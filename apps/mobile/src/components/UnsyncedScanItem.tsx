@@ -1,8 +1,9 @@
-import { CloudOff, UploadCloud, Trash2, ChevronLeft } from "lucide-react-native";
+import { clsx } from "clsx";
+import { CloudOff, UploadCloud, Trash2 } from "lucide-react-native";
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { SwipeRow as BaseSwipeRow } from "react-native-swipe-list-view";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
+import { formatTimeAgo } from "~/utils/format-time-ago";
 
 interface UnsyncedScanItemProps {
   id: string;
@@ -12,9 +13,6 @@ interface UnsyncedScanItemProps {
   onDelete?: (id: string) => void;
 }
 
-// Override type until library typings are fixed
-const SwipeRow = BaseSwipeRow as any;
-
 export function UnsyncedScanItem({
   id,
   timestamp,
@@ -22,121 +20,37 @@ export function UnsyncedScanItem({
   onSync,
   onDelete,
 }: UnsyncedScanItemProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors, classes } = useTheme();
 
   return (
-    <SwipeRow rightOpenValue={-144} disableRightSwipe>
-      {/* Hidden actions */}
-      <View style={styles.hiddenRow}>
+    <View className={clsx("my-2 min-h-[80px] flex-row items-center rounded-xl p-4", classes.card)}>
+      <View className="mr-4 justify-center">
+        <CloudOff size={24} color={colors.semantic.warning} />
+      </View>
+
+      <View className="flex-1">
+        <Text className={clsx("text-base font-bold", classes.text)}>{experimentName}</Text>
+        <Text className={clsx("mt-1 text-xs", classes.textMuted)}>{formatTimeAgo(timestamp)}</Text>
+      </View>
+
+      <View className="ml-3 flex-row gap-2">
         <TouchableOpacity
           onPress={() => onSync?.(id)}
-          style={[styles.actionButton, { backgroundColor: colors.semantic.info }]}
+          className="h-11 w-11 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.semantic.info }}
+          activeOpacity={0.8}
         >
-          <UploadCloud size={25} color="#fff" />
+          <UploadCloud size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => onDelete?.(id)}
-          style={[styles.actionButton, { backgroundColor: colors.semantic.error }]}
+          className="h-11 w-11 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.semantic.error }}
+          activeOpacity={0.8}
         >
-          <Trash2 size={25} color="#fff" />
+          <Trash2 size={20} color="#fff" />
         </TouchableOpacity>
       </View>
-
-      {/* Visible content */}
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-          },
-        ]}
-      >
-        <View style={styles.iconContainer}>
-          <CloudOff size={24} color={colors.semantic.warning} />
-        </View>
-
-        <View style={styles.contentContainer}>
-          <Text
-            style={[
-              styles.experimentName,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            {experimentName}
-          </Text>
-          <Text
-            style={[
-              styles.timestamp,
-              {
-                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-              },
-            ]}
-          >
-            {timestamp}
-          </Text>
-        </View>
-
-        {/* Swipe hint icon */}
-        <View style={styles.dragHint}>
-          <ChevronLeft
-            size={18}
-            color={theme.isDark ? colors.dark.inactive : colors.light.inactive}
-          />
-        </View>
-      </View>
-    </SwipeRow>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iconContainer: {
-    marginRight: 16,
-    justifyContent: "center",
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  experimentName: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  timestamp: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  hiddenRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    height: "100%",
-    borderRadius: 12,
-    backgroundColor: "#fff",
-  },
-  actionButton: {
-    width: 60,
-    height: "50%",
-    marginHorizontal: 4,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionText: {
-    color: "#fff",
-    fontSize: 12,
-  },
-  dragHint: {
-    justifyContent: "center",
-    alignItems: "center",
-    paddingLeft: 12,
-  },
-});

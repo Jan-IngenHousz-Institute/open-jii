@@ -73,7 +73,7 @@ export function ExperimentSelectionStep() {
                 options={experiments}
                 selectedValue={selectedExperimentId}
                 onSelect={(value) => setSelectedExperimentId(value)}
-                placeholder="Choose an experiment to continue"
+                placeholder="Choose an experiment"
               />
 
               {selectedExperiment?.fullDescription && (
