@@ -33,13 +33,14 @@ def _fetch_user_metadata(user_ids: List[str], backend_client: BackendClient) -> 
 
 
 
-def add_user_data_column(df, environment: str):
+def add_user_data_column(df, environment: str, dbutils):
     """
     Add user metadata columns to DataFrame by calling backend API.
     
     Args:
         df: PySpark DataFrame with 'user_id' column containing user IDs
         environment: Environment name (dev, prod, etc.)
+        dbutils: Databricks utilities instance for accessing secrets
         
     Returns:
         DataFrame with additional user columns: user_id, user_name
@@ -48,11 +49,11 @@ def add_user_data_column(df, environment: str):
     from pyspark.sql import functions as F
     from pyspark.sql.types import StringType
     
-    # Get secrets on driver node to pass to workers (dbutils is globally available)
+    # Get secrets on driver node to pass to workers
     scope = f"node-webhook-secret-scope-{environment}"
-    base_url = dbutils.secrets.get(scope=scope, key="backend_url")  # type: ignore
-    api_key_id = dbutils.secrets.get(scope=scope, key="webhook_api_key_id")  # type: ignore
-    webhook_secret = dbutils.secrets.get(scope=scope, key="webhook_secret")  # type: ignore
+    base_url = dbutils.secrets.get(scope=scope, key="webhook_base_url")
+    api_key_id = dbutils.secrets.get(scope=scope, key="webhook_api_key_id")
+    webhook_secret = dbutils.secrets.get(scope=scope, key="webhook_secret")
     
     @F.pandas_udf(StringType())
     def get_user_name(user_ids: pd.Series) -> pd.Series:
