@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import type { ExperimentVisibility } from "@repo/api";
 import { visibilitySchema } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -27,7 +28,7 @@ import { ExperimentVisibilityForm } from "./experiment-visibility-form";
 
 interface ExperimentVisibilityCardProps {
   experimentId: string;
-  initialVisibility: "private" | "public";
+  initialVisibility: ExperimentVisibility;
   embargoUntil: string;
   isArchived?: boolean;
 }
@@ -40,14 +41,13 @@ export function ExperimentVisibilityCard({
 }: ExperimentVisibilityCardProps) {
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
   const { t } = useTranslation();
-  const [currentVisibility, setCurrentVisibility] = useState<"private" | "public">(
-    initialVisibility,
-  );
+  const [currentVisibility, setCurrentVisibility] =
+    useState<ExperimentVisibility>(initialVisibility);
   const [showVisibilityDialog, setShowVisibilityDialog] = useState(false);
-  const [pendingVisibility, setPendingVisibility] = useState<"private" | "public" | undefined>();
+  const [pendingVisibility, setPendingVisibility] = useState<ExperimentVisibility | undefined>();
 
   interface VisibilityFormValues {
-    visibility?: "private" | "public";
+    visibility?: ExperimentVisibility;
     embargoUntil?: string;
   }
 
@@ -59,7 +59,7 @@ export function ExperimentVisibilityCard({
     },
   });
 
-  const handleVisibilityChange = (newVisibility: "private" | "public") => {
+  const handleVisibilityChange = (newVisibility: ExperimentVisibility) => {
     setPendingVisibility(newVisibility);
     setShowVisibilityDialog(true);
   };

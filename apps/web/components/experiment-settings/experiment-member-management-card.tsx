@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { UserProfile, ExperimentMemberRole, ExperimentMember } from "@repo/api";
 import { useSession } from "@repo/auth/client";
@@ -42,7 +42,7 @@ export function ExperimentMemberManagement({
   const adminCount = members.filter((m) => m.role === "admin").length;
   const currentUserId = session?.user.id;
   const currentMember = members.find((m) => m.user.id === currentUserId);
-  const currentUserRole: ExperimentMemberRole = currentMember?.role ?? "member";
+  const currentUserRole = currentMember?.role;
 
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
@@ -58,10 +58,12 @@ export function ExperimentMemberManagement({
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   // Safely extract available users and filter out existing members
-  const availableUsers =
-    userSearchData?.body && Array.isArray(userSearchData.body)
-      ? userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.userId))
-      : [];
+  const availableUsers = useMemo(() => {
+    if (userSearchData?.body && Array.isArray(userSearchData.body)) {
+      return userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.userId));
+    }
+    return [];
+  }, [userSearchData, members]);
 
   // Handle adding a member
   const handleAddMember = async () => {

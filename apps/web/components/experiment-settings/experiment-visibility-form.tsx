@@ -4,6 +4,7 @@ import { CalendarIcon, Info } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
+import type { ExperimentVisibility } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -29,15 +30,15 @@ import { cn } from "@repo/ui/lib/utils";
 import { isoToLocalCalendarDate, embargoUntilHelperString } from "../new-experiment/embargo-utils";
 
 interface VisibilityFormValues {
-  visibility?: "private" | "public";
+  visibility?: ExperimentVisibility;
   embargoUntil?: string;
 }
 
 interface ExperimentVisibilityFormProps {
   form: UseFormReturn<VisibilityFormValues>;
-  currentVisibility: "private" | "public";
+  currentVisibility: ExperimentVisibility;
   isArchived: boolean;
-  onVisibilityChange: (newVisibility: "private" | "public") => void;
+  onVisibilityChange: (newVisibility: ExperimentVisibility) => void;
   onEmbargoDateSelect: (date?: Date) => Promise<void>;
 }
 
@@ -118,32 +119,30 @@ export function ExperimentVisibilityForm({
               return (
                 <FormItem className="space-y-3">
                   <FormLabel>{t("experimentSettings.embargoUntil")}</FormLabel>
-                  <FormControl>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            disabled={isArchived}
-                            className={cn(
-                              "w-full justify-between font-normal",
-                              !selectedDate && "text-muted-foreground",
-                            )}
-                          >
-                            {buttonLabel}
-                            <CalendarIcon className="ml-2 h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={handleEmbargoDateSelect}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                  <FormControl className="flex flex-col gap-3 sm:flex-row">
+                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          disabled={isArchived}
+                          className={cn(
+                            "w-full justify-between font-normal",
+                            !selectedDate && "text-muted-foreground",
+                          )}
+                        >
+                          {buttonLabel}
+                          <CalendarIcon className="ml-2 h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={handleEmbargoDateSelect}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </FormControl>
                   {helperText && (
                     <div className="bg-surface text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">

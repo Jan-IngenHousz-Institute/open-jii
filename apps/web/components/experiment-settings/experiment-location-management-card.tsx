@@ -229,11 +229,13 @@ export function ExperimentLocationManagement({
 
           <div className="flex items-center justify-between">
             {editedLocations.length > 0 && (
-              <div className="text-sm text-gray-600">
+              <div className="text-muted-foreground text-sm">
                 {t("settings.locations.editingCount", { count: editedLocations.length })}
               </div>
             )}
-            {isSaving && <div className="text-sm text-gray-500">{t("common.saving")}...</div>}
+            {isSaving && (
+              <div className="text-muted-foreground text-sm">{t("experimentSettings.saving")}</div>
+            )}
           </div>
         </div>
       </CardContent>

@@ -80,8 +80,8 @@ export default function ExperimentVisualizationsDisplay({
   if (visualizations.length === 0) {
     return (
       <div className="space-y-4">
-        <div>
-          <CardTitle>Latest visualization</CardTitle>
+        <div className="p-0">
+          <CardTitle>Visualizations</CardTitle>
           <CardDescription>{t("selector.noVisualizations")}</CardDescription>
         </div>
         <Card>
