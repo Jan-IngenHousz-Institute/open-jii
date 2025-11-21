@@ -2,28 +2,23 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient, QueryCache, onlineManager } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import axios from "axios";
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
+import { isOnline } from "~/utils/is-online";
 
-const PING_URL = "https://clients3.google.com/generate_204";
 const CHECK_INTERVAL = 10 * 1000;
 
 function startConnectivityWatcher() {
   let lastOnline = true;
 
   async function checkOnline() {
-    try {
-      await axios.head(PING_URL, { timeout: 3000 });
-      if (!lastOnline) {
-        lastOnline = true;
-        onlineManager.setOnline(true);
-      }
-    } catch {
-      if (lastOnline) {
-        lastOnline = false;
-        onlineManager.setOnline(false);
-      }
+    const online = await isOnline();
+    if (online && !lastOnline) {
+      lastOnline = true;
+      onlineManager.setOnline(true);
+    } else if (!online && lastOnline) {
+      lastOnline = false;
+      onlineManager.setOnline(false);
     }
   }
 
