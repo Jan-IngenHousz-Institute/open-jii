@@ -22,6 +22,12 @@ question_schema = StructType([
     StructField("question_answer", StringType(), True)
 ])
 
+macro_schema = StructType([
+    StructField("id", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("filename", StringType(), True)
+])
+
 sensor_schema = StructType([
     StructField("topic", StringType(), False),
     StructField("device_name", StringType(), True),
@@ -34,6 +40,7 @@ sensor_schema = StructType([
     StructField("output", StringType(), True),
     StructField("questions", ArrayType(question_schema), True),
     StructField("user_id", StringType(), True),
+    StructField("macros", ArrayType(macro_schema), True)
 ])
 
 # COMMAND ----------
@@ -160,20 +167,8 @@ def clean_data():
         F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
     )
     
-    # Extract macros from sample data for downstream processing
-    df = df.withColumn(
-        "macros",
-        F.when(F.col("sample").isNotNull(),
-            F.expr("""
-                flatten(
-                    transform(
-                        from_json(sample, 'array<string>'),
-                        x -> from_json(get_json_object(x, '$.macros'), 'array<string>')
-                    )
-                )
-            """)
-        ).otherwise(F.array())
-    )
+    # Extract macros from parsed_data (now available at top-level in sensor_schema)
+    df = df.withColumn("macros", F.col("parsed_data.macros"))
     
     # Extract questions from the parsed_data and keep in original array structure
     df = df.withColumn(

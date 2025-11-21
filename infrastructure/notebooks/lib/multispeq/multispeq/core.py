@@ -47,23 +47,24 @@ def execute_macro_script(
     print(f"[MACRO] Macros path: {macros_path}")
     print(f"[MACRO] Input data keys: {list(input_data.keys()) if input_data else 'None'}")
     
-    # Check for Python script first, then JavaScript
-    script_extensions = ['.py', '.js']
-    script_path = None
-    script_type = None
+    # The macro_name should now be the full filename (e.g., "macro_8f400c257611.py")
+    script_path = f"{macros_path}/{macro_name}"
     
-    for ext in script_extensions:
-        potential_path = f"{macros_path}/{macro_name}{ext}"
-        print(f"[MACRO] Checking for script at: {potential_path}")
-        if os.path.exists(potential_path):
-            script_path = potential_path
-            script_type = 'python' if ext == '.py' else 'javascript'
-            print(f"[MACRO] Found {script_type} script: {script_path}")
-            break
-    
-    if not script_path:
-        print(f"[MACRO] WARNING: Macro script not found for {macro_name}")
+    print(f"[MACRO] Checking for script at: {script_path}")
+    if not os.path.exists(script_path):
+        print(f"[MACRO] ERROR: Macro script not found: {script_path}")
         return {}
+    
+    # Determine script type from file extension
+    if macro_name.endswith('.py'):
+        script_type = 'python'
+    elif macro_name.endswith('.js'):
+        script_type = 'javascript'
+    else:
+        print(f"[MACRO] ERROR: Unsupported file extension for macro: {macro_name}")
+        return {}
+    
+    print(f"[MACRO] Found {script_type} script: {script_path}")
     
     try:
         print(f"[MACRO] Executing {script_type} macro: {macro_name}")
