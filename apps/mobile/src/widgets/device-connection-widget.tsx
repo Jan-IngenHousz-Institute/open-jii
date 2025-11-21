@@ -3,7 +3,7 @@ import { clsx } from "clsx";
 import { Battery, Unplug, RefreshCw, WifiOff } from "lucide-react-native";
 import { useState } from "react";
 import { useAsync } from "react-async-hook";
-import { View, Text, Dimensions, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { toast } from "sonner-native";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useIsOnline } from "~/hooks/use-is-online";
@@ -37,8 +37,6 @@ export function DeviceConnectionWidget() {
     }
     setBatteryLevel(batteryPercentage);
   }, [connectedDevice?.id]);
-
-  const screenWidth = Dimensions.get("window").width;
 
   const isConnected = !!connectedDevice;
 
