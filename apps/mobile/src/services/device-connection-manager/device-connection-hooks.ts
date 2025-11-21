@@ -15,6 +15,7 @@ export function useConnectedDevice() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["connected-device"],
     queryFn: getConnectedDevice,
+    networkMode: "always",
   });
 
   return { data, isLoading, error };
@@ -72,6 +73,7 @@ export function useAllDevices() {
     queryKey: ["all-devices"],
     queryFn: () => getAllDevices(),
     enabled: false,
+    networkMode: "always",
   });
 }
 
@@ -79,6 +81,7 @@ export function usePairedDevices() {
   return useQuery({
     queryKey: ["paired-devices"],
     queryFn: () => getPairedDevices(),
+    networkMode: "always",
   });
 }
 
@@ -87,5 +90,6 @@ export function useSerialDevices() {
     queryKey: ["serial-devices"],
     queryFn: () => getSerialDevices(),
     refetchInterval: 2500,
+    networkMode: "always",
   });
 }
