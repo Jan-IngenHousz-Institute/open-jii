@@ -37,7 +37,7 @@ export function ConnectedDevice(props: Props) {
         <View className="mt-3 flex-row items-stretch gap-2">
           <Button title="Disconnect" onPress={() => onDisconnect(device)} style={{ flex: 1 }} />
           <Button
-            isLoading={isExecuting}
+            disabled={isExecuting}
             title="Turn off MultispeQ"
             onPress={async () => {
               await executeCommand("sleep");

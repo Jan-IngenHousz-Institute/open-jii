@@ -1,16 +1,25 @@
-import { Battery, Unplug } from "lucide-react-native";
+import { useQueryClient } from "@tanstack/react-query";
+import { clsx } from "clsx";
+import { Battery, Unplug, RefreshCw, WifiOff } from "lucide-react-native";
+import { useState } from "react";
 import { useAsync } from "react-async-hook";
-import { View, Text, Dimensions } from "react-native";
+import { View, Text, Dimensions, TouchableOpacity, ActivityIndicator } from "react-native";
+import { toast } from "sonner-native";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
+import { useIsOnline } from "~/hooks/use-is-online";
 import { useTheme } from "~/hooks/use-theme";
 import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-hooks";
 import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-command-executor";
+import { isOnline } from "~/utils/is-online";
 
 export function DeviceConnectionWidget() {
-  const { colors } = useTheme();
+  const { colors, classes } = useTheme();
+  const queryClient = useQueryClient();
   const { batteryLevel, setBatteryLevel } = useDeviceConnectionStore();
   const { executeCommand } = useScannerCommandExecutor();
   const { data: connectedDevice } = useConnectedDevice();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data: isOnlineStatus = true } = useIsOnline();
 
   useAsync(async () => {
     if (!connectedDevice) {
@@ -54,8 +63,27 @@ export function DeviceConnectionWidget() {
     return `${batteryLevel}%`;
   };
 
+  const handleRefresh = async () => {
+    const online = await isOnline();
+    if (!online) {
+      toast.error("Refresh is not allowed in offline mode");
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      await queryClient.resetQueries();
+      await queryClient.refetchQueries();
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
-    <View className="mr-4 items-end" style={{ maxWidth: screenWidth / 2 }}>
+    <View className="flex-row items-center gap-2" style={{ marginRight: 16 }}>
       <View
         className="flex-row items-center gap-0.5 rounded-lg border px-1.5 py-0.5"
         style={{
@@ -92,6 +120,27 @@ export function DeviceConnectionWidget() {
           </Text>
         )}
       </View>
+
+      <TouchableOpacity
+        key={Date.now()}
+        onPress={isOnlineStatus ? handleRefresh : undefined}
+        disabled={isRefreshing || !isOnlineStatus}
+        className={clsx("items-center justify-center rounded-full shadow-lg", classes.card)}
+        style={{
+          width: 36,
+          height: 36,
+          backgroundColor: isOnlineStatus ? colors.primary.dark : colors.semantic.error,
+        }}
+        activeOpacity={0.7}
+      >
+        {isRefreshing ? (
+          <ActivityIndicator size="small" color={colors.onPrimary} />
+        ) : isOnlineStatus ? (
+          <RefreshCw size={16} color={colors.onPrimary} />
+        ) : (
+          <WifiOff size={16} color={colors.onPrimary} />
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
