@@ -54,9 +54,18 @@ export function ExperimentDataTableUserCell({
 }: ExperimentDataTableUserCellProps) {
   const userData = parseUserData(data);
 
-  // If we can't parse the data as a user object, just display it as text
+  // If we can't parse the data as a user object, display unknown user fallback
   if (!userData) {
-    return <span className="muted-foreground text-sm">Invalid user data</span>;
+    return (
+      <div className="flex items-center gap-2">
+        <Avatar className="h-6 w-6 rounded-full">
+          <AvatarFallback className="rounded-full text-xs">U</AvatarFallback>
+        </Avatar>
+        <span className="text-muted-foreground max-w-[120px] truncate text-sm font-medium">
+          Unknown User
+        </span>
+      </div>
+    );
   }
 
   const { name, image } = userData;
