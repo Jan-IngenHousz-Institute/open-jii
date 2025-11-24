@@ -9,20 +9,8 @@ import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-
-/**
- * Data structure based on DataBricks
- */
-export interface SchemaDataDto {
-  columns: {
-    name: string;
-    type_name: string;
-    type_text: string;
-  }[];
-  rows: Record<string, string | null>[];
-  totalRows: number;
-  truncated: boolean;
-}
+import type { SchemaDataDto } from "../../services/data-enrichment/data-enrichment.service";
+import { UserEnrichmentService } from "../../services/data-enrichment/user-metadata/user-enrichment.service";
 
 /**
  * Single table data structure that forms our array response
@@ -50,6 +38,7 @@ export class GetExperimentDataUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly userEnrichmentService: UserEnrichmentService,
   ) {}
 
   async execute(
@@ -184,11 +173,12 @@ export class GetExperimentDataUseCase {
     orderBy?: string,
     orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
-    // Validate table exists
-    const tableExists = await this.validateTableExists(tableName, experiment.name, experimentId);
-    if (tableExists.isFailure()) {
-      return tableExists;
+    // Validate table exists and get table metadata in one call
+    const tableResult = await this.validateTableExists(tableName, experiment.name, experimentId);
+    if (tableResult.isFailure()) {
+      return tableResult;
     }
+    const table = tableResult.value;
 
     // Build SQL query with specific columns
     const columnList = columns
@@ -225,10 +215,10 @@ export class GetExperimentDataUseCase {
     // Create response
     const response: ExperimentDataDto = [
       {
-        name: tableName,
+        name: this.getTableDisplayName(table),
         catalog_name: experiment.name,
         schema_name: schemaName,
-        data: this.transformSchemaData(dataResult.value),
+        data: await this.transformSchemaData(dataResult.value),
         page: 1,
         pageSize: totalRows,
         totalRows,
@@ -252,11 +242,12 @@ export class GetExperimentDataUseCase {
     orderBy?: string,
     orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
-    // Validate table exists
-    const tableExists = await this.validateTableExists(tableName, experiment.name, experimentId);
-    if (tableExists.isFailure()) {
-      return tableExists;
+    // Validate table exists and get table metadata in one call
+    const tableResult = await this.validateTableExists(tableName, experiment.name, experimentId);
+    if (tableResult.isFailure()) {
+      return tableResult;
     }
+    const table = tableResult.value;
 
     // Get total row count for pagination
     const countResult = await this.databricksPort.executeSqlQuery(
@@ -300,10 +291,10 @@ export class GetExperimentDataUseCase {
     // Create response
     const response: ExperimentDataDto = [
       {
-        name: tableName,
+        name: this.getTableDisplayName(table),
         catalog_name: experiment.name,
         schema_name: schemaName,
-        data: this.transformSchemaData(dataResult.value),
+        data: await this.transformSchemaData(dataResult.value),
         page,
         pageSize,
         totalRows,
@@ -329,10 +320,15 @@ export class GetExperimentDataUseCase {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 
-    // Make sure 'device' table is last
+    // Filter tables to only include those with downstream: "false" (final/enriched tables for user consumption)
+    const finalTables = tablesResult.value.tables.filter(
+      (table) => table.properties?.downstream === "false",
+    );
+
+    // Make sure 'device' table is last if it exists and is marked as final
     const tables: Table[] = [];
     let deviceTable: Table | undefined;
-    for (const table of tablesResult.value.tables) {
+    for (const table of finalTables) {
       if (table.name === "device") deviceTable = table;
       else tables.push(table);
     }
@@ -359,7 +355,7 @@ export class GetExperimentDataUseCase {
       const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
       const tableInfo: TableDataDto = {
-        name: table.name,
+        name: this.getTableDisplayName(table),
         catalog_name: table.catalog_name,
         schema_name: table.schema_name,
         page: 1,
@@ -369,7 +365,7 @@ export class GetExperimentDataUseCase {
       };
 
       if (dataResult.isSuccess()) {
-        tableInfo.data = this.transformSchemaData(dataResult.value);
+        tableInfo.data = await this.transformSchemaData(dataResult.value);
       } else {
         this.logger.warn(
           `Failed to get sample data for table ${table.name}: ${dataResult.error.message}`,
@@ -383,43 +379,70 @@ export class GetExperimentDataUseCase {
   }
 
   /**
-   * Validate that a table exists in the experiment
+   * Validate that a table exists in the experiment and is accessible (downstream: "false")
+   * Returns the table object if valid, allowing callers to use it without additional lookups
    */
   private async validateTableExists(
     tableName: string,
     experimentName: string,
     experimentId: string,
-  ): Promise<Result<boolean>> {
+  ): Promise<Result<Table>> {
     const tablesResult = await this.databricksPort.listTables(experimentName, experimentId);
 
     if (tablesResult.isFailure()) {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 
-    const tableExists = tablesResult.value.tables.some((table: Table) => table.name === tableName);
+    const table = tablesResult.value.tables.find((table: Table) => table.name === tableName);
 
-    if (!tableExists) {
+    if (!table) {
       this.logger.warn(`Table ${tableName} not found in experiment ${experimentId}`);
       return failure(AppError.notFound(`Table '${tableName}' not found in this experiment`));
     }
 
-    return success(true);
+    // Check if table is marked as accessible to users (downstream: "false")
+    if (table.properties?.downstream !== "false") {
+      this.logger.warn(
+        `Table ${tableName} in experiment ${experimentId} is not accessible (intermediate processing table)`,
+      );
+      return failure(
+        AppError.forbidden(
+          `Table '${tableName}' is not accessible. Only final processed tables are available.`,
+        ),
+      );
+    }
+
+    return success(table);
   }
 
-  private transformSchemaData(schemaData: SchemaData) {
-    const result: SchemaDataDto = {
+  /**
+   * Get the display name for a table, using properties.display_name if available, otherwise fallback to table.name
+   */
+  private getTableDisplayName(table: Table): string {
+    return table.properties?.display_name ?? table.name;
+  }
+
+  /**
+   * Transform schema data using enrichment services
+   */
+  private async transformSchemaData(schemaData: SchemaData): Promise<SchemaDataDto> {
+    // Check if user enrichment can be applied
+    if (this.userEnrichmentService.canEnrich(schemaData)) {
+      return await this.userEnrichmentService.enrichData(schemaData);
+    }
+
+    // If no enrichment services apply, convert to DTO format
+    return {
       columns: schemaData.columns,
-      rows: [],
+      rows: schemaData.rows.map((row) => {
+        const dataRow: Record<string, string | null> = {};
+        row.forEach((value, index) => {
+          dataRow[schemaData.columns[index].name] = value;
+        });
+        return dataRow;
+      }),
       totalRows: schemaData.totalRows,
       truncated: schemaData.truncated,
     };
-    schemaData.rows.forEach((row) => {
-      const dataRow: Record<string, string | null> = {};
-      row.forEach((dataColumn, index) => {
-        dataRow[schemaData.columns[index].name] = dataColumn;
-      });
-      result.rows.push(dataRow);
-    });
-    return result;
   }
 }

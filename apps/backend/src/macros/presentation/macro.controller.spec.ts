@@ -11,7 +11,7 @@ import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import type { MacroDto, CreateMacroDto, UpdateMacroDto } from "../core/models/macro.model";
-import { deriveFilenameFromName } from "../core/models/macro.model";
+import { generateHashedFilename } from "../core/models/macro.model";
 
 describe("MacroController", () => {
   const testApp = TestHarness.App;
@@ -59,10 +59,12 @@ describe("MacroController", () => {
         code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
       };
 
+      const macroId = faker.string.uuid();
+
       const mockMacro: MacroDto = {
-        id: faker.string.uuid(),
+        id: macroId,
         name: macroData.name,
-        filename: deriveFilenameFromName(macroData.name),
+        filename: generateHashedFilename(macroId),
         description: macroData.description ?? "",
         language: macroData.language,
         code: macroData.code,
@@ -147,10 +149,11 @@ describe("MacroController", () => {
   describe("getMacro", () => {
     it("should successfully get a macro", async () => {
       // Arrange
+      const macroId = faker.string.uuid();
       const mockMacro: MacroDto = {
-        id: faker.string.uuid(),
+        id: macroId,
         name: "Test Macro",
-        filename: deriveFilenameFromName("Test Macro"),
+        filename: generateHashedFilename(macroId),
         description: "Test Description",
         language: "python",
         code: "cHl0aG9uIGNvZGU=",
@@ -206,11 +209,13 @@ describe("MacroController", () => {
   describe("listMacros", () => {
     it("should successfully list macros", async () => {
       // Arrange
+
+      const macroIds = [faker.string.uuid(), faker.string.uuid()];
       const mockMacros: MacroDto[] = [
         {
-          id: faker.string.uuid(),
+          id: macroIds[0],
           name: "Test Macro 1",
-          filename: deriveFilenameFromName("Test Macro 1"),
+          filename: generateHashedFilename(macroIds[0]),
           description: "Test Description 1",
           language: "python",
           code: "dGVzdCBjb2RlIDE=", // base64 encoded "test code 1"
@@ -220,9 +225,9 @@ describe("MacroController", () => {
           createdByName: "Test User",
         },
         {
-          id: faker.string.uuid(),
+          id: macroIds[1],
           name: "Test Macro 2",
-          filename: deriveFilenameFromName("Test Macro 2"),
+          filename: generateHashedFilename(macroIds[1]),
           description: "Test Description 2",
           language: "javascript",
           code: "dGVzdCBjb2RlIDI=", // base64 encoded "test code 2"
@@ -291,7 +296,7 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: "Updated Macro",
-        filename: deriveFilenameFromName("Updated Macro"),
+        filename: generateHashedFilename(macroId),
         description: "Updated Description",
         language: "javascript",
         code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
@@ -353,7 +358,7 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: updateData.name,
-        filename: deriveFilenameFromName(updateData.name),
+        filename: generateHashedFilename(macroId),
         description: "Description",
         language: "python",
         code: "dXBkYXRlZCBjb2RlIHdpdGggZmlsZQ==", // base64 encoded "updated code with file"

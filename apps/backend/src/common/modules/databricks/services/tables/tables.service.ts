@@ -58,6 +58,7 @@ export class DatabricksTablesService {
             table_type: table.table_type,
             comment: table.comment,
             created_at: table.created_at,
+            properties: table.properties,
           })),
         };
       },

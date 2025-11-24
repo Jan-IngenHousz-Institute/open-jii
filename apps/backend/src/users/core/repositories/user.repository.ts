@@ -5,6 +5,7 @@ import {
   ilike,
   or,
   and,
+  inArray,
   organizations,
   profiles,
   users,
@@ -33,6 +34,7 @@ import {
   SearchUsersParams,
   UserProfileDto,
   CreateUserProfileDto,
+  UserProfileMetadata,
 } from "../models/user.model";
 
 @Injectable()
@@ -63,6 +65,27 @@ export class UserRepository {
         .limit(1);
 
       return result.length > 0 ? result[0] : null;
+    });
+  }
+
+  async findUsersByIds(userIds: string[]): Promise<Result<UserProfileMetadata[]>> {
+    return tryCatch(async () => {
+      if (userIds.length === 0) {
+        return [];
+      }
+
+      const result = await this.database
+        .select({
+          userId: users.id,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          image: users.image,
+        })
+        .from(users)
+        .innerJoin(profiles, eq(users.id, profiles.userId))
+        .where(inArray(users.id, userIds));
+
+      return result;
     });
   }
 

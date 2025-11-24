@@ -9,6 +9,10 @@ import {
   zCreateUserProfileBody,
   zCreateUserProfileResponse,
   zUserProfile,
+  zWebhookAuthHeader,
+  zUserMetadataWebhookPayload,
+  zUserMetadataWebhookResponse,
+  zWebhookErrorResponse,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -74,5 +78,20 @@ export const userContract = c.router({
     },
     summary: "Delete a user",
     description: "Deletes a user by their ID if allowed",
+  },
+
+  getUserMetadata: {
+    method: "POST",
+    path: "/api/v1/users/metadata",
+    body: zUserMetadataWebhookPayload,
+    headers: zWebhookAuthHeader,
+    responses: {
+      200: zUserMetadataWebhookResponse,
+      400: zWebhookErrorResponse,
+      401: zWebhookErrorResponse,
+    },
+    summary: "Get user metadata for Databricks pipelines",
+    description:
+      "Fetches user profile metadata (firstName, lastName) for multiple user IDs to populate Databricks pipeline tables",
   },
 });

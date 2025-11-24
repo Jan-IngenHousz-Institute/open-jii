@@ -132,6 +132,11 @@ export class TestHarness {
   }
 
   private async clearDatabase(): Promise<void> {
+    // Ensure the module is set up before attempting to clear the database
+    if (!this._module) {
+      return;
+    }
+
     // Clean up test data in correct order (respecting foreign key constraints)
     await this.database.delete(auditLogs).execute();
     await this.database.delete(experimentMembers).execute();
@@ -222,33 +227,37 @@ export class TestHarness {
     emailVerified = null,
     image = null,
     activated = true,
+    createProfile = true,
   }: {
     email?: string;
     name?: string;
     emailVerified?: Date | null;
     image?: string | null;
     activated?: boolean;
+    createProfile?: boolean;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
       .values({ email, name, emailVerified, image })
       .returning();
 
-    // Split name into firstName and lastName for profile
-    let firstName = "Test";
-    let lastName = "User";
-    if (name) {
-      const parts = name.split(" ");
-      firstName = parts[0];
-      lastName = parts.slice(1).join(" ") || "User";
-    }
+    if (createProfile) {
+      // Split name into firstName and lastName for profile
+      let firstName = "Test";
+      let lastName = "User";
+      if (name) {
+        const parts = name.split(" ");
+        firstName = parts[0];
+        lastName = parts.slice(1).join(" ") || "User";
+      }
 
-    await this.database.insert(profiles).values({
-      userId: user.id,
-      firstName,
-      lastName,
-      activated,
-    });
+      await this.database.insert(profiles).values({
+        userId: user.id,
+        firstName,
+        lastName,
+        activated,
+      });
+    }
 
     return user.id;
   }

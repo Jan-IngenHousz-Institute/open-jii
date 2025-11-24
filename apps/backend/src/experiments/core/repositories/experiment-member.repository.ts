@@ -82,6 +82,30 @@ export class ExperimentMemberRepository {
     });
   }
 
+  async findUserFullNameFromProfile(
+    userId: string,
+  ): Promise<Result<{ firstName: string; lastName: string } | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
+        .from(profiles)
+        .where(eq(profiles.userId, userId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      return {
+        firstName: result[0].firstName,
+        lastName: result[0].lastName,
+      };
+    });
+  }
+
   async removeMember(experimentId: string, userId: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database

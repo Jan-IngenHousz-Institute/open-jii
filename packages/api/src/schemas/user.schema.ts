@@ -62,6 +62,39 @@ export const zUserIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the user"),
 });
 
+// Webhook Schemas
+export const zWebhookAuthHeader = z.object({
+  "x-api-key-id": z.string(),
+  "x-databricks-signature": z.string(),
+  "x-databricks-timestamp": z.string(),
+});
+
+export const zUserMetadataWebhookPayload = z.object({
+  userIds: z.array(z.string().uuid()).min(1).max(100),
+});
+
+export const zUserMetadata = z.object({
+  userId: z.string().uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+});
+
+export const zUserMetadataWebhookResponse = z.object({
+  users: z.array(zUserMetadata),
+  success: z.boolean(),
+});
+
+export const zWebhookSuccessResponse = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+export const zWebhookErrorResponse = z.object({
+  error: z.string(),
+  message: z.string(),
+  statusCode: z.number(),
+});
+
 // Infer types from Zod schemas
 export type User = z.infer<typeof zUser>;
 export type UserList = z.infer<typeof zUserList>;
@@ -70,3 +103,10 @@ export type SearchUsersQuery = z.infer<typeof zSearchUsersQuery>;
 export type UserIdPathParam = z.infer<typeof zUserIdPathParam>;
 export type UserProfile = z.infer<typeof zUserProfile>;
 export type CreateUserProfileBody = z.infer<typeof zCreateUserProfileBody>;
+export type CreateUserProfileResponse = z.infer<typeof zCreateUserProfileResponse>;
+export type WebhookAuthHeader = z.infer<typeof zWebhookAuthHeader>;
+export type UserMetadataWebhookPayload = z.infer<typeof zUserMetadataWebhookPayload>;
+export type UserMetadata = z.infer<typeof zUserMetadata>;
+export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookResponse>;
+export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
+export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
