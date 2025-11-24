@@ -60,7 +60,7 @@ describe("ExperimentDataTableUserCell", () => {
   it("handles invalid JSON gracefully", () => {
     render(<ExperimentDataTableUserCell data="invalid-json" columnName="User" />);
 
-    expect(screen.getByText("Invalid user data")).toBeInTheDocument();
+    expect(screen.getByText("Unknown User")).toBeInTheDocument();
   });
 
   it("handles invalid user object gracefully", () => {
@@ -70,6 +70,6 @@ describe("ExperimentDataTableUserCell", () => {
 
     render(<ExperimentDataTableUserCell data={invalidData} columnName="User" />);
 
-    expect(screen.getByText("Invalid user data")).toBeInTheDocument();
+    expect(screen.getByText("Unknown User")).toBeInTheDocument();
   });
 });
