@@ -146,31 +146,6 @@ vi.mock("@repo/ui/components", () => ({
       {children}
     </div>
   ),
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    variant,
-    size,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    variant?: string;
-    size?: string;
-  }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      onClick={onClick}
-      disabled={disabled}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
 }));
 
 // Mock Lucide icons
@@ -248,15 +223,14 @@ describe("ExperimentLocationManagement", () => {
 
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByTestId("card")).toBeInTheDocument();
-      expect(screen.getByTestId("card-header")).toBeInTheDocument();
+      expect(screen.getByTestId("card-title")).toBeInTheDocument();
       expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
 
-      // Check for loading skeleton
-      const content = screen.getByTestId("card-content");
-      expect(content.querySelector(".animate-pulse")).toBeInTheDocument();
-      expect(content.querySelector(".h-4.w-3\\/4.rounded.bg-gray-200")).toBeInTheDocument();
-      expect(content.querySelector(".h-32.rounded.bg-gray-200")).toBeInTheDocument();
+      // Check for loading skeleton - it should have a div with animate-pulse class
+      const container = screen.getByTestId("card-title").parentElement?.parentElement;
+      expect(container?.querySelector(".animate-pulse")).toBeInTheDocument();
+      expect(container?.querySelector(".h-\\[460px\\]")).toBeInTheDocument();
     });
 
     it("should not render map component when loading", () => {
@@ -275,34 +249,18 @@ describe("ExperimentLocationManagement", () => {
     it("should render the component with all expected elements", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByTestId("card")).toBeInTheDocument();
-      expect(screen.getByTestId("card-header")).toBeInTheDocument();
       expect(screen.getByTestId("card-title")).toBeInTheDocument();
       expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
       expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
-      expect(screen.getByTestId("map-pin-icon")).toBeInTheDocument();
     });
 
     it("should render map component with correct props", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
       expect(screen.getByTestId("map-component")).toBeInTheDocument();
-      expect(screen.getByTestId("map-selection-mode")).toHaveTextContent("true");
-      expect(screen.getByTestId("map-height")).toHaveTextContent("400px");
+      expect(screen.getByTestId("map-selection-mode")).toHaveTextContent("false"); // Default hasAccess is false
+      expect(screen.getByTestId("map-height")).toHaveTextContent("460px");
       expect(screen.getByTestId("map-show-sidebar")).toHaveTextContent("true");
-    });
-
-    it("should render control buttons", () => {
-      renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
-
-      const buttons = screen.getAllByTestId("button");
-      expect(buttons).toHaveLength(2);
-
-      const cancelButton = buttons.find((btn) => btn.textContent === "common.cancel");
-      const saveButton = buttons.find((btn) => btn.textContent === "common.save");
-
-      expect(cancelButton).toBeInTheDocument();
-      expect(saveButton).toBeInTheDocument();
     });
 
     it("should display location count when locations exist", () => {
@@ -385,129 +343,40 @@ describe("ExperimentLocationManagement", () => {
     });
   });
 
-  describe("Save Functionality", () => {
-    it("should call updateLocationsMutation with correct data when save is clicked", async () => {
-      const user = userEvent.setup();
-      renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
-
-      const saveButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "common.save");
-      expect(saveButton).toBeInTheDocument();
-
-      if (saveButton) {
-        await user.click(saveButton);
-      }
-
-      expect(mockMutateAsync).toHaveBeenCalledWith({
-        params: { id: experimentId },
-        body: {
-          locations: [
-            {
-              name: "Central Park",
-              latitude: 40.7829,
-              longitude: -73.9654,
-            },
-            {
-              name: "Times Square",
-              latitude: 40.758,
-              longitude: -73.9855,
-            },
-          ],
-        },
-      });
-    });
-
-    it("should save modified locations after map changes", async () => {
+  describe("Auto-save Functionality", () => {
+    it("should auto-save when locations change through map", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
       // Add a location through the map
       await user.click(screen.getByTestId("mock-add-location"));
 
-      // Click save
-      const saveButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "common.save");
-      if (saveButton) {
-        await user.click(saveButton);
-      }
-
-      expect(mockMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: {
-            locations: expect.arrayContaining([
-              expect.objectContaining({ name: "Central Park" }),
-              expect.objectContaining({ name: "Times Square" }),
-              expect.objectContaining({ name: "New Location" }),
-            ]) as unknown,
-          },
-        }),
-      );
-    });
-
-    it("should disable save button when mutation is pending", () => {
-      useExperimentLocationsUpdateMock.mockReturnValue({
-        ...mockMutation,
-        isPending: true,
-      });
-
-      renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
-
-      const saveButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "common.saving");
-      expect(saveButton).toBeDisabled();
-    });
-
-    it("should show saving text when mutation is pending", () => {
-      useExperimentLocationsUpdateMock.mockReturnValue({
-        ...mockMutation,
-        isPending: true,
-      });
-
-      renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
-
-      expect(screen.getByText("common.saving")).toBeInTheDocument();
-      expect(screen.queryByText("common.save")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Cancel Functionality", () => {
-    it("should reset locations to original state when cancel is clicked", async () => {
-      const user = userEvent.setup();
-      renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
-
-      // Add a location through the map
-      await user.click(screen.getByTestId("mock-add-location"));
-      expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
-
-      // Click cancel
-      const cancelButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "common.cancel");
-      if (cancelButton) {
-        await user.click(cancelButton);
-      }
-
-      // Verify locations reset to original state
+      // Verify mutation was called automatically
       await waitFor(() => {
-        expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
+        expect(mockMutateAsync).toHaveBeenCalled();
       });
     });
 
-    it("should disable cancel button when mutation is pending", () => {
-      useExperimentLocationsUpdateMock.mockReturnValue({
-        ...mockMutation,
-        isPending: true,
-      });
-
+    it("should auto-save with correct location data", async () => {
+      const user = userEvent.setup();
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      const cancelButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "common.cancel");
-      expect(cancelButton).toBeDisabled();
+      // Add a location through the map
+      await user.click(screen.getByTestId("mock-add-location"));
+
+      await waitFor(() => {
+        expect(mockMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            body: {
+              locations: expect.arrayContaining([
+                expect.objectContaining({ name: "Central Park" }),
+                expect.objectContaining({ name: "Times Square" }),
+                expect.objectContaining({ name: "New Location" }),
+              ]) as unknown,
+            },
+          }),
+        );
+      });
     });
   });
 
@@ -554,31 +423,27 @@ describe("ExperimentLocationManagement", () => {
       expect(useExperimentLocationsMock).toHaveBeenCalled();
     });
 
-    it("should apply correct CSS classes to card content", () => {
+    it("should render with correct structure", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      const cardContent = screen.getByTestId("card-content");
-      expect(cardContent).toHaveClass("space-y-4");
+      // Check that the main container exists
+      expect(screen.getByTestId("card-title")).toBeInTheDocument();
+      expect(screen.getByTestId("card-description")).toBeInTheDocument();
     });
 
-    it("should render card header structure correctly", () => {
+    it("should render title with correct classes", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
-
-      const cardHeader = screen.getByTestId("card-header");
-      expect(cardHeader).toBeInTheDocument();
 
       const cardTitle = screen.getByTestId("card-title");
       expect(cardTitle).toHaveClass("flex", "items-center", "gap-2");
-
-      expect(screen.getByTestId("card-description")).toBeInTheDocument();
     });
 
     it("should pass all required props to Map component", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
       expect(lastMapProps).toMatchObject({
-        selectionMode: true,
-        height: "400px",
+        selectionMode: false, // Default hasAccess is false
+        height: "460px",
         zoom: 8,
         minZoom: 2,
         maxZoom: 18,
@@ -626,11 +491,8 @@ describe("ExperimentLocationManagement", () => {
 
       expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
       expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
-      // Use getAllByText for duplicate text that appears in multiple places
-      expect(screen.getAllByText("settings.locations.editMode")).toHaveLength(2);
-      expect(screen.getByText("settings.locations.editModeDescription")).toBeInTheDocument();
-      expect(screen.getByText("common.cancel")).toBeInTheDocument();
-      expect(screen.getByText("common.save")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editMode")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
     });
   });
 });
