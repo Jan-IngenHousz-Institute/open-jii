@@ -494,7 +494,7 @@ def enriched_{macro_table_name}_table():
     
     # Add user metadata column
     from enrich import add_user_data_column
-    enriched_df = add_user_data_column(macro_df, ENVIRONMENT)
+    enriched_df = add_user_data_column(macro_df, ENVIRONMENT, dbutils)
     
     return enriched_df
 '''
@@ -551,7 +551,7 @@ def enriched_sample():
     sample_df = dlt.read_stream(SAMPLE_TABLE)
     
     # Add user metadata column
-    enriched_df = add_user_data_column(sample_df, ENVIRONMENT)
+    enriched_df = add_user_data_column(sample_df, ENVIRONMENT, dbutils)
     
     return enriched_df
 

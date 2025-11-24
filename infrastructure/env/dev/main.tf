@@ -570,8 +570,8 @@ module "enriched_tables_refresh_job" {
       notebook_path = "/Workspace/Shared/notebooks/tasks/enriched_tables_refresh_task"
 
       parameters = {
-        metadata_key         = "{{job.parameters.metadata_key}}"
-        metadata_value       = "{{job.parameters.metadata_value}}"
+        metadata_key         = "{{metadata_key}}"
+        metadata_value       = "{{metadata_value}}"
         catalog_name         = module.databricks_catalog.catalog_name
         central_schema       = "centrum"
         central_silver_table = "clean_data"
@@ -735,7 +735,7 @@ module "ses_secrets" {
     AUTH_EMAIL_SERVER    = module.ses.auth_email_server
     AUTH_EMAIL_FROM      = "auth@mail.${var.environment}.${var.domain_name}"
     BACKEND_EMAIL_SERVER = module.ses.auth_email_server
-    BACKEND_EMAIL_FROM   = "experiments@mail.${var.environment}.${var.domain_name}"
+    BACKEND_EMAIL_FROM   = "notifications@mail.${var.environment}.${var.domain_name}"
   })
 
   tags = {
