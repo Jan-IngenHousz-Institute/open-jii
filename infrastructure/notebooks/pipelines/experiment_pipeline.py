@@ -3,8 +3,8 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
-%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
-%pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_aarch64.whl
+%pip install mini-racer==0.12.4
+%pip install /Workspace/Shared/wheels/multispeq-0.3.0-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/rpy2-3.6.4-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
@@ -258,6 +258,7 @@ try:
 except Exception as e:
     print(f"Error during ambyte table creation: {str(e)}")
     
+
 # COMMAND ----------
 
 # DBTITLE 1,Macro Processing Pipeline
@@ -285,7 +286,7 @@ def create_macro_tables():
                 F.col("macro_struct.name").alias("macro_name"),
                 F.col("macro_struct.filename").alias("macro_filename")
             )
-            .distinct()
+            .dropDuplicates(["macro_id", "macro_filename"])
         )
         
         available_macros = get_available_macros(MACROS_PATH)
