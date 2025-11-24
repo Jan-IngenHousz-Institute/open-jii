@@ -77,7 +77,8 @@ describe("<ExperimentVisibilityCard />", () => {
 
     // Should show embargo field with date
     expect(screen.getByText("experimentSettings.embargoUntil")).toBeInTheDocument();
-    expect(screen.getByText("Jan 16, 2026")).toBeInTheDocument();
+    // Check for date button (format may vary by timezone)
+    expect(screen.getByRole("button", { name: /Jan 1[56], 2026/ })).toBeInTheDocument();
     expect(screen.getByText("newExperiment.embargoUntilHelperString")).toBeInTheDocument();
   });
 
