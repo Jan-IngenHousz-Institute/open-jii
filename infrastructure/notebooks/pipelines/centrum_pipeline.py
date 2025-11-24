@@ -47,6 +47,8 @@ sensor_schema = StructType([
 
 # DBTITLE 1,Configuration
 
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
 
@@ -56,7 +58,6 @@ CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 
 # Slack notification configuration
-ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 # COMMAND ----------
@@ -166,10 +167,35 @@ def clean_data():
         "ingest_latency_ms", 
         F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
     )
-    
-    # Extract macros from parsed_data (now available at top-level in sensor_schema)
-    df = df.withColumn("macros", F.col("parsed_data.macros"))
-    
+
+    # Extract macros from parsed_data or fall back to legacy behaviour
+    df = df.withColumn(
+        "macros",
+        F.when(
+            F.col("parsed_data.macros").isNotNull(),
+            F.col("parsed_data.macros")
+        ).otherwise(
+            F.when(
+                F.col("sample").isNotNull(),
+                F.expr("""
+                    flatten(
+                        transform(
+                            from_json(sample, 'array<string>'),
+                            x -> transform(
+                                from_json(get_json_object(x, '$.macros'), 'array<string>'),
+                                m -> named_struct(
+                                    'id', m,
+                                    'name', m, 
+                                    'filename', m
+                                )
+                            )
+                        )
+                    )
+                """)
+            ).otherwise(F.array())
+        )
+    )
+
     # Extract questions from the parsed_data and keep in original array structure
     df = df.withColumn(
         "questions",
