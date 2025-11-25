@@ -496,14 +496,20 @@ def enriched_{macro_table_name}_table():
     macro_df = dlt.read_stream("macro_{macro_table_name}")
     
     # Discover all question labels used in this experiment
-    question_labels = get_experiment_question_labels(CATALOG_NAME, CENTRAL_SCHEMA, CENTRAL_SILVER_TABLE, EXPERIMENT_ID)
+    question_labels = get_experiment_question_labels(
+        spark,
+        CATALOG_NAME,
+        CENTRAL_SCHEMA,
+        CENTRAL_SILVER_TABLE,
+        EXPERIMENT_ID
+    )
     
     # Add individual question columns based on discovered labels
     macro_with_questions = add_question_columns(macro_df, question_labels)
     
-    # Add user metadata column
+    # Add user metadata column and remove the original questions array column
     from enrich import add_user_data_column
-    enriched_df = add_user_data_column(macro_with_questions, ENVIRONMENT, dbutils)
+    enriched_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
     return enriched_df
 '''
@@ -560,13 +566,19 @@ def enriched_sample():
     sample_df = dlt.read_stream(SAMPLE_TABLE)
     
     # Discover all question labels used in this experiment
-    question_labels = get_experiment_question_labels(CATALOG_NAME, CENTRAL_SCHEMA, CENTRAL_SILVER_TABLE, EXPERIMENT_ID)
-    
+    question_labels = get_experiment_question_labels(
+        spark,
+        CATALOG_NAME,
+        CENTRAL_SCHEMA,
+        CENTRAL_SILVER_TABLE,
+        EXPERIMENT_ID
+    )
+
     # Add individual question columns based on discovered labels
     sample_with_questions = add_question_columns(sample_df, question_labels)
     
-    # Add user metadata column
-    enriched_df = add_user_data_column(sample_with_questions, ENVIRONMENT, dbutils)
+    # Add user metadata column and remove the original questions array column
+    enriched_df = add_user_data_column(sample_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
     return enriched_df
 

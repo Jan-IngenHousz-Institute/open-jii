@@ -2,7 +2,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StringType
 
 # DBTITLE 1,Helper Functions for Questions Processing
-def get_experiment_question_labels(catalog_name, central_schema, central_silver_table, experiment_id):
+def get_experiment_question_labels(spark, catalog_name, central_schema, central_silver_table, experiment_id):
     """
     Discover all unique question labels used in the experiment.
     Similar to how we discover macros, but for question labels.

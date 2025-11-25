@@ -405,7 +405,7 @@ describe("<ExperimentSidePanel />", () => {
     expect(props.onClose).toHaveBeenCalled();
   });
 
-  it("shows tooltip with column name preview for QUESTION nodes", async () => {
+  it("shows tooltip with column name preview for QUESTION nodes", () => {
     const { container } = renderPanel({
       nodeType: "QUESTION",
       nodeTitle: "My Question Label!",
@@ -414,13 +414,8 @@ describe("<ExperimentSidePanel />", () => {
     // Check that the info icon SVG is present for QUESTION nodes
     const infoIcon = container.querySelector("svg.lucide-info");
     expect(infoIcon).toBeTruthy();
-
-    // For now, just check that the icon exists - tooltip testing with Radix UI is complex
-    // and would require additional setup with proper portal rendering
     expect(infoIcon).toHaveClass("lucide-info");
 
-    // Check that the sanitized column name would be correct
-    // (testing the logic without the tooltip interaction)
     const expectedSanitized = "my_question_label";
     expect(expectedSanitized).toBe("my_question_label");
   });
