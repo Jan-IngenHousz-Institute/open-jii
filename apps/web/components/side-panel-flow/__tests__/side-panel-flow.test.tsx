@@ -412,13 +412,13 @@ describe("<ExperimentSidePanel />", () => {
     });
 
     // Check that the info icon SVG is present for QUESTION nodes
-    const infoIcon = container.querySelector('svg.lucide-info');
+    const infoIcon = container.querySelector("svg.lucide-info");
     expect(infoIcon).toBeTruthy();
 
     // For now, just check that the icon exists - tooltip testing with Radix UI is complex
     // and would require additional setup with proper portal rendering
-    expect(infoIcon).toHaveClass('lucide-info');
-    
+    expect(infoIcon).toHaveClass("lucide-info");
+
     // Check that the sanitized column name would be correct
     // (testing the logic without the tooltip interaction)
     const expectedSanitized = "my_question_label";
@@ -431,9 +431,9 @@ describe("<ExperimentSidePanel />", () => {
       nodeTitle: "",
     });
 
-    const infoIcon = container.querySelector('svg.lucide-info');
+    const infoIcon = container.querySelector("svg.lucide-info");
     expect(infoIcon).toBeTruthy();
-    expect(infoIcon).toHaveClass('lucide-info');
+    expect(infoIcon).toHaveClass("lucide-info");
   });
 
   it("does not show info icon for non-QUESTION nodes", () => {
@@ -443,7 +443,7 @@ describe("<ExperimentSidePanel />", () => {
     });
 
     // Should not have the info icon
-    const infoIcon = container.querySelector('svg.lucide-info');
+    const infoIcon = container.querySelector("svg.lucide-info");
     expect(infoIcon).toBeFalsy();
   });
 
