@@ -95,10 +95,9 @@ export class AddAnnotationsUseCase {
         );
 
         if (result.isFailure()) {
-          return failure(AppError.internal(`Failed to get table data: ${result.error.message}`));
+          return failure(AppError.internal(`Failed to add annotations: ${result.error.message}`));
         }
 
-        this.logger.log(result.value);
         return success(result.value);
       },
     );
