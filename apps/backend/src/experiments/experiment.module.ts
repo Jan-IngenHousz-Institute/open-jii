@@ -16,7 +16,7 @@ import { EmbargoProcessorService } from "./application/services/embargo-processo
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
-// import { AddAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/add-annotation/add-annotation";
+import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
@@ -59,7 +59,7 @@ import { ExperimentVisualizationRepository } from "./core/repositories/experimen
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 // Controllers
-// import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
+import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
@@ -80,7 +80,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentVisualizationsController,
     ExperimentWebhookController,
     ExperimentLocationsController,
-    // ExperimentDataAnnotationsController,
+    ExperimentDataAnnotationsController,
   ],
   providers: [
     // Port implementations
@@ -159,7 +159,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     UpdateFlowUseCase,
 
     // Experiment data annotation use cases
-    // AddAnnotationUseCase,
+    AddAnnotationsUseCase,
     // ListAnnotationsUseCase,
     // UpdateAnnotationUseCase,
     // DeleteAnnotationUseCase,

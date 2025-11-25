@@ -154,7 +154,7 @@ export const zAnnotationContent = z.union([zAnnotationCommentContent, zAnnotatio
 
 export const zAnnotation = z.object({
   id: z.string().uuid(),
-  rowId: z.string().uuid().optional(),
+  rowId: z.string().optional(),
   type: zAnnotationType,
   content: zAnnotationContent,
   createdBy: z.string().uuid(),
@@ -172,7 +172,7 @@ export const zAnnotationPathParam = z.object({
 
 export const zAddAnnotationBody = z.object({
   tableName: z.string(),
-  rowId: z.string().uuid(),
+  rowId: z.string().min(1),
   annotation: z.object({
     type: zAnnotationType,
     content: zAnnotationContent,
@@ -181,7 +181,7 @@ export const zAddAnnotationBody = z.object({
 
 export const zAddAnnotationsBulkBody = z.object({
   tableName: z.string(),
-  rowIds: z.array(z.string().uuid().min(1)).min(1),
+  rowIds: z.array(z.string().min(1)).min(1),
   annotation: z.object({
     type: zAnnotationType,
     content: zAnnotationContent,
@@ -204,6 +204,10 @@ export const zAnnotationDeleteBulkPathParam = z.object({
 
 export const zAnnotationDeleteBulkBody = z.object({
   annotationIds: z.array(z.string().uuid().min(1)).min(1).describe("Annotation IDs to delete"),
+});
+
+export const zAnnotationRowsAffected = z.object({
+  rowsAffected: z.number().int(),
 });
 
 // Experiment data schema
@@ -904,3 +908,4 @@ export type AddAnnotationBody = z.infer<typeof zAddAnnotationBody>;
 export type AddAnnotationsBulkBody = z.infer<typeof zAddAnnotationsBulkBody>;
 export type UpdateAnnotationBody = z.infer<typeof zUpdateAnnotationBody>;
 export type DeleteAnnotationsBulkBody = z.infer<typeof zAnnotationDeleteBulkBody>;
+export type AnnotationRowsAffected = z.infer<typeof zAnnotationRowsAffected>;
