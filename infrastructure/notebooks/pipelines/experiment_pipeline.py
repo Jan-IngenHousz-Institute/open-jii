@@ -356,7 +356,8 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     UDF returns JSON string, then we parse it using the inferred StructType schema.
     """
     # Use filename directly for table creation
-    macro_table_name = macro_filename
+    macro_table_name = macro_filename.removeprefix("macro_")
+
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
         "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
@@ -369,7 +370,7 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     return f'''
 # Base macro table
 @dlt.table(
-    name="{macro_table_name}",
+    name="macro_{macro_table_name}",
     comment="Output from macro: {macro_name}",
     table_properties={{
         "quality": "bronze",
@@ -476,7 +477,7 @@ def {macro_table_name}_table():
 
 # Enriched macro table with user metadata
 @dlt.table(
-    name="enriched_{macro_table_name}",
+    name="enriched_macro_{macro_table_name}",
     comment="Enriched output from macro: {macro_name} with user metadata",
     table_properties={{
         "quality": "silver",
@@ -492,7 +493,7 @@ def enriched_{macro_table_name}_table():
     """
     
     # Read from the silver macro table (this creates the dependency)
-    macro_df = dlt.read_stream("{macro_table_name}")
+    macro_df = dlt.read_stream("macro_{macro_table_name}")
     
     # Add user metadata column
     from enrich import add_user_data_column
