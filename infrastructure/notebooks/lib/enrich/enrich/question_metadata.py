@@ -1,9 +1,5 @@
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType
-from pyspark.sql import SparkSession
-
-spark = SparkSession.builder.getOrCreate()
-
 
 # DBTITLE 1,Helper Functions for Questions Processing
 def get_experiment_question_labels(catalog_name, central_schema, central_silver_table, experiment_id):
