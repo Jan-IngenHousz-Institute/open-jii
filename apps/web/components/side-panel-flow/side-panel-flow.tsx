@@ -1,8 +1,18 @@
 import type { Edge, Node } from "@xyflow/react";
+import { Info } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components";
 
 import { AnalysisPanel } from "./analysis-panel";
 import { EdgeSidePanel } from "./edge-panel";
@@ -27,6 +37,16 @@ function isQuestionUI(obj: unknown): obj is QuestionUI {
     typeof rec.required === "boolean" &&
     (rec.options === undefined || Array.isArray(rec.options))
   );
+}
+
+// Sanitize column name (mirroring backend logic)
+function sanitizeColumnName(title: string): string {
+  let sanitized = title.toLowerCase().replace(/[ ,;{}()\n\t=]+/g, "_");
+  sanitized = sanitized.replace(/^_+|_+$/g, "").replace(/_+/g, "_");
+  if (!sanitized || /^\d/.test(sanitized)) {
+    sanitized = `question_${sanitized}`;
+  }
+  return sanitized;
 }
 
 export interface ExperimentSidePanelProps {
@@ -119,7 +139,31 @@ export function ExperimentSidePanel({
           {/* Label input field wrapped in Card */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-jii-dark-green">{t("sidePanelFlow.label")}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-jii-dark-green">{t("sidePanelFlow.label")}</CardTitle>
+                {displayNodeType === "QUESTION" && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs">
+                        <div className="space-y-1">
+                          <p className="font-medium">{t("flow.questionTooltip.title")}</p>
+                          <p className="text-xs">
+                            {t("flow.questionTooltip.description")}
+                            <span className="ml-1 rounded bg-gray-800 px-1 font-mono text-xs text-white">
+                              {currentTitle
+                                ? sanitizeColumnName(currentTitle)
+                                : t("flow.questionTooltip.defaultColumnName")}
+                            </span>
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <input
