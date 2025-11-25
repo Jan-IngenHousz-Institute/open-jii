@@ -1,6 +1,11 @@
 import type { FeatureFlagKey } from "@repo/analytics";
 
 /**
+ * Injection token for the Analytics port
+ */
+export const ANALYTICS_PORT = Symbol("ANALYTICS_PORT");
+
+/**
  * Port for analytics and feature flag operations
  * This interface defines the contract for feature flag checking
  * in the protocols domain

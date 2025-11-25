@@ -246,7 +246,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
         <div className="relative">
           {/* Placeholder overlay */}
           {!editorValue && placeholder && (
-            <div className="pointer-events-none absolute left-4 top-4 z-10 text-sm text-slate-400">
+            <div className="pointer-events-none absolute left-12 top-4 z-10 text-sm text-slate-400">
               {placeholder}
             </div>
           )}

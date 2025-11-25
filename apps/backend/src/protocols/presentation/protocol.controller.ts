@@ -1,4 +1,4 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Inject, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
@@ -8,7 +8,6 @@ import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
-import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
@@ -17,6 +16,7 @@ import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-pr
 import { ListProtocolsUseCase } from "../application/use-cases/list-protocols/list-protocols";
 import { UpdateProtocolUseCase } from "../application/use-cases/update-protocol/update-protocol";
 import { CreateProtocolDto } from "../core/models/protocol.model";
+import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
 
 /**
@@ -111,7 +111,8 @@ export class ProtocolController {
   private readonly logger = new Logger(ProtocolController.name);
 
   constructor(
-    private readonly analyticsAdapter: AnalyticsAdapter,
+    @Inject(ANALYTICS_PORT)
+    private readonly analyticsPort: AnalyticsPort,
     private readonly createProtocolUseCase: CreateProtocolUseCase,
     private readonly getProtocolUseCase: GetProtocolUseCase,
     private readonly listProtocolsUseCase: ListProtocolsUseCase,
@@ -169,7 +170,7 @@ export class ProtocolController {
       const validationResult = await validateProtocolCode(
         body.code,
         this.logger,
-        this.analyticsAdapter,
+        this.analyticsPort,
       );
       if (validationResult.isFailure()) {
         return handleFailure(validationResult, this.logger);
@@ -226,7 +227,7 @@ export class ProtocolController {
         const validationResult = await validateProtocolCode(
           body.code,
           this.logger,
-          this.analyticsAdapter,
+          this.analyticsPort,
         );
         if (validationResult.isFailure()) {
           return handleFailure(validationResult, this.logger);

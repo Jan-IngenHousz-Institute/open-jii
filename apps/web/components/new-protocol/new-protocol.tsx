@@ -51,6 +51,7 @@ export function NewProtocolForm() {
     });
     toast({ description: t("protocols.protocolCreated") });
   }
+
   const isDisabled = useMemo(() => {
     return isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid;
   }, [isPending, form.formState.isDirty, form.formState.isValid, isCodeValid]);

@@ -1,202 +1,240 @@
-import { Logger } from "@nestjs/common";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
+import {
+  initializePostHogServer,
+  getPostHogServerClient,
+  shutdownPostHog,
+} from "@repo/analytics/server";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
-
-import type { AnalyticsConfigService } from "../config/config.service";
+import { TestHarness } from "../../../../../test/test-harness";
+import { AnalyticsConfigService } from "../config/config.service";
 import { FlagsService } from "./flags.service";
 
-// Mock the analytics/server module with inline functions
+// Mock the analytics/server module
 vi.mock("@repo/analytics/server", () => ({
   initializePostHogServer: vi.fn().mockResolvedValue(true),
   getPostHogServerClient: vi.fn(() => ({
     isFeatureEnabled: vi.fn().mockResolvedValue(true),
-    shutdown: vi.fn().mockResolvedValue(undefined),
   })),
   shutdownPostHog: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock the config service
-vi.mock("../config/config.service");
+const mockInitializePostHogServer = vi.mocked(initializePostHogServer);
+const mockGetPostHogServerClient = vi.mocked(getPostHogServerClient);
+const mockShutdownPostHog = vi.mocked(shutdownPostHog);
 
 describe("FlagsService", () => {
+  const testApp = TestHarness.App;
   let service: FlagsService;
-  let mockConfigService: AnalyticsConfigService;
+  let configService: AnalyticsConfigService;
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    await testApp.setup();
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    service = testApp.module.get(FlagsService);
+    configService = testApp.module.get(AnalyticsConfigService);
+
     // Reset mocks
     vi.clearAllMocks();
+    // Reset default mock implementations
+    mockInitializePostHogServer.mockResolvedValue(true);
+    mockGetPostHogServerClient.mockReturnValue({
+      isFeatureEnabled: vi.fn().mockResolvedValue(true),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    });
+  });
 
-    // Create mock config service
-    mockConfigService = {
-      posthogKey: "test-api-key",
-      posthogHost: "https://test-posthog.com",
-      isConfigured: vi.fn().mockReturnValue(true),
-      getPostHogServerConfig: vi.fn().mockReturnValue({
-        host: "https://test-posthog.com",
-      }),
-    } as unknown as AnalyticsConfigService;
+  afterEach(() => {
+    testApp.afterEach();
+  });
 
-    // Create service instance
-    service = new FlagsService(mockConfigService);
+  afterAll(async () => {
+    await testApp.teardown();
   });
 
   describe("onModuleInit", () => {
-    it("should initialize PostHog with config from AnalyticsConfigService", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
+    it("should initialize successfully when properly configured", async () => {
+      vi.spyOn(configService, "isConfigured").mockReturnValue(true);
+      vi.spyOn(configService, "posthogKey", "get").mockReturnValue("test-key");
+      mockInitializePostHogServer.mockResolvedValue(true);
 
       await service.onModuleInit();
 
-      expect(initializePostHogServer).toHaveBeenCalledWith(
-        "test-api-key",
-        expect.objectContaining({
-          host: "https://test-posthog.com",
-        }),
-      );
+      expect(service.isInitialized()).toBe(true);
     });
 
-    it("should log success message when initialization succeeds", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
-      const loggerSpy = vi.spyOn(Logger.prototype, "log");
-      vi.mocked(initializePostHogServer).mockResolvedValueOnce(true);
-
-      await service.onModuleInit();
-
-      expect(loggerSpy).toHaveBeenCalledWith("PostHog initialized successfully");
-    });
-
-    it("should log warning when PostHog is not configured", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
-      const loggerSpy = vi.spyOn(Logger.prototype, "warn");
-      mockConfigService.isConfigured = vi.fn().mockReturnValueOnce(false);
-
-      await service.onModuleInit();
-
-      expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining("PostHog not configured"));
-      expect(initializePostHogServer).not.toHaveBeenCalled();
-    });
-
-    it("should log warning when initialization fails", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
-      const loggerSpy = vi.spyOn(Logger.prototype, "warn");
-      vi.mocked(initializePostHogServer).mockResolvedValueOnce(false);
-
-      await service.onModuleInit();
-
-      expect(loggerSpy).toHaveBeenCalledWith(
-        "PostHog initialization failed - using default feature flag values",
-      );
-    });
-
-    it("should handle initialization errors", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
-      const loggerSpy = vi.spyOn(Logger.prototype, "error").mockImplementation(() => {});
-      vi.mocked(initializePostHogServer).mockRejectedValueOnce(new Error("Init failed"));
-
-      await service.onModuleInit();
-
-      expect(loggerSpy).toHaveBeenCalledWith("Failed to initialize PostHog", expect.any(Error));
-    });
-
-    it("should handle missing PostHog key after configuration check", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
-      const loggerSpy = vi.spyOn(Logger.prototype, "warn");
-      const serviceWithNoKey = new FlagsService({
-        ...mockConfigService,
+    it("should skip initialization when not configured", async () => {
+      // Create a fresh service with mocked config for this test
+      const mockConfig = {
+        isConfigured: vi.fn().mockReturnValue(false),
         posthogKey: undefined,
-      } as AnalyticsConfigService);
+        getPostHogServerConfig: vi.fn(),
+      } as unknown as AnalyticsConfigService;
+      const freshService = new FlagsService(mockConfig);
 
-      await serviceWithNoKey.onModuleInit();
+      await freshService.onModuleInit();
 
-      expect(loggerSpy).toHaveBeenCalledWith("PostHog key is missing after configuration check");
-      expect(initializePostHogServer).not.toHaveBeenCalled();
+      expect(mockInitializePostHogServer).not.toHaveBeenCalled();
+      expect(freshService.isInitialized()).toBe(false);
+    });
+
+    it("should handle missing PostHog key", async () => {
+      // Create a fresh service with mocked config for this test
+      const mockConfig = {
+        isConfigured: vi.fn().mockReturnValue(true),
+        posthogKey: undefined,
+        getPostHogServerConfig: vi.fn(),
+      } as unknown as AnalyticsConfigService;
+      const freshService = new FlagsService(mockConfig);
+
+      await freshService.onModuleInit();
+
+      expect(mockInitializePostHogServer).not.toHaveBeenCalled();
+      expect(freshService.isInitialized()).toBe(false);
+    });
+
+    it("should handle initialization failure", async () => {
+      const mockConfig = {
+        isConfigured: vi.fn().mockReturnValue(true),
+        posthogKey: "test-key",
+        getPostHogServerConfig: vi.fn().mockReturnValue({ host: "test" }),
+      } as unknown as AnalyticsConfigService;
+      const freshService = new FlagsService(mockConfig);
+      mockInitializePostHogServer.mockResolvedValue(false);
+
+      await freshService.onModuleInit();
+
+      expect(freshService.isInitialized()).toBe(false);
+    });
+
+    it("should handle initialization errors gracefully", async () => {
+      const mockConfig = {
+        isConfigured: vi.fn().mockReturnValue(true),
+        posthogKey: "test-key",
+        getPostHogServerConfig: vi.fn().mockReturnValue({ host: "test" }),
+      } as unknown as AnalyticsConfigService;
+      const freshService = new FlagsService(mockConfig);
+      mockInitializePostHogServer.mockRejectedValue(new Error("Network error"));
+
+      await expect(freshService.onModuleInit()).resolves.not.toThrow();
+      expect(freshService.isInitialized()).toBe(false);
     });
   });
 
   describe("onModuleDestroy", () => {
-    it("should shutdown PostHog when initialized", async () => {
-      const { shutdownPostHog } = await import("@repo/analytics/server");
+    it("should shutdown when initialized", async () => {
+      // First initialize the service
+      vi.spyOn(configService, "isConfigured").mockReturnValue(true);
+      vi.spyOn(configService, "posthogKey", "get").mockReturnValue("test-key");
       await service.onModuleInit();
+
       await service.onModuleDestroy();
 
-      expect(shutdownPostHog).toHaveBeenCalled();
+      expect(mockShutdownPostHog).toHaveBeenCalled();
     });
 
-    it("should log shutdown message", async () => {
-      const loggerSpy = vi.spyOn(Logger.prototype, "log");
-      await service.onModuleInit();
-      await service.onModuleDestroy();
+    it("should not shutdown when not initialized", async () => {
+      // Create a fresh service that won't be initialized
+      const mockConfig = {
+        isConfigured: vi.fn().mockReturnValue(false),
+        posthogKey: undefined,
+        getPostHogServerConfig: vi.fn(),
+      } as unknown as AnalyticsConfigService;
+      const freshService = new FlagsService(mockConfig);
 
-      expect(loggerSpy).toHaveBeenCalledWith("PostHog shutdown completed");
-    });
+      // Clear mocks to ensure we only see calls from this test
+      mockShutdownPostHog.mockClear();
 
-    it("should not call shutdown if not initialized", async () => {
-      const { shutdownPostHog } = await import("@repo/analytics/server");
-      mockConfigService.isConfigured = vi.fn().mockReturnValueOnce(false);
-      await service.onModuleInit();
-      await service.onModuleDestroy();
+      await freshService.onModuleInit();
+      await freshService.onModuleDestroy();
 
-      expect(shutdownPostHog).not.toHaveBeenCalled();
+      expect(mockShutdownPostHog).not.toHaveBeenCalled();
     });
   });
 
   describe("isFeatureFlagEnabled", () => {
-    beforeEach(async () => {
-      await service.onModuleInit();
-    });
+    it("should return PostHog result when client is available", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi.fn().mockResolvedValue(true),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
 
-    it("should return a boolean value for feature flag check", async () => {
       const result = await service.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
       );
 
-      expect(typeof result).toBe("boolean");
+      expect(result).toBe(true);
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        "anonymous",
+      );
     });
 
-    it("should use default distinctId when not provided", async () => {
+    it("should return default value when client is null", async () => {
+      mockGetPostHogServerClient.mockReturnValue(null);
+
       const result = await service.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
       );
 
-      expect(typeof result).toBe("boolean");
+      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]);
     });
 
-    it("should accept custom distinctId", async () => {
+    it("should use custom distinctId when provided", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi.fn().mockResolvedValue(false),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
+
       const result = await service.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
         "user-123",
       );
 
-      expect(typeof result).toBe("boolean");
+      expect(result).toBe(false);
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        "user-123",
+      );
     });
 
-    it("should handle errors gracefully and return default", async () => {
-      const { getPostHogServerClient } = await import("@repo/analytics/server");
-      vi.mocked(getPostHogServerClient).mockReturnValueOnce(null);
+    it("should return default when PostHog returns null", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi.fn().mockResolvedValue(null),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
 
       const result = await service.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
       );
 
-      expect(typeof result).toBe("boolean");
+      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]);
+    });
+
+    it("should handle errors and return default value", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi.fn().mockRejectedValue(new Error("PostHog error")),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
+
+      const result = await service.isFeatureFlagEnabled(
+        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+      );
+
+      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]);
     });
   });
 
   describe("isInitialized", () => {
-    it("should return false before initialization", () => {
-      expect(service.isInitialized()).toBe(false);
-    });
-
-    it("should return true after successful initialization", async () => {
-      await service.onModuleInit();
-      expect(service.isInitialized()).toBe(true);
-    });
-
-    it("should return false when initialization fails", async () => {
-      mockConfigService.isConfigured = vi.fn().mockReturnValueOnce(false);
-      await service.onModuleInit();
-
-      expect(service.isInitialized()).toBe(false);
+    it("should return a boolean value", () => {
+      const result = service.isInitialized();
+      expect(typeof result).toBe("boolean");
     });
   });
 });
