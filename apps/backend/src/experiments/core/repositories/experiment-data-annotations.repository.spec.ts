@@ -31,24 +31,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
   const mockRowId = faker.string.uuid();
   const mockTableName = "experiment_data_table";
 
-  const mockSchemaData: SchemaData = {
-    columns: [
-      { name: "id", type_name: "STRING", type_text: "string" },
-      { name: "user_id", type_name: "STRING", type_text: "string" },
-      { name: "table_name", type_name: "STRING", type_text: "string" },
-      { name: "row_id", type_name: "STRING", type_text: "string" },
-      { name: "type", type_name: "STRING", type_text: "string" },
-      { name: "content_text", type_name: "STRING", type_text: "string" },
-      { name: "flag_type", type_name: "STRING", type_text: "string" },
-      { name: "flag_reason", type_name: "STRING", type_text: "string" },
-      { name: "created_at", type_name: "TIMESTAMP", type_text: "timestamp" },
-      { name: "updated_at", type_name: "TIMESTAMP", type_text: "timestamp" },
-    ],
-    rows: [],
-    totalRows: 0,
-    truncated: false,
-  };
-
   beforeAll(async () => {
     await testApp.setup();
   });
@@ -80,6 +62,15 @@ describe("ExperimentDataAnnotationsRepository", () => {
       flagType: null,
       flagReason: null,
     });
+    const mockSchemaData: SchemaData = {
+      columns: [
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+      ],
+      rows: [["1", "1"]],
+      totalRows: 1,
+      truncated: false,
+    };
 
     it("should successfully store single annotation", async () => {
       // Arrange
@@ -98,12 +89,12 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toEqual(mockSchemaData);
+      expect(result.value).toEqual({ rowsAffected: 1 });
 
       expect(databricksPort.executeExperimentSqlQuery).toHaveBeenCalledWith(
         mockExperimentName,
         mockExperimentId,
-        expect.stringContaining("INSERT INTO experiment_annotations"),
+        expect.stringContaining("INSERT INTO annotations"),
       );
     });
 
@@ -149,12 +140,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toEqual({
-        columns: [],
-        rows: [],
-        totalRows: 0,
-        truncated: false,
-      });
+      expect(result.value).toEqual({ rowsAffected: 0 });
       // Method is not called for empty arrays
     });
 
@@ -226,7 +212,9 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Assert
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error).toBe(databricksError);
+      expect(result.error.message).toBe(
+        "Failed to insert annotation: Databricks connection failed",
+      );
     });
   });
 
@@ -235,6 +223,15 @@ describe("ExperimentDataAnnotationsRepository", () => {
       contentText: "Updated comment text",
       flagType: "needs_review",
       flagReason: "Requires additional verification",
+    };
+    const mockSchemaData: SchemaData = {
+      columns: [
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_updated_rows", type_name: "LONG", type_text: "BIGINT" },
+      ],
+      rows: [["1", "1"]],
+      totalRows: 1,
+      truncated: false,
     };
 
     it("should successfully update annotation", async () => {
@@ -258,7 +255,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeExperimentSqlQuery).toHaveBeenCalledWith(
         mockExperimentName,
         mockExperimentId,
-        expect.stringContaining("UPDATE experiment_annotations"),
+        expect.stringContaining("UPDATE annotations"),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeExperimentSqlQuery).mock.calls[0];
@@ -338,6 +335,16 @@ describe("ExperimentDataAnnotationsRepository", () => {
   });
 
   describe("deleteAnnotation", () => {
+    const mockSchemaData: SchemaData = {
+      columns: [
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+      ],
+      rows: [["1", "1"]],
+      totalRows: 1,
+      truncated: false,
+    };
+
     it("should successfully delete annotation", async () => {
       // Arrange
       vi.spyOn(databricksPort, "executeExperimentSqlQuery").mockResolvedValue(
@@ -358,7 +365,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeExperimentSqlQuery).toHaveBeenCalledWith(
         mockExperimentName,
         mockExperimentId,
-        expect.stringContaining("DELETE FROM experiment_annotations"),
+        expect.stringContaining("DELETE FROM annotations"),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeExperimentSqlQuery).mock.calls[0];
@@ -385,6 +392,15 @@ describe("ExperimentDataAnnotationsRepository", () => {
   });
 
   describe("deleteAnnotationsBulk", () => {
+    const mockSchemaData: SchemaData = {
+      columns: [
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+      ],
+      rows: [["1", "1"]],
+      totalRows: 1,
+      truncated: false,
+    };
     const annotationIds = [faker.string.uuid(), faker.string.uuid(), faker.string.uuid()];
 
     it("should successfully delete multiple annotations", async () => {
@@ -407,7 +423,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeExperimentSqlQuery).toHaveBeenCalledWith(
         mockExperimentName,
         mockExperimentId,
-        expect.stringContaining("DELETE FROM experiment_annotations"),
+        expect.stringContaining("DELETE FROM annotations"),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeExperimentSqlQuery).mock.calls[0];
@@ -427,12 +443,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toEqual({
-        columns: [],
-        rows: [],
-        totalRows: 0,
-        truncated: false,
-      });
+      expect(result.value).toEqual({ rowsAffected: 0 });
       // Method is not called for empty arrays
     });
 
@@ -478,6 +489,16 @@ describe("ExperimentDataAnnotationsRepository", () => {
   });
 
   describe("SQL injection protection", () => {
+    const mockSchemaData: SchemaData = {
+      columns: [
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+      ],
+      rows: [["1", "1"]],
+      totalRows: 1,
+      truncated: false,
+    };
+
     it("should protect against SQL injection in annotation content", async () => {
       // Arrange
       const maliciousAnnotation: CreateAnnotationDto = {
@@ -485,7 +506,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
         tableName: mockTableName,
         rowId: mockRowId,
         type: "comment",
-        contentText: "'; DROP TABLE experiment_annotations; --",
+        contentText: "'; DROP TABLE annotations; --",
         flagType: null,
         flagReason: null,
       };
@@ -506,7 +527,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const sqlQuery = sqlCall[2];
 
       // SQL injection attempt should be properly escaped (single quotes escaped as double quotes)
-      expect(sqlQuery).toContain("''; DROP TABLE experiment_annotations; --'");
+      expect(sqlQuery).toContain("''; DROP TABLE annotations; --'");
       // The malicious string should not appear unescaped in the final query
     });
 

@@ -2,6 +2,8 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { SafeParseReturnType, z } from "zod";
 
+import { AnnotationRowsAffected } from "@repo/api";
+
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";
 import {
@@ -63,7 +65,6 @@ export class ExperimentDataAnnotationsRepository {
       const validations = [
         this.validate.uuid(annotation.id),
         this.validate.uuid(annotation.userId),
-        this.validate.uuid(annotation.rowId),
         this.validate.identifier(annotation.tableName),
         this.validate.identifier(annotation.type),
         this.validate.content(annotation.contentText),
@@ -71,7 +72,7 @@ export class ExperimentDataAnnotationsRepository {
         this.validate.content(annotation.flagReason),
       ];
 
-      return validations.every((result) => result.success === true);
+      return validations.every((result) => result.success);
     },
 
     updateData: (updateData: Partial<UpdateAnnotationDto>): boolean => {
@@ -90,9 +91,69 @@ export class ExperimentDataAnnotationsRepository {
         validations.push(this.validate.content(updateData.flagReason));
       }
 
-      return validations.every((result) => result.success === true);
+      return validations.every((result) => result.success);
     },
   };
+
+  async deleteAnnotationsTable(
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<SchemaData>> {
+    const createTableQuery = `
+      DROP TABLE annotations
+    `;
+
+    return this.databricksPort.executeExperimentSqlQuery(
+      experimentName,
+      experimentId,
+      createTableQuery,
+    );
+  }
+
+  /*
+   * Ensure the annotations table exists
+   */
+  async ensureTableExists(
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<SchemaData>> {
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS annotations (
+        id STRING NOT NULL PRIMARY KEY,
+        user_id STRING NOT NULL,
+        table_name STRING NOT NULL,
+        row_id INT NOT NULL,
+        type STRING NOT NULL,
+        content_text STRING,
+        flag_type STRING,
+        flag_reason STRING,
+        created_at TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+      )
+      USING DELTA
+    `;
+
+    return this.databricksPort.executeExperimentSqlQuery(
+      experimentName,
+      experimentId,
+      createTableQuery,
+    );
+  }
+
+  private getRowsAffectedFromResult(result: SchemaData): AnnotationRowsAffected {
+    if (result.rows[0]) {
+      const rowsAffectedIndex = result.columns.findIndex((col) => col.name === "num_affected_rows");
+      if (rowsAffectedIndex !== -1 && result.rows[0][rowsAffectedIndex]) {
+        const rowsAffected = parseInt(result.rows[0][rowsAffectedIndex], 10);
+        return {
+          rowsAffected,
+        };
+      }
+    }
+    return {
+      rowsAffected: 0,
+    };
+  }
 
   /**
    * Store multiple annotations in the experiment annotations table
@@ -101,11 +162,11 @@ export class ExperimentDataAnnotationsRepository {
     experimentName: string,
     experimentId: string,
     annotations: CreateAnnotationDto[],
-  ): Promise<Result<SchemaData>> {
+  ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log(`Storing ${annotations.length} annotations for experiment ${experimentId}`);
 
     if (annotations.length === 0) {
-      return success({ columns: [], rows: [], totalRows: 0, truncated: false } as SchemaData);
+      return success({ rowsAffected: 0 } as AnnotationRowsAffected);
     }
 
     const now = new Date();
@@ -149,7 +210,7 @@ export class ExperimentDataAnnotationsRepository {
     );
 
     const insertQuery = `
-      INSERT INTO experiment_annotations (
+      INSERT INTO annotations (
         id,
         user_id,
         table_name,
@@ -163,7 +224,17 @@ export class ExperimentDataAnnotationsRepository {
       ) VALUES ${valuesClauses.join(", ")}
     `;
 
-    return this.databricksPort.executeExperimentSqlQuery(experimentName, experimentId, insertQuery);
+    const insertResult = await this.databricksPort.executeExperimentSqlQuery(
+      experimentName,
+      experimentId,
+      insertQuery,
+    );
+    if (insertResult.isFailure()) {
+      return failure(
+        AppError.internal(`Failed to insert annotation: ${insertResult.error.message}`),
+      );
+    }
+    return success(this.getRowsAffectedFromResult(insertResult.value));
   }
 
   /**
@@ -174,7 +245,7 @@ export class ExperimentDataAnnotationsRepository {
     experimentId: string,
     annotationId: string,
     updateData: UpdateAnnotationDto,
-  ): Promise<Result<SchemaData>> {
+  ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log(`Updating annotation ${annotationId} for experiment ${experimentId}`);
 
     if (!this.validate.updateData(updateData)) {
@@ -205,12 +276,22 @@ export class ExperimentDataAnnotationsRepository {
 
     // Build raw SQL string for update
     const updateQuery = `
-      UPDATE experiment_annotations 
+      UPDATE annotations 
       SET ${setClauses.join(", ")}
       WHERE id = '${annotationId}'
     `;
 
-    return this.databricksPort.executeExperimentSqlQuery(experimentName, experimentId, updateQuery);
+    const updateResult = await this.databricksPort.executeExperimentSqlQuery(
+      experimentName,
+      experimentId,
+      updateQuery,
+    );
+    if (updateResult.isFailure()) {
+      return failure(
+        AppError.internal(`Failed to update annotation: ${updateResult.error.message}`),
+      );
+    }
+    return success(this.getRowsAffectedFromResult(updateResult.value));
   }
 
   /**
@@ -220,7 +301,7 @@ export class ExperimentDataAnnotationsRepository {
     experimentName: string,
     experimentId: string,
     annotationId: string,
-  ): Promise<Result<SchemaData>> {
+  ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log(`Deleting annotation ${annotationId} for experiment ${experimentId}`);
 
     // Validate input parameters
@@ -231,11 +312,21 @@ export class ExperimentDataAnnotationsRepository {
 
     // Build raw SQL string for delete
     const deleteQuery = `
-      DELETE FROM experiment_annotations
+      DELETE FROM annotations
       WHERE id = '${annotationId}'
     `;
 
-    return this.databricksPort.executeExperimentSqlQuery(experimentName, experimentId, deleteQuery);
+    const deleteResult = await this.databricksPort.executeExperimentSqlQuery(
+      experimentName,
+      experimentId,
+      deleteQuery,
+    );
+    if (deleteResult.isFailure()) {
+      return failure(
+        AppError.internal(`Failed to delete annotation: ${deleteResult.error.message}`),
+      );
+    }
+    return success(this.getRowsAffectedFromResult(deleteResult.value));
   }
 
   /**
@@ -245,11 +336,11 @@ export class ExperimentDataAnnotationsRepository {
     experimentName: string,
     experimentId: string,
     annotationIds: string[],
-  ): Promise<Result<SchemaData>> {
+  ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log(`Bulk deleting ${annotationIds.length} annotations`);
 
     if (annotationIds.length === 0) {
-      return success({ columns: [], rows: [], totalRows: 0, truncated: false } as SchemaData);
+      return success({ rowsAffected: 0 } as AnnotationRowsAffected);
     }
 
     // Validate input parameters
@@ -263,10 +354,20 @@ export class ExperimentDataAnnotationsRepository {
 
     // Build raw SQL string for bulk delete
     const deleteQuery = `
-      DELETE FROM experiment_annotations
+      DELETE FROM annotations
       WHERE id IN (${annotationIdsList})
     `;
 
-    return this.databricksPort.executeExperimentSqlQuery(experimentName, experimentId, deleteQuery);
+    const deleteResult = await this.databricksPort.executeExperimentSqlQuery(
+      experimentName,
+      experimentId,
+      deleteQuery,
+    );
+    if (deleteResult.isFailure()) {
+      return failure(
+        AppError.internal(`Failed to delete annotation: ${deleteResult.error.message}`),
+      );
+    }
+    return success(this.getRowsAffectedFromResult(deleteResult.value));
   }
 }
