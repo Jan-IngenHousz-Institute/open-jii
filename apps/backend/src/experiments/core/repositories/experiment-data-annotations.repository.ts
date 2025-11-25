@@ -231,7 +231,7 @@ export class ExperimentDataAnnotationsRepository {
     );
     if (insertResult.isFailure()) {
       return failure(
-        AppError.internal(`Failed to insert annotation: ${insertResult.error.message}`),
+        AppError.internal(`Failed to insert annotations: ${insertResult.error.message}`),
       );
     }
     return success(this.getRowsAffectedFromResult(insertResult.value));

@@ -213,7 +213,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.message).toBe(
-        "Failed to insert annotation: Databricks connection failed",
+        "Failed to insert annotations: Databricks connection failed",
       );
     });
   });
