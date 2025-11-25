@@ -1158,6 +1158,14 @@ module "backend_ecs" {
     {
       name  = "EMAIL_BASE_URL"
       value = "https://${module.route53.environment_domain}"
+    },
+    {
+      name  = "POSTHOG_KEY"
+      value = var.posthog_key
+    },
+    {
+      name  = "POSTHOG_HOST"
+      value = var.posthog_host
     }
   ]
 
