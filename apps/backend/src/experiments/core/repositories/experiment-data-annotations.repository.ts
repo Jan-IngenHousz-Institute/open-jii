@@ -128,10 +128,22 @@ export class ExperimentDataAnnotationsRepository {
       USING DELTA
     `;
 
-    return this.databricksPort.executeExperimentSqlQuery(
+    const createResult = await this.databricksPort.executeExperimentSqlQuery(
       experimentName,
       experimentId,
       createTableQuery,
+    );
+    if (createResult.isFailure()) {
+      return failure(AppError.internal(createResult.error.message));
+    }
+
+    const alterTableQuery = `
+      ALTER TABLE annotations SET TBLPROPERTIES(downstream = "false")
+    `;
+    return this.databricksPort.executeExperimentSqlQuery(
+      experimentName,
+      experimentId,
+      alterTableQuery,
     );
   }
 
