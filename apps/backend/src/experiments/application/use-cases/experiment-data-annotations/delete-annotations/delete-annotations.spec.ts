@@ -97,6 +97,67 @@ describe("DeleteAnnotations", () => {
     expect(result.value).toStrictEqual({ rowsAffected: 1 });
   });
 
+  it("should delete multiple annotations", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Match any body value to match the delete statement with random IDs
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: 2,
+            columns: [
+              { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+              { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+            ],
+          },
+          total_row_count: 1,
+          truncated: false,
+        },
+        result: {
+          data_array: [["3", "3"]],
+          chunk_index: 0,
+          row_count: 0,
+          row_offset: 0,
+        },
+      });
+
+    const request: DeleteAnnotationsRequest = {
+      tableName: "test_table",
+      rowIds: ["row1", "row2", "row3"],
+      type: "comment",
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, request, testUserId);
+
+    // Assert result is success
+    if (result.isFailure()) {
+      console.log("Test failed with error:", result.error);
+    }
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+
+    expect(result.value).toStrictEqual({ rowsAffected: 3 });
+  });
+
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
     const request: DeleteAnnotationsRequest = {
