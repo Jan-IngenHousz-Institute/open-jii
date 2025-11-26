@@ -223,14 +223,11 @@ describe("ExperimentLocationManagement", () => {
 
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByTestId("card-title")).toBeInTheDocument();
-      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
-      expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
-
-      // Check for loading skeleton - it should have a div with animate-pulse class
-      const container = screen.getByTestId("card-title").parentElement?.parentElement;
-      expect(container?.querySelector(".animate-pulse")).toBeInTheDocument();
-      expect(container?.querySelector(".h-\\[460px\\]")).toBeInTheDocument();
+      // Check that the loading skeleton is shown and the map is not rendered yet
+      expect(screen.queryByTestId("map-component")).not.toBeInTheDocument();
+      const container = document.body;
+      expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+      expect(container.getElementsByClassName("h-[460px]").length).toBeGreaterThan(0);
     });
 
     it("should not render map component when loading", () => {
@@ -249,9 +246,9 @@ describe("ExperimentLocationManagement", () => {
     it("should render the component with all expected elements", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByTestId("card-title")).toBeInTheDocument();
-      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
-      expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
+      // The component renders the interactive map and editing count
+      expect(screen.getByTestId("map-component")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
     });
 
     it("should render map component with correct props", () => {
@@ -427,15 +424,17 @@ describe("ExperimentLocationManagement", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
       // Check that the main container exists
-      expect(screen.getByTestId("card-title")).toBeInTheDocument();
-      expect(screen.getByTestId("card-description")).toBeInTheDocument();
+      // Ensure the main map container and sidebar title exist
+      expect(screen.getByTestId("map-component")).toBeInTheDocument();
+      expect(screen.getByTestId("map-sidebar-title")).toBeInTheDocument();
     });
 
     it("should render title with correct classes", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      const cardTitle = screen.getByTestId("card-title");
-      expect(cardTitle).toHaveClass("flex", "items-center", "gap-2");
+      // There's no CardTitle in this component; assert map sidebar title exists instead
+      const sidebarTitle = screen.getByTestId("map-sidebar-title");
+      expect(sidebarTitle).toHaveTextContent("settings.locations.editMode");
     });
 
     it("should pass all required props to Map component", () => {
@@ -466,8 +465,8 @@ describe("ExperimentLocationManagement", () => {
 
       // When data.body is undefined, no count should be displayed
       expect(screen.queryByText(/Editing 0 locations/)).not.toBeInTheDocument();
-      // But the component should still render properly
-      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
+      // But the component should still render properly (map exists)
+      expect(screen.getByTestId("map-component")).toBeInTheDocument();
     });
 
     it("should handle null data gracefully", () => {
@@ -480,8 +479,8 @@ describe("ExperimentLocationManagement", () => {
 
       // When data is null, no count should be displayed
       expect(screen.queryByText(/Editing 0 locations/)).not.toBeInTheDocument();
-      // But the component should still render properly
-      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
+      // But the component should still render properly (map exists)
+      expect(screen.getByTestId("map-component")).toBeInTheDocument();
     });
   });
 
@@ -489,9 +488,9 @@ describe("ExperimentLocationManagement", () => {
     it("should use translation keys for all text content", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
-      expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
-      expect(screen.getByText("settings.locations.editMode")).toBeInTheDocument();
+      expect(screen.getByTestId("map-sidebar-title")).toHaveTextContent(
+        "settings.locations.editMode",
+      );
       expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
     });
   });

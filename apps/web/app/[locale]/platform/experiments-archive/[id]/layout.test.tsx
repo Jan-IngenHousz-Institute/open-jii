@@ -210,11 +210,11 @@ describe("<ExperimentLayout />", () => {
       const links = screen.getAllByTestId("next-link");
       expect(links).toHaveLength(4); // 4 tabs for archived experiments
 
-      // Check href attributes (archived uses regular /experiments/ path)
-      expect(links[0]).toHaveAttribute("href", "/en/platform/experiments/test-id");
-      expect(links[1]).toHaveAttribute("href", "/en/platform/experiments/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/en/platform/experiments/test-id/analysis");
-      expect(links[3]).toHaveAttribute("href", "/en/platform/experiments/test-id/flow");
+      // Check href attributes (archived uses /experiments-archive/ path)
+      expect(links[0]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id");
+      expect(links[1]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/data");
+      expect(links[2]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/analysis");
+      expect(links[3]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/flow");
     });
 
     it("renders tabs when on root experiment path", () => {
@@ -320,10 +320,10 @@ describe("<ExperimentLayout />", () => {
       });
 
       const links = screen.getAllByTestId("next-link");
-      expect(links[0]).toHaveAttribute("href", "/de/platform/experiments/test-id");
-      expect(links[1]).toHaveAttribute("href", "/de/platform/experiments/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/de/platform/experiments/test-id/analysis");
-      expect(links[3]).toHaveAttribute("href", "/de/platform/experiments/test-id/flow");
+      expect(links[0]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id");
+      expect(links[1]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/data");
+      expect(links[2]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/analysis");
+      expect(links[3]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/flow");
     });
 
     it("renders tabs for different locale", () => {
