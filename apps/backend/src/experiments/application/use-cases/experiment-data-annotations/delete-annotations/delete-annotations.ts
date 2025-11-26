@@ -22,13 +22,13 @@ export class DeleteAnnotationsUseCase {
     request: DeleteAnnotationsRequest,
     userId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Deleting annotations from experiment data for user ${userId}`);
+    this.logger.log(`Deleting annotation(s) from experiment data for user ${userId}`);
 
     // Validate that the user ID is provided
     if (!userId) {
-      this.logger.warn("Attempt to delete annotations for experiment without user ID");
+      this.logger.warn("Attempt to delete annotation(s) for experiment without user ID");
       return failure(
-        AppError.badRequest("User ID is required to delete annotations for an experiment"),
+        AppError.badRequest("User ID is required to delete annotation(s) for an experiment"),
       );
     }
 
@@ -62,9 +62,7 @@ export class DeleteAnnotationsUseCase {
           );
 
           if (result.isFailure()) {
-            return failure(
-              AppError.internal(`Failed to delete annotation: ${result.error.message}`),
-            );
+            return failure(AppError.internal(result.error.message));
           }
 
           return success(result.value);
@@ -78,9 +76,7 @@ export class DeleteAnnotationsUseCase {
           );
 
           if (result.isFailure()) {
-            return failure(
-              AppError.internal(`Failed to delete annotations: ${result.error.message}`),
-            );
+            return failure(AppError.internal(result.error.message));
           }
 
           return success(result.value);
