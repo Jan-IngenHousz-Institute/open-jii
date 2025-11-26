@@ -127,59 +127,64 @@ export default function ExperimentVisualizationsDisplay({
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-6 pt-6">
-        <div>
-          <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
-            <SelectTrigger className="h-auto w-fit border-none p-0 text-xl font-semibold shadow-none hover:bg-transparent focus:ring-0">
-              {selectedVisualization ? (
-                <span className="text-xl font-semibold">{selectedVisualization.name}</span>
-              ) : (
-                <span className="text-muted-foreground text-xl font-semibold">
-                  {t("selector.selectVisualization")}
-                </span>
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              {visualizations.map((visualization) => (
-                <SelectItem key={visualization.id} value={visualization.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{visualization.name}</span>
-                    {visualization.description && (
-                      <span className="text-muted-foreground text-xs">
-                        {visualization.description.length > 60
-                          ? `${visualization.description.substring(0, 60)}...`
-                          : visualization.description}
+    <div className="space-y-4">
+      <div className="p-0">
+        <CardTitle>{t("ui.title")}</CardTitle>
+      </div>
+      <Card>
+        <CardContent className="space-y-6 pt-6">
+          <div>
+            <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
+              <SelectTrigger className="h-auto w-fit border-none p-0 text-xl font-semibold shadow-none hover:bg-transparent focus:ring-0">
+                {selectedVisualization ? (
+                  <span className="text-xl font-semibold">{selectedVisualization.name}</span>
+                ) : (
+                  <span className="text-muted-foreground text-xl font-semibold">
+                    {t("selector.selectVisualization")}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                {visualizations.map((visualization) => (
+                  <SelectItem key={visualization.id} value={visualization.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{visualization.name}</span>
+                      {visualization.description && (
+                        <span className="text-muted-foreground text-xs">
+                          {visualization.description.length > 60
+                            ? `${visualization.description.substring(0, 60)}...`
+                            : visualization.description}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-xs capitalize">
+                        {t(`charts.types.${visualization.chartType}`, visualization.chartType)}
                       </span>
-                    )}
-                    <span className="text-muted-foreground text-xs capitalize">
-                      {t(`charts.types.${visualization.chartType}`, visualization.chartType)}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {selectedVisualization && (
-          <div className="mt-6 flex flex-col">
-            {isDataLoading ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-muted-foreground">{t("ui.messages.loadingData")}</div>
-              </div>
-            ) : (
-              <ExperimentVisualizationRenderer
-                visualization={selectedVisualization}
-                experimentId={experimentId}
-                data={visualizationData?.rows ?? null}
-                showTitle={false}
-                showDescription={false}
-              />
-            )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {selectedVisualization && (
+            <div className="mt-6 flex flex-col">
+              {isDataLoading ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-muted-foreground">{t("ui.messages.loadingData")}</div>
+                </div>
+              ) : (
+                <ExperimentVisualizationRenderer
+                  visualization={selectedVisualization}
+                  experimentId={experimentId}
+                  data={visualizationData?.rows ?? null}
+                  showTitle={false}
+                  showDescription={false}
+                />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
