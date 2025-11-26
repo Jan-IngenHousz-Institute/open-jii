@@ -5,7 +5,7 @@ import { DatabricksSqlService } from "../../../../common/modules/databricks/serv
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { UserEnrichmentService } from "../../services/data-enrichment/user-metadata/user-enrichment.service";
+import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
 const DATABRICKS_HOST = "https://test-databricks.example.com";
@@ -1736,7 +1736,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.error.message).toContain("Failed to list tables");
   });
 
-  it("should enrich user data when user columns are present", async () => {
+  it("should transform user data when user columns are present", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -1761,27 +1761,31 @@ describe("GetExperimentDataUseCase", () => {
       truncated: false,
     };
 
-    // Mock the UserEnrichmentService to return enriched data
-    const userEnrichmentService = testApp.module.get(UserEnrichmentService);
-    const canEnrichSpy = vi.spyOn(userEnrichmentService, "canEnrich").mockReturnValue(true);
-    const enrichDataSpy = vi.spyOn(userEnrichmentService, "enrichData").mockResolvedValue({
-      columns: [
-        { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE" },
-        { name: "user", type_name: "USER", type_text: "USER" },
-      ],
-      rows: [
-        {
-          measurement: "25.5",
-          user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
-        },
-        {
-          measurement: "26.0",
-          user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
-        },
-      ],
-      totalRows: 2,
-      truncated: false,
-    });
+    // Mock the UserTransformationService to return transformed data
+    const userTransformationService = testApp.module.get(UserTransformationService);
+    const canTransformSpy = vi
+      .spyOn(userTransformationService, "canTransform")
+      .mockReturnValue(true);
+    const transformDataSpy = vi
+      .spyOn(userTransformationService, "transformData")
+      .mockResolvedValue({
+        columns: [
+          { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE" },
+          { name: "user", type_name: "USER", type_text: "USER" },
+        ],
+        rows: [
+          {
+            measurement: "25.5",
+            user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
+          },
+          {
+            measurement: "26.0",
+            user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
+          },
+        ],
+        totalRows: 2,
+        truncated: false,
+      });
 
     // Mock token request
     nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -1928,11 +1932,11 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
-    // Verify enrichment was called
-    expect(canEnrichSpy).toHaveBeenCalled();
-    expect(enrichDataSpy).toHaveBeenCalled();
+    // Verify transformation was called
+    expect(canTransformSpy).toHaveBeenCalled();
+    expect(transformDataSpy).toHaveBeenCalled();
 
-    // Verify response structure with enriched data
+    // Verify response structure with transformed data
     expect(Array.isArray(result.value)).toBe(true);
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
@@ -1945,7 +1949,7 @@ describe("GetExperimentDataUseCase", () => {
       totalPages: 1,
     });
 
-    // Verify the data structure has been enriched
+    // Verify the data structure has been transformed
     expect(result.value[0].data?.columns).toHaveLength(2); // measurement + user columns
     expect(result.value[0].data?.columns.some((col) => col.name === "user")).toBe(true);
     expect(result.value[0].data?.columns.some((col) => col.name === "measurement")).toBe(true);

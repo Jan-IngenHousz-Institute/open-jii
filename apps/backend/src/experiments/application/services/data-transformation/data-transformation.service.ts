@@ -11,12 +11,12 @@ export interface SchemaDataDto {
   truncated: boolean;
 }
 
-export abstract class DataEnrichmentService {
+export abstract class DataTransformationService {
   abstract getSourceColumns(): string[];
   abstract getTargetColumn(): string;
   abstract getTargetType(): string;
-  abstract canEnrich(schemaData: SchemaData): boolean;
-  abstract enrichData(schemaData: SchemaData): Promise<SchemaDataDto>;
+  abstract canTransform(schemaData: SchemaData): boolean;
+  abstract transformData(schemaData: SchemaData): Promise<SchemaDataDto>;
 
   protected convertToDto(
     columns: SchemaDataDto["columns"],
