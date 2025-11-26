@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AnnotationRowsAffected } from "@repo/api";
 
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
+import { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
 import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
@@ -18,7 +19,7 @@ export class DeleteAnnotationsUseCase {
 
   async execute(
     experimentId: string,
-    annotationIds: string[],
+    request: DeleteAnnotationsRequest,
     userId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log(`Deleting annotations from experiment data for user ${userId}`);
@@ -53,14 +54,11 @@ export class DeleteAnnotationsUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        if (annotationIds.length == 0) {
-          return failure(AppError.badRequest("No annotation IDs provided for deletion"));
-        }
-        if (annotationIds.length == 1) {
+        if ("annotationId" in request) {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotation(
             experiment.name,
             experimentId,
-            annotationIds[0],
+            request.annotationId,
           );
 
           if (result.isFailure()) {
@@ -71,12 +69,13 @@ export class DeleteAnnotationsUseCase {
 
           return success(result.value);
         } else {
-          // const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
-          //   experiment.name,
-          //   experimentId,
-          //   annotationIds,
-          // );
-          const result = success({ rowsAffected: 0 }); // Dummy code
+          const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
+            experiment.name,
+            experimentId,
+            request.tableName,
+            request.rowIds,
+            request.type,
+          );
 
           if (result.isFailure()) {
             return failure(

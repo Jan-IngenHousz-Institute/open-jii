@@ -23,3 +23,16 @@ export type UpdateAnnotationDto = Partial<Pick<BaseAnnotation, "contentText" | "
 
 // Output type from database
 export type AnnotationDto = BaseAnnotation;
+
+// Use case type for deleting annotations
+export interface DeleteAnnotation {
+  annotationId: string;
+}
+
+export interface DeleteBulkAnnotations {
+  tableName: string;
+  rowIds: string[];
+  type: string;
+}
+
+export type DeleteAnnotationsRequest = DeleteAnnotation | DeleteBulkAnnotations;

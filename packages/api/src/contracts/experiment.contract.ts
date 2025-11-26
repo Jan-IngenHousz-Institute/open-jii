@@ -521,7 +521,7 @@ export const experimentContract = c.router({
     pathParams: zAnnotationPathParam,
     body: zUpdateAnnotationBody,
     responses: {
-      200: zAnnotationRowsAffected,
+      204: zAnnotationRowsAffected,
       404: zErrorResponse,
       403: zErrorResponse,
     },

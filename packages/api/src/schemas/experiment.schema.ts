@@ -203,7 +203,9 @@ export const zAnnotationDeleteBulkPathParam = z.object({
 });
 
 export const zAnnotationDeleteBulkBody = z.object({
-  annotationIds: z.array(z.string().uuid().min(1)).min(1).describe("Annotation IDs to delete"),
+  tableName: z.string().describe("Name of the data table"),
+  rowIds: z.array(z.string().min(1)).min(1).describe("Rows IDs to delete"),
+  type: zAnnotationType.describe("Type of annotations to delete"),
 });
 
 export const zAnnotationRowsAffected = z.object({
