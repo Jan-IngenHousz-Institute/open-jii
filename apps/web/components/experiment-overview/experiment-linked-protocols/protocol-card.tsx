@@ -24,6 +24,9 @@ export function ProtocolCard({
   error: unknown;
 }) {
   const { t } = useTranslation("experiments");
+
+  const MIN_FADE_LENGTH = 400;
+  const isDescriptionLong = protocol?.description && protocol.description.length >= MIN_FADE_LENGTH;
   if (isLoading) {
     return <div className="h-[140px] animate-pulse rounded bg-gray-200" />;
   }
@@ -64,7 +67,10 @@ export function ProtocolCard({
               <RichTextRenderer content={protocol.description} />
             </div>
 
-            <div className="from-surface-light pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t to-transparent" />
+            {/* Fade gradient ONLY if description is long */}
+            {isDescriptionLong && (
+              <div className="from-surface-light pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t to-transparent" />
+            )}
           </div>
         </div>
       )}

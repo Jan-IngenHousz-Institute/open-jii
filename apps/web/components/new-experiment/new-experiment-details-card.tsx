@@ -53,7 +53,7 @@ export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps
                 <RichTextarea
                   value={field.value ?? ""}
                   onChange={field.onChange}
-                  placeholder={t("newExperiment.description_field")}
+                  placeholder={t("newExperiment.descriptionPlaceholder")}
                 />
               </FormControl>
               <FormMessage />

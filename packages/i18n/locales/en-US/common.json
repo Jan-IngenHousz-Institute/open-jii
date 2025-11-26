@@ -157,6 +157,7 @@
     "description": "Set up a new experiment (project).",
     "name": "Name",
     "description_field": "Description",
+    "descriptionPlaceholder": "Short summary of the experiment’s purpose. To add instructions, finish creating the experiment and use the Instruction Node in the flow section",
     "visibility": "Visibility",
     "visibilityPlaceholder": "Select an experiment visibility",
     "cancel": "Cancel",

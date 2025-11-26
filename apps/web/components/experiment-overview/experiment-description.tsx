@@ -105,7 +105,7 @@ export function ExperimentDescription({
           <RichTextarea
             value={editedDescription}
             onChange={setEditedDescription}
-            placeholder={t("descriptionTitle")}
+            placeholder={t("form.descriptionPlaceholder")}
             isDisabled={isUpdating}
           />
           <div className="flex justify-end gap-2">

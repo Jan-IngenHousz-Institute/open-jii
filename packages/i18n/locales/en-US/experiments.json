@@ -2,6 +2,7 @@
   "form": {
     "name": "Experiment Name",
     "description": "Description",
+    "descriptionPlaceholder": "Short summary of the experiment’s purpose. To add instructions, use the Instruction Node in the flow section",
     "protocol": "Protocol",
     "device": "Device",
     "location": "Location",
