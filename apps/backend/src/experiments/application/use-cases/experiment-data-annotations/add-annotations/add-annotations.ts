@@ -33,7 +33,7 @@ export class AddAnnotationsUseCase {
 
     // Validate that the user ID is provided
     if (!userId) {
-      this.logger.warn("Attempt to create experiment without user ID");
+      this.logger.warn("Attempt to add annotation to experiment without user ID");
       return failure(AppError.badRequest("User ID is required to create an experiment"));
     }
 
@@ -83,7 +83,7 @@ export class AddAnnotationsUseCase {
           } else {
             const content = data.annotation.content as unknown as AnnotationFlagContent;
             newAnnotation.flagType = content.flagType;
-            newAnnotation.flagReason = content.reason;
+            newAnnotation.contentText = content.reason;
           }
           newAnnotations.push(newAnnotation);
         }
@@ -95,7 +95,7 @@ export class AddAnnotationsUseCase {
         );
 
         if (result.isFailure()) {
-          return failure(AppError.internal(`Failed to add annotations: ${result.error.message}`));
+          return failure(AppError.internal(result.error.message));
         }
 
         return success(result.value);

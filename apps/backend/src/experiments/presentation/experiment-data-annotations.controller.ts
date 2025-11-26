@@ -7,10 +7,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
-
-// // import { DeleteAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/delete-annotation/delete-annotation";
-// // import { ListAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/list-annotations/list-annotations";
-// // import { UpdateAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
+import { UpdateAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -19,6 +16,7 @@ export class ExperimentDataAnnotationsController {
 
   constructor(
     private readonly addAnnotationsUseCase: AddAnnotationsUseCase,
+    private readonly updateAnnotationUseCase: UpdateAnnotationUseCase,
     // private readonly listAnnotationsUseCase: ListAnnotationsUseCase,
     // private readonly updateAnnotationUseCase: UpdateAnnotationUseCase,
     // private readonly deleteAnnotationUseCase: DeleteAnnotationUseCase,
@@ -62,6 +60,33 @@ export class ExperimentDataAnnotationsController {
         return {
           status: 201,
           body: result.value,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.experiments.updateAnnotation)
+  updateAnnotation(@CurrentUser() user: { id: string }) {
+    return tsRestHandler(contract.experiments.updateAnnotation, async ({ params, body }) => {
+      const { id: experimentId, annotationId } = params;
+
+      this.logger.log(
+        `Updating annotation ${annotationId} for experiment ${experimentId} (user ${user.id})`,
+      );
+
+      const result = await this.updateAnnotationUseCase.execute(
+        experimentId,
+        annotationId,
+        body,
+        user.id,
+      );
+
+      if (result.isSuccess()) {
+        return {
+          status: 204,
+          body: null,
         };
       }
 

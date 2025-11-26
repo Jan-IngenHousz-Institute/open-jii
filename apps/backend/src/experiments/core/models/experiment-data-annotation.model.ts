@@ -9,9 +9,8 @@ export interface BaseAnnotation {
   tableName: string;
   rowId: string;
   type: string; // 'comment' or 'flag'
-  contentText?: string | null; // For comment annotations
+  contentText?: string | null; // For comment annotations or reasons for flags
   flagType?: string | null; // 'outlier' or 'needs_review'
-  flagReason?: string | null; // Reason for flag
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,9 +19,7 @@ export interface BaseAnnotation {
 export type CreateAnnotationDto = Omit<BaseAnnotation, "id" | "createdAt" | "updatedAt">;
 
 // Input type for updating annotations
-export type UpdateAnnotationDto = Partial<
-  Pick<BaseAnnotation, "contentText" | "flagType" | "flagReason">
->;
+export type UpdateAnnotationDto = Partial<Pick<BaseAnnotation, "contentText" | "flagType">>;
 
 // Output type from database
 export type AnnotationDto = BaseAnnotation;
