@@ -27,8 +27,10 @@ export class UpdateAnnotationUseCase {
 
     // Validate that the user ID is provided
     if (!userId) {
-      this.logger.warn("Attempt to update experiment without user ID");
-      return failure(AppError.badRequest("User ID is required to create an experiment"));
+      this.logger.warn("Attempt to update annotation for experiment without user ID");
+      return failure(
+        AppError.badRequest("User ID is required to update annotation for experiment"),
+      );
     }
 
     // Check if experiment exists and user has access

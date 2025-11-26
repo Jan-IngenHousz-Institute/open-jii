@@ -134,17 +134,25 @@ export class ExperimentDataAnnotationsRepository {
       createTableQuery,
     );
     if (createResult.isFailure()) {
-      return failure(AppError.internal(createResult.error.message));
+      return failure(
+        AppError.internal(`Failed to create annotations table: ${createResult.error.message}`),
+      );
     }
 
     const alterTableQuery = `
       ALTER TABLE annotations SET TBLPROPERTIES(downstream = "false")
     `;
-    return this.databricksPort.executeExperimentSqlQuery(
+    const alterTableResult = await this.databricksPort.executeExperimentSqlQuery(
       experimentName,
       experimentId,
       alterTableQuery,
     );
+    if (alterTableResult.isFailure()) {
+      return failure(
+        AppError.internal(`Failed to alter annotations table: ${alterTableResult.error.message}`),
+      );
+    }
+    return success(alterTableResult.value);
   }
 
   private getRowsAffectedFromResult(result: SchemaData): AnnotationRowsAffected {
@@ -341,7 +349,9 @@ export class ExperimentDataAnnotationsRepository {
     rowIds: string[],
     type: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Bulk deleting  annotations for ${rowIds.length} rows of type ${type}`);
+    this.logger.log(
+      `Bulk deleting annotations on table ${tableName} for ${rowIds.length} rows of type ${type}`,
+    );
 
     if (rowIds.length === 0) {
       return success({ rowsAffected: 0 } as AnnotationRowsAffected);
@@ -365,7 +375,7 @@ export class ExperimentDataAnnotationsRepository {
     );
     if (deleteResult.isFailure()) {
       return failure(
-        AppError.internal(`Failed to delete annotation: ${deleteResult.error.message}`),
+        AppError.internal(`Failed to delete annotations: ${deleteResult.error.message}`),
       );
     }
     return success(this.getRowsAffectedFromResult(deleteResult.value));

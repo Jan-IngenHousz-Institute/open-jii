@@ -29,12 +29,14 @@ export class AddAnnotationsUseCase {
     data: AddAnnotationsBulkBody,
     userId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Adding annotation to experiment data for user ${userId}`);
+    this.logger.log(`Adding annotation(s) to experiment data for user ${userId}`);
 
     // Validate that the user ID is provided
     if (!userId) {
-      this.logger.warn("Attempt to add annotation to experiment without user ID");
-      return failure(AppError.badRequest("User ID is required to create an experiment"));
+      this.logger.warn("Attempt to add annotation(s) to experiment without user ID");
+      return failure(
+        AppError.badRequest("User ID is required to add annotation(s) to an experiment"),
+      );
     }
 
     // Check if experiment exists and user has access
@@ -64,9 +66,7 @@ export class AddAnnotationsUseCase {
           experimentId,
         );
         if (createResult.isFailure()) {
-          return failure(
-            AppError.internal(`Failed to create annotations table: ${createResult.error.message}`),
-          );
+          return failure(AppError.internal(createResult.error.message));
         }
 
         const newAnnotations: CreateAnnotationDto[] = [];
