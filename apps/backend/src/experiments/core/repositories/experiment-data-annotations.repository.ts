@@ -69,7 +69,6 @@ export class ExperimentDataAnnotationsRepository {
         this.validate.identifier(annotation.type),
         this.validate.content(annotation.contentText),
         this.validate.flag(annotation.flagType),
-        this.validate.content(annotation.flagReason),
       ];
 
       return validations.every((result) => result.success);
@@ -86,9 +85,6 @@ export class ExperimentDataAnnotationsRepository {
       }
       if ("flagType" in updateData) {
         validations.push(this.validate.flag(updateData.flagType));
-      }
-      if ("flagReason" in updateData) {
-        validations.push(this.validate.content(updateData.flagReason));
       }
 
       return validations.every((result) => result.success);
@@ -126,7 +122,6 @@ export class ExperimentDataAnnotationsRepository {
         type STRING NOT NULL,
         content_text STRING,
         flag_type STRING,
-        flag_reason STRING,
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP NOT NULL
       )
@@ -203,7 +198,6 @@ export class ExperimentDataAnnotationsRepository {
           '${annotation.type}',
           ${this.formatSqlValue(annotation.contentText)},
           ${this.formatSqlValue(annotation.flagType)},
-          ${this.formatSqlValue(annotation.flagReason)},
           '${now.toISOString()}',
           '${now.toISOString()}'
         )`,
@@ -218,7 +212,6 @@ export class ExperimentDataAnnotationsRepository {
         type,
         content_text,
         flag_type,
-        flag_reason,
         created_at,
         updated_at
       ) VALUES ${valuesClauses.join(", ")}
@@ -267,9 +260,6 @@ export class ExperimentDataAnnotationsRepository {
     }
     if (updateData.flagType !== undefined) {
       setClauses.push(`flag_type = ${this.formatSqlValue(updateData.flagType)}`);
-    }
-    if (updateData.flagReason !== undefined) {
-      setClauses.push(`flag_reason = ${this.formatSqlValue(updateData.flagReason)}`);
     }
 
     setClauses.push(`updated_at = '${now.toISOString()}'`);
@@ -335,27 +325,25 @@ export class ExperimentDataAnnotationsRepository {
   async deleteAnnotationsBulk(
     experimentName: string,
     experimentId: string,
-    annotationIds: string[],
+    tableName: string,
+    rowIds: string[],
+    type: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Bulk deleting ${annotationIds.length} annotations`);
+    this.logger.log(`Bulk deleting  annotations for ${rowIds.length} rows of type ${type}`);
 
-    if (annotationIds.length === 0) {
+    if (rowIds.length === 0) {
       return success({ rowsAffected: 0 } as AnnotationRowsAffected);
     }
 
-    // Validate input parameters
-    const uuidsValidation = this.validate.uuids(annotationIds);
-    if (!uuidsValidation.success) {
-      return failure(AppError.validationError("Invalid annotation IDs provided"));
-    }
-
     // Build IN clause for annotation IDs
-    const annotationIdsList = annotationIds.map((id) => `'${id}'`).join(", ");
+    const rowIdList = rowIds.map((id) => `'${id}'`).join(", ");
 
     // Build raw SQL string for bulk delete
     const deleteQuery = `
       DELETE FROM annotations
-      WHERE id IN (${annotationIdsList})
+      WHERE table_name=${this.formatSqlValue(tableName)}
+      AND type=${this.formatSqlValue(type)}
+      AND row_id IN (${rowIdList})
     `;
 
     const deleteResult = await this.databricksPort.executeExperimentSqlQuery(

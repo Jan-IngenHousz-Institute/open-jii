@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { expect } from "vitest";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import {
@@ -401,19 +402,21 @@ describe("ExperimentDataAnnotationsRepository", () => {
       totalRows: 1,
       truncated: false,
     };
-    const annotationIds = [faker.string.uuid(), faker.string.uuid(), faker.string.uuid()];
 
     it("should successfully delete multiple annotations", async () => {
       // Arrange
       vi.spyOn(databricksPort, "executeExperimentSqlQuery").mockResolvedValue(
         success(mockSchemaData),
       );
+      const rowIds = ["test1", "test2"];
 
       // Act
       const result = await repository.deleteAnnotationsBulk(
         mockExperimentName,
         mockExperimentId,
-        annotationIds,
+        mockTableName,
+        rowIds,
+        "comment",
       );
 
       // Assert
@@ -429,10 +432,12 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const sqlCall = vi.mocked(databricksPort.executeExperimentSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[2];
 
-      expect(sqlQuery).toContain("WHERE id IN (");
-      annotationIds.forEach((id) => {
+      expect(sqlQuery).toContain(`table_name='${mockTableName}'`);
+      expect(sqlQuery).toContain("id IN (");
+      rowIds.forEach((id) => {
         expect(sqlQuery).toContain(`'${id}'`);
       });
+      expect(sqlQuery).toContain(`type='comment`);
       expect(sqlQuery).not.toContain("user_id =");
     });
 
@@ -445,46 +450,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
       assertSuccess(result);
       expect(result.value).toEqual({ rowsAffected: 0 });
       // Method is not called for empty arrays
-    });
-
-    it("should return validation error for invalid annotation IDs", async () => {
-      // Arrange
-      const invalidIds = ["valid-" + faker.string.uuid(), "invalid-uuid"];
-
-      // Act
-      const result = await repository.deleteAnnotationsBulk(
-        mockExperimentName,
-        mockExperimentId,
-        invalidIds,
-      );
-
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Invalid annotation IDs provided");
-    });
-
-    it("should handle single annotation ID in bulk delete", async () => {
-      // Arrange
-      const singleId = [faker.string.uuid()];
-      vi.spyOn(databricksPort, "executeExperimentSqlQuery").mockResolvedValue(
-        success(mockSchemaData),
-      );
-
-      // Act
-      const result = await repository.deleteAnnotationsBulk(
-        mockExperimentName,
-        mockExperimentId,
-        singleId,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-
-      const sqlCall = vi.mocked(databricksPort.executeExperimentSqlQuery).mock.calls[0];
-      const sqlQuery = sqlCall[2];
-
-      expect(sqlQuery).toContain(`WHERE id IN ('${singleId[0]}')`);
     });
   });
 

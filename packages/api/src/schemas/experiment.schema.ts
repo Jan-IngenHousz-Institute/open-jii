@@ -195,7 +195,7 @@ export const zListAnnotationsQuery = z.object({
 });
 
 export const zUpdateAnnotationBody = z.object({
-  content: zAnnotationContent.optional().describe("Updated content"),
+  content: zAnnotationContent.describe("Updated content"),
 });
 
 export const zAnnotationDeleteBulkPathParam = z.object({

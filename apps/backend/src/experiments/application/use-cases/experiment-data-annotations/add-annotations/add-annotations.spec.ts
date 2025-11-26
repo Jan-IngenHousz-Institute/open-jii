@@ -75,7 +75,6 @@ describe("AddAnnotations", () => {
         type STRING NOT NULL,
         content_text STRING,
         flag_type STRING,
-        flag_reason STRING,
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP NOT NULL
       )
@@ -246,7 +245,6 @@ describe("AddAnnotations", () => {
         type STRING NOT NULL,
         content_text STRING,
         flag_type STRING,
-        flag_reason STRING,
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP NOT NULL
       )
@@ -317,7 +315,6 @@ describe("AddAnnotations", () => {
         type STRING NOT NULL,
         content_text STRING,
         flag_type STRING,
-        flag_reason STRING,
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP NOT NULL
       )
@@ -375,7 +372,7 @@ describe("AddAnnotations", () => {
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toContain(
-      "Failed to add annotations: Failed to insert annotations: Databricks SQL query execution",
+      "Failed to insert annotations: Databricks SQL query execution",
     );
   });
 });

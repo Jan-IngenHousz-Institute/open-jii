@@ -1,0 +1,92 @@
+import { Injectable, Logger } from "@nestjs/common";
+
+import { AnnotationRowsAffected } from "@repo/api";
+
+import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
+import type { ExperimentDto } from "../../../../core/models/experiment.model";
+import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
+import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
+
+@Injectable()
+export class DeleteAnnotationsUseCase {
+  private readonly logger = new Logger(DeleteAnnotationsUseCase.name);
+
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly experimentDataAnnotationsRepository: ExperimentDataAnnotationsRepository,
+  ) {}
+
+  async execute(
+    experimentId: string,
+    annotationIds: string[],
+    userId: string,
+  ): Promise<Result<AnnotationRowsAffected>> {
+    this.logger.log(`Deleting annotations from experiment data for user ${userId}`);
+
+    // Validate that the user ID is provided
+    if (!userId) {
+      this.logger.warn("Attempt to delete annotations for experiment without user ID");
+      return failure(
+        AppError.badRequest("User ID is required to delete annotations for an experiment"),
+      );
+    }
+
+    // Check if experiment exists and user has access
+    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+
+    return accessResult.chain(
+      async ({
+        hasAccess,
+        experiment,
+      }: {
+        hasAccess: boolean;
+        experiment: ExperimentDto | null;
+      }) => {
+        if (!experiment) {
+          this.logger.warn(`Experiment with ID ${experimentId} not found`);
+          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+        }
+        if (!hasAccess && experiment.visibility !== "public") {
+          this.logger.warn(
+            `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
+          );
+          return failure(AppError.forbidden("You do not have access to this experiment"));
+        }
+
+        if (annotationIds.length == 0) {
+          return failure(AppError.badRequest("No annotation IDs provided for deletion"));
+        }
+        if (annotationIds.length == 1) {
+          const result = await this.experimentDataAnnotationsRepository.deleteAnnotation(
+            experiment.name,
+            experimentId,
+            annotationIds[0],
+          );
+
+          if (result.isFailure()) {
+            return failure(
+              AppError.internal(`Failed to delete annotation: ${result.error.message}`),
+            );
+          }
+
+          return success(result.value);
+        } else {
+          // const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
+          //   experiment.name,
+          //   experimentId,
+          //   annotationIds,
+          // );
+          const result = success({ rowsAffected: 0 }); // Dummy code
+
+          if (result.isFailure()) {
+            return failure(
+              AppError.internal(`Failed to delete annotations: ${result.error.message}`),
+            );
+          }
+
+          return success(result.value);
+        }
+      },
+    );
+  }
+}

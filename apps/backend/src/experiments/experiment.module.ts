@@ -17,6 +17,7 @@ import { EmbargoProcessorService } from "./application/services/embargo-processo
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
 import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
+import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
@@ -161,7 +162,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     // Experiment data annotation use cases
     AddAnnotationsUseCase,
     // ListAnnotationsUseCase,
-    // UpdateAnnotationUseCase,
+    UpdateAnnotationUseCase,
     // DeleteAnnotationUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
