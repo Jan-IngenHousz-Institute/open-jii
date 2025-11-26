@@ -108,6 +108,38 @@ describe("AddAnnotations", () => {
         },
       });
 
+    // Mock SQL query for alter table
+    const alterTableQuery = `
+      ALTER TABLE annotations SET TBLPROPERTIES(downstream = "false")
+    `;
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: alterTableQuery,
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: 0,
+          },
+          total_row_count: 0,
+          truncated: false,
+        },
+        result: {
+          data_array: [],
+          chunk_index: 0,
+          row_count: 0,
+          row_offset: 0,
+        },
+      });
+
     // Match any body value to match the insert statement with random IDs and timestamps
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
@@ -323,6 +355,38 @@ describe("AddAnnotations", () => {
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: createTableQuery,
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: 0,
+          },
+          total_row_count: 0,
+          truncated: false,
+        },
+        result: {
+          data_array: [],
+          chunk_index: 0,
+          row_count: 0,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query for alter table
+    const alterTableQuery = `
+      ALTER TABLE annotations SET TBLPROPERTIES(downstream = "false")
+    `;
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: alterTableQuery,
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,

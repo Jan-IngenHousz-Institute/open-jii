@@ -223,7 +223,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
     const validUpdateData: UpdateAnnotationDto = {
       contentText: "Updated comment text",
       flagType: "needs_review",
-      flagReason: "Requires additional verification",
     };
     const mockSchemaData: SchemaData = {
       columns: [
@@ -265,7 +264,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(sqlQuery).toContain(`WHERE id = '${mockAnnotationId}'`);
       expect(sqlQuery).toContain("content_text =");
       expect(sqlQuery).toContain("flag_type =");
-      expect(sqlQuery).toContain("flag_reason =");
       expect(sqlQuery).toContain("updated_at =");
     });
 
