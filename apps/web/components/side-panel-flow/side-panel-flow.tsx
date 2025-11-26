@@ -39,8 +39,8 @@ function isQuestionUI(obj: unknown): obj is QuestionUI {
   );
 }
 
-// Sanitize column name (mirroring backend logic)
-function sanitizeColumnName(title: string): string {
+// Format label as column name
+function formatNodeLabelAsColumnName(title: string): string {
   let sanitized = title.toLowerCase().replace(/[ ,;{}()\n\t=]+/g, "_");
   sanitized = sanitized.replace(/^_+|_+$/g, "").replace(/_+/g, "_");
   if (!sanitized || /^\d/.test(sanitized)) {
@@ -154,7 +154,7 @@ export function ExperimentSidePanel({
                             {t("flow.questionTooltip.description")}
                             <span className="ml-1 rounded bg-gray-800 px-1 font-mono text-xs text-white">
                               {currentTitle
-                                ? sanitizeColumnName(currentTitle)
+                                ? formatNodeLabelAsColumnName(currentTitle)
                                 : t("flow.questionTooltip.defaultColumnName")}
                             </span>
                           </p>

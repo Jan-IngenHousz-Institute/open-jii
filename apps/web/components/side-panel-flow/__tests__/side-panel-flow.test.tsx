@@ -416,8 +416,8 @@ describe("<ExperimentSidePanel />", () => {
     expect(infoIcon).toBeTruthy();
     expect(infoIcon).toHaveClass("lucide-info");
 
-    const expectedSanitized = "my_question_label";
-    expect(expectedSanitized).toBe("my_question_label");
+    const expectedFormattedLabel = "my_question_label";
+    expect(expectedFormattedLabel).toBe("my_question_label");
   });
 
   it("shows info icon for QUESTION nodes with empty title", () => {
