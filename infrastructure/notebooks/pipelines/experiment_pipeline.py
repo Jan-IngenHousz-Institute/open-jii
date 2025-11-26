@@ -29,7 +29,7 @@ from typing import Dict, Any, List
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
 # Import our enrichment library  
-from enrich import add_user_data_column
+from enrich import add_user_data_column, get_experiment_question_labels, add_question_columns
 
 # COMMAND ----------
 
@@ -489,15 +489,27 @@ def {macro_table_name}_table():
 def enriched_{macro_table_name}_table():
     """
     Create an enriched macro table by combining macro output with user metadata.
-    This creates a silver layer table with denormalized user information.
+    This creates a silver layer table with denormalized user information and individual question columns.
     """
     
     # Read from the silver macro table (this creates the dependency)
     macro_df = dlt.read_stream("macro_{macro_table_name}")
     
-    # Add user metadata column
+    # Discover all question labels used in this experiment
+    question_labels = get_experiment_question_labels(
+        spark,
+        CATALOG_NAME,
+        CENTRAL_SCHEMA,
+        CENTRAL_SILVER_TABLE,
+        EXPERIMENT_ID
+    )
+    
+    # Add individual question columns based on discovered labels
+    macro_with_questions = add_question_columns(macro_df, question_labels)
+    
+    # Add user metadata column and remove the original questions array column
     from enrich import add_user_data_column
-    enriched_df = add_user_data_column(macro_df, ENVIRONMENT, dbutils)
+    enriched_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
     return enriched_df
 '''
@@ -547,14 +559,26 @@ def enriched_sample():
     """
     Create an enriched sample table by combining sample data with user metadata
     from the OpenJII backend API. This creates a silver layer table with denormalized
-    user information for easier analytics.
+    user information for easier analytics and individual question columns.
     """
     
     # Read from the bronze sample table (this creates the dependency)
     sample_df = dlt.read_stream(SAMPLE_TABLE)
     
-    # Add user metadata column
-    enriched_df = add_user_data_column(sample_df, ENVIRONMENT, dbutils)
+    # Discover all question labels used in this experiment
+    question_labels = get_experiment_question_labels(
+        spark,
+        CATALOG_NAME,
+        CENTRAL_SCHEMA,
+        CENTRAL_SILVER_TABLE,
+        EXPERIMENT_ID
+    )
+
+    # Add individual question columns based on discovered labels
+    sample_with_questions = add_question_columns(sample_df, question_labels)
+    
+    # Add user metadata column and remove the original questions array column
+    enriched_df = add_user_data_column(sample_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
     return enriched_df
 

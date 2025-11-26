@@ -56,6 +56,11 @@
       "QUESTION": "Frage",
       "MEASUREMENT": "Messung",
       "ANALYSIS": "Analyse"
+    },
+    "questionTooltip": {
+      "title": "Datenspaltenname",
+      "description": "Diese Bezeichnung wird zu einer Spalte in Ihrer Datenanalyse:",
+      "defaultColumnName": "frage_name"
     }
   },
   "overview": "Übersicht",
