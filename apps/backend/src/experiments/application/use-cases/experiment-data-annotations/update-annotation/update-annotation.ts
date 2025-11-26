@@ -23,7 +23,7 @@ export class UpdateAnnotationUseCase {
     data: UpdateAnnotationBody,
     userId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Adding annotation to experiment data for user ${userId}`);
+    this.logger.log(`Updating annotation to experiment data for user ${userId}`);
 
     // Validate that the user ID is provided
     if (!userId) {
@@ -70,7 +70,7 @@ export class UpdateAnnotationUseCase {
         );
 
         if (result.isFailure()) {
-          return failure(AppError.internal(`Failed to update annotation: ${result.error.message}`));
+          return failure(AppError.internal(result.error.message));
         }
 
         return success(result.value);

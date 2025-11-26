@@ -61,7 +61,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
       type: "comment",
       contentText: "This is a test comment",
       flagType: null,
-      flagReason: null,
     });
     const mockSchemaData: SchemaData = {
       columns: [
@@ -471,7 +470,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
         type: "comment",
         contentText: "'; DROP TABLE annotations; --",
         flagType: null,
-        flagReason: null,
       };
 
       vi.spyOn(databricksPort, "executeExperimentSqlQuery").mockResolvedValue(
@@ -503,7 +501,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
         type: "comment",
         contentText: "test",
         flagType: null,
-        flagReason: null,
       };
 
       // Act
