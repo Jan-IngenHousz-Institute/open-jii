@@ -475,10 +475,10 @@ def {macro_table_name}_table():
         print(f"JSON parsing failed for macro {macro_name}: {{e}}")
         return processed_df
 
-# Enriched macro table with user metadata
+# Enriched macro table with user metadata and annotations
 @dlt.table(
-    name="enriched_macro_{macro_table_name}",
-    comment="Enriched output from macro: {macro_name} with user metadata",
+    name="enriched_{macro_table_name}",
+    comment="Enriched output from macro: {macro_name} with user metadata and annotations",
     table_properties={{
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
@@ -488,8 +488,8 @@ def {macro_table_name}_table():
 )
 def enriched_{macro_table_name}_table():
     """
-    Create an enriched macro table by combining macro output with user metadata.
-    This creates a silver layer table with denormalized user information and individual question columns.
+    Create an enriched macro table by combining macro output with user metadata and annotations.
+    This creates a silver layer table with denormalized user information and annotation data.
     """
     
     # Read from the silver macro table (this creates the dependency)
@@ -508,8 +508,16 @@ def enriched_{macro_table_name}_table():
     macro_with_questions = add_question_columns(macro_df, question_labels)
     
     # Add user metadata column and remove the original questions array column
-    from enrich import add_user_data_column
-    enriched_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
+    enriched_with_user_data_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
+    
+    # Add annotation columns
+    enriched_df = add_annotation_columns(
+        enriched_with_user_data_df,
+        "{macro_table_name}",
+        CATALOG_NAME,
+        EXPERIMENT_SCHEMA,
+        spark
+    )
     
     return enriched_df
 '''
@@ -546,7 +554,7 @@ else:
 # DBTITLE 1,Enriched Sample Table (Silver Layer)
 @dlt.table(
     name=ENRICHED_SAMPLE_TABLE,
-    comment="Silver layer sample table enriched with user profile metadata",
+    comment="Silver layer sample table enriched with user profile metadata and annotations",
     table_properties={
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
@@ -579,6 +587,17 @@ def enriched_sample():
     
     # Add user metadata column and remove the original questions array column
     enriched_df = add_user_data_column(sample_with_questions.drop("questions"), ENVIRONMENT, dbutils)
+    
+    # Add annotation columns
+    # Note: In streaming context, annotations are added as null columns
+    # The actual join with annotations happens in batch queries on the materialized table
+    enriched_df = add_annotation_columns(
+        enriched_df, 
+        SAMPLE_TABLE, 
+        CATALOG_NAME, 
+        EXPERIMENT_SCHEMA, 
+        spark
+    )
     
     return enriched_df
 

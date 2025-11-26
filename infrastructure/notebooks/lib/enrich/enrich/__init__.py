@@ -10,7 +10,7 @@ __version__ = "0.1.0"
 
 from .backend_client import BackendClient, BackendIntegrationError
 from .user_metadata import add_user_data_column
-from .question_metadata import add_question_columns, get_experiment_question_labels
+from .question_metadata import add_question_columns, get_experiment_question_labels, add_annotation_columns
 
 __all__ = [
     "BackendClient",
@@ -18,4 +18,5 @@ __all__ = [
     "add_user_data_column",
     "add_question_columns",
     "get_experiment_question_labels",
+    "add_annotation_columns"
 ]
