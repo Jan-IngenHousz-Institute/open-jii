@@ -45,7 +45,7 @@ describe("AddAnnotations", () => {
     await testApp.teardown();
   });
 
-  it("should an annotation to experiment data", async () => {
+  it("should add an annotation to experiment data", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
