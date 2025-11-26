@@ -163,7 +163,7 @@ export function ExperimentMemberManagement({
             variant="outline"
             disabled={!selectedUser || isAddingMember || currentUserRole !== "admin" || isArchived}
             size="default"
-            className="bg-surface-dark"
+            className="bg-surface"
           >
             {t("common.add")}
           </Button>

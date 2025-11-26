@@ -8,9 +8,10 @@ import type { Experiment, ExperimentMember, Location } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
 
-import { ExperimentInfoCard } from "../experiment-settings/experiment-info-card";
-import { ExperimentMemberManagement } from "../experiment-settings/experiment-member-management-card";
-import { ExperimentVisibilityCard } from "../experiment-settings/experiment-visibility-card";
+import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
+import { ExperimentMemberManagement } from "../../experiment-settings/experiment-member-management-card";
+import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-visibility-card";
+import { ExperimentLocationsSection } from "./experiment-locations-section";
 
 interface ExperimentDetailsCardProps {
   experimentId: string;
@@ -19,6 +20,7 @@ interface ExperimentDetailsCardProps {
   members: ExperimentMember[];
   isMembersLoading: boolean;
   isMembersError: boolean;
+  hasAccess?: boolean;
   isArchived?: boolean;
 }
 
@@ -29,6 +31,7 @@ export function ExperimentDetailsCard({
   members,
   isMembersLoading,
   isMembersError,
+  hasAccess = false,
   isArchived = false,
 }: ExperimentDetailsCardProps) {
   const { t } = useTranslation("experiments");
@@ -56,7 +59,7 @@ export function ExperimentDetailsCard({
 
         {isSidebarCollapsed && (
           <div className="text-muted-foreground -mt-6 truncate px-6 pb-3 text-sm md:hidden">
-            Updated {formatDate(experiment.updatedAt)}, Experiment ID {experiment.id}
+            {t("updated")} {formatDate(experiment.updatedAt)}, {t("experimentId")} {experiment.id}
           </div>
         )}
 
@@ -68,28 +71,12 @@ export function ExperimentDetailsCard({
               <p className="text-muted-foreground">{experiment.id}</p>
             </div>
 
-            {locations.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Experiment location(s)</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="locations-action"
-                    className="text-primary"
-                  >
-                    Add
-                  </Button>
-                </div>
-                <div className="text-muted-foreground">
-                  {locations.map((location) => (
-                    <p key={location.id} className="truncate">
-                      {location.name}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
+            <ExperimentLocationsSection
+              experimentId={experimentId}
+              locations={locations}
+              hasAccess={hasAccess}
+              isArchived={isArchived}
+            />
 
             <div>
               <h4 className="text-sm font-medium">{t("updated")}</h4>

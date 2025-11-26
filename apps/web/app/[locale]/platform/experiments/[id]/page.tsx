@@ -9,8 +9,9 @@ import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVis
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
-import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details-card";
-import { ExperimentLocationManagement } from "~/components/experiment-settings/experiment-location-management-card";
+import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
+import { ExperimentLinkedProtocols } from "~/components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols";
+import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
 import type { Experiment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -70,6 +71,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         members={members}
         isMembersLoading={isMembersLoading}
         isMembersError={isMembersError}
+        hasAccess={hasAccess}
       />
 
       {/* LEFT SIDE CONTENT (Second on mobile) */}
@@ -79,6 +81,9 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           description={experiment.description ?? ""}
           hasAccess={hasAccess}
         />
+        <ExperimentLinkedProtocols experimentId={id} />
+
+        <ExperimentMeasurements experimentId={id} />
 
         <ExperimentVisualizationsDisplay
           experimentId={id}
@@ -86,8 +91,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           isLoading={visualizationsLoading}
           hasAccess={hasAccess}
         />
-
-        <ExperimentLocationManagement experimentId={experiment.id} hasAccess={hasAccess} />
       </div>
     </div>
   );

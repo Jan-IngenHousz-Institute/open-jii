@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { CardTitle, CardDescription } from "@repo/ui/components";
 import type { LocationPoint } from "@repo/ui/components/map";
 import { toast } from "@repo/ui/hooks";
 
@@ -160,11 +159,7 @@ export function ExperimentLocationManagement({
 
   if (isLoading) {
     return (
-      <div className="space-y-4 p-0">
-        <div>
-          <CardTitle className="flex items-center gap-2">{t("settings.locations.title")}</CardTitle>
-          <CardDescription>{t("settings.locations.description")}</CardDescription>
-        </div>
+      <div className="space-y-4">
         <div className="animate-pulse space-y-2">
           <div className="h-[460px] rounded bg-gray-200"></div>
         </div>
@@ -173,11 +168,7 @@ export function ExperimentLocationManagement({
   }
 
   return (
-    <div className="space-y-4 p-0">
-      <div>
-        <CardTitle className="flex items-center gap-2">{t("settings.locations.title")}</CardTitle>
-        <CardDescription>{t("settings.locations.description")}</CardDescription>
-      </div>
+    <div className="space-y-4">
       {/* Interactive Map for Editing */}
       <div className="min-h-[460px]">
         <Map
