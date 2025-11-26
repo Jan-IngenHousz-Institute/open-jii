@@ -3,13 +3,13 @@ import { Injectable } from "@nestjs/common";
 import type { SchemaData } from "../../../../../common/modules/databricks/services/sql/sql.types";
 import type { UserDto } from "../../../../../users/core/models/user.model";
 import { UserRepository } from "../../../../../users/core/repositories/user.repository";
-import type { SchemaDataDto } from "../data-enrichment.service";
-import { DataEnrichmentService } from "../data-enrichment.service";
+import type { SchemaDataDto } from "../data-transformation.service";
+import { DataTransformationService } from "../data-transformation.service";
 
 type UserObject = Pick<UserDto, "id" | "name" | "image">;
 
 @Injectable()
-export class UserEnrichmentService extends DataEnrichmentService {
+export class UserTransformationService extends DataTransformationService {
   constructor(private readonly userRepository: UserRepository) {
     super();
   }
@@ -26,13 +26,13 @@ export class UserEnrichmentService extends DataEnrichmentService {
     return "USER";
   }
 
-  canEnrich(schemaData: SchemaData): boolean {
+  canTransform(schemaData: SchemaData): boolean {
     return this.getSourceColumns().every((col) =>
       schemaData.columns.some((schemaCol) => schemaCol.name === col),
     );
   }
 
-  async enrichData(schemaData: SchemaData): Promise<SchemaDataDto> {
+  async transformData(schemaData: SchemaData): Promise<SchemaDataDto> {
     const userIdIndex = schemaData.columns.findIndex((col) => col.name === "user_id");
     const userNameIndex = schemaData.columns.findIndex((col) => col.name === "user_name");
 

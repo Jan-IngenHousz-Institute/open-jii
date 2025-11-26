@@ -9,8 +9,8 @@ import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import type { SchemaDataDto } from "../../services/data-enrichment/data-enrichment.service";
-import { UserEnrichmentService } from "../../services/data-enrichment/user-metadata/user-enrichment.service";
+import type { SchemaDataDto } from "../../services/data-transformation/data-transformation.service";
+import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 
 /**
  * Single table data structure that forms our array response
@@ -38,7 +38,7 @@ export class GetExperimentDataUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
-    private readonly userEnrichmentService: UserEnrichmentService,
+    private readonly userTransformationService: UserTransformationService,
   ) {}
 
   async execute(
@@ -423,15 +423,15 @@ export class GetExperimentDataUseCase {
   }
 
   /**
-   * Transform schema data using enrichment services
+   * Transform schema data using transformation services
    */
   private async transformSchemaData(schemaData: SchemaData): Promise<SchemaDataDto> {
-    // Check if user enrichment can be applied
-    if (this.userEnrichmentService.canEnrich(schemaData)) {
-      return await this.userEnrichmentService.enrichData(schemaData);
+    // Check if user transformation can be applied
+    if (this.userTransformationService.canTransform(schemaData)) {
+      return await this.userTransformationService.transformData(schemaData);
     }
 
-    // If no enrichment services apply, convert to DTO format
+    // If no transformation services apply, convert to DTO format
     return {
       columns: schemaData.columns,
       rows: schemaData.rows.map((row) => {
