@@ -32,7 +32,6 @@ vi.mock("@repo/i18n", () => ({
       const translations: Record<string, string> = {
         "experimentDataTable.loading": "Loading...",
         "experimentDataTable.noData": "No data available",
-        "experimentDataTable.table": "Table",
         "experimentDataTable.details": "View Details",
         "experimentDataTable.noResults": "No results found",
         "experimentDataTable.download": "Download",
@@ -235,8 +234,8 @@ describe("ExperimentDataSampleTables", () => {
     );
 
     // Should render both table names
-    expect(screen.getByText("Table measurements")).toBeInTheDocument();
-    expect(screen.getByText("Table metadata")).toBeInTheDocument();
+    expect(screen.getByText("measurements")).toBeInTheDocument();
+    expect(screen.getByText("metadata")).toBeInTheDocument();
 
     // Should render table data
     expect(screen.getAllByTestId("experiment-table-header")).toHaveLength(2);
@@ -347,8 +346,8 @@ describe("ExperimentDataSampleTables", () => {
     );
 
     // Should render only one table
-    expect(screen.getByText("Table measurements")).toBeInTheDocument();
-    expect(screen.queryByText("Table metadata")).not.toBeInTheDocument();
+    expect(screen.getByText("measurements")).toBeInTheDocument();
+    expect(screen.queryByText("metadata")).not.toBeInTheDocument();
 
     // Should render only one detail button
     const detailButtons = screen.getAllByText("View Details");

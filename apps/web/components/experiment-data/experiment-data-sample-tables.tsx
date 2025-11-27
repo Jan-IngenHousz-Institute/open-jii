@@ -83,7 +83,6 @@ function DownloadButton({ experimentId, tableName }: { experimentId: string; tab
 }
 
 function ExperimentDataSampleTable({ sampleTable }: { sampleTable: SampleTable }) {
-  const { t } = useTranslation();
   const columns = sampleTable.tableMetadata.columns;
   const table = useReactTable<DataRow>({
     data: sampleTable.tableRows,
@@ -96,9 +95,7 @@ function ExperimentDataSampleTable({ sampleTable }: { sampleTable: SampleTable }
 
   return (
     <>
-      <h5 className="mb-4 text-base font-medium">
-        {t("experimentDataTable.table")} {sampleTable.displayName}
-      </h5>
+      <h5 className="mb-4 text-base font-medium">{sampleTable.displayName}</h5>
       <div className="text-muted-foreground rounded-md border">
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />

@@ -426,7 +426,7 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("experimentDataTable.table test_table")).toBeInTheDocument();
+    expect(screen.getByText("test_table")).toBeInTheDocument();
     expect(screen.getByText("experimentDataTable.totalRows: 100")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
