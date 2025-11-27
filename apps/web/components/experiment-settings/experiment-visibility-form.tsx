@@ -51,12 +51,18 @@ export function ExperimentVisibilityForm({
 }: ExperimentVisibilityFormProps) {
   const { t } = useTranslation();
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isSavingEmbargo, setIsSavingEmbargo] = useState(false);
 
   const visibility = form.watch("visibility");
 
   const handleEmbargoDateSelect = async (date?: Date) => {
-    await onEmbargoDateSelect(date);
-    setCalendarOpen(false);
+    try {
+      setIsSavingEmbargo(true);
+      await onEmbargoDateSelect(date);
+    } finally {
+      setIsSavingEmbargo(false);
+      setCalendarOpen(false);
+    }
   };
 
   return (
@@ -124,13 +130,13 @@ export function ExperimentVisibilityForm({
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          disabled={isArchived}
+                          disabled={isArchived || isSavingEmbargo}
                           className={cn(
                             "w-full justify-between font-normal",
                             !selectedDate && "text-muted-foreground",
                           )}
                         >
-                          {buttonLabel}
+                          {isSavingEmbargo ? t("experimentSettings.saving") : buttonLabel}
                           <CalendarIcon className="ml-2 h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
@@ -140,6 +146,7 @@ export function ExperimentVisibilityForm({
                           selected={selectedDate}
                           onSelect={handleEmbargoDateSelect}
                           initialFocus
+                          disabled={isSavingEmbargo}
                         />
                       </PopoverContent>
                     </Popover>

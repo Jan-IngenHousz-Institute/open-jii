@@ -45,10 +45,8 @@ describe("<ExperimentVisibilityCard />", () => {
 
   it("renders title and description", () => {
     renderCard();
-    expect(screen.getByText("Actions")).toBeInTheDocument();
-    expect(
-      screen.getByText("Set the page to public or private to control who can see it."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("experimentVisibility.visibilityCardTitle")).toBeInTheDocument();
+    expect(screen.getByText("experimentVisibility.visibilityCardDescription")).toBeInTheDocument();
   });
 
   it("shows embargo field when visibility is private", () => {

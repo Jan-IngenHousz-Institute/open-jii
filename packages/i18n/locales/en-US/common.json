@@ -268,6 +268,14 @@
     "collaboratorsDescription": "Manage who has access to this experiment",
     "archiveNote": "Once you archive an experiment, this means your experiment will be read-only and no longer editable."
   },
+  "experimentVisibility": {
+    "visibilityCardTitle": "Actions",
+    "visibilityCardDescription": "Set the page to public or private to control who can see it.",
+    "changeToPublicTitle": "Change to Public?",
+    "changeToPublicDescription": "Making this experiment public will allow anyone to view it. This action cannot be undone.",
+    "changeToPrivateTitle": "Change to Private?",
+    "changeToPrivateDescription": "Making this experiment private will restrict access to only members."
+  },
 
   "dashboard": {
     "title": "Dashboard",

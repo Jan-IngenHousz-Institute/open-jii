@@ -117,10 +117,8 @@ export function ExperimentVisibilityCard({
   return (
     <>
       <CardHeader>
-        <CardTitle>Actions</CardTitle>
-        <CardDescription>
-          Set the page to public or private to control who can see it.
-        </CardDescription>
+        <CardTitle>{t("experimentVisibility.visibilityCardTitle")}</CardTitle>
+        <CardDescription>{t("experimentVisibility.visibilityCardDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <ExperimentVisibilityForm
@@ -136,12 +134,14 @@ export function ExperimentVisibilityCard({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {pendingVisibility === "public" ? "Change to Public?" : "Change to Private?"}
+                {pendingVisibility === "public"
+                  ? t("experimentVisibility.changeToPublicTitle")
+                  : t("experimentVisibility.changeToPrivateTitle")}
               </DialogTitle>
               <DialogDescription>
                 {pendingVisibility === "public"
-                  ? "Making this experiment public will allow anyone to view it. This action cannot be undone."
-                  : "Making this experiment private will restrict access to only members."}
+                  ? t("experimentVisibility.changeToPublicDescription")
+                  : t("experimentVisibility.changeToPrivateDescription")}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -150,10 +150,10 @@ export function ExperimentVisibilityCard({
                 onClick={() => setShowVisibilityDialog(false)}
                 disabled={isUpdating}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button onClick={confirmVisibilityChange} disabled={isUpdating}>
-                {isUpdating ? t("experimentSettings.saving") : "Confirm"}
+                {isUpdating ? t("experimentSettings.saving") : t("common.confirm")}
               </Button>
             </DialogFooter>
           </DialogContent>
