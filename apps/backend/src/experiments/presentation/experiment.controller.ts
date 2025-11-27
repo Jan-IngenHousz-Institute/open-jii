@@ -175,6 +175,7 @@ export class ExperimentController {
     return tsRestHandler(contract.experiments.deleteExperiment, async ({ params }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.EXPERIMENT_DELETION,
+        user.email ?? user.id,
       );
 
       if (!isDeletionEnabled) {

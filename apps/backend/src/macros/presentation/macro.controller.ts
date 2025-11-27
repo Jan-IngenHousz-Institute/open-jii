@@ -109,6 +109,7 @@ export class MacroController {
     return tsRestHandler(macroContract.deleteMacro, async ({ params }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.MACRO_DELETION,
+        user.email ?? user.id,
       );
 
       if (!isDeletionEnabled) {

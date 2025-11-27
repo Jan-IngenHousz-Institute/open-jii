@@ -36,10 +36,9 @@ export function ProtocolInfoCard({ protocolId, protocol }: ProtocolInfoCardProps
   const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const router = useRouter();
-
   const { t } = useTranslation();
   const locale = useLocale();
-  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION,);
+  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION);
 
   const handleDeleteProtocol = async () => {
     await deleteProtocol({ params: { id: protocolId } });
