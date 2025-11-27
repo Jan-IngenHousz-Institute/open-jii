@@ -59,6 +59,7 @@ describe("NewVisualizationForm", () => {
   const mockSampleTables: SampleTable[] = [
     {
       name: "measurements",
+      displayName: "Measurements",
       tableMetadata: {} as never,
       tableRows: [],
       columns: [
@@ -68,6 +69,7 @@ describe("NewVisualizationForm", () => {
     },
     {
       name: "observations",
+      displayName: "Observations",
       tableMetadata: {} as never,
       tableRows: [],
       columns: [

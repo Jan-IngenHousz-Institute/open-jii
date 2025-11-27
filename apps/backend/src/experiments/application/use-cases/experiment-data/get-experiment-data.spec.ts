@@ -212,7 +212,8 @@ describe("GetExperimentDataUseCase", () => {
     expect(Array.isArray(result.value)).toBe(true);
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
-      name: "Sensor Measurements", // Should use display_name from properties
+      name: "sensor_data",
+      displayName: "Sensor Measurements", // Should use display_name from properties
       catalog_name: experiment.name,
       schema_name: `exp_${cleanName}_${experiment.id}`,
       data: expectedColumnData,
@@ -418,7 +419,8 @@ describe("GetExperimentDataUseCase", () => {
     expect(Array.isArray(result.value)).toBe(true);
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
-      name: "Test Table Data", // Should use display_name from properties
+      name: "test_table",
+      displayName: "Test Table Data", // Should use display_name from properties
       catalog_name: experiment.name,
       schema_name: `exp_test_experiment_${experiment.id}`,
       data: expectedTableData,
@@ -584,6 +586,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
       name: "sensor_data",
+      displayName: "sensor_data",
       catalog_name: experiment.name,
       schema_name: `exp_${cleanName}_${experiment.id}`,
       data: expectedTableData,
@@ -826,6 +829,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check first table
     expect(result.value[0]).toMatchObject({
       name: mockTables.tables[0].name,
+      displayName: mockTables.tables[0].name,
       catalog_name: mockTables.tables[0].catalog_name,
       schema_name: mockTables.tables[0].schema_name,
       page: 1,
@@ -836,6 +840,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check second table
     expect(result.value[1]).toMatchObject({
       name: mockTables.tables[1].name,
+      displayName: mockTables.tables[1].name,
       catalog_name: mockTables.tables[1].catalog_name,
       schema_name: mockTables.tables[1].schema_name,
       page: 1,
@@ -1080,6 +1085,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check first table which should be "sample" (not "device")
     expect(result.value[0]).toMatchObject({
       name: mockTables.tables[1].name,
+      displayName: mockTables.tables[1].name,
       catalog_name: mockTables.tables[1].catalog_name,
       schema_name: mockTables.tables[1].schema_name,
       page: 1,
@@ -1090,6 +1096,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check second table which should be "device"
     expect(result.value[1]).toMatchObject({
       name: mockTables.tables[0].name,
+      displayName: mockTables.tables[0].name,
       catalog_name: mockTables.tables[0].catalog_name,
       schema_name: mockTables.tables[0].schema_name,
       page: 1,
@@ -1295,6 +1302,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Verify the table data
     expect(result.value[0].name).toBe(mockTables.tables[0].name);
+    expect(result.value[0].displayName).toBe(mockTables.tables[0].name);
     expect(result.value[0].catalog_name).toBe(mockTables.tables[0].catalog_name);
     expect(result.value[0].schema_name).toBe(mockTables.tables[0].schema_name);
   });
@@ -1941,6 +1949,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
       name: "enriched_sample",
+      displayName: "enriched_sample",
       catalog_name: experiment.name,
       schema_name: `exp_test_experiment_${experiment.id}`,
       page: 1,
@@ -2038,6 +2047,7 @@ describe("GetExperimentDataUseCase", () => {
     assertSuccess(result);
     expect(result.value).toHaveLength(1); // Only one table should be returned
     expect(result.value[0].name).toBe("enriched_sample_data");
+    expect(result.value[0].displayName).toBe("enriched_sample_data");
   });
 
   it("should return forbidden error when trying to access table with downstream: true", async () => {

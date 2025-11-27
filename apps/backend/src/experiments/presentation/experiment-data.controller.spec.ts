@@ -375,6 +375,9 @@ describe("ExperimentDataController", () => {
       // Check first table
       expect(response.body[0]).toMatchObject({
         name: mockTablesResponse.tables[0].name,
+        displayName:
+          mockTablesResponse.tables[0].properties?.display_name ??
+          mockTablesResponse.tables[0].name,
         catalog_name: mockTablesResponse.tables[0].catalog_name,
         schema_name: mockTablesResponse.tables[0].schema_name,
         page: 1,
@@ -385,6 +388,9 @@ describe("ExperimentDataController", () => {
       // Check second table
       expect(response.body[1]).toMatchObject({
         name: mockTablesResponse.tables[1].name,
+        displayName:
+          mockTablesResponse.tables[1].properties?.display_name ??
+          mockTablesResponse.tables[1].name,
         catalog_name: mockTablesResponse.tables[1].catalog_name,
         schema_name: mockTablesResponse.tables[1].schema_name,
         page: 1,
