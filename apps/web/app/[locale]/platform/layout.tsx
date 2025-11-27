@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 
-import initTranslations from "@repo/i18n/server";
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 
 import { Breadcrumbs } from "../../../components/app-breadcrumbs";
@@ -45,103 +44,12 @@ export default async function AppLayout({
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 
-  // Get translations server-side
-  const { t: tNavigation } = await initTranslations({
-    locale,
-    namespaces: ["navigation"],
-  });
-
-  const { t: tCommon } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
-
-  // Prepare navigation data server-side
-  const navigationData = {
-    navDashboard: [
-      {
-        title: tCommon("dashboard.title"),
-        url: `/${locale}/platform`,
-        icon: "Home",
-        isActive: true,
-        items: [],
-      },
-    ],
-    navExperiments: [
-      {
-        title: tNavigation("sidebar.experiments"),
-        url: `/${locale}/platform/experiments`,
-        icon: "Microscope",
-        isActive: true,
-        items: [
-          {
-            title: tNavigation("sidebar.newExperiment"),
-            url: `/${locale}/platform/experiments/new`,
-          },
-          {
-            title: tNavigation("sidebar.overview"),
-            url: `/${locale}/platform/experiments`,
-          },
-        ],
-      },
-    ],
-    navHardware: [
-      {
-        title: tNavigation("sidebar.protocols"),
-        url: `/${locale}/platform/protocols`,
-        icon: "FileSliders",
-        isActive: true,
-        items: [
-          {
-            title: tNavigation("sidebar.newProtocol"),
-            url: `/${locale}/platform/protocols/new`,
-          },
-          {
-            title: tNavigation("sidebar.overview"),
-            url: `/${locale}/platform/protocols`,
-          },
-        ],
-      },
-    ],
-    navMacros: [
-      {
-        title: tNavigation("sidebar.macros"),
-        url: `/${locale}/platform/macros`,
-        icon: "Code",
-        isActive: true,
-        items: [
-          {
-            title: tNavigation("sidebar.newMacro"),
-            url: `/${locale}/platform/macros/new`,
-          },
-          {
-            title: tNavigation("sidebar.overview"),
-            url: `/${locale}/platform/macros`,
-          },
-        ],
-      },
-    ],
-  };
-
-  const translations = {
-    openJII: tCommon("navigation.openJII"),
-    logoAlt: tCommon("common.logo"),
-    signIn: tCommon("signIn"),
-    create: tCommon("common.create"),
-    protocol: tCommon("common.protocolLabel"),
-    experiment: tNavigation("sidebar.experiments"),
-    macro: tNavigation("sidebar.macros"),
-    experimentsTitle: tNavigation("sidebar.experiments"),
-    hardwareTitle: tNavigation("sidebar.hardware"),
-    macrosTitle: tNavigation("sidebar.macros"),
-  };
-
   // Get current pathname for breadcrumbs
   const pathname = (await headers()).get("x-current-path") ?? "/";
 
   return (
     <SidebarProvider>
-      <AppSidebarWrapper user={session.user} locale={locale} />
+      <AppSidebarWrapper locale={locale} />
       <PlatformTopBar locale={locale} user={session.user} />
       <SidebarInset>
         <div className="flex flex-1 flex-col gap-4 p-6 pt-20">

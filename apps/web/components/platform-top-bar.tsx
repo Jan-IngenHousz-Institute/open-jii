@@ -57,7 +57,6 @@ export function PlatformTopBar({ locale, user }: PlatformTopBarProps) {
               avatar: user.image ?? "",
             }}
             locale={locale}
-            variant="topbar"
           />
         </div>
       </div>

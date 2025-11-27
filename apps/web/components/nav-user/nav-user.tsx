@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
 
@@ -16,10 +16,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
 } from "@repo/ui/components";
 
 import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
@@ -31,7 +27,6 @@ interface NavUserProps {
     avatar: string;
   };
   locale: string;
-  variant?: "sidebar" | "topbar";
 }
 
 function UserAvatar({ avatar, displayName }: { avatar: string; displayName: string }) {
@@ -81,8 +76,7 @@ function MenuItems({ locale, t }: { locale: string; t: (key: string) => string }
   );
 }
 
-export function NavUser({ user, locale, variant = "sidebar" }: NavUserProps) {
-  const { isMobile } = useSidebar();
+export function NavUser({ user, locale }: NavUserProps) {
   const { t } = useTranslation();
 
   const { data: userProfile } = useGetUserProfile(user.id);
@@ -92,66 +86,27 @@ export function NavUser({ user, locale, variant = "sidebar" }: NavUserProps) {
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
       : "";
 
-  const dropdownContent = (
-    <DropdownMenuContent
-      align="end"
-      className="w-56"
-      {...(variant === "sidebar" && {
-        side: isMobile ? "bottom" : "right",
-        sideOffset: 4,
-      })}
-    >
-      <DropdownMenuLabel className="p-0 font-normal">
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <UserAvatar avatar={user.avatar} displayName={displayName} />
-          <UserInfo displayName={displayName} email={user.email} />
-        </div>
-      </DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      <MenuItems locale={locale} t={t} />
-    </DropdownMenuContent>
-  );
-
-  if (variant === "topbar") {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="group flex items-center gap-2 hover:bg-transparent hover:opacity-70 data-[state=open]:bg-transparent"
-          >
-            <UserAvatar avatar={user.avatar} displayName={displayName} />
-            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-          </Button>
-        </DropdownMenuTrigger>
-        {dropdownContent}
-      </DropdownMenu>
-    );
-  }
-
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:ml-2">
-                <AvatarImage src={user.avatar} alt={displayName} />
-                <AvatarFallback className="rounded-lg">JII</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{displayName}</span>
-                <span className="truncate text-xs">{user.email}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          {dropdownContent}
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="group flex items-center gap-2 hover:bg-transparent hover:opacity-70 data-[state=open]:bg-transparent"
+        >
+          <UserAvatar avatar={user.avatar} displayName={displayName} />
+          <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="p-0 font-normal">
+          <div className="flex items-center gap-2 px-2 py-1.5">
+            <UserAvatar avatar={user.avatar} displayName={displayName} />
+            <UserInfo displayName={displayName} email={user.email} />
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <MenuItems locale={locale} t={t} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

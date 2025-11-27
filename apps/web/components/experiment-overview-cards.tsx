@@ -1,11 +1,9 @@
-import { ArrowRight, Lock, Globe } from "lucide-react";
 import Link from "next/link";
 import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
 import type { Experiment } from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardHeader, RichTextRenderer } from "@repo/ui/components";
+import { RichTextRenderer } from "@repo/ui/components";
 
 export function ExperimentOverviewCards({
   experiments,
