@@ -20,7 +20,7 @@ export function DashboardSection({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-base font-bold text-gray-900">{title}</h2>
         <Link href={seeAllHref} locale={locale}>
           <span className="text-primary hover:text-primary/80 text-sm font-semibold">
             {seeAllLabel}

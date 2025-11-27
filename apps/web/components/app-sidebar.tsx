@@ -135,7 +135,7 @@ export function AppSidebar({
       <SidebarFooter className="px-8 pb-6 pt-2 group-data-[collapsible=icon]:px-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="group/btn text-primary hover:border-primary/30 relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md border bg-white px-2 text-sm font-medium transition-all duration-300 hover:bg-gradient-to-r hover:from-white hover:to-gray-50/50 hover:shadow-md active:scale-[0.97] group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-2">
+            <button className="group/btn text-primary hover:border-primary/30 relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md border bg-white px-2 text-sm font-medium transition-all duration-300 hover:scale-[1.03] hover:bg-gradient-to-r hover:from-white hover:to-gray-50/50 hover:shadow-md active:scale-[0.97] data-[state=open]:scale-[1.03] group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-2">
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full" />
               <CirclePlus
                 className="text-primary relative -mt-px h-[15px] w-[15px] shrink-0 transition-all duration-300 group-hover/btn:rotate-180 group-hover/btn:scale-110"

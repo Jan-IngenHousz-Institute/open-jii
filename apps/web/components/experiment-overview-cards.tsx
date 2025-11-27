@@ -37,11 +37,11 @@ export function ExperimentOverviewCards({
 
           return (
             <Link key={experiment.id} href={experimentPath}>
-              <div className="flex h-full min-h-[180px] flex-col rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-sm">
+              <div className="flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
                 <div className="inline-flex">
                   <ExperimentStatusBadge status={experiment.status} />
                 </div>
-                <div className="mb-auto mt-4">
+                <div className="mb-auto">
                   <h3 className="mb-2 text-lg font-semibold text-gray-900">{experiment.name}</h3>
                   <div className="overflow-hidden text-sm text-gray-500">
                     <RichTextRenderer
