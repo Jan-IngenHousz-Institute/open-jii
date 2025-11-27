@@ -128,8 +128,25 @@ export interface DatabricksPort {
    *
    * @param experimentName - Name of the experiment
    * @param experimentId - ID of the experiment for logging purposes
+   * @param options - Optional parameters for the pipeline update
    */
   triggerExperimentPipeline(
+    experimentName: string,
+    experimentId: string,
+    options?: {
+      fullRefresh?: boolean;
+      fullRefreshSelection?: string[];
+      refreshSelection?: string[];
+    },
+  ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
+
+  /**
+   * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   */
+  triggerExperimentPipelineSilverRefresh(
     experimentName: string,
     experimentId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
@@ -184,4 +201,15 @@ export interface DatabricksPort {
     experimentId: string,
     sqlStatement: string,
   ): Promise<Result<SchemaData>>;
+
+  /**
+   * Refresh all silver quality tables for an experiment with full refresh
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   */
+  refreshSilverData(
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
 }

@@ -29,7 +29,7 @@ from typing import Dict, Any, List
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
 # Import our enrichment library  
-from enrich import add_user_data_column, get_experiment_question_labels, add_question_columns
+from enrich import add_user_data_column, get_experiment_question_labels, add_question_columns, add_annotation_column
 
 # COMMAND ----------
 
@@ -511,7 +511,7 @@ def enriched_{macro_table_name}_table():
     enriched_with_user_data_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
     # Add annotation columns
-    enriched_df = add_annotation_columns(
+    enriched_df = add_annotation_column(
         enriched_with_user_data_df,
         "{macro_table_name}",
         CATALOG_NAME,
@@ -591,7 +591,7 @@ def enriched_sample():
     # Add annotation columns
     # Note: In streaming context, annotations are added as null columns
     # The actual join with annotations happens in batch queries on the materialized table
-    enriched_df = add_annotation_columns(
+    enriched_df = add_annotation_column(
         enriched_df, 
         SAMPLE_TABLE, 
         CATALOG_NAME, 

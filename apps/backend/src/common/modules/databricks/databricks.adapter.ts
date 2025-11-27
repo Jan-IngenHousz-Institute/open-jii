@@ -269,11 +269,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    *
    * @param experimentName - Name of the experiment
    * @param _experimentId - ID of the experiment for logging purposes
+   * @param options - Optional parameters for the pipeline update
    * @returns Result containing the pipeline update response or an error
    */
   async triggerExperimentPipeline(
     experimentName: string,
     _experimentId: string,
+    options?: {
+      fullRefresh?: boolean;
+      fullRefreshSelection?: string[];
+      refreshSelection?: string[];
+    },
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
     // Construct the pipeline name as per the Python notebook format
     const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
@@ -289,9 +295,71 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     const pipeline = pipelineResult.value;
     const pipelineId = pipeline.pipeline_id;
 
-    // Start the pipeline update
+    // Start the pipeline update with optional parameters
     return this.pipelinesService.startPipelineUpdate({
       pipelineId,
+      cause: "API_CALL",
+      fullRefresh: options?.fullRefresh,
+      fullRefreshSelection: options?.fullRefreshSelection,
+      refreshSelection: options?.refreshSelection,
+    });
+  }
+
+  /**
+   * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @returns Result containing the pipeline update response or an error
+   */
+  async triggerExperimentPipelineSilverRefresh(
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
+    return this.refreshSilverData(experimentName, experimentId);
+  }
+
+  /**
+   * Refresh all silver quality tables for an experiment with full refresh
+   * This is a convenience method that wraps triggerExperimentPipelineSilverRefresh
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @returns Result containing the pipeline update response or an error
+   */
+  async refreshSilverData(
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
+    this.logger.log(`Refreshing silver data for experiment ${experimentName} (${experimentId})`);
+
+    // First, get the list of tables in the experiment
+    const tablesResult = await this.listTables(experimentName, experimentId);
+
+    if (tablesResult.isFailure()) {
+      this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
+      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
+    }
+
+    // Filter for tables with quality === "silver"
+    const silverTables = tablesResult.value.tables
+      .filter((table) => table.properties?.quality === "silver")
+      .map((table) => table.name);
+
+    if (silverTables.length === 0) {
+      this.logger.warn(`No silver quality tables found for experiment ${experimentName}`);
+      return failure(
+        AppError.notFound(`No silver quality tables found for experiment ${experimentName}`),
+      );
+    }
+
+    this.logger.log(
+      `Found ${silverTables.length} silver tables to refresh: ${silverTables.join(", ")}`,
+    );
+
+    // Trigger the pipeline with full refresh for silver tables
+    return this.triggerExperimentPipeline(experimentName, experimentId, {
+      fullRefreshSelection: silverTables,
     });
   }
 
