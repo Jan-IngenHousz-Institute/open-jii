@@ -109,7 +109,7 @@ describe("<NavUser />", () => {
 
     // JII fallback should be present
     expect(screen.getByText("JII")).toBeInTheDocument();
-    
+
     // Button should exist and be clickable
     expect(triggerBtn).toBeInTheDocument();
     expect(triggerBtn).not.toBeDisabled();
