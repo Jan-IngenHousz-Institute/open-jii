@@ -1,7 +1,8 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Inject, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { macroContract } from "@repo/api";
 import type { User } from "@repo/auth/types";
 
@@ -14,12 +15,16 @@ import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
+import { ANALYTICS_PORT } from "../core/ports/analytics.port";
+import type { AnalyticsPort } from "../core/ports/analytics.port";
 
 @Controller()
 export class MacroController {
   private readonly logger = new Logger(MacroController.name);
 
   constructor(
+    @Inject(ANALYTICS_PORT)
+    private readonly analyticsPort: AnalyticsPort,
     private readonly createMacroUseCase: CreateMacroUseCase,
     private readonly getMacroUseCase: GetMacroUseCase,
     private readonly listMacrosUseCase: ListMacrosUseCase,
@@ -102,6 +107,17 @@ export class MacroController {
   @UseGuards(AuthGuard)
   deleteMacro(@CurrentUser() user: User) {
     return tsRestHandler(macroContract.deleteMacro, async ({ params }) => {
+      const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
+        FEATURE_FLAGS.MACRO_DELETION,
+      );
+
+      if (!isDeletionEnabled) {
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: undefined,
+        };
+      }
+
       const result = await this.deleteMacroUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
