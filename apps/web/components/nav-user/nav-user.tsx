@@ -10,6 +10,7 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -24,28 +25,110 @@ import {
 
 import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
 
-export function NavUser({
-  user,
-  locale,
-}: {
+interface NavUserProps {
   user: {
     id: string;
     email: string;
     avatar: string;
   };
   locale: string;
-}) {
+  variant?: "sidebar" | "topbar";
+}
+
+function UserAvatar({ avatar, displayName }: { avatar: string; displayName: string }) {
+  return (
+    <Avatar className="h-8 w-8">
+      <AvatarImage src={avatar} alt={displayName} />
+      <AvatarFallback>JII</AvatarFallback>
+    </Avatar>
+  );
+}
+
+function UserInfo({ displayName, email }: { displayName: string; email: string }) {
+  return (
+    <div className="flex flex-col space-y-0.5">
+      <p className="text-sm font-medium">{displayName}</p>
+      <p className="text-muted-foreground text-xs">{email}</p>
+    </div>
+  );
+}
+
+function MenuItems({ locale, t }: { locale: string; t: (key: string) => string }) {
+  return (
+    <>
+      <DropdownMenuItem asChild>
+        <Link
+          href={`/${locale}/platform/account/settings`}
+          className="flex w-full cursor-default items-center"
+        >
+          <Avatar className="bg-muted mr-2 h-4 w-4">
+            <AvatarFallback>
+              <UserIcon className="h-4 w-4" />
+            </AvatarFallback>
+          </Avatar>
+          {t("auth.account")}
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link
+          href={`/${locale}/platform/signout`}
+          className="flex w-full cursor-default items-center"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          {t("navigation.logout")}
+        </Link>
+      </DropdownMenuItem>
+    </>
+  );
+}
+
+export function NavUser({ user, locale, variant = "sidebar" }: NavUserProps) {
   const { isMobile } = useSidebar();
   const { t } = useTranslation();
 
-  // Fetch user profile for first/last name
   const { data: userProfile } = useGetUserProfile(user.id);
   const userProfileBody = userProfile?.body;
-  // Prefer profile name if available
   const displayName =
     userProfileBody?.firstName && userProfileBody.lastName
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
       : "";
+
+  const dropdownContent = (
+    <DropdownMenuContent
+      align="end"
+      className="w-56"
+      {...(variant === "sidebar" && {
+        side: isMobile ? "bottom" : "right",
+        sideOffset: 4,
+      })}
+    >
+      <DropdownMenuLabel className="p-0 font-normal">
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <UserAvatar avatar={user.avatar} displayName={displayName} />
+          <UserInfo displayName={displayName} email={user.email} />
+        </div>
+      </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <MenuItems locale={locale} t={t} />
+    </DropdownMenuContent>
+  );
+
+  if (variant === "topbar") {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="group flex items-center gap-2 hover:bg-transparent hover:opacity-70 data-[state=open]:bg-transparent"
+          >
+            <UserAvatar avatar={user.avatar} displayName={displayName} />
+            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+          </Button>
+        </DropdownMenuTrigger>
+        {dropdownContent}
+      </DropdownMenu>
+    );
+  }
 
   return (
     <SidebarMenu>
@@ -58,9 +141,7 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:ml-2">
                 <AvatarImage src={user.avatar} alt={displayName} />
-                <AvatarFallback className="rounded-lg">
-                  {displayName ? displayName.substring(0, 2).toUpperCase() : "JII"}
-                </AvatarFallback>
+                <AvatarFallback className="rounded-lg">JII</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{displayName}</span>
