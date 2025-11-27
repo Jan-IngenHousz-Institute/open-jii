@@ -9,7 +9,7 @@ setup(
     python_requires=">=3.7",
     include_package_data=True,
     package_data={
-        "multispeq.helpers": ["*.js"],
+        "multispeq.helpers": ["*.js", "*.r"],
     },
     zip_safe=False,
 )

@@ -75,6 +75,11 @@
       "QUESTION": "Question",
       "MEASUREMENT": "Measurement",
       "ANALYSIS": "Analysis"
+    },
+    "questionTooltip": {
+      "title": "Data Column Name",
+      "description": "This label will become a column in your data analysis:",
+      "defaultColumnName": "question_name"
     }
   },
   "overview": "Overview",
