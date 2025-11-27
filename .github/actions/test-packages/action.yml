@@ -8,6 +8,10 @@ inputs:
   codecov-token:
     description: "Codecov token for uploading coverage"
     required: true
+  skip-coverage:
+    description: "Skip coverage upload (e.g., for Dependabot PRs)"
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -32,6 +36,7 @@ runs:
         eval "$TEST_CMD"
 
     - name: Upload coverage to Codecov
+      if: inputs.skip-coverage != 'true'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.codecov-token }}

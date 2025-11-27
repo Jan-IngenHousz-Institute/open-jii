@@ -4,7 +4,7 @@ import type { SchemaData } from "../../../../../common/modules/databricks/servic
 import { failure } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
 import { UserRepository } from "../../../../../users/core/repositories/user.repository";
-import { UserEnrichmentService } from "./user-enrichment.service";
+import { UserTransformationService } from "./user-transformation.service";
 
 interface UserObject {
   id: string;
@@ -19,9 +19,9 @@ function parseUserObject(userString: string | null | undefined): UserObject {
   return JSON.parse(userString) as UserObject;
 }
 
-describe("UserEnrichmentService", () => {
+describe("UserTransformationService", () => {
   const testApp = TestHarness.App;
-  let service: UserEnrichmentService;
+  let service: UserTransformationService;
   let userRepository: UserRepository;
   let testUser1Id: string;
   let testUser2Id: string;
@@ -46,7 +46,7 @@ describe("UserEnrichmentService", () => {
     });
 
     userRepository = testApp.module.get(UserRepository);
-    service = testApp.module.get(UserEnrichmentService);
+    service = testApp.module.get(UserTransformationService);
   });
 
   afterEach(() => {
@@ -75,7 +75,7 @@ describe("UserEnrichmentService", () => {
     });
   });
 
-  describe("canEnrich", () => {
+  describe("canTransform", () => {
     it("should return true when both user_id and user_name columns are present", () => {
       const schemaData: SchemaData = {
         columns: [
@@ -88,7 +88,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      expect(service.canEnrich(schemaData)).toBe(true);
+      expect(service.canTransform(schemaData)).toBe(true);
     });
 
     it("should return false when user_id column is missing", () => {
@@ -102,7 +102,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      expect(service.canEnrich(schemaData)).toBe(false);
+      expect(service.canTransform(schemaData)).toBe(false);
     });
 
     it("should return false when user_name column is missing", () => {
@@ -116,7 +116,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      expect(service.canEnrich(schemaData)).toBe(false);
+      expect(service.canTransform(schemaData)).toBe(false);
     });
 
     it("should return false when both user columns are missing", () => {
@@ -130,12 +130,12 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      expect(service.canEnrich(schemaData)).toBe(false);
+      expect(service.canTransform(schemaData)).toBe(false);
     });
   });
 
-  describe("enrichData", () => {
-    it("should enrich data by replacing user columns with user object", async () => {
+  describe("transformData", () => {
+    it("should transform data by replacing user columns with user object", async () => {
       const schemaData: SchemaData = {
         columns: [
           { name: "user_id", type_name: "STRING", type_text: "STRING" },
@@ -151,7 +151,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       // Should have 3 columns: measurement, timestamp, and user
       expect(result.columns).toHaveLength(3);
@@ -205,7 +205,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       expect(result.rows).toHaveLength(2);
 
@@ -230,7 +230,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       expect(result.columns).toHaveLength(2); // measurement + user
       expect(result.rows).toEqual([]);
@@ -252,7 +252,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0]).toHaveProperty("user");
@@ -288,7 +288,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0]).toHaveProperty("user");
@@ -324,7 +324,7 @@ describe("UserEnrichmentService", () => {
       // Spy on the repository method to verify it's called with unique IDs only
       const findUsersByIdsSpy = vi.spyOn(userRepository, "findUsersByIds");
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       // Should only call repository once with unique user IDs
       expect(findUsersByIdsSpy).toHaveBeenCalledTimes(1);
@@ -358,7 +358,7 @@ describe("UserEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       // Should preserve order: timestamp, measurement, location, user (source columns removed, target added at end)
       expect(result.columns).toEqual([

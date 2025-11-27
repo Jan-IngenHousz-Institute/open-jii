@@ -1,11 +1,8 @@
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import {
-  generateHashedFilename,
-  type CreateMacroDto,
-  type UpdateMacroDto,
-} from "../../../core/models/macro.model";
+import { generateHashedFilename } from "../../../core/models/macro.model";
+import type { CreateMacroDto, UpdateMacroDto } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { UpdateMacroUseCase } from "./update-macro";
 

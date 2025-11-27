@@ -1,11 +1,11 @@
 "use client";
 
-import { FEATURE_FLAGS } from "@/lib/posthog-config";
 import { Globe } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import {
   Button,
   DropdownMenu,

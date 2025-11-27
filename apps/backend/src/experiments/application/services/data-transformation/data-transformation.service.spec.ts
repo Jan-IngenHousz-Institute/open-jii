@@ -1,9 +1,9 @@
 import type { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
-import { DataEnrichmentService } from "./data-enrichment.service";
-import type { SchemaDataDto } from "./data-enrichment.service";
+import { DataTransformationService } from "./data-transformation.service";
+import type { SchemaDataDto } from "./data-transformation.service";
 
-// Concrete implementation of DataEnrichmentService for testing
-class TestDataEnrichmentService extends DataEnrichmentService {
+// Concrete implementation of DataTransformationService for testing
+class TestDataTransformationService extends DataTransformationService {
   private sourceColumns: string[];
   private targetColumn: string;
   private targetType: string;
@@ -27,13 +27,13 @@ class TestDataEnrichmentService extends DataEnrichmentService {
     return this.targetType;
   }
 
-  canEnrich(schemaData: SchemaData): boolean {
+  canTransform(schemaData: SchemaData): boolean {
     // Check if all source columns exist in the schema
     const columnNames = schemaData.columns.map((col) => col.name);
     return this.sourceColumns.every((sourceCol) => columnNames.includes(sourceCol));
   }
 
-  enrichData(schemaData: SchemaData): Promise<SchemaDataDto> {
+  transformData(schemaData: SchemaData): Promise<SchemaDataDto> {
     // For testing, we'll add a new column that concatenates the source columns
     const newColumns = [
       ...schemaData.columns,
@@ -44,20 +44,20 @@ class TestDataEnrichmentService extends DataEnrichmentService {
       },
     ];
 
-    const enrichedRows = schemaData.rows.map((row) => {
+    const transformedRows = schemaData.rows.map((row) => {
       // Get values from source columns
       const sourceValues = this.sourceColumns.map((sourceCol) => {
         const colIndex = schemaData.columns.findIndex((col) => col.name === sourceCol);
         return colIndex >= 0 ? row[colIndex] : null;
       });
 
-      // Create enriched value (concatenate non-null source values)
-      const enrichedValue = sourceValues.filter((val) => val !== null).join(" ");
+      // Create transformed value (concatenate non-null source values)
+      const transformedValue = sourceValues.filter((val) => val !== null).join(" ");
 
-      return [...row, enrichedValue || null];
+      return [...row, transformedValue || null];
     });
 
-    return Promise.resolve(this.convertToDto(newColumns, enrichedRows, schemaData));
+    return Promise.resolve(this.convertToDto(newColumns, transformedRows, schemaData));
   }
 
   // Make convertToDto public for testing
@@ -70,11 +70,11 @@ class TestDataEnrichmentService extends DataEnrichmentService {
   }
 }
 
-describe("DataEnrichmentService", () => {
-  let service: TestDataEnrichmentService;
+describe("DataTransformationService", () => {
+  let service: TestDataTransformationService;
 
   beforeEach(() => {
-    service = new TestDataEnrichmentService(["first_name", "last_name"], "full_name", "STRING");
+    service = new TestDataTransformationService(["first_name", "last_name"], "full_name", "STRING");
   });
 
   describe("getSourceColumns", () => {
@@ -95,7 +95,7 @@ describe("DataEnrichmentService", () => {
     });
   });
 
-  describe("canEnrich", () => {
+  describe("canTransform", () => {
     it("should return true when all source columns exist in schema", () => {
       const schemaData: SchemaData = {
         columns: [
@@ -111,7 +111,7 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      expect(service.canEnrich(schemaData)).toBe(true);
+      expect(service.canTransform(schemaData)).toBe(true);
     });
 
     it("should return false when some source columns are missing from schema", () => {
@@ -128,7 +128,7 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      expect(service.canEnrich(schemaData)).toBe(false);
+      expect(service.canTransform(schemaData)).toBe(false);
     });
 
     it("should return false when no source columns exist in schema", () => {
@@ -145,12 +145,12 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      expect(service.canEnrich(schemaData)).toBe(false);
+      expect(service.canTransform(schemaData)).toBe(false);
     });
   });
 
-  describe("enrichData", () => {
-    it("should enrich data by adding a new column with concatenated values", async () => {
+  describe("transformData", () => {
+    it("should transform data by adding a new column with concatenated values", async () => {
       const schemaData: SchemaData = {
         columns: [
           { name: "first_name", type_name: "STRING", type_text: "STRING" },
@@ -165,7 +165,7 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       expect(result).toEqual({
         columns: [
@@ -208,7 +208,7 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       expect(result.rows).toEqual([
         {
@@ -240,7 +240,7 @@ describe("DataEnrichmentService", () => {
         truncated: true,
       };
 
-      const result = await service.enrichData(schemaData);
+      const result = await service.transformData(schemaData);
 
       expect(result.totalRows).toBe(100);
       expect(result.truncated).toBe(true);
@@ -264,7 +264,7 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = service["convertToDto"](columns, rows, schemaData);
+      const result = service.testConvertToDto(columns, rows, schemaData);
 
       expect(result).toEqual({
         columns,
@@ -290,7 +290,7 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = service["convertToDto"](columns, rows, schemaData);
+      const result = service.testConvertToDto(columns, rows, schemaData);
 
       expect(result).toEqual({
         columns,
@@ -338,7 +338,7 @@ describe("DataEnrichmentService", () => {
         truncated: false,
       };
 
-      const result = service["convertToDto"](columns, rows, schemaData);
+      const result = service.testConvertToDto(columns, rows, schemaData);
 
       expect(result.rows).toEqual([
         { name: "John", age: null },
@@ -347,16 +347,16 @@ describe("DataEnrichmentService", () => {
     });
   });
 
-  describe("different enrichment configurations", () => {
+  describe("different transformation configurations", () => {
     it("should work with single source column", () => {
-      const singleColumnService = new TestDataEnrichmentService(["email"], "domain", "STRING");
+      const singleColumnService = new TestDataTransformationService(["email"], "domain", "STRING");
 
       expect(singleColumnService.getSourceColumns()).toEqual(["email"]);
       expect(singleColumnService.getTargetColumn()).toBe("domain");
     });
 
     it("should work with multiple source columns", () => {
-      const multiColumnService = new TestDataEnrichmentService(
+      const multiColumnService = new TestDataTransformationService(
         ["street", "city", "state", "zip"],
         "full_address",
         "STRING",
@@ -367,7 +367,11 @@ describe("DataEnrichmentService", () => {
     });
 
     it("should work with different target types", () => {
-      const numericService = new TestDataEnrichmentService(["value1", "value2"], "sum", "DOUBLE");
+      const numericService = new TestDataTransformationService(
+        ["value1", "value2"],
+        "sum",
+        "DOUBLE",
+      );
 
       expect(numericService.getTargetType()).toBe("DOUBLE");
     });
