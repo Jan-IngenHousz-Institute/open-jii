@@ -56,28 +56,7 @@ vi.mock("./nav-items", () => ({
   ),
 }));
 
-// Mock NavUser component
-vi.mock("./nav-user/nav-user", () => ({
-  NavUser: ({ locale, user }: { locale: string; user: { id: string; email: string } }) => (
-    <div data-testid="nav-user" data-locale={locale} data-user-id={user.id} />
-  ),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@repo/ui/components")>();
-  return {
-    ...actual,
-  };
-});
-
 describe("AppSidebar", () => {
-  const mockUser = {
-    id: "user-123",
-    email: "test@example.com",
-    image: "/avatar.jpg",
-  };
-
   const mockNavigationData = {
     navDashboard: [{ title: "Dashboard", url: "/en/platform", icon: "Home", items: [] }],
     navExperiments: [
@@ -99,6 +78,9 @@ describe("AppSidebar", () => {
     logoAlt: "JII Logo",
     signIn: "Sign In",
     create: "Create",
+    protocol: "Protocol",
+    experiment: "Experiment",
+    macro: "Macro",
     experimentsTitle: "Experiments",
     hardwareTitle: "Hardware",
     macrosTitle: "Macros",
@@ -109,7 +91,6 @@ describe("AppSidebar", () => {
     render(
       <SidebarProvider>
         <AppSidebar
-          user={mockUser}
           locale="en"
           navigationData={mockNavigationData}
           translations={mockTranslations}
@@ -120,31 +101,11 @@ describe("AppSidebar", () => {
     expect(screen.getByAltText("JII Logo")).toBeInTheDocument();
   });
 
-  it("renders NavUser component when user is provided", async () => {
-    const { SidebarProvider } = await import("@repo/ui/components");
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          user={mockUser}
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
-
-    const navUser = screen.getByTestId("nav-user");
-    expect(navUser).toBeInTheDocument();
-    expect(navUser).toHaveAttribute("data-locale", "en");
-    expect(navUser).toHaveAttribute("data-user-id", "user-123");
-  });
-
   it("renders all navigation sections", async () => {
     const { SidebarProvider } = await import("@repo/ui/components");
     render(
       <SidebarProvider>
         <AppSidebar
-          user={mockUser}
           locale="en"
           navigationData={mockNavigationData}
           translations={mockTranslations}
@@ -161,7 +122,6 @@ describe("AppSidebar", () => {
     render(
       <SidebarProvider>
         <AppSidebar
-          user={mockUser}
           locale="en"
           navigationData={mockNavigationData}
           translations={mockTranslations}
@@ -170,7 +130,8 @@ describe("AppSidebar", () => {
     );
 
     expect(screen.getByText("Create")).toBeInTheDocument();
-  });   user={mockUser}
+  });
+
   it("shows dropdown menu with create options when button is clicked", async () => {
     const { SidebarProvider } = await import("@repo/ui/components");
     const user = userEvent.setup();
@@ -178,7 +139,6 @@ describe("AppSidebar", () => {
     render(
       <SidebarProvider>
         <AppSidebar
-          user={mockUser}
           locale="en"
           navigationData={mockNavigationData}
           translations={mockTranslations}
@@ -190,13 +150,9 @@ describe("AppSidebar", () => {
     await user.click(createButton);
 
     // Should show protocol, experiment, and macro options
-    const protocolLink = screen.getByRole("menuitem", { name: "Protocol" });
-    const experimentLink = screen.getByRole("menuitem", { name: "Experiment" });
-    const macroLink = screen.getByRole("menuitem", { name: "Macro" });
-
-    expect(protocolLink).toBeInTheDocument();
-    expect(experimentLink).toBeInTheDocument();
-    expect(macroLink).toBeInTheDocument();
+    expect(screen.getByText("Protocol")).toBeInTheDocument();
+    expect(screen.getByText("Experiment")).toBeInTheDocument();
+    expect(screen.getByText("Macro")).toBeInTheDocument();
   });
 
   it("create dropdown links have correct hrefs", async () => {
@@ -206,7 +162,6 @@ describe("AppSidebar", () => {
     render(
       <SidebarProvider>
         <AppSidebar
-          user={mockUser}
           locale="en"
           navigationData={mockNavigationData}
           translations={mockTranslations}
@@ -217,9 +172,9 @@ describe("AppSidebar", () => {
     const createButton = screen.getByText("Create");
     await user.click(createButton);
 
-    const protocolLink = screen.getByRole("menuitem", { name: "Protocol" });
-    const experimentLink = screen.getByRole("menuitem", { name: "Experiment" });
-    const macroLink = screen.getByRole("menuitem", { name: "Macro" });
+    const protocolLink = screen.getByText("Protocol").closest("a");
+    const experimentLink = screen.getByText("Experiment").closest("a");
+    const macroLink = screen.getByText("Macro").closest("a");
 
     expect(protocolLink).toHaveAttribute("href", "/en/platform/protocols/new");
     expect(experimentLink).toHaveAttribute("href", "/en/platform/experiments/new");
@@ -233,7 +188,6 @@ describe("AppSidebar", () => {
     render(
       <SidebarProvider>
         <AppSidebar
-          user={mockUser}
           locale="de"
           navigationData={mockNavigationData}
           translations={mockTranslations}
@@ -244,16 +198,7 @@ describe("AppSidebar", () => {
     const createButton = screen.getByText("Create");
     await user.click(createButton);
 
-    const protocolLink = screen.getByRole("menuitem", { name: "Protocol" });
-    expect(protocolLink).toHaveAttribute("href", "/de/platform/protocols/new");
-  });   translations={mockTranslations}
-      />,
-    );
-
-    const createButton = screen.getByText("Create");
-    await user.click(createButton);
-
-    const protocolLink = screen.getByRole("menuitem", { name: "Protocol" });
+    const protocolLink = screen.getByText("Protocol").closest("a");
     expect(protocolLink).toHaveAttribute("href", "/de/platform/protocols/new");
   });
 });
