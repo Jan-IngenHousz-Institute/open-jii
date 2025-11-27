@@ -149,8 +149,16 @@ vi.mock("@repo/ui/components", () => ({
   SelectContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="select-content">{children}</div>
   ),
-  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
-    <option data-testid="select-item" value={value}>
+  SelectItem: ({
+    value,
+    children,
+    disabled,
+  }: {
+    value: string;
+    children: React.ReactNode;
+    disabled?: boolean;
+  }) => (
+    <option data-testid="select-item" value={value} disabled={disabled}>
       {children}
     </option>
   ),
@@ -245,7 +253,9 @@ describe("MacroDetailsCard", () => {
     render(<MacroDetailsCard {...defaultProps} />);
 
     expect(screen.getByText("Python")).toBeInTheDocument();
-    expect(screen.getByText("R")).toBeInTheDocument();
+    const rOption = screen.getByText("R").closest("option");
+    expect(rOption).toBeInTheDocument();
+    expect(rOption).toBeDisabled();
     expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
