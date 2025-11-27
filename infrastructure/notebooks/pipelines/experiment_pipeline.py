@@ -477,7 +477,7 @@ def {macro_table_name}_table():
 
 # Enriched macro table with user metadata and annotations
 @dlt.table(
-    name="enriched_{macro_table_name}",
+    name="enriched_macro_{macro_table_name}",
     comment="Enriched output from macro: {macro_name} with user metadata and annotations",
     table_properties={{
         "quality": "silver",
