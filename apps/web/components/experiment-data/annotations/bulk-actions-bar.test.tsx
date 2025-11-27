@@ -93,7 +93,6 @@ describe("BulkActionsBar", () => {
         tableName="table1"
         rowIds={[]}
         totalComments={0}
-        totalFlags={0}
         clearSelection={vi.fn()}
         downloadTable={vi.fn()}
       />,
@@ -102,31 +101,24 @@ describe("BulkActionsBar", () => {
 
     expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
     const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
+    expect(menuItems).toHaveLength(2);
     expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
     expect(menuItems[0].ariaDisabled).toBe("true");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
+    expect(menuItems[1]).toHaveTextContent(
+      "experimentDataAnnotations.bulkActions.removeAllComments",
+    );
     expect(menuItems[1].ariaDisabled).toBe("true");
-    expect(menuItems[2]).toHaveTextContent(
-      "experimentDataAnnotations.bulkActions.removeAllComments",
-    );
-    expect(menuItems[2].ariaDisabled).toBe("true");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlags");
-    expect(menuItems[3].ariaDisabled).toBe("true");
     expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
     expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
   });
 
-  it("should render for selected rows > 0, comments > 0 and flags = 0", () => {
+  it("should render for selected rows > 0, comments > 0", () => {
     render(
       <BulkActionsBar
         experimentId="exp1"
         tableName="table1"
         rowIds={["row1", "row2", "row3"]}
         totalComments={5}
-        totalFlags={0}
         clearSelection={vi.fn()}
         downloadTable={vi.fn()}
       />,
@@ -135,87 +127,15 @@ describe("BulkActionsBar", () => {
 
     expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
     const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
+    expect(menuItems).toHaveLength(2);
     expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
     expect(menuItems[0].ariaDisabled).toBe("false");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
-    expect(menuItems[1].ariaDisabled).toBe("false");
-    expect(menuItems[2]).toHaveTextContent(
+    expect(menuItems[1]).toHaveTextContent(
       "experimentDataAnnotations.bulkActions.removeAllComments",
     );
-    expect(menuItems[2].ariaDisabled).toBe("false");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlags");
-    expect(menuItems[3].ariaDisabled).toBe("true");
-    expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
-  });
-
-  it("should render for selected rows > 0, comments = 0 and flags > 0", () => {
-    render(
-      <BulkActionsBar
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        totalComments={0}
-        totalFlags={2}
-        clearSelection={vi.fn()}
-        downloadTable={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
-    const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
-    expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
-    expect(menuItems[0].ariaDisabled).toBe("false");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
     expect(menuItems[1].ariaDisabled).toBe("false");
-    expect(menuItems[2]).toHaveTextContent(
-      "experimentDataAnnotations.bulkActions.removeAllComments",
-    );
-    expect(menuItems[2].ariaDisabled).toBe("true");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlag");
-    expect(menuItems[3].ariaDisabled).toBe("false");
     expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
     expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
-  });
-
-  it("should render for selected rows > 0, comments > 0 and flags > 0", () => {
-    render(
-      <BulkActionsBar
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        totalComments={5}
-        totalFlags={2}
-        clearSelection={vi.fn()}
-        downloadTable={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
-    const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
-    expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
-    expect(menuItems[0].ariaDisabled).toBe("false");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
-    expect(menuItems[1].ariaDisabled).toBe("false");
-    expect(menuItems[2]).toHaveTextContent(
-      "experimentDataAnnotations.bulkActions.removeAllComments",
-    );
-    expect(menuItems[2].ariaDisabled).toBe("false");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlag");
-    expect(menuItems[3].ariaDisabled).toBe("false");
-    expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
   });
 
   it("should render download button and open modal", async () => {
@@ -227,7 +147,6 @@ describe("BulkActionsBar", () => {
         tableName="table1"
         rowIds={["row1", "row2", "row3"]}
         totalComments={5}
-        totalFlags={2}
         clearSelection={vi.fn()}
         downloadTable={downloadTableFunction}
       />,

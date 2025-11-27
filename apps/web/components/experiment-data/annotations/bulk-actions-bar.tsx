@@ -1,4 +1,4 @@
-import { MessageSquare, Flag, ChevronDown, Trash2, Download } from "lucide-react";
+import { MessageSquare, ChevronDown, Trash2, Download } from "lucide-react";
 import React from "react";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
@@ -18,7 +18,6 @@ interface BulkActionsBarProps {
   tableName: string;
   rowIds: string[];
   totalComments: number;
-  totalFlags: number;
   clearSelection: () => void;
   downloadTable: () => void;
 }
@@ -28,16 +27,13 @@ export function BulkActionsBar({
   tableName,
   rowIds,
   totalComments,
-  totalFlags,
   clearSelection,
   downloadTable,
 }: BulkActionsBarProps) {
   const { t } = useTranslation();
   const selectedCount = rowIds.length;
   const [showAddBulkCommentDialog, setShowAddBulkCommentDialog] = React.useState(false);
-  const [showAddBulkFlagDialog, setShowAddBulkFlagDialog] = React.useState(false);
   const [showDeleteBulkCommentsDialog, setShowDeleteBulkCommentsDialog] = React.useState(false);
-  const [showDeleteBulkFlagsDialog, setShowDeleteBulkFlagsDialog] = React.useState(false);
 
   return (
     <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3">
@@ -47,18 +43,12 @@ export function BulkActionsBar({
           {selectedCount !== 1 ? t("experimentDataTable.rows") : t("experimentDataTable.row")}{" "}
           {t("experimentDataAnnotations.bulkActions.selected")}
         </span>
-        {(totalComments > 0 || totalFlags > 0) && (
+        {totalComments > 0 && (
           <div className="flex items-center gap-2 text-xs text-blue-700">
             {totalComments > 0 && (
               <span className="flex items-center">
                 <MessageSquare className="mr-1 h-3 w-3" />
                 {totalComments} comment{totalComments !== 1 ? "s" : ""}
-              </span>
-            )}
-            {totalFlags > 0 && (
-              <span className="flex items-center">
-                <Flag className="mr-1 h-3 w-3" />
-                {totalFlags} flag{totalFlags !== 1 ? "s" : ""}
               </span>
             )}
           </div>
@@ -89,13 +79,6 @@ export function BulkActionsBar({
               <MessageSquare className="mr-2 h-4 w-4" />
               {t("experimentDataAnnotations.bulkActions.addComment")}
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setShowAddBulkFlagDialog(true)}
-              disabled={selectedCount === 0}
-            >
-              <Flag className="mr-2 h-4 w-4" />
-              {t("experimentDataAnnotations.bulkActions.addFlag")}
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => setShowDeleteBulkCommentsDialog(true)}
@@ -103,13 +86,6 @@ export function BulkActionsBar({
             >
               <Trash2 className="mr-2 h-4 w-4" />
               {t("experimentDataAnnotations.bulkActions.removeAllComments")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setShowDeleteBulkFlagsDialog(true)}
-              disabled={totalFlags === 0}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("experimentDataAnnotations.bulkActions.removeAllFlags")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -124,16 +100,6 @@ export function BulkActionsBar({
         setBulkOpen={setShowAddBulkCommentDialog}
         clearSelection={clearSelection}
       />
-      <AddAnnotationDialog
-        experimentId={experimentId}
-        tableName={tableName}
-        rowIds={rowIds}
-        type="flag"
-        bulk={true}
-        bulkOpen={showAddBulkFlagDialog}
-        setBulkOpen={setShowAddBulkFlagDialog}
-        clearSelection={clearSelection}
-      />
       <DeleteAnnotationsDialog
         experimentId={experimentId}
         tableName={tableName}
@@ -141,15 +107,6 @@ export function BulkActionsBar({
         type="comment"
         bulkOpen={showDeleteBulkCommentsDialog}
         setBulkOpen={setShowDeleteBulkCommentsDialog}
-        clearSelection={clearSelection}
-      />
-      <DeleteAnnotationsDialog
-        experimentId={experimentId}
-        tableName={tableName}
-        rowIds={rowIds}
-        type="flag"
-        bulkOpen={showDeleteBulkFlagsDialog}
-        setBulkOpen={setShowDeleteBulkFlagsDialog}
         clearSelection={clearSelection}
       />
     </div>

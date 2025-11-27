@@ -1,32 +1,14 @@
-import { Flag, MessageSquare, Trash2 } from "lucide-react";
+import { MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import type { AnnotationData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentDeleteAnnotation } from "~/hooks/experiment/useExperimentDeleteAnnotation/useExperimentDeleteAnnotation";
 import { formatDate } from "~/util/date";
 
-import type {
-  Annotation,
-  AnnotationCommentContent,
-  AnnotationFlagContent,
-  AnnotationFlagType,
-} from "@repo/api";
+import type { Annotation, AnnotationCommentContent } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Badge, Button, HoverCard, HoverCardContent, HoverCardTrigger } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
-
-function Flags({ flags }: { flags: AnnotationFlagType[] }) {
-  if (flags.length === 0) return null;
-  return (
-    <>
-      {flags.map((flag) => (
-        <Badge key={flag} variant="outline" className="px-1">
-          <Flag size={12} className="mr-2" /> {flag}
-        </Badge>
-      ))}
-    </>
-  );
-}
 
 function CommentsBadge({ count }: { count: number }) {
   if (count === 0) return null;
@@ -55,31 +37,12 @@ function Annotation({
   }
 
   function getText() {
-    if (annotation.type === "flag") {
-      const content = annotation.content as AnnotationFlagContent;
-      return content.reason;
-    } else {
-      const content = annotation.content as AnnotationCommentContent;
-      return content.text;
-    }
-  }
-
-  function getFlagType() {
-    if (annotation.type === "flag") {
-      const content = annotation.content as AnnotationFlagContent;
-      return content.flagType;
-    }
-    return undefined;
+    const content = annotation.content as AnnotationCommentContent;
+    return content.text;
   }
 
   return (
     <div className="mt-4">
-      {annotation.type === "flag" && (
-        <Badge variant="outline" className="px-1">
-          <Flag size={12} className="mr-2" />{" "}
-          {t(`experimentDataAnnotations.flagType.${getFlagType()}`)}
-        </Badge>
-      )}
       <div className="grid w-full grid-cols-[3fr_1fr_1fr] grid-rows-2 items-center">
         <div className="text-sm font-medium">{annotation.createdByName}</div>
         <div className="text-xs text-gray-500">{formatDate(annotation.createdAt)}</div>
@@ -108,7 +71,6 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
       <HoverCardTrigger asChild>
         <div className="flex w-full flex-wrap gap-2">
           <CommentsBadge count={data.commentCount} />
-          <Flags flags={Array.from(data.uniqueFlags)} />
           {data.count === 0 && <Link href="#">{t("common.add")}...</Link>}
         </div>
       </HoverCardTrigger>
@@ -122,30 +84,8 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
               rowIds={rowIds}
               type="comment"
             />
-            <AddAnnotationDialog
-              experimentId={experimentId}
-              tableName={tableName}
-              rowIds={rowIds}
-              type="flag"
-            />
           </div>
         </div>
-        {data.flagCount > 0 && (
-          <div className="mt-4">
-            <h4 className="mb-3 text-sm font-medium uppercase text-gray-600">
-              {t(`experimentDataAnnotations.titleFlags`)}
-            </h4>
-            {data.annotationsPerType.flag.map((annotation) => {
-              return (
-                <Annotation
-                  key={annotation.id}
-                  experimentId={experimentId}
-                  annotation={annotation}
-                />
-              );
-            })}
-          </div>
-        )}
         {data.commentCount > 0 && (
           <div className="mt-4">
             <h4 className="mb-3 text-sm font-medium uppercase text-gray-600">

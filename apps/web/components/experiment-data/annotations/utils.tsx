@@ -8,7 +8,7 @@ import type {
   DataRow,
 } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { Annotation, AnnotationFlagType, AnnotationType } from "@repo/api";
+import type { Annotation, AnnotationType } from "@repo/api";
 import { Checkbox, FormControl, FormField, FormItem } from "@repo/ui/components";
 
 export interface AnnotationsRowIdentifier {
@@ -18,28 +18,23 @@ export interface AnnotationsRowIdentifier {
 }
 
 export function getAnnotationData(annotations: Annotation[]): AnnotationData {
-  const { annotationsPerType, uniqueFlags } = annotations.reduce(
+  const { annotationsPerType } = annotations.reduce(
     (acc, annotation) => {
       if (!(annotation.type in acc.annotationsPerType)) {
         acc.annotationsPerType[annotation.type] = [];
       }
       acc.annotationsPerType[annotation.type].push(annotation);
-      if (annotation.type === "flag" && "flagType" in annotation.content) {
-        acc.uniqueFlags.add(annotation.content.flagType);
-      }
       return acc;
     },
     {
       annotationsPerType: {} as Record<AnnotationType, Annotation[]>,
-      uniqueFlags: new Set<AnnotationFlagType>(),
     },
   );
 
   const count = annotations.length;
   const commentCount = "comment" in annotationsPerType ? annotationsPerType.comment.length : 0;
-  const flagCount = "flag" in annotationsPerType ? annotationsPerType.flag.length : 0;
 
-  return { annotations, annotationsPerType, uniqueFlags, count, commentCount, flagCount };
+  return { annotations, annotationsPerType, count, commentCount };
 }
 
 export function isAnnotationData(value: unknown): value is AnnotationData {
@@ -48,10 +43,8 @@ export function isAnnotationData(value: unknown): value is AnnotationData {
     value !== null &&
     Array.isArray((value as AnnotationData).annotations) &&
     typeof (value as AnnotationData).annotationsPerType === "object" &&
-    (value as AnnotationData).uniqueFlags instanceof Set &&
     typeof (value as AnnotationData).count === "number" &&
-    typeof (value as AnnotationData).commentCount === "number" &&
-    typeof (value as AnnotationData).flagCount === "number"
+    typeof (value as AnnotationData).commentCount === "number"
   );
 }
 
@@ -146,7 +139,7 @@ export function getAnnotationsColumn(
 }
 
 export function getTotalSelectedCounts(tableRows: DataRow[] | undefined, selectedRowIds: string[]) {
-  if (!tableRows) return { totalSelectedComments: 0, totalSelectedFlags: 0 };
+  if (!tableRows) return { totalSelectedComments: 0 };
 
   return tableRows
     .filter((row) => row.id && row.annotations && selectedRowIds.includes(row.id as string))
@@ -156,10 +149,7 @@ export function getTotalSelectedCounts(tableRows: DataRow[] | undefined, selecte
         totalSelectedComments:
           acc.totalSelectedComments +
           (annotation.commentCount > 0 ? annotation.annotationsPerType.comment.length : 0),
-        totalSelectedFlags:
-          acc.totalSelectedFlags +
-          (annotation.flagCount > 0 ? annotation.annotationsPerType.flag.length : 0),
       }),
-      { totalSelectedComments: 0, totalSelectedFlags: 0 },
+      { totalSelectedComments: 0 },
     );
 }

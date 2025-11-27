@@ -188,7 +188,7 @@ export function ExperimentDataTable({
 
   const selectedRowIds = useWatch({ control: selectionForm.control, name: "selectedRowId" });
 
-  const { totalSelectedComments, totalSelectedFlags } = useMemo(() => {
+  const { totalSelectedComments } = useMemo(() => {
     return getTotalSelectedCounts(tableRows, selectedRowIds);
   }, [selectedRowIds, tableRows]);
 
@@ -220,7 +220,6 @@ export function ExperimentDataTable({
           tableName={tableName}
           rowIds={selectedRowIds}
           totalComments={totalSelectedComments}
-          totalFlags={totalSelectedFlags}
           clearSelection={() => selectionForm.setValue("selectedRowId", [])}
           downloadTable={() => setDownloadModalOpen(true)}
         />

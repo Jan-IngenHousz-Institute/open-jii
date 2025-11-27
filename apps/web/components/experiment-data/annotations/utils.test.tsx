@@ -24,7 +24,7 @@ import type { Annotation } from "@repo/api";
 vi.mock("~/components/experiment-data/annotations/annotations", () => ({
   Annotations: ({ experimentId, tableName, rowIds, data }: AnnotationsProps) => (
     <div
-      data-testid="render-comments-and-flags"
+      data-testid="render-annotations"
       data-experimentid={experimentId}
       data-tablename={tableName}
       data-rowids={rowIds.join(",")}
@@ -56,45 +56,40 @@ describe("getAnnotationData", () => {
     updatedAt: "2025-09-01T00:00:00Z",
   };
 
-  const flag1: Annotation = {
+  const comment2: Annotation = {
     id: uuidv4(),
     createdBy: uuidv4(),
-    createdByName: "User Three",
-    type: "flag",
-    content: { flagType: "outlier", reason: "Flagged as outlier" },
-    createdAt: "2025-09-03T00:00:00Z",
-    updatedAt: "2025-09-03T00:00:00Z",
+    createdByName: "User One",
+    type: "comment",
+    content: { text: "Test comment 2" },
+    createdAt: "2025-09-01T00:00:00Z",
+    updatedAt: "2025-09-01T00:00:00Z",
   };
 
-  const flag2: Annotation = {
+  const comment3: Annotation = {
     id: uuidv4(),
     createdBy: uuidv4(),
-    createdByName: "User Four",
-    type: "flag",
-    content: { flagType: "needs_review", reason: "Needs review" },
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
+    createdByName: "User One",
+    type: "comment",
+    content: { text: "Test comment 3" },
+    createdAt: "2025-09-01T00:00:00Z",
+    updatedAt: "2025-09-01T00:00:00Z",
   };
 
   it("should aggregate annotation data correctly", () => {
-    const annotations: Annotation[] = [comment1, flag1, flag2];
+    const annotations: Annotation[] = [comment1, comment2, comment3];
 
     const result = getAnnotationData(annotations);
 
     expect(result.count).toBe(3);
-    expect(result.commentCount).toBe(1);
-    expect(result.flagCount).toBe(2);
-    expect(Array.from(result.uniqueFlags)).toEqual(["outlier", "needs_review"]);
-    expect(result.annotationsPerType.comment).toHaveLength(1);
-    expect(result.annotationsPerType.flag).toHaveLength(2);
+    expect(result.commentCount).toBe(3);
+    expect(result.annotationsPerType.comment).toHaveLength(3);
   });
 
   it("should handle empty annotations array", () => {
     const result = getAnnotationData([]);
     expect(result.count).toBe(0);
     expect(result.commentCount).toBe(0);
-    expect(result.flagCount).toBe(0);
-    expect(Array.from(result.uniqueFlags)).toEqual([]);
     expect(result.annotationsPerType).toEqual({});
   });
 });
@@ -110,24 +105,12 @@ describe("isAnnotationData", () => {
     updatedAt: "2025-09-01T00:00:00Z",
   };
 
-  const flag1: Annotation = {
-    id: uuidv4(),
-    createdBy: uuidv4(),
-    createdByName: "User Three",
-    type: "flag",
-    content: { flagType: "outlier", reason: "Flagged as outlier" },
-    createdAt: "2025-09-03T00:00:00Z",
-    updatedAt: "2025-09-03T00:00:00Z",
-  };
-
   it("should return true for valid AnnotationData", () => {
     const validData = {
-      annotations: [comment1, flag1],
-      annotationsPerType: { comment: [comment1], flag: [flag1] },
-      uniqueFlags: new Set(["outlier"]),
-      count: 2,
+      annotations: [comment1],
+      annotationsPerType: { comment: [comment1] },
+      count: 1,
       commentCount: 1,
-      flagCount: 1,
     };
 
     expect(isAnnotationData(validData)).toBe(true);
@@ -151,10 +134,8 @@ describe("isAnnotationData", () => {
     const invalidData = {
       annotations: "not an array",
       annotationsPerType: {},
-      uniqueFlags: new Set(),
       count: 0,
       commentCount: 0,
-      flagCount: 0,
     };
 
     expect(isAnnotationData(invalidData)).toBe(false);
@@ -164,23 +145,8 @@ describe("isAnnotationData", () => {
     const invalidData = {
       annotations: [],
       annotationsPerType: "not an object",
-      uniqueFlags: new Set(),
       count: 0,
       commentCount: 0,
-      flagCount: 0,
-    };
-
-    expect(isAnnotationData(invalidData)).toBe(false);
-  });
-
-  it("should return false when uniqueFlags is not a Set", () => {
-    const invalidData = {
-      annotations: [],
-      annotationsPerType: {},
-      uniqueFlags: ["not", "a", "set"],
-      count: 0,
-      commentCount: 0,
-      flagCount: 0,
     };
 
     expect(isAnnotationData(invalidData)).toBe(false);
@@ -190,10 +156,8 @@ describe("isAnnotationData", () => {
     const invalidData = {
       annotations: [],
       annotationsPerType: {},
-      uniqueFlags: new Set(),
       count: "not a number",
       commentCount: 0,
-      flagCount: 0,
     };
 
     expect(isAnnotationData(invalidData)).toBe(false);
@@ -203,23 +167,8 @@ describe("isAnnotationData", () => {
     const invalidData = {
       annotations: [],
       annotationsPerType: {},
-      uniqueFlags: new Set(),
       count: 0,
       commentCount: "not a number",
-      flagCount: 0,
-    };
-
-    expect(isAnnotationData(invalidData)).toBe(false);
-  });
-
-  it("should return false when flagCount is not a number", () => {
-    const invalidData = {
-      annotations: [],
-      annotationsPerType: {},
-      uniqueFlags: new Set(),
-      count: 0,
-      commentCount: 0,
-      flagCount: "not a number",
     };
 
     expect(isAnnotationData(invalidData)).toBe(false);
@@ -229,7 +178,7 @@ describe("isAnnotationData", () => {
     const incompleteData = {
       annotations: [],
       annotationsPerType: {},
-      // missing uniqueFlags, count, commentCount, flagCount
+      // missing count, commentCount
     };
 
     expect(isAnnotationData(incompleteData)).toBe(false);
@@ -581,103 +530,88 @@ describe("getTotalSelectedCounts", () => {
     };
   }
 
-  function createFlag(): Annotation {
-    return {
-      id: uuidv4(),
-      createdBy: uuidv4(),
-      createdByName: "User Three",
-      type: "flag",
-      content: { flagType: "outlier", reason: "Flagged as outlier" },
-      createdAt: "2025-09-03T00:00:00Z",
-      updatedAt: "2025-09-03T00:00:00Z",
-    };
-  }
-
-  const createMockAnnotationData = (commentCount: number, flagCount: number): AnnotationData => {
+  const createMockAnnotationData = (commentCount: number): AnnotationData => {
     const annotations: Annotation[] = [];
     for (let i = 0; i < commentCount; i++) {
       annotations.push(createComment());
     }
-    for (let i = 0; i < flagCount; i++) {
-      annotations.push(createFlag());
-    }
     return getAnnotationData(annotations);
   };
 
-  const createMockDataRow = (id: string, commentCount: number, flagCount: number): DataRow => ({
+  const createMockDataRow = (id: string, commentCount: number): DataRow => ({
     id,
-    annotations: createMockAnnotationData(commentCount, flagCount),
+    annotations: createMockAnnotationData(commentCount),
   });
 
   it("should return zero counts when tableRows is undefined", () => {
     const result = getTotalSelectedCounts(undefined, ["row1", "row2"]);
-    expect(result).toEqual({ totalSelectedComments: 0, totalSelectedFlags: 0 });
+    expect(result).toEqual({ totalSelectedComments: 0 });
   });
 
   it("should return zero counts when tableRows is empty", () => {
     const result = getTotalSelectedCounts([], ["row1", "row2"]);
-    expect(result).toEqual({ totalSelectedComments: 0, totalSelectedFlags: 0 });
+    expect(result).toEqual({ totalSelectedComments: 0 });
   });
 
   it("should return zero counts when selectedRowIds is empty", () => {
-    const tableRows = [createMockDataRow("row1", 2, 1), createMockDataRow("row2", 1, 3)];
+    const tableRows = [createMockDataRow("row1", 2), createMockDataRow("row2", 1)];
     const result = getTotalSelectedCounts(tableRows, []);
-    expect(result).toEqual({ totalSelectedComments: 0, totalSelectedFlags: 0 });
+    expect(result).toEqual({ totalSelectedComments: 0 });
   });
 
   it("should count annotations for selected rows only", () => {
     const tableRows = [
-      createMockDataRow("row1", 2, 1), // selected
-      createMockDataRow("row2", 3, 2), // not selected
-      createMockDataRow("row3", 1, 4), // selected
+      createMockDataRow("row1", 2), // selected
+      createMockDataRow("row2", 3), // not selected
+      createMockDataRow("row3", 1), // selected
     ];
     const selectedRowIds = ["row1", "row3"];
 
     const result = getTotalSelectedCounts(tableRows, selectedRowIds);
-    expect(result).toEqual({ totalSelectedComments: 3, totalSelectedFlags: 5 });
+    expect(result).toEqual({ totalSelectedComments: 3 });
   });
 
   it("should handle rows without annotations", () => {
     const tableRows = [
-      createMockDataRow("row1", 2, 1),
+      createMockDataRow("row1", 2),
       { id: "row2", annotations: null } as DataRow,
-      createMockDataRow("row3", 1, 0),
+      createMockDataRow("row3", 1),
     ];
     const selectedRowIds = ["row1", "row2", "row3"];
 
     const result = getTotalSelectedCounts(tableRows, selectedRowIds);
-    expect(result).toEqual({ totalSelectedComments: 3, totalSelectedFlags: 1 });
+    expect(result).toEqual({ totalSelectedComments: 3 });
   });
 
   it("should handle rows without id", () => {
     const tableRows = [
-      createMockDataRow("row1", 1, 1),
-      { id: null, annotations: createMockAnnotationData(5, 5) } as DataRow,
-      createMockDataRow("row2", 2, 0),
+      createMockDataRow("row1", 1),
+      { id: null, annotations: createMockAnnotationData(5) } as DataRow,
+      createMockDataRow("row2", 2),
     ];
     const selectedRowIds = ["row1", "row2"];
 
     const result = getTotalSelectedCounts(tableRows, selectedRowIds);
-    expect(result).toEqual({ totalSelectedComments: 3, totalSelectedFlags: 1 });
+    expect(result).toEqual({ totalSelectedComments: 3 });
   });
 
-  it("should handle rows with zero comment and flag counts", () => {
+  it("should handle rows with zero comment count", () => {
     const tableRows = [
-      createMockDataRow("row1", 0, 0),
-      createMockDataRow("row2", 0, 2),
-      createMockDataRow("row3", 3, 0),
+      createMockDataRow("row1", 0),
+      createMockDataRow("row2", 0),
+      createMockDataRow("row3", 3),
     ];
     const selectedRowIds = ["row1", "row2", "row3"];
 
     const result = getTotalSelectedCounts(tableRows, selectedRowIds);
-    expect(result).toEqual({ totalSelectedComments: 3, totalSelectedFlags: 2 });
+    expect(result).toEqual({ totalSelectedComments: 3 });
   });
 
   it("should handle selectedRowIds that don't match any rows", () => {
-    const tableRows = [createMockDataRow("row1", 2, 1), createMockDataRow("row2", 1, 3)];
+    const tableRows = [createMockDataRow("row1", 2), createMockDataRow("row2", 1)];
     const selectedRowIds = ["nonexistent1", "nonexistent2"];
 
     const result = getTotalSelectedCounts(tableRows, selectedRowIds);
-    expect(result).toEqual({ totalSelectedComments: 0, totalSelectedFlags: 0 });
+    expect(result).toEqual({ totalSelectedComments: 0 });
   });
 });
