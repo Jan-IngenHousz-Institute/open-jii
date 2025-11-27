@@ -29,5 +29,22 @@
     "title": "Benachrichtigungen",
     "mark_all_read": "Alle als gelesen markieren",
     "settings": "Benachrichtigungseinstellungen"
-  }
+  },
+  "stats": {
+    "photosynthesisRate": "Photosyntheserate",
+    "activeExperiments": "Aktive Experimente",
+    "averageGrowthYield": "Durchschnittlicher Wachstumsertrag",
+    "imageDataCollected": "Erfasste Bilddaten",
+    "sinceLastWeek": "seit letzter Woche",
+    "newAddedThisWeek": "neu hinzugefügt diese Woche",
+    "comparedToLastCycle": "im Vergleich zum letzten Zyklus",
+    "newSinceLastWeek": "neu seit letzter Woche"
+  },
+  "alerts": {
+    "title": "Warnungen",
+    "noUrgentAlerts": "Großartig! Es gibt keine dringenden Protokollwarnungen, um die Sie sich kümmern müssen.",
+    "lastAttempt": "Letzter Versuch"
+  },
+  "latestActivity": "Neueste Messaktivität",
+  "favoriteExperiments": "Übersicht der Lieblingsexperimente"
 }
