@@ -113,7 +113,7 @@ export function ExperimentDataTable({
   }, []);
 
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, displayName, isLoading, error } = useExperimentData(
     experimentId,
     pagination.pageIndex + 1,
     pagination.pageSize,
@@ -225,7 +225,7 @@ export function ExperimentDataTable({
         {!isBulkActionsEnabled && (
           <div className="mb-4 flex items-center justify-between">
             <h5 className="text-base font-medium">
-              {t("experimentDataTable.table")} {tableName}
+              {t("experimentDataTable.table")} {displayName ?? tableName}
             </h5>
 
             <Button
@@ -242,7 +242,7 @@ export function ExperimentDataTable({
         {isBulkActionsEnabled && (
           <>
             <h5 className="text-base font-medium">
-              {t("experimentDataTable.table")} {tableName}
+              {t("experimentDataTable.table")} {displayName ?? tableName}
             </h5>
             <BulkActionsBar
               experimentId={experimentId}

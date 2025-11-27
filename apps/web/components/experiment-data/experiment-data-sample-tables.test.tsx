@@ -147,6 +147,7 @@ describe("ExperimentDataSampleTables", () => {
     body: [
       {
         name: "measurements",
+        displayName: "measurements",
         data: {
           columns: [
             { name: "id", type_name: "INT", type_text: "Integer" },
@@ -165,6 +166,7 @@ describe("ExperimentDataSampleTables", () => {
       },
       {
         name: "metadata",
+        displayName: "metadata",
         data: {
           columns: [
             { name: "key", type_name: "STRING", type_text: "String" },

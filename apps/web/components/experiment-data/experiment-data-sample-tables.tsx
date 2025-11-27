@@ -97,7 +97,7 @@ function ExperimentDataSampleTable({ sampleTable }: { sampleTable: SampleTable }
   return (
     <>
       <h5 className="mb-4 text-base font-medium">
-        {t("experimentDataTable.table")} {sampleTable.name}
+        {t("experimentDataTable.table")} {sampleTable.displayName}
       </h5>
       <div className="text-muted-foreground rounded-md border">
         <Table>
