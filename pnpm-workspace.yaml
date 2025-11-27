@@ -36,10 +36,10 @@ catalogs:
     "@tanstack/query-async-storage-persister": ^5.83.1
     "@tanstack/react-query-persist-client": ^5.84.1
   testing:
-    vitest: ^4.0.8
+    vitest: ^4.0.13
     jsdom: ^26.0.0
-    "@vitest/coverage-v8": ^4.0.8
-    "@vitest/ui": ^4.0.8
+    "@vitest/coverage-v8": ^4.0.13
+    "@vitest/ui": ^4.0.13
     "@testing-library/react": ^16.3.0
     "@testing-library/jest-dom": ^6.6.8
     "@testing-library/user-event": ^14.6.1
