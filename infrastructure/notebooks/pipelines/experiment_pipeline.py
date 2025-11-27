@@ -3,8 +3,9 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
-%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
-%pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_aarch64.whl
+%pip install mini-racer==0.12.4
+%pip install /Workspace/Shared/wheels/multispeq-0.3.0-py3-none-any.whl
+# %pip install /Workspace/Shared/wheels/rpy2-3.6.4-py3-none-any.whl # Disabled R support for now, doesn't really work on serverless compute, maybe on custom clusters
 %pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
@@ -28,7 +29,7 @@ from typing import Dict, Any, List
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
 # Import our enrichment library  
-from enrich import add_user_data_column
+from enrich import add_user_data_column, get_experiment_question_labels, add_question_columns
 
 # COMMAND ----------
 
@@ -257,6 +258,7 @@ try:
 except Exception as e:
     print(f"Error during ambyte table creation: {str(e)}")
     
+
 # COMMAND ----------
 
 # DBTITLE 1,Macro Processing Pipeline
@@ -284,7 +286,7 @@ def create_macro_tables():
                 F.col("macro_struct.name").alias("macro_name"),
                 F.col("macro_struct.filename").alias("macro_filename")
             )
-            .distinct()
+            .dropDuplicates(["macro_id", "macro_filename"])
         )
         
         available_macros = get_available_macros(MACROS_PATH)
@@ -354,7 +356,8 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     UDF returns JSON string, then we parse it using the inferred StructType schema.
     """
     # Use filename directly for table creation
-    macro_table_name = macro_filename
+    macro_table_name = macro_filename.removeprefix("macro_")
+
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
         "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
@@ -367,7 +370,7 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     return f'''
 # Base macro table
 @dlt.table(
-    name="{macro_table_name}",
+    name="macro_{macro_table_name}",
     comment="Output from macro: {macro_name}",
     table_properties={{
         "quality": "bronze",
@@ -474,7 +477,7 @@ def {macro_table_name}_table():
 
 # Enriched macro table with user metadata
 @dlt.table(
-    name="enriched_{macro_table_name}",
+    name="enriched_macro_{macro_table_name}",
     comment="Enriched output from macro: {macro_name} with user metadata",
     table_properties={{
         "quality": "silver",
@@ -486,15 +489,27 @@ def {macro_table_name}_table():
 def enriched_{macro_table_name}_table():
     """
     Create an enriched macro table by combining macro output with user metadata.
-    This creates a silver layer table with denormalized user information.
+    This creates a silver layer table with denormalized user information and individual question columns.
     """
     
     # Read from the silver macro table (this creates the dependency)
-    macro_df = dlt.read_stream("{macro_table_name}")
+    macro_df = dlt.read_stream("macro_{macro_table_name}")
     
-    # Add user metadata column
+    # Discover all question labels used in this experiment
+    question_labels = get_experiment_question_labels(
+        spark,
+        CATALOG_NAME,
+        CENTRAL_SCHEMA,
+        CENTRAL_SILVER_TABLE,
+        EXPERIMENT_ID
+    )
+    
+    # Add individual question columns based on discovered labels
+    macro_with_questions = add_question_columns(macro_df, question_labels)
+    
+    # Add user metadata column and remove the original questions array column
     from enrich import add_user_data_column
-    enriched_df = add_user_data_column(macro_df, ENVIRONMENT, dbutils)
+    enriched_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
     return enriched_df
 '''
@@ -544,14 +559,26 @@ def enriched_sample():
     """
     Create an enriched sample table by combining sample data with user metadata
     from the OpenJII backend API. This creates a silver layer table with denormalized
-    user information for easier analytics.
+    user information for easier analytics and individual question columns.
     """
     
     # Read from the bronze sample table (this creates the dependency)
     sample_df = dlt.read_stream(SAMPLE_TABLE)
     
-    # Add user metadata column
-    enriched_df = add_user_data_column(sample_df, ENVIRONMENT, dbutils)
+    # Discover all question labels used in this experiment
+    question_labels = get_experiment_question_labels(
+        spark,
+        CATALOG_NAME,
+        CENTRAL_SCHEMA,
+        CENTRAL_SILVER_TABLE,
+        EXPERIMENT_ID
+    )
+
+    # Add individual question columns based on discovered labels
+    sample_with_questions = add_question_columns(sample_df, question_labels)
+    
+    # Add user metadata column and remove the original questions array column
+    enriched_df = add_user_data_column(sample_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
     return enriched_df
 

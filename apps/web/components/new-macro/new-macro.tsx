@@ -99,7 +99,9 @@ export function NewMacroForm() {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="python">Python</SelectItem>
-                      <SelectItem value="r">R</SelectItem>
+                      <SelectItem value="r" disabled>
+                        R
+                      </SelectItem>
                       <SelectItem value="javascript">JavaScript</SelectItem>
                     </SelectContent>
                   </Select>

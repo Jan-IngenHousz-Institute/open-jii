@@ -54,6 +54,7 @@ interface MockSelectProps {
 interface MockSelectItemProps {
   value: string;
   children: React.ReactNode;
+  disabled?: boolean;
 }
 
 interface MockCardProps {
@@ -175,8 +176,10 @@ vi.mock("@repo/ui/components", () => ({
     </select>
   ),
   SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ value, children }: MockSelectItemProps) => (
-    <option value={value}>{children}</option>
+  SelectItem: ({ value, children, disabled }: MockSelectItemProps) => (
+    <option value={value} disabled={disabled}>
+      {children}
+    </option>
   ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="select-trigger">{children}</div>
@@ -382,7 +385,9 @@ describe("NewMacroForm", () => {
     // Assert
     expect(languageSelect).toBeInTheDocument();
     expect(screen.getByText("Python")).toBeInTheDocument();
-    expect(screen.getByText("R")).toBeInTheDocument();
+    const rOption = screen.getByText("R").closest("option");
+    expect(rOption).toBeInTheDocument();
+    expect(rOption).toBeDisabled();
     expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
