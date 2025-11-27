@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import {
   AddAnnotationsBulkBody,
@@ -12,6 +12,8 @@ import { success } from "../../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../../common/utils/fp-utils";
 import type { CreateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
+import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
+import type { DatabricksPort } from "../../../../core/ports/databricks.port";
 import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 
@@ -22,6 +24,7 @@ export class AddAnnotationsUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDataAnnotationsRepository: ExperimentDataAnnotationsRepository,
+    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
   async execute(
@@ -96,6 +99,19 @@ export class AddAnnotationsUseCase {
 
         if (result.isFailure()) {
           return failure(AppError.internal(result.error.message));
+        }
+
+        // Trigger silver data refresh to update enriched tables with new annotations
+        const refreshResult = await this.databricksPort.refreshSilverData(
+          experiment.name,
+          experimentId,
+        );
+
+        if (refreshResult.isFailure()) {
+          this.logger.warn(
+            `Failed to trigger silver data refresh after adding annotations: ${refreshResult.error.message}`,
+          );
+          // Don't fail the whole operation, just log the warning
         }
 
         return success(result.value);
