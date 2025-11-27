@@ -1,18 +1,28 @@
 # Register
 
+If you don't yet have an openJII account, follow these steps to create one.
 
-If you don't have an openJII account yet, create an account via the following steps:
+## Create an account
 
-#### step 1
-register yourself via the login in 3 ways:
-- Email -> a secure email will be sent to you with a link to login - no password needed
-- GitHub -> if you have a GitHub account, you can register via this method
-- ORCID  -> if you have a ORCHID account, you can register via this method
+1. Go to the openJII website and choose **Sign up / Log in**.
+2. Select one of the three registration methods:
+	- **Email** — we send a secure login link to your email (no password required).
+	- **GitHub** — sign in with your GitHub account.
+	- **ORCID** — sign in with your ORCID account.
 
-#### step 2
-After this step you will be asked to supply your:
+## Complete your profile
+
+After signing in you will be asked to provide some basic information:
+
 - First name
 - Last name
 - Organisation
 
-Congratulations, now your account is created and you can login. Use these same credentials to login into the openJII mobile app.
+Click **Save** to finish creating your account.
+
+## Next steps
+
+- You can now log in to both the openJII web platform and the mobile app using the same account.
+
+
+If you run into any issues during registration, contact the project admins.

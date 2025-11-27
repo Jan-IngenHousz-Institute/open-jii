@@ -5,6 +5,8 @@
   padding: 0.6rem 1.1rem;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.5;
   text-decoration: none;
   cursor: pointer;
   border: 1px solid transparent;
@@ -14,7 +16,7 @@
 
 .primary {
   background-color: var(--ifm-color-primary);
-  color: var(--ifm-color-white);
+  color: #ffffff !important;
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.04);
 }
 

@@ -96,7 +96,7 @@ const sidebars: SidebarsConfig = {
     {
       type: "doc",
       id: "data-platform/overview",
-      label: "Overview",
+      label: "Platform Overview",
     },
     {
       type: "category",
@@ -106,6 +106,7 @@ const sidebars: SidebarsConfig = {
         "data-platform/web-platform/overview",
         "data-platform/web-platform/register",
         "data-platform/web-platform/create-add-experiment",
+        "data-platform/web-platform/protocol",
       ],
     },
     {
@@ -127,6 +128,11 @@ const sidebars: SidebarsConfig = {
       type: "doc",
       id: "data-platform/ingestion-architecture",
       label: "Ingestion Architecture",
+    },
+    {
+      type: "doc",
+      id: "data-platform/report-issue",
+      label: "Report issue / Request feature",
     },
     /*{
       type: "category",
@@ -317,7 +323,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
       ],
-    },
+    },/*
     {
       type: "html",
       value: `
@@ -333,7 +339,7 @@ const sidebars: SidebarsConfig = {
       id: "faq-support/frequently-asked-questions",
       label: "Frequently Asked Questions",
     },
-    /*{
+    {
       type: "category",
       label: "Support Channels",
       link: { type: "generated-index" },

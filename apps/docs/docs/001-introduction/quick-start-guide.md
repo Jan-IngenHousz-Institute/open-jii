@@ -5,5 +5,3 @@
 4. Login in the app
 5. Connect your sensor/device
 6. Start measuring!
-7. Review and share results on openJII.org
-8. Analyse results or download data
