@@ -21,6 +21,10 @@ vi.mock("@/util/date", () => ({
   formatDate: (date: string) => date,
 }));
 
+vi.mock("@repo/auth/client", () => ({
+  useSession: () => ({ data: { user: { id: "user-1" } } }),
+}));
+
 vi.mock("lucide-react", () => ({
   ChevronDown: () => <span data-testid="icon-chevron-down">ChevronDown</span>,
   ChevronUp: () => <span data-testid="icon-chevron-up">ChevronUp</span>,

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 import type { Experiment, ExperimentMember, Location } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
 
@@ -36,6 +37,10 @@ export function ExperimentDetailsCard({
 }: ExperimentDetailsCardProps) {
   const { t } = useTranslation("experiments");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const { data: session } = useSession();
+  const currentUserId = session?.user.id;
+  const currentMember = members.find((m) => m.user.id === currentUserId);
+  const currentUserRole = currentMember?.role;
 
   return (
     <div className="w-full md:order-2 md:w-96">
@@ -101,12 +106,15 @@ export function ExperimentDetailsCard({
             aria-orientation="horizontal"
             className="text-muted-foreground mx-4 border-t"
           />
-          <ExperimentVisibilityCard
-            experimentId={experimentId}
-            initialVisibility={experiment.visibility}
-            embargoUntil={experiment.embargoUntil}
-            isArchived={isArchived}
-          />
+
+          {currentUserRole === "admin" || currentUserRole === "member" ? (
+            <ExperimentVisibilityCard
+              experimentId={experimentId}
+              initialVisibility={experiment.visibility}
+              embargoUntil={experiment.embargoUntil}
+              isArchived={isArchived}
+            />
+          ) : null}
 
           <div
             role="separator"
