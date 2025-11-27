@@ -27,8 +27,8 @@ const testAnnotation3: Annotation = {
   id: uuidv4(),
   createdBy: testAnnotation1.createdBy,
   createdByName: "Test User 1",
-  type: "flag",
-  content: { flagType: "outlier", reason: "Test reason 1" },
+  type: "comment",
+  content: { text: "Test comment 3" },
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -37,8 +37,8 @@ const testAnnotation4: Annotation = {
   id: uuidv4(),
   createdBy: testAnnotation2.createdBy,
   createdByName: "Test User 2",
-  type: "flag",
-  content: { flagType: "needs_review", reason: "Test reason 2" },
+  type: "comment",
+  content: { text: "Test comment 4" },
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };

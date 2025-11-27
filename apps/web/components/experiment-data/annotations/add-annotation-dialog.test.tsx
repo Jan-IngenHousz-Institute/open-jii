@@ -42,11 +42,6 @@ vi.mock("lucide-react", () => ({
       <rect width="100%" height="100%" fill="currentColor" />
     </svg>
   ),
-  Flag: (props: React.SVGProps<SVGSVGElement>) => (
-    <svg data-testid="flag-icon" {...props}>
-      <rect width="100%" height="100%" fill="currentColor" />
-    </svg>
-  ),
 }));
 
 // Mock UI components
@@ -194,25 +189,6 @@ describe("AddCommentDialog", () => {
     );
   });
 
-  it("should render dialog for adding a flag", () => {
-    render(
-      <AddAnnotationDialog experimentId="exp1" tableName="table1" rowIds={["row1"]} type="flag" />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
-      "experimentDataAnnotations.flagDialog.title",
-    );
-    expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
-      "experimentDataAnnotations.flagDialog.description",
-    );
-    expect(screen.queryAllByTestId("form-field")).toHaveLength(2);
-    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
-    expect(screen.queryByTestId("button-submit")).toHaveTextContent(
-      "experimentDataAnnotations.flagDialog.add",
-    );
-  });
-
   it("should render dialog for adding bulk comments", () => {
     render(
       <AddAnnotationDialog
@@ -235,31 +211,6 @@ describe("AddCommentDialog", () => {
     expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
     expect(screen.queryByTestId("button-submit")).toHaveTextContent(
       "experimentDataAnnotations.commentDialogBulk.add",
-    );
-  });
-
-  it("should render dialog for adding bulk flags", () => {
-    render(
-      <AddAnnotationDialog
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        type="flag"
-        bulk={true}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
-      "experimentDataAnnotations.flagDialogBulk.title",
-    );
-    expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
-      "experimentDataAnnotations.flagDialogBulk.description",
-    );
-    expect(screen.queryAllByTestId("form-field")).toHaveLength(2);
-    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
-    expect(screen.queryByTestId("button-submit")).toHaveTextContent(
-      "experimentDataAnnotations.flagDialogBulk.add",
     );
   });
 
@@ -347,15 +298,5 @@ describe("AddCommentDialog", () => {
 
     // The MessageSquare component should be rendered
     expect(screen.getByTestId("message-square-icon")).toBeInTheDocument();
-  });
-
-  it("should render Flag icon for flag type", () => {
-    render(
-      <AddAnnotationDialog experimentId="exp1" tableName="table1" rowIds={["row1"]} type="flag" />,
-      { wrapper: createWrapper() },
-    );
-
-    // The Flag component should be rendered
-    expect(screen.getByTestId("flag-icon")).toBeInTheDocument();
   });
 });

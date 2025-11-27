@@ -1,7 +1,7 @@
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
-// import { useEffect } from "react";
+import { useEffect } from "react";
 import { useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AnnotationsRowIdentifier } from "~/components/experiment-data/annotations/utils";
@@ -12,13 +12,7 @@ import type { BulkSelectionFormType } from "~/components/experiment-data/experim
 import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
 import { tsr } from "~/lib/tsr";
 
-import type {
-  Annotation,
-  AnnotationFlagType,
-  AnnotationType,
-  DataColumn,
-  ExperimentData,
-} from "@repo/api";
+import type { Annotation, AnnotationType, DataColumn, ExperimentData } from "@repo/api";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
@@ -33,10 +27,8 @@ export type DataRenderFunction = (
 export interface AnnotationData {
   annotations: Annotation[];
   annotationsPerType: Record<AnnotationType, Annotation[]>;
-  uniqueFlags: Set<AnnotationFlagType>;
   count: number;
   commentCount: number;
-  flagCount: number;
 }
 
 // Time in ms before data is removed from the cache
@@ -227,20 +219,20 @@ export const useExperimentData = (
   }, [originalTableData]);
 
   // Add all row id's to form
-  // const allRowIds = useMemo(() => {
-  //   if (tableData?.data) {
-  //     if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
-  //       // Extract all row IDs from the data
-  //       return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
-  //     }
-  //     return [];
-  //   }
-  // }, [tableData]);
-  // useEffect(() => {
-  //   if (selectionForm) {
-  //     selectionForm.setValue("allRows", allRowIds ?? []);
-  //   }
-  // }, [selectionForm, allRowIds]);
+  const allRowIds = useMemo(() => {
+    if (tableData?.data) {
+      if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
+        // Extract all row IDs from the data
+        return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
+      }
+      return [];
+    }
+  }, [tableData]);
+  useEffect(() => {
+    if (selectionForm) {
+      selectionForm.setValue("allRows", allRowIds ?? []);
+    }
+  }, [selectionForm, allRowIds]);
 
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData

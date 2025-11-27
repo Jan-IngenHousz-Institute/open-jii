@@ -118,32 +118,6 @@ describe("DeleteCommentsDialog", () => {
     );
   });
 
-  it("should render dialog for deleting flags", () => {
-    render(
-      <DeleteAnnotationsDialog
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        type="flag"
-        bulkOpen={true}
-        setBulkOpen={vi.fn()}
-        clearSelection={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
-      "experimentDataAnnotations.flagDeleteDialog.title",
-    );
-    expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
-      "experimentDataAnnotations.flagDeleteDialog.description",
-    );
-    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
-    expect(screen.queryByTestId("button-submit")).toHaveTextContent(
-      "experimentDataAnnotations.flagDeleteDialog.delete",
-    );
-  });
-
   it("should handle form submission for deleting comments", async () => {
     render(
       <DeleteAnnotationsDialog

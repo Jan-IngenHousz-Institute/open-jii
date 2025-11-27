@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Flag, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import React from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
@@ -12,7 +12,6 @@ import type {
   AnnotationContent,
   AnnotationType,
 } from "@repo/api";
-import { zAnnotationFlagType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
@@ -30,12 +29,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
@@ -52,7 +45,6 @@ export interface AddAnnotationDialogProps {
 }
 
 const zAddAnnotationFormSchema = z.object({
-  flag: zAnnotationFlagType.optional(),
   text: z.string().min(1).max(255),
 });
 export type AddAnnotationDialogFormType = z.infer<typeof zAddAnnotationFormSchema>;
@@ -76,24 +68,14 @@ export function AddAnnotationDialog({
   const count = rowIds.length;
 
   const form = useForm<AddAnnotationDialogFormType>({
-    resolver: zodResolver(
-      type === "flag"
-        ? zAddAnnotationFormSchema.extend({ flag: zAnnotationFlagType })
-        : zAddAnnotationFormSchema,
-    ),
-    defaultValues: type === "flag" ? { text: "", flag: undefined } : { text: "" },
+    resolver: zodResolver(zAddAnnotationFormSchema),
+    defaultValues: { text: "" },
   });
 
   async function onSubmit(formData: AddAnnotationDialogFormType) {
-    const content: AnnotationContent =
-      type === "flag" && formData.flag
-        ? {
-            reason: formData.text,
-            flagType: formData.flag,
-          }
-        : {
-            text: formData.text,
-          };
+    const content: AnnotationContent = {
+      text: formData.text,
+    };
     if (bulk) {
       const data: AddAnnotationsBulkBody = {
         tableName,
@@ -142,7 +124,6 @@ export function AddAnnotationDialog({
             aria-label={t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.title`)}
           >
             {type === "comment" && <MessageSquare className="h-4 w-4" />}
-            {type === "flag" && <Flag className="h-4 w-4" />}
           </Button>
         </DialogTrigger>
       )}
@@ -158,42 +139,6 @@ export function AddAnnotationDialog({
               </DialogDescription>
             </DialogHeader>
             <div className="mb-4 grid gap-4">
-              {type === "flag" && (
-                <div className="grid gap-3">
-                  <FormField
-                    control={form.control}
-                    name="flag"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.flagLabel`)}
-                        </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue
-                                placeholder={t(
-                                  `experimentDataAnnotations.${type}Dialog${bulkSuffix}.flagPlaceholder`,
-                                )}
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem value="needs_review">
-                                {t(`experimentDataAnnotations.flagType.needs_review`)}
-                              </SelectItem>
-                              <SelectItem value="outlier">
-                                {t(`experimentDataAnnotations.flagType.outlier`)}
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
               <div className="grid gap-3">
                 <FormField
                   control={form.control}

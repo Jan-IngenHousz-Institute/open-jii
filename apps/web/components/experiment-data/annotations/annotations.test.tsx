@@ -72,26 +72,6 @@ describe("Annotations", () => {
     updatedAt: "2025-09-02T00:00:00Z",
   };
 
-  const flag1: Annotation = {
-    id: uuidv4(),
-    createdBy: uuidv4(),
-    createdByName: "User Three",
-    type: "flag",
-    content: { flagType: "outlier", reason: "Flagged as outlier" },
-    createdAt: "2025-09-03T00:00:00Z",
-    updatedAt: "2025-09-03T00:00:00Z",
-  };
-
-  const flag2: Annotation = {
-    id: uuidv4(),
-    createdBy: uuidv4(),
-    createdByName: "User Four",
-    type: "flag",
-    content: { flagType: "needs_review", reason: "Needs review" },
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     // Add event listener mocks
@@ -123,7 +103,6 @@ describe("Annotations", () => {
       screen.getByText("experimentDataAnnotations.noAnnotationsDescription"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
   });
 
   it("should render a single comment", () => {
@@ -144,7 +123,6 @@ describe("Annotations", () => {
       screen.queryByText("experimentDataAnnotations.noAnnotationsDescription"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
     expect(screen.getByText("experimentDataAnnotations.titleComments")).toBeInTheDocument();
     expect(screen.getByText("Test comment 1")).toBeInTheDocument();
   });
@@ -165,41 +143,7 @@ describe("Annotations", () => {
     expect(screen.getByTestId("badge")).toBeInTheDocument();
   });
 
-  it("should render multiple flags", () => {
-    render(
-      <Annotations
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1"]}
-        data={getAnnotationData([flag1, flag2])}
-      />,
-      { wrapper: createWrapper() },
-    );
-    expect(screen.getByText("Flagged as outlier")).toBeInTheDocument();
-    expect(screen.getByText("Needs review")).toBeInTheDocument();
-    expect(screen.getAllByTestId("badge").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("experimentDataAnnotations.titleFlags")).toBeInTheDocument();
-  });
-
-  it("should render mixed comments and flags", () => {
-    render(
-      <Annotations
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1"]}
-        data={getAnnotationData([comment1, flag1, comment2, flag2])}
-      />,
-      { wrapper: createWrapper() },
-    );
-    expect(screen.getByText("Test comment 1")).toBeInTheDocument();
-    expect(screen.getByText("Test comment 2")).toBeInTheDocument();
-    expect(screen.getByText("Flagged as outlier")).toBeInTheDocument();
-    expect(screen.getByText("Needs review")).toBeInTheDocument();
-    expect(screen.getByText("experimentDataAnnotations.titleComments")).toBeInTheDocument();
-    expect(screen.getByText("experimentDataAnnotations.titleFlags")).toBeInTheDocument();
-  });
-
-  it("should not render badge if there are no comments or flags", () => {
+  it("should not render badge if there are no comments", () => {
     render(
       <Annotations
         experimentId="exp1"
