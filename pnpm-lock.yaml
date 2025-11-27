@@ -89,7 +89,7 @@ catalogs:
       specifier: ^4.0.13
       version: 4.0.15
     jsdom:
-      specifier: ^26.0.0
+      specifier: ^26.0.03
       version: 26.1.0
     vitest:
       specifier: ^4.0.13
@@ -16497,9 +16497,6 @@ packages:
   std-env@3.10.0:
     resolution: {integrity: sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==}
 
-  std-env@3.9.0:
-    resolution: {integrity: sha512-UGvjygr6F6tpH7o2qyqR6QYpwraIjKSdtzyBdyytFOHmPZY917kwdwLG0RbOjWOnKmnm3PeHjaoLLMie7kPLQw==}
-
   stdin-discarder@0.2.2:
     resolution: {integrity: sha512-UhDfHmA92YAlNnCfhmq0VeNL5bDbiZGg7sZ2IvPsXubGkiNa9EC+tUTsjBRsYUAz87btI6/1wf4XoVvQ3uRnmQ==}
     engines: {node: '>=18'}
@@ -20557,7 +20554,7 @@ snapshots:
   '@babel/types@7.28.2':
     dependencies:
       '@babel/helper-string-parser': 7.27.1
-      '@babel/helper-validator-identifier': 7.27.1
+      '@babel/helper-validator-identifier': 7.28.5
 
   '@babel/types@7.28.5':
     dependencies:
@@ -22675,10 +22672,10 @@ snapshots:
       '@graphql-tools/utils': 10.8.6(graphql@16.8.1)
       '@whatwg-node/disposablestack': 0.0.6
       graphql: 16.8.1
-      graphql-ws: 6.0.6(graphql@16.8.1)(ws@8.18.2)
-      isomorphic-ws: 5.0.0(ws@8.18.2)
+      graphql-ws: 6.0.6(graphql@16.8.1)(ws@8.18.3)
+      isomorphic-ws: 5.0.0(ws@8.18.3)
       tslib: 2.8.1
-      ws: 8.18.2
+      ws: 8.18.3
     transitivePeerDependencies:
       - '@fastify/websocket'
       - bufferutil
@@ -22706,9 +22703,9 @@ snapshots:
       '@graphql-tools/utils': 10.8.6(graphql@16.8.1)
       '@types/ws': 8.18.1
       graphql: 16.8.1
-      isomorphic-ws: 5.0.0(ws@8.18.2)
+      isomorphic-ws: 5.0.0(ws@8.18.3)
       tslib: 2.8.1
-      ws: 8.18.2
+      ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -22932,10 +22929,10 @@ snapshots:
       '@types/ws': 8.18.1
       duplexify: 3.7.1
       inherits: 2.0.4
-      isomorphic-ws: 4.0.1(ws@8.18.2)
+      isomorphic-ws: 4.0.1(ws@8.18.3)
       readable-stream: 2.3.8
       safe-buffer: 5.2.1
-      ws: 8.18.2
+      ws: 8.18.3
       xtend: 4.0.2
     transitivePeerDependencies:
       - bufferutil
@@ -32249,11 +32246,11 @@ snapshots:
       graphql: 16.8.1
       tslib: 2.8.1
 
-  graphql-ws@6.0.6(graphql@16.8.1)(ws@8.18.2):
+  graphql-ws@6.0.6(graphql@16.8.1)(ws@8.18.3):
     dependencies:
       graphql: 16.8.1
     optionalDependencies:
-      ws: 8.18.2
+      ws: 8.18.3
 
   graphql@16.8.1: {}
 
@@ -33062,9 +33059,9 @@ snapshots:
 
   isobject@3.0.1: {}
 
-  isomorphic-ws@4.0.1(ws@8.18.2):
+  isomorphic-ws@4.0.1(ws@8.18.3):
     dependencies:
-      ws: 8.18.2
+      ws: 8.18.3
 
   isomorphic-ws@5.0.0(ws@8.18.2):
     dependencies:
@@ -33316,7 +33313,7 @@ snapshots:
       whatwg-encoding: 3.1.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 14.2.0
-      ws: 8.18.2
+      ws: 8.18.3
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -34937,7 +34934,7 @@ snapshots:
       socks: 2.8.7
       split2: 4.2.0
       worker-timers: 7.1.8
-      ws: 8.18.2
+      ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -38415,8 +38412,6 @@ snapshots:
 
   std-env@3.10.0: {}
 
-  std-env@3.9.0: {}
-
   stdin-discarder@0.2.2: {}
 
   stream-buffers@2.2.0: {}
@@ -39982,7 +39977,7 @@ snapshots:
       figures: 3.2.0
       markdown-table: 2.0.0
       pretty-time: 1.1.0
-      std-env: 3.9.0
+      std-env: 3.10.0
       webpack: 5.99.8
       wrap-ansi: 7.0.0
 
