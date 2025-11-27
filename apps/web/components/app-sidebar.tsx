@@ -7,7 +7,6 @@ import {
   Code,
   FileSliders,
   Home,
-  LogIn,
   Microscope,
   RadioReceiver,
   Webcam,
@@ -29,13 +28,6 @@ import {
 } from "@repo/ui/components";
 
 import { NavItems } from "./nav-items";
-
-interface UserData {
-  id?: string | null;
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-}
 
 interface NavigationItem {
   title: string;
@@ -82,13 +74,11 @@ const iconMap = {
 } as const;
 
 export function AppSidebar({
-  user,
   locale,
   navigationData,
   translations,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
-  user?: UserData | null;
   locale: string;
   navigationData: NavigationData;
   translations: Translations;

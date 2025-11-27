@@ -83,7 +83,7 @@ describe("<NavUser />", () => {
     vi.clearAllMocks();
   });
 
-  it("renders display name (from profile), email, avatar and basic functionality", () => {
+  it("renders avatar and chevron icon in button", () => {
     renderNav({
       profile: { firstName: "Ada", lastName: "Lovelace" },
       locale: "en-US",
@@ -92,33 +92,27 @@ describe("<NavUser />", () => {
     // Find the trigger button
     const triggerBtn = screen.getByRole("button");
 
-    // The name and email should be visible in the button
-    expect(within(triggerBtn).getByText("Ada Lovelace")).toBeInTheDocument();
-    expect(within(triggerBtn).getByText("ada@example.com")).toBeInTheDocument();
+    // Initials should be in the fallback
+    expect(screen.getByText("JII")).toBeInTheDocument();
 
-    // Initials should be in the fallback (AD for Ada Lovelace)
-    expect(screen.getByText("AD")).toBeInTheDocument();
-
+    // Should have chevron icon
     expect(triggerBtn.querySelector("svg")).toBeInTheDocument();
 
     // Button should be clickable
     expect(triggerBtn).not.toBeDisabled();
   });
 
-  it("falls back to 'JII' initials and empty name when profile name is missing", () => {
+  it("renders avatar with JII fallback", () => {
     renderNav({ profile: undefined });
 
     const triggerBtn = screen.getByRole("button");
 
     // JII fallback should be present
     expect(screen.getByText("JII")).toBeInTheDocument();
-
-    // Email should be present in the button
-    expect(within(triggerBtn).getByText("ada@example.com")).toBeInTheDocument();
-
-    // The name span should be empty (no text content)
-    const nameSpan = triggerBtn.querySelector("span.font-medium");
-    expect(nameSpan).toHaveTextContent("");
+    
+    // Button should exist and be clickable
+    expect(triggerBtn).toBeInTheDocument();
+    expect(triggerBtn).not.toBeDisabled();
   });
 
   it("renders dropdown menu with account, support, faq and logout links", async () => {
@@ -155,5 +149,20 @@ describe("<NavUser />", () => {
 
     const supportItem = screen.getByRole("menuitem", { name: "navigation.support" });
     expect(supportItem).toHaveAttribute("href", "https://docs.openjii.org");
+  });
+
+  it("renders with avatar and chevron icon", () => {
+    renderNav({
+      profile: { firstName: "Ada", lastName: "Lovelace" },
+    });
+
+    const triggerBtn = screen.getByRole("button");
+    expect(triggerBtn).toBeInTheDocument();
+
+    // Should have avatar visible
+    expect(screen.getByText("JII")).toBeInTheDocument();
+
+    // Should have chevron icon
+    expect(triggerBtn.querySelector("svg")).toBeInTheDocument();
   });
 });

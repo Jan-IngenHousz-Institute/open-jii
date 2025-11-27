@@ -6,7 +6,6 @@ import { AppSidebar } from "./app-sidebar";
 
 export async function AppSidebarWrapper({
   locale,
-  user,
   ...props
 }: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
   locale: string;
@@ -104,7 +103,6 @@ export async function AppSidebarWrapper({
 
   return (
     <AppSidebar
-      user={user}
       locale={locale}
       navigationData={navigationData}
       translations={translations}

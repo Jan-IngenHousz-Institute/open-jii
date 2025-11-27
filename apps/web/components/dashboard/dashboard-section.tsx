@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { Button } from "@repo/ui/components";
-
 interface DashboardSectionProps {
   title: string;
   seeAllLabel: string;
