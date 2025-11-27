@@ -1,31 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
-import {
-  initializePostHogServer,
-  getPostHogServerClient,
-  shutdownPostHog,
-} from "@repo/analytics/server";
+import * as AnalyticsServer from "@repo/analytics/server";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { AnalyticsConfigService } from "../config/config.service";
 import { FlagsService } from "./flags.service";
 
-// Mock the analytics/server module
-vi.mock("@repo/analytics/server", () => ({
-  initializePostHogServer: vi.fn().mockResolvedValue(true),
-  getPostHogServerClient: vi.fn(() => ({
-    isFeatureEnabled: vi.fn().mockResolvedValue(true),
-  })),
-  shutdownPostHog: vi.fn().mockResolvedValue(undefined),
-}));
-
-const mockInitializePostHogServer = vi.mocked(initializePostHogServer);
-const mockGetPostHogServerClient = vi.mocked(getPostHogServerClient);
-const mockShutdownPostHog = vi.mocked(shutdownPostHog);
+type PostHogServerClient = NonNullable<ReturnType<typeof AnalyticsServer.getPostHogServerClient>>;
 
 describe("FlagsService", () => {
   const testApp = TestHarness.App;
   let service: FlagsService;
   let configService: AnalyticsConfigService;
+  let mockInitializePostHogServer: ReturnType<typeof vi.spyOn>;
+  let mockGetPostHogServerClient: ReturnType<typeof vi.spyOn>;
+  let mockShutdownPostHog: ReturnType<typeof vi.spyOn>;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -36,14 +25,22 @@ describe("FlagsService", () => {
     service = testApp.module.get(FlagsService);
     configService = testApp.module.get(AnalyticsConfigService);
 
-    // Reset mocks
-    vi.clearAllMocks();
-    // Reset default mock implementations
-    mockInitializePostHogServer.mockResolvedValue(true);
-    mockGetPostHogServerClient.mockReturnValue({
-      isFeatureEnabled: vi.fn().mockResolvedValue(true),
-      shutdown: vi.fn().mockResolvedValue(undefined),
-    });
+    // Create fresh spies for each test
+    mockInitializePostHogServer = vi
+      .spyOn(AnalyticsServer, "initializePostHogServer")
+      .mockResolvedValue(true);
+    mockGetPostHogServerClient = vi
+      .spyOn(AnalyticsServer, "getPostHogServerClient")
+      .mockReturnValue({
+        isFeatureEnabled: vi.fn().mockResolvedValue(true),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      } satisfies PostHogServerClient);
+    mockShutdownPostHog = vi.spyOn(AnalyticsServer, "shutdownPostHog").mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
