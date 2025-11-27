@@ -43,7 +43,7 @@ export const ArticleTile = ({
       <Link className="flex" href={`/${locale}/blog/${slug}`}>
         <div
           className={cn(
-            "border-gray300 flex flex-1 flex-row overflow-hidden rounded-2xl border shadow-lg",
+            "border-gray300 flex flex-1 flex-row overflow-hidden rounded-lg border transition-shadow hover:shadow-md",
             className,
           )}
         >
@@ -54,16 +54,16 @@ export const ArticleTile = ({
             >
               <CtfImage
                 nextImageProps={{
-                  className: "object-cover w-full h-full rounded-l-xl",
+                  className: "object-cover w-full h-full",
                 }}
                 {...featuredImage}
               />
             </div>
           )}
 
-          <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4 lg:px-7 lg:py-5">
+          <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4">
             <div
-              className={cn("mb-2 text-left text-xs text-gray-600")}
+              className={cn("mb-2 text-left text-sm text-gray-600")}
               {...inspectorProps({ fieldId: "publishedDate" })}
             >
               <FormatDate date={safePublishedDate} />
@@ -71,7 +71,7 @@ export const ArticleTile = ({
 
             {title && (
               <p
-                className="h3 mb-2 text-left text-lg font-medium text-gray-800 md:mb-3 md:text-xl"
+                className="h3 mb-2 text-left text-base font-semibold text-gray-900 md:mb-3"
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {title}

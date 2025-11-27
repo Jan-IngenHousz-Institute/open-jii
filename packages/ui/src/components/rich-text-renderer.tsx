@@ -46,6 +46,11 @@ export function RichTextRenderer({
             overflow-wrap: break-word;
             white-space: normal;
             min-width: 0;
+            cursor: inherit;
+          }
+          
+          .rich-text-renderer * {
+            cursor: inherit;
           }
 
           .rich-text-renderer-truncate {
