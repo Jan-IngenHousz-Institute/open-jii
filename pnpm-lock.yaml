@@ -89,7 +89,7 @@ catalogs:
       specifier: ^4.0.13
       version: 4.0.15
     jsdom:
-      specifier: ^26.0.0
+      specifier: ^26.0.03
       version: 26.1.0
     vitest:
       specifier: ^4.0.13
