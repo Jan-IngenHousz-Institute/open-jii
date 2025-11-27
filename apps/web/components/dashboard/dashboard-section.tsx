@@ -19,12 +19,12 @@ export function DashboardSection({
 }: DashboardSectionProps) {
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
         <Link href={seeAllHref} locale={locale}>
-          <Button variant="ghost" className="text-jii-dark-green text-base font-semibold">
+          <span className="text-primary hover:text-primary/80 text-sm font-semibold">
             {seeAllLabel}
-          </Button>
+          </span>
         </Link>
       </div>
       {children}

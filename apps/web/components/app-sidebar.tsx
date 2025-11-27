@@ -3,6 +3,7 @@
 import {
   Archive,
   BookOpen,
+  CirclePlus,
   Code,
   FileSliders,
   Home,
@@ -16,16 +17,18 @@ import Link from "next/link";
 import * as React from "react";
 
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenuButton,
   SidebarRail,
 } from "@repo/ui/components";
 
 import { NavItems } from "./nav-items";
-import { NavUser } from "./nav-user/nav-user";
 
 interface UserData {
   id?: string | null;
@@ -56,6 +59,10 @@ interface Translations {
   openJII: string;
   logoAlt: string;
   signIn: string;
+  create: string;
+  protocol: string;
+  experiment: string;
+  macro: string;
 
   experimentsTitle: string;
   hardwareTitle: string;
@@ -108,7 +115,7 @@ export function AppSidebar({
   }));
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" className="group-data-[collapsible=icon]:w-[5rem]" {...props}>
       <SidebarHeader>
         <Image
           src="/logo-open-yellow.svg"
@@ -125,30 +132,58 @@ export function AppSidebar({
         <NavItems items={processedNavHardware} />
         <NavItems items={processedNavMacros} />
       </SidebarContent>
-      <SidebarFooter>
-        {user ? (
-          <NavUser
-            locale={locale}
-            user={{
-              id: user.id ?? "",
-              email: user.email ?? "",
-              avatar: user.image ?? "/avatars/default.jpg",
-            }}
-          />
-        ) : (
-          <SidebarMenuButton
-            asChild
-            tooltip={translations.signIn}
-            className="group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!gap-0 group-data-[collapsible=icon]:!px-0"
-          >
-            <Link href="/" locale={locale}>
-              <LogIn className="group-data-[collapsible=icon]:mx-auto" />
-              <span className="text-base font-semibold group-data-[collapsible=icon]:hidden">
-                {translations.signIn}
+      <SidebarFooter className="px-8 pb-6 pt-2 group-data-[collapsible=icon]:px-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="group/btn text-primary hover:border-primary/30 relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md border bg-white px-2 text-sm font-medium transition-all duration-300 hover:bg-gradient-to-r hover:from-white hover:to-gray-50/50 hover:shadow-md active:scale-[0.97] group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-2">
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full" />
+              <CirclePlus
+                className="text-primary relative -mt-px h-[15px] w-[15px] shrink-0 transition-all duration-300 group-hover/btn:rotate-180 group-hover/btn:scale-110"
+                strokeWidth={2}
+              />
+              <span className="relative -mt-px group-data-[collapsible=icon]:hidden">
+                {translations.create}
               </span>
-            </Link>
-          </SidebarMenuButton>
-        )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="top"
+            align="center"
+            sideOffset={8}
+            className="animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 w-[var(--radix-dropdown-menu-trigger-width)] duration-200"
+          >
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/${locale}/platform/protocols/new`}
+                className="group/item cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 hover:pl-3"
+              >
+                <span className="transition-transform duration-200 group-hover/item:translate-x-1">
+                  {translations.protocol}
+                </span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/${locale}/platform/experiments/new`}
+                className="group/item cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 hover:pl-3"
+              >
+                <span className="transition-transform duration-200 group-hover/item:translate-x-1">
+                  {translations.experiment}
+                </span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/${locale}/platform/macros/new`}
+                className="group/item cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 hover:pl-3"
+              >
+                <span className="transition-transform duration-200 group-hover/item:translate-x-1">
+                  {translations.macro}
+                </span>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

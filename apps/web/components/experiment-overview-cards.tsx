@@ -5,14 +5,16 @@ import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 import type { Experiment } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
+import { Button, Card, CardContent, CardHeader, RichTextRenderer } from "@repo/ui/components";
 
 export function ExperimentOverviewCards({
   experiments,
   archived = false,
+  horizontal = false,
 }: {
   experiments: Experiment[] | undefined;
   archived?: boolean;
+  horizontal?: boolean;
 }) {
   const { t } = useTranslation("experiments");
 
@@ -24,6 +26,43 @@ export function ExperimentOverviewCards({
     return <span>{t("experiments.noExperiments")}</span>;
   }
 
+  if (horizontal) {
+    // Horizontal layout for dashboard
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {experiments.map((experiment) => {
+          const experimentPath = archived
+            ? `/platform/experiments-archive/${experiment.id}`
+            : `/platform/experiments/${experiment.id}`;
+
+          return (
+            <Link key={experiment.id} href={experimentPath}>
+              <div className="flex h-full min-h-[180px] flex-col rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-sm">
+                <div className="inline-flex">
+                  <ExperimentStatusBadge status={experiment.status} />
+                </div>
+                <div className="mb-auto mt-4">
+                  <h3 className="mb-2 text-lg font-semibold text-gray-900">{experiment.name}</h3>
+                  <div className="overflow-hidden text-sm text-gray-500">
+                    <RichTextRenderer
+                      content={experiment.description ?? " "}
+                      truncate
+                      maxLines={3}
+                    />
+                  </div>
+                </div>
+                <p className="mt-4 text-xs text-gray-400">
+                  {t("lastUpdate")}: {new Date(experiment.updatedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Original grid layout
   return (
     <>
       {/* Experiments Grid */}
@@ -37,7 +76,7 @@ export function ExperimentOverviewCards({
             : `/platform/experiments/${experiment.id}`;
           return (
             <Link key={experiment.id} href={experimentPath}>
-              <Card className="bg-white transition-shadow hover:shadow-md">
+              <Card className="border border-gray-200 bg-white transition-shadow hover:shadow-md">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
@@ -55,6 +94,13 @@ export function ExperimentOverviewCards({
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
+                  <div className="overflow-hidden text-sm text-gray-500">
+                    <RichTextRenderer
+                      content={experiment.description || " "}
+                      truncate
+                      maxLines={3}
+                    />
+                  </div>
                   <Button
                     variant="ghost"
                     className="mt-6 h-auto w-full justify-between p-0 font-normal text-gray-700 hover:text-gray-900"

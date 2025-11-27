@@ -24,7 +24,10 @@ interface LanguageSwitcherProps {
   locale: string;
 }
 
-export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
+export function LanguageSwitcher({
+  locale,
+  variant = "default",
+}: LanguageSwitcherProps & { variant?: "default" | "header" }) {
   const pathname = usePathname();
   const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
   // If feature flag is disabled, only show English
@@ -46,11 +49,18 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
     return `/${newLocale}${pathWithoutLocale}`;
   };
 
+  const buttonClassName = variant === "header" ? "text-white hover:bg-primary-light" : "";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" aria-label="Switch language">
-          <Globe className="h-4 w-4" />
+        <Button
+          variant="ghost"
+          size={variant === "header" ? "icon" : "sm"}
+          aria-label="Switch language"
+          className={buttonClassName}
+        >
+          <Globe className={variant === "header" ? "h-5 w-5" : "h-4 w-4"} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
