@@ -45,21 +45,20 @@ const testAnnotation4: Annotation = {
 
 export function addDemoAnnotationData(data: ExperimentData) {
   if (data.columns.length === 0) return;
-  if (!data.columns.find((column) => column.name === "id")) {
-    data.columns.unshift({
-      name: "id",
-      type_name: "ID",
-      type_text: "ID",
-    });
+  const idColumnIndex = data.columns.findIndex((col) => col.name === "id");
+  if (idColumnIndex === -1) return; // ID must be present for annotations to work
+  if (idColumnIndex !== -1 && data.columns[idColumnIndex].type_name !== "LONG") return; // ID must be of type LONG
+  data.columns[idColumnIndex].type_name = "ID";
+  data.columns[idColumnIndex].type_text = "ID";
+  if (!data.columns.find((column) => column.name === "annotations")) {
     data.columns.unshift({
       name: "annotations",
       type_name: "ANNOTATIONS",
       type_text: "ANNOTATIONS",
     });
     data.rows.forEach((row) => {
-      row.id = uuidv4();
       const randomComment = Math.floor(Math.random() * (5 - 1 + 1)) + 1;
-      let annotations: Annotation[] = [];
+      let annotations: Annotation[];
       switch (randomComment) {
         case 1:
           annotations = [testAnnotation1];
