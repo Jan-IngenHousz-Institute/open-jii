@@ -84,7 +84,7 @@ export class ExperimentDataAnnotationsController {
 
       if (result.isSuccess()) {
         return {
-          status: 204,
+          status: 200,
           body: result.value,
         };
       }
@@ -110,7 +110,7 @@ export class ExperimentDataAnnotationsController {
 
       if (result.isSuccess()) {
         return {
-          status: 204,
+          status: 200,
           body: result.value,
         };
       }
@@ -137,7 +137,7 @@ export class ExperimentDataAnnotationsController {
 
       if (result.isSuccess()) {
         return {
-          status: 204,
+          status: 200,
           body: result.value,
         };
       }
