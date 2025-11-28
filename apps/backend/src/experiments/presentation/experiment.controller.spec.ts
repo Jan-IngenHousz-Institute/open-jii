@@ -9,7 +9,8 @@ import { contract } from "@repo/api";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success, failure } from "../../common/utils/fp-utils";
-import type { SuperTestResponse, MockAnalyticsAdapter } from "../../test/test-harness";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
+import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import type { UserDto } from "../../users/core/models/user.model";
 
@@ -20,7 +21,7 @@ describe("ExperimentController", () => {
   let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
-    await testApp.setup({ useMockAnalytics: true });
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
   });
 
   beforeEach(async () => {

@@ -6,7 +6,7 @@ import { contract } from "@repo/api";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
-import type { MockAnalyticsAdapter } from "../../test/test-harness";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
@@ -27,7 +27,7 @@ describe("MacroController", () => {
   let deleteMacroUseCase: DeleteMacroUseCase;
 
   beforeAll(async () => {
-    await testApp.setup({ useMockAnalytics: true });
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
   });
 
   beforeEach(async () => {

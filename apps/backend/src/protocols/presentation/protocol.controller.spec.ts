@@ -7,7 +7,7 @@ import { contract } from "@repo/api";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success } from "../../common/utils/fp-utils";
-import type { MockAnalyticsAdapter } from "../../test/test-harness";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-protocol";
 
@@ -18,7 +18,7 @@ describe("ProtocolController", () => {
   let getProtocolUseCase: GetProtocolUseCase;
 
   beforeAll(async () => {
-    await testApp.setup({ useMockAnalytics: true });
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
   });
 
   beforeEach(async () => {

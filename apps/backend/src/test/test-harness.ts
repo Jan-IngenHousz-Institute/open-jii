@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type { INestApplication } from "@nestjs/common";
+import type { INestApplication, Type } from "@nestjs/common";
 import type { ModuleMetadata } from "@nestjs/common/interfaces";
 import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
@@ -10,8 +10,6 @@ import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
-import type { FeatureFlagKey } from "@repo/analytics";
-import { FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
 import {
@@ -30,27 +28,31 @@ import {
 
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
 
-export type SuperTestResponse<T> = Omit<Response, "body"> & { body: T };
-
-export class MockAnalyticsAdapter {
-  private flags = new Map<FeatureFlagKey, boolean>();
-
-  async isFeatureFlagEnabled(flagKey: FeatureFlagKey, _distinctId?: string): Promise<boolean> {
-    return Promise.resolve(this.flags.get(flagKey) ?? FEATURE_FLAG_DEFAULTS[flagKey]);
-  }
-
-  setFlag(flagKey: FeatureFlagKey, value: boolean) {
-    this.flags.set(flagKey, value);
-  }
-
-  reset() {
-    this.flags.clear();
-  }
+interface AdapterDefinition {
+  real: Type;
+  mock: Type;
 }
+
+const ADAPTERS = {
+  AnalyticsAdapter: {
+    real: AnalyticsAdapter,
+    mock: MockAnalyticsAdapter,
+  },
+} satisfies Record<string, AdapterDefinition>;
+
+type AdapterKey = keyof typeof ADAPTERS;
+
+export interface TestSetupOptions {
+  mock?: Partial<Record<AdapterKey, boolean>>;
+}
+
+export type SuperTestResponse<T> = Omit<Response, "body"> & { body: T };
+export { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
 
 export class TestHarness {
   private app: INestApplication<App> | null = null;
@@ -70,8 +72,8 @@ export class TestHarness {
   /**
    * Set up the application for testing
    */
-  public async setup(options: { useMockAnalytics?: boolean } = {}) {
-    const { useMockAnalytics = false } = options;
+  public async setup(options: TestSetupOptions = {}) {
+    const mockFlags = options.mock ?? {};
 
     if (!this.app) {
       // Configure nock to prevent any real HTTP requests during tests
@@ -79,12 +81,20 @@ export class TestHarness {
       // But allow localhost connections for the test server
       nock.enableNetConnect("127.0.0.1");
 
-      this._module = await Test.createTestingModule({
+      const moduleBuilder = Test.createTestingModule({
         imports: this._imports,
-      })
-        .overrideProvider(AnalyticsAdapter)
-        .useClass(useMockAnalytics ? MockAnalyticsAdapter : AnalyticsAdapter)
-        .compile();
+      });
+
+      for (const [name, { real, mock }] of Object.entries(ADAPTERS) as [
+        AdapterKey,
+        AdapterDefinition,
+      ][]) {
+        const useMock = mockFlags[name] === true;
+
+        moduleBuilder.overrideProvider(real).useClass(useMock ? mock : real);
+      }
+
+      this._module = await moduleBuilder.compile();
 
       this.app = this._module.createNestApplication<INestApplication<App>>({
         logger: false,
@@ -105,12 +115,7 @@ export class TestHarness {
       }
 
       await this.clearDatabase();
-
-      // Reset mock analytics adapter
-      const analyticsAdapter = this._module?.get(AnalyticsAdapter);
-      if (analyticsAdapter && analyticsAdapter instanceof MockAnalyticsAdapter) {
-        analyticsAdapter.reset();
-      }
+      this.resetMockAdapters();
     } catch (e) {
       console.log("Failed to clean up database for integration tests.", e);
       // Don't throw the error to allow tests to continue
@@ -182,6 +187,24 @@ export class TestHarness {
     await this.database.delete(profiles).execute();
     await this.database.delete(organizations).execute();
     await this.database.delete(users).execute();
+  }
+
+  private resetMockAdapters() {
+    if (!this._module) {
+      return;
+    }
+
+    for (const { real, mock } of Object.values(ADAPTERS) as AdapterDefinition[]) {
+      const providerInstance = this._module.get<unknown>(real, { strict: false });
+      const MockClass = mock as new (...args: unknown[]) => unknown;
+
+      if (
+        providerInstance instanceof MockClass &&
+        typeof (providerInstance as { reset?: () => void }).reset === "function"
+      ) {
+        (providerInstance as { reset: () => void }).reset();
+      }
+    }
   }
 
   /**
