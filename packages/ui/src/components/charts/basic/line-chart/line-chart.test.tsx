@@ -698,4 +698,44 @@ describe("LineChart", () => {
       expect(chart).toHaveAttribute("data-series-count", "1");
     });
   });
+
+  describe("Multiple Y-Axes", () => {
+    it("passes through yaxis property from series data", () => {
+      const multiAxisData: LineSeriesData[] = [
+        {
+          x: [1, 2, 3, 4],
+          y: [10, 20, 15, 25],
+          name: "Primary Axis",
+          yaxis: "y",
+          mode: "lines",
+        },
+        {
+          x: [1, 2, 3, 4],
+          y: [100, 200, 150, 250],
+          name: "Secondary Axis",
+          yaxis: "y2",
+          mode: "lines",
+        },
+      ];
+
+      render(<LineChart data={multiAxisData} />);
+
+      const chart = screen.getByTestId("plotly-chart");
+      expect(chart).toHaveAttribute("data-series-count", "2");
+    });
+
+    it("supports up to 4 Y-axes (y, y2, y3, y4)", () => {
+      const fourAxisData: LineSeriesData[] = [
+        { x: [1, 2, 3], y: [10, 20, 15], name: "Axis 1", yaxis: "y", mode: "lines" },
+        { x: [1, 2, 3], y: [100, 200, 150], name: "Axis 2", yaxis: "y2", mode: "lines" },
+        { x: [1, 2, 3], y: [1000, 2000, 1500], name: "Axis 3", yaxis: "y3", mode: "lines" },
+        { x: [1, 2, 3], y: [5, 10, 7], name: "Axis 4", yaxis: "y4", mode: "lines" },
+      ];
+
+      render(<LineChart data={fourAxisData} />);
+
+      const chart = screen.getByTestId("plotly-chart");
+      expect(chart).toHaveAttribute("data-series-count", "4");
+    });
+  });
 });

@@ -856,8 +856,8 @@ describe("YAxisConfiguration", () => {
       );
 
       const axisTitleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
-      // Should only have one axis title input (for first series)
-      expect(axisTitleInputs.length).toBe(1);
+      // Should have one axis title input for each Y-axis series (2 series = 2 inputs)
+      expect(axisTitleInputs.length).toBe(2);
     });
 
     it("should allow typing in axis title input", async () => {

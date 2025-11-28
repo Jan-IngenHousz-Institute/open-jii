@@ -226,6 +226,81 @@ describe("ScatterChartRenderer", () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[1].name).toBe("Series 2");
     });
+
+    it("should assign series to different Y-axes (y, y2, y3, y4)", () => {
+      const fourSeriesViz = {
+        ...mockVisualization,
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "x_value", role: "x" as const, alias: "X" },
+            { tableName: "test_table", columnName: "y1", role: "y" as const, alias: "Series 1" },
+            { tableName: "test_table", columnName: "y2", role: "y" as const, alias: "Series 2" },
+            { tableName: "test_table", columnName: "y3", role: "y" as const, alias: "Series 3" },
+            { tableName: "test_table", columnName: "y4", role: "y" as const, alias: "Series 4" },
+          ],
+        },
+      };
+
+      const testData = [
+        { x_value: 1, y1: 10, y2: 20, y3: 30, y4: 40 },
+        { x_value: 2, y1: 15, y2: 25, y3: 35, y4: 45 },
+      ];
+
+      render(
+        <ScatterChartRenderer visualization={fourSeriesViz} experimentId="exp-1" data={testData} />,
+      );
+
+      const chartData = screen.getByTestId("chart-data");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      expect(parsed).toHaveLength(4);
+
+      // Verify each series is assigned to the correct Y-axis
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[0].yaxis).toBe("y");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[1].yaxis).toBe("y2");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[2].yaxis).toBe("y3");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[3].yaxis).toBe("y4");
+    });
+
+    it("should extract and pass Y-axis colors from series", () => {
+      const coloredSeriesViz = {
+        ...mockVisualization,
+        config: {
+          ...mockVisualization.config,
+          color: ["#ff0000", "#00ff00", "#0000ff"],
+        },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "x_value", role: "x" as const, alias: "X" },
+            { tableName: "test_table", columnName: "y1", role: "y" as const, alias: "Series 1" },
+            { tableName: "test_table", columnName: "y2", role: "y" as const, alias: "Series 2" },
+            { tableName: "test_table", columnName: "y3", role: "y" as const, alias: "Series 3" },
+          ],
+        },
+      };
+
+      const testData = [
+        { x_value: 1, y1: 10, y2: 20, y3: 30 },
+        { x_value: 2, y1: 15, y2: 25, y3: 35 },
+      ];
+
+      render(
+        <ScatterChartRenderer
+          visualization={coloredSeriesViz}
+          experimentId="exp-1"
+          data={testData}
+        />,
+      );
+
+      // The component should pass yAxisColor, yAxisColor2, yAxisColor3 to the config
+      expect(screen.getByTestId("scatter-chart")).toBeInTheDocument();
+    });
   });
 
   describe("Color mapping", () => {

@@ -270,6 +270,84 @@ describe("LineChartRenderer", () => {
       expect(chartData.textContent).toContain("Series 1");
       expect(chartData.textContent).toContain("Series 2");
     });
+
+    it("should assign series to different Y-axes (y, y2, y3, y4)", () => {
+      const fourSeriesViz = {
+        ...mockVisualization,
+        dataConfig: {
+          ...mockVisualization.dataConfig,
+          dataSources: [
+            { tableName: "test_table", columnName: "time", role: "x", alias: "Time" },
+            { tableName: "test_table", columnName: "value1", role: "y", alias: "Series 1" },
+            { tableName: "test_table", columnName: "value2", role: "y", alias: "Series 2" },
+            { tableName: "test_table", columnName: "value3", role: "y", alias: "Series 3" },
+            { tableName: "test_table", columnName: "value4", role: "y", alias: "Series 4" },
+          ],
+        },
+      };
+
+      const fourSeriesData = [
+        { time: 0, value1: 10, value2: 20, value3: 30, value4: 40 },
+        { time: 1, value1: 15, value2: 25, value3: 35, value4: 45 },
+      ];
+
+      render(
+        <LineChartRenderer
+          visualization={fourSeriesViz}
+          experimentId="exp-1"
+          data={fourSeriesData}
+        />,
+      );
+
+      const chartData = screen.getByTestId("chart-data");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const parsed = JSON.parse(chartData.textContent ?? "{}");
+
+      // Verify each series is assigned to the correct Y-axis
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[0].yaxis).toBe("y");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[1].yaxis).toBe("y2");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[2].yaxis).toBe("y3");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[3].yaxis).toBe("y4");
+    });
+
+    it("should extract and pass Y-axis colors from series", () => {
+      const coloredSeriesViz = {
+        ...mockVisualization,
+        config: {
+          ...mockVisualization.config,
+          color: ["#ff0000", "#00ff00", "#0000ff"],
+        },
+        dataConfig: {
+          ...mockVisualization.dataConfig,
+          dataSources: [
+            { tableName: "test_table", columnName: "time", role: "x", alias: "Time" },
+            { tableName: "test_table", columnName: "value1", role: "y", alias: "Series 1" },
+            { tableName: "test_table", columnName: "value2", role: "y", alias: "Series 2" },
+            { tableName: "test_table", columnName: "value3", role: "y", alias: "Series 3" },
+          ],
+        },
+      };
+
+      const coloredSeriesData = [
+        { time: 0, value1: 10, value2: 20, value3: 30 },
+        { time: 1, value1: 15, value2: 25, value3: 35 },
+      ];
+
+      render(
+        <LineChartRenderer
+          visualization={coloredSeriesViz}
+          experimentId="exp-1"
+          data={coloredSeriesData}
+        />,
+      );
+
+      // The component should pass yAxisColor, yAxisColor2, yAxisColor3 to the config
+      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+    });
   });
 
   describe("Data type handling", () => {

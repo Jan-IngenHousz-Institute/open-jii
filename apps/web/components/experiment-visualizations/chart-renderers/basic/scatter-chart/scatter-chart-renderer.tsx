@@ -145,10 +145,14 @@ export function ScatterChartRenderer({
             }
           : undefined;
 
+      // Determine which Y-axis this series should use
+      const yaxis = index === 0 ? "y" : index === 1 ? "y2" : index === 2 ? "y3" : "y4";
+
       return {
         x: xValues,
         y: yValues,
         name,
+        yaxis,
         mode: chartConfig.mode,
         marker: {
           size: chartConfig.marker?.size,
@@ -170,9 +174,27 @@ export function ScatterChartRenderer({
       };
     });
 
+    // Extract colors for each Y-axis from series colors
+    const yAxisColors: Record<string, string> = {};
+    scatterData.forEach((series, index) => {
+      const seriesColor =
+        typeof series.marker?.color === "string"
+          ? series.marker.color
+          : typeof series.color === "string"
+            ? series.color
+            : "#3b82f6";
+      if (index === 0) yAxisColors.yAxisColor = seriesColor;
+      else if (index === 1) yAxisColors.yAxisColor2 = seriesColor;
+      else if (index === 2) yAxisColors.yAxisColor3 = seriesColor;
+      else if (index === 3) yAxisColors.yAxisColor4 = seriesColor;
+    });
+
     return (
       <div className="flex h-full w-full flex-col">
-        <ScatterChart data={scatterData} config={{ ...chartConfig, autosizable: true }} />
+        <ScatterChart
+          data={scatterData}
+          config={{ ...chartConfig, ...yAxisColors, autosizable: true }}
+        />
       </div>
     );
   } catch (error) {

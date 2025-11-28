@@ -77,8 +77,18 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
     title,
     xAxisTitle,
     yAxisTitle,
+    yAxisTitle2,
+    yAxisTitle3,
+    yAxisTitle4,
+    yAxisColor,
+    yAxisColor2,
+    yAxisColor3,
+    yAxisColor4,
     xAxisType = "linear",
     yAxisType = "linear",
+    yAxisType2 = "linear",
+    yAxisType3 = "linear",
+    yAxisType4 = "linear",
     showLegend = true,
     showGrid = true,
     backgroundColor,
@@ -125,32 +135,110 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
       linecolor: gridColor,
       tickcolor: gridColor,
       automargin: true,
+      domain: [0.13, 0.88], // Leave space on both left and right for additional axes
     },
 
     yaxis: {
       title: yAxisTitle
-        ? { text: yAxisTitle, font: { size: 14, color: textColor, family: "Inter, sans-serif" } }
+        ? {
+            text: yAxisTitle,
+            font: { size: 14, color: yAxisColor || textColor, family: "Inter, sans-serif" },
+          }
         : undefined,
       gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
       showgrid: showGrid,
       type: yAxisType,
-      color: textColor,
+      color: yAxisColor || textColor,
       showline: true,
-      linecolor: gridColor,
-      tickcolor: gridColor,
+      linecolor: yAxisColor || gridColor,
+      tickcolor: yAxisColor || gridColor,
       automargin: true,
+      tickfont: { color: yAxisColor || textColor },
+      side: "left",
+    },
+
+    yaxis2: {
+      title: yAxisTitle2
+        ? {
+            text: yAxisTitle2,
+            font: { size: 14, color: yAxisColor2 || textColor, family: "Inter, sans-serif" },
+          }
+        : undefined,
+      gridcolor: "rgba(0,0,0,0)",
+      showgrid: false,
+      type: yAxisType2,
+      color: yAxisColor2 || textColor,
+      showline: true,
+      linecolor: yAxisColor2 || gridColor,
+      tickcolor: yAxisColor2 || gridColor,
+      tickfont: { color: yAxisColor2 || textColor },
+      automargin: true,
+      overlaying: "y",
+      side: "right",
+      anchor: "x",
+    },
+
+    yaxis3: {
+      title: yAxisTitle3
+        ? {
+            text: yAxisTitle3,
+            font: { size: 14, color: yAxisColor3 || textColor, family: "Inter, sans-serif" },
+          }
+        : undefined,
+      gridcolor: "rgba(0,0,0,0)",
+      showgrid: false,
+      type: yAxisType3,
+      color: yAxisColor3 || textColor,
+      showline: true,
+      linecolor: yAxisColor3 || gridColor,
+      tickcolor: yAxisColor3 || gridColor,
+      tickfont: { color: yAxisColor3 || textColor },
+      automargin: true,
+      overlaying: "y",
+      side: "left",
+      anchor: "free",
+      position: 0.06,
+    },
+
+    yaxis4: {
+      title: yAxisTitle4
+        ? {
+            text: yAxisTitle4,
+            font: { size: 14, color: yAxisColor4 || textColor, family: "Inter, sans-serif" },
+          }
+        : undefined,
+      gridcolor: "rgba(0,0,0,0)",
+      showgrid: false,
+      type: yAxisType4,
+      color: yAxisColor4 || textColor,
+      showline: true,
+      linecolor: yAxisColor4 || gridColor,
+      tickcolor: yAxisColor4 || gridColor,
+      tickfont: { color: yAxisColor4 || textColor },
+      automargin: true,
+      overlaying: "y",
+      side: "right",
+      anchor: "free",
+      position: 0.95,
     },
 
     showlegend: showLegend,
-    legend: {
-      x: 1,
-      y: 1,
-      xanchor: "right",
-      bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
-      bordercolor: gridColor,
-      borderwidth: 1,
-      font: { color: textColor, family: "Inter, sans-serif" },
-    },
+    legend: (() => {
+      // Calculate number of right-side axes
+      const rightAxesCount = [yAxisTitle2, yAxisTitle4].filter(Boolean).length;
+      // Position legend based on number of right axes: 1.02 (none), 1.10 (1 axis), 1.18 (2 axes)
+      const legendX = rightAxesCount === 0 ? 0.9 : rightAxesCount === 1 ? 0.95 : 1;
+
+      return {
+        x: legendX,
+        y: 1,
+        xanchor: "left",
+        bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
+        bordercolor: gridColor,
+        borderwidth: 1,
+        font: { color: textColor, family: "Inter, sans-serif" },
+      };
+    })(),
 
     margin: { l: 60, r: 40, t: title ? 60 : 20, b: 60 },
     autosize: !width && !height, // Enable autosize when no fixed dimensions

@@ -37,6 +37,7 @@ interface YAxisConfigurationProps {
   addYAxisSeries: () => void;
   removeDataSource: (index: number) => void;
   isColorColumnSelected?: boolean;
+  maxYAxes?: number; // Maximum number of Y-axes to support (default 4)
 }
 
 export default function YAxisConfiguration({
@@ -46,14 +47,13 @@ export default function YAxisConfiguration({
   addYAxisSeries,
   removeDataSource,
   isColorColumnSelected = false,
+  maxYAxes = 4,
 }: YAxisConfigurationProps) {
   const { t } = useTranslation("experimentVisualizations");
 
   const handleYAxisColumnChange = (value: string, seriesIndex: number) => {
-    // Auto-fill Y-axis title for the first series
-    if (seriesIndex === 0) {
-      form.setValue("config.yAxisTitle", value);
-    }
+    // Auto-fill Y-axis title for each series
+    form.setValue(`config.yAxisTitle${seriesIndex === 0 ? "" : seriesIndex + 1}`, value);
 
     // Handle alias assignment for the data source
     const currentAlias = form.getValues(
@@ -69,6 +69,11 @@ export default function YAxisConfiguration({
 
   // Simple wrapper to add series with color
   const handleAddYAxisSeries = () => {
+    // Check if we've reached the maximum number of Y-axes
+    if (yAxisDataSources.length >= maxYAxes) {
+      return; // Don't add more series if we've reached the limit
+    }
+
     addYAxisSeries();
     // Add corresponding color for the new series
     const currentColors = form.getValues("config.color");
@@ -94,6 +99,7 @@ export default function YAxisConfiguration({
           size="sm"
           onClick={handleAddYAxisSeries}
           className="h-8 px-3"
+          disabled={yAxisDataSources.length >= maxYAxes}
         >
           <Plus className="mr-1.5 h-3.5 w-3.5" />
           {t("configuration.series.add")}
@@ -234,7 +240,7 @@ export default function YAxisConfiguration({
 
                   <FormField
                     control={form.control}
-                    name="config.yAxisType"
+                    name={`config.yAxisType${seriesIndex === 0 ? "" : seriesIndex + 1}`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">
@@ -261,28 +267,26 @@ export default function YAxisConfiguration({
                     )}
                   />
 
-                  {/* Show Y-Axis Title only for first series */}
-                  {seriesIndex === 0 && (
-                    <FormField
-                      control={form.control}
-                      name="config.yAxisTitle"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium">
-                            {t("configuration.axes.title")}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("configuration.placeholders.enterAxisTitle")}
-                              className="h-10 bg-white"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                  {/* Show Y-Axis Title for each series */}
+                  <FormField
+                    control={form.control}
+                    name={`config.yAxisTitle${seriesIndex === 0 ? "" : seriesIndex + 1}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          {t("configuration.axes.title")}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={t("configuration.placeholders.enterAxisTitle")}
+                            className="h-10 bg-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </CardContent>
             </Card>

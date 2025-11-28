@@ -17,7 +17,13 @@ describe("chart-configurator-util", () => {
           xAxisTitle: "",
           xAxisType: "linear",
           yAxisType: "linear",
+          yAxisType2: "linear",
+          yAxisType3: "linear",
+          yAxisType4: "linear",
           yAxisTitle: "",
+          yAxisTitle2: "",
+          yAxisTitle3: "",
+          yAxisTitle4: "",
           showLegend: true,
           showGrid: true,
           useWebGL: false,
@@ -78,7 +84,13 @@ describe("chart-configurator-util", () => {
         xAxisTitle: "",
         xAxisType: "linear",
         yAxisType: "linear",
+        yAxisType2: "linear",
+        yAxisType3: "linear",
+        yAxisType4: "linear",
         yAxisTitle: "",
+        yAxisTitle2: "",
+        yAxisTitle3: "",
+        yAxisTitle4: "",
         showLegend: true,
         showGrid: true,
         useWebGL: false,
@@ -123,6 +135,24 @@ describe("chart-configurator-util", () => {
 
       expect(config.marker).toBeUndefined();
     });
+
+    it("should set all Y-axis types to linear by default for line chart", () => {
+      const config = getDefaultChartConfig("line");
+
+      expect(config.yAxisType).toBe("linear");
+      expect(config.yAxisType2).toBe("linear");
+      expect(config.yAxisType3).toBe("linear");
+      expect(config.yAxisType4).toBe("linear");
+    });
+
+    it("should set all Y-axis titles to empty string by default for line chart", () => {
+      const config = getDefaultChartConfig("line");
+
+      expect(config.yAxisTitle).toBe("");
+      expect(config.yAxisTitle2).toBe("");
+      expect(config.yAxisTitle3).toBe("");
+      expect(config.yAxisTitle4).toBe("");
+    });
   });
 
   describe("unknown chart type", () => {
@@ -134,7 +164,13 @@ describe("chart-configurator-util", () => {
         xAxisTitle: "",
         xAxisType: "linear",
         yAxisType: "linear",
+        yAxisType2: "linear",
+        yAxisType3: "linear",
+        yAxisType4: "linear",
         yAxisTitle: "",
+        yAxisTitle2: "",
+        yAxisTitle3: "",
+        yAxisTitle4: "",
         showLegend: true,
         showGrid: true,
         useWebGL: false,

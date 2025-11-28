@@ -75,6 +75,7 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
         name: series.name,
         type: plotType,
         mode: series.mode || "markers",
+        yaxis: series.yaxis, // Support multiple Y-axes
 
         marker: {
           color: series.marker?.color || series.color,

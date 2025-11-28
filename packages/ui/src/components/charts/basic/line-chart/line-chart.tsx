@@ -70,6 +70,7 @@ export function LineChart({
       name: series.name,
       type: plotType,
       mode: series.mode || "lines",
+      yaxis: series.yaxis, // Support multiple Y-axes
 
       line: {
         color: series.line?.color || series.color || "#1f77b4",

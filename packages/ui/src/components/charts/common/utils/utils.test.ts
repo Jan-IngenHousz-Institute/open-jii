@@ -277,6 +277,139 @@ describe("utils", () => {
       expect(layout.yaxis?.type).toBe("category");
     });
 
+    it("configures multiple Y-axes with titles", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxisTitle: "Primary Axis",
+        yAxisTitle2: "Secondary Axis",
+        yAxisTitle3: "Tertiary Axis",
+        yAxisTitle4: "Quaternary Axis",
+      };
+
+      const layout = createBaseLayout(config);
+
+      expect(layout.yaxis?.title).toMatchObject({
+        text: "Primary Axis",
+      });
+      expect(layout.yaxis2?.title).toMatchObject({
+        text: "Secondary Axis",
+      });
+      expect(layout.yaxis3?.title).toMatchObject({
+        text: "Tertiary Axis",
+      });
+      expect(layout.yaxis4?.title).toMatchObject({
+        text: "Quaternary Axis",
+      });
+    });
+
+    it("configures multiple Y-axes with different types", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxisType: "linear",
+        yAxisType2: "log",
+        yAxisType3: "date",
+        yAxisType4: "category",
+      };
+
+      const layout = createBaseLayout(config);
+
+      expect(layout.yaxis?.type).toBe("linear");
+      expect(layout.yaxis2?.type).toBe("log");
+      expect(layout.yaxis3?.type).toBe("date");
+      expect(layout.yaxis4?.type).toBe("category");
+    });
+
+    it("positions multiple Y-axes correctly", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxisTitle: "Y1",
+        yAxisTitle2: "Y2",
+        yAxisTitle3: "Y3",
+        yAxisTitle4: "Y4",
+      };
+
+      const layout = createBaseLayout(config);
+
+      // Primary axis on left
+      expect(layout.yaxis?.side).toBe("left");
+
+      // Secondary axis on right, anchored to x
+      expect(layout.yaxis2?.side).toBe("right");
+      expect(layout.yaxis2?.anchor).toBe("x");
+      expect(layout.yaxis2?.overlaying).toBe("y");
+
+      // Tertiary axis on left, free positioning
+      expect(layout.yaxis3?.side).toBe("left");
+      expect(layout.yaxis3?.anchor).toBe("free");
+      expect(layout.yaxis3?.overlaying).toBe("y");
+      expect(layout.yaxis3?.position).toBe(0.06);
+
+      // Quaternary axis on right, free positioning
+      expect(layout.yaxis4?.side).toBe("right");
+      expect(layout.yaxis4?.anchor).toBe("free");
+      expect(layout.yaxis4?.overlaying).toBe("y");
+      expect(layout.yaxis4?.position).toBe(0.95);
+    });
+
+    it("applies custom colors to multiple Y-axes", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxisTitle: "Y1",
+        yAxisTitle2: "Y2",
+        yAxisTitle3: "Y3",
+        yAxisTitle4: "Y4",
+        yAxisColor: "#ff0000",
+        yAxisColor2: "#00ff00",
+        yAxisColor3: "#0000ff",
+        yAxisColor4: "#ffff00",
+      };
+
+      const layout = createBaseLayout(config);
+
+      expect(layout.yaxis?.title?.font?.color).toBe("#ff0000");
+      expect(layout.yaxis?.tickfont?.color).toBe("#ff0000");
+
+      expect(layout.yaxis2?.title?.font?.color).toBe("#00ff00");
+      expect(layout.yaxis2?.tickfont?.color).toBe("#00ff00");
+
+      expect(layout.yaxis3?.title?.font?.color).toBe("#0000ff");
+      expect(layout.yaxis3?.tickfont?.color).toBe("#0000ff");
+
+      expect(layout.yaxis4?.title?.font?.color).toBe("#ffff00");
+      expect(layout.yaxis4?.tickfont?.color).toBe("#ffff00");
+    });
+
+    it("adjusts x-axis domain when multiple Y-axes are present", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxisTitle: "Y1",
+        yAxisTitle2: "Y2",
+        yAxisTitle3: "Y3",
+        yAxisTitle4: "Y4",
+      };
+
+      const layout = createBaseLayout(config);
+
+      // X-axis domain should be adjusted to make room for left and right axes
+      expect(layout.xaxis?.domain).toEqual([0.13, 0.88]);
+    });
+
+    it("positions legend based on number of right-side axes", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxisTitle: "Y1",
+        yAxisTitle2: "Y2",
+        yAxisTitle3: "Y3",
+        yAxisTitle4: "Y4",
+      };
+
+      const layout = createBaseLayout(config);
+
+      // Legend should be positioned to accommodate right-side axes
+      expect(layout.legend?.x).toBe(1.0);
+      expect(layout.legend?.xanchor).toBe("left");
+    });
+
     it("disables legend when specified", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
