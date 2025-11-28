@@ -16,7 +16,7 @@ import { defaultLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
-import { PostHogAuthWrapper } from "../../components/posthog-auth-wrapper";
+import { usePostHogAuth } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
 
@@ -102,6 +102,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     locale,
     namespaces: [...namespaces],
   });
+
   return (
     <div
       className={cn(
@@ -120,11 +121,20 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       >
         <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
           <SessionProvider>
-            <PostHogAuthWrapper />
+            <PostHogIdentifier />
             <QueryProvider>{children}</QueryProvider>
           </SessionProvider>
         </TranslationsProvider>
       </ContentfulPreviewProvider>
     </div>
   );
+}
+
+/**
+ * Client component that calls the PostHog auth hook
+ */
+function PostHogIdentifier() {
+  "use client";
+  usePostHogAuth();
+  return null;
 }

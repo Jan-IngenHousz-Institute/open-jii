@@ -5,7 +5,11 @@ import { useEffect } from "react";
 
 import { useSession } from "@repo/auth/client";
 
-export function PostHogAuthWrapper() {
+/**
+ * Hook to identify the current user with PostHog analytics
+ * Automatically identifies users when they log in and resets when they log out
+ */
+export function usePostHogAuth() {
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -19,6 +23,4 @@ export function PostHogAuthWrapper() {
       posthog.reset();
     }
   }, [session]);
-
-  return null;
 }
