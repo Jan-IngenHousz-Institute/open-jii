@@ -124,7 +124,7 @@ describe("RichTextRenderer", () => {
     it("should apply custom maxLines when provided", () => {
       const richText = "<p>This is a long paragraph</p>";
       const { container } = render(
-        <RichTextRenderer content={richText} truncate={true} maxLines={5} />
+        <RichTextRenderer content={richText} truncate={true} maxLines={5} />,
       );
       const editor = container.querySelector(".ql-editor") as HTMLElement;
       expect(editor).toHaveClass("rich-text-renderer-truncate");
@@ -134,7 +134,7 @@ describe("RichTextRenderer", () => {
     it("should not apply line clamp style when truncate is false", () => {
       const richText = "<p>This is a long paragraph</p>";
       const { container } = render(
-        <RichTextRenderer content={richText} truncate={false} maxLines={5} />
+        <RichTextRenderer content={richText} truncate={false} maxLines={5} />,
       );
       const editor = container.querySelector(".ql-editor") as HTMLElement;
       expect(editor).not.toHaveClass("rich-text-renderer-truncate");
