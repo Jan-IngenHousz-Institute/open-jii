@@ -17,7 +17,7 @@ globalThis.React = React;
 // --- mock the profile hook to avoid network and control the UI ---
 let __mockProfile: { firstName?: string; lastName?: string } | undefined;
 
-vi.mock("../../hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
+vi.mock("@/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
   useGetUserProfile: vi.fn(() => {
     return __mockProfile ? { data: { body: __mockProfile } } : { data: undefined };
   }),

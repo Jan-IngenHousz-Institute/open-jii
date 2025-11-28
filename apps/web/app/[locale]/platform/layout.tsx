@@ -1,4 +1,4 @@
-import { AppSidebarWrapper } from "@/components/app-sidebar-wrapper";
+import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -6,8 +6,8 @@ import type React from "react";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 
-import { Breadcrumbs } from "../../../components/app-breadcrumbs";
-import { PlatformTopBar } from "../../../components/platform-top-bar";
+import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
+import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
 
 const getCallbackUrl = async () => {
   // Get the current path from the 'x-current-path' header.
@@ -44,17 +44,14 @@ export default async function AppLayout({
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 
-  // Get current pathname for breadcrumbs
-  const pathname = (await headers()).get("x-current-path") ?? "/";
-
   return (
     <SidebarProvider>
-      <AppSidebarWrapper locale={locale} />
-      <PlatformTopBar locale={locale} user={session.user} />
+      <NavigationSidebarWrapper locale={locale} />
+      <NavigationTopbar locale={locale} user={session.user} />
       <SidebarInset>
         <div className="flex flex-1 flex-col gap-4 p-6 pt-20">
           <div className="mx-auto w-full max-w-7xl">
-            <Breadcrumbs pathname={pathname} pageTitle={pageTitle} locale={locale} />
+            <Breadcrumbs pageTitle={pageTitle} locale={locale} />
             {children}
           </div>
         </div>

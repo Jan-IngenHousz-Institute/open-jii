@@ -1,10 +1,11 @@
+import { mainNavigation, createNavigation } from "@/components/navigation/navigation-config";
 import * as React from "react";
 
 import initTranslations from "@repo/i18n/server";
 
-import { AppSidebar } from "./app-sidebar";
+import { AppSidebar } from "../navigation-sidebar/navigation-sidebar";
 
-export async function AppSidebarWrapper({
+export async function NavigationSidebarWrapper({
   locale,
   ...props
 }: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
@@ -21,22 +22,22 @@ export async function AppSidebarWrapper({
     namespaces: ["common"],
   });
 
-  // Prepare navigation data server-side
+  // Prepare navigation data server-side using config
   const navigationData = {
     navDashboard: [
       {
-        title: tCommon("dashboard.title"),
-        url: `/${locale}/platform`,
-        icon: "Home",
+        title: tCommon(mainNavigation.dashboard.titleKey),
+        url: mainNavigation.dashboard.url(locale),
+        icon: mainNavigation.dashboard.icon,
         isActive: true,
         items: [],
       },
     ],
     navExperiments: [
       {
-        title: tNavigation("sidebar.experiments"),
-        url: `/${locale}/platform/experiments`,
-        icon: "Microscope",
+        title: tNavigation(mainNavigation.experiments.titleKey),
+        url: mainNavigation.experiments.url(locale),
+        icon: mainNavigation.experiments.icon,
         isActive: true,
         items: [
           {
@@ -52,9 +53,9 @@ export async function AppSidebarWrapper({
     ],
     navHardware: [
       {
-        title: tNavigation("sidebar.protocols"),
-        url: `/${locale}/platform/protocols`,
-        icon: "FileSliders",
+        title: tNavigation(mainNavigation.protocols.titleKey),
+        url: mainNavigation.protocols.url(locale),
+        icon: mainNavigation.protocols.icon,
         isActive: true,
         items: [
           {
@@ -70,9 +71,9 @@ export async function AppSidebarWrapper({
     ],
     navMacros: [
       {
-        title: tNavigation("sidebar.macros"),
-        url: `/${locale}/platform/macros`,
-        icon: "Code",
+        title: tNavigation(mainNavigation.macros.titleKey),
+        url: mainNavigation.macros.url(locale),
+        icon: mainNavigation.macros.icon,
         isActive: true,
         items: [
           {
@@ -92,13 +93,13 @@ export async function AppSidebarWrapper({
     openJII: tCommon("navigation.openJII"),
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
-    create: tCommon("common.create"),
-    protocol: tCommon("common.protocolLabel"),
-    experiment: tNavigation("sidebar.experiments"),
-    macro: tNavigation("sidebar.macros"),
-    experimentsTitle: tNavigation("sidebar.experiments"),
+    create: tCommon(createNavigation.buttonKey),
+    protocol: tCommon(createNavigation.items[0].titleKey),
+    experiment: tNavigation(createNavigation.items[1].titleKey),
+    macro: tNavigation(createNavigation.items[2].titleKey),
+    experimentsTitle: tNavigation(mainNavigation.experiments.titleKey),
     hardwareTitle: tNavigation("sidebar.hardware"),
-    macrosTitle: tNavigation("sidebar.macros"),
+    macrosTitle: tNavigation(mainNavigation.macros.titleKey),
   };
 
   return (

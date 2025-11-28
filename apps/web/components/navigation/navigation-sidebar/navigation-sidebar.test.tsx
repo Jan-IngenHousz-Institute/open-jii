@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import { AppSidebar } from "./app-sidebar";
+import { AppSidebar } from "./navigation-sidebar";
 
 globalThis.React = React;
 
@@ -20,6 +20,11 @@ window.matchMedia = () =>
     removeListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }) as unknown as MediaQueryList;
+
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/en/platform",
+}));
 
 // Mock Next.js components
 vi.mock("next/image", () => ({
@@ -113,8 +118,11 @@ describe("AppSidebar", () => {
       </SidebarProvider>,
     );
 
-    const navItems = screen.getAllByTestId("nav-items");
-    expect(navItems).toHaveLength(4); // Dashboard, Experiments, Hardware, Macros
+    // Check that navigation items are rendered by looking for the text content
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Experiments")).toBeInTheDocument();
+    expect(screen.getByText("Protocols")).toBeInTheDocument();
+    expect(screen.getByText("Macros")).toBeInTheDocument();
   });
 
   it("renders create button", async () => {

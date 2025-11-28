@@ -462,6 +462,8 @@
     "home": "Home",
     "platform": "Platform",
     "experiments": "Experiments",
+    "protocols": "Protocols",
+    "macros": "Macros",
     "new": "New",
     "edit": "Edit",
     "view": "View",
