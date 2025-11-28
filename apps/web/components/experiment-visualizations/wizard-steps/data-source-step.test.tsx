@@ -87,10 +87,12 @@ vi.mock("../chart-preview/chart-preview-modal", () => ({
 // Helper to create mock sample tables for testing
 const createMockSampleTable = (
   name: string,
+  displayName: string,
   columns: DataColumn[],
   totalRows: number,
 ): SampleTable => ({
   name,
+  displayName,
   columns,
   tableMetadata: {
     // For tests, we can provide a minimal column structure that satisfies the type
@@ -109,6 +111,7 @@ const createMockSampleTable = (
 const mockTables: SampleTable[] = [
   createMockSampleTable(
     "measurements",
+    "Measurements",
     [
       { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
       { name: "temperature", type_name: "double", type_text: "double" },
@@ -118,6 +121,7 @@ const mockTables: SampleTable[] = [
   ),
   createMockSampleTable(
     "sensors",
+    "Sensors",
     [
       { name: "id", type_name: "varchar", type_text: "varchar" },
       { name: "value", type_name: "double", type_text: "double" },

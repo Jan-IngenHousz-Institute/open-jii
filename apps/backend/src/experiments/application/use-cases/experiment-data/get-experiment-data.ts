@@ -17,6 +17,7 @@ import { UserTransformationService } from "../../services/data-transformation/us
  */
 export interface TableDataDto {
   name: string;
+  displayName: string;
   catalog_name: string;
   schema_name: string;
   data?: SchemaDataDto;
@@ -215,7 +216,8 @@ export class GetExperimentDataUseCase {
     // Create response
     const response: ExperimentDataDto = [
       {
-        name: this.getTableDisplayName(table),
+        name: table.name,
+        displayName: table.properties?.display_name ?? table.name,
         catalog_name: experiment.name,
         schema_name: schemaName,
         data: await this.transformSchemaData(dataResult.value),
@@ -291,7 +293,8 @@ export class GetExperimentDataUseCase {
     // Create response
     const response: ExperimentDataDto = [
       {
-        name: this.getTableDisplayName(table),
+        name: table.name,
+        displayName: table.properties?.display_name ?? table.name,
         catalog_name: experiment.name,
         schema_name: schemaName,
         data: await this.transformSchemaData(dataResult.value),
@@ -355,7 +358,8 @@ export class GetExperimentDataUseCase {
       const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
       const tableInfo: TableDataDto = {
-        name: this.getTableDisplayName(table),
+        name: table.name,
+        displayName: table.properties?.display_name ?? table.name,
         catalog_name: table.catalog_name,
         schema_name: table.schema_name,
         page: 1,
@@ -413,13 +417,6 @@ export class GetExperimentDataUseCase {
     }
 
     return success(table);
-  }
-
-  /**
-   * Get the display name for a table, using properties.display_name if available, otherwise fallback to table.name
-   */
-  private getTableDisplayName(table: Table): string {
-    return table.properties?.display_name ?? table.name;
   }
 
   /**

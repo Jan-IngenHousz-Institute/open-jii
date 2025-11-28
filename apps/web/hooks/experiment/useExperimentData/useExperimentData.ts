@@ -271,12 +271,14 @@ export const useExperimentData = (
     selectionForm,
   ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
+  const displayName = tableData?.displayName;
 
-  return { tableMetadata, tableRows, isLoading, error };
+  return { tableMetadata, tableRows, displayName, isLoading, error };
 };
 
 export interface SampleTable {
   name: string;
+  displayName: string;
   tableMetadata: TableMetadata;
   tableRows: DataRow[];
   columns: DataColumn[]; // Add raw columns for easy access
@@ -312,6 +314,7 @@ export const useExperimentSampleData = (
     data.body.forEach((tableData) => {
       tables.push({
         name: tableData.name,
+        displayName: tableData.displayName,
         tableMetadata: {
           columns: createTableColumns({ experimentId, data: tableData.data, formatFunction }),
           totalPages: tableData.totalPages,

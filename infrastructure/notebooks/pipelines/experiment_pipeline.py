@@ -375,7 +375,7 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     table_properties={{
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
-        "display_name": "Raw {macro_name} Data",
+        "display_name": "Raw Processed Data ({macro_name})",
         "downstream": "true"
     }}
 )
@@ -482,7 +482,7 @@ def {macro_table_name}_table():
     table_properties={{
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
-        "display_name": "{macro_name} Data",
+        "display_name": "Processed Data ({macro_name})",
         "downstream": "false"
     }}
 )

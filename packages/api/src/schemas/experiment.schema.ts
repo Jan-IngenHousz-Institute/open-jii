@@ -697,7 +697,8 @@ export const zExperimentDataQuery = z.object({
 });
 
 export const zExperimentDataTableInfo = z.object({
-  name: z.string().describe("Name of the table"),
+  name: z.string().describe("Technical name of the table used for queries and operations"),
+  displayName: z.string().describe("Human-readable display name of the table for UI"),
   catalog_name: z.string().describe("Catalog name"),
   schema_name: z.string().describe("Schema name"),
   data: zExperimentData.optional(),

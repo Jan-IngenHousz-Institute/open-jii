@@ -152,7 +152,7 @@ export function DataSourceStep({
                         {tables.map((table) => (
                           <SelectItem key={table.name} value={table.name}>
                             {t("form.dataSource.tableInfo", {
-                              name: table.name,
+                              name: table.displayName,
                             })}
                           </SelectItem>
                         ))}

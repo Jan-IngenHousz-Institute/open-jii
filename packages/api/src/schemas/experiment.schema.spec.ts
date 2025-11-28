@@ -464,9 +464,10 @@ describe("Experiment Schema", () => {
 
     it("zExperimentDataTableInfo valid", () => {
       const info = {
-        name: "tbl",
-        catalog_name: "hive_metastore",
-        schema_name: "default",
+        name: "t1",
+        displayName: "Table 1",
+        catalog_name: "cat",
+        schema_name: "sch",
         data: {
           columns: [{ name: "x", type_name: "text", type_text: "VARCHAR" }],
           rows: [{ x: "1" }],
@@ -485,6 +486,7 @@ describe("Experiment Schema", () => {
       const list = [
         {
           name: "t1",
+          displayName: "Table 1",
           catalog_name: "cat",
           schema_name: "sch",
           page: 1,
