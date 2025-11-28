@@ -264,6 +264,7 @@ describe("useExperimentUpdate", () => {
 
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experiment", "exp-123"],
+        exact: true,
       });
 
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
@@ -293,6 +294,7 @@ describe("useExperimentUpdate", () => {
       expect(mockInvalidateQueries).toHaveBeenCalledTimes(3);
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experiment", "exp-123"],
+        exact: true,
       });
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experimentAccess", "exp-123"],
