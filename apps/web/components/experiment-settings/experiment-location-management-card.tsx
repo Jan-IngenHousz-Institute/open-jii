@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
 import type { LocationPoint } from "@repo/ui/components/map";
@@ -83,36 +84,44 @@ export function ExperimentLocationManagement({
   const searchResults = searchData?.body ?? [];
 
   const saveLocations = useCallback(
-    async (locationsToUpdate: LocationPoint[]) => {
+    (locationsToUpdate: LocationPoint[]) => {
       setIsSaving(true);
-      try {
-        const locationsToSave = locationsToUpdate.map((location) => ({
-          name: location.name,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          country: location.country,
-          region: location.region,
-          municipality: location.municipality,
-          postalCode: location.postalCode,
-          addressLabel: location.address,
-        }));
+      const locationsToSave = locationsToUpdate.map((location) => ({
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        country: location.country,
+        region: location.region,
+        municipality: location.municipality,
+        postalCode: location.postalCode,
+        addressLabel: location.address,
+      }));
 
-        await updateLocationsMutation.mutateAsync({
+      updateLocationsMutation.mutate(
+        {
           params: { id: experimentId },
           body: { locations: locationsToSave },
-        });
-        toast({ description: t("experiments.experimentUpdated") });
-      } finally {
-        setIsSaving(false);
-      }
+        },
+        {
+          onSuccess: () => {
+            toast({ description: t("experiments.experimentUpdated") });
+          },
+          onError: (error) => {
+            toast({ description: parseApiError(error)?.message, variant: "destructive" });
+          },
+          onSettled: () => {
+            setIsSaving(false);
+          },
+        },
+      );
     },
     [experimentId, updateLocationsMutation, t],
   );
 
-  const handleLocationsChange = async (newLocations: LocationPoint[]) => {
+  const handleLocationsChange = (newLocations: LocationPoint[]) => {
     setEditedLocations(newLocations);
     // Auto-save whenever locations change
-    await saveLocations(newLocations);
+    saveLocations(newLocations);
   };
 
   // Handle adding location from map click with geocoding
@@ -150,7 +159,7 @@ export function ExperimentLocationManagement({
       setEditedLocations(updatedLocations);
 
       // Auto-save the new location
-      void saveLocations(updatedLocations);
+      saveLocations(updatedLocations);
 
       // Clear pending location
       setPendingLocation(null);

@@ -196,9 +196,9 @@ const renderWithQueryClient = (ui: React.ReactElement) => {
 /* --------------------------------- Tests -------------------------------- */
 
 describe("ExperimentLocationManagement", () => {
-  const mockMutateAsync = vi.fn();
+  const mockMutate = vi.fn();
   const mockMutation = {
-    mutateAsync: mockMutateAsync,
+    mutate: mockMutate,
     isPending: false,
   };
 
@@ -350,7 +350,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Verify mutation was called automatically
       await waitFor(() => {
-        expect(mockMutateAsync).toHaveBeenCalled();
+        expect(mockMutate).toHaveBeenCalled();
       });
     });
 
@@ -362,7 +362,7 @@ describe("ExperimentLocationManagement", () => {
       await user.click(screen.getByTestId("mock-add-location"));
 
       await waitFor(() => {
-        expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect(mockMutate).toHaveBeenCalledWith(
           expect.objectContaining({
             body: {
               locations: expect.arrayContaining([
@@ -371,6 +371,11 @@ describe("ExperimentLocationManagement", () => {
                 expect.objectContaining({ name: "New Location" }),
               ]) as unknown,
             },
+          }),
+          expect.objectContaining({
+            onSuccess: expect.any(Function) as unknown,
+            onError: expect.any(Function) as unknown,
+            onSettled: expect.any(Function) as unknown,
           }),
         );
       });
