@@ -14,8 +14,16 @@ export function RichTextRenderer({
   truncate = false,
   maxLines = 2,
 }: RichTextRendererProps) {
-  // Use a safe regex to check for HTML tags
-  const isRichText = /<[^>]+>/.test(content);
+  // Check for common HTML tags that Quill editor produces
+  const isRichText =
+    content.includes("<p>") ||
+    content.includes("<br>") ||
+    content.includes("<strong>") ||
+    content.includes("<em>") ||
+    content.includes("<ul>") ||
+    content.includes("<ol>") ||
+    content.includes("<h1>") ||
+    content.includes("<h2>");
 
   if (!content || content === "<p><br></p>") {
     return <p className="text-muted-foreground text-sm italic">No description provided</p>;
