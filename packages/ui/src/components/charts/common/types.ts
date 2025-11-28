@@ -1,5 +1,12 @@
 import type { Config, Layout, PlotData } from "plotly.js";
 
+// Y-axis configuration interface
+export interface YAxisConfig {
+  title?: string;
+  type?: "linear" | "log" | "date" | "category" | "multicategory";
+  color?: string;
+}
+
 // Core chart configuration interface for Plotly charts
 export interface PlotlyChartConfig extends Partial<Config> {
   // WebGL rendering support
@@ -8,14 +15,7 @@ export interface PlotlyChartConfig extends Partial<Config> {
   // Layout configuration
   title?: string;
   xAxisTitle?: string;
-  yAxisTitle?: string;
-  yAxisTitle2?: string;
-  yAxisTitle3?: string;
-  yAxisTitle4?: string;
-  yAxisColor?: string;
-  yAxisColor2?: string;
-  yAxisColor3?: string;
-  yAxisColor4?: string;
+  yAxis?: YAxisConfig[];
   zAxisTitle?: string;
   height?: number;
   width?: number;
@@ -32,10 +32,6 @@ export interface PlotlyChartConfig extends Partial<Config> {
 
   // Axis configuration
   xAxisType?: "linear" | "log" | "date" | "category" | "multicategory";
-  yAxisType?: "linear" | "log" | "date" | "category" | "multicategory";
-  yAxisType2?: "linear" | "log" | "date" | "category" | "multicategory";
-  yAxisType3?: "linear" | "log" | "date" | "category" | "multicategory";
-  yAxisType4?: "linear" | "log" | "date" | "category" | "multicategory";
   zAxisType?: "linear" | "log" | "date" | "category";
 
   // Annotations and shapes
@@ -98,7 +94,7 @@ export interface BaseSeries {
   hovertemplate?: string;
   hoverinfo?: string;
   customdata?: any[];
-  yaxis?: "y" | "y2" | "y3" | "y4"; // Which Y-axis this series should use
+  yaxis?: "y" | "y2" | "y3" | "y4" | "y5" | "y6"; // Which Y-axis this series should use
 }
 
 // Marker configuration

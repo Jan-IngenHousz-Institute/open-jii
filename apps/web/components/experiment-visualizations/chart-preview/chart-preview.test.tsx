@@ -66,7 +66,7 @@ describe("ChartPreview", () => {
       showGrid: true,
       showLegend: true,
       xAxisTitle: "Time",
-      yAxisTitle: "Temperature",
+      yAxis: [{ title: "Temperature", type: "linear" }],
     },
   };
 

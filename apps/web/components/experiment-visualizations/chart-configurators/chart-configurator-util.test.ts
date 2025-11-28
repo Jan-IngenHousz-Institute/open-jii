@@ -16,14 +16,7 @@ describe("chart-configurator-util", () => {
           title: "",
           xAxisTitle: "",
           xAxisType: "linear",
-          yAxisType: "linear",
-          yAxisType2: "linear",
-          yAxisType3: "linear",
-          yAxisType4: "linear",
-          yAxisTitle: "",
-          yAxisTitle2: "",
-          yAxisTitle3: "",
-          yAxisTitle4: "",
+          yAxis: [{ title: "", type: "linear", color: undefined }],
           showLegend: true,
           showGrid: true,
           useWebGL: false,
@@ -83,14 +76,7 @@ describe("chart-configurator-util", () => {
         title: "",
         xAxisTitle: "",
         xAxisType: "linear",
-        yAxisType: "linear",
-        yAxisType2: "linear",
-        yAxisType3: "linear",
-        yAxisType4: "linear",
-        yAxisTitle: "",
-        yAxisTitle2: "",
-        yAxisTitle3: "",
-        yAxisTitle4: "",
+        yAxis: [{ title: "", type: "linear", color: undefined }],
         showLegend: true,
         showGrid: true,
         useWebGL: false,
@@ -139,19 +125,13 @@ describe("chart-configurator-util", () => {
     it("should set all Y-axis types to linear by default for line chart", () => {
       const config = getDefaultChartConfig("line");
 
-      expect(config.yAxisType).toBe("linear");
-      expect(config.yAxisType2).toBe("linear");
-      expect(config.yAxisType3).toBe("linear");
-      expect(config.yAxisType4).toBe("linear");
+      expect(config.yAxis).toEqual([{ title: "", type: "linear", color: undefined }]);
     });
 
     it("should set all Y-axis titles to empty string by default for line chart", () => {
       const config = getDefaultChartConfig("line");
 
-      expect(config.yAxisTitle).toBe("");
-      expect(config.yAxisTitle2).toBe("");
-      expect(config.yAxisTitle3).toBe("");
-      expect(config.yAxisTitle4).toBe("");
+      expect(config.yAxis?.[0]?.title).toBe("");
     });
   });
 
@@ -163,14 +143,7 @@ describe("chart-configurator-util", () => {
         title: "",
         xAxisTitle: "",
         xAxisType: "linear",
-        yAxisType: "linear",
-        yAxisType2: "linear",
-        yAxisType3: "linear",
-        yAxisType4: "linear",
-        yAxisTitle: "",
-        yAxisTitle2: "",
-        yAxisTitle3: "",
-        yAxisTitle4: "",
+        yAxis: [{ title: "", type: "linear", color: undefined }],
         showLegend: true,
         showGrid: true,
         useWebGL: false,
@@ -203,7 +176,7 @@ describe("chart-configurator-util", () => {
     it("should set yAxisTitle to empty string", () => {
       const config = getDefaultChartConfig("scatter");
 
-      expect(config.yAxisTitle).toBe("");
+      expect(config.yAxis?.[0]?.title).toBe("");
     });
 
     it("should set xAxisType to linear", () => {
@@ -215,7 +188,7 @@ describe("chart-configurator-util", () => {
     it("should set yAxisType to linear", () => {
       const config = getDefaultChartConfig("scatter");
 
-      expect(config.yAxisType).toBe("linear");
+      expect(config.yAxis?.[0]?.type).toBe("linear");
     });
 
     it("should enable legend by default", () => {
@@ -334,8 +307,7 @@ describe("edge cases", () => {
       title: "",
       xAxisTitle: "",
       xAxisType: "linear",
-      yAxisType: "linear",
-      yAxisTitle: "",
+      yAxis: [{ title: "", type: "linear", color: undefined }],
       showLegend: true,
       showGrid: true,
       useWebGL: false,

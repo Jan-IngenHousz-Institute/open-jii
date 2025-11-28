@@ -26,7 +26,7 @@ vi.mock("../../common", () => ({
   createBaseLayout: vi.fn((config) => ({
     title: config.title,
     xaxis: { title: config.xAxisTitle },
-    yaxis: { title: config.yAxisTitle },
+    yaxis: { title: config.yAxis?.[0]?.title },
     showlegend: config.showLegend !== false,
   })),
   createPlotlyConfig: vi.fn((config) => ({

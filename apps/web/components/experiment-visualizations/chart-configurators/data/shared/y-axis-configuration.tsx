@@ -37,7 +37,7 @@ interface YAxisConfigurationProps {
   addYAxisSeries: () => void;
   removeDataSource: (index: number) => void;
   isColorColumnSelected?: boolean;
-  maxYAxes?: number; // Maximum number of Y-axes to support (default 4)
+  maxYAxes?: number; // Maximum number of Y-axes to support (default 6)
 }
 
 export default function YAxisConfiguration({
@@ -47,13 +47,26 @@ export default function YAxisConfiguration({
   addYAxisSeries,
   removeDataSource,
   isColorColumnSelected = false,
-  maxYAxes = 4,
+  maxYAxes = 6,
 }: YAxisConfigurationProps) {
   const { t } = useTranslation("experimentVisualizations");
 
   const handleYAxisColumnChange = (value: string, seriesIndex: number) => {
     // Auto-fill Y-axis title for each series
-    form.setValue(`config.yAxisTitle${seriesIndex === 0 ? "" : seriesIndex + 1}`, value);
+    const yAxis = form.getValues("config.yAxis") ?? [];
+    const updatedYAxis = [...yAxis];
+
+    // Ensure the array has enough entries
+    while (updatedYAxis.length <= seriesIndex) {
+      updatedYAxis.push({ title: "", type: "linear", color: undefined });
+    }
+
+    updatedYAxis[seriesIndex] = {
+      ...updatedYAxis[seriesIndex],
+      title: value,
+    };
+
+    form.setValue("config.yAxis", updatedYAxis);
 
     // Handle alias assignment for the data source
     const currentAlias = form.getValues(
@@ -75,6 +88,11 @@ export default function YAxisConfiguration({
     }
 
     addYAxisSeries();
+
+    // Add corresponding yAxis config entry
+    const yAxis = form.getValues("config.yAxis") ?? [];
+    form.setValue("config.yAxis", [...yAxis, { title: "", type: "linear", color: undefined }]);
+
     // Add corresponding color for the new series
     const currentColors = form.getValues("config.color");
     const newSeriesColor = getDefaultSeriesColor(yAxisDataSources.length);
@@ -240,7 +258,7 @@ export default function YAxisConfiguration({
 
                   <FormField
                     control={form.control}
-                    name={`config.yAxisType${seriesIndex === 0 ? "" : seriesIndex + 1}`}
+                    name={`config.yAxis.${seriesIndex}.type`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">
@@ -270,7 +288,7 @@ export default function YAxisConfiguration({
                   {/* Show Y-Axis Title for each series */}
                   <FormField
                     control={form.control}
-                    name={`config.yAxisTitle${seriesIndex === 0 ? "" : seriesIndex + 1}`}
+                    name={`config.yAxis.${seriesIndex}.title`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">

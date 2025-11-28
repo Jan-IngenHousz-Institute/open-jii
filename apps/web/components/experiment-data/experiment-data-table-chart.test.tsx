@@ -50,7 +50,7 @@ interface ChartData {
 interface ChartConfig {
   title: string;
   xAxisTitle: string;
-  yAxisTitle: string;
+  yAxis: Array<{ title?: string; type?: string; color?: string }>;
   useWebGL: boolean;
 }
 
@@ -164,7 +164,7 @@ describe("ExperimentDataTableChart", () => {
 
     expect(config.title).toBe(`${mockColumnName} Data Series`);
     expect(config.xAxisTitle).toBe("Pulses");
-    expect(config.yAxisTitle).toBe("Intensity");
+    expect(config.yAxis?.[0]?.title).toBe("Intensity");
     expect(config.useWebGL).toBe(false);
   });
 

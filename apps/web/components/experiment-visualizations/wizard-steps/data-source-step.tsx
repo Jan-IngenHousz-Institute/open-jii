@@ -115,10 +115,8 @@ export function DataSourceStep({
 
     form.setValue("dataConfig.dataSources", resetDataSources);
     form.setValue("config.xAxisTitle", "");
-    form.setValue("config.yAxisTitle", "");
-    form.setValue("config.yAxisTitle2", "");
-    form.setValue("config.yAxisTitle3", "");
-    form.setValue("config.yAxisTitle4", "");
+    // Reset yAxis array
+    form.setValue("config.yAxis", [{ title: "", type: "linear", color: undefined }]);
   };
 
   return (

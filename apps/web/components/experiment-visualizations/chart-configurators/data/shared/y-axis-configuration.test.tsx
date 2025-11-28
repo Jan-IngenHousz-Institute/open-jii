@@ -62,8 +62,7 @@ function TestWrapper({
       chartFamily: "basic",
       chartType: "line",
       config: {
-        yAxisTitle: defaultValues?.config?.yAxisTitle ?? "",
-        yAxisType: defaultValues?.config?.yAxisType ?? "linear",
+        yAxis: defaultValues?.config?.yAxis ?? [{ title: "", type: "linear", color: undefined }],
         color: defaultValues?.config?.color ?? [],
       },
       dataConfig: {
@@ -511,7 +510,7 @@ describe("YAxisConfiguration", () => {
           yAxisDataSources={yAxisDataSources}
           defaultValues={{
             config: {
-              yAxisTitle: "Initial Title",
+              yAxis: [{ title: "Initial Title", type: "linear" }],
             },
             dataConfig: {
               tableName: "test-table",
@@ -773,6 +772,9 @@ describe("YAxisConfiguration", () => {
         <TestWrapper
           yAxisDataSources={yAxisDataSources}
           defaultValues={{
+            config: {
+              yAxis: [{ title: "", type: "linear" }],
+            },
             dataConfig: {
               tableName: "test-table",
               dataSources: [
@@ -904,7 +906,7 @@ describe("YAxisConfiguration", () => {
           yAxisDataSources={yAxisDataSources}
           defaultValues={{
             config: {
-              yAxisTitle: "Temperature (°C)",
+              yAxis: [{ title: "Temperature (°C)", type: "linear" }],
             },
             dataConfig: {
               tableName: "test-table",

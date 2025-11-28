@@ -208,6 +208,7 @@ describe("utils", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
         theme: "dark",
+        yAxis: [{ title: "Y Axis", type: "linear" }],
       };
 
       const layout = createBaseLayout(config);
@@ -240,7 +241,7 @@ describe("utils", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
         xAxisTitle: "X Axis",
-        yAxisTitle: "Y Axis",
+        yAxis: [{ title: "Y Axis", type: "linear" }],
       };
 
       const layout = createBaseLayout(config);
@@ -268,7 +269,7 @@ describe("utils", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
         xAxisType: "log",
-        yAxisType: "category",
+        yAxis: [{ title: "", type: "category" }],
       };
 
       const layout = createBaseLayout(config);
@@ -280,10 +281,12 @@ describe("utils", () => {
     it("configures multiple Y-axes with titles", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
-        yAxisTitle: "Primary Axis",
-        yAxisTitle2: "Secondary Axis",
-        yAxisTitle3: "Tertiary Axis",
-        yAxisTitle4: "Quaternary Axis",
+        yAxis: [
+          { title: "Primary Axis", type: "linear" },
+          { title: "Secondary Axis", type: "linear" },
+          { title: "Tertiary Axis", type: "linear" },
+          { title: "Quaternary Axis", type: "linear" },
+        ],
       };
 
       const layout = createBaseLayout(config);
@@ -305,10 +308,12 @@ describe("utils", () => {
     it("configures multiple Y-axes with different types", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
-        yAxisType: "linear",
-        yAxisType2: "log",
-        yAxisType3: "date",
-        yAxisType4: "category",
+        yAxis: [
+          { title: "", type: "linear" },
+          { title: "", type: "log" },
+          { title: "", type: "date" },
+          { title: "", type: "category" },
+        ],
       };
 
       const layout = createBaseLayout(config);
@@ -322,10 +327,12 @@ describe("utils", () => {
     it("positions multiple Y-axes correctly", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
-        yAxisTitle: "Y1",
-        yAxisTitle2: "Y2",
-        yAxisTitle3: "Y3",
-        yAxisTitle4: "Y4",
+        yAxis: [
+          { title: "Y1", type: "linear" },
+          { title: "Y2", type: "linear" },
+          { title: "Y3", type: "linear" },
+          { title: "Y4", type: "linear" },
+        ],
       };
 
       const layout = createBaseLayout(config);
@@ -338,13 +345,13 @@ describe("utils", () => {
       expect(layout.yaxis2?.anchor).toBe("x");
       expect(layout.yaxis2?.overlaying).toBe("y");
 
-      // Tertiary axis on left, free positioning
+      // Tertiary axis on left, free positioning (< 3 left axes, so uses FEW_AXES position)
       expect(layout.yaxis3?.side).toBe("left");
       expect(layout.yaxis3?.anchor).toBe("free");
       expect(layout.yaxis3?.overlaying).toBe("y");
-      expect(layout.yaxis3?.position).toBe(0.06);
+      expect(layout.yaxis3?.position).toBe(0.05);
 
-      // Quaternary axis on right, free positioning
+      // Quaternary axis on right, free positioning (< 3 right axes, so uses FEW_AXES position)
       expect(layout.yaxis4?.side).toBe("right");
       expect(layout.yaxis4?.anchor).toBe("free");
       expect(layout.yaxis4?.overlaying).toBe("y");
@@ -354,14 +361,12 @@ describe("utils", () => {
     it("applies custom colors to multiple Y-axes", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
-        yAxisTitle: "Y1",
-        yAxisTitle2: "Y2",
-        yAxisTitle3: "Y3",
-        yAxisTitle4: "Y4",
-        yAxisColor: "#ff0000",
-        yAxisColor2: "#00ff00",
-        yAxisColor3: "#0000ff",
-        yAxisColor4: "#ffff00",
+        yAxis: [
+          { title: "Y1", type: "linear", color: "#ff0000" },
+          { title: "Y2", type: "linear", color: "#00ff00" },
+          { title: "Y3", type: "linear", color: "#0000ff" },
+          { title: "Y4", type: "linear", color: "#ffff00" },
+        ],
       };
 
       const layout = createBaseLayout(config);
@@ -382,32 +387,125 @@ describe("utils", () => {
     it("adjusts x-axis domain when multiple Y-axes are present", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
-        yAxisTitle: "Y1",
-        yAxisTitle2: "Y2",
-        yAxisTitle3: "Y3",
-        yAxisTitle4: "Y4",
+        yAxis: [
+          { title: "Y1", type: "linear" },
+          { title: "Y2", type: "linear" },
+          { title: "Y3", type: "linear" },
+          { title: "Y4", type: "linear" },
+        ],
       };
 
       const layout = createBaseLayout(config);
 
       // X-axis domain should be adjusted to make room for left and right axes
-      expect(layout.xaxis?.domain).toEqual([0.13, 0.88]);
+      // With 2 left axes (Y1, Y3) and 2 right axes (Y2, Y4)
+      expect(layout.xaxis?.domain).toEqual([0.13, 0.87]);
     });
 
     it("positions legend based on number of right-side axes", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
-        yAxisTitle: "Y1",
-        yAxisTitle2: "Y2",
-        yAxisTitle3: "Y3",
-        yAxisTitle4: "Y4",
+        yAxis: [
+          { title: "Y1", type: "linear" },
+          { title: "Y2", type: "linear" },
+          { title: "Y3", type: "linear" },
+          { title: "Y4", type: "linear" },
+        ],
       };
 
       const layout = createBaseLayout(config);
 
-      // Legend should be positioned to accommodate right-side axes
-      expect(layout.legend?.x).toBe(1.0);
+      // Legend should be positioned to accommodate right-side axes (Y2, Y4 = 2 right axes)
+      expect(layout.legend?.x).toBe(1.05);
       expect(layout.legend?.xanchor).toBe("left");
+    });
+
+    it("supports up to 6 Y-axes", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxis: [
+          { title: "Y1", type: "linear" },
+          { title: "Y2", type: "linear" },
+          { title: "Y3", type: "linear" },
+          { title: "Y4", type: "linear" },
+          { title: "Y5", type: "linear" },
+          { title: "Y6", type: "linear" },
+        ],
+      };
+
+      const layout = createBaseLayout(config);
+
+      expect(layout.yaxis?.title?.text).toBe("Y1");
+      expect(layout.yaxis2?.title?.text).toBe("Y2");
+      expect(layout.yaxis3?.title?.text).toBe("Y3");
+      expect(layout.yaxis4?.title?.text).toBe("Y4");
+      expect(layout.yaxis5?.title?.text).toBe("Y5");
+      expect(layout.yaxis6?.title?.text).toBe("Y6");
+    });
+
+    it("uses dynamic positioning when 3+ left axes are present", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxis: [
+          { title: "Y1", type: "linear" },
+          { title: "", type: "linear" },
+          { title: "Y3", type: "linear" },
+          { title: "", type: "linear" },
+          { title: "Y5", type: "linear" },
+        ],
+      };
+
+      const layout = createBaseLayout(config);
+
+      // Third left axis (Y3) should use MANY_AXES position (0.09) because there are 3 left axes
+      expect(layout.yaxis3?.position).toBe(0.1); // Updated to match MANY_AXES constant
+    });
+
+    it("uses default positioning when fewer than 3 left axes", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        yAxis: [
+          { title: "Y1", type: "linear" },
+          { title: "Y2", type: "linear" },
+          { title: "Y3", type: "linear" },
+        ],
+      };
+
+      const layout = createBaseLayout(config);
+
+      // Third left axis should use FEW_AXES position (0.05) because there are only 2 left axes
+      expect(layout.yaxis3?.position).toBe(0.05);
+    });
+
+    it("uses default text color for single Y-axis", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        theme: "light",
+        yAxis: [{ title: "Y1", type: "linear", color: "#ff0000" }],
+      };
+
+      const layout = createBaseLayout(config);
+
+      // Single axis should ignore custom color and use default text color
+      expect(layout.yaxis?.title?.font?.color).toBe("#000000");
+      expect(layout.yaxis?.tickfont?.color).toBe("#000000");
+    });
+
+    it("uses custom colors for multiple Y-axes", () => {
+      const config: PlotlyChartConfig = {
+        ...baseConfig,
+        theme: "light",
+        yAxis: [
+          { title: "Y1", type: "linear", color: "#ff0000" },
+          { title: "Y2", type: "linear", color: "#00ff00" },
+        ],
+      };
+
+      const layout = createBaseLayout(config);
+
+      // Multiple axes should use custom colors
+      expect(layout.yaxis?.title?.font?.color).toBe("#ff0000");
+      expect(layout.yaxis2?.title?.font?.color).toBe("#00ff00");
     });
 
     it("disables legend when specified", () => {
@@ -425,6 +523,7 @@ describe("utils", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
         showGrid: false,
+        yAxis: [{ title: "Y Axis", type: "linear" }],
       };
 
       const layout = createBaseLayout(config);
@@ -579,7 +678,7 @@ describe("utils", () => {
     const baseConfig: PlotlyChartConfig = {
       theme: "light",
       xAxisTitle: "X Axis",
-      yAxisTitle: "Y Axis",
+      yAxis: [{ title: "Y Axis", type: "linear" }],
       zAxisTitle: "Z Axis",
     };
 

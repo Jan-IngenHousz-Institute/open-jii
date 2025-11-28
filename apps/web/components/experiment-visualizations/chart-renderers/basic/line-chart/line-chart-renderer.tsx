@@ -107,7 +107,18 @@ export function LineChartRenderer({
       });
 
       // Determine which Y-axis this series should use
-      const yaxis = index === 0 ? "y" : index === 1 ? "y2" : index === 2 ? "y3" : "y4";
+      const yaxis =
+        index === 0
+          ? "y"
+          : index === 1
+            ? "y2"
+            : index === 2
+              ? "y3"
+              : index === 3
+                ? "y4"
+                : index === 4
+                  ? "y5"
+                  : "y6";
 
       return {
         x: xData,
@@ -129,19 +140,20 @@ export function LineChartRenderer({
       };
     });
 
-    // Extract colors for each Y-axis from series colors
-    const yAxisColors: Record<string, string> = {};
-    chartSeries.forEach((series, index) => {
+    // Update yAxis array with colors from series
+    const yAxis = chartConfig.yAxis || [];
+    const updatedYAxis = chartSeries.map((series, index) => {
       const seriesColor = typeof series.color === "string" ? series.color : "#3b82f6";
-      if (index === 0) yAxisColors.yAxisColor = seriesColor;
-      else if (index === 1) yAxisColors.yAxisColor2 = seriesColor;
-      else if (index === 2) yAxisColors.yAxisColor3 = seriesColor;
-      else if (index === 3) yAxisColors.yAxisColor4 = seriesColor;
+      return {
+        title: yAxis[index]?.title || "",
+        type: yAxis[index]?.type || "linear",
+        color: seriesColor,
+      };
     });
 
     return (
       <div className="flex h-full w-full flex-col">
-        <LineChart data={chartSeries} config={{ ...chartConfig, ...yAxisColors }} />{" "}
+        <LineChart data={chartSeries} config={{ ...chartConfig, yAxis: updatedYAxis }} />
       </div>
     );
   } catch (error) {

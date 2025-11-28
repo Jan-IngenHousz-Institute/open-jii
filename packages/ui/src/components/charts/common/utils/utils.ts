@@ -68,6 +68,35 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   return webglTypes[baseType] || baseType;
 }
 
+// Layout configuration constants
+const LAYOUT_CONSTANTS = {
+  // X-axis domain margins based on number of y-axes on each side
+  DOMAIN_MARGINS: {
+    LEFT: [0.05, 0.13, 0.18, 0.23], // margins for 1, 2, 3, 4 left axes
+    RIGHT: [0.95, 0.87, 0.82, 0.78], // margins for 1, 2, 3, 4 right axes
+  },
+  // Legend positions based on number of right-side y-axes
+  LEGEND_POSITIONS: [0.95, 1.0, 1.05, 1.1], // positions for 0, 1, 2, 3 right axes
+  // Third axis positions
+  THIRD_AXIS_POSITIONS: {
+    LEFT: {
+      MANY_AXES: 0.10, // when 3+ axes on left
+      FEW_AXES: 0.05, // when < 3 axes on left
+    },
+    RIGHT: {
+      MANY_AXES: 0.91, // when 3+ axes on right
+      FEW_AXES: 0.95, // when < 3 axes on right
+    },
+  },
+  // Outermost axis positions
+  OUTER_AXIS_POSITIONS: {
+    LEFT: 0.0,
+    RIGHT: 1.0,
+  },
+  // Axis count threshold for dynamic positioning
+  AXIS_COUNT_THRESHOLD: 3,
+} as const;
+
 /**
  * Creates base layout for all charts with PlotlyChartConfig
  */
@@ -76,19 +105,8 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
     theme,
     title,
     xAxisTitle,
-    yAxisTitle,
-    yAxisTitle2,
-    yAxisTitle3,
-    yAxisTitle4,
-    yAxisColor,
-    yAxisColor2,
-    yAxisColor3,
-    yAxisColor4,
+    yAxis = [],
     xAxisType = "linear",
-    yAxisType = "linear",
-    yAxisType2 = "linear",
-    yAxisType3 = "linear",
-    yAxisType4 = "linear",
     showLegend = true,
     showGrid = true,
     backgroundColor,
@@ -115,7 +133,66 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
   const bgColor = backgroundColor || "rgba(0,0,0,0)";
   const paperBgColor = backgroundColor || colorScheme[theme ?? "auto"].bg;
 
-  return {
+  // Calculate total axes on each side (used for positioning and margins)
+  const leftAxesCount = [yAxis[0], yAxis[2], yAxis[4]].filter((axis) => axis?.title).length;
+  const rightAxesCount = [yAxis[1], yAxis[3], yAxis[5]].filter((axis) => axis?.title).length;
+  const totalAxesCount = leftAxesCount + rightAxesCount;
+
+  // Calculate dynamic positions for third axes
+  const leftThirdAxisPosition =
+    leftAxesCount >= LAYOUT_CONSTANTS.AXIS_COUNT_THRESHOLD
+      ? LAYOUT_CONSTANTS.THIRD_AXIS_POSITIONS.LEFT.MANY_AXES
+      : LAYOUT_CONSTANTS.THIRD_AXIS_POSITIONS.LEFT.FEW_AXES;
+  const rightThirdAxisPosition =
+    rightAxesCount >= LAYOUT_CONSTANTS.AXIS_COUNT_THRESHOLD
+      ? LAYOUT_CONSTANTS.THIRD_AXIS_POSITIONS.RIGHT.MANY_AXES
+      : LAYOUT_CONSTANTS.THIRD_AXIS_POSITIONS.RIGHT.FEW_AXES;
+
+  // Helper to build y-axis configuration
+  const buildYAxis = (index: number) => {
+    const axisConfig = yAxis[index];
+    if (!axisConfig) return undefined;
+
+    // Only use custom color if there are multiple axes
+    const axisColor = totalAxesCount > 1 ? (axisConfig.color || textColor) : textColor;
+    const axisType = axisConfig.type || "linear";
+    const axisTitle = axisConfig.title;
+
+    // Define positioning based on index
+    const positions: Array<
+      Pick<Partial<Layout["yaxis"]>, "side" | "overlaying" | "anchor" | "position">
+    > = [
+      { side: "left", overlaying: undefined, position: undefined },
+      { side: "right", overlaying: "y", anchor: "x", position: undefined },
+      { side: "left", overlaying: "y", anchor: "free", position: leftThirdAxisPosition },
+      { side: "right", overlaying: "y", anchor: "free", position: rightThirdAxisPosition },
+      { side: "left", overlaying: "y", anchor: "free", position: LAYOUT_CONSTANTS.OUTER_AXIS_POSITIONS.LEFT },
+      { side: "right", overlaying: "y", anchor: "free", position: LAYOUT_CONSTANTS.OUTER_AXIS_POSITIONS.RIGHT },
+    ];
+
+    const pos = positions[index] || positions[0];
+
+    return {
+      title: axisTitle
+        ? {
+            text: axisTitle,
+            font: { size: 14, color: axisColor, family: "Inter, sans-serif" },
+          }
+        : undefined,
+      gridcolor: index === 0 && showGrid ? gridColor : "rgba(0,0,0,0)",
+      showgrid: index === 0 && showGrid,
+      type: axisType,
+      color: axisColor,
+      showline: true,
+      linecolor: axisColor || gridColor,
+      tickcolor: axisColor || gridColor,
+      tickfont: { color: axisColor },
+      automargin: true,
+      ...pos,
+    };
+  };
+
+  const layout: Partial<Layout> = {
     title: title
       ? {
           text: title,
@@ -135,99 +212,24 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
       linecolor: gridColor,
       tickcolor: gridColor,
       automargin: true,
-      domain: [0.13, 0.88], // Leave space on both left and right for additional axes
+      domain: (() => {
+        const leftMargin = LAYOUT_CONSTANTS.DOMAIN_MARGINS.LEFT[leftAxesCount - 1] ?? LAYOUT_CONSTANTS.DOMAIN_MARGINS.LEFT[0];
+        const rightMargin = LAYOUT_CONSTANTS.DOMAIN_MARGINS.RIGHT[rightAxesCount - 1] ?? LAYOUT_CONSTANTS.DOMAIN_MARGINS.RIGHT[0];
+        return [leftMargin, rightMargin];
+      })(),
     },
 
-    yaxis: {
-      title: yAxisTitle
-        ? {
-            text: yAxisTitle,
-            font: { size: 14, color: yAxisColor || textColor, family: "Inter, sans-serif" },
-          }
-        : undefined,
-      gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
-      showgrid: showGrid,
-      type: yAxisType,
-      color: yAxisColor || textColor,
-      showline: true,
-      linecolor: yAxisColor || gridColor,
-      tickcolor: yAxisColor || gridColor,
-      automargin: true,
-      tickfont: { color: yAxisColor || textColor },
-      side: "left",
-    },
-
-    yaxis2: {
-      title: yAxisTitle2
-        ? {
-            text: yAxisTitle2,
-            font: { size: 14, color: yAxisColor2 || textColor, family: "Inter, sans-serif" },
-          }
-        : undefined,
-      gridcolor: "rgba(0,0,0,0)",
-      showgrid: false,
-      type: yAxisType2,
-      color: yAxisColor2 || textColor,
-      showline: true,
-      linecolor: yAxisColor2 || gridColor,
-      tickcolor: yAxisColor2 || gridColor,
-      tickfont: { color: yAxisColor2 || textColor },
-      automargin: true,
-      overlaying: "y",
-      side: "right",
-      anchor: "x",
-    },
-
-    yaxis3: {
-      title: yAxisTitle3
-        ? {
-            text: yAxisTitle3,
-            font: { size: 14, color: yAxisColor3 || textColor, family: "Inter, sans-serif" },
-          }
-        : undefined,
-      gridcolor: "rgba(0,0,0,0)",
-      showgrid: false,
-      type: yAxisType3,
-      color: yAxisColor3 || textColor,
-      showline: true,
-      linecolor: yAxisColor3 || gridColor,
-      tickcolor: yAxisColor3 || gridColor,
-      tickfont: { color: yAxisColor3 || textColor },
-      automargin: true,
-      overlaying: "y",
-      side: "left",
-      anchor: "free",
-      position: 0.06,
-    },
-
-    yaxis4: {
-      title: yAxisTitle4
-        ? {
-            text: yAxisTitle4,
-            font: { size: 14, color: yAxisColor4 || textColor, family: "Inter, sans-serif" },
-          }
-        : undefined,
-      gridcolor: "rgba(0,0,0,0)",
-      showgrid: false,
-      type: yAxisType4,
-      color: yAxisColor4 || textColor,
-      showline: true,
-      linecolor: yAxisColor4 || gridColor,
-      tickcolor: yAxisColor4 || gridColor,
-      tickfont: { color: yAxisColor4 || textColor },
-      automargin: true,
-      overlaying: "y",
-      side: "right",
-      anchor: "free",
-      position: 0.95,
-    },
+    // Build y-axes dynamically
+    ...(buildYAxis(0) && { yaxis: buildYAxis(0) }),
+    ...(buildYAxis(1) && { yaxis2: buildYAxis(1) }),
+    ...(buildYAxis(2) && { yaxis3: buildYAxis(2) }),
+    ...(buildYAxis(3) && { yaxis4: buildYAxis(3) }),
+    ...(buildYAxis(4) && { yaxis5: buildYAxis(4) }),
+    ...(buildYAxis(5) && { yaxis6: buildYAxis(5) }),
 
     showlegend: showLegend,
     legend: (() => {
-      // Calculate number of right-side axes
-      const rightAxesCount = [yAxisTitle2, yAxisTitle4].filter(Boolean).length;
-      // Position legend based on number of right axes: 1.02 (none), 1.10 (1 axis), 1.18 (2 axes)
-      const legendX = rightAxesCount === 0 ? 0.9 : rightAxesCount === 1 ? 0.95 : 1;
+      const legendX = LAYOUT_CONSTANTS.LEGEND_POSITIONS[rightAxesCount] ?? LAYOUT_CONSTANTS.LEGEND_POSITIONS[0];
 
       return {
         x: legendX,
@@ -278,6 +280,8 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
         }
       : undefined,
   };
+
+  return layout;
 }
 
 /**
@@ -320,7 +324,7 @@ function generateSubplotNames(rows: number, cols: number): string[][] {
  */
 export function create3DLayout(config: PlotlyChartConfig): Partial<Layout> {
   const baseLayout = createBaseLayout(config);
-  const { xAxisTitle, yAxisTitle, zAxisTitle, theme = "light" } = config;
+  const { xAxisTitle, yAxis = [], zAxisTitle, theme = "light" } = config;
 
   const isDark = theme === "dark";
   const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
@@ -338,7 +342,7 @@ export function create3DLayout(config: PlotlyChartConfig): Partial<Layout> {
         linecolor: gridColor,
       },
       yaxis: {
-        title: { text: yAxisTitle || "Y Axis" },
+        title: { text: yAxis[0]?.title || "Y Axis" },
         color: textColor,
         gridcolor: gridColor,
         showgrid: true,

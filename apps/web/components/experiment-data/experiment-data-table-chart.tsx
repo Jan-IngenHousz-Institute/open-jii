@@ -73,7 +73,7 @@ export function ExperimentDataTableChart({
           config={{
             title: `${columnName || "Chart"} Data Series`,
             xAxisTitle: "Pulses",
-            yAxisTitle: "Intensity",
+            yAxis: [{ title: "Intensity", type: "linear" }],
             useWebGL: false,
           }}
         />
