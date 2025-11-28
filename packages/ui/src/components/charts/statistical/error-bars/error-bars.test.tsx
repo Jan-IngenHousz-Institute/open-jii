@@ -23,7 +23,7 @@ vi.mock("../../common", () => ({
       title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
     },
     yaxis: {
-      title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+      title: config.yAxis?.[0]?.title ? { text: config.yAxis[0].title } : undefined,
     },
   })),
   createPlotlyConfig: vi.fn((config = {}) => ({
@@ -451,7 +451,7 @@ describe("ErrorBarPlot", () => {
           data={mockData}
           config={{
             xAxisTitle: "Categories",
-            yAxisTitle: "Values",
+            yAxis: [{ title: "Values", type: "linear" }],
           }}
         />,
       );
@@ -878,7 +878,7 @@ describe("ContinuousErrorBands", () => {
           {...mockProps}
           config={{
             xAxisTitle: "Time",
-            yAxisTitle: "Temperature (°C)",
+            yAxis: [{ title: "Temperature (°C)", type: "linear" }],
           }}
         />,
       );

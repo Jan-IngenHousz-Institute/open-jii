@@ -23,7 +23,7 @@ vi.mock("../../common", () => ({
       title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
     },
     yaxis: {
-      title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+      title: config.yAxis?.[0]?.title ? { text: config.yAxis[0].title } : undefined,
     },
   })),
   createPlotlyConfig: vi.fn((config = {}) => ({
@@ -205,7 +205,7 @@ describe("DensityPlot", () => {
           x={mockX}
           y={mockY}
           showMarginalHistograms={true}
-          config={{ xAxisTitle: "X Values", yAxisTitle: "Y Values" }}
+          config={{ xAxisTitle: "X Values", yAxis: [{ title: "Y Values", type: "linear" }] }}
         />,
       );
 
@@ -268,7 +268,7 @@ describe("DensityPlot", () => {
           y={mockY}
           config={{
             xAxisTitle: "X Variable",
-            yAxisTitle: "Y Variable",
+            yAxis: [{ title: "Y Variable", type: "linear" }],
           }}
         />,
       );
@@ -581,7 +581,7 @@ describe("RidgePlot", () => {
           data={mockData}
           config={{
             xAxisTitle: "Temperature",
-            yAxisTitle: "Groups",
+            yAxis: [{ title: "Groups", type: "linear" }],
           }}
         />,
       );

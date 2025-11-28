@@ -80,7 +80,7 @@ const LAYOUT_CONSTANTS = {
   // Third axis positions
   THIRD_AXIS_POSITIONS: {
     LEFT: {
-      MANY_AXES: 0.10, // when 3+ axes on left
+      MANY_AXES: 0.1, // when 3+ axes on left
       FEW_AXES: 0.05, // when < 3 axes on left
     },
     RIGHT: {
@@ -154,7 +154,7 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
     if (!axisConfig) return undefined;
 
     // Only use custom color if there are multiple axes
-    const axisColor = totalAxesCount > 1 ? (axisConfig.color || textColor) : textColor;
+    const axisColor = totalAxesCount > 1 ? axisConfig.color || textColor : textColor;
     const axisType = axisConfig.type || "linear";
     const axisTitle = axisConfig.title;
 
@@ -166,8 +166,18 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
       { side: "right", overlaying: "y", anchor: "x", position: undefined },
       { side: "left", overlaying: "y", anchor: "free", position: leftThirdAxisPosition },
       { side: "right", overlaying: "y", anchor: "free", position: rightThirdAxisPosition },
-      { side: "left", overlaying: "y", anchor: "free", position: LAYOUT_CONSTANTS.OUTER_AXIS_POSITIONS.LEFT },
-      { side: "right", overlaying: "y", anchor: "free", position: LAYOUT_CONSTANTS.OUTER_AXIS_POSITIONS.RIGHT },
+      {
+        side: "left",
+        overlaying: "y",
+        anchor: "free",
+        position: LAYOUT_CONSTANTS.OUTER_AXIS_POSITIONS.LEFT,
+      },
+      {
+        side: "right",
+        overlaying: "y",
+        anchor: "free",
+        position: LAYOUT_CONSTANTS.OUTER_AXIS_POSITIONS.RIGHT,
+      },
     ];
 
     const pos = positions[index] || positions[0];
@@ -213,8 +223,12 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
       tickcolor: gridColor,
       automargin: true,
       domain: (() => {
-        const leftMargin = LAYOUT_CONSTANTS.DOMAIN_MARGINS.LEFT[leftAxesCount - 1] ?? LAYOUT_CONSTANTS.DOMAIN_MARGINS.LEFT[0];
-        const rightMargin = LAYOUT_CONSTANTS.DOMAIN_MARGINS.RIGHT[rightAxesCount - 1] ?? LAYOUT_CONSTANTS.DOMAIN_MARGINS.RIGHT[0];
+        const leftMargin =
+          LAYOUT_CONSTANTS.DOMAIN_MARGINS.LEFT[leftAxesCount - 1] ??
+          LAYOUT_CONSTANTS.DOMAIN_MARGINS.LEFT[0];
+        const rightMargin =
+          LAYOUT_CONSTANTS.DOMAIN_MARGINS.RIGHT[rightAxesCount - 1] ??
+          LAYOUT_CONSTANTS.DOMAIN_MARGINS.RIGHT[0];
         return [leftMargin, rightMargin];
       })(),
     },
@@ -229,7 +243,8 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
 
     showlegend: showLegend,
     legend: (() => {
-      const legendX = LAYOUT_CONSTANTS.LEGEND_POSITIONS[rightAxesCount] ?? LAYOUT_CONSTANTS.LEGEND_POSITIONS[0];
+      const legendX =
+        LAYOUT_CONSTANTS.LEGEND_POSITIONS[rightAxesCount] ?? LAYOUT_CONSTANTS.LEGEND_POSITIONS[0];
 
       return {
         x: legendX,

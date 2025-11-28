@@ -27,7 +27,7 @@ vi.mock("../../common", () => ({
   createBaseLayout: vi.fn((config) => ({
     title: config.title,
     xaxis: { title: config.xAxisTitle },
-    yaxis: { title: config.yAxisTitle },
+    yaxis: { title: config.yAxis?.[0]?.title },
     showlegend: config.showLegend !== false,
     barmode: config.barmode || "group",
   })),
@@ -112,7 +112,7 @@ describe("BarChart", () => {
       const config = {
         title: "Sales vs Expenses",
         xAxisTitle: "Quarter",
-        yAxisTitle: "Amount ($)",
+        yAxis: [{ title: "Amount ($)", type: "linear" as const }],
         showLegend: true,
         barmode: "group" as const,
       };

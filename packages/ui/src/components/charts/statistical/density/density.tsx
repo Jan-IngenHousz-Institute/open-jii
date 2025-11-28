@@ -169,7 +169,7 @@ export function DensityPlot({
         domain: [0, 0.85],
         showgrid: false,
         zeroline: false,
-        title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+        title: config.yAxis?.[0]?.title ? { text: config.yAxis[0].title } : undefined,
       },
       // Marginal histogram axes
       xaxis2: {
@@ -202,7 +202,7 @@ export function DensityPlot({
       yaxis: {
         showgrid: false,
         zeroline: false,
-        title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+        title: config.yAxis?.[0]?.title ? { text: config.yAxis[0].title } : undefined,
       },
     } as any; // Layout type allows flexible property assignment
   }
@@ -494,7 +494,7 @@ export function RidgePlot({
       tickvals: data.map((_, index) => index * spacing),
       ticktext: data.map((series) => series.category),
       range: [-0.5, (data.length - 1) * spacing + 1],
-      title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+      title: config.yAxis?.[0]?.title ? { text: config.yAxis[0].title } : undefined,
     },
   };
 

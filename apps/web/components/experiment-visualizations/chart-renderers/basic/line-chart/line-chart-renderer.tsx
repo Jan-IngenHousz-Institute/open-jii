@@ -141,12 +141,12 @@ export function LineChartRenderer({
     });
 
     // Update yAxis array with colors from series
-    const yAxis = chartConfig.yAxis || [];
+    const yAxis = chartConfig.yAxis ?? [];
     const updatedYAxis = chartSeries.map((series, index) => {
       const seriesColor = typeof series.color === "string" ? series.color : "#3b82f6";
       return {
-        title: yAxis[index]?.title || "",
-        type: yAxis[index]?.type || "linear",
+        title: yAxis[index]?.title ?? "",
+        type: yAxis[index]?.type ?? "linear",
         color: seriesColor,
       };
     });

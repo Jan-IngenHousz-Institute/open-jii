@@ -550,7 +550,7 @@ describe("SPCControlCharts", () => {
       const customConfig = {
         title: "SPC Control Chart",
         xAxisTitle: "Sample Number",
-        yAxisTitle: "Measurement",
+        yAxis: [{ title: "Measurement", type: "linear" }],
       };
 
       render(<SPCControlCharts data={defaultData} config={customConfig} />);

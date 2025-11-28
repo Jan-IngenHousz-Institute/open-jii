@@ -23,7 +23,7 @@ vi.mock("../../common", () => ({
       title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
     },
     yaxis: {
-      title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+      title: config.yAxis?.[0]?.title ? { text: config.yAxis[0].title } : undefined,
     },
   })),
   createPlotlyConfig: vi.fn((config = {}) => ({
@@ -676,7 +676,7 @@ describe("Histogram", () => {
           data={mockData}
           config={{
             xAxisTitle: "Values",
-            yAxisTitle: "Frequency",
+            yAxis: [{ title: "Frequency", type: "linear" }],
           }}
         />,
       );
@@ -1154,7 +1154,7 @@ describe("Histogram2D", () => {
           data={mockData}
           config={{
             xAxisTitle: "X Values",
-            yAxisTitle: "Y Values",
+            yAxis: [{ title: "Y Values", type: "linear" }],
           }}
         />,
       );

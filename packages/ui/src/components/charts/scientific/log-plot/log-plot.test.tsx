@@ -487,7 +487,7 @@ describe("LogPlot", () => {
   it("handles axis titles in config", () => {
     const configWithTitles = {
       xAxisTitle: "Time (seconds)",
-      yAxisTitle: "Logarithmic Value",
+      yAxis: [{ title: "Logarithmic Value", type: "log" }],
     };
 
     const { getByTestId } = render(<LogPlot data={mockLogData} config={configWithTitles} />);

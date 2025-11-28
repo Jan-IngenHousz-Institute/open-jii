@@ -115,6 +115,7 @@ export function LogPlot({
   );
 
   // Create layout with logarithmic axes
+  const yAxisTitle = config.yAxis?.[0]?.title;
   const layout = {
     ...createBaseLayout(config),
     xaxis: {
@@ -123,7 +124,7 @@ export function LogPlot({
       ...(xAxisType === "log" && logBase.x ? { base: logBase.x } : {}),
     },
     yaxis: {
-      title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+      title: yAxisTitle ? { text: yAxisTitle } : undefined,
       type: yAxisType,
       ...(yAxisType === "log" && logBase.y ? { base: logBase.y } : {}),
     },

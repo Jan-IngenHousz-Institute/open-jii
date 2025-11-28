@@ -117,11 +117,20 @@ export function DotPlot({
     } as unknown as PlotData;
   });
 
+  const defaultYAxisType = orientation === "v" ? "linear" : "category";
+  const yAxisConfig = config.yAxis?.[0];
+
   const layout = createBaseLayout({
     ...config,
     // Adjust bargap for dot spacing
     xAxisType: config.xAxisType || (orientation === "h" ? "linear" : undefined),
-    yAxisType: config.yAxisType || (orientation === "v" ? "linear" : undefined),
+    yAxis: config.yAxis || [
+      {
+        type: yAxisConfig?.type || defaultYAxisType,
+        title: yAxisConfig?.title,
+        color: yAxisConfig?.color,
+      },
+    ],
   });
 
   // Add specific layout adjustments for dot plots
@@ -223,9 +232,15 @@ export function LollipopChart({
         xAxisTitle: isHorizontal
           ? props.config?.xAxisTitle || "Value"
           : props.config?.xAxisTitle || "Category",
-        yAxisTitle: isHorizontal
-          ? props.config?.yAxisTitle || "Category"
-          : props.config?.yAxisTitle || "Value",
+        yAxis: [
+          {
+            title: isHorizontal
+              ? props.config?.yAxis?.[0]?.title || "Category"
+              : props.config?.yAxis?.[0]?.title || "Value",
+            type: props.config?.yAxis?.[0]?.type || "linear",
+            color: props.config?.yAxis?.[0]?.color,
+          },
+        ],
       }}
       {...props}
     />
