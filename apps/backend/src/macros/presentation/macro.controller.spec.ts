@@ -1,9 +1,12 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api";
 
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
+import type { MockAnalyticsAdapter } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
@@ -16,6 +19,7 @@ import { generateHashedFilename } from "../core/models/macro.model";
 describe("MacroController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let analyticsAdapter: MockAnalyticsAdapter;
   let createMacroUseCase: CreateMacroUseCase;
   let getMacroUseCase: GetMacroUseCase;
   let listMacrosUseCase: ListMacrosUseCase;
@@ -23,7 +27,7 @@ describe("MacroController", () => {
   let deleteMacroUseCase: DeleteMacroUseCase;
 
   beforeAll(async () => {
-    await testApp.setup();
+    await testApp.setup({ useMockAnalytics: true });
   });
 
   beforeEach(async () => {
@@ -31,6 +35,7 @@ describe("MacroController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Get use case instances for mocking
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
     createMacroUseCase = testApp.module.get(CreateMacroUseCase);
     getMacroUseCase = testApp.module.get(GetMacroUseCase);
     listMacrosUseCase = testApp.module.get(ListMacrosUseCase);
@@ -419,6 +424,10 @@ describe("MacroController", () => {
   });
 
   describe("deleteMacro", () => {
+    beforeEach(() => {
+      analyticsAdapter.setFlag(FEATURE_FLAGS.MACRO_DELETION, true);
+    });
+
     it("should successfully delete a macro", async () => {
       // Arrange
       const macroId = faker.string.uuid();
@@ -433,6 +442,18 @@ describe("MacroController", () => {
       // Assert
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(deleteMacroUseCase.execute).toHaveBeenCalledWith(macroId, testUserId);
+    });
+
+    it("should return 403 if macro deletion is disabled", async () => {
+      // Override mock to disable feature flag
+      analyticsAdapter.setFlag(FEATURE_FLAGS.MACRO_DELETION, false);
+
+      const macroId = faker.string.uuid();
+
+      await testApp
+        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN);
     });
 
     it("should handle macro not found", async () => {

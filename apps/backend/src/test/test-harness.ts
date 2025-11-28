@@ -10,6 +10,8 @@ import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
+import type { FeatureFlagKey } from "@repo/analytics";
+import { FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
 import {
@@ -27,11 +29,28 @@ import {
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
+import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
 
 export type SuperTestResponse<T> = Omit<Response, "body"> & { body: T };
+
+export class MockAnalyticsAdapter {
+  private flags = new Map<FeatureFlagKey, boolean>();
+
+  async isFeatureFlagEnabled(flagKey: FeatureFlagKey, _distinctId?: string): Promise<boolean> {
+    return Promise.resolve(this.flags.get(flagKey) ?? FEATURE_FLAG_DEFAULTS[flagKey]);
+  }
+
+  setFlag(flagKey: FeatureFlagKey, value: boolean) {
+    this.flags.set(flagKey, value);
+  }
+
+  reset() {
+    this.flags.clear();
+  }
+}
 
 export class TestHarness {
   private app: INestApplication<App> | null = null;
@@ -51,7 +70,9 @@ export class TestHarness {
   /**
    * Set up the application for testing
    */
-  public async setup() {
+  public async setup(options: { useMockAnalytics?: boolean } = {}) {
+    const { useMockAnalytics = false } = options;
+
     if (!this.app) {
       // Configure nock to prevent any real HTTP requests during tests
       nock.disableNetConnect();
@@ -60,11 +81,15 @@ export class TestHarness {
 
       this._module = await Test.createTestingModule({
         imports: this._imports,
-      }).compile();
+      })
+        .overrideProvider(AnalyticsAdapter)
+        .useClass(useMockAnalytics ? MockAnalyticsAdapter : AnalyticsAdapter)
+        .compile();
 
       this.app = this._module.createNestApplication<INestApplication<App>>({
         logger: false,
       });
+
       await this.app.init();
       this._request = request(this.app.getHttpServer());
     }
@@ -80,6 +105,12 @@ export class TestHarness {
       }
 
       await this.clearDatabase();
+
+      // Reset mock analytics adapter
+      const analyticsAdapter = this._module?.get(AnalyticsAdapter);
+      if (analyticsAdapter && analyticsAdapter instanceof MockAnalyticsAdapter) {
+        analyticsAdapter.reset();
+      }
     } catch (e) {
       console.log("Failed to clean up database for integration tests.", e);
       // Don't throw the error to allow tests to continue
