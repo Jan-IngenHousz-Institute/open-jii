@@ -24,12 +24,12 @@ vi.mock("next/headers", () => ({
 
 vi.mock("next/navigation");
 
-vi.mock("@/components/app-breadcrumbs", () => ({
+vi.mock("@/components/navigation/navigation-breadcrumbs/navigation-breadcrumbs", () => ({
   Breadcrumbs: () => <div data-testid="breadcrumbs">Breadcrumbs</div>,
 }));
 
-vi.mock("@/components/app-sidebar-wrapper", () => ({
-  AppSidebarWrapper: ({ locale }: { locale: string }) => (
+vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper", () => ({
+  NavigationSidebarWrapper: ({ locale }: { locale: string }) => (
     <div data-testid="app-sidebar-wrapper" data-locale={locale}>
       Sidebar
     </div>
@@ -44,8 +44,8 @@ vi.mock("@/components/language-switcher", () => ({
   ),
 }));
 
-vi.mock("@/components/platform-top-bar", () => ({
-  PlatformTopBar: ({ locale }: { locale: string }) => (
+vi.mock("@/components/navigation/navigation-topbar/navigation-topbar", () => ({
+  NavigationTopbar: ({ locale }: { locale: string }) => (
     <div data-testid="platform-top-bar" data-locale={locale}>
       Platform Top Bar
     </div>

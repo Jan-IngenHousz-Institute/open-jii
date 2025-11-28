@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown, LogOut } from "lucide-react";
-import { User as UserIcon } from "lucide-react";
+import { userNavigation, iconMap } from "@/components/navigation/navigation-config";
+import { useGetUserProfile } from "@/hooks/profile/useGetUserProfile/useGetUserProfile";
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
@@ -18,8 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
-
 interface NavUserProps {
   user: {
     id: string;
@@ -30,10 +29,21 @@ interface NavUserProps {
 }
 
 function UserAvatar({ avatar, displayName }: { avatar: string; displayName: string }) {
+  // Get initials from display name
+  const getInitials = () => {
+    if (!displayName) return "";
+
+    const names = displayName.trim().split(/\s+/);
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return displayName.slice(0, 2).toUpperCase();
+  };
+
   return (
     <Avatar className="h-8 w-8">
       <AvatarImage src={avatar} alt={displayName} />
-      <AvatarFallback>JII</AvatarFallback>
+      <AvatarFallback>{getInitials()}</AvatarFallback>
     </Avatar>
   );
 }
@@ -47,31 +57,26 @@ function UserInfo({ displayName, email }: { displayName: string; email: string }
   );
 }
 
-function MenuItems({ locale, t }: { locale: string; t: (key: string) => string }) {
+function MenuItems({
+  locale,
+  t,
+}: {
+  locale: string;
+  t: (key: string, options?: { ns?: string }) => string;
+}) {
   return (
     <>
-      <DropdownMenuItem asChild>
-        <Link
-          href={`/${locale}/platform/account/settings`}
-          className="flex w-full cursor-default items-center"
-        >
-          <Avatar className="bg-muted mr-2 h-4 w-4">
-            <AvatarFallback>
-              <UserIcon className="h-4 w-4" />
-            </AvatarFallback>
-          </Avatar>
-          {t("auth.account")}
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuItem asChild>
-        <Link
-          href={`/${locale}/platform/signout`}
-          className="flex w-full cursor-default items-center"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          {t("navigation.logout")}
-        </Link>
-      </DropdownMenuItem>
+      {Object.values(userNavigation).map((item) => {
+        const Icon = iconMap[item.icon as keyof typeof iconMap];
+        return (
+          <DropdownMenuItem key={item.titleKey} asChild>
+            <Link href={item.url(locale)} className="flex w-full cursor-default items-center">
+              <Icon className="mr-2 h-4 w-4" />
+              {t(item.titleKey, { ns: item.namespace })}
+            </Link>
+          </DropdownMenuItem>
+        );
+      })}
     </>
   );
 }

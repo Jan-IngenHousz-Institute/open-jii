@@ -1,6 +1,7 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { useGetUserProfile } from "@/hooks/profile/useGetUserProfile/useGetUserProfile";
 import { User, Home, BookOpen, LogOut, Menu, Sprout } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,8 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components";
-
-import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
 
 interface UnifiedNavbarProps {
   locale: string;

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -91,8 +91,8 @@ describe("<NavUser />", () => {
     // Find the trigger button
     const triggerBtn = screen.getByRole("button");
 
-    // Initials should be in the fallback
-    expect(screen.getByText("JII")).toBeInTheDocument();
+    // Initials should be "AL" from Ada Lovelace
+    expect(screen.getByText("AL")).toBeInTheDocument();
 
     // Should have chevron icon
     expect(triggerBtn.querySelector("svg")).toBeInTheDocument();
@@ -101,15 +101,13 @@ describe("<NavUser />", () => {
     expect(triggerBtn).not.toBeDisabled();
   });
 
-  it("renders avatar with JII fallback", () => {
+  it("renders avatar with empty fallback when no profile", () => {
     renderNav({ profile: undefined });
 
     const triggerBtn = screen.getByRole("button");
 
-    // JII fallback should be present
-    expect(screen.getByText("JII")).toBeInTheDocument();
-
-    // Button should exist and be clickable
+    // Without profile, displayName is empty, so avatar fallback is empty
+    // Just verify the button exists
     expect(triggerBtn).toBeInTheDocument();
     expect(triggerBtn).not.toBeDisabled();
   });
@@ -140,8 +138,8 @@ describe("<NavUser />", () => {
     const triggerBtn = screen.getByRole("button");
     expect(triggerBtn).toBeInTheDocument();
 
-    // Should have avatar visible
-    expect(screen.getByText("JII")).toBeInTheDocument();
+    // Should have avatar visible with initials "AL"
+    expect(screen.getByText("AL")).toBeInTheDocument();
 
     // Should have chevron icon
     expect(triggerBtn.querySelector("svg")).toBeInTheDocument();

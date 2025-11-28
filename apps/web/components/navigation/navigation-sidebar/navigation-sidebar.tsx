@@ -27,7 +27,7 @@ import {
   SidebarRail,
 } from "@repo/ui/components";
 
-import { NavItems } from "./nav-items";
+import { NavItems } from "../nav-items/nav-items";
 
 interface NavigationItem {
   title: string;
@@ -105,7 +105,11 @@ export function AppSidebar({
   }));
 
   return (
-    <Sidebar collapsible="icon" className="group-data-[collapsible=icon]:w-[5rem]" {...props}>
+    <Sidebar
+      collapsible="icon"
+      className="hidden group-data-[collapsible=icon]:w-[5rem] md:flex"
+      {...props}
+    >
       <SidebarHeader>
         <Image
           src="/logo-open-yellow.svg"

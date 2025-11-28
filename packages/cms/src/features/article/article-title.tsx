@@ -50,7 +50,7 @@ export const ArticleTile = ({
           {featuredImage && (
             <div
               {...inspectorProps({ fieldId: "featuredImage" })}
-              className="flex h-full w-1/3 min-w-[120px] max-w-[180px] items-center justify-center"
+              className="flex h-full w-2/5 min-w-[100px] max-w-[160px] items-center justify-center md:w-1/3 md:min-w-[120px] md:max-w-[180px]"
             >
               <CtfImage
                 nextImageProps={{
@@ -63,7 +63,7 @@ export const ArticleTile = ({
 
           <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4">
             <div
-              className={cn("mb-2 text-left text-sm text-gray-600")}
+              className={cn("mb-2 text-left text-xs text-gray-600 md:text-sm")}
               {...inspectorProps({ fieldId: "publishedDate" })}
             >
               <FormatDate date={safePublishedDate} />
@@ -71,7 +71,7 @@ export const ArticleTile = ({
 
             {title && (
               <p
-                className="h3 mb-2 text-left text-base font-semibold text-gray-900 md:mb-3"
+                className="h3 mb-2 text-left text-sm font-medium text-gray-900 md:mb-3 lg:text-base lg:font-semibold"
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {title}
