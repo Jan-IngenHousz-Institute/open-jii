@@ -178,6 +178,8 @@ export const zExperiment = z.object({
   visibility: zExperimentVisibility,
   embargoUntil: z.string().datetime(),
   createdBy: z.string().uuid(),
+  ownerFirstName: z.string().nullable().optional(),
+  ownerLastName: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   data: zExperimentData.optional(),

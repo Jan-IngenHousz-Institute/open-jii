@@ -11,8 +11,8 @@ export function RichTextRenderer({ content }: RichTextRendererProps) {
   // Use a safe regex to check for HTML tags
   const isRichText = /<[^>]+>/.test(content);
 
-  if (!content) {
-    return <p className="text-sm">No description provided</p>;
+  if (!content || content === "<p><br></p>") {
+    return <p className="text-muted-foreground text-sm italic">No description provided</p>;
   }
 
   if (!isRichText) {

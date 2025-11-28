@@ -11,10 +11,6 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-vi.mock("@/util/date", () => ({
-  formatDate: (date: string) => `Formatted: ${date.slice(0, 10)}`,
-}));
-
 const mockUser = {
   userId: "user-123",
   firstName: "John",
@@ -49,7 +45,6 @@ describe("<MemberItem />", () => {
 
     expect(screen.getByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
-    expect(screen.getByText(/Formatted: 2024-01-15/)).toBeInTheDocument();
     expect(screen.getByText("experimentSettings.roleMember")).toBeInTheDocument();
   });
 

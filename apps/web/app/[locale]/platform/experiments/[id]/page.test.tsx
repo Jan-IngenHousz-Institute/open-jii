@@ -146,11 +146,11 @@ describe("<ExperimentOverviewPage />", () => {
     expect(screen.getByText("notFound")).toBeInTheDocument();
   });
 
-  it("calls notFound when experiment is not archived", () => {
+  it("calls notFound when experiment is archived", () => {
     vi.mocked(useExperimentAccess).mockReturnValue({
       data: {
         body: {
-          experiment: { status: "active", name: "Test", id: "123" },
+          experiment: { status: "archived", name: "Test", id: "123" },
           hasAccess: true,
         },
       },

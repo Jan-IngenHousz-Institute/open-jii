@@ -117,7 +117,10 @@ describe("ExperimentVisualizationsDisplay", () => {
       />,
     );
 
-    expect(screen.getByText("ui.messages.loading")).toBeInTheDocument();
+    expect(screen.getByText("ui.title")).toBeInTheDocument();
+    expect(screen.getByText("selector.noVisualizations")).toBeInTheDocument();
+    // Should show loading skeleton
+    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("should render no visualizations message when empty", () => {
@@ -215,7 +218,7 @@ describe("ExperimentVisualizationsDisplay", () => {
       />,
     );
 
-    expect(screen.getByText("Loading visualization data...")).toBeInTheDocument();
+    expect(screen.getByText("ui.messages.loadingData")).toBeInTheDocument();
   });
 
   it("should call hook with correct parameters for selected visualization", () => {

@@ -140,7 +140,7 @@ describe("<NewExperimentMembersCard />", () => {
     renderWithForm([]);
 
     // Type in search to trigger user search
-    const searchInput = screen.getByPlaceholderText("newExperiment.addMemberPlaceholder");
+    const searchInput = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
     fireEvent.change(searchInput, { target: { value: "Alice" } });
 
     // Wait for and select user from results

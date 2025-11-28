@@ -48,11 +48,6 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-// formatDate
-vi.mock("@/util/date", () => ({
-  formatDate: (iso: string) => `FMT(${iso.slice(0, 10)})`,
-}));
-
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -148,7 +143,6 @@ describe("<MemberList />", () => {
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     expect(screen.getByText("grace@example.com")).toBeInTheDocument();
     expect(screen.getByText("experimentSettings.roleMember")).toBeInTheDocument();
-    expect(screen.getByText(/experimentSettings\.joined/)).toBeInTheDocument();
 
     const selectTrigger = screen.getByRole("combobox");
     expect(selectTrigger).toBeInTheDocument();
@@ -192,10 +186,6 @@ describe("<MemberList />", () => {
 
     // No email -> i18n key
     expect(screen.getByText("experimentSettings.noEmail")).toBeInTheDocument();
-
-    // Joined label (key) and formatted date both present (could be split by nodes)
-    expect(screen.getByText(/experimentSettings\.joined/)).toBeInTheDocument();
-    expect(screen.getByText(/FMT\(2023-01-02\)/, { exact: false })).toBeInTheDocument();
 
     expect(screen.getByText("experimentSettings.roleAdmin")).toBeInTheDocument();
 

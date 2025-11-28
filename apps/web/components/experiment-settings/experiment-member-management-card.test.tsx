@@ -85,28 +85,28 @@ vi.mock("../current-members-list/current-members-list", () => ({
 
 const experimentId = "exp-123";
 
-const membersData = {
-  body: [
-    {
-      role: "admin",
-      user: {
-        id: "u-admin",
-        firstName: "Ada",
-        lastName: "Lovelace",
-        email: "ada@example.com",
-      },
+const membersData = [
+  {
+    role: "admin" as const,
+    user: {
+      id: "u-admin",
+      firstName: "Ada",
+      lastName: "Lovelace",
+      email: "ada@example.com",
     },
-    {
-      role: "member",
-      user: {
-        id: "u-member",
-        firstName: "Grace",
-        lastName: "Hopper",
-        email: "grace@example.com",
-      },
+    joinedAt: "2024-01-01T00:00:00.000Z",
+  },
+  {
+    role: "member" as const,
+    user: {
+      id: "u-member",
+      firstName: "Grace",
+      lastName: "Hopper",
+      email: "grace@example.com",
     },
-  ],
-};
+    joinedAt: "2024-01-02T00:00:00.000Z",
+  },
+];
 
 const userProfiles: UserProfile[] = [
   {
@@ -131,11 +131,19 @@ const userProfiles: UserProfile[] = [
 
 /* -------------------------- Helper Renderer -------------------------- */
 
-function renderWithClient() {
+function renderWithClient(
+  props?: Partial<Omit<React.ComponentProps<typeof ExperimentMemberManagement>, "experimentId">>,
+) {
   const queryClient = new QueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <ExperimentMemberManagement experimentId={experimentId} />
+      <ExperimentMemberManagement
+        experimentId={experimentId}
+        members={membersData}
+        isLoading={false}
+        isError={false}
+        {...props}
+      />
     </QueryClientProvider>,
   );
 }
@@ -149,11 +157,6 @@ beforeEach(() => {
   useUserSearchMock.mockImplementation(() => ({
     data: { body: userProfiles },
     isLoading: false,
-  }));
-  useExperimentMembersMock.mockImplementation(() => ({
-    data: membersData,
-    isLoading: false,
-    isError: false,
   }));
   useExperimentMemberAddMock.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({ ok: true }),
@@ -169,32 +172,20 @@ beforeEach(() => {
 
 describe("<ExperimentMemberManagement />", () => {
   it("renders loading skeleton", () => {
-    useExperimentMembersMock.mockReturnValueOnce({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-    });
-
-    renderWithClient();
+    renderWithClient({ isLoading: true });
     expect(screen.getByText("experimentSettings.memberManagement")).toBeInTheDocument();
   });
 
   it("renders error card", () => {
-    useExperimentMembersMock.mockReturnValueOnce({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-    });
-
-    renderWithClient();
+    renderWithClient({ isError: true });
     expect(screen.getByText("experimentSettings.memberManagementError")).toBeInTheDocument();
   });
 
   it("renders title, description, and existing members", () => {
     renderWithClient();
 
-    expect(screen.getByText("experimentSettings.memberManagement")).toBeInTheDocument();
-    expect(screen.getByText("experimentSettings.memberDescription")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.collaboratorsDescription")).toBeInTheDocument();
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     expect(screen.getByText("admin")).toBeInTheDocument();
@@ -207,7 +198,7 @@ describe("<ExperimentMemberManagement />", () => {
 
     renderWithClient();
 
-    const input = screen.getByPlaceholderText("newExperiment.addMembersTitle");
+    const input = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
     fireEvent.change(input, { target: { value: "Kat" } });
 
     // Wait for the search results to appear
@@ -230,7 +221,7 @@ describe("<ExperimentMemberManagement />", () => {
 
   it("removes a member successfully", async () => {
     const removeSpy = vi.fn().mockResolvedValue({ ok: true });
-    useExperimentMemberRemoveMock.mockReturnValueOnce({ mutateAsync: removeSpy, isPending: false });
+    useExperimentMemberRemoveMock.mockReturnValue({ mutateAsync: removeSpy, isPending: false });
 
     renderWithClient();
 

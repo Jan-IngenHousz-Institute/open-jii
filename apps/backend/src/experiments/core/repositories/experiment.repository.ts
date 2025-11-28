@@ -12,10 +12,15 @@ import {
   experimentMembers,
   exists,
   sql,
+  profiles,
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  getAnonymizedFirstName,
+  getAnonymizedLastName,
+} from "../../../common/utils/profile-anonymization";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
@@ -201,6 +206,8 @@ export class ExperimentRepository {
         createdAt: experiments.createdAt,
         createdBy: experiments.createdBy,
         updatedAt: experiments.updatedAt,
+        ownerFirstName: getAnonymizedFirstName(),
+        ownerLastName: getAnonymizedLastName(),
       };
 
       const result = await this.database
@@ -209,6 +216,7 @@ export class ExperimentRepository {
           memberRole: experimentMembers.role,
         })
         .from(experiments)
+        .innerJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .leftJoin(
           experimentMembers,
           and(

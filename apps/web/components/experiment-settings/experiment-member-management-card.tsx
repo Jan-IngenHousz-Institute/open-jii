@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { UserProfile, ExperimentMemberRole } from "@repo/api";
+import type { UserProfile, ExperimentMemberRole, ExperimentMember } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -12,17 +12,11 @@ import {
   CardDescription,
   CardContent,
   Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { useExperimentMemberAdd } from "../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
 import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
-import { useExperimentMembers } from "../../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useUserSearch } from "../../hooks/useUserSearch";
 import { MemberList } from "../current-members-list/current-members-list";
@@ -30,26 +24,25 @@ import { UserSearchPopover } from "../user-search-popover";
 
 interface ExperimentMemberManagementProps {
   experimentId: string;
+  members: ExperimentMember[];
+  isLoading: boolean;
+  isError: boolean;
+  isArchived?: boolean;
 }
 
-export function ExperimentMemberManagement({ experimentId }: ExperimentMemberManagementProps) {
+export function ExperimentMemberManagement({
+  experimentId,
+  members,
+  isLoading,
+  isError,
+  isArchived = false,
+}: ExperimentMemberManagementProps) {
   const { t } = useTranslation();
   const { data: session } = useSession();
-
-  // Get experiment members
-  const {
-    data: membersData,
-    isLoading: isMembersLoading,
-    isError: isMembersError,
-  } = useExperimentMembers(experimentId);
-
-  const members = useMemo(() => membersData?.body ?? [], [membersData]);
-  const adminCount = useMemo(() => members.filter((m) => m.role === "admin").length, [members]);
-  const currentUserRole: ExperimentMemberRole = useMemo(() => {
-    const currentUserId = session?.user.id;
-    const currentMember = members.find((m) => m.user.id === currentUserId);
-    return currentMember?.role ?? "member";
-  }, [members, session]);
+  const adminCount = members.filter((m) => m.role === "admin").length;
+  const currentUserId = session?.user.id;
+  const currentMember = members.find((m) => m.user.id === currentUserId);
+  const currentUserRole = currentMember?.role;
 
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
@@ -114,7 +107,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
     }
   };
 
-  if (isMembersLoading) {
+  if (isLoading) {
     return (
       <Card className="animate-pulse">
         <CardHeader>
@@ -128,7 +121,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
     );
   }
 
-  if (isMembersError) {
+  if (isError) {
     return (
       <Card className="border-destructive">
         <CardHeader>
@@ -142,15 +135,15 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
   }
 
   return (
-    <Card>
+    <>
       <CardHeader>
-        <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
-        <CardDescription>{t("experimentSettings.memberDescription")}</CardDescription>
+        <CardTitle>{t("experimentSettings.collaborators")}</CardTitle>
+        <CardDescription>{t("experimentSettings.collaboratorsDescription")}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
         {/* Add member section */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2">
           <UserSearchPopover
             availableUsers={availableUsers}
             searchValue={userSearch}
@@ -158,27 +151,19 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
             isAddingUser={isAddingMember}
             loading={!isDebounced || isFetchingUsers}
             onSelectUser={setSelectedUser}
-            placeholder={t("newExperiment.addMembersTitle")}
+            placeholder={t("experiments.searchUsersPlaceholder")}
             selectedUser={selectedUser}
             onClearSelection={() => setSelectedUser(null)}
+            disabled={isArchived || currentUserRole !== "admin"}
+            selectedRole={selectedRole}
+            onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
           />
-          <Select
-            value={selectedRole}
-            onValueChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
-              <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             onClick={handleAddMember}
-            disabled={!selectedUser || isAddingMember || currentUserRole !== "admin"}
+            variant="outline"
+            disabled={!selectedUser || isAddingMember || currentUserRole !== "admin" || isArchived}
             size="default"
-            className="flex-1 md:flex-none"
+            className="bg-surface"
           >
             {t("common.add")}
           </Button>
@@ -186,7 +171,6 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
 
         {/* Current members section */}
         <div>
-          <h6 className="mb-2 text-sm font-medium">{t("experimentSettings.currentMembers")}</h6>
           <MemberList
             membersWithUserInfo={members.map((member) => ({
               ...member,
@@ -207,9 +191,10 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
             experimentId={experimentId}
             currentUserRole={currentUserRole}
             currentUserId={session?.user.id ?? ""}
+            isArchived={isArchived}
           />
         </div>
       </CardContent>
-    </Card>
+    </>
   );
 }

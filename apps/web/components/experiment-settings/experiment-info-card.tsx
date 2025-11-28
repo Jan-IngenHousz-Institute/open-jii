@@ -1,20 +1,15 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
-import { Archive, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
-import type { Experiment } from "@repo/api";
+import type { Experiment, ExperimentMember } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -25,52 +20,28 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperimentDelete } from "../../hooks/experiment/useExperimentDelete/useExperimentDelete";
-import { useExperimentMembers } from "../../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 interface ExperimentInfoCardProps {
   experimentId: string;
   experiment: Experiment;
+  members: ExperimentMember[];
 }
 
-export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoCardProps) {
+export function ExperimentInfoCard({ experimentId, experiment, members }: ExperimentInfoCardProps) {
   const { t } = useTranslation();
   const locale = useLocale();
+  const { data: session } = useSession();
+  const currentUserId = session?.user.id;
 
-  // Fetch experiment members to get admin info
-  const { data: membersData } = useExperimentMembers(experimentId);
-
-  const members = useMemo(() => {
-    return membersData?.body ?? [];
-  }, [membersData]);
-
-  // Find the member that corresponds to the experiment creator UUID
-  const adminMember = useMemo(() => {
-    return members.find((m) => m.user.id === experiment.createdBy);
-  }, [members, experiment.createdBy]);
-
-  // Helper to get name/email from the resolved member
-  const adminName = adminMember
-    ? `${adminMember.user.firstName} ${adminMember.user.lastName}`
-    : t("experimentSettings.unknownUser");
-
-  const adminEmail = adminMember?.user.email;
-
-  const { mutateAsync: deleteExperiment, isPending: isDeleting } = useExperimentDelete();
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
   const router = useRouter();
 
-  const isArchived = experiment.status === "archived";
+  const currentUserRole = members.find((m) => m.user.id === currentUserId)?.role ?? "member";
+  const isAdmin = currentUserRole === "admin";
 
-  const handleDeleteExperiment = async () => {
-    await deleteExperiment({ params: { id: experimentId } });
-    setIsDeleteDialogOpen(false);
-    // Navigate to experiments list
-    router.push(`/${locale}/platform/experiments`);
-  };
+  const isArchived = experiment.status === "archived";
 
   const handleToggleArchive = async () => {
     const newStatus = isArchived ? "active" : "archived";
@@ -84,142 +55,77 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
       ? `/${locale}/platform/experiments`
       : `/${locale}/platform/experiments-archive`;
 
-    try {
-      await updateExperiment({
+    await updateExperiment(
+      {
         params: { id: experimentId },
         body: { status: newStatus },
-      });
-      setIsArchiveDialogOpen(false);
-      toast({ description: successMessage });
-      router.push(redirectPath);
-    } catch (error) {
-      toast({
-        description:
-          error &&
-          typeof error === "object" &&
-          "body" in error &&
-          error.body &&
-          typeof error.body === "object" &&
-          "message" in error.body
-            ? String(error.body.message)
-            : errorMessage,
-        variant: "destructive",
-      });
-    }
+      },
+      {
+        onSuccess: () => {
+          toast({ description: successMessage });
+          router.push(redirectPath);
+        },
+        onError: (err) => {
+          toast({
+            description: parseApiError(err)?.message ?? errorMessage,
+            variant: "destructive",
+          });
+        },
+        onSettled: () => {
+          setIsArchiveDialogOpen(false);
+        },
+      },
+    );
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("experimentSettings.generalSettings")}</CardTitle>
-        <CardDescription>{t("experimentSettings.generalDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-x-2">
-            <span className="font-medium">{t("experimentSettings.created")} by:</span> {adminName}
-            <span className="text-muted-foreground flex items-center gap-x-1">
-              <Mail className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate text-xs md:max-w-[200px] md:text-sm">
-                {adminEmail ?? t("experimentSettings.noEmail")}
-              </span>
-            </span>
-          </div>
-          <div>
-            <span className="font-medium">{t("experimentSettings.created")}:</span>{" "}
-            {formatDate(experiment.createdAt)}
-          </div>
-          <div>
-            <span className="font-medium">{t("experimentSettings.updated")}:</span>{" "}
-            {formatDate(experiment.updatedAt)}
-          </div>
-        </div>
+    <>
+      <div className="mt-8">
+        <p className="text-muted-foreground mb-2 text-sm">{t("experimentSettings.archiveNote")}</p>
 
-        <div className="border-t pt-4">
-          <h5 className="text-destructive mb-2 text-base font-medium">
-            {t("experimentSettings.dangerZone")}
-          </h5>
-          <p className="text-muted-foreground mb-4 text-sm">
-            {t("experimentSettings.deleteWarning")}
-          </p>
-
-          <div className="flex flex-col gap-3 md:flex-row">
-            {/* Delete Experiment */}
-            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" className="w-full md:w-fit">
-                  {t("experimentSettings.deleteExperiment")}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="text-destructive">
-                    {t("experimentSettings.deleteExperiment")}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {t("experimentSettings.confirmDelete")} "{experiment.name}"?{" "}
-                    {t("experimentSettings.deleteWarning")}
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="mt-4">
-                  <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                    {t("experimentSettings.cancel")}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteExperiment}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? t("experimentSettings.saving") : t("experimentSettings.delete")}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Archive/Unarchive Experiment */}
-            <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full md:w-fit">
-                  <Archive className="mr-2 h-4 w-4" />
+        <div className="flex flex-col gap-3 md:flex-row">
+          {/* Archive/Unarchive Experiment */}
+          <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="bg-surface-dark w-full md:w-fit"
+                disabled={!isAdmin}
+              >
+                {isArchived
+                  ? t("experimentSettings.unarchiveExperiment")
+                  : t("experimentSettings.archiveExperiment")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
                   {isArchived
-                    ? t("experimentSettings.unarchiveExperiment")
-                    : t("experimentSettings.archiveExperiment")}
+                    ? t("experimentSettings.unarchivingExperiment")
+                    : t("experimentSettings.archivingExperiment")}
+                </DialogTitle>
+                <DialogDescription>
+                  {isArchived
+                    ? t("experimentSettings.unarchiveDescription")
+                    : t("experimentSettings.archiveDescription")}{" "}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setIsArchiveDialogOpen(false)}>
+                  {t("experimentSettings.cancel")}
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {isArchived
-                      ? t("experimentSettings.unarchivingExperiment")
-                      : t("experimentSettings.archivingExperiment")}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {isArchived
-                      ? t("experimentSettings.unarchiveDescription")
-                      : t("experimentSettings.archiveDescription")}{" "}
-                    {isArchived
-                      ? t("experimentSettings.confirmUnarchive")
-                      : t("experimentSettings.confirmArchive")}{" "}
-                    "{experiment.name}"?
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="mt-4">
-                  <Button variant="outline" onClick={() => setIsArchiveDialogOpen(false)}>
-                    {t("experimentSettings.cancel")}
-                  </Button>
-                  <Button variant="default" onClick={handleToggleArchive} disabled={isUpdating}>
-                    {isUpdating
-                      ? t("experimentSettings.saving")
-                      : isArchived
-                        ? t("experimentSettings.unarchiveActivate")
-                        : t("experimentSettings.archiveDeactivate")}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+                <Button variant="default" onClick={handleToggleArchive} disabled={isUpdating}>
+                  {isUpdating
+                    ? t("experimentSettings.saving")
+                    : isArchived
+                      ? t("experimentSettings.unarchiveActivate")
+                      : t("experimentSettings.archiveDeactivate")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </>
   );
 }

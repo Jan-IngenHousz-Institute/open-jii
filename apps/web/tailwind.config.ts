@@ -54,6 +54,15 @@ export default {
           light: "#F6F8FA",
           foreground: "#000000",
         },
+        badge: {
+          DEFAULT: "#FBF8C1",
+          provisioning: "#FFF3B0",
+          provisioningFailed: "#FFE0E0",
+          active: "#CCFCD8",
+          stale: "#FFE0B2",
+          archived: "#E7EDF2",
+          published: "#D8F2FC",
+        },
         highlight: {
           DEFAULT: "#fff381", // Yellow
           light: "#fff9c0", // Lighter yellow (50%)

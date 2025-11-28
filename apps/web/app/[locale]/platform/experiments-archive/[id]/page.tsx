@@ -2,26 +2,19 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
-import { ExperimentLocationsDisplay } from "@/components/experiment/experiment-locations-display";
-import { FlowEditor } from "@/components/flow-editor";
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
+import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import { formatDate } from "@/util/date";
-import { CalendarIcon } from "lucide-react";
 import { notFound } from "next/navigation";
-import { use } from "react";
+import { use, useRef } from "react";
+import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
+import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
+import { ExperimentLinkedProtocols } from "~/components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols";
+import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
+import type { Experiment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  Badge,
-  RichTextRenderer,
-} from "@repo/ui/components";
 
 interface ExperimentOverviewPageProps {
   params: Promise<{ id: string }>;
@@ -29,129 +22,79 @@ interface ExperimentOverviewPageProps {
 
 export default function ExperimentOverviewPage({ params }: ExperimentOverviewPageProps) {
   const { id } = use(params);
-  const { data, isLoading, error } = useExperiment(id);
   const { t } = useTranslation("experiments");
 
-  // Get flow data for this experiment
-  const experiment = data?.body;
-  const { data: experimentFlow } = useExperimentFlow(id);
+  // Experiment with access info
+  const { data: accessData, isLoading, error } = useExperimentAccess(id);
+  const experiment = accessData?.body.experiment;
+  const hasAccess = accessData?.body.hasAccess;
 
-  // Get locations data for this experiment
-  const { data: locationsData, isLoading: locationsLoading } = useExperimentLocations(id);
+  // Locations
+  const { data: locationsData } = useExperimentLocations(id);
+  const locations = locationsData?.body ?? [];
 
-  // Get visualizations data for this experiment
+  // Members
+  const {
+    data: membersData,
+    isLoading: isMembersLoading,
+    isError: isMembersError,
+  } = useExperimentMembers(id);
+  const members = membersData?.body ?? [];
+
+  // Visualizations
   const { data: visualizationsData, isLoading: visualizationsLoading } =
-    useExperimentVisualizations({
-      experimentId: id,
-    });
-  if (isLoading) {
-    return <div>{t("loading")}</div>;
-  }
+    useExperimentVisualizations({ experimentId: id });
 
-  if (error) {
-    return <ErrorDisplay error={error} title={t("failedToLoad")} />;
-  }
+  const initialStatusRef = useRef<Experiment["status"] | null>(null);
 
-  if (!data) {
-    return <div>{t("notFound")}</div>;
-  }
+  if (isLoading) return <div>{t("loading")}</div>;
 
-  // Body may still be undefined even if data exists; guard explicitly
-  if (!experiment) {
-    return <div>{t("notFound")}</div>;
-  }
+  if (error) return <ErrorDisplay error={error} title={t("failedToLoad")} />;
 
-  // Check if experiment is archived - if not, redirect to not found
-  if (experiment.status !== "archived") {
+  if (!accessData) return <div>{t("notFound")}</div>;
+
+  if (!experiment) return <div>{t("notFound")}</div>;
+
+  initialStatusRef.current ??= experiment.status;
+
+  if (initialStatusRef.current !== "archived") {
     notFound();
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-secondary">{t("status.active")}</Badge>;
-      case "provisioning":
-        return <Badge className="bg-highlight text-black">{t("status.provisioning")}</Badge>;
-      case "archived":
-        return <Badge className="bg-muted">{t("status.archived")}</Badge>;
-      case "stale":
-        return <Badge className="bg-tertiary">{t("status.stale")}</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Experiment info card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <CardTitle className="text-2xl">{experiment.name}</CardTitle>
-            <div className="flex items-center gap-2">
-              {getStatusBadge(experiment.status)}
-              <Badge variant="outline" className="ml-2 capitalize">
-                {experiment.visibility}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">{t("created")}</h4>
-              <p className="flex items-center gap-1">
-                <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
-                {formatDate(experiment.createdAt)}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">{t("updated")}</h4>
-              <p>{formatDate(experiment.updatedAt)}</p>
-            </div>
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">{t("experimentId")}</h4>
-              <p className="truncate font-mono text-xs">{experiment.id}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>{t("descriptionTitle")}</CardHeader>
-        <CardContent>
-          <RichTextRenderer content={experiment.description ?? ""} />
-        </CardContent>
-      </Card>
-
-      {/* Visualizations Display */}
-      <ExperimentVisualizationsDisplay
+    <div className="flex flex-col gap-6 md:flex-row">
+      {/* RIGHT SIDE — EXPERIMENT DETAILS CARD (First on mobile) */}
+      <ExperimentDetailsCard
         experimentId={id}
-        visualizations={visualizationsData?.body ?? []}
-        isLoading={visualizationsLoading}
+        experiment={experiment}
+        locations={locations}
+        members={members}
+        isMembersLoading={isMembersLoading}
+        isMembersError={isMembersError}
+        isArchived
       />
 
-      {/* Locations Display */}
-      <ExperimentLocationsDisplay
-        locations={locationsData?.body ?? []}
-        isLoading={locationsLoading}
-      />
+      {/* LEFT SIDE CONTENT (Second on mobile) */}
+      <div className="flex-1 space-y-8 md:order-1">
+        <ExperimentDescription
+          experimentId={id}
+          description={experiment.description ?? ""}
+          hasAccess={hasAccess}
+          isArchived
+        />
 
-      {/* Flow Display */}
-      {experimentFlow?.body && (
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">{t("flow.title")}</h3>
-              <p className="text-muted-foreground text-sm">{t("flow.staticDescription")}</p>
-            </div>
-            <div className="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5">
-              <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-              <span className="text-sm font-medium text-blue-700">{t("previewMode")}</span>
-            </div>
-          </div>
-          <FlowEditor initialFlow={experimentFlow.body} isDisabled={true} />
-        </div>
-      )}
+        <ExperimentLinkedProtocols experimentId={id} isArchived />
+
+        <ExperimentMeasurements experimentId={id} isArchived />
+
+        <ExperimentVisualizationsDisplay
+          experimentId={id}
+          visualizations={visualizationsData?.body ?? []}
+          isLoading={visualizationsLoading}
+          hasAccess={hasAccess}
+          isArchived
+        />
+      </div>
     </div>
   );
 }
