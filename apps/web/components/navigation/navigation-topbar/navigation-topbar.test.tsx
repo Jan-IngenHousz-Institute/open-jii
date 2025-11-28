@@ -251,7 +251,7 @@ describe("NavigationTopbar", () => {
     });
   });
 
-  it("handles sheet onInteractOutside callback", async () => {
+  it("handles sheet onInteractOutside callback", () => {
     render(<NavigationTopbar locale="en" user={mockUser} />);
 
     // The component renders with Sheet that has onInteractOutside={() => setIsMobileMenuOpen(false)}
