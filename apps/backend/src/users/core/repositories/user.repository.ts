@@ -283,12 +283,18 @@ export class UserRepository {
     });
   }
 
-  async findUserProfile(userId: string): Promise<Result<UserProfileDto | null>> {
+  async findUserProfile(
+    userId: string,
+    requestingUserId?: string,
+  ): Promise<Result<UserProfileDto | null>> {
     return tryCatch(async () => {
+      // If viewing own profile, return real data even if deactivated
+      const isOwnProfile = requestingUserId && requestingUserId === userId;
+
       const result = await this.database
         .select({
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
+          firstName: isOwnProfile ? profiles.firstName : getAnonymizedFirstName(),
+          lastName: isOwnProfile ? profiles.lastName : getAnonymizedLastName(),
           bio: getAnonymizedBio(),
           organization: getAnonymizedOrganizationName(),
           activated: profiles.activated,

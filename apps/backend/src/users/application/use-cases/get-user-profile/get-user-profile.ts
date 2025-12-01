@@ -10,10 +10,10 @@ export class GetUserProfileUseCase {
 
   constructor(private readonly userRepository: UserRepository) {}
 
-  async execute(id: string): Promise<Result<UserProfileDto>> {
+  async execute(id: string, requestingUserId?: string): Promise<Result<UserProfileDto>> {
     this.logger.log(`Getting user profile with ID ${id}`);
 
-    const userProfileResult = await this.userRepository.findUserProfile(id);
+    const userProfileResult = await this.userRepository.findUserProfile(id, requestingUserId);
 
     return userProfileResult.chain((userProfile: UserProfileDto | null) => {
       if (!userProfile) {

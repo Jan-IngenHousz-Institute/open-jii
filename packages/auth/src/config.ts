@@ -2,9 +2,6 @@ import GitHub from "@auth/core/providers/github";
 import type { ExpressAuthConfig } from "@auth/express";
 import type { NextAuthConfig } from "next-auth";
 
-// Reactivate user on successful sign in
-import { db, profiles, eq } from "@repo/database";
-
 import { isSession } from "./types";
 
 const useSecureCookies = process.env.NODE_ENV === "production";
@@ -70,17 +67,6 @@ export const baseAuthConfig = {
         // session.user.role = token.role;
       }
       return session;
-    },
-  },
-  events: {
-    async signIn({ user }) {
-      try {
-        if (user.id) {
-          await db.update(profiles).set({ activated: true }).where(eq(profiles.userId, user.id));
-        }
-      } catch (err) {
-        console.warn("Failed to reactivate profile on sign-in:", err);
-      }
     },
   },
 } satisfies NextAuthConfig & ExpressAuthConfig;

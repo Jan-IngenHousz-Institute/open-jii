@@ -1,4 +1,5 @@
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
+import { ProfileActivator } from "@/components/profile-activator";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -46,6 +47,7 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
+      <ProfileActivator />
       <NavigationSidebarWrapper locale={locale} />
       <NavigationTopbar locale={locale} user={session.user} />
       <SidebarInset>
