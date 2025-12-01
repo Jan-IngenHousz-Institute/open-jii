@@ -61,10 +61,14 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         the function will add an empty array column and continue without failing.
     """
     try:
+        annotation_table_name = f"{catalog_name}.`{experiment_schema}`.annotations"
+        print(f"Reading annotations from: {annotation_table_name}")
+        print(f"Filtering by table_name: {table_name}")
+        
         # Read annotations table with all fields
-        # Parse the content JSON string into a proper struct
+        # Build content struct from individual columns
         annotations_df = (
-            spark.read.table(f"{catalog_name}.{experiment_schema}.annotations")
+            spark.read.table(annotation_table_name)
             .filter(F.col("table_name") == table_name)
             .select(
                 F.col("row_id"),
@@ -72,14 +76,22 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
                     F.col("id"),
                     F.col("row_id").alias("rowId"),
                     F.col("type"),
-                    F.from_json(F.col("content_text"), "struct<text:string,flagType:string,reason:string>").alias("content"),
+                    F.struct(
+                        F.col("content_text").alias("text"),
+                        F.col("flag_type").alias("flagType"),
+                        #F.col("flag_reason").alias("reason")
+                    ).alias("content"),
                     F.col("user_id").alias("createdBy"),
-                    F.col("user_name").alias("createdByName"),
+                    # F.col("user_name").alias("createdByName"),
                     F.col("created_at").alias("createdAt"),
                     F.col("updated_at").alias("updatedAt")
                 ).alias("annotation")
             )
         )
+        
+        annotation_count = annotations_df.count()
+        print(f"Found {annotation_count} annotations for table '{table_name}'")
+        
         
         # Group by row_id and collect all annotations into an array
         annotations_grouped = (
@@ -87,6 +99,9 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
             .groupBy("row_id")
             .agg(F.collect_list("annotation").alias("annotations"))
         )
+        
+        grouped_count = annotations_grouped.count()
+        print(f"Grouped into {grouped_count} unique row_ids")
         
         # Left join with annotations and handle null case
         enriched_df = (
@@ -101,6 +116,8 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
                 F.when(F.col("annotations").isNull(), F.array()).otherwise(F.col("annotations"))
             )
         )
+        
+        print(f"Join completed successfully")
         
         return enriched_df
         
