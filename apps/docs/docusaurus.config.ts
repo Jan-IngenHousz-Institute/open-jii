@@ -5,7 +5,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: "OpenJII",
+  title: "openJII",
   tagline: "Documentation Hub",
   favicon: "img/favicon.ico",
 
@@ -18,7 +18,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: "JII", // Usually your GitHub org/user name.
-  projectName: "OpenJII", // Usually your repo name.
+  projectName: "openJII", // Usually your repo name.
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -57,7 +57,7 @@ const config: Config = {
     // Replace with your project's social card
     image: "img/logo.png",
     navbar: {
-      title: "OpenJII Documentation Hub",
+      title: "openJII Docs",
       logo: {
         alt: "JII Logo",
         src: "img/logo.png",
@@ -99,7 +99,7 @@ const config: Config = {
             {
               label: "Introduction",
               to: "/docs/introduction/overview",
-            },
+            },/*
             {
               label: "Getting Started",
               to: "/docs/category/installation--setup",
@@ -111,15 +111,15 @@ const config: Config = {
             {
               label: "Methodology & Analysis",
               to: "/docs/category/sensor-calibration--measurement",
-            },
+            },*/
             {
               label: "Developer's Guide",
               to: "/docs/category/developers-guide",
-            },
+            },/*
             {
               label: "FAQ & Support",
               to: "/docs/category/support-channels",
-            },
+            },*/
           ],
         },
         {
@@ -137,10 +137,7 @@ const config: Config = {
               label: "JII Contact",
               href: "https://www.jan-ingenhousz-institute.org/contact",
             },
-            {
-              label: "Social Media",
-              href: "/",
-            },
+
           ],
         },
         {
@@ -161,7 +158,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} OpenJII - OpenJII Documentation Hub - Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} openJII - openJII Documentation Hub - Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

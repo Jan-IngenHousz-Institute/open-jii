@@ -49,6 +49,7 @@ const sidebars: SidebarsConfig = {
       id: "introduction/glossary-terminology",
       label: "Glossary & Terminology",
     },
+    /*
     {
       type: "html",
       value: `
@@ -80,14 +81,14 @@ const sidebars: SidebarsConfig = {
         "getting-started/hardware-device-linking/device-registration-linking",
         "getting-started/hardware-device-linking/network-mqtt-configuration",
       ],
-    },
-
+    },*/
+    
     {
       type: "html",
       value: `
         <div class="sidebar-divider">
           <hr class="sidebar-divider-line" />
-          <div class="sidebar-divider-label">Data Platform</div>
+          <div class="sidebar-divider-label">openJII Platform</div>
         </div>
       `,
       defaultStyle: false,
@@ -95,7 +96,28 @@ const sidebars: SidebarsConfig = {
     {
       type: "doc",
       id: "data-platform/overview",
-      label: "Overview",
+      label: "Platform Overview",
+    },
+    {
+      type: "category",
+      label: "Web platform",
+      link: { type: "generated-index" },
+      items: [
+        "data-platform/web-platform/overview",
+        "data-platform/web-platform/register",
+        "data-platform/web-platform/create-add-experiment",
+        "data-platform/web-platform/protocol",
+      ],
+    },
+    {
+      type: "doc",
+      id: "data-platform/mobile-app",
+      label: "Mobile App",
+    },
+    {
+      type: "doc",
+      id: "data-platform/multispeq",
+      label: "MultispeQ",
     },
     {
       type: "doc",
@@ -108,6 +130,11 @@ const sidebars: SidebarsConfig = {
       label: "Ingestion Architecture",
     },
     {
+      type: "doc",
+      id: "data-platform/report-issue",
+      label: "Report issue / Request feature",
+    },
+    /*{
       type: "category",
       label: "Usage",
       link: { type: "generated-index" },
@@ -170,7 +197,7 @@ const sidebars: SidebarsConfig = {
       `,
       defaultStyle: false,
     },
-    {
+    /*{
       type: "category",
       label: "Sensor Calibration & Measurement",
       link: { type: "generated-index" },
@@ -189,7 +216,7 @@ const sidebars: SidebarsConfig = {
         "methodology-analysis/data-analysis/analytical-tools",
         "methodology-analysis/data-analysis/statistical-models",
       ],
-    },
+    },*/
     {
       type: "html",
       value: `
@@ -296,7 +323,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
       ],
-    },
+    },/*
     {
       type: "html",
       value: `
@@ -321,7 +348,7 @@ const sidebars: SidebarsConfig = {
         "faq-support/support-channels/email-ticket-support",
         "faq-support/support-channels/live-chat-social-media",
       ],
-    },
+    }, */
   ],
 };
 
