@@ -88,8 +88,7 @@ export function ProtocolInfoCard({ protocolId, protocol }: ProtocolInfoCardProps
                     {t("protocolSettings.deleteProtocol")}
                   </DialogTitle>
                   <DialogDescription>
-                    {t("protocolSettings.confirmDelete")} "{protocol.name}"?{" "}
-                    {t("protocolSettings.deleteWarning")}
+                    {t("common.confirmDelete", { name: protocol.name })}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="mt-4">

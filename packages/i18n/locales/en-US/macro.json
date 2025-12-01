@@ -77,7 +77,6 @@
     "dangerZone": "Danger Zone",
     "deleteWarning": "This action cannot be undone. This will permanently delete the macro.",
     "deleteMacro": "Delete Macro",
-    "confirmDelete": "Are you sure you want to delete",
     "cancel": "Cancel",
     "delete": "Delete",
     "deleting": "Deleting..."

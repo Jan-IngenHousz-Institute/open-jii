@@ -16,7 +16,7 @@ import { defaultLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
-import { usePostHogAuth } from "../../hooks/usePostHogAuth";
+import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
 
@@ -128,13 +128,4 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       </ContentfulPreviewProvider>
     </div>
   );
-}
-
-/**
- * Client component that calls the PostHog auth hook
- */
-function PostHogIdentifier() {
-  "use client";
-  usePostHogAuth();
-  return null;
 }

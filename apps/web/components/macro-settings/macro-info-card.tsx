@@ -87,8 +87,7 @@ export function MacroInfoCard({ macroId, macro }: MacroInfoCardProps) {
                     {t("macroSettings.deleteMacro")}
                   </DialogTitle>
                   <DialogDescription>
-                    {t("macroSettings.confirmDelete")} "{macro.name}"?{" "}
-                    {t("macroSettings.deleteWarning")}
+                    {t("common.confirmDelete", { name: macro.name })}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="mt-4">

@@ -24,3 +24,12 @@ export function usePostHogAuth() {
     }
   }, [session]);
 }
+
+/**
+ * Client component that calls the PostHog auth hook
+ */
+export function PostHogIdentifier() {
+  "use client";
+  usePostHogAuth();
+  return null;
+}

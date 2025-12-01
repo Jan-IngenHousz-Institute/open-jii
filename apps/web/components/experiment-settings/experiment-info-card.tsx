@@ -1,5 +1,8 @@
 "use client";
 
+import { useFeatureFlagEnabled } from "posthog-js/react";
+
+import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Experiment, ExperimentMember } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -20,13 +23,20 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
 
   const currentUserRole = members.find((m) => m.user.id === currentUserId)?.role ?? "member";
   const isAdmin = currentUserRole === "admin";
+  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.EXPERIMENT_DELETION);
 
   const isArchived = experiment.status === "archived";
 
   return (
     <>
       <div className="mt-8">
-        <p className="text-muted-foreground mb-2 text-sm">{t("experimentSettings.archiveNote")}</p>
+        <p className="text-muted-foreground mb-2 text-sm">
+          {t(
+            isDeletionEnabled
+              ? "experimentSettings.dangerZoneNote_deleteAllowed"
+              : "experimentSettings.dangerZoneNote",
+          )}
+        </p>
 
         <div className="flex flex-col gap-3 md:flex-row">
           <ExperimentArchive

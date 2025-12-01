@@ -76,8 +76,7 @@ export function ExperimentDelete({ experimentId, experimentName }: ExperimentDel
             {t("experimentSettings.deleteExperiment")}
           </DialogTitle>
           <DialogDescription>
-            {t("experimentSettings.confirmDelete")} "{experimentName}"?{" "}
-            {t("experimentSettings.deleteWarning")}
+            {t("common.confirmDelete", { name: experimentName })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4">

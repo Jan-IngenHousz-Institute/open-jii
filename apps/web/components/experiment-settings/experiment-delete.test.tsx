@@ -24,7 +24,12 @@ const useFeatureFlagEnabledMock = vi.hoisted(() => vi.fn());
 // i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (k: string) => k,
+    t: (k: string, options?: Record<string, unknown>) => {
+      if (options) {
+        return `${k} ${JSON.stringify(options)}`;
+      }
+      return k;
+    },
   }),
 }));
 
@@ -120,7 +125,9 @@ describe("<ExperimentDelete />", () => {
     await user.click(deleteButton);
 
     expect(screen.getAllByText("experimentSettings.deleteExperiment")).toHaveLength(2); // Button and Title
-    expect(screen.getByText(/experimentSettings.confirmDelete/)).toBeInTheDocument();
+    expect(
+      screen.getByText(`common.confirmDelete ${JSON.stringify({ name: experimentName })}`),
+    ).toBeInTheDocument();
   });
 
   it("calls deleteExperiment and redirects on success", async () => {

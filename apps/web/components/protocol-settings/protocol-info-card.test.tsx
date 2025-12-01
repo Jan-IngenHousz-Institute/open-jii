@@ -21,7 +21,12 @@ const mockPush = vi.fn();
 // Mock useTranslation
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (k: string, options?: Record<string, unknown>) => {
+      if (options) {
+        return `${k} ${JSON.stringify(options)}`;
+      }
+      return k;
+    },
   }),
 }));
 
@@ -119,8 +124,9 @@ describe("ProtocolInfoCard", () => {
     // The dialog text is broken up into multiple elements, so we use a more flexible approach
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveTextContent("protocolSettings.confirmDelete");
-    expect(dialog).toHaveTextContent("Test Protocol");
+    expect(dialog).toHaveTextContent(
+      `common.confirmDelete ${JSON.stringify({ name: "Test Protocol" })}`,
+    );
     expect(screen.getByText("protocolSettings.cancel")).toBeInTheDocument();
     expect(screen.getByText("protocolSettings.delete")).toBeInTheDocument();
   });
@@ -135,8 +141,9 @@ describe("ProtocolInfoCard", () => {
     // Check that the dialog is open
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveTextContent("protocolSettings.confirmDelete");
-    expect(dialog).toHaveTextContent("Test Protocol");
+    expect(dialog).toHaveTextContent(
+      `common.confirmDelete ${JSON.stringify({ name: "Test Protocol" })}`,
+    );
 
     // Click cancel
     const cancelButton = screen.getByText("protocolSettings.cancel");
