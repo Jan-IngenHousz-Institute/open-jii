@@ -5,11 +5,11 @@ import { useEffect } from "react";
 import { useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AnnotationsRowIdentifier } from "~/components/experiment-data/annotations/utils";
+import { getAnnotationData } from "~/components/experiment-data/annotations/utils";
 import { getAllRowsSelectionCheckbox } from "~/components/experiment-data/annotations/utils";
 import { getRowSelectionCheckbox } from "~/components/experiment-data/annotations/utils";
 import { getAnnotationsColumn } from "~/components/experiment-data/annotations/utils";
 import type { BulkSelectionFormType } from "~/components/experiment-data/experiment-data-table";
-import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
 import { tsr } from "~/lib/tsr";
 
 import type { Annotation, AnnotationType, DataColumn, ExperimentData } from "@repo/api";
@@ -36,6 +36,25 @@ const STALE_TIME = 2 * 60 * 1000;
 
 // ID column name
 const ID_COLUMN_NAME = "id";
+
+export function identifyAnnotationColumns(data: ExperimentData) {
+  if (data.columns.length === 0) return;
+  const idColumnIndex = data.columns.findIndex((col) => col.name === ID_COLUMN_NAME);
+  if (idColumnIndex === -1) return; // ID must be present for annotations to work
+  if (idColumnIndex !== -1 && data.columns[idColumnIndex].type_name !== "LONG") return; // ID must be of type LONG
+  data.columns[idColumnIndex].type_name = "ID";
+  data.columns[idColumnIndex].type_text = "ID";
+  const annotationColumnIndex = data.columns.findIndex((col) => col.name === "annotations");
+  if (annotationColumnIndex === -1) return;
+  if (data.columns[annotationColumnIndex].type_name !== "ARRAY") return;
+  if (
+    data.columns[annotationColumnIndex].type_text !==
+    "ARRAY<STRUCT<id: STRING, rowId: INT, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>"
+  )
+    return;
+  data.columns[annotationColumnIndex].type_name = "ANNOTATIONS";
+  data.columns[annotationColumnIndex].type_text = "ANNOTATIONS";
+}
 
 export function getColumnWidth(typeName: string): number | undefined {
   // Set very small width for id column to accommodate checkboxes
@@ -136,7 +155,13 @@ function createTableColumns({
           tableName,
           rowId: rowId as string,
         };
-        return getAnnotationsColumn(commentRowId, value);
+        try {
+          const jsonData: unknown = JSON.parse(value as string);
+          const annotationData = getAnnotationData(jsonData as Annotation[]);
+          return getAnnotationsColumn(commentRowId, annotationData);
+        } catch {
+          return null;
+        }
       }
       return value as string;
     }
@@ -208,12 +233,11 @@ export const useExperimentData = (
     staleTime: STALE_TIME,
   });
 
-  // Add fake data for demo purposes
+  // Identify annotation columns
   const originalTableData = data?.body[0];
   const tableData = useMemo(() => {
     if (originalTableData?.data) {
-      // Add fake id columns to each row if not present
-      addDemoAnnotationData(originalTableData.data);
+      identifyAnnotationColumns(originalTableData.data);
     }
     return originalTableData;
   }, [originalTableData]);
