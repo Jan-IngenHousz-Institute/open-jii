@@ -5,18 +5,11 @@ import React from "react";
 
 interface RichTextRendererProps {
   content: string;
-  truncate?: boolean;
-  maxLines?: number;
 }
 
-export function RichTextRenderer({
-  content,
-  truncate = false,
-  maxLines = 2,
-}: RichTextRendererProps) {
-  // Check for common HTML tags that Quill editor produces
-  const htmlTags = ["<p>", "<a>", "<blockquote>", "<code>", "<pre>", "<br>", "<strong>", "<em>", "<ul>", "<ol>", "<h1>", "<h2>"];
-  const isRichText = htmlTags.some((tag) => content.includes(tag));
+export function RichTextRenderer({ content }: RichTextRendererProps) {
+  // Use a safe regex to check for HTML tags
+  const isRichText = /<[^>]+>/.test(content);
 
   if (!content || content === "<p><br></p>") {
     return <p className="text-muted-foreground text-sm italic">No description provided</p>;
@@ -26,15 +19,9 @@ export function RichTextRenderer({
     return <p className="text-sm">{content}</p>;
   }
 
-  const lineClampStyle = truncate ? { WebkitLineClamp: maxLines } : {};
-
   return (
     <>
-      <div
-        className={`ql-editor rich-text-renderer ${truncate ? "rich-text-renderer-truncate" : ""}`}
-        style={lineClampStyle}
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
+      <div className="ql-editor rich-text-renderer" dangerouslySetInnerHTML={{ __html: content }} />
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -47,54 +34,6 @@ export function RichTextRenderer({
             overflow-wrap: break-word;
             white-space: normal;
             min-width: 0;
-            cursor: inherit;
-          }
-          
-          .rich-text-renderer * {
-            cursor: inherit;
-          }
-
-          .rich-text-renderer-truncate {
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            padding: 0;
-          }
-
-          .rich-text-renderer-truncate * {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          .rich-text-renderer-truncate p,
-          .rich-text-renderer-truncate ul,
-          .rich-text-renderer-truncate ol,
-          .rich-text-renderer-truncate li,
-          .rich-text-renderer-truncate h1,
-          .rich-text-renderer-truncate h2,
-          .rich-text-renderer-truncate h3,
-          .rich-text-renderer-truncate h4,
-          .rich-text-renderer-truncate h5,
-          .rich-text-renderer-truncate h6,
-          .rich-text-renderer-truncate div {
-            display: block !important;
-          }
-
-          .rich-text-renderer-truncate ul,
-          .rich-text-renderer-truncate ol {
-            padding-left: 20px !important;
-          }
-
-          .rich-text-renderer-truncate li {
-            display: list-item !important;
-          }
-
-          .rich-text-renderer-truncate br {
-            display: none;
-          }
-
-          .rich-text-renderer-truncate img {
-            display: none !important;
           }
 
           .rich-text-renderer h1 {

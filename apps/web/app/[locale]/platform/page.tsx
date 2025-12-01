@@ -17,7 +17,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({
     locale,
-    namespaces: ["common", "dashboard"],
+    namespaces: ["common"],
   });
 
   return (

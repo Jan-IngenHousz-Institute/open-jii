@@ -4,40 +4,15 @@ import { Badge } from "@repo/ui/components";
 export const ExperimentStatusBadge = ({ status }: { status: string }) => {
   const { t } = useTranslation("experiments");
 
-  const baseClasses =
-    "h-6 gap-2.5 rounded border-0 px-2 py-1 text-[#011111] shadow-none hover:bg-[--bg-color] pointer-events-none";
-
   switch (status) {
     case "active":
-      return (
-        <Badge className={`${baseClasses} bg-[#CCFCD8] [--bg-color:#CCFCD8]`}>
-          {t("status.active")}
-        </Badge>
-      );
+      return <Badge className="bg-secondary">{t("status.active")}</Badge>;
     case "provisioning":
-      return (
-        <Badge className={`${baseClasses} bg-[#FEF8BE] [--bg-color:#FEF8BE]`}>
-          {t("status.provisioning")}
-        </Badge>
-      );
+      return <Badge className="bg-highlight text-black">{t("status.provisioning")}</Badge>;
     case "archived":
-      return (
-        <Badge className={`${baseClasses} bg-[#E7EDF2] [--bg-color:#E7EDF2]`}>
-          {t("status.archived")}
-        </Badge>
-      );
+      return <Badge className="bg-muted">{t("status.archived")}</Badge>;
     case "stale":
-      return (
-        <Badge className={`${baseClasses} bg-[#FFE0B2] [--bg-color:#FFE0B2]`}>
-          {t("status.stale")}
-        </Badge>
-      );
-    case "provisioning_failed":
-      return (
-        <Badge className={`${baseClasses} bg-[#FFD2D3] [--bg-color:#FFD2D3]`}>
-          {t("status.provisioningFailed")}
-        </Badge>
-      );
+      return <Badge className="bg-tertiary">{t("status.stale")}</Badge>;
     default:
       return <Badge>{status}</Badge>;
   }
