@@ -1,7 +1,8 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Inject, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api";
 import type { User } from "@repo/auth/types";
 
@@ -15,6 +16,8 @@ import { GetExperimentAccessUseCase } from "../application/use-cases/get-experim
 import { GetExperimentUseCase } from "../application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "../application/use-cases/update-experiment/update-experiment";
+import { ANALYTICS_PORT } from "../core/ports/analytics.port";
+import type { AnalyticsPort } from "../core/ports/analytics.port";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -22,6 +25,8 @@ export class ExperimentController {
   private readonly logger = new Logger(ExperimentController.name);
 
   constructor(
+    @Inject(ANALYTICS_PORT)
+    private readonly analyticsPort: AnalyticsPort,
     private readonly createExperimentUseCase: CreateExperimentUseCase,
     private readonly getExperimentUseCase: GetExperimentUseCase,
     private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
@@ -168,6 +173,18 @@ export class ExperimentController {
   @TsRestHandler(contract.experiments.deleteExperiment)
   deleteExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.deleteExperiment, async ({ params }) => {
+      const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
+        FEATURE_FLAGS.EXPERIMENT_DELETION,
+        user.email ?? user.id,
+      );
+
+      if (!isDeletionEnabled) {
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "Experiment deletion is currently disabled" },
+        };
+      }
+
       const result = await this.deleteExperimentUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {

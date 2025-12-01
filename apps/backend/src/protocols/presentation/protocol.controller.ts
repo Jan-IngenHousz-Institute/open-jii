@@ -264,6 +264,18 @@ export class ProtocolController {
   @TsRestHandler(contract.protocols.deleteProtocol)
   deleteProtocol(@CurrentUser() user: User) {
     return tsRestHandler(contract.protocols.deleteProtocol, async ({ params }) => {
+      const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
+        FEATURE_FLAGS.PROTOCOL_DELETION,
+        user.email ?? user.id,
+      );
+
+      if (!isDeletionEnabled) {
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "Protocol deletion is currently disabled" },
+        };
+      }
+
       // First check if protocol exists and user is the creator
       const protocolResult = await this.getProtocolUseCase.execute(params.id);
 
