@@ -22,12 +22,13 @@ const allLocales = [
 
 interface LanguageSwitcherProps {
   locale: string;
+  variant?: "default" | "header";
 }
 
 export function LanguageSwitcher({
   locale,
   variant = "default",
-}: LanguageSwitcherProps & { variant?: "default" | "header" }) {
+}: LanguageSwitcherProps) {
   const pathname = usePathname();
   const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
   // If feature flag is disabled, only show English
