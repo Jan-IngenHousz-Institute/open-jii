@@ -118,15 +118,40 @@ p {
   color: var(--ifm-font-color-base);
 }
 
-/* Links */
-a {
+/* Links (content area only) */
+/* Keep navbar/footer links controlled by their specific selectors above. */
+.theme-doc-markdown a,
+.markdown a,
+.docMainContainer a {
   color: var(--ifm-color-primary);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: currentColor;
+  transition: color 120ms ease, text-decoration-color 120ms ease, box-shadow 120ms ease;
 }
 
-a:hover {
+.theme-doc-markdown a:hover,
+.markdown a:hover,
+.docMainContainer a:hover {
   color: var(--ifm-color-highlight);
-  text-decoration: underline;
+  text-decoration-color: var(--ifm-color-highlight);
+}
+
+/* Make links highly keyboard-focusable for accessibility */
+.theme-doc-markdown a:focus-visible,
+.markdown a:focus-visible,
+.docMainContainer a:focus-visible {
+  outline: 3px solid rgba(73, 224, 109, 0.25);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Inline code inside links should not show double underlines */
+.theme-doc-markdown a code,
+.markdown a code,
+.docMainContainer a code {
+  text-decoration: none;
 }
 
 /* Lead Text */
