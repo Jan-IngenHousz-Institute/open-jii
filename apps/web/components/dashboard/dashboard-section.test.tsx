@@ -24,7 +24,7 @@ describe("<DashboardSection />", () => {
     expect(screen.getByTestId("child")).toHaveTextContent("Hello Child");
   });
 
-  it("renders link(s) with correct href and label", () => {
+  it("renders link with correct href and label", () => {
     render(
       <DashboardSection
         title="Projects"
@@ -36,10 +36,7 @@ describe("<DashboardSection />", () => {
       </DashboardSection>,
     );
 
-    const links = screen.getAllByRole("link", { name: "View all projects" });
-    expect(links.length).toBeGreaterThan(0);
-    links.forEach((link) => {
-      expect(link).toHaveAttribute("href", "/projects");
-    });
+    const link = screen.getByRole("link", { name: "View all projects" });
+    expect(link).toHaveAttribute("href", "/projects");
   });
 });

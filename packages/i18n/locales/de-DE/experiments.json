@@ -19,10 +19,8 @@
     "cancelled": "Abgebrochen",
     "archived": "Archiviert",
     "stale": "Veraltet",
-    "provisioning": "Bereitstellung",
-    "provisioningFailed": "Bereitstellung fehlgeschlagen"
+    "provisioning": "Bereitstellung"
   },
-  "lastUpdate": "Letzte Aktualisierung",
   "visibility": {
     "private": "Privat",
     "public": "Publik"

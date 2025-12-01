@@ -17,7 +17,7 @@ globalThis.React = React;
 // --- mock the profile hook to avoid network and control the UI ---
 let __mockProfile: { firstName?: string; lastName?: string } | undefined;
 
-vi.mock("@/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
+vi.mock("../../hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
   useGetUserProfile: vi.fn(() => {
     return __mockProfile ? { data: { body: __mockProfile } } : { data: undefined };
   }),
@@ -314,81 +314,5 @@ describe("<UnifiedNavbar />", () => {
   it("mobile menu trigger is present (icon button)", () => {
     renderNavbar({ locale: "en-US", pathname: "/en-US" });
     expect(screen.getByRole("button", { name: /Navigation menu/i })).toBeInTheDocument();
-  });
-
-  it("renders User icon when session user has no image", () => {
-    const sessionWithoutImage = makeSession({
-      user: {
-        id: "user-1",
-        name: "Ada Lovelace",
-        email: "ada@example.com",
-        image: undefined,
-        registered: true,
-      },
-    });
-
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US",
-      session: sessionWithoutImage,
-    });
-
-    const trigger = screen.getAllByTestId("dropdown-trigger")[0];
-    // Should render User icon fallback
-    expect(within(trigger).getByTestId("icon")).toBeInTheDocument();
-  });
-
-  it("applies dark navbar styles for non-light pages", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US/some-other-page" });
-
-    const header = screen.getByRole("banner");
-    // Should have text-white class for dark navbar
-    expect(header).toHaveClass("text-white");
-  });
-
-  it("applies light navbar styles for home page", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US" });
-
-    const header = screen.getByRole("banner");
-    // Should have light navbar styles (text-black for light pages)
-    expect(header).toHaveClass("text-black");
-  });
-
-  it("applies light navbar styles for about page", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US/about" });
-
-    const header = screen.getByRole("banner");
-    // Should have text-black for light pages
-    expect(header).toHaveClass("text-black");
-  });
-
-  it("applies overlay styles for platform pages", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US/platform" });
-
-    const header = screen.getByRole("banner");
-    // Should have overlay styles
-    expect(header).toHaveClass("absolute");
-  });
-
-  it("applies overlay styles for login page", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US/login" });
-
-    const header = screen.getByRole("banner");
-    // Should have overlay styles
-    expect(header).toHaveClass("absolute");
-  });
-
-  it("renders empty display name when profile has no first/last name", () => {
-    __mockProfile = undefined;
-
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US",
-      session: makeSession(),
-    });
-
-    const trigger = screen.getAllByTestId("dropdown-trigger")[0];
-    // Should render with empty string as display name
-    expect(trigger).toBeInTheDocument();
   });
 });

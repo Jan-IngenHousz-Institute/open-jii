@@ -19,7 +19,13 @@ export const ArticleTileGrid = ({
   ...props
 }: ArticleTileGridProps) => {
   return articles && articles.length > 0 ? (
-    <div className={cn("grid gap-x-5 gap-y-4 lg:gap-x-12 lg:gap-y-12", className)} {...props}>
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-3 lg:gap-x-12 lg:gap-y-12",
+        className,
+      )}
+      {...props}
+    >
       {articles.map((article) =>
         article ? (
           <ArticleTile

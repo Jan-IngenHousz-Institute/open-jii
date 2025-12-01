@@ -28,7 +28,7 @@ vi.mock("~/lib/contentful", () => ({
   getContentfulClients: (): unknown => mockGetContentfulClients(),
 }));
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
+vi.mock("@/components/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: ({ locale, session }: { locale: string; session: unknown }) => (
     <div data-testid="unified-navbar">
       Navbar - {locale} - {session ? "with session" : "no session"}

@@ -43,27 +43,27 @@ export const ArticleTile = ({
       <Link className="flex" href={`/${locale}/blog/${slug}`}>
         <div
           className={cn(
-            "border-gray300 flex flex-1 flex-row overflow-hidden rounded-lg border transition-shadow hover:shadow-md",
+            "border-gray300 flex flex-1 flex-row overflow-hidden rounded-2xl border shadow-lg",
             className,
           )}
         >
           {featuredImage && (
             <div
               {...inspectorProps({ fieldId: "featuredImage" })}
-              className="flex h-full w-2/5 min-w-[100px] max-w-[160px] items-center justify-center md:w-1/3 md:min-w-[120px] md:max-w-[180px]"
+              className="flex h-full w-1/3 min-w-[120px] max-w-[180px] items-center justify-center"
             >
               <CtfImage
                 nextImageProps={{
-                  className: "object-cover w-full h-full",
+                  className: "object-cover w-full h-full rounded-l-xl",
                 }}
                 {...featuredImage}
               />
             </div>
           )}
 
-          <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4">
+          <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4 lg:px-7 lg:py-5">
             <div
-              className={cn("mb-2 text-left text-xs text-gray-600 md:text-sm")}
+              className={cn("mb-2 text-left text-xs text-gray-600")}
               {...inspectorProps({ fieldId: "publishedDate" })}
             >
               <FormatDate date={safePublishedDate} />
@@ -71,7 +71,7 @@ export const ArticleTile = ({
 
             {title && (
               <p
-                className="h3 mb-2 text-left text-sm font-medium text-gray-900 md:mb-3 lg:text-base lg:font-semibold"
+                className="h3 mb-2 text-left text-lg font-medium text-gray-800 md:mb-3 md:text-xl"
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {title}

@@ -1,9 +1,6 @@
-"use client";
-
-import { usePathname } from "next/navigation";
 import React from "react";
 
-import { useTranslation } from "@repo/i18n";
+import initTranslations from "@repo/i18n/server";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,6 +10,7 @@ import {
 } from "@repo/ui/components";
 
 interface BreadcrumbsProps {
+  pathname: string;
   pageTitle?: string;
   locale: string;
 }
@@ -26,8 +24,6 @@ const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
   view: "breadcrumbs.view",
   account: "breadcrumbs.account",
   settings: "breadcrumbs.settings",
-  protocols: "breadcrumbs.protocols",
-  macros: "breadcrumbs.macros",
 };
 
 function getTitle(title: string, overrideTitle?: string, t?: (key: string) => string): string {
@@ -42,14 +38,15 @@ function getTitle(title: string, overrideTitle?: string, t?: (key: string) => st
   return title.charAt(0).toUpperCase() + title.slice(1);
 }
 
-export function Breadcrumbs({ pageTitle, locale }: BreadcrumbsProps) {
-  const { t } = useTranslation("common");
-  const pathname = usePathname();
+export async function Breadcrumbs({ pathname, pageTitle, locale }: BreadcrumbsProps) {
+  const { t } = await initTranslations({
+    locale,
+    namespaces: ["common"],
+  });
 
   const pathNames = pathname.split("/").filter((path) => path);
   // Remove the first item which is the locale (e.g., 'en-US', 'de-DE')
-  // and the second item 'platform' since we show that as "Home"
-  const pathNamesWithoutLocale = pathNames.slice(2);
+  const pathNamesWithoutLocale = pathNames.slice(1);
 
   return (
     <Breadcrumb>
@@ -58,7 +55,7 @@ export function Breadcrumbs({ pageTitle, locale }: BreadcrumbsProps) {
           <BreadcrumbLink href={`/${locale}/platform`}>{t("breadcrumbs.home")}</BreadcrumbLink>
         </BreadcrumbItem>
         {pathNamesWithoutLocale.map((link, index) => {
-          const href = `/${locale}/platform/${pathNamesWithoutLocale.slice(0, index + 1).join("/")}`;
+          const href = `/${locale}/${pathNamesWithoutLocale.slice(0, index + 1).join("/")}`;
           const title = getTitle(
             link,
             index === pathNamesWithoutLocale.length - 1 ? pageTitle : undefined,

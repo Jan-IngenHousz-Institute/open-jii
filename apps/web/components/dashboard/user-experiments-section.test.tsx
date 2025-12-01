@@ -42,8 +42,8 @@ describe("<UserExperimentsSection />", () => {
 
     render(<UserExperimentsSection />);
 
-    // Each experiment card is wrapped in a link
-    const links = screen.getAllByRole("link");
+    // Each experiment card has a link with /platform/experiments/:id
+    const links = screen.getAllByRole("link", { name: "experiments.viewDetails" });
     expect(links).toHaveLength(3);
 
     // The hrefs are correct for the first 3
