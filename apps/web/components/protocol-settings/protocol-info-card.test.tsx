@@ -2,14 +2,14 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { MacroInfoCard } from "./macro-info-card";
+import { ProtocolInfoCard } from "./protocol-info-card";
 
 // Mock the delete mutation function
 const mockDeleteMutate = vi.fn().mockImplementation(() => Promise.resolve());
 
-// Mock useMacroDelete
-vi.mock("@/hooks/macro/useMacroDelete/useMacroDelete", () => ({
-  useMacroDelete: () => ({
+// Mock useProtocolDelete
+vi.mock("@/hooks/protocol/useProtocolDelete/useProtocolDelete", () => ({
+  useProtocolDelete: () => ({
     mutateAsync: mockDeleteMutate,
     isPending: false,
   }),
@@ -54,14 +54,15 @@ vi.mock("posthog-js/react", () => ({
   useFeatureFlagEnabled: useFeatureFlagEnabledMock,
 }));
 
-describe("MacroInfoCard", () => {
-  const mockMacro = {
-    id: "macro-123",
-    name: "Test Macro",
+describe("ProtocolInfoCard", () => {
+  const mockProtocol = {
+    id: "protocol-123",
+    name: "Test Protocol",
     description: "Test description",
+    type: "protocol" as const,
     language: "python" as const,
     code: btoa("print('Hello, World!')"), // base64 encoded code
-    filename: "test_macro.py",
+    filename: "test_protocol.py",
     createdBy: "user-123",
     createdByName: "Test User",
     createdAt: "2023-01-01T00:00:00Z",
@@ -77,75 +78,75 @@ describe("MacroInfoCard", () => {
     useFeatureFlagEnabledMock.mockReturnValue(true);
   });
 
-  it("should render the macro info card with correct data", () => {
-    render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
+  it("should render the protocol info card with correct data", () => {
+    render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
     // Check titles
-    expect(screen.getByText("macroSettings.macroInfo")).toBeInTheDocument();
-    expect(screen.getByText("macroSettings.macroInfoDescription")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.protocolInfo")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.protocolInfoDescription")).toBeInTheDocument();
 
     // Check creation and update dates
-    expect(screen.getByText("macroSettings.created:")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.created:")).toBeInTheDocument();
     expect(screen.getByText(/formatted-2023-01-01T00:00:00Z/)).toBeInTheDocument();
-    expect(screen.getByText("macroSettings.updated:")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.updated:")).toBeInTheDocument();
     expect(screen.getByText(/formatted-2023-01-02T00:00:00Z/)).toBeInTheDocument();
 
     // Check ID
-    expect(screen.getByText("macros.macroId:")).toBeInTheDocument();
-    expect(screen.getByText("macro-123")).toBeInTheDocument();
+    expect(screen.getByText("protocols.protocolId:")).toBeInTheDocument();
+    expect(screen.getByText("protocol-123")).toBeInTheDocument();
   });
 
   it("should render the danger zone section when feature flag is enabled", () => {
     useFeatureFlagEnabledMock.mockReturnValue(true);
 
-    render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
+    render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
-    expect(screen.getByText("macroSettings.dangerZone")).toBeInTheDocument();
-    expect(screen.getByText("macroSettings.deleteWarning")).toBeInTheDocument();
-    expect(screen.getByText("macroSettings.deleteMacro")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.dangerZone")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.deleteWarning")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.deleteProtocol")).toBeInTheDocument();
   });
 
   it("should not render delete button when feature flag is disabled", () => {
     useFeatureFlagEnabledMock.mockReturnValue(false);
 
-    render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
+    render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
-    expect(screen.queryByText("macroSettings.dangerZone")).not.toBeInTheDocument();
-    expect(screen.queryByText("macroSettings.deleteMacro")).not.toBeInTheDocument();
+    expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
+    expect(screen.queryByText("protocolSettings.deleteProtocol")).not.toBeInTheDocument();
   });
 
   it("should open the delete confirmation dialog when delete button is clicked", () => {
-    render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
+    render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
-    const deleteButton = screen.getByText("macroSettings.deleteMacro");
+    const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
     fireEvent.click(deleteButton);
 
     // The dialog text is broken up into multiple elements, so we use a more flexible approach
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveTextContent(
-      `common.confirmDelete ${JSON.stringify({ name: "Test Macro" })}`,
+      `common.confirmDelete ${JSON.stringify({ name: "Test Protocol" })}`,
     );
-    expect(screen.getByText("macroSettings.cancel")).toBeInTheDocument();
-    expect(screen.getByText("macroSettings.delete")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.cancel")).toBeInTheDocument();
+    expect(screen.getByText("protocolSettings.delete")).toBeInTheDocument();
   });
 
   it("should close the dialog when cancel is clicked", () => {
-    render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
+    render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
     // Open the dialog
-    const deleteButton = screen.getByText("macroSettings.deleteMacro");
+    const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
     fireEvent.click(deleteButton);
 
     // Check that the dialog is open
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveTextContent(
-      `common.confirmDelete ${JSON.stringify({ name: "Test Macro" })}`,
+      `common.confirmDelete ${JSON.stringify({ name: "Test Protocol" })}`,
     );
 
     // Click cancel
-    const cancelButton = screen.getByText("macroSettings.cancel");
+    const cancelButton = screen.getByText("protocolSettings.cancel");
     fireEvent.click(cancelButton);
 
     // Dialog should be closed
@@ -153,20 +154,20 @@ describe("MacroInfoCard", () => {
   });
 
   it("should handle delete when confirmed", async () => {
-    render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
+    render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
     // Open the dialog
-    const deleteButton = screen.getByText("macroSettings.deleteMacro");
+    const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
     fireEvent.click(deleteButton);
 
     // Click delete
-    const confirmDeleteButton = screen.getByText("macroSettings.delete");
+    const confirmDeleteButton = screen.getByText("protocolSettings.delete");
     fireEvent.click(confirmDeleteButton);
 
     // Wait for the async operation to complete
     await waitFor(() => {
-      expect(mockDeleteMutate).toHaveBeenCalledWith({ params: { id: "macro-123" } });
-      expect(mockPush).toHaveBeenCalledWith("/en/platform/macros");
+      expect(mockDeleteMutate).toHaveBeenCalledWith({ params: { id: "protocol-123" } });
+      expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols");
     });
   });
 });

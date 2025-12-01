@@ -16,6 +16,7 @@ import { defaultLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
+import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
 
@@ -101,6 +102,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     locale,
     namespaces: [...namespaces],
   });
+
   return (
     <div
       className={cn(
@@ -119,6 +121,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       >
         <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
           <SessionProvider>
+            <PostHogIdentifier />
             <QueryProvider>{children}</QueryProvider>
           </SessionProvider>
         </TranslationsProvider>

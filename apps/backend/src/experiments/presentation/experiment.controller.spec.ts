@@ -1,12 +1,15 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import type { ErrorResponse, Experiment, ExperimentMemberList } from "@repo/api";
 import type { ExperimentList } from "@repo/api";
 import { contract } from "@repo/api";
 
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success, failure } from "../../common/utils/fp-utils";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import type { UserDto } from "../../users/core/models/user.model";
@@ -15,9 +18,10 @@ describe("ExperimentController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let databricksAdapter: DatabricksAdapter;
+  let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
-    await testApp.setup();
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
   });
 
   beforeEach(async () => {
@@ -26,6 +30,7 @@ describe("ExperimentController", () => {
 
     // Get the databricks service instance for create experiment tests
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
@@ -634,6 +639,10 @@ describe("ExperimentController", () => {
   });
 
   describe("deleteExperiment", () => {
+    beforeEach(() => {
+      analyticsAdapter.setFlag(FEATURE_FLAGS.EXPERIMENT_DELETION, true);
+    });
+
     it("should delete an experiment successfully", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Experiment to Delete",
@@ -651,6 +660,28 @@ describe("ExperimentController", () => {
         id: experiment.id,
       });
       await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should return 403 if experiment deletion is disabled", async () => {
+      // Override mock to disable feature flag
+      analyticsAdapter.setFlag(FEATURE_FLAGS.EXPERIMENT_DELETION, false);
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment to Delete",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.experiments.deleteExperiment.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .delete(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toBe("Experiment deletion is currently disabled");
+        });
     });
 
     it("should return 404 if experiment does not exist", async () => {

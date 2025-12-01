@@ -1,20 +1,24 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Protocol, ProtocolList } from "@repo/api";
 import { contract } from "@repo/api";
 
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success } from "../../common/utils/fp-utils";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-protocol";
 
 describe("ProtocolController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let analyticsAdapter: MockAnalyticsAdapter;
   let getProtocolUseCase: GetProtocolUseCase;
 
   beforeAll(async () => {
-    await testApp.setup();
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
   });
 
   beforeEach(async () => {
@@ -22,6 +26,7 @@ describe("ProtocolController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Get use case instances for mocking
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
     getProtocolUseCase = testApp.module.get(GetProtocolUseCase);
 
     // Reset any mocks before each test
@@ -466,6 +471,10 @@ describe("ProtocolController", () => {
   });
 
   describe("deleteProtocol", () => {
+    beforeEach(() => {
+      analyticsAdapter.setFlag(FEATURE_FLAGS.PROTOCOL_DELETION, true);
+    });
+
     it("should delete a protocol when user is the creator", async () => {
       // Arrange
       // Create a protocol to delete
@@ -495,6 +504,39 @@ describe("ProtocolController", () => {
         id: createdProtocol.id,
       });
       await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should return 403 if protocol deletion is disabled", async () => {
+      // Override mock to disable feature flag
+      analyticsAdapter.setFlag(FEATURE_FLAGS.PROTOCOL_DELETION, false);
+
+      // Arrange
+      const createData = {
+        name: "Protocol to Delete",
+        description: "Will be deleted",
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
+        family: "multispeq" as const,
+      };
+
+      const createResponse = await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(createData)
+        .expect(StatusCodes.CREATED);
+
+      const createdProtocol = createResponse.body as Protocol;
+
+      const deletePath = testApp.resolvePath(contract.protocols.deleteProtocol.path, {
+        id: createdProtocol.id,
+      });
+
+      await testApp
+        .delete(deletePath)
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: { message: string } }) => {
+          expect(body.message).toBe("Protocol deletion is currently disabled");
+        });
     });
 
     it("should return 403 when user is not the creator", async () => {

@@ -20,6 +20,7 @@
     "add": "Add",
     "remove": "Remove",
     "confirm": "Confirm",
+    "confirmDelete": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
     "close": "Close",
     "yes": "Yes",
     "no": "No",
@@ -198,10 +199,9 @@
     "dangerZone": "Danger Zone",
     "dangerDescription": "Delete this experiment and all of its data",
     "deleteExperiment": "Delete Experiment",
-    "deleteWarning": "Once you delete an experiment, there is no going back. Please be certain.",
+    "deleteWarning": "This action cannot be undone.",
     "delete": "Delete",
     "cancel": "Cancel",
-    "confirmDelete": "Are you sure? Please type",
     "toConfirm": "to confirm.",
     "save": "Save",
     "saving": "Saving...",
@@ -266,7 +266,8 @@
     "remove": "Remove",
     "collaborators": "Collaborators",
     "collaboratorsDescription": "Manage who has access to this experiment",
-    "archiveNote": "Once you archive an experiment, this means your experiment will be read-only and no longer editable."
+    "dangerZoneNote": "Once you archive an experiment, it will be read-only and no longer editable.",
+    "dangerZoneNote_deleteAllowed": "Once you archive an experiment, it will be read-only and no longer editable. Alternatively, you can permanently delete it."
   },
   "experimentVisibility": {
     "visibilityCardTitle": "Actions",
@@ -298,7 +299,7 @@
     "rememberMe": "Remember Me",
     "signIn": "Sign in",
     "signUp": "Sign Up",
-    "signOut": "Sign out",
+    "signOut": "Sign Out",
     "signOutServer": "Sign out (Server)",
     "welcomeBack": "Welcome Back",
     "loginSuccess": "Signed in successfully",
@@ -589,11 +590,10 @@
     "description": "Description",
     "dangerZone": "Danger Zone",
     "deleteProtocol": "Delete Protocol",
-    "deleteWarning": "Once you delete a protocol, there is no going back. Please be certain.",
+    "deleteWarning": "This action cannot be undone.",
     "delete": "Delete",
     "deleting": "Deleting...",
     "cancel": "Cancel",
-    "confirmDelete": "Are you sure you want to delete",
     "save": "Save",
     "saving": "Saving...",
     "created": "Created",
@@ -602,5 +602,17 @@
     "codePlaceholder": "Enter protocol code as JSON",
     "codeDescription": "Define the JSON structure and logic for your protocol",
     "family": "Sensor Family"
+  },
+  "macroSettings": {
+    "macroInfo": "Macro Information",
+    "macroInfoDescription": "View macro metadata and danger zone",
+    "created": "Created",
+    "updated": "Updated",
+    "dangerZone": "Danger Zone",
+    "deleteMacro": "Delete Macro",
+    "deleteWarning": "This action cannot be undone.",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "cancel": "Cancel"
   }
 }

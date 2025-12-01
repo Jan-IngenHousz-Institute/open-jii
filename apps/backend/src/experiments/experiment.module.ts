@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 // Adapters & External Modules
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
@@ -42,6 +44,7 @@ import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
+import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
@@ -64,7 +67,7 @@ import { ExperimentWebhookController } from "./presentation/experiment-webhook.c
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule, EmailModule, UserModule],
+  imports: [DatabricksModule, AwsModule, EmailModule, UserModule, AnalyticsModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,
@@ -88,6 +91,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
     {
       provide: EMAIL_PORT,
       useExisting: EmailAdapter,
+    },
+    {
+      provide: ANALYTICS_PORT,
+      useExisting: AnalyticsAdapter,
     },
 
     // Repositories
