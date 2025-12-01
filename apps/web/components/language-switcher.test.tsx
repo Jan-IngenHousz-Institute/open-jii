@@ -40,15 +40,8 @@ vi.mock("lucide-react", () => ({
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    size,
-    variant,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string }) => (
-    <button data-size={size} data-variant={variant} {...props}>
-      {children}
-    </button>
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
   ),
   DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { asChild?: boolean; children: React.ReactNode }) => (
@@ -187,23 +180,5 @@ describe("LanguageSwitcher", () => {
     // Should default to English flag
     const flags = screen.getAllByText("🇺🇸");
     expect(flags[0]).toBeInTheDocument();
-  });
-
-  it("should render with default variant", () => {
-    mockFeatureFlagValue = true;
-
-    render(<LanguageSwitcher locale="en-US" />);
-
-    const button = screen.getByLabelText("Switch language");
-    expect(button).toHaveAttribute("data-size", "sm");
-  });
-
-  it("should render with header variant", () => {
-    mockFeatureFlagValue = true;
-
-    render(<LanguageSwitcher locale="en-US" variant="header" />);
-
-    const button = screen.getByLabelText("Switch language");
-    expect(button).toHaveAttribute("data-size", "icon");
   });
 });

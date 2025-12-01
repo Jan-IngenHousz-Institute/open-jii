@@ -29,22 +29,5 @@
     "title": "Notifications",
     "mark_all_read": "Mark all as read",
     "settings": "Notification Settings"
-  },
-  "stats": {
-    "photosynthesisRate": "Photosynthesis rate",
-    "activeExperiments": "Active experiments",
-    "averageGrowthYield": "Average growth yield",
-    "imageDataCollected": "Image data collected",
-    "sinceLastWeek": "since last week",
-    "newAddedThisWeek": "new added this week",
-    "comparedToLastCycle": "compared to last cycle",
-    "newSinceLastWeek": "new since last week"
-  },
-  "alerts": {
-    "title": "Alerts",
-    "noUrgentAlerts": "Great! There is no urgent protocols alert you need to take care on.",
-    "lastAttempt": "Last attempt"
-  },
-  "latestActivity": "Latest measurement activity",
-  "favoriteExperiments": "Favorite experiments overview"
+  }
 }
