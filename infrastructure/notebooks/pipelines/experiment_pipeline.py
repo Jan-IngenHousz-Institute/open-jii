@@ -513,7 +513,7 @@ def enriched_{macro_table_name}_table():
     # Add annotation columns
     enriched_df = add_annotation_column(
         enriched_with_user_data_df,
-        "{macro_table_name}",
+        "macro_{macro_table_name}",
         CATALOG_NAME,
         EXPERIMENT_SCHEMA,
         spark
