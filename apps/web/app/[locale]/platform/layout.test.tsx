@@ -44,6 +44,10 @@ vi.mock("@/components/language-switcher", () => ({
   ),
 }));
 
+vi.mock("@/components/profile-activator", () => ({
+  ProfileActivator: () => <div data-testid="profile-activator">Profile Activator</div>,
+}));
+
 vi.mock("@repo/ui/components", () => ({
   Separator: () => <div data-testid="separator">Separator</div>,
   SidebarInset: ({ children }: { children: React.ReactNode }) => (
