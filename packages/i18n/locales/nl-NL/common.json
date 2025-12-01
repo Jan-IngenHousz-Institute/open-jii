@@ -236,13 +236,9 @@
     "home": "Home",
     "platform": "Platform",
     "experiments": "Experimenten",
-    "protocols": "Protocollen",
-    "macros": "Macro's",
     "new": "Nieuw",
     "edit": "Bewerken",
-    "view": "Bekijken",
-    "account": "Account",
-    "settings": "Instellingen"
+    "view": "Bekijken"
   },
   "experimentData": {
     "title": "Experimentgegevens",

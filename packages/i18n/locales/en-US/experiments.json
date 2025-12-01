@@ -24,7 +24,6 @@
     "published": "Published",
     "provisioning": "Provisioning"
   },
-  "lastUpdate": "Last update",
   "visibility": {
     "private": "Private",
     "public": "Public"

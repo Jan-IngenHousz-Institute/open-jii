@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { UnifiedNavbar } from "@/components/unified-navbar/unified-navbar";
 import { auth } from "@/lib/auth";
 import type { SearchParamsType } from "@/util/searchParams";
 import { MailCheck } from "lucide-react";

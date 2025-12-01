@@ -1,6 +1,5 @@
 {
   "common": {
-    "logo": "Jan IngenHousz Institute",
     "protocolLabel": "Protocol",
     "by": "by",
     "homepage": "Homepage",
@@ -25,9 +24,6 @@
     "close": "Close",
     "yes": "Yes",
     "no": "No",
-    "search": "Search",
-    "notifications": "Notifications",
-    "menu": "Menu",
     "noVariant": "no variant",
     "destructive": "destructive",
     "ghost": "ghost",
@@ -52,8 +48,7 @@
     "kilobytes": "KB",
     "megabytes": "MB",
     "comingSoon": "Coming Soon",
-    "ok": "OK",
-    "greeting": "Hi, {{name}}"
+    "ok": "OK"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -426,8 +421,6 @@
     "home": "Home",
     "platform": "Platform",
     "experiments": "Experiments",
-    "protocols": "Protocols",
-    "macros": "Macros",
     "new": "New",
     "edit": "Edit",
     "view": "View",

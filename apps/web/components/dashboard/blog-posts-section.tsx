@@ -37,7 +37,7 @@ export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
 
     return (
       <ArticleTileGrid
-        className="grid-cols-1 lg:grid-cols-2"
+        className="grid-cols-1 md:grid-cols-2 lg:grid-cols-2"
         articles={posts}
         locale={locale}
         horizontal
