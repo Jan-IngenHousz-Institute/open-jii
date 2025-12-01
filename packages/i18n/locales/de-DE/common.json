@@ -402,19 +402,22 @@
       "description": "Fügen Sie einen Kommentar zur Messung hinzu",
       "textLabel": "Kommentar",
       "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
-      "add": "Kommentar hinzufügen"
+      "add": "Kommentar hinzufügen",
+      "addPending": "Kommentar wird hinzugefügt..."
     },
     "commentDialogBulk": {
       "title": "Kommentar für mehrere hinzufügen",
       "description": "Fügen Sie denselben Kommentar zu {{count}} ausgewählten Messungen hinzu",
       "textLabel": "Kommentar",
       "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
-      "add": "Zu {{count}} Zeile(n) hinzufügen"
+      "add": "Zu {{count}} Zeile(n) hinzufügen",
+      "addPending": "Wird zu {{count}} Zeile(n) hinzugefügt..."
     },
     "commentDeleteDialog": {
       "title": "Sind Sie absolut sicher?",
       "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Kommentare aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "deletePending": "Wird gelöscht..."
     },
     "noAnnotations": "Noch keine Kommentare.",
     "noAnnotationsDescription": "Verwenden Sie die obigen Schaltflächen, um einen hinzuzufügen.",

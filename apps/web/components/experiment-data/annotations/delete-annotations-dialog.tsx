@@ -34,9 +34,10 @@ export function DeleteAnnotationsDialog({
   setBulkOpen,
   clearSelection,
 }: DeleteAnnotationsDialogProps) {
-  const { mutateAsync: deleteAnnotationsBulk } = useExperimentDeleteAnnotationsBulk();
+  const { mutateAsync: deleteAnnotationsBulk, isPending } = useExperimentDeleteAnnotationsBulk();
   const { t } = useTranslation();
   const count = rowIds.length;
+  const isPendingSuffix = isPending ? "Pending" : "";
 
   async function onDelete() {
     await deleteAnnotationsBulk({
@@ -61,8 +62,8 @@ export function DeleteAnnotationsDialog({
           <DialogClose asChild>
             <Button variant="outline">{t("common.cancel")}</Button>
           </DialogClose>
-          <Button type="submit" onClick={onDelete}>
-            {t(`experimentDataAnnotations.${type}DeleteDialog.delete`)}
+          <Button type="submit" onClick={onDelete} disabled={isPending}>
+            {t(`experimentDataAnnotations.${type}DeleteDialog.delete${isPendingSuffix}`)}
           </Button>
         </DialogFooter>
       </DialogContent>

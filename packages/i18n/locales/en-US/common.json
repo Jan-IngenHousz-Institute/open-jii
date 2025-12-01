@@ -464,19 +464,22 @@
       "description": "Add a comment to the measurement",
       "textLabel": "Comment",
       "textPlaceholder": "Enter your comment here...",
-      "add": "Add Comment"
+      "add": "Add Comment",
+      "addPending": "Adding Comment..."
     },
     "commentDialogBulk": {
       "title": "Bulk Add Comment",
       "description": "Add the same comment to {{count}} selected measurements",
       "textLabel": "Comment",
       "textPlaceholder": "Enter your comment here...",
-      "add": "Add to {{count}} Row(s)"
+      "add": "Add to {{count}} Row(s)",
+      "addPending": "Adding to {{count}} Row(s)..."
     },
     "commentDeleteDialog": {
       "title": "Are you absolutely sure?",
       "description": "This action cannot be undone. This will permanently delete all comments from the selected {{count}} row(s).",
-      "delete": "Delete"
+      "delete": "Delete",
+      "deletePending": "Deleting..."
     },
     "noAnnotations": "No comments yet.",
     "noAnnotationsDescription": "Use the buttons above to add one.",

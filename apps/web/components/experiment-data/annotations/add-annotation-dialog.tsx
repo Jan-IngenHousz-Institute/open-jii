@@ -59,13 +59,16 @@ export function AddAnnotationDialog({
   setBulkOpen,
   clearSelection,
 }: AddAnnotationDialogProps) {
-  const { mutateAsync: addAnnotation } = useExperimentAddAnnotation();
-  const { mutateAsync: addAnnotationsBulk } = useExperimentAddAnnotationsBulk();
+  const { mutateAsync: addAnnotation, isPending: isPendingSingle } = useExperimentAddAnnotation();
+  const { mutateAsync: addAnnotationsBulk, isPending: isPendingBulk } =
+    useExperimentAddAnnotationsBulk();
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
 
   const bulkSuffix = bulk ? "Bulk" : "";
   const count = rowIds.length;
+  const isPending = bulk ? isPendingBulk : isPendingSingle;
+  const pendingSuffix = isPending ? "Pending" : "";
 
   const form = useForm<AddAnnotationDialogFormType>({
     resolver: zodResolver(zAddAnnotationFormSchema),
@@ -168,8 +171,10 @@ export function AddAnnotationDialog({
               <DialogClose asChild>
                 <Button variant="outline">{t("common.cancel")}</Button>
               </DialogClose>
-              <Button type="submit">
-                {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.add`, { count })}
+              <Button type="submit" disabled={isPending}>
+                {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.add${pendingSuffix}`, {
+                  count,
+                })}
               </Button>
             </DialogFooter>
           </form>
