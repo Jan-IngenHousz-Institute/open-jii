@@ -1,7 +1,6 @@
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
 import { AppSidebarWrapper } from "@/components/app-sidebar-wrapper";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { ProfileActivator } from "@/components/profile-activator";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -54,7 +53,6 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <ProfileActivator />
       <AppSidebarWrapper locale={locale} user={session.user} />
       <SidebarInset>
         <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">

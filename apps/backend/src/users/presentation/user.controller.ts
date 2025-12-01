@@ -110,9 +110,9 @@ export class UserController {
   }
 
   @TsRestHandler(contract.users.getUserProfile)
-  getUserProfile(@CurrentUser() user: User) {
+  getUserProfile() {
     return tsRestHandler(contract.users.getUserProfile, async ({ params }) => {
-      const result = await this.getUserProfileUseCase.execute(params.id, user.id);
+      const result = await this.getUserProfileUseCase.execute(params.id);
 
       if (result.isSuccess()) {
         const userProfile = result.value;
