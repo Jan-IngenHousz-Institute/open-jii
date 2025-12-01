@@ -25,10 +25,7 @@ interface LanguageSwitcherProps {
   variant?: "default" | "header";
 }
 
-export function LanguageSwitcher({
-  locale,
-  variant = "default",
-}: LanguageSwitcherProps) {
+export function LanguageSwitcher({ locale, variant = "default" }: LanguageSwitcherProps) {
   const pathname = usePathname();
   const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
   // If feature flag is disabled, only show English
