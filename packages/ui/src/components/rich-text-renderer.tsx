@@ -15,15 +15,8 @@ export function RichTextRenderer({
   maxLines = 2,
 }: RichTextRendererProps) {
   // Check for common HTML tags that Quill editor produces
-  const isRichText =
-    content.includes("<p>") ||
-    content.includes("<br>") ||
-    content.includes("<strong>") ||
-    content.includes("<em>") ||
-    content.includes("<ul>") ||
-    content.includes("<ol>") ||
-    content.includes("<h1>") ||
-    content.includes("<h2>");
+  const htmlTags = ["<p>", "<a>", "<blockquote>", "<code>", "<pre>", "<br>", "<strong>", "<em>", "<ul>", "<ol>", "<h1>", "<h2>"];
+  const isRichText = htmlTags.some((tag) => content.includes(tag));
 
   if (!content || content === "<p><br></p>") {
     return <p className="text-muted-foreground text-sm italic">No description provided</p>;
