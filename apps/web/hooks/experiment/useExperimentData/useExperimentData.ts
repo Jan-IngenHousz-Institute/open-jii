@@ -41,7 +41,8 @@ export function identifyAnnotationColumns(data: ExperimentData) {
   if (data.columns.length === 0) return;
   const idColumnIndex = data.columns.findIndex((col) => col.name === ID_COLUMN_NAME);
   if (idColumnIndex === -1) return; // ID must be present for annotations to work
-  if (idColumnIndex !== -1 && data.columns[idColumnIndex].type_name !== "LONG") return; // ID must be of type LONG
+  if (idColumnIndex !== -1 && !["LONG", "INT"].includes(data.columns[idColumnIndex].type_name))
+    return; // ID must be of type LONG or INT
   data.columns[idColumnIndex].type_name = "ID";
   data.columns[idColumnIndex].type_text = "ID";
   const annotationColumnIndex = data.columns.findIndex((col) => col.name === "annotations");
