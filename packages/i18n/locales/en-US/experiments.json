@@ -2,6 +2,7 @@
   "form": {
     "name": "Experiment Name",
     "description": "Description",
+    "descriptionPlaceholder": "Short summary of the experiment’s purpose. To add instructions, use the Instruction Node in the flow section",
     "protocol": "Protocol",
     "device": "Device",
     "location": "Location",
@@ -19,6 +20,8 @@
     "cancelled": "Cancelled",
     "archived": "Archived",
     "stale": "Stale",
+    "provisioningFailed": "Provisioning Failed",
+    "published": "Published",
     "provisioning": "Provisioning"
   },
   "visibility": {
@@ -40,7 +43,23 @@
     "addMeasurement": "Add Measurement",
     "viewResults": "View Results",
     "downloadData": "Download Data",
-    "noMeasurements": "No measurements recorded yet"
+    "noMeasurements": "No measurements recorded yet",
+    "latestMeasurements": "Latest Measurements",
+    "deviceId": "Device ID",
+    "lastProcessed": "Last Processed",
+    "seeAll": "See all"
+  },
+  "protocols": {
+    "linkedProtocols": "Linked Protocols",
+    "noProtocolsLinked": "No protocols linked to this experiment",
+    "unableToLoadExperimentFlow": "Unable to load experiment flow",
+    "noFlowYet": "This experiment has no flow yet",
+    "createFlow": "Create flow",
+    "goToFlow": "Go to flow",
+    "goToProtocol": "Go to protocol",
+    "unableToLoadProtocol": "Unable to load protocol",
+    "sensorFamily": "Sensor Family",
+    "unknownProtocol": "Unknown protocol"
   },
   "flow": {
     "title": "Measurement Flow",
@@ -56,6 +75,11 @@
       "QUESTION": "Question",
       "MEASUREMENT": "Measurement",
       "ANALYSIS": "Analysis"
+    },
+    "questionTooltip": {
+      "title": "Data Column Name",
+      "description": "This label will become a column in your data analysis:",
+      "defaultColumnName": "question_name"
     }
   },
   "overview": "Overview",
@@ -81,15 +105,20 @@
     }
   },
   "experiment": "Experiment",
+  "detailsTitle": "Details",
   "experimentId": "Experiment ID",
+  "createdBy": "Created By",
   "created": "Created",
   "updated": "Updated",
   "descriptionTitle": "Description",
+  "and": "and",
   "details": {
     "location": {
       "locationsTitle": "Experiment Locations",
       "noLocations": "No locations",
-      "noLocationsDescription": "This experiment doesn't have any locations configured."
+      "noLocationsAdded": "No locations added yet",
+      "noLocationsDescription": "This experiment doesn't have any locations configured.",
+      "otherLocations": "other locations..."
     },
     "locations": {
       "locationsTitle": "Experiment Locations",

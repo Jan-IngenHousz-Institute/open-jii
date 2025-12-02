@@ -226,6 +226,7 @@ module "experiment_secret_scope" {
   secrets = {
     webhook_api_key_id = var.backend_webhook_api_key_id
     webhook_secret     = var.backend_webhook_secret
+    webhook_base_url   = "https://${module.route53.api_domain}"
   }
 
   acl_principals  = [module.node_service_principal.service_principal_application_id]
@@ -534,6 +535,70 @@ module "experiment_provisioning_job" {
   }
 }
 
+module "enriched_tables_refresh_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Enriched-Tables-Refresh-Job-DEV"
+  description = "Refreshes enriched tables across experiment pipelines when metadata changes (e.g., user profile updates)"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "refresh_enriched_tables"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/enriched_tables_refresh_task"
+
+      parameters = {
+        metadata_key         = "{{metadata_key}}"
+        metadata_value       = "{{metadata_value}}"
+        catalog_name         = module.databricks_catalog.catalog_name
+        central_schema       = "centrum"
+        central_silver_table = "clean_data"
+        environment          = var.environment
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
   cluster_identifier     = "open-jii-${var.environment}-db-cluster"
@@ -589,6 +654,7 @@ module "databricks_secrets" {
     DATABRICKS_CLIENT_SECRET                  = module.node_service_principal.service_principal_secret_value
     DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID = module.experiment_provisioning_job.job_id
     DATABRICKS_AMBYTE_PROCESSING_JOB_ID       = module.ambyte_processing_job.job_id
+    DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID = module.enriched_tables_refresh_job.job_id
     DATABRICKS_WAREHOUSE_ID                   = var.backend_databricks_warehouse_id
     DATABRICKS_WEBHOOK_API_KEY_ID             = var.backend_webhook_api_key_id
     DATABRICKS_WEBHOOK_SECRET                 = var.backend_webhook_secret
@@ -640,6 +706,7 @@ module "ses" {
 
   allowed_from_addresses = [
     "auth@mail.${var.environment}.${var.domain_name}",
+    "notifications@mail.${var.environment}.${var.domain_name}",
   ]
 
   create_smtp_user            = true
@@ -665,8 +732,10 @@ module "ses_secrets" {
 
   # Store SES SMTP credentials as JSON
   secret_string = jsonencode({
-    AUTH_EMAIL_SERVER = module.ses.auth_email_server
-    AUTH_EMAIL_FROM   = "auth@mail.${var.environment}.${var.domain_name}"
+    AUTH_EMAIL_SERVER    = module.ses.auth_email_server
+    AUTH_EMAIL_FROM      = "auth@mail.${var.environment}.${var.domain_name}"
+    BACKEND_EMAIL_SERVER = module.ses.auth_email_server
+    BACKEND_EMAIL_FROM   = "notifications@mail.${var.environment}.${var.domain_name}"
   })
 
   tags = {
@@ -1011,6 +1080,10 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
     },
     {
+      name      = "DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID::"
+    },
+    {
       name      = "DATABRICKS_WAREHOUSE_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
     },
@@ -1029,6 +1102,14 @@ module "backend_ecs" {
     {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
+    },
+    {
+      name      = "EMAIL_SERVER"
+      valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_SERVER::"
+    },
+    {
+      name      = "EMAIL_FROM"
+      valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_FROM::"
     },
   ]
 
@@ -1073,6 +1154,18 @@ module "backend_ecs" {
     {
       name  = "AWS_REGION"
       value = var.aws_region
+    },
+    {
+      name  = "EMAIL_BASE_URL"
+      value = "https://${module.route53.environment_domain}"
+    },
+    {
+      name  = "POSTHOG_KEY"
+      value = var.posthog_key
+    },
+    {
+      name  = "POSTHOG_HOST"
+      value = var.posthog_host
     }
   ]
 

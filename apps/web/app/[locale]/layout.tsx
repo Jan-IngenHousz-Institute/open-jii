@@ -6,9 +6,9 @@ import { notFound } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
 import { getContentfulClients } from "~/lib/contentful";
-import { FEATURE_FLAGS } from "~/lib/posthog-config";
 import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { SessionProvider } from "@repo/auth/client";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import type { LandingMetadataFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -16,6 +16,7 @@ import { defaultLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
+import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
 
@@ -101,6 +102,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     locale,
     namespaces: [...namespaces],
   });
+
   return (
     <div
       className={cn(
@@ -119,6 +121,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       >
         <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
           <SessionProvider>
+            <PostHogIdentifier />
             <QueryProvider>{children}</QueryProvider>
           </SessionProvider>
         </TranslationsProvider>

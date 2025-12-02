@@ -65,6 +65,7 @@ export const useExperimentUpdate = () => {
       // Always refetch after error or success
       await queryClient.invalidateQueries({
         queryKey: ["experiment", variables.params.id],
+        exact: true,
       });
       await queryClient.invalidateQueries({
         queryKey: ["experimentAccess", variables.params.id],

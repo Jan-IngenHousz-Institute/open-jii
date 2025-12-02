@@ -21,7 +21,12 @@ const mockPush = vi.fn();
 // Mock useTranslation
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (k: string, options?: Record<string, unknown>) => {
+      if (options) {
+        return `${k} ${JSON.stringify(options)}`;
+      }
+      return k;
+    },
   }),
 }));
 
@@ -42,6 +47,13 @@ vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
 }));
 
+// PostHog feature flags - hoisted mock
+const useFeatureFlagEnabledMock = vi.hoisted(() => vi.fn());
+
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: useFeatureFlagEnabledMock,
+}));
+
 describe("MacroInfoCard", () => {
   const mockMacro = {
     id: "macro-123",
@@ -60,6 +72,9 @@ describe("MacroInfoCard", () => {
     vi.clearAllMocks();
     mockPush.mockClear();
     mockDeleteMutate.mockClear();
+
+    // Default: feature flag enabled
+    useFeatureFlagEnabledMock.mockReturnValue(true);
   });
 
   it("should render the macro info card with correct data", () => {
@@ -80,12 +95,23 @@ describe("MacroInfoCard", () => {
     expect(screen.getByText("macro-123")).toBeInTheDocument();
   });
 
-  it("should render the danger zone section", () => {
+  it("should render the danger zone section when feature flag is enabled", () => {
+    useFeatureFlagEnabledMock.mockReturnValue(true);
+
     render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
 
     expect(screen.getByText("macroSettings.dangerZone")).toBeInTheDocument();
     expect(screen.getByText("macroSettings.deleteWarning")).toBeInTheDocument();
     expect(screen.getByText("macroSettings.deleteMacro")).toBeInTheDocument();
+  });
+
+  it("should not render delete button when feature flag is disabled", () => {
+    useFeatureFlagEnabledMock.mockReturnValue(false);
+
+    render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
+
+    expect(screen.queryByText("macroSettings.dangerZone")).not.toBeInTheDocument();
+    expect(screen.queryByText("macroSettings.deleteMacro")).not.toBeInTheDocument();
   });
 
   it("should open the delete confirmation dialog when delete button is clicked", () => {
@@ -97,8 +123,9 @@ describe("MacroInfoCard", () => {
     // The dialog text is broken up into multiple elements, so we use a more flexible approach
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveTextContent("macroSettings.confirmDelete");
-    expect(dialog).toHaveTextContent("Test Macro");
+    expect(dialog).toHaveTextContent(
+      `common.confirmDelete ${JSON.stringify({ name: "Test Macro" })}`,
+    );
     expect(screen.getByText("macroSettings.cancel")).toBeInTheDocument();
     expect(screen.getByText("macroSettings.delete")).toBeInTheDocument();
   });
@@ -113,8 +140,9 @@ describe("MacroInfoCard", () => {
     // Check that the dialog is open
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveTextContent("macroSettings.confirmDelete");
-    expect(dialog).toHaveTextContent("Test Macro");
+    expect(dialog).toHaveTextContent(
+      `common.confirmDelete ${JSON.stringify({ name: "Test Macro" })}`,
+    );
 
     // Click cancel
     const cancelButton = screen.getByText("macroSettings.cancel");

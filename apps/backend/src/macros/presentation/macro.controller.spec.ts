@@ -1,9 +1,12 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api";
 
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
@@ -11,11 +14,12 @@ import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import type { MacroDto, CreateMacroDto, UpdateMacroDto } from "../core/models/macro.model";
-import { deriveFilenameFromName } from "../core/models/macro.model";
+import { generateHashedFilename } from "../core/models/macro.model";
 
 describe("MacroController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let analyticsAdapter: MockAnalyticsAdapter;
   let createMacroUseCase: CreateMacroUseCase;
   let getMacroUseCase: GetMacroUseCase;
   let listMacrosUseCase: ListMacrosUseCase;
@@ -23,7 +27,7 @@ describe("MacroController", () => {
   let deleteMacroUseCase: DeleteMacroUseCase;
 
   beforeAll(async () => {
-    await testApp.setup();
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
   });
 
   beforeEach(async () => {
@@ -31,6 +35,7 @@ describe("MacroController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Get use case instances for mocking
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
     createMacroUseCase = testApp.module.get(CreateMacroUseCase);
     getMacroUseCase = testApp.module.get(GetMacroUseCase);
     listMacrosUseCase = testApp.module.get(ListMacrosUseCase);
@@ -59,10 +64,12 @@ describe("MacroController", () => {
         code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
       };
 
+      const macroId = faker.string.uuid();
+
       const mockMacro: MacroDto = {
-        id: faker.string.uuid(),
+        id: macroId,
         name: macroData.name,
-        filename: deriveFilenameFromName(macroData.name),
+        filename: generateHashedFilename(macroId),
         description: macroData.description ?? "",
         language: macroData.language,
         code: macroData.code,
@@ -147,10 +154,11 @@ describe("MacroController", () => {
   describe("getMacro", () => {
     it("should successfully get a macro", async () => {
       // Arrange
+      const macroId = faker.string.uuid();
       const mockMacro: MacroDto = {
-        id: faker.string.uuid(),
+        id: macroId,
         name: "Test Macro",
-        filename: deriveFilenameFromName("Test Macro"),
+        filename: generateHashedFilename(macroId),
         description: "Test Description",
         language: "python",
         code: "cHl0aG9uIGNvZGU=",
@@ -206,11 +214,13 @@ describe("MacroController", () => {
   describe("listMacros", () => {
     it("should successfully list macros", async () => {
       // Arrange
+
+      const macroIds = [faker.string.uuid(), faker.string.uuid()];
       const mockMacros: MacroDto[] = [
         {
-          id: faker.string.uuid(),
+          id: macroIds[0],
           name: "Test Macro 1",
-          filename: deriveFilenameFromName("Test Macro 1"),
+          filename: generateHashedFilename(macroIds[0]),
           description: "Test Description 1",
           language: "python",
           code: "dGVzdCBjb2RlIDE=", // base64 encoded "test code 1"
@@ -220,9 +230,9 @@ describe("MacroController", () => {
           createdByName: "Test User",
         },
         {
-          id: faker.string.uuid(),
+          id: macroIds[1],
           name: "Test Macro 2",
-          filename: deriveFilenameFromName("Test Macro 2"),
+          filename: generateHashedFilename(macroIds[1]),
           description: "Test Description 2",
           language: "javascript",
           code: "dGVzdCBjb2RlIDI=", // base64 encoded "test code 2"
@@ -291,7 +301,7 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: "Updated Macro",
-        filename: deriveFilenameFromName("Updated Macro"),
+        filename: generateHashedFilename(macroId),
         description: "Updated Description",
         language: "javascript",
         code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
@@ -353,7 +363,7 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: updateData.name,
-        filename: deriveFilenameFromName(updateData.name),
+        filename: generateHashedFilename(macroId),
         description: "Description",
         language: "python",
         code: "dXBkYXRlZCBjb2RlIHdpdGggZmlsZQ==", // base64 encoded "updated code with file"
@@ -414,6 +424,10 @@ describe("MacroController", () => {
   });
 
   describe("deleteMacro", () => {
+    beforeEach(() => {
+      analyticsAdapter.setFlag(FEATURE_FLAGS.MACRO_DELETION, true);
+    });
+
     it("should successfully delete a macro", async () => {
       // Arrange
       const macroId = faker.string.uuid();
@@ -428,6 +442,18 @@ describe("MacroController", () => {
       // Assert
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(deleteMacroUseCase.execute).toHaveBeenCalledWith(macroId, testUserId);
+    });
+
+    it("should return 403 if macro deletion is disabled", async () => {
+      // Override mock to disable feature flag
+      analyticsAdapter.setFlag(FEATURE_FLAGS.MACRO_DELETION, false);
+
+      const macroId = faker.string.uuid();
+
+      await testApp
+        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN);
     });
 
     it("should handle macro not found", async () => {

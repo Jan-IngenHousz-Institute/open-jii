@@ -5,6 +5,7 @@ import { DatabricksSqlService } from "../../../../common/modules/databricks/serv
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
 const DATABRICKS_HOST = "https://test-databricks.example.com";
@@ -105,6 +106,10 @@ describe("GetExperimentDataUseCase", () => {
             name: "sensor_data",
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_${cleanName}_${experiment.id}`,
+            properties: {
+              display_name: "Sensor Measurements",
+              downstream: "false",
+            },
           },
         ],
       });
@@ -208,6 +213,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
       name: "sensor_data",
+      displayName: "Sensor Measurements", // Should use display_name from properties
       catalog_name: experiment.name,
       schema_name: `exp_${cleanName}_${experiment.id}`,
       data: expectedColumnData,
@@ -277,6 +283,10 @@ describe("GetExperimentDataUseCase", () => {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              display_name: "Test Table Data",
+              downstream: "false",
+            },
           },
         ],
       });
@@ -410,6 +420,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
       name: "test_table",
+      displayName: "Test Table Data", // Should use display_name from properties
       catalog_name: experiment.name,
       schema_name: `exp_test_experiment_${experiment.id}`,
       data: expectedTableData,
@@ -484,6 +495,9 @@ describe("GetExperimentDataUseCase", () => {
             name: "sensor_data",
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_${cleanName}_${experiment.id}`,
+            properties: {
+              downstream: "false",
+            },
           },
         ],
       });
@@ -572,6 +586,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
       name: "sensor_data",
+      displayName: "sensor_data",
       catalog_name: experiment.name,
       schema_name: `exp_${cleanName}_${experiment.id}`,
       data: expectedTableData,
@@ -599,11 +614,17 @@ describe("GetExperimentDataUseCase", () => {
           name: "table1",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_test_experiment_${experiment.id}`,
+          properties: {
+            downstream: "false",
+          },
         },
         {
           name: "table2",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_test_experiment_${experiment.id}`,
+          properties: {
+            downstream: "false",
+          },
         },
       ],
     };
@@ -808,6 +829,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check first table
     expect(result.value[0]).toMatchObject({
       name: mockTables.tables[0].name,
+      displayName: mockTables.tables[0].name,
       catalog_name: mockTables.tables[0].catalog_name,
       schema_name: mockTables.tables[0].schema_name,
       page: 1,
@@ -818,6 +840,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check second table
     expect(result.value[1]).toMatchObject({
       name: mockTables.tables[1].name,
+      displayName: mockTables.tables[1].name,
       catalog_name: mockTables.tables[1].catalog_name,
       schema_name: mockTables.tables[1].schema_name,
       page: 1,
@@ -847,11 +870,17 @@ describe("GetExperimentDataUseCase", () => {
           name: "device",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_test_experiment_${experiment.id}`,
+          properties: {
+            downstream: "false",
+          },
         },
         {
           name: "sample",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_test_experiment_${experiment.id}`,
+          properties: {
+            downstream: "false",
+          },
         },
       ],
     };
@@ -1056,6 +1085,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check first table which should be "sample" (not "device")
     expect(result.value[0]).toMatchObject({
       name: mockTables.tables[1].name,
+      displayName: mockTables.tables[1].name,
       catalog_name: mockTables.tables[1].catalog_name,
       schema_name: mockTables.tables[1].schema_name,
       page: 1,
@@ -1066,6 +1096,7 @@ describe("GetExperimentDataUseCase", () => {
     // Check second table which should be "device"
     expect(result.value[1]).toMatchObject({
       name: mockTables.tables[0].name,
+      displayName: mockTables.tables[0].name,
       catalog_name: mockTables.tables[0].catalog_name,
       schema_name: mockTables.tables[0].schema_name,
       page: 1,
@@ -1142,6 +1173,9 @@ describe("GetExperimentDataUseCase", () => {
           name: "public_table",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_public_experiment_${experiment.id}`,
+          properties: {
+            downstream: "false",
+          },
         },
       ],
     };
@@ -1268,6 +1302,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Verify the table data
     expect(result.value[0].name).toBe(mockTables.tables[0].name);
+    expect(result.value[0].displayName).toBe(mockTables.tables[0].name);
     expect(result.value[0].catalog_name).toBe(mockTables.tables[0].catalog_name);
     expect(result.value[0].schema_name).toBe(mockTables.tables[0].schema_name);
   });
@@ -1304,6 +1339,9 @@ describe("GetExperimentDataUseCase", () => {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "false",
+            },
           },
         ],
       });
@@ -1439,6 +1477,9 @@ describe("GetExperimentDataUseCase", () => {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "false",
+            },
           },
         ],
       });
@@ -1520,6 +1561,9 @@ describe("GetExperimentDataUseCase", () => {
           name: "existing_table",
           catalog_name: MOCK_CATALOG_NAME,
           schema_name: `exp_test_experiment_${experiment.id}`,
+          properties: {
+            downstream: "false",
+          },
         },
       ],
     };
@@ -1583,6 +1627,9 @@ describe("GetExperimentDataUseCase", () => {
             name: "sensor_data",
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_${cleanName}_${experiment.id}`,
+            properties: {
+              downstream: "false",
+            },
           },
         ],
       });
@@ -1695,5 +1742,360 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.message).toContain("Failed to list tables");
+  });
+
+  it("should transform user data when user columns are present", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock data with user columns
+    const mockTableData = {
+      columns: [
+        { name: "user_id", type_name: "STRING", type_text: "STRING" },
+        { name: "user_name", type_name: "STRING", type_text: "STRING" },
+        { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ],
+      rows: [
+        [testUserId, "Test User", "25.5"],
+        [testUserId, "Test User", "26.0"],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+
+    // Mock the UserTransformationService to return transformed data
+    const userTransformationService = testApp.module.get(UserTransformationService);
+    const canTransformSpy = vi
+      .spyOn(userTransformationService, "canTransform")
+      .mockReturnValue(true);
+    const transformDataSpy = vi
+      .spyOn(userTransformationService, "transformData")
+      .mockResolvedValue({
+        columns: [
+          { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE" },
+          { name: "user", type_name: "USER", type_text: "USER" },
+        ],
+        rows: [
+          {
+            measurement: "25.5",
+            user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
+          },
+          {
+            measurement: "26.0",
+            user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
+          },
+        ],
+        totalRows: 2,
+        truncated: false,
+      });
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "enriched_sample",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "false",
+            },
+          },
+        ],
+      });
+
+    // Mock SQL query for describing columns (needed for ORDER BY validation)
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["user_id", "STRING", null],
+        ["user_name", "STRING", null],
+        ["measurement", "DOUBLE", null],
+      ],
+      totalRows: 3,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE enriched_sample",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-describe-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query for row count
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT COUNT(*) as count FROM enriched_sample",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-count-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: 1,
+            columns: [{ name: "count", type_name: "LONG", type_text: "LONG", position: 0 }],
+          },
+          total_row_count: 1,
+          truncated: false,
+        },
+        result: {
+          data_array: [["2"]],
+          chunk_index: 0,
+          row_count: 1,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query for table data
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT * FROM enriched_sample LIMIT 20 OFFSET 0",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockTableData.columns.length,
+            columns: mockTableData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockTableData.totalRows,
+          truncated: mockTableData.truncated,
+        },
+        result: {
+          data_array: mockTableData.rows,
+          chunk_index: 0,
+          row_count: mockTableData.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "enriched_sample",
+      page: 1,
+      pageSize: 20,
+    });
+
+    // Assert result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+
+    // Verify transformation was called
+    expect(canTransformSpy).toHaveBeenCalled();
+    expect(transformDataSpy).toHaveBeenCalled();
+
+    // Verify response structure with transformed data
+    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]).toMatchObject({
+      name: "enriched_sample",
+      displayName: "enriched_sample",
+      catalog_name: experiment.name,
+      schema_name: `exp_test_experiment_${experiment.id}`,
+      page: 1,
+      pageSize: 20,
+      totalRows: 2,
+      totalPages: 1,
+    });
+
+    // Verify the data structure has been transformed
+    expect(result.value[0].data?.columns).toHaveLength(2); // measurement + user columns
+    expect(result.value[0].data?.columns.some((col) => col.name === "user")).toBe(true);
+    expect(result.value[0].data?.columns.some((col) => col.name === "measurement")).toBe(true);
+  });
+
+  it("should filter out tables with downstream: true (intermediate processing tables)", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call with mixed downstream properties
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "raw_sample_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "true", // Should be filtered out
+            },
+          },
+          {
+            name: "enriched_sample_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "false", // Should be included
+            },
+          },
+          {
+            name: "macro_processing_temp",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "true", // Should be filtered out
+            },
+          },
+        ],
+      });
+
+    // Only need to mock data for the downstream: false table
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+      .reply(200, {
+        statement_id: "mock-statement-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: 1,
+            columns: [{ name: "id", type_name: "STRING", type_text: "STRING", position: 0 }],
+          },
+          total_row_count: 1,
+          truncated: false,
+        },
+        result: {
+          data_array: [["test-id"]],
+          chunk_index: 0,
+          row_count: 1,
+          row_offset: 0,
+        },
+      });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert - should only return tables with downstream: false
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1); // Only one table should be returned
+    expect(result.value[0].name).toBe("enriched_sample_data");
+    expect(result.value[0].displayName).toBe("enriched_sample_data");
+  });
+
+  it("should return forbidden error when trying to access table with downstream: true", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call with intermediate processing table
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "raw_sample_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "true", // Intermediate processing table
+            },
+          },
+        ],
+      });
+
+    // Act - try to access the intermediate table directly
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "raw_sample_data",
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert - should return forbidden error
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toContain("not accessible");
+    expect(result.error.message).toContain("Only final processed tables are available");
   });
 });

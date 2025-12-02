@@ -1,0 +1,265 @@
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import React from "react";
+import { describe, it, expect, vi } from "vitest";
+
+import type { Protocol } from "@repo/api";
+
+import { ProtocolCard, ProtocolSelector } from "./protocol-card";
+
+globalThis.React = React;
+
+// ---------- Hoisted mocks ----------
+const { useProtocolSpy } = vi.hoisted(() => {
+  return {
+    useProtocolSpy: vi.fn(() => ({
+      data: null as { body: Protocol } | null,
+      isLoading: false,
+    })),
+  };
+});
+
+// ---------- Mocks ----------
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+vi.mock("../../../hooks/protocol/useProtocol/useProtocol", () => ({
+  useProtocol: () => useProtocolSpy(),
+}));
+
+vi.mock("@/util/date", () => ({
+  formatDate: (dateString: string) => `formatted-${dateString}`,
+}));
+
+vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    RichTextRenderer: ({ content }: { content: string }) => (
+      <div data-testid="rich-text-renderer">{content}</div>
+    ),
+    Select: ({
+      children,
+      value,
+      onValueChange,
+    }: {
+      children: React.ReactNode;
+      value: string;
+      onValueChange: (val: string) => void;
+    }) => (
+      <div data-testid="select" data-value={value}>
+        {children}
+        <button data-testid="select-button" onClick={() => onValueChange("new-protocol-id")}>
+          Change
+        </button>
+      </div>
+    ),
+    SelectTrigger: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="select-trigger">{children}</div>
+    ),
+    SelectContent: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="select-content">{children}</div>
+    ),
+    SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
+      <div data-testid="select-item" data-value={value}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+describe("ProtocolCard", () => {
+  const mockProtocol: Protocol = {
+    id: "proto-1",
+    name: "Test Protocol",
+    description: "Test protocol description",
+    family: "multispeq",
+    code: [],
+    createdBy: "user-1",
+    createdByName: "Test User",
+    createdAt: "2023-01-01T00:00:00Z",
+    updatedAt: "2023-01-15T00:00:00Z",
+  };
+
+  it("renders loading state", () => {
+    render(<ProtocolCard protocol={undefined} isLoading={true} error={null} />);
+
+    const loadingElement = document.querySelector(".animate-pulse");
+    expect(loadingElement).toBeInTheDocument();
+  });
+
+  it("renders error state", () => {
+    render(<ProtocolCard protocol={undefined} isLoading={false} error={new Error("Failed")} />);
+
+    expect(screen.getByText("protocols.unableToLoadProtocol")).toBeInTheDocument();
+  });
+
+  it("renders protocol metadata", () => {
+    render(<ProtocolCard protocol={mockProtocol} isLoading={false} error={null} />);
+
+    expect(screen.getByText("multispeq")).toBeInTheDocument();
+    expect(screen.getByText("formatted-2023-01-15T00:00:00Z")).toBeInTheDocument();
+    expect(screen.getByText("Test User")).toBeInTheDocument();
+  });
+
+  it("renders protocol description", () => {
+    render(<ProtocolCard protocol={mockProtocol} isLoading={false} error={null} />);
+
+    expect(screen.getByText("Test protocol description")).toBeInTheDocument();
+  });
+
+  it("does not render empty description", () => {
+    const protocolWithoutDesc = { ...mockProtocol, description: "<p><br></p>" };
+    render(<ProtocolCard protocol={protocolWithoutDesc} isLoading={false} error={null} />);
+
+    expect(screen.queryByTestId("rich-text-renderer")).not.toBeInTheDocument();
+  });
+
+  it("shows fade gradient for long descriptions", () => {
+    const longDescription = "a".repeat(500);
+    const protocolWithLongDesc = { ...mockProtocol, description: longDescription };
+    render(<ProtocolCard protocol={protocolWithLongDesc} isLoading={false} error={null} />);
+
+    const fadeElement = document.querySelector(".bg-gradient-to-t");
+    expect(fadeElement).toBeInTheDocument();
+  });
+
+  it("does not show fade gradient for short descriptions", () => {
+    const shortDescription = "Short description";
+    const protocolWithShortDesc = { ...mockProtocol, description: shortDescription };
+    render(<ProtocolCard protocol={protocolWithShortDesc} isLoading={false} error={null} />);
+
+    const fadeElement = document.querySelector(".bg-gradient-to-t");
+    expect(fadeElement).not.toBeInTheDocument();
+  });
+
+  it("renders without creator name", () => {
+    const protocolWithoutCreator = { ...mockProtocol, createdByName: undefined };
+    render(<ProtocolCard protocol={protocolWithoutCreator} isLoading={false} error={null} />);
+
+    expect(screen.queryByText("Test User")).not.toBeInTheDocument();
+  });
+});
+
+describe("ProtocolSelector", () => {
+  it("renders protocol selector with selected protocol", () => {
+    useProtocolSpy.mockReturnValue({
+      data: {
+        body: {
+          id: "proto-1",
+          name: "Selected Protocol",
+          code: [],
+          family: "multispeq",
+          createdBy: "user-1",
+          description: null,
+          createdAt: "2023-01-01T00:00:00Z",
+          updatedAt: "2023-01-15T00:00:00Z",
+        } as Protocol,
+      },
+      isLoading: false,
+    });
+
+    const handleChange = vi.fn();
+
+    render(
+      <ProtocolSelector
+        protocolIds={["proto-1", "proto-2"]}
+        selectedProtocolId="proto-1"
+        selectedProtocolName="Selected Protocol"
+        onProtocolChange={handleChange}
+      />,
+    );
+
+    expect(screen.getAllByText("Selected Protocol").length).toBeGreaterThan(0);
+  });
+
+  it("shows loading state when no protocol name", () => {
+    useProtocolSpy.mockReturnValue({
+      data: null,
+      isLoading: false,
+    });
+
+    const handleChange = vi.fn();
+
+    render(
+      <ProtocolSelector
+        protocolIds={["proto-1"]}
+        selectedProtocolId="proto-1"
+        onProtocolChange={handleChange}
+      />,
+    );
+
+    expect(screen.getByText("loading")).toBeInTheDocument();
+  });
+
+  it("calls onProtocolChange when selection changes", async () => {
+    const user = userEvent.setup();
+    const handleChange = vi.fn();
+
+    useProtocolSpy.mockReturnValue({
+      data: {
+        body: {
+          id: "proto-1",
+          name: "Test Protocol",
+          code: [],
+          family: "multispeq",
+          createdBy: "user-1",
+          description: null,
+          createdAt: "2023-01-01T00:00:00Z",
+          updatedAt: "2023-01-15T00:00:00Z",
+        } as Protocol,
+      },
+      isLoading: false,
+    });
+
+    render(
+      <ProtocolSelector
+        protocolIds={["proto-1", "proto-2"]}
+        selectedProtocolId="proto-1"
+        selectedProtocolName="Test Protocol"
+        onProtocolChange={handleChange}
+      />,
+    );
+
+    const button = screen.getByTestId("select-button");
+    await user.click(button);
+
+    expect(handleChange).toHaveBeenCalledWith("new-protocol-id");
+  });
+
+  it("renders protocol items in dropdown", () => {
+    useProtocolSpy.mockReturnValue({
+      data: {
+        body: {
+          id: "proto-1",
+          name: "Protocol 1",
+          code: [],
+          family: "multispeq",
+          createdBy: "user-1",
+          description: null,
+          createdAt: "2023-01-01T00:00:00Z",
+          updatedAt: "2023-01-15T00:00:00Z",
+        } as Protocol,
+      },
+      isLoading: false,
+    });
+
+    const handleChange = vi.fn();
+
+    render(
+      <ProtocolSelector
+        protocolIds={["proto-1", "proto-2", "proto-3"]}
+        selectedProtocolId="proto-1"
+        selectedProtocolName="Protocol 1"
+        onProtocolChange={handleChange}
+      />,
+    );
+
+    const items = screen.getAllByTestId("select-item");
+    expect(items).toHaveLength(3);
+  });
+});

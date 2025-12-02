@@ -1,11 +1,17 @@
 import { Module } from "@nestjs/common";
 
+import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 // Adapters & External Modules
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+import { EmailAdapter } from "../common/modules/email/services/email.adapter";
+import { EmailModule } from "../common/modules/email/services/email.module";
+import { UserModule } from "../users/user.module";
 // Services
+import { UserTransformationService } from "./application/services/data-transformation/user-metadata/user-transformation.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -38,9 +44,11 @@ import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
+import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { EMAIL_PORT } from "./core/ports/email.port";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
@@ -59,7 +67,7 @@ import { ExperimentWebhookController } from "./presentation/experiment-webhook.c
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule],
+  imports: [DatabricksModule, AwsModule, EmailModule, UserModule, AnalyticsModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,
@@ -80,6 +88,14 @@ import { ExperimentController } from "./presentation/experiment.controller";
       provide: AWS_PORT,
       useExisting: AwsAdapter,
     },
+    {
+      provide: EMAIL_PORT,
+      useExisting: EmailAdapter,
+    },
+    {
+      provide: ANALYTICS_PORT,
+      useExisting: AnalyticsAdapter,
+    },
 
     // Repositories
     ExperimentRepository,
@@ -91,6 +107,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 
     // Services
     EmbargoProcessorService,
+    UserTransformationService,
 
     // General experiment use cases
     CreateExperimentUseCase,

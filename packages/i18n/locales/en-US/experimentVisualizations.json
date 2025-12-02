@@ -201,6 +201,8 @@
   },
 
   "selector": {
-    "noVisualizations": "No visualizations available for this experiment"
+    "noVisualizations": "No visualizations available for this experiment",
+    "createVisualization": "Create visualization",
+    "selectVisualization": "Select a visualization"
   }
 }

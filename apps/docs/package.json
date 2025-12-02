@@ -24,11 +24,11 @@
     "@docusaurus/preset-classic": "^3.9.2",
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.1.1",
     "prism-react-renderer": "^2.4.1",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
-    "swagger-ui-react": "^5.30.2"
+    "swagger-ui-react": "^5.30.3"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.9.2",

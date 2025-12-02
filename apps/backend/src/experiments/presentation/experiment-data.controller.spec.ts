@@ -10,6 +10,7 @@ import type {
 import { contract } from "@repo/api";
 
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
+import type { ListTablesResponse } from "../../common/modules/databricks/services/tables/tables.types";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -85,7 +86,7 @@ describe("ExperimentDataController", () => {
       };
 
       // Mock listTables to validate table exists
-      const mockTablesResponse = {
+      const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
             name: "test_table",
@@ -93,6 +94,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
         ],
       };
@@ -209,7 +211,7 @@ describe("ExperimentDataController", () => {
       };
 
       // Mock listTables to validate table exists
-      const mockTablesResponse = {
+      const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
             name: "sensor_data",
@@ -217,6 +219,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
         ],
       };
@@ -289,7 +292,7 @@ describe("ExperimentDataController", () => {
       });
 
       // Mock the DatabricksAdapter listTables method
-      const mockTablesResponse = {
+      const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
             name: "bronze_data",
@@ -297,6 +300,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
           {
             name: "silver_data",
@@ -304,6 +308,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
         ],
       };
@@ -370,6 +375,9 @@ describe("ExperimentDataController", () => {
       // Check first table
       expect(response.body[0]).toMatchObject({
         name: mockTablesResponse.tables[0].name,
+        displayName:
+          mockTablesResponse.tables[0].properties?.display_name ??
+          mockTablesResponse.tables[0].name,
         catalog_name: mockTablesResponse.tables[0].catalog_name,
         schema_name: mockTablesResponse.tables[0].schema_name,
         page: 1,
@@ -380,6 +388,9 @@ describe("ExperimentDataController", () => {
       // Check second table
       expect(response.body[1]).toMatchObject({
         name: mockTablesResponse.tables[1].name,
+        displayName:
+          mockTablesResponse.tables[1].properties?.display_name ??
+          mockTablesResponse.tables[1].name,
         catalog_name: mockTablesResponse.tables[1].catalog_name,
         schema_name: mockTablesResponse.tables[1].schema_name,
         page: 1,
@@ -507,7 +518,7 @@ describe("ExperimentDataController", () => {
       });
 
       // Mock listTables to return the table exists
-      const mockTablesResponse = {
+      const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
             name: "nonexistent_table",
@@ -515,6 +526,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
         ],
       };
@@ -573,7 +585,7 @@ describe("ExperimentDataController", () => {
       };
 
       // Mock listTables to validate table exists
-      const mockTablesResponse = {
+      const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
             name: "test_table",
@@ -581,6 +593,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
         ],
       };
@@ -644,7 +657,7 @@ describe("ExperimentDataController", () => {
       });
 
       // Mock listTables to return empty table list
-      const mockTablesResponse = {
+      const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
             name: "existing_table",
@@ -652,6 +665,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
         ],
       };
@@ -1135,7 +1149,7 @@ describe("ExperimentDataController", () => {
       };
 
       // Mock listTables to validate table exists
-      const mockTablesResponse = {
+      const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
             name: "bronze_data",
@@ -1143,6 +1157,7 @@ describe("ExperimentDataController", () => {
             schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
+            properties: { downstream: "false" },
           },
         ],
       };

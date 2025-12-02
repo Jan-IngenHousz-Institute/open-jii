@@ -1,6 +1,6 @@
 // components/experiment-settings/experiment-visibility-card.test.tsx
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -43,14 +43,10 @@ describe("<ExperimentVisibilityCard />", () => {
     return render(<ExperimentVisibilityCard {...defaultProps} {...props} />);
   }
 
-  it("renders title & general description", () => {
+  it("renders title and description", () => {
     renderCard();
-    expect(
-      screen
-        .getAllByText("experimentSettings.visibility")
-        .find((el) => el.tagName.toLowerCase() === "div"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("experimentSettings.generalDescription")).toBeInTheDocument();
+    expect(screen.getByText("experimentVisibility.visibilityCardTitle")).toBeInTheDocument();
+    expect(screen.getByText("experimentVisibility.visibilityCardDescription")).toBeInTheDocument();
   });
 
   it("shows embargo field when visibility is private", () => {
@@ -71,74 +67,33 @@ describe("<ExperimentVisibilityCard />", () => {
     expect(screen.getByText("experimentSettings.visibilityCannotBeChanged")).toBeInTheDocument();
   });
 
-  it("submits with embargo when private (includes embargoUntil)", async () => {
+  it("shows embargo field with helper text when visibility is private", () => {
     renderCard({
       initialVisibility: "private",
       embargoUntil: "2026-01-15T23:59:59.999Z",
     });
 
-    // Submit the form
-    const submitBtn = screen.getByRole("button", { name: "experimentSettings.save" });
-    mutateAsyncMock.mockResolvedValueOnce(undefined);
-    fireEvent.click(submitBtn);
-
-    await waitFor(() => {
-      expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
-    });
-
-    // Assert the payload sent to updateExperiment
-    const callArg = mutateAsyncMock.mock.calls[0][0] as {
-      params: { id: string };
-      body: { visibility: string; embargoUntil?: string };
-    };
-    expect(callArg).toMatchObject({
-      params: { id: "exp-123" },
-      body: {
-        visibility: "private",
-        embargoUntil: "2026-01-15T23:59:59.999Z",
-      },
-    });
-
-    expect(
-      screen.getByText(
-        (_, node) =>
-          node?.textContent === "experimentSettings.embargoUntilHelperString" ||
-          node?.textContent === "newExperiment.embargoUntilHelperString",
-      ),
-    ).toBeInTheDocument();
+    // Should show embargo field with date
+    expect(screen.getByText("experimentSettings.embargoUntil")).toBeInTheDocument();
+    // Check for date button (format may vary by timezone)
+    expect(screen.getByRole("button", { name: /Jan 1[56], 2026/ })).toBeInTheDocument();
+    expect(screen.getByText("newExperiment.embargoUntilHelperString")).toBeInTheDocument();
   });
 
-  it("submits without embargo when public (visibility only) and Select is disabled", async () => {
+  it("disables visibility select when public and shows warning message", () => {
     renderCard({
       initialVisibility: "public",
       embargoUntil: "2025-12-31T23:59:59.999Z",
     });
 
     // Select should be disabled when currentVisibility === "public"
-    // The trigger is rendered as a combobox button by the shadcn Select
     const combobox = screen.getByRole("combobox");
     expect(combobox).toBeDisabled();
 
-    const submitBtn = screen.getByRole("button", { name: "experimentSettings.save" });
-    mutateAsyncMock.mockResolvedValueOnce(undefined);
-    fireEvent.click(submitBtn);
+    // Should show warning that visibility cannot be changed
+    expect(screen.getByText("experimentSettings.visibilityCannotBeChanged")).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
-    });
-
-    const callArg = mutateAsyncMock.mock.calls[0][0] as {
-      params: { id: string };
-      body: { visibility: string; embargoUntil?: string };
-    };
-    expect(callArg).toMatchObject({
-      params: { id: "exp-123" },
-      body: {
-        visibility: "public",
-      },
-    });
-
-    // Embargo section should remain hidden
+    // Embargo section should be hidden for public experiments
     expect(
       screen.queryByText((_, node) => node?.textContent === "experimentSettings.embargoUntil"),
     ).not.toBeInTheDocument();

@@ -655,4 +655,160 @@ describe("UserRepository", () => {
       expect(profs[0].bio).toBe(dto.bio);
     });
   });
+
+  describe("findUsersByIds", () => {
+    let testUser1Id: string;
+    let testUser2Id: string;
+    let testUser3Id: string;
+
+    beforeEach(async () => {
+      // Create additional test users
+      testUser1Id = await testApp.createTestUser({
+        email: "finduser1@example.com",
+        name: "Find User 1",
+        image: "https://example.com/avatar1.jpg",
+      });
+      testUser2Id = await testApp.createTestUser({
+        email: "finduser2@example.com",
+        name: "Find User 2",
+        image: null,
+      });
+      testUser3Id = await testApp.createTestUser({
+        email: "finduser3@example.com",
+        name: "Find User 3",
+        image: "https://example.com/avatar3.jpg",
+        createProfile: false, // Don't create profile for this user
+      });
+
+      // Create profiles for users 1 and 2, but not 3
+      await repository.createOrUpdateUserProfile(testUser1Id, {
+        firstName: "Find",
+        lastName: "User1",
+        bio: "Test bio 1",
+        activated: true,
+      });
+      await repository.createOrUpdateUserProfile(testUser2Id, {
+        firstName: "Find",
+        lastName: "User2",
+        bio: "Test bio 2",
+        activated: true,
+      });
+    });
+
+    it("should return user metadata for valid user IDs", async () => {
+      // Act
+      const result = await repository.findUsersByIds([testUser1Id, testUser2Id]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+
+      // Check first user
+      const user1 = result.value.find((u) => u.userId === testUser1Id);
+      expect(user1).toBeDefined();
+      expect(user1).toMatchObject({
+        userId: testUser1Id,
+        firstName: "Find",
+        lastName: "User1",
+        image: "https://example.com/avatar1.jpg",
+      });
+
+      // Check second user
+      const user2 = result.value.find((u) => u.userId === testUser2Id);
+      expect(user2).toBeDefined();
+      expect(user2).toMatchObject({
+        userId: testUser2Id,
+        firstName: "Find",
+        lastName: "User2",
+        image: null,
+      });
+    });
+
+    it("should return empty array for empty user IDs array", async () => {
+      // Act
+      const result = await repository.findUsersByIds([]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    it("should exclude users without profiles (inner join)", async () => {
+      // Act - include user without profile
+      const result = await repository.findUsersByIds([testUser3Id]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0); // User without profile is excluded by inner join
+    });
+
+    it("should only return users with profiles (inner join)", async () => {
+      // Act - request both user with profile and user without profile
+      const result = await repository.findUsersByIds([testUser1Id, testUser3Id]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1); // Only user with profile is returned
+
+      // User with profile
+      const userWithProfile = result.value.find((u) => u.userId === testUser1Id);
+      expect(userWithProfile).toMatchObject({
+        userId: testUser1Id,
+        firstName: "Find",
+        lastName: "User1",
+        image: "https://example.com/avatar1.jpg",
+      });
+
+      // User without profile should not be included
+      const userWithoutProfile = result.value.find((u) => u.userId === testUser3Id);
+      expect(userWithoutProfile).toBeUndefined();
+    });
+
+    it("should return partial results for mix of valid and invalid user IDs", async () => {
+      const invalidUserId = faker.string.uuid();
+
+      // Act
+      const result = await repository.findUsersByIds([testUser1Id, invalidUserId, testUser2Id]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2); // Only valid users with profiles returned
+
+      const userIds = result.value.map((u) => u.userId);
+      expect(userIds).toContain(testUser1Id);
+      expect(userIds).toContain(testUser2Id);
+      expect(userIds).not.toContain(invalidUserId);
+    });
+
+    it("should return empty array for all invalid user IDs", async () => {
+      const invalidUserIds = [faker.string.uuid(), faker.string.uuid()];
+
+      // Act
+      const result = await repository.findUsersByIds(invalidUserIds);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    it("should handle duplicate user IDs", async () => {
+      // Act - pass duplicate user IDs
+      const result = await repository.findUsersByIds([testUser1Id, testUser1Id, testUser2Id]);
+
+      // Assert - should return each user only once
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+
+      const userIds = result.value.map((u) => u.userId);
+      expect(userIds.filter((id) => id === testUser1Id)).toHaveLength(1);
+      expect(userIds.filter((id) => id === testUser2Id)).toHaveLength(1);
+    });
+  });
 });

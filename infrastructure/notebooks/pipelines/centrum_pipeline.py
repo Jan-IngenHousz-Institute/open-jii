@@ -22,6 +22,12 @@ question_schema = StructType([
     StructField("question_answer", StringType(), True)
 ])
 
+macro_schema = StructType([
+    StructField("id", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("filename", StringType(), True)
+])
+
 sensor_schema = StructType([
     StructField("topic", StringType(), False),
     StructField("device_name", StringType(), True),
@@ -32,12 +38,16 @@ sensor_schema = StructType([
     StructField("sample", StringType(), True),
     StructField("timestamp", TimestampType(), False),
     StructField("output", StringType(), True),
-    StructField("questions", ArrayType(question_schema), True)
+    StructField("questions", ArrayType(question_schema), True),
+    StructField("user_id", StringType(), True),
+    StructField("macros", ArrayType(macro_schema), True)
 ])
 
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
+
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
@@ -48,7 +58,6 @@ CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 
 # Slack notification configuration
-ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 # COMMAND ----------
@@ -146,6 +155,7 @@ def clean_data():
         .withColumn("device_firmware", F.col("parsed_data.device_firmware"))
         .withColumn("sample", F.col("parsed_data.sample"))
         .withColumn("output", F.col("parsed_data.output"))
+        .withColumn("user_id", F.col("parsed_data.user_id"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
@@ -157,22 +167,35 @@ def clean_data():
         "ingest_latency_ms", 
         F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
     )
-    
-    # Extract macros from sample data for downstream processing
+
+    # Extract macros from parsed_data or fall back to legacy behaviour
     df = df.withColumn(
         "macros",
-        F.when(F.col("sample").isNotNull(),
-            F.expr("""
-                flatten(
-                    transform(
-                        from_json(sample, 'array<string>'),
-                        x -> from_json(get_json_object(x, '$.macros'), 'array<string>')
+        F.when(
+            F.col("parsed_data.macros").isNotNull(),
+            F.col("parsed_data.macros")
+        ).otherwise(
+            F.when(
+                F.col("sample").isNotNull(),
+                F.expr("""
+                    flatten(
+                        transform(
+                            from_json(sample, 'array<string>'),
+                            x -> transform(
+                                from_json(get_json_object(x, '$.macros'), 'array<string>'),
+                                m -> named_struct(
+                                    'id', m,
+                                    'name', m, 
+                                    'filename', m
+                                )
+                            )
+                        )
                     )
-                )
-            """)
-        ).otherwise(F.array())
+                """)
+            ).otherwise(F.array())
+        )
     )
-    
+
     # Extract questions from the parsed_data and keep in original array structure
     df = df.withColumn(
         "questions",
@@ -207,6 +230,7 @@ def clean_data():
         "output",
         "macros",
         "questions",
+        "user_id",
         "experiment_id",
         "timestamp",
         "date",

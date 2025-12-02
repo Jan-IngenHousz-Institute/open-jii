@@ -113,7 +113,7 @@ export function ExperimentDataTable({
   }, []);
 
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, displayName, isLoading, error } = useExperimentData(
     experimentId,
     pagination.pageIndex + 1,
     pagination.pageSize,
@@ -224,9 +224,7 @@ export function ExperimentDataTable({
         {/*TODO: The option with bulk actions will be removed as soon as the backend code is ready.*/}
         {!isBulkActionsEnabled && (
           <div className="mb-4 flex items-center justify-between">
-            <h5 className="text-base font-medium">
-              {t("experimentDataTable.table")} {tableName}
-            </h5>
+            <h5 className="text-base font-medium">{displayName ?? tableName}</h5>
 
             <Button
               variant="outline"
@@ -241,9 +239,7 @@ export function ExperimentDataTable({
         )}
         {isBulkActionsEnabled && (
           <>
-            <h5 className="text-base font-medium">
-              {t("experimentDataTable.table")} {tableName}
-            </h5>
+            <h5 className="text-base font-medium">{displayName ?? tableName}</h5>
             <BulkActionsBar
               experimentId={experimentId}
               tableName={tableName}

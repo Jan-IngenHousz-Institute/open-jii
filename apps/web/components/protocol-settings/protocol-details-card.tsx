@@ -2,6 +2,7 @@
 
 import { editProtocolFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api";
@@ -49,6 +50,7 @@ export function ProtocolDetailsCard({
 }: ProtocolDetailsCardProps) {
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
   const { t } = useTranslation();
+  const [isCodeValid, setIsCodeValid] = useState(true);
 
   const form = useForm<UpdateProtocolRequestBody & { name: string; family: SensorFamily }>({
     resolver: zodResolver(
@@ -148,6 +150,7 @@ export function ProtocolDetailsCard({
                       <ProtocolCodeEditor
                         value={field.value ?? [{}]}
                         onChange={field.onChange}
+                        onValidationChange={setIsCodeValid}
                         label=""
                         placeholder={t("protocolSettings.codePlaceholder")}
                         error={form.formState.errors.code?.message?.toString()}
@@ -158,8 +161,14 @@ export function ProtocolDetailsCard({
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? t("protocolSettings.saving") : t("protocolSettings.save")}
+              <Button
+                type="submit"
+                isLoading={isUpdating}
+                disabled={
+                  isUpdating || !form.formState.isDirty || !form.formState.isValid || !isCodeValid
+                }
+              >
+                {t("protocolSettings.save")}
               </Button>
             </div>
           </form>

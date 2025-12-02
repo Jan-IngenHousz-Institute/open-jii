@@ -811,12 +811,14 @@ describe("useExperimentData", () => {
       body: [
         {
           name: "table1",
+          displayName: "table1",
           data: mockExperimentData,
           totalPages: 1,
           totalRows: 2,
         },
         {
           name: "table2",
+          displayName: "table2",
           data: {
             columns: [{ name: "count", type_name: "BIGINT", type_text: "BIGINT" }],
             rows: [{ count: "42" }],
@@ -866,6 +868,7 @@ describe("useExperimentData", () => {
       expect(result.current.sampleTables).toHaveLength(2);
       expect(result.current.sampleTables[0]).toEqual({
         name: "table1",
+        displayName: "table1",
         columns: expect.arrayContaining([
           expect.objectContaining({
             name: "id",
@@ -898,6 +901,7 @@ describe("useExperimentData", () => {
       });
       expect(result.current.sampleTables[1]).toEqual({
         name: "table2",
+        displayName: "table2",
         columns: expect.arrayContaining([
           expect.objectContaining({
             name: "count",

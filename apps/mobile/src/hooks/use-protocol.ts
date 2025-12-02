@@ -5,6 +5,7 @@ export function useProtocol(protocolId: string | undefined) {
     queryKey: ["protocol", protocolId],
     queryData: { params: { id: protocolId ?? "" } },
     enabled: !!protocolId,
+    networkMode: "offlineFirst",
   });
 
   const protocol = data?.body;

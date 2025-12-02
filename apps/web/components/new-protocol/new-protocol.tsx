@@ -4,6 +4,7 @@ import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtoco
 import { useLocale } from "@/hooks/useLocale";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import type { CreateProtocolRequestBody } from "@repo/api";
@@ -19,6 +20,7 @@ export function NewProtocolForm() {
   const router = useRouter();
   const { t } = useTranslation();
   const locale = useLocale();
+  const [isCodeValid, setIsCodeValid] = useState(true);
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
     onSuccess: (id: string) => router.push(`/${locale}/platform/protocols/${id}`),
@@ -50,6 +52,10 @@ export function NewProtocolForm() {
     toast({ description: t("protocols.protocolCreated") });
   }
 
+  const isDisabled = useMemo(() => {
+    return isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid;
+  }, [isPending, form.formState.isDirty, form.formState.isValid, isCodeValid]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -66,6 +72,7 @@ export function NewProtocolForm() {
                 <ProtocolCodeEditor
                   value={field.value}
                   onChange={field.onChange}
+                  onValidationChange={setIsCodeValid}
                   label={t("newProtocol.code")}
                   placeholder={t("newProtocol.codePlaceholder")}
                   error={form.formState.errors.code?.message?.toString()}
@@ -79,7 +86,7 @@ export function NewProtocolForm() {
           <Button type="button" onClick={cancel}>
             {t("newProtocol.cancel")}
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isDisabled}>
             {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
           </Button>
         </div>

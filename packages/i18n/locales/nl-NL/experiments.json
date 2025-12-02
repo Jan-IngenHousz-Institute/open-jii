@@ -49,7 +49,18 @@
     "staticDescription": "Visueel overzicht van de experimentworkflow",
     "tabLabel": "Flow",
     "saving": "Opslaan...",
-    "saveFlow": "Flow opslaan"
+    "saveFlow": "Flow opslaan",
+    "nodeTypes": {
+      "INSTRUCTION": "Instructie",
+      "QUESTION": "Vraag",
+      "MEASUREMENT": "Meting",
+      "ANALYSIS": "Analyse"
+    },
+    "questionTooltip": {
+      "title": "Gegevenskolomnaam",
+      "description": "Dit label wordt een kolom in uw gegevensanalyse:",
+      "defaultColumnName": "vraag_naam"
+    }
   },
   "overview": "Overzicht",
   "data": "Gegevens",

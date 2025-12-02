@@ -3,8 +3,10 @@
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -34,9 +36,9 @@ export function ProtocolInfoCard({ protocolId, protocol }: ProtocolInfoCardProps
   const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const router = useRouter();
-
   const { t } = useTranslation();
   const locale = useLocale();
+  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION);
 
   const handleDeleteProtocol = async () => {
     await deleteProtocol({ params: { id: protocolId } });
@@ -67,39 +69,44 @@ export function ProtocolInfoCard({ protocolId, protocol }: ProtocolInfoCardProps
           </div>
         </div>
 
-        <div className="border-t pt-4">
-          <h5 className="text-destructive mb-2 text-base font-medium">
-            {t("protocolSettings.dangerZone")}
-          </h5>
-          <p className="text-muted-foreground mb-4 text-sm">
-            {t("protocolSettings.deleteWarning")}
-          </p>
+        {isDeletionEnabled && (
+          <div className="border-t pt-4">
+            <h5 className="text-destructive mb-2 text-base font-medium">
+              {t("protocolSettings.dangerZone")}
+            </h5>
+            <p className="text-muted-foreground mb-4 text-sm">
+              {t("protocolSettings.deleteWarning")}
+            </p>
 
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive">{t("protocolSettings.deleteProtocol")}</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="text-destructive">
-                  {t("protocolSettings.deleteProtocol")}
-                </DialogTitle>
-                <DialogDescription>
-                  {t("protocolSettings.confirmDelete")} "{protocol.name}"?{" "}
-                  {t("protocolSettings.deleteWarning")}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="mt-4">
-                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                  {t("protocolSettings.cancel")}
-                </Button>
-                <Button variant="destructive" onClick={handleDeleteProtocol} disabled={isDeleting}>
-                  {isDeleting ? t("protocolSettings.deleting") : t("protocolSettings.delete")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive">{t("protocolSettings.deleteProtocol")}</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="text-destructive">
+                    {t("protocolSettings.deleteProtocol")}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {t("common.confirmDelete", { name: protocol.name })}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="mt-4">
+                  <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                    {t("protocolSettings.cancel")}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteProtocol}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? t("protocolSettings.deleting") : t("protocolSettings.delete")}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

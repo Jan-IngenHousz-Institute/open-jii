@@ -9,6 +9,7 @@ import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/
 import { ExperimentDataTableArrayCell } from "./experiment-data-table-array-cell";
 import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
 import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
+import { ExperimentDataTableUserCell } from "./experiment-data-table-user-cell";
 
 export function formatValue(
   value: unknown,
@@ -26,6 +27,10 @@ export function formatValue(
       return <div className="text-right tabular-nums">{value as number}</div>;
     case "TIMESTAMP":
       return (value as string).substring(0, 19).replace("T", " ");
+    case "USER":
+      return (
+        <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
+      );
     case "ARRAY":
     case "ARRAY<DOUBLE>":
     case "ARRAY<REAL>":

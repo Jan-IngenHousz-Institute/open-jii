@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { experiments } from "@repo/database";
@@ -403,6 +404,41 @@ describe("ExperimentMemberRepository", () => {
       expect(member.user.firstName).toBe("Default");
       expect(member.user.lastName).toBe("Role Batch");
       expect(member.user.email).toBe("default-role-batch@example.com");
+    });
+  });
+
+  describe("findUserFullNameFromProfile", () => {
+    it("should find minimum user profile by user id", async () => {
+      // Arrange
+      const userEmail = faker.internet.email();
+      const userId = await testApp.createTestUser({
+        email: userEmail,
+        name: "First Last",
+      });
+
+      // Act
+      const result = await repository.findUserFullNameFromProfile(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const profile = result.value;
+      expect(profile).not.toBeNull();
+      expect(profile?.firstName).toBe("First");
+      expect(profile?.lastName).toBe("Last");
+    });
+
+    it("should return null if profile not found", async () => {
+      // Arrange
+      const nonExistentId = "00000000-0000-0000-0000-000000000000";
+
+      // Act
+      const result = await repository.findUserFullNameFromProfile(nonExistentId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
     });
   });
 

@@ -57,7 +57,7 @@ const config: Config = {
     // Replace with your project's social card
     image: "img/logo.png",
     navbar: {
-      title: "openJII Documentation Hub",
+      title: "openJII Docs",
       logo: {
         alt: "JII Logo",
         src: "img/logo.png",
@@ -99,7 +99,7 @@ const config: Config = {
             {
               label: "Introduction",
               to: "/docs/introduction/overview",
-            },
+            },/*
             {
               label: "Getting Started",
               to: "/docs/category/installation--setup",
@@ -111,15 +111,15 @@ const config: Config = {
             {
               label: "Methodology & Analysis",
               to: "/docs/category/sensor-calibration--measurement",
-            },
+            },*/
             {
               label: "Developer's Guide",
               to: "/docs/category/developers-guide",
-            },
+            },/*
             {
               label: "FAQ & Support",
               to: "/docs/category/support-channels",
-            },
+            },*/
           ],
         },
         {
@@ -137,10 +137,7 @@ const config: Config = {
               label: "JII Contact",
               href: "https://www.jan-ingenhousz-institute.org/contact",
             },
-            {
-              label: "Social Media",
-              href: "/",
-            },
+
           ],
         },
         {
