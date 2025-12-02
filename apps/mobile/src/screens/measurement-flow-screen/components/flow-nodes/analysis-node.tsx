@@ -3,7 +3,7 @@ import React, { useRef } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
-import { useExperiment } from "~/hooks/use-experiment";
+import { useExperiments } from "~/hooks/use-experiments";
 import { useMacro } from "~/hooks/use-macro";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useSessionStore } from "~/hooks/use-session-store";
@@ -31,9 +31,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     iterationCount,
     flowNodes,
   } = useMeasurementFlowStore();
-  const { experiment } = useExperiment(experimentId);
+  const { experiments } = useExperiments();
   const { session } = useSessionStore();
-  const experimentName = experiment?.name ?? "Experiment";
+
+  const experimentName =
+    experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";
 
   const analysisTimestampRef = useRef<string>(new Date().toISOString());
   const { getCycleAnswers } = useFlowAnswersStore();
@@ -104,9 +106,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       throw new Error("Missing user id");
     }
 
-    if (!macro?.filename) {
-      throw new Error("Missing macro filename");
+    if (!macro?.id || !macro?.name || !macro?.filename) {
+      throw new Error("Missing macro information");
     }
+
+    const cycleAnswers = getCycleAnswers(iterationCount);
+    const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
 
     await uploadMeasurement({
       rawMeasurement: scanResult,
@@ -115,8 +120,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       experimentId,
       protocolId,
       userId: session?.data?.user?.id,
-      macroFilename: macro?.filename,
-      questions: convertCycleAnswersToArray(getCycleAnswers(iterationCount), flowNodes),
+      macro: {
+        id: macro.id,
+        name: macro.name,
+        filename: macro.filename,
+      },
+      questions,
     });
     finishFlow();
   };

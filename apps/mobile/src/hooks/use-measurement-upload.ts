@@ -1,14 +1,22 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
+import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
+
+interface MacroInfo {
+  id: string;
+  name: string;
+  filename: string;
+}
 
 interface PrepareMeasurementArgs {
   rawMeasurement: any;
   userId: string;
-  macroFilename: string;
+  macro: MacroInfo | null;
   timestamp: string;
   questions: AnswerData[];
 }
@@ -16,7 +24,7 @@ interface PrepareMeasurementArgs {
 function prepareMeasurementForUpload({
   rawMeasurement,
   userId,
-  macroFilename,
+  macro,
   timestamp,
   questions,
 }: PrepareMeasurementArgs) {
@@ -26,19 +34,23 @@ function prepareMeasurementForUpload({
       : [rawMeasurement.sample];
 
     for (const sample of samples) {
-      sample.macros = macroFilename ? [macroFilename] : [];
+      sample.macros = macro?.filename ? [macro.filename] : [];
     }
   }
 
+  const macros: MacroInfo[] = macro ? [macro] : [];
+
   return {
     questions,
+    macros,
     timestamp,
-    userId,
+    user_id: userId,
     ...rawMeasurement,
   };
 }
 
 export function useMeasurementUpload() {
+  const queryClient = useQueryClient();
   const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
@@ -49,7 +61,7 @@ export function useMeasurementUpload() {
       experimentId,
       protocolId,
       userId,
-      macroFilename,
+      macro,
       questions,
     }: {
       rawMeasurement: any;
@@ -58,7 +70,7 @@ export function useMeasurementUpload() {
       experimentId: string;
       protocolId: string;
       userId: string;
-      macroFilename: string;
+      macro: { id: string; name: string; filename: string } | null;
       questions: AnswerData[];
     }) => {
       if (typeof rawMeasurement !== "object") {
@@ -68,7 +80,7 @@ export function useMeasurementUpload() {
       const measurementData = prepareMeasurementForUpload({
         rawMeasurement,
         userId,
-        macroFilename,
+        macro,
         timestamp,
         questions,
       });
@@ -78,9 +90,20 @@ export function useMeasurementUpload() {
       try {
         await sendMqttEvent(topic, measurementData);
         toast.success("Measurement uploaded!");
+        // Save successful upload for history
+        await saveSuccessfulUpload({
+          topic,
+          measurementResult: measurementData,
+          metadata: {
+            experimentName,
+            protocolName: protocolId,
+            timestamp: measurementData.timestamp,
+          },
+        });
+        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
       } catch (e: any) {
         console.log("Upload failed", e);
-        toast.error("Upload not available, upload it later from Home screen");
+        toast.error("Upload not available, upload it later from Recent");
         await saveFailedUpload({
           topic,
           measurementResult: measurementData,
@@ -90,6 +113,7 @@ export function useMeasurementUpload() {
             timestamp: measurementData.timestamp,
           },
         });
+        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
       }
     },
   );
