@@ -29,6 +29,14 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+// Mock Next.js router
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 // Profile hook
 type ProfileBody = { firstName?: string; lastName?: string } | undefined;
 const useGetUserProfileMock = vi.fn();

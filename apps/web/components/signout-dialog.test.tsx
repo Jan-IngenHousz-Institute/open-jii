@@ -9,16 +9,11 @@ globalThis.React = React;
 
 // ---- Mocks ----
 
-const mockBack = vi.fn();
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    back: mockBack,
+    push: mockPush,
   }),
-}));
-
-const handleLogoutMock = vi.fn(() => Promise.resolve());
-vi.mock("../app/actions/auth", () => ({
-  handleLogout: (...args: Parameters<typeof handleLogoutMock>) => handleLogoutMock(...args),
 }));
 
 // Mock UI components from @repo/ui
@@ -79,12 +74,12 @@ describe("<SignOutDialog />", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBack.mockClear();
-    handleLogoutMock.mockClear();
+    mockPush.mockClear();
   });
 
   it("renders the dialog with correct translations", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+    const mockOnOpenChange = vi.fn();
+    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByTestId("dialog")).toHaveAttribute("data-open", "true");
@@ -95,7 +90,8 @@ describe("<SignOutDialog />", () => {
   });
 
   it("renders cancel and confirm buttons with correct labels", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+    const mockOnOpenChange = vi.fn();
+    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
 
     const cancelButton = screen.getByRole("button", { name: /Cancel/i });
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
@@ -104,26 +100,26 @@ describe("<SignOutDialog />", () => {
     expect(cancelButton).toHaveAttribute("data-variant", "ghost");
     expect(confirmButton).toBeInTheDocument();
     expect(confirmButton).toHaveAttribute("data-variant", "default");
-    expect(confirmButton).toHaveAttribute("type", "submit");
   });
 
-  it("calls router.back() when cancel button is clicked", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+  it("calls onOpenChange(false) when cancel button is clicked", () => {
+    const mockOnOpenChange = vi.fn();
+    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
 
     const cancelButton = screen.getByRole("button", { name: /Cancel/i });
     fireEvent.click(cancelButton);
 
-    expect(mockBack).toHaveBeenCalled();
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("calls handleLogout when confirm button is clicked", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+  it("calls router.push with logout URL when confirm button is clicked", () => {
+    const mockOnOpenChange = vi.fn();
+    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
 
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
     fireEvent.click(confirmButton);
 
-    expect(handleLogoutMock).toHaveBeenCalledTimes(1);
-    expect(handleLogoutMock).toHaveBeenCalledWith();
+    expect(mockPush).toHaveBeenCalledWith("/api/auth/logout");
   });
 
   it("renders with custom translations", () => {
@@ -134,7 +130,8 @@ describe("<SignOutDialog />", () => {
       confirm: "Bestätigen",
     };
 
-    render(<SignOutDialog translations={customTranslations} />);
+    const mockOnOpenChange = vi.fn();
+    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={customTranslations} />);
 
     expect(screen.getByTestId("dialog-title")).toHaveTextContent("Abmelden");
     expect(screen.getByTestId("dialog-description")).toHaveTextContent(
