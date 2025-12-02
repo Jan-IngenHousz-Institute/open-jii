@@ -12,9 +12,9 @@ import {
   DialogTitle,
 } from "@repo/ui/components";
 
+import { handleLogout } from "../app/actions/auth";
+
 interface SignOutDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   translations: {
     title: string;
     description: string;
@@ -23,27 +23,36 @@ interface SignOutDialogProps {
   };
 }
 
-export function SignOutDialog({ open, onOpenChange, translations }: SignOutDialogProps) {
+export function SignOutDialog({ translations }: SignOutDialogProps) {
   const router = useRouter();
 
-  const handleConfirm = () => {
-    router.push("/api/auth/logout");
+  const handleCancel = () => {
+    router.back();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) {
+          handleCancel();
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{translations.title}</DialogTitle>
           <DialogDescription>{translations.description}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:justify-end">
-          <Button onClick={() => onOpenChange(false)} variant="ghost">
+          <Button onClick={handleCancel} variant="ghost">
             {translations.cancel}
           </Button>
-          <Button onClick={handleConfirm} variant="default">
-            {translations.confirm}
-          </Button>
+          <form action={() => handleLogout()} className="inline-flex">
+            <Button type="submit" variant="default">
+              {translations.confirm}
+            </Button>
+          </form>
         </DialogFooter>
       </DialogContent>
     </Dialog>

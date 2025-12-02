@@ -256,7 +256,7 @@ resource "aws_cloudfront_distribution" "distribution" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/api/auth/logout"
+    path_pattern           = "/*/platform/signout"
     target_origin_id       = "ServerLambda"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
