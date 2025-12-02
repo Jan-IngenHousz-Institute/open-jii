@@ -212,9 +212,7 @@ export function ExperimentDataTable({
     <Form {...selectionForm}>
       <form>
         <input type="hidden" name="allRows" />
-        <h5 className="text-base font-medium">
-          {t("experimentDataTable.table")} {tableName}
-        </h5>
+        <h5 className="text-base font-medium">{displayName ?? tableName}</h5>
         <BulkActionsBar
           experimentId={experimentId}
           tableName={tableName}
