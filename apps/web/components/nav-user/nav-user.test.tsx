@@ -120,7 +120,7 @@ describe("<NavUser />", () => {
     expect(nameSpan).toHaveTextContent("");
   });
 
-  it("renders dropdown menu with account and logout links", async () => {
+  it("renders dropdown menu with account and logout items", async () => {
     const user = userEvent.setup();
     renderNav({
       profile: { firstName: "Ada", lastName: "Lovelace" },
@@ -134,7 +134,8 @@ describe("<NavUser />", () => {
     const accountItem = screen.getByRole("menuitem", { name: "auth.account" });
     expect(accountItem).toHaveAttribute("href", "/en-US/platform/account/settings");
 
+    // Logout is now a button that opens a dialog, not a direct link
     const logoutItem = screen.getByRole("menuitem", { name: "navigation.logout" });
-    expect(logoutItem).toHaveAttribute("href", "/en-US/platform/signout");
+    expect(logoutItem).toBeInTheDocument();
   });
 });

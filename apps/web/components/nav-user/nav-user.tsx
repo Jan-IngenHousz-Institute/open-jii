@@ -103,10 +103,7 @@ export function NavUser({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link
-                href={`/${locale}/platform/signout`}
-                className="flex w-full cursor-default items-center"
-              >
+              <Link href="/api/auth/logout" className="flex w-full cursor-default items-center">
                 <LogOut className="mr-2 h-4 w-4" />
                 {t("navigation.logout")}
               </Link>

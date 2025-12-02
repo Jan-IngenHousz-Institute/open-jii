@@ -1,8 +1,8 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { handleLogout } from "~/app/actions/auth";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useDeleteUser } from "~/hooks/profile/useDeleteUser/useDeleteUser";
 import { parseApiError } from "~/util/apiError";
@@ -33,15 +33,16 @@ interface DangerZoneCardProps {
 
 export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
   const { t } = useTranslation("account");
+  const router = useRouter();
   const [openModal, setOpenModal] = useState<"deactivate" | "delete" | null>(null);
   const [confirmation, setConfirmation] = useState("");
 
   const { mutate: updateProfile, isPending } = useCreateUserProfile({
-    onSuccess: async () => {
+    onSuccess: () => {
       toast({ description: t("dangerZone.deactivate.successMessage") });
       // Sign out after deactivation
       if (profile?.activated) {
-        await handleLogout({ redirectTo: "/" });
+        router.push("/api/auth/logout");
       }
     },
   });
@@ -67,13 +68,13 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
 
   // Delete hook with improved success message for soft-delete
   const { mutateAsync: deleteAccount, isPending: isDeleting } = useDeleteUser({
-    onSuccess: async () => {
+    onSuccess: () => {
       toast({
         description: t("dangerZone.delete.successMessage"),
       });
       handleClose();
       // Sign out after successful deletion
-      await handleLogout({ redirectTo: "/" });
+      router.push("/api/auth/logout");
     },
   });
 
