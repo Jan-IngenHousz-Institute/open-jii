@@ -79,7 +79,9 @@ describe("<SignOutDialog />", () => {
 
   it("renders the dialog with correct translations", () => {
     const mockOnOpenChange = vi.fn();
-    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
+    render(
+      <SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />,
+    );
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByTestId("dialog")).toHaveAttribute("data-open", "true");
@@ -91,7 +93,9 @@ describe("<SignOutDialog />", () => {
 
   it("renders cancel and confirm buttons with correct labels", () => {
     const mockOnOpenChange = vi.fn();
-    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
+    render(
+      <SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />,
+    );
 
     const cancelButton = screen.getByRole("button", { name: /Cancel/i });
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
@@ -104,7 +108,9 @@ describe("<SignOutDialog />", () => {
 
   it("calls onOpenChange(false) when cancel button is clicked", () => {
     const mockOnOpenChange = vi.fn();
-    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
+    render(
+      <SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />,
+    );
 
     const cancelButton = screen.getByRole("button", { name: /Cancel/i });
     fireEvent.click(cancelButton);
@@ -114,7 +120,9 @@ describe("<SignOutDialog />", () => {
 
   it("calls router.push with logout URL when confirm button is clicked", () => {
     const mockOnOpenChange = vi.fn();
-    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />);
+    render(
+      <SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={mockTranslations} />,
+    );
 
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
     fireEvent.click(confirmButton);
@@ -131,7 +139,13 @@ describe("<SignOutDialog />", () => {
     };
 
     const mockOnOpenChange = vi.fn();
-    render(<SignOutDialog open={true} onOpenChange={mockOnOpenChange} translations={customTranslations} />);
+    render(
+      <SignOutDialog
+        open={true}
+        onOpenChange={mockOnOpenChange}
+        translations={customTranslations}
+      />,
+    );
 
     expect(screen.getByTestId("dialog-title")).toHaveTextContent("Abmelden");
     expect(screen.getByTestId("dialog-description")).toHaveTextContent(
