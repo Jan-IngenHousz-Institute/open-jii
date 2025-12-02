@@ -138,4 +138,26 @@ describe("<NavUser />", () => {
     const logoutItem = screen.getByRole("menuitem", { name: "navigation.logout" });
     expect(logoutItem).toBeInTheDocument();
   });
+
+  it("opens sign-out dialog when logout is clicked", async () => {
+    const user = userEvent.setup();
+    renderNav({
+      profile: { firstName: "Ada", lastName: "Lovelace" },
+      locale: "en-US",
+    });
+
+    // open the menu
+    await user.click(screen.getByRole("button"));
+
+    // Click the logout menu item
+    const logoutItem = screen.getByRole("menuitem", { name: "navigation.logout" });
+    await user.click(logoutItem);
+
+    // Check that the sign-out dialog is now visible
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("signout.title")).toBeInTheDocument();
+    expect(screen.getByText("signout.description")).toBeInTheDocument();
+    expect(screen.getByText("common.cancel")).toBeInTheDocument();
+    expect(screen.getByText("signout.confirm")).toBeInTheDocument();
+  });
 });
