@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
@@ -80,10 +81,7 @@ export default function LoginScreen() {
         >
           <View style={styles.logoContainer}>
             <Pressable onPress={handleHeaderTap} hitSlop={10}>
-              <Image
-                source={require("../../../assets/splash-icon.png")}
-                style={styles.logo}
-              />
+              <Image source={require("../../../assets/splash-icon.png")} style={styles.logo} />
             </Pressable>
             <Text
               style={[
