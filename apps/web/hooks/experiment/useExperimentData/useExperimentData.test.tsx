@@ -209,7 +209,7 @@ describe("useExperimentData", () => {
           expect.objectContaining({
             accessorKey: "id",
             header: "id",
-            meta: { type: "INT" },
+            meta: { type: "ID" },
           }),
           expect.objectContaining({
             accessorKey: "name",
@@ -431,7 +431,7 @@ describe("useExperimentData", () => {
     it("should set smaller width for array columns", () => {
       const mockDataWithArrays: ExperimentData = {
         columns: [
-          { name: "id", type_name: "INT", type_text: "INT" },
+          { name: "temperature", type_name: "INT", type_text: "INT" },
           { name: "chart_data", type_name: "ARRAY", type_text: "ARRAY<DOUBLE>" },
           { name: "array_data", type_name: "ARRAY", type_text: "ARRAY<STRING>" },
           { name: "name", type_name: "STRING", type_text: "STRING" },
