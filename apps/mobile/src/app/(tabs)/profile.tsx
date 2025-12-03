@@ -1,5 +1,6 @@
 import "expo-application";
 import * as Application from "expo-application";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
@@ -14,11 +15,13 @@ import { formatRelativeTime } from "~/utils/format-relative-time";
 
 export default function ProfileScreen() {
   const { clearSession, session } = useSessionStore();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const theme = useTheme();
   const { colors } = theme;
 
   const handleLogout = () => {
+    queryClient.resetQueries();
     clearSession();
     router.replace("/callback");
   };
