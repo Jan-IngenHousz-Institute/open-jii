@@ -7,14 +7,14 @@ import styles from "./api.module.css";
 
 export default function RestApiPage(): JSX.Element {
   return (
-    <Layout title="REST API Documentation" description="OpenJII REST API Documentation">
+    <Layout title="REST API Documentation" description="openJII REST API Documentation">
       <Head>
-        <meta name="description" content="OpenJII REST API Documentation" />
+        <meta name="description" content="openJII REST API Documentation" />
       </Head>
       <main className={styles.apiContainer}>
         <div className={styles.apiHeader}>
-          <h1>OpenJII REST API Documentation</h1>
-          <p>Explore and test the OpenJII REST API endpoints</p>
+          <h1>openJII REST API Documentation</h1>
+          <p>Explore and test the openJII REST API endpoints</p>
         </div>
         <div className={styles.apiContent}>
           <SwaggerUI

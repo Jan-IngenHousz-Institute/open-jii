@@ -69,11 +69,11 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
     <footer className="bg-jii-dark-green w-full py-12 text-white">
       <div className="mx-auto w-full max-w-7xl px-4">
         <div className="mb-8 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-          {/* OpenJII Brand/Description aligned left */}
+          {/* openJII Brand/Description aligned left */}
           <div className="flex flex-col items-start">
             <Image
               src="/openJII-logo-BW-horizontal-white.svg"
-              alt="OpenJII Logo"
+              alt="openJII Logo"
               width={140}
               height={80}
               priority
