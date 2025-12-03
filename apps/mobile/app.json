@@ -29,7 +29,9 @@
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT"
       ],
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "package": "com.openjii.app"
     },
     "web": {
