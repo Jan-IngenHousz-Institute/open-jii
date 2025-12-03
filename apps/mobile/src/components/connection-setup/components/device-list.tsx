@@ -23,6 +23,7 @@ export function DeviceList({
   title,
 }: Props) {
   const { colors, classes } = useTheme();
+
   const renderKey = useMemo(() => Date.now(), [connectingDeviceId]);
 
   return (
