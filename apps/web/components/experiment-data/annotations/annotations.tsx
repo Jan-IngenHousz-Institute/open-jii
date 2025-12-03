@@ -26,7 +26,7 @@ function Annotation({
   experimentId: string;
   annotation: Annotation;
 }) {
-  const { mutateAsync: deleteAnnotation } = useExperimentDeleteAnnotation();
+  const { mutateAsync: deleteAnnotation, isPending } = useExperimentDeleteAnnotation();
   const { t } = useTranslation();
 
   async function onDelete() {
@@ -47,7 +47,7 @@ function Annotation({
         <div className="text-sm font-medium">{annotation.createdByName}</div>
         <div className="text-xs text-gray-500">{formatDate(annotation.createdAt)}</div>
         <div>
-          <Button variant="ghost" size="sm" type="button" onClick={onDelete}>
+          <Button variant="ghost" size="sm" type="button" onClick={onDelete} disabled={isPending}>
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>
