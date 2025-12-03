@@ -101,27 +101,11 @@ const config: Config = {
             {
               label: "Introduction",
               to: "/docs/introduction/overview",
-            } /*
-            {
-              label: "Getting Started",
-              to: "/docs/category/installation--setup",
             },
-            {
-              label: "Platform Usage",
-              to: "/docs/category/sensor-operation",
-            },
-            {
-              label: "Methodology & Analysis",
-              to: "/docs/category/sensor-calibration--measurement",
-            },*/,
             {
               label: "Developer's Guide",
               to: "/docs/category/developers-guide",
-            } /*
-            {
-              label: "FAQ & Support",
-              to: "/docs/category/support-channels",
-            },*/,
+            },
           ],
         },
         {
