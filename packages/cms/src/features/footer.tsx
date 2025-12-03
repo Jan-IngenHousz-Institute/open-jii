@@ -66,7 +66,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
   );
 
   return (
-    <footer className="bg-jii-dark-green w-full py-12 text-white">
+    <footer className="bg-sidebar w-full py-12 text-white">
       <div className="mx-auto w-full max-w-7xl px-4">
         <div className="mb-8 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           {/* OpenJII Brand/Description aligned left */}
@@ -116,7 +116,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
           </div>
         </div>
 
-        <div className="w-full border-t border-gray-500 pt-8 text-center">
+        <div className="w-full border-t border-white/40 pt-8 text-center">
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <p className="text-sm text-white" {...inspectorProps({ fieldId: "copyright" })}>
               {currentFooter.copyright}

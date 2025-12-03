@@ -13,6 +13,15 @@ fragment PageHomeFeaturesFields on PageHomeFeatures {
       ...FeatureFields
     }
   }
+  image {
+    url
+    title
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+  }
 }
 
 fragment FeatureFields on ComponentFeature {

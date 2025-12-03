@@ -4,9 +4,12 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import React from "react";
+
+import { Button } from "@repo/ui/components";
 
 import type { PageHomeHeroFieldsFragment, ButtonFieldsFragment } from "../../lib/__generated/sdk";
 
@@ -38,14 +41,12 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
     return locale ? `/${locale}${url}` : url;
   };
 
-  // Helper function to determine if URL is external
   const isExternalUrl = (url: string): boolean => url.startsWith("http");
 
   // Button component for cleaner JSX
-  const renderButton = (button: ButtonFieldsFragment | null, index: number) => {
+  const renderButton = (button: ButtonFieldsFragment | null) => {
     if (!button?.url) return null;
 
-    const isPrimary = index === 0;
     const href = buildHref(button.url);
     const isExternal = isExternalUrl(button.url);
 
@@ -54,67 +55,88 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
       locale,
     });
 
-    // Remove linkProps and spread props directly in <Link>
     return (
       <Link
         key={button.sys.id}
         href={href}
-        className="sm:h-14"
         {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
-        {isPrimary ? (
-          <button
-            className="bg-jii-dark-green hover:bg-jii-medium-green hover:shadow-jii-bright-green/25 group relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl px-7 py-3 text-lg font-bold text-white shadow-2xl transition-all duration-300 hover:scale-105"
-            {...buttonInspectorProps({ fieldId: "label" })}
-          >
-            <div className="relative flex items-center space-x-2">
-              <span>{button.label}</span>
-              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </button>
-        ) : (
-          <div
-            className="border-jii-dark-green text-jii-dark-green hover:border-jii-medium-green hover:text-jii-medium-green group flex h-14 items-center justify-center rounded-2xl border-2 bg-white px-7 py-3 text-lg font-bold shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105"
-            {...buttonInspectorProps({ fieldId: "label" })}
-          >
-            <div className="flex items-center space-x-2">
-              <span>{button.label}</span>
-              <ExternalLink className="h-5 w-5 transition-transform group-hover:scale-110" />
-            </div>
+        <Button
+          className="text-primary bg-badge-featured rounded-md px-5 py-6 text-sm font-semibold shadow transition hover:bg-white"
+          {...buttonInspectorProps({ fieldId: "label" })}
+        >
+          <div className="flex items-center space-x-2">
+            <span>{button.label}</span>
+            <ArrowRight className="h-4 w-4" />
           </div>
-        )}
+        </Button>
       </Link>
     );
   };
 
   return (
-    <section className="relative w-full max-w-7xl px-4 py-20 text-center">
-      <div
-        className="mb-7 inline-flex items-center space-x-2 rounded-full border border-emerald-200/50 bg-white/40 px-5 py-2.5 backdrop-blur-sm"
-        {...inspectorProps({ fieldId: "badge" })}
-      >
-        <span className="text-sm font-medium text-gray-700">{currentHero.badge}</span>
+    <section className="relative isolate -mt-16 min-h-screen w-full overflow-hidden bg-white">
+      {/* Background image block */}
+      <div className="absolute inset-0 -z-10" {...inspectorProps({ fieldId: "image" })}>
+        {currentHero.image?.url && (
+          <Image
+            src={currentHero.image.url}
+            alt={currentHero.image.title ?? "Hero background"}
+            fill
+            priority
+            className="object-cover"
+          />
+        )}
+
+        {/* Black transparent vertical fade */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-transparent" />
+
+        {/* Radial center fade */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)",
+          }}
+        />
       </div>
 
-      <h1
-        className="text-jii-dark-green mb-5 break-words text-5xl font-extrabold leading-tight md:text-6xl"
-        {...inspectorProps({ fieldId: "title" })}
-      >
-        {currentHero.title}
-      </h1>
-
-      <p
-        className="mx-auto mb-7 max-w-3xl text-xl leading-relaxed text-gray-600 md:text-2xl"
-        {...inspectorProps({ fieldId: "subtitle" })}
-      >
-        {currentHero.subtitle}
-      </p>
-
-      <div
-        className="mb-10 mt-10 flex flex-col justify-center gap-5 sm:flex-row"
-        {...inspectorProps({ fieldId: "buttons" })}
-      >
-        {currentHero.buttonsCollection?.items?.map(renderButton)}
+      {/* Main container */}
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="relative mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center text-center">
+          {" "}
+          {/* Badge */}
+          {currentHero.badge && (
+            <div
+              className="mb-6 inline-flex items-center rounded-full bg-white/10 px-4 py-1.5 text-sm text-white ring-1 ring-white/20 backdrop-blur-sm"
+              {...inspectorProps({ fieldId: "badge" })}
+            >
+              {currentHero.badge}
+            </div>
+          )}
+          {/* Title */}
+          <h1
+            className="text-5xl font-semibold tracking-tight text-white sm:text-7xl"
+            {...inspectorProps({ fieldId: "title" })}
+          >
+            {currentHero.title}
+          </h1>
+          {/* Subtitle */}
+          <p
+            className="mt-6 text-lg font-medium text-gray-200 sm:text-xl"
+            {...inspectorProps({ fieldId: "subtitle" })}
+          >
+            {currentHero.subtitle}
+          </p>
+          {/* Buttons */}
+          <div
+            className="mt-10 flex items-center justify-center gap-x-6"
+            {...inspectorProps({ fieldId: "buttons" })}
+          >
+            {currentHero.buttonsCollection?.items?.[0] &&
+              renderButton(currentHero.buttonsCollection.items[0])}
+          </div>
+        </div>
       </div>
     </section>
   );

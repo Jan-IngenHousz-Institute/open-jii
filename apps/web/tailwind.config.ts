@@ -54,6 +54,11 @@ export default {
           light: "#F6F8FA",
           foreground: "#000000",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          background: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+        },
         badge: {
           DEFAULT: "#FBF8C1",
           provisioning: "#FFF3B0",
@@ -62,6 +67,7 @@ export default {
           stale: "#FFE0B2",
           archived: "#E7EDF2",
           published: "#D8F2FC",
+          featured: "#E2FCFC"
         },
         highlight: {
           DEFAULT: "#fff381", // Yellow
