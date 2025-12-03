@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { Bluetooth, Radio, Usb, Trash2 } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import { Device } from "~/types/device";
@@ -23,6 +23,7 @@ export function DeviceList({
   title,
 }: Props) {
   const { colors, classes } = useTheme();
+  const renderKey = useMemo(() => Date.now(), [connectingDeviceId]);
 
   return (
     <View className="mb-6">
@@ -38,8 +39,10 @@ export function DeviceList({
 
       <FlatList
         data={devices}
+        extraData={connectingDeviceId}
         renderItem={({ item }) => {
           const showDeleteButton = !!onDelete && item.type !== "usb";
+          const isConnecting = item.id === connectingDeviceId;
 
           return (
             <TouchableOpacity
@@ -47,8 +50,10 @@ export function DeviceList({
                 "mb-2 flex-row items-center justify-between rounded-lg p-3",
                 classes.card,
               )}
-              onPress={() => onConnect(item)}
-              activeOpacity={0.7}
+              onPress={() => !isConnecting && onConnect(item)}
+              activeOpacity={isConnecting ? 1 : 0.7}
+              disabled={isConnecting}
+              style={{ opacity: isConnecting ? 0.6 : 1 }}
             >
               <View className="flex-1">
                 <Text className={clsx("text-base font-medium", classes.text)}>
@@ -62,8 +67,8 @@ export function DeviceList({
               </View>
               <View className="flex-row items-center gap-2">
                 <View className="p-2">
-                  {item.id === connectingDeviceId ? (
-                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                  {isConnecting ? (
+                    <ActivityIndicator size="small" color={colors.primary.dark} />
                   ) : (
                     <>
                       {item.type === "bluetooth-classic" && (
@@ -91,7 +96,7 @@ export function DeviceList({
             </TouchableOpacity>
           );
         }}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => `${item.id}-${renderKey}`}
         contentContainerStyle={{ paddingBottom: 8 }}
       />
     </View>
