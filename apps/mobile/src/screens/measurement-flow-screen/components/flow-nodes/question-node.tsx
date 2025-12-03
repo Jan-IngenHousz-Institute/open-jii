@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { Button } from "~/components/Button";
 import { Checkbox } from "~/components/Checkbox";
 import { useTheme } from "~/hooks/use-theme";
@@ -116,11 +116,18 @@ export function QuestionNode({ node }: QuestionNodeProps) {
 
   return (
     <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
-      <View className="border-b border-gray-200 p-4 dark:border-gray-700">
-        <Text className={clsx("text-lg font-semibold", classes.text)}>{content.text}</Text>
-      </View>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="border-b border-gray-200 p-4 dark:border-gray-700">
+          <Text className={clsx("text-lg font-semibold", classes.text)}>{content.text}</Text>
+        </View>
 
-      <View className="flex-1 p-4">{renderQuestionType()}</View>
+        <View className="flex-1 p-4">{renderQuestionType()}</View>
+      </ScrollView>
 
       <View className={clsx("border-t p-4", classes.border)}>
         <View className="mb-3 flex-row items-center justify-between">

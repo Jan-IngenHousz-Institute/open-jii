@@ -49,13 +49,17 @@ export function Checkbox({
       {checkboxPosition === "left" ? (
         <>
           {checkbox}
-          <Text className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}>
+          <Text
+            className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}
+          >
             {text}
           </Text>
         </>
       ) : (
         <>
-          <Text className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}>
+          <Text
+            className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}
+          >
             {text}
           </Text>
           {checkbox}
