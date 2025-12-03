@@ -21,7 +21,6 @@ const config: Config = {
   projectName: "openJII", // Usually your repo name.
 
   onBrokenLinks: "throw",
-  onBrokenMarkdownLinks: "warn",
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -33,6 +32,9 @@ const config: Config = {
 
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: "warn",
+    },
   },
   themes: ["@docusaurus/theme-mermaid"],
 
@@ -99,27 +101,11 @@ const config: Config = {
             {
               label: "Introduction",
               to: "/docs/introduction/overview",
-            },/*
-            {
-              label: "Getting Started",
-              to: "/docs/category/installation--setup",
             },
-            {
-              label: "Platform Usage",
-              to: "/docs/category/sensor-operation",
-            },
-            {
-              label: "Methodology & Analysis",
-              to: "/docs/category/sensor-calibration--measurement",
-            },*/
             {
               label: "Developer's Guide",
               to: "/docs/category/developers-guide",
-            },/*
-            {
-              label: "FAQ & Support",
-              to: "/docs/category/support-channels",
-            },*/
+            },
           ],
         },
         {
@@ -137,7 +123,6 @@ const config: Config = {
               label: "JII Contact",
               href: "https://www.jan-ingenhousz-institute.org/contact",
             },
-
           ],
         },
         {
@@ -164,38 +149,38 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-    algolia: {
-      // The application ID provided by Algolia
-      appId: "YOUR_APP_ID",
-
-      // Public API key: it is safe to commit it
-      apiKey: "YOUR_SEARCH_API_KEY",
-
-      indexName: "YOUR_INDEX_NAME",
-
-      // Optional: see doc section below
-      contextualSearch: true,
-
-      // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
-      externalUrlRegex: "external\\.com|domain\\.com",
-
-      // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.com/docs
-      replaceSearchResultPathname: {
-        from: "/docs/", // or as RegExp: /\/docs\//
-        to: "/",
-      },
-
-      // Optional: Algolia search parameters
-      searchParameters: {},
-
-      // Optional: path for search page that enabled by default (`false` to disable it)
-      searchPagePath: "search",
-
-      // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
-      insights: false,
-
-      //... other Algolia params
-    },
+    // algolia: {
+    //   // The application ID provided by Algolia
+    //   appId: "YOUR_APP_ID",
+    //
+    //   // Public API key: it is safe to commit it
+    //   apiKey: "YOUR_SEARCH_API_KEY",
+    //
+    //   indexName: "YOUR_INDEX_NAME",
+    //
+    //   // Optional: see doc section below
+    //   contextualSearch: true,
+    //
+    //   // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
+    //   externalUrlRegex: "external\\.com|domain\\.com",
+    //
+    //   // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.com/docs
+    //   replaceSearchResultPathname: {
+    //     from: "/docs/", // or as RegExp: /\/docs\//
+    //     to: "/",
+    //   },
+    //
+    //   // Optional: Algolia search parameters
+    //   searchParameters: {},
+    //
+    //   // Optional: path for search page that enabled by default (`false` to disable it)
+    //   searchPagePath: "search",
+    //
+    //   // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
+    //   insights: false,
+    //
+    //   //... other Algolia params
+    // },
   } satisfies Preset.ThemeConfig,
 };
 
