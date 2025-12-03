@@ -7,9 +7,17 @@ interface CheckboxProps {
   value: boolean;
   text: string;
   onChange: (value: boolean) => void;
+  textSize?: "sm" | "base";
+  checkboxPosition?: "left" | "right";
 }
 
-export function Checkbox({ value, text, onChange }: CheckboxProps) {
+export function Checkbox({
+  value,
+  text,
+  onChange,
+  textSize = "base",
+  checkboxPosition = "left",
+}: CheckboxProps) {
   const { classes } = useTheme();
 
   // WORKAROUND: Key with timestamp to force remount on every render
@@ -17,22 +25,42 @@ export function Checkbox({ value, text, onChange }: CheckboxProps) {
   // The timestamp ensures remount even when props stay the same (which was causing the issue)
   const renderId = Date.now();
 
+  const checkbox = (
+    <View
+      className={clsx(
+        checkboxPosition === "left" ? "mr-3" : "ml-3",
+        "h-8 w-8 items-center justify-center rounded border-2",
+      )}
+      style={{
+        borderColor: value ? "#10b981" : "#d1d5db",
+        backgroundColor: value ? "#10b981" : "transparent",
+      }}
+    >
+      {value && <Text className="text-base font-bold text-white">✓</Text>}
+    </View>
+  );
+
   return (
     <TouchableOpacity
       key={renderId}
       className="flex-row items-center"
       onPress={() => onChange(!value)}
     >
-      <View
-        className={clsx("mr-3 h-8 w-8 items-center justify-center rounded border-2")}
-        style={{
-          borderColor: value ? "#10b981" : "#d1d5db",
-          backgroundColor: value ? "#10b981" : "transparent",
-        }}
-      >
-        {value && <Text className="text-base font-bold text-white">✓</Text>}
-      </View>
-      <Text className={clsx("text-base", classes.textSecondary)}>{text}</Text>
+      {checkboxPosition === "left" ? (
+        <>
+          {checkbox}
+          <Text className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}>
+            {text}
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}>
+            {text}
+          </Text>
+          {checkbox}
+        </>
+      )}
     </TouchableOpacity>
   );
 }

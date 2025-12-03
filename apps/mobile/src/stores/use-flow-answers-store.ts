@@ -3,6 +3,7 @@ import { create } from "zustand";
 interface FlowAnswersStore {
   answersHistory: Record<string, string>[];
   autoincrementSettings: Record<string, boolean>;
+  rememberAnswerSettings: Record<string, boolean>;
 
   // Set an answer for a specific cycle and question
   setAnswer: (cycle: number, name: string, value: string) => void;
@@ -21,11 +22,18 @@ interface FlowAnswersStore {
 
   // Check if autoincrement is enabled for a variable
   isAutoincrementEnabled: (name: string) => boolean;
+
+  // Set remember answer setting for a variable
+  setRememberAnswer: (name: string, enabled: boolean) => void;
+
+  // Check if remember answer is enabled for a variable
+  isRememberAnswerEnabled: (name: string) => boolean;
 }
 
 export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
   answersHistory: [],
   autoincrementSettings: {},
+  rememberAnswerSettings: {},
 
   setAnswer: (cycle: number, name: string, value: string) => {
     set((state) => {
@@ -47,7 +55,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
   },
 
   clearHistory: () => {
-    set({ answersHistory: [], autoincrementSettings: {} });
+    set({ answersHistory: [], autoincrementSettings: {}, rememberAnswerSettings: {} });
   },
 
   getAnswer: (cycle: number, name: string) => {
@@ -72,5 +80,19 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
   isAutoincrementEnabled: (name: string) => {
     const state = get();
     return state.autoincrementSettings[name] ?? false;
+  },
+
+  setRememberAnswer: (name: string, enabled: boolean) => {
+    set((state) => ({
+      rememberAnswerSettings: {
+        ...state.rememberAnswerSettings,
+        [name]: enabled,
+      },
+    }));
+  },
+
+  isRememberAnswerEnabled: (name: string) => {
+    const state = get();
+    return state.rememberAnswerSettings[name] ?? false;
   },
 }));
