@@ -3,7 +3,7 @@
     "scheme": ["photosynq", "openjii"],
     "name": "OpenJII",
     "slug": "photosynq",
-    "version": "1.0.12",
+    "version": "1.0.13",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
