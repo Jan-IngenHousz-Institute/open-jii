@@ -1,6 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import "expo-application";
 import * as Application from "expo-application";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
