@@ -19,7 +19,7 @@ export function useScanner() {
       return;
     }
 
-    const result = await executeCommand(protocolCode).catch(console.log);
+    const result = await executeCommand(protocolCode);
 
     setBatteryLevel((result as any)?.device_battery);
     if (typeof result !== "object") {
