@@ -29,6 +29,14 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+// Mock Next.js router
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 // Profile hook
 type ProfileBody = { firstName?: string; lastName?: string } | undefined;
 const useGetUserProfileMock = vi.fn();
@@ -120,7 +128,7 @@ describe("<NavUser />", () => {
     expect(nameSpan).toHaveTextContent("");
   });
 
-  it("renders dropdown menu with account and logout links", async () => {
+  it("renders dropdown menu with account and logout items", async () => {
     const user = userEvent.setup();
     renderNav({
       profile: { firstName: "Ada", lastName: "Lovelace" },
@@ -134,7 +142,30 @@ describe("<NavUser />", () => {
     const accountItem = screen.getByRole("menuitem", { name: "auth.account" });
     expect(accountItem).toHaveAttribute("href", "/en-US/platform/account/settings");
 
+    // Logout is now a button that opens a dialog, not a direct link
     const logoutItem = screen.getByRole("menuitem", { name: "navigation.logout" });
-    expect(logoutItem).toHaveAttribute("href", "/en-US/platform/signout");
+    expect(logoutItem).toBeInTheDocument();
+  });
+
+  it("opens sign-out dialog when logout is clicked", async () => {
+    const user = userEvent.setup();
+    renderNav({
+      profile: { firstName: "Ada", lastName: "Lovelace" },
+      locale: "en-US",
+    });
+
+    // open the menu
+    await user.click(screen.getByRole("button"));
+
+    // Click the logout menu item
+    const logoutItem = screen.getByRole("menuitem", { name: "navigation.logout" });
+    await user.click(logoutItem);
+
+    // Check that the sign-out dialog is now visible
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("signout.title")).toBeInTheDocument();
+    expect(screen.getByText("signout.description")).toBeInTheDocument();
+    expect(screen.getByText("common.cancel")).toBeInTheDocument();
+    expect(screen.getByText("signout.confirm")).toBeInTheDocument();
   });
 });

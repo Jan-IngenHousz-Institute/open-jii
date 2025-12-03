@@ -3,6 +3,7 @@
 import { ChevronsUpDown, LogOut } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -22,6 +23,7 @@ import {
 } from "@repo/ui/components";
 
 import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
+import { SignOutDialog } from "../signout-dialog";
 
 export function NavUser({
   user,
@@ -36,6 +38,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const { t } = useTranslation();
+  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
 
   // Fetch user profile for first/last name
   const { data: userProfile } = useGetUserProfile(user.id);
@@ -102,18 +105,23 @@ export function NavUser({
                 {t("auth.account")}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/${locale}/platform/signout`}
-                className="flex w-full cursor-default items-center"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                {t("navigation.logout")}
-              </Link>
+            <DropdownMenuItem onSelect={() => setIsSignOutDialogOpen(true)}>
+              <LogOut className="mr-2 h-4 w-4" />
+              {t("navigation.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <SignOutDialog
+        open={isSignOutDialogOpen}
+        onOpenChange={setIsSignOutDialogOpen}
+        translations={{
+          title: t("signout.title"),
+          description: t("signout.description"),
+          cancel: t("common.cancel"),
+          confirm: t("signout.confirm"),
+        }}
+      />
     </SidebarMenu>
   );
 }

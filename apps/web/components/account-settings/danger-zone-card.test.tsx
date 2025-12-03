@@ -36,6 +36,13 @@ vi.mock("~/app/actions/auth", () => ({
   handleLogout: (arg: { redirectTo: string }) => handleLogoutSpy(arg),
 }));
 
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 let isPendingUpdate = false;
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   useCreateUserProfile: (cfg: { onSuccess?: () => Promise<void> | void }) => {
@@ -298,7 +305,7 @@ describe("<DangerZoneCard />", () => {
       });
 
       await waitFor(() => {
-        expect(handleLogoutSpy).toHaveBeenCalledWith({ redirectTo: "/" });
+        expect(mockPush).toHaveBeenCalledWith("/api/auth/logout");
       });
     });
 
@@ -452,7 +459,7 @@ describe("<DangerZoneCard />", () => {
       });
 
       await waitFor(() => {
-        expect(handleLogoutSpy).toHaveBeenCalledWith({ redirectTo: "/" });
+        expect(mockPush).toHaveBeenCalledWith("/api/auth/logout");
       });
     });
 
