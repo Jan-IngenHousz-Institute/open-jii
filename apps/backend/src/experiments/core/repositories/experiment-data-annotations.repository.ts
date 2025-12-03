@@ -91,21 +91,6 @@ export class ExperimentDataAnnotationsRepository {
     },
   };
 
-  async deleteAnnotationsTable(
-    experimentName: string,
-    experimentId: string,
-  ): Promise<Result<SchemaData>> {
-    const createTableQuery = `
-      DROP TABLE annotations
-    `;
-
-    return this.databricksPort.executeExperimentSqlQuery(
-      experimentName,
-      experimentId,
-      createTableQuery,
-    );
-  }
-
   /*
    * Ensure the annotations table exists
    */
