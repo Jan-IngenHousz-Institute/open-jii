@@ -5,7 +5,9 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import type { Document } from "@contentful/rich-text-types";
-import React from "react";
+import React, { useState } from "react";
+
+import { Button } from "@repo/ui/components";
 
 import type { PageFaqFieldsFragment, FaqQuestionFieldsFragment } from "../lib/__generated/sdk";
 import { CtfRichText } from "./contentful/ctf-rich-text";
@@ -41,58 +43,112 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
     locale,
   });
 
+  // State to manage which FAQ is open
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const toggleQuestion = (index: number) => {
+    setOpenIndex(openIndex === index ? null : index);
+  };
+
   // Helper to render the questions list
   const renderQuestionsList = (questions: (FaqQuestionFieldsFragment | null)[]) =>
     questions
       .filter((q): q is FaqQuestionFieldsFragment => q?.__typename === "ComponentFaqQuestion")
-      .map((q) => {
+      .map((q, index) => {
         if (!q) return null;
         const questionInspectorProps = useContentfulInspectorMode({
           entryId: q.sys.id,
           locale,
         });
+        const isOpen = openIndex === index;
+
         return (
-          <div
-            key={q.sys.id}
-            className="rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <h3
-              className="mb-3 text-xl font-semibold text-gray-900"
-              {...questionInspectorProps({ fieldId: "question" })}
+          <div key={q.sys.id} className="py-6 first:pt-0 last:pb-0">
+            <dt>
+              <Button
+                type="button"
+                onClick={() => toggleQuestion(index)}
+                aria-expanded={isOpen}
+                variant="ghost"
+                className="h-auto w-full justify-between gap-0 p-0 hover:bg-transparent"
+              >
+                <span
+                  className="whitespace-normal break-words text-left text-base/7 font-semibold"
+                  {...questionInspectorProps({ fieldId: "question" })}
+                >
+                  {q.question}
+                </span>
+                <span className="ml-6 flex h-7 items-center">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    aria-hidden="true"
+                    className={`!size-6 transition-all duration-300 ${
+                      isOpen ? "rotate-180 opacity-0" : "rotate-0 opacity-100"
+                    }`}
+                  >
+                    <path d="M12 6v12m6-6H6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    aria-hidden="true"
+                    className={`absolute !size-6 transition-all duration-300 ${
+                      isOpen ? "rotate-0 opacity-100" : "-rotate-180 opacity-0"
+                    }`}
+                  >
+                    <path d="M18 12H6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </Button>
+            </dt>
+            <dd
+              className={`grid pr-12 transition-all duration-500 ease-in-out ${
+                isOpen ? "mt-2 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              }`}
             >
-              {q.question}
-            </h3>
-            {q.answer?.json && (
-              <div {...questionInspectorProps({ fieldId: "answer" })}>
-                <CtfRichText json={q.answer.json as Document} />
+              <div className="overflow-hidden">
+                {q.answer?.json && (
+                  <div
+                    className="text-base/7 text-gray-600"
+                    {...questionInspectorProps({ fieldId: "answer" })}
+                  >
+                    <CtfRichText json={q.answer.json as Document} />
+                  </div>
+                )}
               </div>
-            )}
+            </dd>
           </div>
         );
       });
 
   return (
-    <>
-      <div className="mx-auto mb-12 max-w-4xl text-left">
-        <h1
-          className="mb-4 text-center text-4xl font-bold text-gray-900"
-          {...inspectorProps({ fieldId: "title" })}
-        >
-          {currentFaq.title}
-        </h1>
-        {typeof currentFaq.intro === "string" && (
-          <p
-            className="mx-auto max-w-2xl text-center text-lg text-gray-600"
-            {...inspectorProps({ fieldId: "intro" })}
+    <div className="bg-white">
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        <div className="mx-auto max-w-4xl">
+          <h2
+            className="text-4xl font-semibold tracking-tight sm:text-5xl"
+            {...inspectorProps({ fieldId: "title" })}
           >
-            {currentFaq.intro}
-          </p>
-        )}
+            {currentFaq.title}
+          </h2>
+          {currentFaq.intro && (
+            <p className="mt-6 text-base/7 text-gray-600" {...inspectorProps({ fieldId: "intro" })}>
+              {currentFaq.intro}
+            </p>
+          )}
+          <dl
+            className="mt-16 divide-y divide-gray-900/10"
+            {...inspectorProps({ fieldId: "questions" })}
+          >
+            {renderQuestionsList(questions)}
+          </dl>
+        </div>
       </div>
-
-      <div className="mx-auto max-w-4xl space-y-6" {...inspectorProps({ fieldId: `questions` })}>
-        {renderQuestionsList(questions)}
-      </div>
-    </>
+    </div>
   );
 };
