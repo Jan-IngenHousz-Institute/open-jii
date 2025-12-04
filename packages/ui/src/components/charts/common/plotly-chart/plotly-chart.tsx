@@ -310,6 +310,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         window.addEventListener("webglcontextlost", handleWebGLError);
         return () => window.removeEventListener("webglcontextlost", handleWebGLError);
       }
+
+      return;
     }, []);
 
     // Validate and prepare layout

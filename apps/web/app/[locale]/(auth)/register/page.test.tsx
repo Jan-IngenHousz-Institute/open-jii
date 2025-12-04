@@ -122,9 +122,9 @@ describe("UserRegistrationPage", () => {
 
     render(await UserRegistrationPage(defaultProps));
 
-    const container = document.querySelector(".relative.min-h-svh");
-    expect(container).toBeInTheDocument();
-    expect(container).toHaveClass("overflow-hidden");
+    // Check for fixed background container
+    const backgroundContainer = document.querySelector(".fixed.inset-0.z-0");
+    expect(backgroundContainer).toBeInTheDocument();
 
     const image = document.querySelector('img[alt="Registration background"]');
     expect(image).toBeInTheDocument();
@@ -133,13 +133,18 @@ describe("UserRegistrationPage", () => {
     expect(gradient).toBeInTheDocument();
     expect(gradient).toHaveClass("from-black", "via-black/80", "to-black/40");
 
+    // Check for foreground content container
+    const foregroundContainer = document.querySelector(".relative.z-10");
+    expect(foregroundContainer).toBeInTheDocument();
+    expect(foregroundContainer).toHaveClass("flex", "h-[calc(100vh-4rem)]");
+
     mockMathRandom.mockRestore();
   });
 
   it("renders with proper grid layout", async () => {
     render(await UserRegistrationPage(defaultProps));
 
-    const gridContainer = document.querySelector(".grid");
+    const gridContainer = document.querySelector(".grid.h-full");
     expect(gridContainer).toBeInTheDocument();
     expect(gridContainer).toHaveClass("grid-cols-1", "md:grid-cols-2");
   });

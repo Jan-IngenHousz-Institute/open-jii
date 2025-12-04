@@ -40,22 +40,22 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
   renderNode: {
     // Headings
     [BLOCKS.HEADING_1]: (node: Node, children: React.ReactNode) => (
-      <h1 className="my-8 text-4xl font-bold text-gray-900">{children}</h1>
+      <h1 className="my-8 text-4xl font-bold">{children}</h1>
     ),
     [BLOCKS.HEADING_2]: (node: Node, children: React.ReactNode) => (
-      <h2 className="my-6 text-3xl font-semibold text-gray-900">{children}</h2>
+      <h2 className="my-6 text-3xl font-semibold">{children}</h2>
     ),
     [BLOCKS.HEADING_3]: (node: Node, children: React.ReactNode) => (
-      <h3 className="my-5 text-2xl font-semibold text-gray-900">{children}</h3>
+      <h3 className="my-5 text-2xl font-semibold">{children}</h3>
     ),
     [BLOCKS.HEADING_4]: (node: Node, children: React.ReactNode) => (
-      <h4 className="my-4 text-xl font-semibold text-gray-900">{children}</h4>
+      <h4 className="my-4 text-xl font-semibold">{children}</h4>
     ),
     [BLOCKS.HEADING_5]: (node: Node, children: React.ReactNode) => (
-      <h5 className="my-3 text-lg font-semibold text-gray-900">{children}</h5>
+      <h5 className="my-3 text-lg font-semibold">{children}</h5>
     ),
     [BLOCKS.HEADING_6]: (node: Node, children: React.ReactNode) => (
-      <h6 className="my-2 text-base font-semibold text-gray-900">{children}</h6>
+      <h6 className="my-2 text-base font-semibold">{children}</h6>
     ),
 
     // Paragraphs
@@ -72,7 +72,7 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
     ),
 
     [BLOCKS.LIST_ITEM]: (node: Node, children: React.ReactNode) => (
-      <li className="leading-relaxed text-gray-700 [&>p]:my-0">{children}</li>
+      <li className="leading-relaxed [&>p]:my-0">{children}</li>
     ),
 
     // Blockquote
@@ -112,7 +112,7 @@ export const CtfRichText = ({ json, links }: ContentfulRichTextInterface) => {
   const baseOptions = contentfulBaseRichTextOptions({ json, links });
 
   return (
-    <div className="w-full break-words leading-relaxed text-gray-700">
+    <div className="w-full break-words leading-relaxed text-gray-900">
       {documentToReactComponents(json, baseOptions)}
     </div>
   );
