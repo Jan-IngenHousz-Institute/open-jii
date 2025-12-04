@@ -223,7 +223,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
   return (
     <header className={navbarBackgroundVariants({ mode: getNavbarMode() })}>
       <nav
-        className={`font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-4 ${
+        className={`font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 ${
           isLightMode ? "text-black" : "text-white"
         }`}
       >
