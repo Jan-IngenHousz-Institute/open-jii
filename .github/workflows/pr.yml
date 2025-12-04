@@ -78,6 +78,103 @@ jobs:
             apps/*/coverage.json
           retention-days: 1
 
+  preview_release:
+    name: Preview Next Release Version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for semantic versioning
+      
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+      
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+      
+      - name: Preview Release (Dry Run)
+        id: preview
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: ./.github/actions/semantic-release
+        with:
+          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: 'true'
+      
+      - name: Comment PR with Preview
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const releases = JSON.parse('${{ steps.preview.outputs.releases_created }}');
+            
+            let comment = '## 🔍 Release Preview\n\n';
+            
+            if (Object.keys(releases).length === 0) {
+              comment += '✅ **No new releases will be created.**\n\n';
+              comment += 'The changes in this PR do not trigger a version bump (e.g., docs, chore, style commits).\n';
+            } else {
+              comment += '✨ Merging this PR will create the following releases:\n\n';
+              
+              for (const [app, version] of Object.entries(releases)) {
+                comment += `### ${app}\n`;
+                comment += `- **Version**: \`v${version}\`\n`;
+                comment += `- **Tag**: \`${app}-v${version}\`\n`;
+                comment += `- **GitHub Release**: Will be created automatically\n`;
+                comment += `- **Deployment**: Will trigger ${app} deployment workflow\n\n`;
+              }
+              
+              comment += '---\n';
+              comment += '### 📚 What gets released?\n\n';
+              comment += 'Releases are triggered by **conventional commits**:\n';
+              comment += '- `feat:` → Minor version bump (1.0.0 → 1.1.0)\n';
+              comment += '- `fix:` → Patch version bump (1.0.0 → 1.0.1)\n';
+              comment += '- `BREAKING CHANGE:` → Major version bump (1.0.0 → 2.0.0)\n';
+              comment += '- `docs:`, `chore:`, `style:` → No release\n\n';
+              comment += '📖 [Release Documentation](https://docs.openjii.org/releases)\n';
+            }
+            
+            comment += '\n---\n';
+            comment += '*This is a preview based on your conventional commits. Actual releases will occur when merged to main.*';
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🔍 Release Preview')
+            );
+            
+            // Update or create comment
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
   # tofu:
   #   name: OpenTofu
   #   needs: build_lint_test
