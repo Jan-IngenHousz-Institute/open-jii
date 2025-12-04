@@ -101,7 +101,10 @@ function UserMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/api/auth/logout" className="flex w-full cursor-default items-center">
+          <Link
+            href={`/${locale}/platform/signout?hideBackground=true`}
+            className="flex w-full cursor-default items-center"
+          >
             <LogOut className="mr-2 h-4 w-4" />
             {t("auth.signOut", "Sign Out")}
           </Link>
@@ -356,7 +359,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link
-                        href="/api/auth/logout"
+                        href={`/${locale}/platform/signout?hideBackground=true`}
                         className="flex w-full cursor-default items-center"
                       >
                         <LogOut className="mr-2 h-4 w-4" />
