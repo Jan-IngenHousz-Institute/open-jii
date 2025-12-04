@@ -349,4 +349,66 @@ describe("<UnifiedNavbar />", () => {
     expect(within(dropdown).getByText("Ada Lovelace")).toBeInTheDocument();
     expect(within(dropdown).getByTestId("avatar-image")).toBeInTheDocument();
   });
+
+  it("sets up intersection observer when isHomePage is true", () => {
+    const observeMock = vi.fn();
+    const unobserveMock = vi.fn();
+    const mockIntersectionObserver = vi.fn(() => ({
+      observe: observeMock,
+      unobserve: unobserveMock,
+      disconnect: vi.fn(),
+    }));
+
+    vi.stubGlobal("IntersectionObserver", mockIntersectionObserver);
+
+    // Create a mock hero section
+    const heroSection = document.createElement("section");
+    const main = document.createElement("main");
+    main.appendChild(heroSection);
+    document.body.appendChild(main);
+
+    const { unmount } = render(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
+      >
+        <UnifiedNavbar locale="en-US" session={null} isHomePage={true} />
+      </QueryClientProvider>,
+    );
+
+    expect(mockIntersectionObserver).toHaveBeenCalledWith(expect.any(Function), {
+      threshold: 0,
+      rootMargin: "-64px 0px 0px 0px",
+    });
+    expect(observeMock).toHaveBeenCalledWith(heroSection);
+
+    unmount();
+    expect(unobserveMock).toHaveBeenCalledWith(heroSection);
+
+    // Cleanup
+    document.body.removeChild(main);
+    vi.unstubAllGlobals();
+  });
+
+  it("renders mobile navigation links with active state", () => {
+    renderNavbar({
+      locale: "en-US",
+      pathname: "/en-US/about",
+    });
+
+    const mobileDropdowns = screen.getAllByTestId("dropdown-content");
+    const mobileDropdown = mobileDropdowns[mobileDropdowns.length - 1];
+
+    const mobileLinks = within(mobileDropdown).getAllByRole("link");
+
+    const aboutLink = mobileLinks.find((link) => link.textContent?.includes("About"));
+    expect(aboutLink).toHaveAttribute("aria-current", "page");
+    expect(aboutLink).toHaveClass("bg-accent");
+
+    const homeLink = mobileLinks.find((link) => link.textContent?.includes("Home"));
+    expect(homeLink).not.toHaveAttribute("aria-current");
+  });
 });
