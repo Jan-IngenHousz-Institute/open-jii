@@ -43,27 +43,26 @@ export function RichTextarea({
   });
 
   useEffect(() => {
-    if (quill) {
-      // Set initial value if provided
-      if (value && quill.root.innerHTML !== value) {
-        quill.root.innerHTML = value;
-      }
+    if (!quill) return;
 
-      const handleTextChange = () => {
-        const html = quill.root.innerHTML;
-        if (html !== value) {
-          onChange(html);
-        }
-      };
-      quill.enable(!isDisabled);
-
-      quill.on("text-change", handleTextChange);
-
-      // Cleanup
-      return () => {
-        quill.off("text-change", handleTextChange);
-      };
+    // Set initial value if provided
+    if (value && quill.root.innerHTML !== value) {
+      quill.root.innerHTML = value;
     }
+
+    const handleTextChange = () => {
+      const html = quill.root.innerHTML;
+      if (html !== value) {
+        onChange(html);
+      }
+    };
+
+    quill.enable(!isDisabled);
+    quill.on("text-change", handleTextChange);
+
+    return () => {
+      quill.off("text-change", handleTextChange);
+    };
   }, [quill, onChange, value, isDisabled]);
 
   return (

@@ -20,6 +20,7 @@ export function ConnectionSetup() {
 
   const { data: device } = useConnectedDevice();
   const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
+
   const { connectToDevice, connectingDeviceId, disconnectFromDevice, unpairDevice } =
     useConnectToDevice();
   const { data: pairedDevices = [] } = usePairedDevices();

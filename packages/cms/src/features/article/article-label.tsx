@@ -10,7 +10,7 @@ export const ArticleLabel = ({ children, className, ...props }: ArticleLabelProp
   return (
     <span
       className={cn(
-        "rounded bg-purple-100 px-2 py-1 text-xs font-medium uppercase leading-none tracking-widest text-purple-700",
+        "bg-badge-featured text-primary rounded px-2 py-1 text-xs font-medium uppercase leading-none tracking-widest",
         className,
       )}
       {...props}

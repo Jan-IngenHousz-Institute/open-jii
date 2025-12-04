@@ -1,6 +1,5 @@
 import { UnifiedNavbar } from "@/components/unified-navbar/unified-navbar";
 import { auth } from "@/lib/auth";
-import { ChevronDown } from "lucide-react";
 import { draftMode } from "next/headers";
 import { getContentfulClients } from "~/lib/contentful";
 
@@ -52,24 +51,19 @@ export default async function Home({ params }: HomePageProps) {
 
   return (
     <>
-      <UnifiedNavbar locale={locale} session={session} />
-      <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <UnifiedNavbar locale={locale} session={session} isHomePage={true} />
+      <main className="flex min-h-screen flex-col items-center bg-gradient-to-br">
         {/* Hero Section */}
         <HomeHeroComponent heroData={homeHero} preview={preview} locale={locale} />
 
-        {/* Scroll Indicator */}
-        <div className="animate-bounce">
-          <ChevronDown className="mx-auto h-8 w-8 text-emerald-500" />
-        </div>
+        {/* Partners Section */}
+        <HomePartners partnersData={homePartners} preview={preview} locale={locale} />
 
         {/* About & Mission Section */}
         <HomeAboutMission missionData={homeMission} preview={preview} locale={locale} />
 
-        {/* Enhanced Key Features */}
+        {/* Features Section */}
         <HomeKeyFeatures featuresData={homeFeatures} preview={preview} locale={locale} />
-
-        {/*Partner & Visual Media */}
-        <HomePartners partnersData={homePartners} preview={preview} locale={locale} />
 
         {/* Footer */}
         <HomeFooter locale={locale} footerData={footerData} preview={preview} />

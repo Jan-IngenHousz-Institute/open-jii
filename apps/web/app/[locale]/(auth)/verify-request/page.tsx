@@ -31,8 +31,9 @@ export default async function VerifyRequestPage(props: {
   return (
     <>
       <UnifiedNavbar locale={locale} session={session} />
-      <div className="relative min-h-svh w-full overflow-hidden">
-        {/* Background Image */}
+
+      {/* Fixed full-screen background */}
+      <div className="fixed inset-0 z-0 w-full">
         <Image
           src={bgImage}
           alt="Verify request background"
@@ -40,17 +41,20 @@ export default async function VerifyRequestPage(props: {
           priority
           className="object-cover"
         />
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 z-10 bg-gradient-to-l from-black via-black/80 to-black/40" />
 
-        {/* Content */}
-        <div className="relative z-20 mx-auto max-w-7xl">
-          <div className="grid min-h-svh w-full grid-cols-1 md:grid-cols-2">
-            {/* Left side: Login form */}
-            <div className="flex flex-col p-0 md:mt-6 md:p-10">
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-l from-black via-black/80 to-black/40" />
+      </div>
+
+      {/* Foreground content */}
+      <div className="relative z-10 flex h-[calc(100vh-4rem)] w-full items-center">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="grid h-full grid-cols-1 md:grid-cols-2">
+            {/* Left side: Verify request card */}
+            <div className="flex flex-col p-0 md:p-10">
               <div className="flex h-full w-full flex-col justify-center">
                 <div className="w-full max-w-none md:mx-0 md:max-w-md">
-                  <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 lg:p-14">
+                  <div className="bg-card text-card-foreground ring-border flex h-full min-h-[420px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 md:min-h-[600px] lg:p-14">
                     {/* Icon */}
                     <div className="mb-4 flex justify-center">
                       <span className="bg-primary/10 inline-flex items-center justify-center rounded-full p-3">
