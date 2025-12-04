@@ -36,9 +36,9 @@ export function MeasurementFlowScreen() {
 
   return (
     <View className={clsx("flex-1", classes.background)}>
-      <View className="flex-1 p-5">
+      <View className="flex-1 p-3">
         {shouldShowNavigationButtons && (
-          <View className="mb-4 flex-row justify-between">
+          <View className="mb-2 flex-row justify-between">
             {shouldShowBackButton && <BackButton onPress={handleBackPress} />}
             {!shouldShowBackButton && <View />}
             <EndFlowButton onPress={handleEndFlow} />

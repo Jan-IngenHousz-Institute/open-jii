@@ -14,6 +14,15 @@ fragment PageHomeHeroFields on PageHomeHero {
       ...ButtonFields
     }
   }
+  image {
+    url
+    title
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+  }
 }
 
 fragment ButtonFields on ComponentButton {

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import "expo-application";
 import * as Application from "expo-application";
 import { useRouter } from "expo-router";
@@ -14,11 +15,13 @@ import { formatRelativeTime } from "~/utils/format-relative-time";
 
 export default function ProfileScreen() {
   const { clearSession, session } = useSessionStore();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const theme = useTheme();
   const { colors } = theme;
 
   const handleLogout = () => {
+    queryClient.resetQueries();
     clearSession();
     router.replace("/callback");
   };

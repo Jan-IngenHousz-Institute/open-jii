@@ -88,9 +88,9 @@ describe("VerifyRequestPage", () => {
 
     render(await VerifyRequestPage(props));
 
-    const container = document.querySelector(".relative.min-h-svh");
-    expect(container).toBeInTheDocument();
-    expect(container).toHaveClass("overflow-hidden");
+    // Check for fixed background container
+    const backgroundContainer = document.querySelector(".fixed.inset-0.z-0");
+    expect(backgroundContainer).toBeInTheDocument();
 
     // Check for Next.js Image component with correct props
     const image = document.querySelector('img[alt="Verify request background"]');
@@ -100,6 +100,10 @@ describe("VerifyRequestPage", () => {
     const gradient = document.querySelector(".bg-gradient-to-l");
     expect(gradient).toBeInTheDocument();
     expect(gradient).toHaveClass("from-black", "via-black/80", "to-black/40");
+
+    // Check for foreground content container
+    const foregroundContainer = document.querySelector(".relative.z-10");
+    expect(foregroundContainer).toBeInTheDocument();
 
     mockMathRandom.mockRestore();
   });

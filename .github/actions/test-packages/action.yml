@@ -36,9 +36,14 @@ runs:
         EXIT_CODE=$?
         echo "$OUTPUT"
 
-        if echo "$OUTPUT" | grep -q "No tasks were executed"; then
+        COVERAGE_FILES=$(find apps tooling packages -maxdepth 2 -name "coverage.json" -type f 2>/dev/null)
+
+        if [ -z "$COVERAGE_FILES" ]; then
+          echo "⚠️ No coverage files were generated; skipping Codecov upload"
           echo "has_coverage=false" >> $GITHUB_OUTPUT
         else
+          echo "✅ Found coverage files:"
+          echo "$COVERAGE_FILES"
           echo "has_coverage=true" >> $GITHUB_OUTPUT
         fi
 
