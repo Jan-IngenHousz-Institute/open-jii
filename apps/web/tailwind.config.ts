@@ -67,7 +67,7 @@ export default {
           stale: "#FFE0B2",
           archived: "#E7EDF2",
           published: "#D8F2FC",
-          featured: "#E2FCFC"
+          featured: "#E2FCFC",
         },
         highlight: {
           DEFAULT: "#fff381", // Yellow
