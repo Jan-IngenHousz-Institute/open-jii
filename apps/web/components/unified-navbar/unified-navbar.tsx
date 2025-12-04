@@ -201,7 +201,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         mode: {
           light: "bg-white/60 backdrop-blur-md border-b border-white/60",
           dark: "bg-gradient-to-b from-black/80 to-transparent",
-          scrolled: "bg-sidebar border-b border-white/40 shadow-lg",
+          green: "bg-sidebar border-b border-white/40 shadow-lg",
         },
       },
       defaultVariants: {
@@ -210,9 +210,9 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     },
   );
 
-  const getNavbarMode = (): "light" | "dark" | "scrolled" => {
+  const getNavbarMode = (): "light" | "dark" | "green" => {
     if (isHomePage && !isIntersecting) {
-      return "scrolled";
+      return "green";
     }
     if (isLightMode) {
       return "light";
