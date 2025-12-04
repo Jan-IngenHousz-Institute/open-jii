@@ -315,4 +315,38 @@ describe("<UnifiedNavbar />", () => {
     renderNavbar({ locale: "en-US", pathname: "/en-US" });
     expect(screen.getByRole("button", { name: /Navigation menu/i })).toBeInTheDocument();
   });
+
+  it("applies light navbar mode on light-themed routes", () => {
+    renderNavbar({ locale: "en-US", pathname: "/en-US/about" });
+
+    const header = screen.getByRole("banner");
+    expect(header.className).toMatch(/bg-white\/60/); // light mode background
+  });
+
+  it("applies overlay/transparent navbar on platform-related pages", () => {
+    renderNavbar({ locale: "en-US", pathname: "/en-US/platform" });
+
+    const header = screen.getByRole("banner");
+    expect(header.className).toMatch(/from-black\/80/); // overlay gradient
+  });
+
+  it("uses dark gradient mode on non-light, non-overlay routes", () => {
+    renderNavbar({ locale: "en-US", pathname: "/en-US/some-random-page" });
+
+    const header = screen.getByRole("banner");
+    expect(header.className).toMatch(/from-black\/80/);
+  });
+
+  it("renders mobile auth section correctly when logged in", () => {
+    renderNavbar({
+      locale: "en-US",
+      pathname: "/en-US",
+      session: makeSession(),
+    });
+
+    const dropdown = screen.getAllByTestId("dropdown-content")[0];
+
+    expect(within(dropdown).getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(within(dropdown).getByTestId("avatar-image")).toBeInTheDocument();
+  });
 });
