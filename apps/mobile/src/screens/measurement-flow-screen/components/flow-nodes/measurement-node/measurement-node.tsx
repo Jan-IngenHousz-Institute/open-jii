@@ -5,7 +5,7 @@ import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
 import { useProtocol } from "~/hooks/use-protocol";
 import { useTheme } from "~/hooks/use-theme";
-import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
+import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-hooks";
 import { useScanner } from "~/services/scan-manager/scan-manager";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { playSound } from "~/utils/play-sound";
@@ -51,8 +51,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
     resetScan();
     try {
-      // For measurement node, we only execute the protocol scan, no macro
-      const result = await executeScan(content.protocolId);
+      if (!protocol) {
+        throw new Error("No protocol");
+      }
+
+      const result = await executeScan(protocol);
       setScanResult(result);
       // Play system notification sound when measurement completes
       await playSound();

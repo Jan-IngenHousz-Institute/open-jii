@@ -1,77 +1,10 @@
-import { useAsync, useAsyncCallback } from "react-async-hook";
-import RNBluetoothClassic from "react-native-bluetooth-classic";
+import { useAsyncCallback } from "react-async-hook";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
-import { useProtocols } from "~/hooks/use-protocols";
-import {
-  getConnectedSerialPortConnection,
-  useConnectedDevice,
-} from "~/services/device-connection-manager/device-connection-manager";
-import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
-import { serialPortToMultispeqStream } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
-import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
-import { Device } from "~/types/device";
-
-async function createBluetoothMultiseqCommandExecutor(device: Device | undefined) {
-  if (!device) {
-    return undefined;
-  }
-
-  const bluetoothDevice = await RNBluetoothClassic.getConnectedDevice(device.id);
-  return new MultispeqCommandExecutor(bluetoothDeviceToMultispeqStream(bluetoothDevice));
-}
-
-function createSerialPortCommandExecutor() {
-  const connection = getConnectedSerialPortConnection();
-  if (!connection) {
-    return undefined;
-  }
-
-  return new MultispeqCommandExecutor(serialPortToMultispeqStream(connection));
-}
-
-async function createMultispeqCommandExecutor(device: Device | undefined) {
-  if (!device) {
-    return undefined;
-  }
-
-  if (device.type === "bluetooth-classic") {
-    return createBluetoothMultiseqCommandExecutor(device);
-  }
-
-  if (device.type === "usb") {
-    return createSerialPortCommandExecutor();
-  }
-
-  throw new Error("Unsupported device type");
-}
-
-export function useScannerCommandExecutor() {
-  const { data: device } = useConnectedDevice();
-  const { result: commandExecutor } = useAsync(
-    () => createMultispeqCommandExecutor(device ?? undefined),
-    [device?.id],
-  );
-
-  const {
-    result: commandResponse,
-    reset,
-    loading: isExecuting,
-    error,
-    execute: executeCommand,
-  } = useAsyncCallback((command: string | object) => commandExecutor?.execute(command));
-
-  return {
-    commandResponse,
-    reset,
-    isExecuting,
-    error,
-    executeCommand,
-  };
-}
+import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-command-executor";
 
 export function useScanner() {
   const { executeCommand } = useScannerCommandExecutor();
-  const { protocols } = useProtocols();
+
   const { setBatteryLevel } = useDeviceConnectionStore();
 
   const {
@@ -80,13 +13,13 @@ export function useScanner() {
     loading: isScanning,
     error,
     result,
-  } = useAsyncCallback(async (protocolId: string) => {
-    const protocolCode = protocols?.find((p) => p.value === protocolId)?.code;
+  } = useAsyncCallback(async (protocol: { code: Record<string, unknown>[] }) => {
+    const protocolCode = protocol.code;
     if (!protocolCode) {
       return;
     }
 
-    const result = await executeCommand(protocolCode).catch(console.log);
+    const result = await executeCommand(protocolCode);
 
     setBatteryLevel((result as any)?.device_battery);
     if (typeof result !== "object") {

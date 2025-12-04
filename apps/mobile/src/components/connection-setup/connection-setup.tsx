@@ -9,7 +9,7 @@ import {
   useConnectToDevice,
   usePairedDevices,
   useSerialDevices,
-} from "~/services/device-connection-manager/device-connection-manager";
+} from "~/services/device-connection-manager/device-connection-hooks";
 
 import { ConnectedDevice } from "./components/connected-device";
 import { DeviceList } from "./components/device-list";
@@ -20,6 +20,7 @@ export function ConnectionSetup() {
 
   const { data: device } = useConnectedDevice();
   const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
+
   const { connectToDevice, connectingDeviceId, disconnectFromDevice, unpairDevice } =
     useConnectToDevice();
   const { data: pairedDevices = [] } = usePairedDevices();

@@ -285,7 +285,7 @@ describe("<UnifiedNavbar />", () => {
     expect(signOutLink).toBeInTheDocument();
   });
 
-  it("navigates to signout page when sign out is clicked", () => {
+  it("navigates to logout API route when sign out is clicked", () => {
     renderNavbar({
       locale: "en-US",
       pathname: "/en-US/blog",
@@ -295,10 +295,10 @@ describe("<UnifiedNavbar />", () => {
     const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
     const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
 
-    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
+    expect(signOutLink).toHaveAttribute("href", "/api/auth/logout");
   });
 
-  it("navigates to signout page when currently on /platform", () => {
+  it("navigates to logout API route when currently on /platform", () => {
     renderNavbar({
       locale: "en-US",
       pathname: "/en-US/platform",
@@ -308,7 +308,7 @@ describe("<UnifiedNavbar />", () => {
     const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
     const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
 
-    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
+    expect(signOutLink).toHaveAttribute("href", "/api/auth/logout");
   });
 
   it("mobile menu trigger is present (icon button)", () => {

@@ -6,21 +6,25 @@ import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
 import { useExperimentFlowQuery } from "~/hooks/use-experiment-flow-query";
 import { useExperiments } from "~/hooks/use-experiments";
+import { usePrecachedExperimentData } from "~/hooks/use-precached-experiment-data";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { orderFlowNodes } from "~/utils/order-flow-nodes";
 
+import { OfflineModeIndicator } from "./offline-mode-indicator";
+
 export function ExperimentSelectionStep() {
   const { classes } = useTheme();
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const { setExperimentId, setFlowNodes, nextStep } = useMeasurementFlowStore();
-  const { refetch: fetchExperimentFlow, isFetching } = useExperimentFlowQuery(selectedExperimentId);
+  const { data: experimentFlow } = useExperimentFlowQuery(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
 
   const selectedExperiment = experiments.find((exp) => exp.value === selectedExperimentId);
+  const { data: precachedData } = usePrecachedExperimentData(selectedExperimentId);
 
   return (
     <View className="flex-1">
@@ -60,12 +64,16 @@ export function ExperimentSelectionStep() {
 
           {!isLoading && !error && (
             <>
+              <View className="mb-1.5 flex-row items-center justify-between">
+                <Text className={clsx("text-sm", classes.text)}>Available Experiments</Text>
+                <OfflineModeIndicator isVisible={!!precachedData} />
+              </View>
+
               <Dropdown
-                label="Available Experiments"
                 options={experiments}
                 selectedValue={selectedExperimentId}
                 onSelect={(value) => setSelectedExperimentId(value)}
-                placeholder="Choose an experiment to continue"
+                placeholder="Choose an experiment"
               />
 
               {selectedExperiment?.fullDescription && (
@@ -81,28 +89,24 @@ export function ExperimentSelectionStep() {
           )}
         </View>
 
-        {/* Action Button footer inside card for consistent layout */}
         <View className="border-t border-gray-200 p-4 dark:border-gray-700">
           <Button
             title="Start measurement flow"
-            onPress={async () => {
-              if (!selectedExperimentId) {
+            onPress={() => {
+              if (!selectedExperimentId || !experimentFlow) {
                 return;
               }
 
-              // Clear previous answers when starting a new flow
               clearHistory();
-
               setExperimentId(selectedExperimentId);
 
-              const experimentFlow = await fetchExperimentFlow();
-              const { nodes = [], edges = [] } = experimentFlow?.data?.body?.graph ?? {};
+              const { nodes = [], edges = [] } = experimentFlow?.body?.graph ?? {};
 
               const orderedNodes = orderFlowNodes(nodes, edges);
               setFlowNodes(orderedNodes);
               nextStep();
             }}
-            isDisabled={!selectedExperimentId || isFetching}
+            isDisabled={!selectedExperimentId || !experimentFlow}
             style={{ width: "100%" }}
           />
         </View>

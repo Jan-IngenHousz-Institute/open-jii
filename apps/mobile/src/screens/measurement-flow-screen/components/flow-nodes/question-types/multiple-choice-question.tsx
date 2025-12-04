@@ -2,10 +2,8 @@ import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { Checkbox } from "~/components/Checkbox";
 import { useTheme } from "~/hooks/use-theme";
 import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-types/utils/grid-layout";
-import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 
 import { FlowNode } from "../../../types";
 
@@ -43,8 +41,6 @@ export function MultipleChoiceQuestion({
   disabledOptions = [],
 }: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
-  const { setAutoincrement, isAutoincrementEnabled } = useFlowAnswersStore();
-
   const content = node.content;
 
   const handleOptionSelect = (value: string) => {
@@ -93,14 +89,6 @@ export function MultipleChoiceQuestion({
           Previously used options are disabled
         </Text>
       )}
-
-      <View className="mt-auto">
-        <Checkbox
-          value={isAutoincrementEnabled(node.name)}
-          text="Auto Increment"
-          onChange={(enabled) => setAutoincrement(node.name, enabled)}
-        />
-      </View>
     </View>
   );
 }
