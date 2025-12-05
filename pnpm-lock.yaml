@@ -802,11 +802,11 @@ importers:
         specifier: 0.41.1
         version: 0.41.1(nodemailer@7.0.11)
       '@auth/drizzle-adapter':
-        specifier: ^1.10.0
-        version: 1.10.0(nodemailer@7.0.11)
+        specifier: ^1.11.1
+        version: 1.11.1(nodemailer@7.0.11)
       '@auth/express':
-        specifier: ^0.11.0
-        version: 0.11.0(express@5.1.0)(nodemailer@7.0.11)
+        specifier: ^0.12.1
+        version: 0.12.1(express@5.1.0)(nodemailer@7.0.11)
       '@react-email/components':
         specifier: catalog:react-email
         version: 0.3.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -17725,7 +17725,7 @@ snapshots:
     optionalDependencies:
       nodemailer: 7.0.11
 
-  '@auth/drizzle-adapter@1.10.0(nodemailer@7.0.11)':
+  '@auth/drizzle-adapter@1.11.1(nodemailer@7.0.11)':
     dependencies:
       '@auth/core': 0.41.1(nodemailer@7.0.11)
     transitivePeerDependencies:
@@ -17733,7 +17733,7 @@ snapshots:
       - '@simplewebauthn/server'
       - nodemailer
 
-  '@auth/express@0.11.0(express@5.1.0)(nodemailer@7.0.11)':
+  '@auth/express@0.12.1(express@5.1.0)(nodemailer@7.0.11)':
     dependencies:
       '@auth/core': 0.41.1(nodemailer@7.0.11)
       express: 5.1.0
