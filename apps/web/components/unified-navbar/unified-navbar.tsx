@@ -1,7 +1,7 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { User, Home, BookOpen, LogOut, Menu, Sprout } from "lucide-react";
+import { User, Home, BookOpen, LogOut, Menu, Sprout, MessageCircleQuestion } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -162,7 +162,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
       },
       {
         href: `/${locale}/about`,
-        label: t("navigation.about", "About"),
+        label: t("navigation.about", "About JII"),
         icon: User,
         isActive: pathname.startsWith(`/${locale}/about`),
       },
@@ -171,6 +171,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         label: t("navigation.blog", "Blog"),
         icon: BookOpen,
         isActive: pathname.startsWith(`/${locale}/blog`),
+      },
+      {
+        href: `/${locale}/faq`,
+        label: t("navigation.faq", "FAQ"),
+        icon: MessageCircleQuestion,
+        isActive: pathname.startsWith(`/${locale}/faq`),
       },
       {
         href: `/${locale}/platform`,
@@ -274,7 +280,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                 aria-current={item.isActive ? "page" : undefined}
               >
                 <Icon className={iconClass} />
-                <span>{item.label}</span>
+                <span className="whitespace-nowrap">{item.label}</span>
               </Link>
             );
           })}
@@ -315,7 +321,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                         aria-current={item.isActive ? "page" : undefined}
                       >
                         <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <span className="whitespace-nowrap">{item.label}</span>
                       </Link>
                     </DropdownMenuItem>
                   );

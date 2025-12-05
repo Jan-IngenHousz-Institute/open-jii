@@ -156,6 +156,7 @@ vi.mock("lucide-react", () => {
     Menu: Icon,
     LogIn: Icon,
     Sprout: Icon,
+    MessageCircleQuestion: Icon,
   };
 });
 
