@@ -1,7 +1,7 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { User, Home, BookOpen, LogOut, Menu, Sprout } from "lucide-react";
+import { User, Home, BookOpen, LogOut, Menu, Sprout, MessageCircleQuestion } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -101,7 +101,10 @@ function UserMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/api/auth/logout" className="flex w-full cursor-default items-center">
+          <Link
+            href={`/${locale}/platform/signout?hideBackground=true`}
+            className="flex w-full cursor-default items-center"
+          >
             <LogOut className="mr-2 h-4 w-4" />
             {t("auth.signOut", "Sign Out")}
           </Link>
@@ -159,7 +162,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
       },
       {
         href: `/${locale}/about`,
-        label: t("navigation.about", "About"),
+        label: t("navigation.about", "About JII"),
         icon: User,
         isActive: pathname.startsWith(`/${locale}/about`),
       },
@@ -168,6 +171,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         label: t("navigation.blog", "Blog"),
         icon: BookOpen,
         isActive: pathname.startsWith(`/${locale}/blog`),
+      },
+      {
+        href: `/${locale}/faq`,
+        label: t("navigation.faq", "FAQ"),
+        icon: MessageCircleQuestion,
+        isActive: pathname.startsWith(`/${locale}/faq`),
       },
       {
         href: `/${locale}/platform`,
@@ -249,7 +258,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                 aria-current={item.isActive ? "page" : undefined}
               >
                 <Icon className={iconClass} />
-                <span>{item.label}</span>
+                <span className="whitespace-nowrap">{item.label}</span>
               </Link>
             );
           })}
@@ -290,7 +299,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                         aria-current={item.isActive ? "page" : undefined}
                       >
                         <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <span className="whitespace-nowrap">{item.label}</span>
                       </Link>
                     </DropdownMenuItem>
                   );
@@ -334,7 +343,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link
-                        href="/api/auth/logout"
+                        href={`/${locale}/platform/signout?hideBackground=true`}
                         className="flex w-full cursor-default items-center"
                       >
                         <LogOut className="mr-2 h-4 w-4" />
