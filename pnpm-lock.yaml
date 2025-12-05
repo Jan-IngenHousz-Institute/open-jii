@@ -98,7 +98,7 @@ catalogs:
 overrides:
   react: 19.1.0
   react-dom: 19.1.0
-  '@auth/core': 0.41.1
+  '@auth/core': ^0.41.1
   mermaid: ^11.10.0
 
 patchedDependencies:
@@ -799,14 +799,14 @@ importers:
   packages/auth:
     dependencies:
       '@auth/core':
-        specifier: 0.41.1
+        specifier: ^0.41.1
         version: 0.41.1(nodemailer@7.0.11)
       '@auth/drizzle-adapter':
-        specifier: ^1.10.0
-        version: 1.10.0(nodemailer@7.0.11)
+        specifier: ^1.11.1
+        version: 1.11.1(nodemailer@7.0.11)
       '@auth/express':
-        specifier: ^0.11.0
-        version: 0.11.0(express@5.1.0)(nodemailer@7.0.11)
+        specifier: ^0.12.1
+        version: 0.12.1(express@5.1.0)(nodemailer@7.0.11)
       '@react-email/components':
         specifier: catalog:react-email
         version: 0.3.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1486,11 +1486,11 @@ packages:
       nodemailer:
         optional: true
 
-  '@auth/drizzle-adapter@1.10.0':
-    resolution: {integrity: sha512-3MKsdAINTfvV4QKev8PFMNG93HJEUHh9sggDXnmUmriFogRf8qLvgqnPsTlfUyWcLwTzzrrYjeu8CGM+4IxHwQ==}
+  '@auth/drizzle-adapter@1.11.1':
+    resolution: {integrity: sha512-cQTvDZqsyF7RPhDm/B6SvqdVP9EzQhy3oM4Muu7fjjmSYFLbSR203E6dH631ZHSKDn2b4WZkfMnjPDzRsPSAeA==}
 
-  '@auth/express@0.11.0':
-    resolution: {integrity: sha512-IOw4U5qMNHdSMCRwMMDGW9rEi/bcUaoEj142C1bJg/Uc3LKqoezOXqf23trZT8KkK9u/IH80K42RzAboa4J4Bw==}
+  '@auth/express@0.12.1':
+    resolution: {integrity: sha512-DJHrolXcxs3VpXW6/rw+Pz1W1H2MTXCyHBpzRsJDAmP0BLB1RgeKjdOndj/ytVuoRFhTU8y6D/iwYkKU7aV3Ag==}
     peerDependencies:
       express: ^4.18.2 || ^5.0.0
 
@@ -17725,7 +17725,7 @@ snapshots:
     optionalDependencies:
       nodemailer: 7.0.11
 
-  '@auth/drizzle-adapter@1.10.0(nodemailer@7.0.11)':
+  '@auth/drizzle-adapter@1.11.1(nodemailer@7.0.11)':
     dependencies:
       '@auth/core': 0.41.1(nodemailer@7.0.11)
     transitivePeerDependencies:
@@ -17733,7 +17733,7 @@ snapshots:
       - '@simplewebauthn/server'
       - nodemailer
 
-  '@auth/express@0.11.0(express@5.1.0)(nodemailer@7.0.11)':
+  '@auth/express@0.12.1(express@5.1.0)(nodemailer@7.0.11)':
     dependencies:
       '@auth/core': 0.41.1(nodemailer@7.0.11)
       express: 5.1.0
