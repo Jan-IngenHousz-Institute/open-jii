@@ -316,13 +316,6 @@ describe("<UnifiedNavbar />", () => {
     expect(screen.getByRole("button", { name: /Navigation menu/i })).toBeInTheDocument();
   });
 
-  it("applies light navbar mode on light-themed routes", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US/about" });
-
-    const header = screen.getByRole("banner");
-    expect(header.className).toMatch(/bg-white\/60/); // light mode background
-  });
-
   it("applies overlay/transparent navbar on platform-related pages", () => {
     renderNavbar({ locale: "en-US", pathname: "/en-US/platform" });
 

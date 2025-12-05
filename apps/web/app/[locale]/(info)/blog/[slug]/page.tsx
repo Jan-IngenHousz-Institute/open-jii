@@ -78,13 +78,13 @@ export default async function Page({ params }: BlogPageProps) {
 
   return (
     <>
-      <Container>
+      <Container className="mt-4">
         <ArticleHero article={blogPost} isFeatured={isFeatured} isReversedLayout={true} />
       </Container>
       <Container className="mt-8 max-w-4xl">
         <ArticleContent article={blogPost} />
       </Container>
-      {relatedPosts && (
+      {relatedPosts && relatedPosts.length > 0 && (
         <Container className="mt-8 max-w-5xl">
           <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
             {t("article.relatedArticles")}

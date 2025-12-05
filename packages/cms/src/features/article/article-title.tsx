@@ -34,99 +34,107 @@ export const ArticleTile = ({
     title?: string;
   };
 
-  const safePublishedDate: Date | undefined = publishedDate ? new Date(publishedDate) : undefined;
+  const safePublishedDate = publishedDate ? new Date(publishedDate) : undefined;
   const inspectorProps = useContentfulInspectorMode({ entryId: article.sys.id });
 
+  // HORIZONTAL
   if (horizontal) {
-    // --- HORIZONTAL
     return (
-      <Link className="flex" href={`/${locale}/blog/${slug}`}>
-        <div
-          className={cn(
-            "border-gray300 flex flex-1 flex-row overflow-hidden rounded-2xl border shadow-lg",
-            className,
-          )}
-        >
+      <Link href={`/${locale}/blog/${slug}`} className={cn("flex flex-col", className)}>
+        <article className="relative isolate flex h-[190px] flex-col overflow-hidden rounded-2xl bg-gray-900">
+          {/* IMAGE */}
           {featuredImage && (
-            <div
-              {...inspectorProps({ fieldId: "featuredImage" })}
-              className="flex h-full w-1/3 min-w-[120px] max-w-[180px] items-center justify-center"
-            >
+            <div {...inspectorProps({ fieldId: "featuredImage" })}>
               <CtfImage
                 nextImageProps={{
-                  className: "object-cover w-full h-full rounded-l-xl",
+                  className:
+                    "absolute inset-0 -z-10 h-full w-full object-cover pointer-events-none",
                 }}
                 {...featuredImage}
               />
             </div>
           )}
 
-          <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4 lg:px-7 lg:py-5">
-            <div
-              className={cn("mb-2 text-left text-xs text-gray-600")}
-              {...inspectorProps({ fieldId: "publishedDate" })}
-            >
-              <FormatDate date={safePublishedDate} />
+          {/* GRADIENTS */}
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/40" />
+          <div className="inset-ring inset-ring-gray-900/10 pointer-events-none absolute inset-0 -z-10 rounded-2xl" />
+
+          {/* CONTENT */}
+          <div className="relative z-10 mt-auto px-6 pb-6">
+            <div className="flex flex-wrap items-center gap-y-1 text-sm text-gray-300">
+              <time className="mr-8" {...inspectorProps({ fieldId: "publishedDate" })}>
+                <FormatDate date={safePublishedDate} />
+              </time>
+
+              <div className="-ml-4 flex items-center gap-x-4">
+                <svg viewBox="0 0 2 2" className="-ml-0.5 h-0.5 w-0.5 flex-none fill-white/50">
+                  <circle r="1" cx="1" cy="1" />
+                </svg>
+                <ArticleAuthor article={article} />
+              </div>
             </div>
 
             {title && (
-              <p
-                className="h3 mb-2 text-left text-lg font-medium text-gray-800 md:mb-3 md:text-xl"
+              <h3
+                className="mt-3 text-lg font-semibold leading-6 text-white"
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {title}
-              </p>
+              </h3>
             )}
-
-            <div className="mt-auto flex flex-col items-start gap-2">
-              <ArticleAuthor article={article} />
-            </div>
           </div>
-        </div>
+        </article>
       </Link>
     );
   }
 
-  // --- VERTICAL
+  // VERTICAL
   return (
-    <Link className="flex flex-col" href={`/${locale}/blog/${slug}`}>
-      <div
-        className={cn(
-          "border-gray300 flex flex-1 flex-col overflow-hidden rounded-2xl border shadow-lg",
-          className,
-        )}
-      >
+    <Link href={`/${locale}/blog/${slug}`} className={cn("flex flex-col", className)}>
+      <article className="relative isolate flex h-[420px] flex-col overflow-hidden rounded-2xl bg-gray-900">
+        {/* IMAGE */}
         {featuredImage && (
           <div {...inspectorProps({ fieldId: "featuredImage" })}>
             <CtfImage
               nextImageProps={{
-                className: "object-cover aspect-[16/10] w-full",
+                className: "absolute inset-0 -z-10 h-full w-full object-cover pointer-events-none",
               }}
               {...featuredImage}
             />
           </div>
         )}
-        <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4 lg:px-7 lg:py-5">
+
+        {/* GRADIENTS */}
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/40" />
+        <div className="inset-ring inset-ring-gray-900/10 pointer-events-none absolute inset-0 -z-10 rounded-2xl" />
+
+        {/* CONTENT */}
+        <div className="relative z-10 mt-auto px-8 pb-8">
+          {/* DATE + AUTHOR */}
+          <div className="flex flex-wrap items-center gap-y-1 text-sm text-gray-300">
+            <time className="mr-8" {...inspectorProps({ fieldId: "publishedDate" })}>
+              <FormatDate date={safePublishedDate} />
+            </time>
+
+            <div className="-ml-4 flex items-center gap-x-4">
+              <svg viewBox="0 0 2 2" className="-ml-0.5 h-0.5 w-0.5 flex-none fill-white/50">
+                <circle r="1" cx="1" cy="1" />
+              </svg>
+              <ArticleAuthor article={article} />
+            </div>
+          </div>
+
+          {/* TITLE */}
           {title && (
-            <p
-              className="h3 mb-2 text-lg font-medium text-gray-800 md:mb-3 md:text-xl"
+            <h3
+              className="mt-3 text-lg font-semibold leading-6 text-white"
               {...inspectorProps({ fieldId: "title" })}
             >
               {title}
-            </p>
+            </h3>
           )}
-
-          <div className="mt-auto flex items-center">
-            <ArticleAuthor article={article} />
-            <div
-              className={cn("ml-auto pl-2 text-xs text-gray-600")}
-              {...inspectorProps({ fieldId: "publishedDate" })}
-            >
-              <FormatDate date={safePublishedDate} />
-            </div>
-          </div>
         </div>
-      </div>
+      </article>
     </Link>
   );
 };

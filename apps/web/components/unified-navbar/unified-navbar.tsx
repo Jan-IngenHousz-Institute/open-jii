@@ -155,7 +155,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         href: `/${locale}`,
         label: t("navigation.home", "Home"),
         icon: Home,
-        isActive: pathname === `/${locale}`,
+        isActive: pathname === `/${locale}` || pathname === `/${locale}/`,
       },
       {
         href: `/${locale}/about`,
