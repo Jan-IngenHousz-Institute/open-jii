@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/unbound-method */
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
@@ -110,5 +110,38 @@ describe("useExperimentAnnotationDelete", () => {
 
     expect(result.current.isError).toBe(true);
     expect(result.current.error).toBe(mockError);
+  });
+
+  it("should call onSuccess callback and invalidate queries", async () => {
+    const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
+    mockTsr.useQueryClient.mockReturnValue({
+      invalidateQueries: mockInvalidateQueries,
+    } as any);
+
+    let onSuccessCallback: (() => Promise<void>) | undefined;
+
+    mockTsr.experiments.deleteAnnotation.useMutation = vi
+      .fn()
+      .mockImplementation(({ onSuccess }) => {
+        onSuccessCallback = onSuccess;
+        return {
+          mutate: vi.fn(),
+          mutateAsync: vi.fn(),
+          isPending: false,
+          isError: false,
+          isSuccess: false,
+          data: undefined,
+          error: null,
+        };
+      }) as any;
+
+    renderHook(() => useExperimentAnnotationDelete(), { wrapper: createWrapper() });
+
+    // Verify onSuccess callback was passed
+    expect(onSuccessCallback).toBeDefined();
+
+    // Call the onSuccess callback and verify it invalidates queries
+    await onSuccessCallback?.();
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["experiment"] });
   });
 });
