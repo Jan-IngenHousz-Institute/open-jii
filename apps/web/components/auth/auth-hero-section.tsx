@@ -26,7 +26,7 @@ export async function AuthHeroSection({ locale }: AuthHeroSectionProps) {
       <div className="mt-10 flex items-center gap-3 text-white">
         <Image
           src="/openJII-logo-BW-horizontal-white.svg"
-          alt="OpenJII Logo"
+          alt="openJII Logo"
           width={160}
           height={80}
           className="h-12 w-auto"

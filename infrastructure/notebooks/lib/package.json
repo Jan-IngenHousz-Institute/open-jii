@@ -1,7 +1,7 @@
 {
   "name": "openjii-python-packages",
   "version": "0.1.0",
-  "description": "Python package build scripts for OpenJII",
+  "description": "Python package build scripts for openJII",
   "scripts": {
     "build": "npm run build:multispeq && npm run build:ambyte && npm run build:enrich",
     "build:multispeq": "cd multispeq && python3 -m build",

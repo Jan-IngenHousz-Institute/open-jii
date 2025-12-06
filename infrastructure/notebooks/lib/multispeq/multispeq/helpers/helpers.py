@@ -1,5 +1,5 @@
 """
-Python Helper Functions for OpenJII MultispeQ Data Processing
+Python Helper Functions for openJII MultispeQ Data Processing
 
 This module provides Python equivalents of the JavaScript helper functions
 used in MultispeQ macro processing. These functions are made available to

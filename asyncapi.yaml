@@ -1,13 +1,13 @@
 asyncapi: "2.0.0"
 info:
-  title: OpenJII MQTT API (AWS IoT Core)
+  title: openJII MQTT API (AWS IoT Core)
   version: "1.0.0"
   description: >
     This AsyncAPI specification defines the MQTT topics and message schemas for AWS IoT Core.
     It details channels for device status updates and sensor data, allowing devices to publish
     their state and sensor readings securely.
   contact:
-    name: OpenJII
+    name: openJII
     email: ji-institute@info.nl
   license:
     name: GNU General Public License

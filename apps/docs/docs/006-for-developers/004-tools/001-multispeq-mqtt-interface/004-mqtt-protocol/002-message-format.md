@@ -142,4 +142,4 @@ message = {
 validate_message(message)
 ```
 
-By following these guidelines, you can ensure that the messages published by the MultispeQ MQTT Interface tool are well-structured and easily processed by the OpenJII platform.
+By following these guidelines, you can ensure that the messages published by the MultispeQ MQTT Interface tool are well-structured and easily processed by the openJII platform.

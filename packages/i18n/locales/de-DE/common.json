@@ -221,7 +221,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Willkommen bei OpenJII",
+    "welcome": "Willkommen bei openJII",
     "recentExperiments": "Kürzliche Experimente",
     "recentArticles": "Neueste Blogbeiträge",
     "yourExperiments": "Ihre neuesten Experimente",
@@ -273,7 +273,7 @@
     "signingOut": "Abmelden...",
     "heroTitle": "Offene Wissenschaft für Photosynthese",
     "heroDescription": "Ermächtigung globaler Zusammenarbeit in der Pflanzenwissenschaft und Photosynthese-Forschung.",
-    "brandName": "OpenJII",
+    "brandName": "openJII",
     "poweredBy": "betrieben von",
     "instituteAlt": "Jan IngenHousz Institut",
     "continueWithEmail": "Mit E-Mail fortfahren",

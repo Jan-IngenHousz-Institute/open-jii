@@ -1,16 +1,16 @@
-# 🏗️ OpenJII Infrastructure
+# 🏗️ openJII Infrastructure
 
-This directory contains [OpenTofu](https://opentofu.org/manifesto/) (Terraform) configuration for deploying and managing the **OpenJII** cloud infrastructure. It follows a **modular architecture**, allowing the infrastructure to be efficiently configured with services that are necessary. Though it is scalable to multiple environments, currently the system is running on a single, development environment.
+This directory contains [OpenTofu](https://opentofu.org/manifesto/) (Terraform) configuration for deploying and managing the **openJII** cloud infrastructure. It follows a **modular architecture**, allowing the infrastructure to be efficiently configured with services that are necessary. Though it is scalable to multiple environments, currently the system is running on a single, development environment.
 
 ## 📖 Overview
 
-The infrastructure is built on **Amazon Web Services (AWS)** and defined using **OpenTofu** as Infrastructure as Code (IaC), with the goal of providing a secure, scalable, and maintainable cloud infrastructure that supports the **OpenJII platform**.
+The infrastructure is built on **Amazon Web Services (AWS)** and defined using **OpenTofu** as Infrastructure as Code (IaC), with the goal of providing a secure, scalable, and maintainable cloud infrastructure that supports the **openJII platform**.
 
 This repository leverages **cloud best practices**, including **least privilege access control**, **automated deployments**, and **separation of concerns** to ensure performance, robustness, security and flexibility.
 
 ### 🏛️ Cloud Architecture
 
-This infrastructure is designed to enable the **communcation and data ingestion** from JII MultispeQ devices, as well as **data persistance and processing**. Furthermore, it provisions for all other OpenJII touchpoints, such as the Community Hub, native and web application, as well as OpenJII **static content**, including the Documentation Hub and deployment configuration.
+This infrastructure is designed to enable the **communcation and data ingestion** from JII MultispeQ devices, as well as **data persistance and processing**. Furthermore, it provisions for all other openJII touchpoints, such as the Community Hub, native and web application, as well as openJII **static content**, including the Documentation Hub and deployment configuration.
 
 ```mermaid
 graph TD;
@@ -57,7 +57,7 @@ infrastructure/
 
 ## 📜 Infrastructure Design and Considerations
 
-It is crucial that the OpenJII cloud infrastructure is **resilient, scalable, and cost-effective**, and remains as such. For this purpose, decisions and considerations are recorded as **Architecture Design Records (ADRs)** in the OpenJII Documentation Hub:
+It is crucial that the openJII cloud infrastructure is **resilient, scalable, and cost-effective**, and remains as such. For this purpose, decisions and considerations are recorded as **Architecture Design Records (ADRs)** in the openJII Documentation Hub:
 
 [Design Records: Infrastructure](/)
 
@@ -126,7 +126,7 @@ pnpm run tf
 
 ## ⚠️ Disclaimer
 
-While the OpenJII project is **open source**, provisioning infrastructure on AWS is **restricted to repository owners and administrators**. This is necessary to prevent **unauthorized access, security risks, and unnecessary costs**, and to ensure the platform remains operational and retains longevity.
+While the openJII project is **open source**, provisioning infrastructure on AWS is **restricted to repository owners and administrators**. This is necessary to prevent **unauthorized access, security risks, and unnecessary costs**, and to ensure the platform remains operational and retains longevity.
 
 However, we welcome **contributions, ideas, and improvements**! If you have an idea for improving the infrastructure, you are encouraged to:
 

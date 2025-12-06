@@ -1,5 +1,5 @@
 # Databricks notebook source
-# DBTITLE 1,OpenJII Individual Experiment Pipeline Creator
+# DBTITLE 1,openJII Individual Experiment Pipeline Creator
 """
 This notebook creates a cost-optimized Delta Live Tables pipeline for a specific experiment 
 and triggers its initial execution with comprehensive error handling and monitoring.

@@ -1,7 +1,7 @@
 # Databricks notebook source
-# DBTITLE 1,OpenJII Medallion Architecture Pipeline
+# DBTITLE 1,openJII Medallion Architecture Pipeline
 # This notebook implements the complete medallion architecture (Bronze-Silver-Gold)
-# for OpenJII IoT sensor data processing following the dual medallion pattern
+# for openJII IoT sensor data processing following the dual medallion pattern
 
 # COMMAND ----------
 

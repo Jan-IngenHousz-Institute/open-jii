@@ -1,7 +1,7 @@
 """
 MultispeQ Macro Processing Package
 
-This package provides macro execution capabilities for OpenJII MultispeQ data processing.
+This package provides macro execution capabilities for openJII MultispeQ data processing.
 It includes support for both JavaScript and Python macros.
 """
 
@@ -13,4 +13,4 @@ __all__ = ['execute_macro_script', 'get_available_macros', 'process_macro_output
 
 # Package metadata
 __version__ = "0.1.0"
-__author__ = "OpenJII Team"
+__author__ = "openJII Team"

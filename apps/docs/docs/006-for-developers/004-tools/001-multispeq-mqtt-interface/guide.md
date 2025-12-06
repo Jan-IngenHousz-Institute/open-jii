@@ -28,7 +28,7 @@ apps/docs/docs/006-for-developers/004-tools/001-multispeq-mqtt-interface/
 
 - Overview of the MultiSpeQ MQTT Interface tool
 - Purpose and key features
-- How it fits into the OpenJII ecosystem
+- How it fits into the openJII ecosystem
 - Target audience for the tool
 
 ### 002-installation.md

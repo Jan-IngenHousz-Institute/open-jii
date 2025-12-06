@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Managing sensor data via the OpenJII platform calls for a structured approach that ensures consistency, security, and reproducibility. The OpenJII data governance framework aims to support data isolation, simplifies auditing, and scales as new experiments are added. Its key objectives are to preserve data lineage, control access, provide cross-experiment collaboration and optimize query performance.
+Managing sensor data via the openJII platform calls for a structured approach that ensures consistency, security, and reproducibility. The openJII data governance framework aims to support data isolation, simplifies auditing, and scales as new experiments are added. Its key objectives are to preserve data lineage, control access, provide cross-experiment collaboration and optimize query performance.
 
 ## Purpose & Objectives
 
@@ -32,7 +32,7 @@ The framework takes advantage of Databricks Unity Catalog's three-tier namespace
 
 ### Infrastructure Implementation
 
-The OpenJII platform uses Terraform to provision and maintain the following components:
+The openJII platform uses Terraform to provision and maintain the following components:
 
 - A Databricks Unity Catalog **metastore** serving as the root container for all data assets
 - An S3 bucket dedicated to Unity Catalog with proper IAM role-based access controls
@@ -84,7 +84,7 @@ E --> E4[Table: experiment_metadata]
 
 ### Catalogs (Top-Level Organizational Unit)
 
-A single catalog (`open_jii`) covers the entire domain of OpenJII-managed experiments, with additional catalogs possible for different environments (development, testing, production).
+A single catalog (`open_jii`) covers the entire domain of openJII-managed experiments, with additional catalogs possible for different environments (development, testing, production).
 
 A single catalog groups all related schemas and tables under one logical domain. This approach simplifies the enforcement of enterprise security policies, as permissions automatically apply to all underlying objects. It also minimizes complexity and prevents fragmentation, while still leaving room for additional catalogs if fundamentally different data domains arise in the future.
 
