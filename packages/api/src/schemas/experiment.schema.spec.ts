@@ -19,6 +19,22 @@ import {
   zExperimentDataTableInfo,
   zExperimentDataTableList,
   zExperimentDataResponse,
+  // Annotations
+  zAnnotationType,
+  zAnnotationFlagType,
+  zAnnotationCommentContent,
+  zAnnotationFlagContent,
+  zAnnotationContent,
+  zAnnotation,
+  zAnnotationList,
+  zAnnotationPathParam,
+  zAddAnnotationBody,
+  zAddAnnotationsBulkBody,
+  zListAnnotationsQuery,
+  zUpdateAnnotationBody,
+  zAnnotationDeleteBulkPathParam,
+  zAnnotationDeleteBulkBody,
+  zAnnotationRowsAffected,
   // Protocol associations
   zExperimentProtocolDetails,
   zExperimentProtocol,
@@ -436,6 +452,216 @@ describe("Experiment Schema", () => {
         status: "active",
         search: "my experiment",
       });
+    });
+  });
+
+  // ----- Annotations -----
+  describe("Annotations", () => {
+    it("zAnnotationType accepts valid values", () => {
+      expect(zAnnotationType.parse("comment")).toBe("comment");
+      expect(zAnnotationType.parse("flag")).toBe("flag");
+      expect(() => zAnnotationType.parse("note")).toThrow();
+    });
+
+    it("zAnnotationFlagType accepts valid values", () => {
+      expect(zAnnotationFlagType.parse("outlier")).toBe("outlier");
+      expect(zAnnotationFlagType.parse("needs_review")).toBe("needs_review");
+      expect(() => zAnnotationFlagType.parse("invalid")).toThrow();
+    });
+
+    it("zAnnotationCommentContent valid", () => {
+      const comment = { type: "comment", text: "This is a comment" };
+      expect(zAnnotationCommentContent.parse(comment)).toEqual(comment);
+    });
+
+    it("zAnnotationCommentContent rejects empty text", () => {
+      expect(() => zAnnotationCommentContent.parse({ type: "comment", text: "" })).toThrow();
+    });
+
+    it("zAnnotationCommentContent rejects text too long", () => {
+      const longText = "a".repeat(256);
+      expect(() => zAnnotationCommentContent.parse({ type: "comment", text: longText })).toThrow();
+    });
+
+    it("zAnnotationFlagContent valid with text", () => {
+      const flag = { type: "flag", flagType: "outlier", text: "This is flagged as outlier" };
+      expect(zAnnotationFlagContent.parse(flag)).toEqual(flag);
+    });
+
+    it("zAnnotationFlagContent valid without text", () => {
+      const flag = { type: "flag", flagType: "needs_review" };
+      expect(zAnnotationFlagContent.parse(flag)).toEqual(flag);
+    });
+
+    it("zAnnotationContent discriminated union works", () => {
+      const comment = { type: "comment", text: "Comment text" };
+      const flag = { type: "flag", flagType: "outlier", text: "Flag text" };
+
+      expect(zAnnotationContent.parse(comment)).toEqual(comment);
+      expect(zAnnotationContent.parse(flag)).toEqual(flag);
+
+      // Invalid type for comment
+      expect(() => zAnnotationContent.parse({ type: "comment", flagType: "outlier" })).toThrow();
+      // Invalid type for flag
+      expect(() => zAnnotationContent.parse({ type: "flag", text: "no flagType" })).toThrow();
+    });
+
+    it("zAnnotation valid complete", () => {
+      const annotation = {
+        id: uuidA,
+        rowId: "row-123",
+        type: "comment",
+        content: { type: "comment", text: "Test comment" },
+        createdBy: uuidB,
+        createdByName: "John Doe",
+        createdAt: isoTime,
+        updatedAt: isoTime2,
+      };
+      expect(zAnnotation.parse(annotation)).toEqual(annotation);
+    });
+
+    it("zAnnotation valid without optional fields", () => {
+      const annotation = {
+        id: uuidA,
+        type: "flag",
+        content: { type: "flag", flagType: "outlier" },
+        createdBy: uuidB,
+        createdAt: isoTime,
+        updatedAt: isoTime2,
+      };
+      expect(zAnnotation.parse(annotation)).toEqual(annotation);
+    });
+
+    it("zAnnotationList valid array", () => {
+      const annotations = [
+        {
+          id: uuidA,
+          type: "comment",
+          content: { type: "comment", text: "Comment 1" },
+          createdBy: uuidB,
+          createdAt: isoTime,
+          updatedAt: isoTime2,
+        },
+        {
+          id: uuidB,
+          type: "flag",
+          content: { type: "flag", flagType: "needs_review" },
+          createdBy: uuidA,
+          createdAt: isoTime,
+          updatedAt: isoTime2,
+        },
+      ];
+      expect(zAnnotationList.parse(annotations)).toEqual(annotations);
+    });
+
+    it("zAnnotationPathParam valid", () => {
+      const params = { id: uuidA, annotationId: uuidB };
+      expect(zAnnotationPathParam.parse(params)).toEqual(params);
+    });
+
+    it("zAddAnnotationBody valid", () => {
+      const body = {
+        tableName: "sensor_data",
+        rowId: "row-123",
+        annotation: {
+          type: "comment",
+          content: { type: "comment", text: "Great data point!" },
+        },
+      };
+      expect(zAddAnnotationBody.parse(body)).toEqual(body);
+    });
+
+    it("zAddAnnotationBody rejects empty rowId", () => {
+      const body = {
+        tableName: "sensor_data",
+        rowId: "",
+        annotation: {
+          type: "comment",
+          content: { type: "comment", text: "Test" },
+        },
+      };
+      expect(() => zAddAnnotationBody.parse(body)).toThrow();
+    });
+
+    it("zAddAnnotationsBulkBody valid", () => {
+      const body = {
+        tableName: "sensor_data",
+        rowIds: ["row-1", "row-2", "row-3"],
+        annotation: {
+          type: "flag",
+          content: { type: "flag", flagType: "outlier", text: "All outliers" },
+        },
+      };
+      expect(zAddAnnotationsBulkBody.parse(body)).toEqual(body);
+    });
+
+    it("zAddAnnotationsBulkBody rejects empty rowIds array", () => {
+      const body = {
+        tableName: "sensor_data",
+        rowIds: [],
+        annotation: {
+          type: "comment",
+          content: { type: "comment", text: "Test" },
+        },
+      };
+      expect(() => zAddAnnotationsBulkBody.parse(body)).toThrow();
+    });
+
+    it("zListAnnotationsQuery valid with all fields", () => {
+      const query = { page: 2, pageSize: 50, tableName: "measurements" };
+      expect(zListAnnotationsQuery.parse(query)).toEqual(query);
+    });
+
+    it("zListAnnotationsQuery valid with just tableName", () => {
+      const query = { tableName: "sensor_data" };
+      expect(zListAnnotationsQuery.parse(query)).toEqual(query);
+    });
+
+    it("zListAnnotationsQuery coerces string numbers", () => {
+      const query = { page: "3", pageSize: "25", tableName: "data" };
+      const parsed = zListAnnotationsQuery.parse(query);
+      expect(parsed.page).toBe(3);
+      expect(parsed.pageSize).toBe(25);
+      expect(parsed.tableName).toBe("data");
+    });
+
+    it("zUpdateAnnotationBody valid", () => {
+      const body = {
+        content: { type: "comment", text: "Updated comment text" },
+      };
+      expect(zUpdateAnnotationBody.parse(body)).toEqual(body);
+    });
+
+    it("zAnnotationDeleteBulkPathParam valid", () => {
+      const params = { id: uuidA };
+      expect(zAnnotationDeleteBulkPathParam.parse(params)).toEqual(params);
+    });
+
+    it("zAnnotationDeleteBulkBody valid", () => {
+      const body = {
+        tableName: "measurements",
+        rowIds: ["row-1", "row-2"],
+        type: "flag",
+      };
+      expect(zAnnotationDeleteBulkBody.parse(body)).toEqual(body);
+    });
+
+    it("zAnnotationDeleteBulkBody rejects empty rowIds", () => {
+      const body = {
+        tableName: "measurements",
+        rowIds: [],
+        type: "comment",
+      };
+      expect(() => zAnnotationDeleteBulkBody.parse(body)).toThrow();
+    });
+
+    it("zAnnotationRowsAffected valid", () => {
+      const result = { rowsAffected: 5 };
+      expect(zAnnotationRowsAffected.parse(result)).toEqual(result);
+    });
+
+    it("zAnnotationRowsAffected rejects non-integer", () => {
+      expect(() => zAnnotationRowsAffected.parse({ rowsAffected: 3.14 })).toThrow();
     });
   });
 
