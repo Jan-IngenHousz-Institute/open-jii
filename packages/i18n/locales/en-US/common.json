@@ -458,6 +458,11 @@
   "experimentDataAnnotations": {
     "title": "Comments",
     "columnHeader": "Comments",
+    "annotations": "Annotations",
+    "comments": "Comments",
+    "flags": "Flags",
+    "addComment": "Add comment",
+    "addFlag": "Add flag",
     "titleComments": "Comments",
     "commentDialog": {
       "title": "Add Comment",
@@ -475,24 +480,74 @@
       "add": "Add to {{count}} Row(s)",
       "addPending": "Adding to {{count}} Row(s)..."
     },
+    "flagDialog": {
+      "title": "Add Flag",
+      "description": "Add a flag to the measurement",
+      "textLabel": "Reason",
+      "textPlaceholder": "Explain why this data is flagged...",
+      "add": "Add Flag",
+      "addPending": "Adding Flag..."
+    },
+    "flagDialogBulk": {
+      "title": "Bulk Add Flag",
+      "description": "Add the same flag to {{count}} selected measurements",
+      "textLabel": "Reason",
+      "textPlaceholder": "Explain why this data is flagged...",
+      "add": "Add to {{count}} Row(s)",
+      "addPending": "Adding to {{count}} Row(s)..."
+    },
     "commentDeleteDialog": {
       "title": "Are you absolutely sure?",
       "description": "This action cannot be undone. This will permanently delete all comments from the selected {{count}} row(s).",
       "delete": "Delete",
       "deletePending": "Deleting..."
     },
-    "noAnnotations": "No comments yet.",
+    "flagDeleteDialog": {
+      "title": "Are you absolutely sure?",
+      "description": "This action cannot be undone. This will permanently delete all flags from the selected {{count}} row(s).",
+      "delete": "Delete",
+      "deletePending": "Deleting..."
+    },
+    "noAnnotations": "No annotations yet.",
     "noAnnotationsDescription": "Use the buttons above to add one.",
-    "updated": "Comments updated",
+    "updated": "Annotations updated",
     "deleted": {
       "comment": "Comment deleted",
-      "comments": "Comments deleted"
+      "comments": "Comments deleted",
+      "flag": "Flag deleted",
+      "flags": "Flags deleted"
+    },
+    "typeLabel": "Annotation Type",
+    "comment": "Comment",
+    "flag": "Flag",
+    "commentText": "Comment",
+    "commentPlaceholder": "Add your comment here...",
+    "flagType": "Flag Type",
+    "selectFlagType": "Select a flag type",
+    "flagTypes": {
+      "outlier": "Outlier",
+      "needs_review": "Needs Review"
+    },
+    "flagReason": "Reason",
+    "flagReasonPlaceholder": "Explain why this data is flagged...",
+    "add": "Add",
+    "adding": "Adding...",
+    "addAnnotation": {
+      "title": "Add Annotation",
+      "description": "Add an annotation to this row."
+    },
+    "addAnnotationBulk": {
+      "title": "Add Annotation to Multiple Rows",
+      "description": "Add the same annotation to {{count}} selected rows."
     },
     "bulkActions": {
       "actions": "Actions",
       "selected": "selected",
+      "noRowsSelected": "No rows selected",
       "addComment": "Add comment",
-      "removeAllComments": "Remove all comments"
+      "addFlag": "Add flag",
+      "removeAllComments": "Remove all comments",
+      "removeAllFlags": "Remove all flags"
     },
     "details": "Show table details"
   },

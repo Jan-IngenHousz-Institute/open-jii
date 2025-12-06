@@ -1,5 +1,5 @@
 import React from "react";
-import { useExperimentDeleteAnnotationsBulk } from "~/hooks/experiment/useExperimentDeleteAnnotationsBulk/useExperimentDeleteAnnotationsBulk";
+import { useExperimentAnnotationDeleteBulk } from "~/hooks/experiment/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk";
 
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -20,8 +20,8 @@ export interface DeleteAnnotationsDialogProps {
   tableName: string;
   rowIds: string[];
   type: AnnotationType;
-  bulkOpen: boolean;
-  setBulkOpen: (value: React.SetStateAction<boolean>) => void;
+  open: boolean;
+  setOpen: (value: React.SetStateAction<boolean>) => void;
   clearSelection: () => void;
 }
 
@@ -30,11 +30,11 @@ export function DeleteAnnotationsDialog({
   tableName,
   rowIds,
   type,
-  bulkOpen,
-  setBulkOpen,
+  open,
+  setOpen,
   clearSelection,
 }: DeleteAnnotationsDialogProps) {
-  const { mutateAsync: deleteAnnotationsBulk, isPending } = useExperimentDeleteAnnotationsBulk();
+  const { mutateAsync: deleteAnnotationsBulk, isPending } = useExperimentAnnotationDeleteBulk();
   const { t } = useTranslation();
   const count = rowIds.length;
   const isPendingSuffix = isPending ? "Pending" : "";
@@ -46,11 +46,11 @@ export function DeleteAnnotationsDialog({
     });
     toast({ description: t(`experimentDataAnnotations.deleted.${type}s`) });
     clearSelection();
-    setBulkOpen(false);
+    setOpen(false);
   }
 
   return (
-    <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t(`experimentDataAnnotations.${type}DeleteDialog.title`)}</DialogTitle>

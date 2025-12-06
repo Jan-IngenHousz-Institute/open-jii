@@ -49,6 +49,7 @@ export class ExperimentDataAnnotationsRepository {
       .max(64),
     content: z.string().max(10000).nullable().optional(),
     flag: z.string().max(100).nullable().optional(),
+    userName: z.string().max(255).nullable().optional(),
   };
 
   /**
@@ -60,6 +61,7 @@ export class ExperimentDataAnnotationsRepository {
     identifier: (value: string) => this.schemas.identifier.safeParse(value),
     content: (value: string | null | undefined) => this.schemas.content.safeParse(value),
     flag: (value: string | null | undefined) => this.schemas.flag.safeParse(value),
+    userName: (value: string | null | undefined) => this.schemas.userName.safeParse(value),
 
     annotation: (annotation: CreateAnnotationDto & { id: string }): boolean => {
       const validations = [
@@ -69,6 +71,7 @@ export class ExperimentDataAnnotationsRepository {
         this.validate.identifier(annotation.type),
         this.validate.content(annotation.contentText),
         this.validate.flag(annotation.flagType),
+        this.validate.userName(annotation.userName),
       ];
 
       return validations.every((result) => result.success);
@@ -102,8 +105,9 @@ export class ExperimentDataAnnotationsRepository {
       CREATE TABLE IF NOT EXISTS annotations (
         id STRING NOT NULL PRIMARY KEY,
         user_id STRING NOT NULL,
+        user_name STRING,
         table_name STRING NOT NULL,
-        row_id INT NOT NULL,
+        row_id STRING NOT NULL,
         type STRING NOT NULL,
         content_text STRING,
         flag_type STRING,
@@ -198,6 +202,7 @@ export class ExperimentDataAnnotationsRepository {
         `(
           '${annotation.id}',
           '${annotation.userId}',
+          ${this.formatSqlValue(annotation.userName)},
           '${annotation.tableName}',
           '${annotation.rowId}',
           '${annotation.type}',
@@ -212,6 +217,7 @@ export class ExperimentDataAnnotationsRepository {
       INSERT INTO annotations (
         id,
         user_id,
+        user_name,
         table_name,
         row_id,
         type,

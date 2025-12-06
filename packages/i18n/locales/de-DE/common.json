@@ -396,6 +396,11 @@
   "experimentDataAnnotations": {
     "title": "Kommentare",
     "columnHeader": "Kommentare",
+    "annotations": "Anmerkungen",
+    "comments": "Kommentare",
+    "flags": "Markierungen",
+    "addComment": "Kommentar hinzufügen",
+    "addFlag": "Markierung hinzufügen",
     "titleComments": "Kommentare",
     "commentDialog": {
       "title": "Kommentar hinzufügen",
@@ -413,24 +418,74 @@
       "add": "Zu {{count}} Zeile(n) hinzufügen",
       "addPending": "Wird zu {{count}} Zeile(n) hinzugefügt..."
     },
+    "flagDialog": {
+      "title": "Markierung hinzufügen",
+      "description": "Eine Markierung zur Messung hinzufügen",
+      "textLabel": "Grund",
+      "textPlaceholder": "Erklären Sie, warum diese Daten markiert sind...",
+      "add": "Markierung hinzufügen",
+      "addPending": "Markierung wird hinzugefügt..."
+    },
+    "flagDialogBulk": {
+      "title": "Massenmarkierung hinzufügen",
+      "description": "Dieselbe Markierung zu {{count}} ausgewählten Messungen hinzufügen",
+      "textLabel": "Grund",
+      "textPlaceholder": "Erklären Sie, warum diese Daten markiert sind...",
+      "add": "Zu {{count}} Zeile(n) hinzufügen",
+      "addPending": "Wird zu {{count}} Zeile(n) hinzugefügt..."
+    },
     "commentDeleteDialog": {
       "title": "Sind Sie absolut sicher?",
       "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Kommentare aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
       "delete": "Löschen",
       "deletePending": "Wird gelöscht..."
     },
-    "noAnnotations": "Noch keine Kommentare.",
-    "noAnnotationsDescription": "Verwenden Sie die obigen Schaltflächen, um einen hinzuzufügen.",
-    "updated": "Kommentare aktualisiert",
+    "flagDeleteDialog": {
+      "title": "Sind Sie absolut sicher?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Markierungen aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
+      "delete": "Löschen",
+      "deletePending": "Wird gelöscht..."
+    },
+    "noAnnotations": "Noch keine Anmerkungen.",
+    "noAnnotationsDescription": "Verwenden Sie die obigen Schaltflächen, um eine hinzuzufügen.",
+    "updated": "Anmerkungen aktualisiert",
     "deleted": {
       "comment": "Kommentar gelöscht",
-      "comments": "Kommentare gelöscht"
+      "comments": "Kommentare gelöscht",
+      "flag": "Markierung gelöscht",
+      "flags": "Markierungen gelöscht"
+    },
+    "typeLabel": "Anmerkungstyp",
+    "comment": "Kommentar",
+    "flag": "Markierung",
+    "commentText": "Kommentar",
+    "commentPlaceholder": "Fügen Sie hier Ihren Kommentar hinzu...",
+    "flagType": "Markierungstyp",
+    "selectFlagType": "Wählen Sie einen Markierungstyp",
+    "flagTypes": {
+      "outlier": "Ausreißer",
+      "needs_review": "Überprüfung erforderlich"
+    },
+    "flagReason": "Grund",
+    "flagReasonPlaceholder": "Erklären Sie, warum diese Daten markiert sind...",
+    "add": "Hinzufügen",
+    "adding": "Wird hinzugefügt...",
+    "addAnnotation": {
+      "title": "Anmerkung hinzufügen",
+      "description": "Fügen Sie dieser Zeile eine Anmerkung hinzu."
+    },
+    "addAnnotationBulk": {
+      "title": "Anmerkung zu mehreren Zeilen hinzufügen",
+      "description": "Fügen Sie die gleiche Anmerkung zu {{count}} ausgewählten Zeilen hinzu."
     },
     "bulkActions": {
       "actions": "Aktionen",
       "selected": "ausgewählt",
+      "noRowsSelected": "Keine Zeilen ausgewählt",
       "addComment": "Kommentar hinzufügen",
-      "removeAllComments": "Alle Kommentare entfernen"
+      "addFlag": "Markierung hinzufügen",
+      "removeAllComments": "Alle Kommentare entfernen",
+      "removeAllFlags": "Alle Markierungen entfernen"
     }
   },
   "landingPage": {

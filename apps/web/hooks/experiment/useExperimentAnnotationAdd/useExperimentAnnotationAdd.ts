@@ -1,9 +1,10 @@
 import { tsr } from "~/lib/tsr";
 
-export const useExperimentAddAnnotationsBulk = () => {
+export const useExperimentAnnotationAdd = () => {
   const queryClient = tsr.useQueryClient();
 
-  return tsr.experiments.addAnnotationsBulk.useMutation({
+  return tsr.experiments.addAnnotation.useMutation({
+    // Invalidate and refetch experiment data
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["experiment"] });
     },

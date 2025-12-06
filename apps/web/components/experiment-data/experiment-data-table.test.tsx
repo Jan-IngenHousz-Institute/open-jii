@@ -10,9 +10,36 @@ import { ExperimentDataTable } from "./experiment-data-table";
 // Mock the tsr module
 vi.mock("@/lib/tsr", () => ({
   tsr: {
+    useQueryClient: vi.fn(() => ({
+      invalidateQueries: vi.fn(),
+    })),
     experiments: {
       getExperimentData: {
         useQuery: vi.fn(),
+      },
+      addAnnotation: {
+        useMutation: vi.fn(() => ({
+          mutateAsync: vi.fn(),
+          isPending: false,
+        })),
+      },
+      addAnnotationsBulk: {
+        useMutation: vi.fn(() => ({
+          mutateAsync: vi.fn(),
+          isPending: false,
+        })),
+      },
+      deleteAnnotation: {
+        useMutation: vi.fn(() => ({
+          mutateAsync: vi.fn(),
+          isPending: false,
+        })),
+      },
+      deleteAnnotationsBulk: {
+        useMutation: vi.fn(() => ({
+          mutateAsync: vi.fn(),
+          isPending: false,
+        })),
       },
     },
   },
@@ -28,6 +55,18 @@ vi.mock("@repo/i18n", () => ({
 // Mock BulkActionsBar
 vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
   BulkActionsBar: () => <div data-testid="bulk-actions-bar">BulkActionsBar</div>,
+}));
+
+// Mock AddAnnotationDialog
+vi.mock("~/components/experiment-data/annotations/add-annotation-dialog", () => ({
+  AddAnnotationDialog: () => <div data-testid="add-annotation-dialog">AddAnnotationDialog</div>,
+}));
+
+// Mock DeleteAnnotationsDialog
+vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", () => ({
+  DeleteAnnotationsDialog: () => (
+    <div data-testid="delete-annotations-dialog">DeleteAnnotationsDialog</div>
+  ),
 }));
 
 // Mock UI components
@@ -580,24 +619,6 @@ describe("ExperimentDataTable", () => {
       staleTime: 120000,
     });
   });
-
-  // it("should render bulk actions bar", () => {
-  //   const mockUseQuery = vi.fn().mockReturnValue({
-  //     data: mockResponse,
-  //     isLoading: false,
-  //     error: null,
-  //   });
-  //   mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-  //   render(
-  //     <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
-  //     { wrapper: createWrapper() },
-  //   );
-
-  //   // Find and click download button
-  //   const bulkActionsBar = screen.getByTestId("bulk-actions-bar");
-  //   expect(bulkActionsBar).toBeInTheDocument();
-  // });
 
   describe("Chart functionality", () => {
     const mockTableDataWithCharts = {

@@ -10,6 +10,7 @@ import {
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../../common/utils/fp-utils";
+import { UserRepository } from "../../../../../users/core/repositories/user.repository";
 import type { CreateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
@@ -24,6 +25,7 @@ export class AddAnnotationsUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDataAnnotationsRepository: ExperimentDataAnnotationsRepository,
+    private readonly userRepository: UserRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
@@ -72,10 +74,21 @@ export class AddAnnotationsUseCase {
           return failure(AppError.internal(createResult.error.message));
         }
 
+        // Fetch user profile to get full name
+        const userProfilesResult = await this.userRepository.findUsersByIds([userId]);
+        if (userProfilesResult.isFailure()) {
+          this.logger.warn(`Failed to fetch user profile for userId ${userId}`);
+        }
+        const userProfile = userProfilesResult.isSuccess() ? userProfilesResult.value[0] : null;
+        const userName = userProfile
+          ? `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || null
+          : null;
+
         const newAnnotations: CreateAnnotationDto[] = [];
         for (const rowId of data.rowIds) {
           const newAnnotation: CreateAnnotationDto = {
             userId,
+            userName,
             tableName: data.tableName,
             rowId,
             type: data.annotation.type,
@@ -86,7 +99,7 @@ export class AddAnnotationsUseCase {
           } else {
             const content = data.annotation.content as unknown as AnnotationFlagContent;
             newAnnotation.flagType = content.flagType;
-            newAnnotation.contentText = content.reason;
+            newAnnotation.contentText = content.text ?? null;
           }
           newAnnotations.push(newAnnotation);
         }

@@ -64,7 +64,7 @@ export class UpdateAnnotationUseCase {
         }
         if ("flagType" in data.content) {
           updateAnnotation.flagType = data.content.flagType;
-          updateAnnotation.contentText = data.content.reason;
+          updateAnnotation.contentText = data.content.text ?? null;
         }
 
         const result = await this.experimentDataAnnotationsRepository.updateAnnotation(

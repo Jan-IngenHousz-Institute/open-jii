@@ -140,17 +140,24 @@ export const zDataColumn = z.object({
 // Experiment data annotations
 export const zAnnotationType = z.enum(["comment", "flag"]);
 
+export const zAnnotationFlagType = z.enum(["outlier", "needs_review"]);
+
+// Use discriminated union to properly differentiate between comment and flag content
 export const zAnnotationCommentContent = z.object({
+  type: z.literal("comment"),
   text: z.string().min(1).max(255),
 });
 
-export const zAnnotationFlagType = z.enum(["outlier", "needs_review"]);
 export const zAnnotationFlagContent = z.object({
+  type: z.literal("flag"),
   flagType: zAnnotationFlagType,
-  reason: z.string().min(1).max(255),
+  text: z.string().max(255).optional(),
 });
 
-export const zAnnotationContent = z.union([zAnnotationCommentContent, zAnnotationFlagContent]);
+export const zAnnotationContent = z.discriminatedUnion("type", [
+  zAnnotationCommentContent,
+  zAnnotationFlagContent,
+]);
 
 export const zAnnotation = z.object({
   id: z.string().uuid(),

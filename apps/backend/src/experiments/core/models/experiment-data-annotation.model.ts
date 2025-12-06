@@ -6,10 +6,11 @@
 export interface BaseAnnotation {
   id: string;
   userId: string;
+  userName?: string | null; // User's full name from profile
   tableName: string;
   rowId: string;
   type: string; // 'comment' or 'flag'
-  contentText?: string | null; // For comment annotations or reasons for flags
+  contentText?: string | null; // For comment text or flag reason
   flagType?: string | null; // 'outlier' or 'needs_review'
   createdAt: Date;
   updatedAt: Date;

@@ -63,6 +63,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "comment",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -91,6 +92,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "comment",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -116,6 +118,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "comment",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -142,6 +145,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "comment",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -172,6 +176,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "comment",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -200,6 +205,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "comment",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -226,6 +232,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "unknown-type",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -252,6 +259,7 @@ describe("ExperimentDataAnnotationsController", () => {
         annotation: {
           type: "comment",
           content: {
+            type: "comment",
             text: "This is a test comment",
           },
         },
@@ -279,6 +287,7 @@ describe("ExperimentDataAnnotationsController", () => {
       // Create the request body
       const updateAnnotationData: UpdateAnnotationBody = {
         content: {
+          type: "comment",
           text: "This is the modified comment",
         },
       };
@@ -305,6 +314,7 @@ describe("ExperimentDataAnnotationsController", () => {
       // Create the request body
       const updateAnnotationData: UpdateAnnotationBody = {
         content: {
+          type: "comment",
           text: "This is the modified comment",
         },
       };
@@ -329,6 +339,7 @@ describe("ExperimentDataAnnotationsController", () => {
       // Create the request body
       const updateAnnotationData: UpdateAnnotationBody = {
         content: {
+          type: "comment",
           text: "This is the modified comment",
         },
       };
@@ -377,6 +388,7 @@ describe("ExperimentDataAnnotationsController", () => {
       // Create the request body
       const updateAnnotationData: UpdateAnnotationBody = {
         content: {
+          type: "comment",
           text: "This is the modified comment",
         },
       };
