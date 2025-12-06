@@ -13,7 +13,6 @@ from pyspark.sql.types import StringType, StructType, StructField, ArrayType, Ti
 annotation_content_schema = StructType([
     StructField("text", StringType(), True),
     StructField("flagType", StringType(), True),
-    StructField("reason", StringType(), True)
 ])
 
 # Define annotation schema
@@ -55,6 +54,7 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         
         Note: content is a union type in TypeScript (comment or flag).
         In Spark, we store all possible fields and only the relevant ones are populated.
+        The content_text column is reused for both comment text and flag reason.
         
     Note:
         If the annotations table doesn't exist or an error occurs,
@@ -67,6 +67,7 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         
         # Read annotations table with all fields
         # Build content struct from individual columns
+        # Note: content_text is reused for both comment text and flag reason
         annotations_df = (
             spark.read.table(annotation_table_name)
             .filter(F.col("table_name") == table_name)
@@ -79,10 +80,9 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
                     F.struct(
                         F.col("content_text").alias("text"),
                         F.col("flag_type").alias("flagType"),
-                        #F.col("flag_reason").alias("reason")
                     ).alias("content"),
                     F.col("user_id").alias("createdBy"),
-                    # F.col("user_name").alias("createdByName"),
+                    F.col("user_name").alias("createdByName"),
                     F.col("created_at").alias("createdAt"),
                     F.col("updated_at").alias("updatedAt")
                 ).alias("annotation")

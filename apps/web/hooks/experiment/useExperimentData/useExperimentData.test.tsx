@@ -22,10 +22,6 @@ vi.mock("@/lib/tsr", () => ({
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
 
 describe("getColumnWidth", () => {
-  it("should return 30 for ID column type", () => {
-    expect(getColumnWidth("ID")).toBe(30);
-  });
-
   it("should return 120 for ARRAY column type", () => {
     expect(getColumnWidth("ARRAY")).toBe(120);
   });
@@ -209,7 +205,7 @@ describe("useExperimentData", () => {
           expect.objectContaining({
             accessorKey: "id",
             header: "id",
-            meta: { type: "ID" },
+            meta: { type: "INT" },
           }),
           expect.objectContaining({
             accessorKey: "name",
@@ -353,8 +349,13 @@ describe("useExperimentData", () => {
             type_name: "ARRAY",
             type_text: "ARRAY<STRUCT<name: STRING, age: INT>>",
           },
-          { name: "id", type_name: "ID", type_text: "ID" },
-          { name: "annotations", type_name: "ANNOTATIONS", type_text: "ANNOTATIONS" },
+          { name: "id", type_name: "INT", type_text: "INT" },
+          {
+            name: "annotations",
+            type_name: "ARRAY",
+            type_text:
+              "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
+          },
           { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
           { name: "map_data", type_name: "MAP", type_text: "MAP<STRING, STRING>" },
           { name: "name", type_name: "STRING", type_text: "STRING" },
@@ -411,20 +412,20 @@ describe("useExperimentData", () => {
       expect(columns).toBeDefined();
 
       // Verify columns are sorted by type precedence:
-      // 1. ID, 2. ANNOTATIONS, 3. TIMESTAMP, 4. MAP/ARRAY<STRUCT>, 5. STRING, 6. DOUBLE/INT/BIGINT, 7. ARRAY, 8. Others
+      // 1. TIMESTAMP, 2. MAP/ARRAY<STRUCT>, 3. USER, 4. STRING, 5. DOUBLE/INT/BIGINT, 6. ARRAY, 7. Others
       const columnOrder = columns?.map((col) => col.accessorKey);
       expect(columnOrder).toEqual([
-        "id", // ID (precedence 1)
-        "annotations", // ANNOTATIONS (precedence 2)
-        "timestamp", // TIMESTAMP (precedence 3)
-        "struct_data", // ARRAY<STRUCT<...>> (precedence 4)
-        "map_data", // MAP<STRING,STRING> (precedence 4)
-        "name", // STRING (precedence 5)
-        "value", // DOUBLE (precedence 6)
-        "count", // INT (precedence 6)
-        "amount", // BIGINT (precedence 6)
-        "chart_data", // ARRAY<DOUBLE> (precedence 7)
-        "other", // UNKNOWN (precedence 8)
+        "timestamp", // TIMESTAMP (precedence 1)
+        "struct_data", // ARRAY<STRUCT<...>> (precedence 2)
+        "annotations", // ARRAY<STRUCT<...>> (precedence 2)
+        "map_data", // MAP<STRING,STRING> (precedence 2)
+        "name", // STRING (precedence 4)
+        "id", // INT (precedence 5)
+        "value", // DOUBLE (precedence 5)
+        "count", // INT (precedence 5)
+        "amount", // BIGINT (precedence 5)
+        "chart_data", // ARRAY<DOUBLE> (precedence 6)
+        "other", // UNKNOWN (precedence 7)
       ]);
     });
 

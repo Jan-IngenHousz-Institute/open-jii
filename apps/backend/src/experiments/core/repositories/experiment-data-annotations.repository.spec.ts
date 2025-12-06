@@ -56,6 +56,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
   describe("storeAnnotations", () => {
     const createValidAnnotation = (): CreateAnnotationDto => ({
       userId: mockUserId,
+      userName: "Test User",
       tableName: mockTableName,
       rowId: mockRowId,
       type: "comment",
@@ -105,9 +106,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
         {
           ...createValidAnnotation(),
           type: "flag" as const,
-          contentText: null,
+          contentText: "Data point seems anomalous",
           flagType: "outlier",
-          flagReason: "Data point seems anomalous",
         },
       ];
       vi.spyOn(databricksPort, "executeExperimentSqlQuery").mockResolvedValue(
@@ -291,7 +291,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
       expect(sqlQuery).toContain("content_text =");
       expect(sqlQuery).not.toContain("flag_type =");
-      expect(sqlQuery).not.toContain("flag_reason =");
       expect(sqlQuery).toContain("updated_at =");
     });
 
@@ -465,6 +464,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Arrange
       const maliciousAnnotation: CreateAnnotationDto = {
         userId: mockUserId,
+        userName: "Test User",
         tableName: mockTableName,
         rowId: mockRowId,
         type: "comment",
@@ -496,6 +496,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Arrange
       const invalidAnnotation: CreateAnnotationDto = {
         userId: mockUserId,
+        userName: "Test User",
         tableName: "invalid; DROP TABLE", // Invalid table name
         rowId: mockRowId,
         type: "comment",
@@ -512,6 +513,33 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.message).toContain("Validation failed for annotation");
+    });
+
+    it("should handle databricks port failure in bulk delete", async () => {
+      // Mock the databricks port to fail
+      const mockFailure = failure({
+        message: "Databricks connection failed",
+        code: "DATABRICKS_ERROR",
+        statusCode: 500,
+        name: "DatabricksError",
+      });
+      vi.spyOn(databricksPort, "executeExperimentSqlQuery").mockResolvedValue(mockFailure);
+
+      // Act
+      const result = await repository.deleteAnnotationsBulk(
+        mockExperimentName,
+        mockExperimentId,
+        "test_table",
+        ["row1", "row2"],
+        "comment",
+      );
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain(
+        "Failed to delete annotations: Databricks connection failed",
+      );
     });
   });
 });
