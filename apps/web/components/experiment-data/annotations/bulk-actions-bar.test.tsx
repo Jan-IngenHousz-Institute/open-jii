@@ -1,246 +1,178 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { AddAnnotationDialogProps } from "~/components/experiment-data/annotations/add-annotation-dialog";
-import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
-import type { DeleteAnnotationsDialogProps } from "~/components/experiment-data/annotations/delete-annotations-dialog";
+import { describe, it, expect, vi } from "vitest";
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
+import { BulkActionsBar } from "./bulk-actions-bar";
 
-// Mock UI components
+// Mock UI components to make dropdown content visible in tests
 vi.mock("@repo/ui/components", () => ({
   Button: ({
     children,
     onClick,
-    className,
     ...props
   }: {
     children: React.ReactNode;
     onClick?: () => void;
-    variant?: string;
-    size?: string;
-    className?: string;
+    [key: string]: unknown;
   }) => (
-    <button onClick={onClick} className={className} {...props}>
+    <button onClick={onClick} {...props}>
       {children}
     </button>
   ),
-  DropdownMenu: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="dropdown-menu">{children ?? "DropdownMenu"}</div>
-  ),
-  DropdownMenuContent: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="dropdown-menu-content">{children ?? "DropdownMenuContent"}</div>
-  ),
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuItem: ({
-    disabled,
     children,
+    onClick,
   }: {
-    disabled?: boolean;
-    children?: React.ReactNode;
-  }) => (
-    <div data-testid="dropdown-menu-item" aria-disabled={disabled}>
-      {children ?? "DropdownMenuItem"}
-    </div>
-  ),
-  DropdownMenuSeparator: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="dropdown-menu-separator">{children ?? "DropdownMenuSeparator"}</div>
-  ),
-  DropdownMenuTrigger: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="dropdown-menu-trigger">{children ?? "DropdownMenuTrigger"}</div>
-  ),
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => <div onClick={onClick}>{children}</div>,
+  DropdownMenuSeparator: () => <div />,
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Mock AddAnnotationDialog
-vi.mock("~/components/experiment-data/annotations/add-annotation-dialog", () => ({
-  AddAnnotationDialog: ({ type }: AddAnnotationDialogProps) => (
-    <div data-testid={`add-annotation-dialog-${type}`}>AddCommentDialog</div>
-  ),
+// Mock i18n to return translation keys
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, unknown>) => {
+      if (params) {
+        return `${key}:${JSON.stringify(params)}`;
+      }
+      return key;
+    },
+  }),
 }));
 
-// Mock DeleteAnnotationsDialog
-vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", () => ({
-  DeleteAnnotationsDialog: ({ type }: DeleteAnnotationsDialogProps) => (
-    <div data-testid={`delete-annotations-dialog-${type}`}>DeleteCommentsDialog</div>
-  ),
-}));
+const mockProps = {
+  rowIds: ["1", "2", "3"],
+  tableRows: [
+    { id: "1", annotations: JSON.stringify([{ type: "comment" }, { type: "flag" }]) },
+    { id: "2", annotations: JSON.stringify([{ type: "comment" }]) },
+    { id: "3", annotations: "[]" },
+  ],
+  downloadTable: vi.fn(),
+  onAddAnnotation: vi.fn(),
+  onDeleteAnnotations: vi.fn(),
+};
 
 describe("BulkActionsBar", () => {
-  const createWrapper = () => {
-    return ({ children }: { children: React.ReactNode }) => children;
-  };
+  it("should render selected rows count", () => {
+    render(<BulkActionsBar {...mockProps} />);
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Add event listener mocks
-    vi.spyOn(window, "addEventListener").mockImplementation(() => {
-      // Mock implementation
-    });
-    vi.spyOn(window, "removeEventListener").mockImplementation(() => {
-      // Mock implementation
-    });
+    expect(screen.getByText(/3/)).toBeInTheDocument();
+    expect(screen.getByText(/experimentDataTable.rows/)).toBeInTheDocument();
+    expect(screen.getByText(/experimentDataAnnotations.bulkActions.selected/)).toBeInTheDocument();
   });
 
-  it("should render for no selected rows", () => {
-    render(
-      <BulkActionsBar
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={[]}
-        totalComments={0}
-        totalFlags={0}
-        clearSelection={vi.fn()}
-        downloadTable={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
+  it("should render singular row text for single selection", () => {
+    render(<BulkActionsBar {...mockProps} rowIds={["1"]} />);
 
-    expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
-    const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
-    expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
-    expect(menuItems[0].ariaDisabled).toBe("true");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
-    expect(menuItems[1].ariaDisabled).toBe("true");
-    expect(menuItems[2]).toHaveTextContent(
+    expect(
+      screen.getByText("1 experimentDataTable.row experimentDataAnnotations.bulkActions.selected"),
+    ).toBeInTheDocument();
+    // Row text is part of the main count text above
+  });
+
+  it("should show comment and flag counts", () => {
+    render(<BulkActionsBar {...mockProps} />);
+
+    expect(screen.getByText(/2 comments/)).toBeInTheDocument();
+    expect(screen.getByText(/1 flag/)).toBeInTheDocument();
+  });
+
+  it("should show no rows selected when empty", () => {
+    render(<BulkActionsBar {...mockProps} rowIds={[]} />);
+
+    expect(
+      screen.getByText(/experimentDataAnnotations.bulkActions.noRowsSelected/),
+    ).toBeInTheDocument();
+  });
+
+  it("should call downloadTable when download button clicked", () => {
+    render(<BulkActionsBar {...mockProps} />);
+
+    const downloadButton = screen.getByText(/experimentDataTable.download/);
+    fireEvent.click(downloadButton);
+
+    expect(mockProps.downloadTable).toHaveBeenCalled();
+  });
+
+  it("should open actions dropdown and show options", () => {
+    render(<BulkActionsBar {...mockProps} />);
+
+    expect(
+      screen.getByText("experimentDataAnnotations.bulkActions.addComment"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.bulkActions.addFlag")).toBeInTheDocument();
+    expect(
+      screen.getByText("experimentDataAnnotations.bulkActions.removeAllComments"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("experimentDataAnnotations.bulkActions.removeAllFlags"),
+    ).toBeInTheDocument();
+  });
+
+  it("should call onAddAnnotation when add comment clicked", () => {
+    render(<BulkActionsBar {...mockProps} />);
+
+    const addCommentButton = screen.getByText("experimentDataAnnotations.bulkActions.addComment");
+    fireEvent.click(addCommentButton);
+
+    expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["1", "2", "3"], "comment");
+  });
+
+  it("should call onAddAnnotation when add flag clicked", () => {
+    render(<BulkActionsBar {...mockProps} />);
+
+    const addFlagButton = screen.getByText("experimentDataAnnotations.bulkActions.addFlag");
+    fireEvent.click(addFlagButton);
+
+    expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["1", "2", "3"], "flag");
+  });
+
+  it("should call onDeleteAnnotations when remove comments clicked", () => {
+    render(<BulkActionsBar {...mockProps} />);
+
+    const removeCommentsButton = screen.getByText(
       "experimentDataAnnotations.bulkActions.removeAllComments",
     );
-    expect(menuItems[2].ariaDisabled).toBe("true");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlags");
-    expect(menuItems[3].ariaDisabled).toBe("true");
-    expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
+    fireEvent.click(removeCommentsButton);
+
+    expect(mockProps.onDeleteAnnotations).toHaveBeenCalledWith(["1", "2", "3"], "comment");
   });
 
-  it("should render for selected rows > 0, comments > 0 and flags = 0", () => {
-    render(
-      <BulkActionsBar
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        totalComments={5}
-        totalFlags={0}
-        clearSelection={vi.fn()}
-        downloadTable={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
+  it("should call onDeleteAnnotations when remove flags clicked", () => {
+    render(<BulkActionsBar {...mockProps} />);
 
-    expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
-    const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
-    expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
-    expect(menuItems[0].ariaDisabled).toBe("false");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
-    expect(menuItems[1].ariaDisabled).toBe("false");
-    expect(menuItems[2]).toHaveTextContent(
-      "experimentDataAnnotations.bulkActions.removeAllComments",
+    const removeFlagsButton = screen.getByText(
+      "experimentDataAnnotations.bulkActions.removeAllFlags",
     );
-    expect(menuItems[2].ariaDisabled).toBe("false");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlags");
-    expect(menuItems[3].ariaDisabled).toBe("true");
-    expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
+    fireEvent.click(removeFlagsButton);
+
+    expect(mockProps.onDeleteAnnotations).toHaveBeenCalledWith(["1", "2", "3"], "flag");
   });
 
-  it("should render for selected rows > 0, comments = 0 and flags > 0", () => {
-    render(
-      <BulkActionsBar
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        totalComments={0}
-        totalFlags={2}
-        clearSelection={vi.fn()}
-        downloadTable={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
+  it("should handle malformed annotations JSON gracefully", () => {
+    const propsWithBadJson = {
+      ...mockProps,
+      tableRows: [
+        { id: "1", annotations: "invalid json" },
+        { id: "2", annotations: JSON.stringify([{ type: "comment" }]) },
+      ],
+    };
 
-    expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
-    const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
-    expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
-    expect(menuItems[0].ariaDisabled).toBe("false");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
-    expect(menuItems[1].ariaDisabled).toBe("false");
-    expect(menuItems[2]).toHaveTextContent(
-      "experimentDataAnnotations.bulkActions.removeAllComments",
-    );
-    expect(menuItems[2].ariaDisabled).toBe("true");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlag");
-    expect(menuItems[3].ariaDisabled).toBe("false");
-    expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
+    expect(() => render(<BulkActionsBar {...propsWithBadJson} />)).not.toThrow();
+    expect(screen.getByText(/1 comment/)).toBeInTheDocument();
   });
 
-  it("should render for selected rows > 0, comments > 0 and flags > 0", () => {
-    render(
-      <BulkActionsBar
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        totalComments={5}
-        totalFlags={2}
-        clearSelection={vi.fn()}
-        downloadTable={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
+  it("should work without tableRows prop", () => {
+    const propsWithoutTableRows = {
+      ...mockProps,
+      tableRows: undefined,
+    };
 
-    expect(screen.getByTestId("dropdown-menu-trigger")).toHaveTextContent("Actions");
-    const menuItems = screen.getAllByTestId("dropdown-menu-item");
-    expect(menuItems).toHaveLength(4);
-    expect(menuItems[0]).toHaveTextContent("experimentDataAnnotations.bulkActions.addComment");
-    expect(menuItems[0].ariaDisabled).toBe("false");
-    expect(menuItems[1]).toHaveTextContent("experimentDataAnnotations.bulkActions.addFlag");
-    expect(menuItems[1].ariaDisabled).toBe("false");
-    expect(menuItems[2]).toHaveTextContent(
-      "experimentDataAnnotations.bulkActions.removeAllComments",
-    );
-    expect(menuItems[2].ariaDisabled).toBe("false");
-    expect(menuItems[3]).toHaveTextContent("experimentDataAnnotations.bulkActions.removeAllFlag");
-    expect(menuItems[3].ariaDisabled).toBe("false");
-    expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-comment")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-annotations-dialog-flag")).toBeInTheDocument();
-  });
-
-  it("should render download button and open modal", async () => {
-    const user = userEvent.setup();
-    const downloadTableFunction = vi.fn();
-    render(
-      <BulkActionsBar
-        experimentId="exp1"
-        tableName="table1"
-        rowIds={["row1", "row2", "row3"]}
-        totalComments={5}
-        totalFlags={2}
-        clearSelection={vi.fn()}
-        downloadTable={downloadTableFunction}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    // Find and click download button
-    const downloadButton = screen.getByText("experimentDataTable.download");
-    expect(downloadButton).toBeInTheDocument();
-
-    await user.click(downloadButton);
-
-    // Check that function was called
-    expect(downloadTableFunction).toHaveBeenCalledTimes(1);
+    expect(() => render(<BulkActionsBar {...propsWithoutTableRows} />)).not.toThrow();
+    expect(screen.getByText(/3/)).toBeInTheDocument();
   });
 });

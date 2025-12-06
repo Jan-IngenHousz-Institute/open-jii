@@ -1,53 +1,28 @@
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
-// import { useEffect } from "react";
 import { useMemo } from "react";
-import type { UseFormReturn } from "react-hook-form";
-import type { AnnotationsRowIdentifier } from "~/components/experiment-data/annotations/utils";
-import { getAllRowsSelectionCheckbox } from "~/components/experiment-data/annotations/utils";
-import { getRowSelectionCheckbox } from "~/components/experiment-data/annotations/utils";
-import { getAnnotationsColumn } from "~/components/experiment-data/annotations/utils";
-import type { BulkSelectionFormType } from "~/components/experiment-data/experiment-data-table";
-//import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
 import { tsr } from "~/lib/tsr";
 
-import type {
-  Annotation,
-  AnnotationFlagType,
-  AnnotationType,
-  DataColumn,
-  ExperimentData,
-} from "@repo/api";
+import type { DataColumn, ExperimentData, AnnotationType } from "@repo/api";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
   value: unknown,
   type: string,
+  rowId: string,
   columnName?: string,
   onChartHover?: (data: number[], columnName: string) => void,
   onChartLeave?: () => void,
   onChartClick?: (data: number[], columnName: string) => void,
+  onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void,
+  onDeleteAnnotations?: (rowIds: string[], type: AnnotationType) => void,
 ) => string | React.JSX.Element;
-
-export interface AnnotationData {
-  annotations: Annotation[];
-  annotationsPerType: Record<AnnotationType, Annotation[]>;
-  uniqueFlags: Set<AnnotationFlagType>;
-  count: number;
-  commentCount: number;
-  flagCount: number;
-}
 
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
 
-// ID column name
-const ID_COLUMN_NAME = "id";
-
 export function getColumnWidth(typeName: string): number | undefined {
-  // Set very small width for id column to accommodate checkboxes
-  if (typeName === "ID") return 30;
   // Set medium width for user columns that contain avatar + name
   if (typeName === "USER") return 180;
   // Set medium width for array of struct columns that contain collapsible content
@@ -60,25 +35,23 @@ export function getColumnWidth(typeName: string): number | undefined {
 }
 
 interface CreateTableColumnsParams {
-  experimentId: string;
-  tableName?: string;
   data: ExperimentData | undefined;
   formatFunction?: DataRenderFunction;
   onChartHover?: (data: number[], columnName: string) => void;
   onChartLeave?: () => void;
   onChartClick?: (data: number[], columnName: string) => void;
-  selectionForm?: UseFormReturn<BulkSelectionFormType>;
+  onAddAnnotation?: (rowIds: string[]) => void;
+  onDeleteAnnotations?: (rowIds: string[]) => void;
 }
 
 function createTableColumns({
-  experimentId,
-  tableName,
   data,
   formatFunction,
   onChartHover,
   onChartLeave,
   onChartClick,
-  selectionForm,
+  onAddAnnotation,
+  onDeleteAnnotations,
 }: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataRow>();
 
@@ -88,30 +61,26 @@ function createTableColumns({
   // Define type precedence for sorting
   const getTypePrecedence = (typeName: string): number => {
     switch (typeName) {
-      case "ID":
-        return 1;
-      case "ANNOTATIONS":
-        return 2;
       case "TIMESTAMP":
-        return 3;
+        return 1;
       case "USER":
-        return 5;
+        return 3;
       case "STRING":
-        return 6;
+        return 4;
       case "DOUBLE":
       case "INT":
       case "LONG":
       case "BIGINT":
-        return 7;
+        return 5;
       default:
         if (
           typeName === "MAP" ||
           typeName.startsWith("MAP<") ||
           typeName.startsWith("ARRAY<STRUCT<")
         )
-          return 4;
-        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 8;
-        return 9; // Other types at the end
+          return 2;
+        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 6;
+        return 7; // Other types at the end
     }
   };
 
@@ -122,36 +91,27 @@ function createTableColumns({
     return precedenceA - precedenceB;
   });
 
-  function getHeader(typeName: string, columnName: string) {
-    if (typeName === "ID" && selectionForm) return () => getAllRowsSelectionCheckbox(selectionForm);
+  function getHeader(columnName: string) {
     return columnName;
   }
 
-  function getRow(typeName: string, columnName: string, row: Row<DataRow>) {
-    // ID column shows a checkbox
-    if (typeName === "ID" && selectionForm) {
-      return getRowSelectionCheckbox(selectionForm, row.original[ID_COLUMN_NAME] as string);
-    }
-
+  function getRow(columnName: string, typeName: string, row: Row<DataRow>) {
     const value = row.getValue(columnName);
+    const rowId = row.original.id as string | undefined;
 
-    // Annotations column shows the annotations component
-    if (typeName === "ANNOTATIONS") {
-      const rowId = row.getValue(ID_COLUMN_NAME);
-      if (rowId && tableName) {
-        const commentRowId: AnnotationsRowIdentifier = {
-          experimentId,
-          tableName,
-          rowId: rowId as string,
-        };
-        return getAnnotationsColumn(commentRowId, value);
-      }
-      return value as string;
-    }
-
-    // Regular data column is formatted using the provided function
+    // Format using the provided function
     if (formatFunction) {
-      return formatFunction(value, typeName, columnName, onChartHover, onChartLeave, onChartClick);
+      return formatFunction(
+        value,
+        typeName,
+        rowId ?? "",
+        columnName,
+        onChartHover,
+        onChartLeave,
+        onChartClick,
+        onAddAnnotation,
+        onDeleteAnnotations,
+      );
     }
     return value as string;
   }
@@ -159,13 +119,13 @@ function createTableColumns({
   sortedColumns.forEach((dataColumn) => {
     columns.push(
       columnHelper.accessor(dataColumn.name, {
-        header: getHeader(dataColumn.type_text, dataColumn.name),
+        header: getHeader(dataColumn.name),
         size: getColumnWidth(dataColumn.type_text),
         meta: {
           type: dataColumn.type_text,
         },
         cell: ({ row }) => {
-          return getRow(dataColumn.type_text, dataColumn.name, row);
+          return getRow(dataColumn.name, dataColumn.type_text, row);
         },
       }),
     );
@@ -191,7 +151,6 @@ export interface TableMetadata {
  * @param onChartHover Event handler for when a chart is hovered
  * @param onChartLeave Event handler for when a chart is no longer hovered
  * @param onChartClick Event handler for when a chart is clicked
- * @param selectionForm Backing form to manage bulk selection state
  * @returns Query result containing the experiment data
  */
 export const useExperimentData = (
@@ -205,7 +164,8 @@ export const useExperimentData = (
   onChartHover?: (data: number[], columnName: string) => void,
   onChartLeave?: () => void,
   onChartClick?: (data: number[], columnName: string) => void,
-  selectionForm?: UseFormReturn<BulkSelectionFormType>,
+  onAddAnnotation?: (rowIds: string[]) => void,
+  onDeleteAnnotations?: (rowIds: string[]) => void,
 ) => {
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
@@ -216,59 +176,32 @@ export const useExperimentData = (
     staleTime: STALE_TIME,
   });
 
-  // Add fake data for demo purposes
-  // const originalTableData = data?.body[0];
-  // const tableData = useMemo(() => {
-  //   if (originalTableData?.data) {
-  //     // Add fake id columns to each row if not present
-  //     addDemoAnnotationData(originalTableData.data);
-  //   }
-  //   return originalTableData;
-  // }, [originalTableData]);
   const tableData = data?.body[0];
-
-  // Add all row id's to form
-  // const allRowIds = useMemo(() => {
-  //   if (tableData?.data) {
-  //     if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
-  //       // Extract all row IDs from the data
-  //       return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
-  //     }
-  //     return [];
-  //   }
-  // }, [tableData]);
-  // useEffect(() => {
-  //   if (selectionForm) {
-  //     selectionForm.setValue("allRows", allRowIds ?? []);
-  //   }
-  // }, [selectionForm, allRowIds]);
 
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData
       ? {
           columns: createTableColumns({
-            experimentId,
-            tableName,
             data: tableData.data,
             formatFunction,
             onChartHover,
             onChartLeave,
             onChartClick,
-            selectionForm,
+            onAddAnnotation,
+            onDeleteAnnotations,
           }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
         }
       : undefined;
   }, [
-    experimentId,
-    tableName,
     tableData,
     formatFunction,
     onChartHover,
     onChartLeave,
     onChartClick,
-    selectionForm,
+    onAddAnnotation,
+    onDeleteAnnotations,
   ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
   const displayName = tableData?.displayName;
@@ -316,16 +249,16 @@ export const useExperimentSampleData = (
         name: tableData.name,
         displayName: tableData.displayName,
         tableMetadata: {
-          columns: createTableColumns({ experimentId, data: tableData.data, formatFunction }),
+          columns: createTableColumns({ data: tableData.data, formatFunction }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
         } as TableMetadata,
         tableRows: tableData.data?.rows ?? [],
-        columns: tableData.data?.columns ?? [], // Add raw columns
+        columns: tableData.data?.columns ?? [],
       });
     });
     return tables;
-  }, [experimentId, data, formatFunction]);
+  }, [data, formatFunction]);
 
   return { sampleTables, isLoading, error };
 };

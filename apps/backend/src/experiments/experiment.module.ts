@@ -16,6 +16,9 @@ import { EmbargoProcessorService } from "./application/services/embargo-processo
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
+import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
+import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
+import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
@@ -49,14 +52,16 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
-import { LocationRepository } from "./core/repositories/experiment-location.repository";
 // Repositories
+import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
+import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 // Controllers
+import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
@@ -77,6 +82,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentVisualizationsController,
     ExperimentWebhookController,
     ExperimentLocationsController,
+    ExperimentDataAnnotationsController,
   ],
   providers: [
     // Port implementations
@@ -101,6 +107,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentRepository,
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
+    ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
     FlowRepository,
     LocationRepository,
@@ -152,6 +159,11 @@ import { ExperimentController } from "./presentation/experiment.controller";
     GetFlowUseCase,
     CreateFlowUseCase,
     UpdateFlowUseCase,
+
+    // Experiment data annotation use cases
+    AddAnnotationsUseCase,
+    UpdateAnnotationUseCase,
+    DeleteAnnotationsUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
 })

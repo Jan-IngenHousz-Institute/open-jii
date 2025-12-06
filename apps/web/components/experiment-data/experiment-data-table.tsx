@@ -8,12 +8,12 @@ import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExper
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
-import { Download } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import React, { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import z from "zod";
+import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
-import { getTotalSelectedCounts } from "~/components/experiment-data/annotations/utils";
+import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
 import {
   ExperimentDataRows,
   ExperimentTableHeader,
@@ -21,9 +21,10 @@ import {
   LoadingRows,
 } from "~/components/experiment-data/experiment-data-utils";
 
+import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
-  Button,
+  Checkbox,
   Form,
   Label,
   Pagination,
@@ -45,9 +46,7 @@ import { DataDownloadModal } from "./data-download-modal/data-download-modal";
 import { ExperimentDataTableChart } from "./experiment-data-table-chart";
 
 const bulkSelectionFormSchema = z.object({
-  allRows: z.array(z.string()),
-  selectedRowId: z.array(z.string()),
-  selectAll: z.boolean().optional(),
+  selectedRowIds: z.array(z.string()),
 });
 export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 
@@ -64,13 +63,24 @@ export function ExperimentDataTable({
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
 
-  // Row selection state - for bulk actions
+  // Annotation dialog states
+  const [addAnnotationDialogOpen, setAddAnnotationDialogOpen] = useState(false);
+  const [addAnnotationRowIds, setAddAnnotationRowIds] = useState<string[]>([]);
+  const [addAnnotationType, setAddAnnotationType] = useState<AnnotationType>("comment");
+  const [deleteAnnotationsDialogOpen, setDeleteAnnotationsDialogOpen] = useState(false);
+  const [deleteAnnotationRowIds, setDeleteAnnotationRowIds] = useState<string[]>([]);
+  const [deleteAnnotationType, setDeleteAnnotationType] = useState<AnnotationType>("comment");
+
+  // Row selection state (TanStack Table)
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+
+  // Form to track selection for bulk actions
   const selectionForm = useForm<BulkSelectionFormType>({
     resolver: zodResolver(bulkSelectionFormSchema),
-    defaultValues: { selectedRowId: [], allRows: [] },
+    defaultValues: { selectedRowIds: [] },
   });
 
-  // Chart state - much simpler
+  // Chart state
   const [chartDisplay, setChartDisplay] = useState<{
     data: number[];
     columnName: string;
@@ -112,6 +122,25 @@ export function ExperimentDataTable({
     setChartDisplay(null);
   }, []);
 
+  // Annotation dialog handlers
+  const openAddAnnotationDialog = useCallback(
+    (rowIds: string[], type: AnnotationType = "comment") => {
+      setAddAnnotationRowIds(rowIds);
+      setAddAnnotationType(type);
+      setAddAnnotationDialogOpen(true);
+    },
+    [],
+  );
+
+  const openDeleteAnnotationsDialog = useCallback(
+    (rowIds: string[], type: AnnotationType = "comment") => {
+      setDeleteAnnotationRowIds(rowIds);
+      setDeleteAnnotationType(type);
+      setDeleteAnnotationsDialogOpen(true);
+    },
+    [],
+  );
+
   // Use traditional pagination with improved column persistence
   const { tableMetadata, tableRows, displayName, isLoading, error } = useExperimentData(
     experimentId,
@@ -124,7 +153,8 @@ export function ExperimentDataTable({
     showChartOnHover,
     hideChartOnLeave,
     toggleChartPin,
-    selectionForm,
+    openAddAnnotationDialog,
+    openDeleteAnnotationsDialog,
   );
 
   const onPaginationChange = useCallback(
@@ -132,13 +162,13 @@ export function ExperimentDataTable({
       if (typeof updaterOrValue === "function") {
         const newPagination = updaterOrValue(pagination);
         setPagination(newPagination);
-        selectionForm.setValue("selectedRowId", []); // Clear selection on page change
       } else {
         setPagination(updaterOrValue);
-        selectionForm.setValue("selectedRowId", []); // Clear selection on page change
       }
+      // Clear selection on page change
+      setRowSelection({});
     },
-    [pagination, selectionForm],
+    [pagination],
   );
 
   function changePageSize(pageSize: number) {
@@ -157,21 +187,75 @@ export function ExperimentDataTable({
   const totalPages = persistedMetaData?.totalPages ?? 0;
   const totalRows = persistedMetaData?.totalRows ?? 0;
 
+  // Create columns with checkbox column
+  const columns = React.useMemo(() => {
+    if (!persistedMetaData?.columns) return [];
+
+    return [
+      {
+        id: "select",
+        size: 50,
+        header: ({
+          table,
+        }: {
+          table: {
+            getIsAllPageRowsSelected: () => boolean;
+            getIsSomePageRowsSelected: () => boolean;
+            toggleAllPageRowsSelected: (value: boolean) => void;
+          };
+        }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected()
+                ? true
+                : table.getIsSomePageRowsSelected()
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({
+          row,
+        }: {
+          row: { getIsSelected: () => boolean; toggleSelected: (value: boolean) => void };
+        }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      ...persistedMetaData.columns,
+    ];
+  }, [persistedMetaData?.columns]);
+
   const table = useReactTable<DataRow>({
     data: tableRows ?? [],
-    columns: persistedMetaData?.columns ?? [],
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
+    enableRowSelection: true,
+    getRowId: (row) => String(row.id),
+    onRowSelectionChange: setRowSelection,
     onPaginationChange,
     state: {
       pagination,
+      rowSelection,
     },
     rowCount: totalRows,
     defaultColumn: {
       size: 180,
     },
   });
+
+  // Derive selected row IDs from table state
+  const selectedRowIds = Object.keys(rowSelection);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -187,12 +271,6 @@ export function ExperimentDataTable({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [table]);
-
-  const selectedRowIds = useWatch({ control: selectionForm.control, name: "selectedRowId" });
-
-  const { totalSelectedComments, totalSelectedFlags } = useMemo(() => {
-    return getTotalSelectedCounts(tableRows, selectedRowIds);
-  }, [selectedRowIds, tableRows]);
 
   if (isLoading && !persistedMetaData) {
     return <div>{t("experimentDataTable.loading")}</div>;
@@ -210,48 +288,18 @@ export function ExperimentDataTable({
   const loadingRowCount =
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
-  const isBulkActionsEnabled = selectionForm.getValues("allRows").length > 0;
-
-  // Prevent form submission to avoid URL navigation
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-
   return (
     <Form {...selectionForm}>
-      <form onSubmit={handleSubmit}>
-        {/* <input type="hidden" name="allRows" /> */}
-        {/*TODO: The option with bulk actions will be removed as soon as the backend code is ready.*/}
-        {!isBulkActionsEnabled && (
-          <div className="mb-4 flex items-center justify-between">
-            <h5 className="text-base font-medium">{displayName ?? tableName}</h5>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDownloadModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {t("experimentDataTable.download")}
-            </Button>
-          </div>
-        )}
-        {isBulkActionsEnabled && (
-          <>
-            <h5 className="text-base font-medium">{displayName ?? tableName}</h5>
-            <BulkActionsBar
-              experimentId={experimentId}
-              tableName={tableName}
-              rowIds={selectedRowIds}
-              totalComments={totalSelectedComments}
-              totalFlags={totalSelectedFlags}
-              clearSelection={() => selectionForm.setValue("selectedRowId", [])}
-              downloadTable={() => setDownloadModalOpen(true)}
-            />
-          </>
-        )}
-        <div className="text-muted-foreground relative overflow-visible rounded-md border">
+      <form>
+        <h5 className="mb-3 text-base font-medium">{displayName ?? tableName}</h5>
+        <BulkActionsBar
+          rowIds={selectedRowIds}
+          tableRows={tableRows}
+          downloadTable={() => setDownloadModalOpen(true)}
+          onAddAnnotation={openAddAnnotationDialog}
+          onDeleteAnnotations={openDeleteAnnotationsDialog}
+        />
+        <div className="text-muted-foreground relative -mt-px overflow-visible rounded-b-lg border">
           <Table>
             <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
             <TableBody>
@@ -338,6 +386,24 @@ export function ExperimentDataTable({
           </div>
         )}
       </form>
+      <AddAnnotationDialog
+        experimentId={experimentId}
+        tableName={tableName}
+        rowIds={addAnnotationRowIds}
+        type={addAnnotationType}
+        open={addAnnotationDialogOpen}
+        setOpen={setAddAnnotationDialogOpen}
+        clearSelection={() => setRowSelection({})}
+      />
+      <DeleteAnnotationsDialog
+        experimentId={experimentId}
+        tableName={tableName}
+        rowIds={deleteAnnotationRowIds}
+        type={deleteAnnotationType}
+        open={deleteAnnotationsDialogOpen}
+        setOpen={setDeleteAnnotationsDialogOpen}
+        clearSelection={() => setRowSelection({})}
+      />
     </Form>
   );
 }

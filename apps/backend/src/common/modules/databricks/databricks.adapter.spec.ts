@@ -17,6 +17,7 @@ import { DatabricksWorkspaceService } from "./services/workspace/workspace.servi
 // Constants for testing
 const MOCK_ACCESS_TOKEN = "mock-token";
 const MOCK_EXPIRES_IN = 3600;
+const MOCK_CATALOG_NAME = "test_catalog";
 
 describe("DatabricksAdapter", () => {
   const testApp = TestHarness.App;
@@ -1033,6 +1034,489 @@ describe("DatabricksAdapter", () => {
       // Execute trigger experiment pipeline
       const result = await databricksAdapter.triggerExperimentPipeline(
         specialExperimentName,
+        experimentId,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        update_id: updateId,
+      });
+    });
+
+    it("should trigger pipeline with full refresh option", async () => {
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+      const pipelineId = "pipeline-abc123";
+      const updateId = "update-xyz789";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list pipelines to find pipeline by name
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [
+            {
+              pipeline_id: pipelineId,
+              name: pipelineName,
+              state: "ACTIVE",
+            },
+          ],
+        });
+
+      // Mock get pipeline details
+      nock(databricksHost)
+        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
+        .reply(200, {
+          pipeline_id: pipelineId,
+          name: pipelineName,
+          state: "ACTIVE",
+        });
+
+      // Mock start pipeline update API call with full refresh
+      nock(databricksHost)
+        .post(
+          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
+          (body: Record<string, any>) => {
+            return body.full_refresh === true;
+          },
+        )
+        .reply(200, {
+          update_id: updateId,
+        });
+
+      // Execute trigger experiment pipeline with full refresh
+      const result = await databricksAdapter.triggerExperimentPipeline(
+        experimentName,
+        experimentId,
+        { fullRefresh: true },
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        update_id: updateId,
+      });
+    });
+
+    it("should trigger pipeline with full refresh selection", async () => {
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+      const pipelineId = "pipeline-abc123";
+      const updateId = "update-xyz789";
+      const tablesToRefresh = ["table1", "table2"];
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list pipelines to find pipeline by name
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [
+            {
+              pipeline_id: pipelineId,
+              name: pipelineName,
+              state: "ACTIVE",
+            },
+          ],
+        });
+
+      // Mock get pipeline details
+      nock(databricksHost)
+        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
+        .reply(200, {
+          pipeline_id: pipelineId,
+          name: pipelineName,
+          state: "ACTIVE",
+        });
+
+      // Mock start pipeline update API call with full refresh selection
+      nock(databricksHost)
+        .post(
+          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
+          (body: Record<string, any>) => {
+            return (
+              Array.isArray(body.full_refresh_selection) &&
+              body.full_refresh_selection.length === 2 &&
+              body.full_refresh_selection.includes("table1") &&
+              body.full_refresh_selection.includes("table2")
+            );
+          },
+        )
+        .reply(200, {
+          update_id: updateId,
+        });
+
+      // Execute trigger experiment pipeline with full refresh selection
+      const result = await databricksAdapter.triggerExperimentPipeline(
+        experimentName,
+        experimentId,
+        { fullRefreshSelection: tablesToRefresh },
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        update_id: updateId,
+      });
+    });
+
+    it("should trigger pipeline with refresh selection", async () => {
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+      const pipelineId = "pipeline-abc123";
+      const updateId = "update-xyz789";
+      const tablesToRefresh = ["table3"];
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list pipelines to find pipeline by name
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [
+            {
+              pipeline_id: pipelineId,
+              name: pipelineName,
+              state: "ACTIVE",
+            },
+          ],
+        });
+
+      // Mock get pipeline details
+      nock(databricksHost)
+        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
+        .reply(200, {
+          pipeline_id: pipelineId,
+          name: pipelineName,
+          state: "ACTIVE",
+        });
+
+      // Mock start pipeline update API call with refresh selection
+      nock(databricksHost)
+        .post(
+          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
+          (body: Record<string, any>) => {
+            return (
+              Array.isArray(body.refresh_selection) &&
+              body.refresh_selection.length === 1 &&
+              body.refresh_selection.includes("table3")
+            );
+          },
+        )
+        .reply(200, {
+          update_id: updateId,
+        });
+
+      // Execute trigger experiment pipeline with refresh selection
+      const result = await databricksAdapter.triggerExperimentPipeline(
+        experimentName,
+        experimentId,
+        { refreshSelection: tablesToRefresh },
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        update_id: updateId,
+      });
+    });
+  });
+
+  describe("refreshSilverData", () => {
+    const experimentName = "Test Experiment";
+    const experimentId = "123-456-789";
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+
+    it("should refresh silver tables successfully", async () => {
+      const pipelineId = "pipeline-abc123";
+      const updateId = "update-xyz789";
+      const silverTable1 = "silver_table_1";
+      const silverTable2 = "silver_table_2";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list tables to get silver tables
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              catalog_name: MOCK_CATALOG_NAME,
+              schema_name: schemaName,
+              name: silverTable1,
+              properties: { quality: "silver" },
+            },
+            {
+              catalog_name: MOCK_CATALOG_NAME,
+              schema_name: schemaName,
+              name: silverTable2,
+              properties: { quality: "silver" },
+            },
+            {
+              catalog_name: MOCK_CATALOG_NAME,
+              schema_name: schemaName,
+              name: "bronze_table",
+              properties: { quality: "bronze" },
+            },
+          ],
+        });
+
+      // Mock list pipelines to find pipeline by name
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [
+            {
+              pipeline_id: pipelineId,
+              name: pipelineName,
+              state: "ACTIVE",
+            },
+          ],
+        });
+
+      // Mock get pipeline details
+      nock(databricksHost)
+        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
+        .reply(200, {
+          pipeline_id: pipelineId,
+          name: pipelineName,
+          state: "ACTIVE",
+        });
+
+      // Mock start pipeline update API call with full refresh selection
+      nock(databricksHost)
+        .post(
+          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
+          (body: Record<string, any>) => {
+            return (
+              Array.isArray(body.full_refresh_selection) &&
+              body.full_refresh_selection.length === 2 &&
+              body.full_refresh_selection.includes(silverTable1) &&
+              body.full_refresh_selection.includes(silverTable2) &&
+              body.cause === "API_CALL"
+            );
+          },
+        )
+        .reply(200, {
+          update_id: updateId,
+        });
+
+      // Execute refresh silver data
+      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        update_id: updateId,
+      });
+    });
+
+    it("should handle case with no silver tables", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list tables with no silver tables
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              catalog_name: MOCK_CATALOG_NAME,
+              schema_name: schemaName,
+              name: "bronze_table",
+              properties: { quality: "bronze" },
+            },
+          ],
+        });
+
+      // Execute refresh silver data
+      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+
+      // Assert result is failure (no silver tables found)
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("No silver quality tables found");
+    });
+
+    it("should handle table listing failure", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list tables failure
+      nock(databricksHost).get(DatabricksTablesService.TABLES_ENDPOINT).query(true).reply(404, {
+        error_code: "SCHEMA_DOES_NOT_EXIST",
+        message: "Schema not found",
+      });
+
+      // Execute refresh silver data
+      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to list tables");
+    });
+
+    it("should handle pipeline trigger failure", async () => {
+      const silverTable1 = "silver_table_1";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list tables to get silver tables
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              catalog_name: MOCK_CATALOG_NAME,
+              schema_name: schemaName,
+              name: silverTable1,
+              properties: { quality: "silver" },
+            },
+          ],
+        });
+
+      // Mock token request for pipeline operations
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list pipelines with empty results (pipeline not found)
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [],
+        });
+
+      // Execute refresh silver data
+      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("not found");
+    });
+  });
+
+  describe("triggerExperimentPipelineSilverRefresh", () => {
+    const experimentName = "Test Experiment";
+    const experimentId = "123-456-789";
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+
+    it("should successfully trigger silver refresh", async () => {
+      const pipelineId = "pipeline-abc123";
+      const updateId = "update-xyz789";
+      const silverTable1 = "silver_table_1";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list tables to get silver tables
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              catalog_name: MOCK_CATALOG_NAME,
+              schema_name: schemaName,
+              name: silverTable1,
+              properties: { quality: "silver" },
+            },
+          ],
+        });
+
+      // Mock list pipelines to find pipeline by name
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [
+            {
+              pipeline_id: pipelineId,
+              name: pipelineName,
+              state: "ACTIVE",
+            },
+          ],
+        });
+
+      // Mock get pipeline details
+      nock(databricksHost)
+        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
+        .reply(200, {
+          pipeline_id: pipelineId,
+          name: pipelineName,
+          state: "ACTIVE",
+        });
+
+      // Mock start pipeline update API call
+      nock(databricksHost)
+        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
+        .reply(200, {
+          update_id: updateId,
+        });
+
+      // Execute trigger experiment pipeline silver refresh
+      const result = await databricksAdapter.triggerExperimentPipelineSilverRefresh(
+        experimentName,
         experimentId,
       );
 

@@ -140,26 +140,83 @@ export const zDataColumn = z.object({
 // Experiment data annotations
 export const zAnnotationType = z.enum(["comment", "flag"]);
 
+export const zAnnotationFlagType = z.enum(["outlier", "needs_review"]);
+
+// Use discriminated union to properly differentiate between comment and flag content
 export const zAnnotationCommentContent = z.object({
+  type: z.literal("comment"),
   text: z.string().min(1).max(255),
 });
 
-export const zAnnotationFlagType = z.enum(["outlier", "needs_review"]);
 export const zAnnotationFlagContent = z.object({
+  type: z.literal("flag"),
   flagType: zAnnotationFlagType,
-  reason: z.string().min(1).max(255),
+  text: z.string().max(255).optional(),
 });
 
-export const zAnnotationContent = z.union([zAnnotationCommentContent, zAnnotationFlagContent]);
+export const zAnnotationContent = z.discriminatedUnion("type", [
+  zAnnotationCommentContent,
+  zAnnotationFlagContent,
+]);
 
 export const zAnnotation = z.object({
   id: z.string().uuid(),
-  userId: z.string().uuid(),
-  userName: z.string().optional(),
+  rowId: z.string().optional(),
   type: zAnnotationType,
   content: zAnnotationContent,
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+export const zAnnotationList = z.array(zAnnotation);
+
+export const zAnnotationPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  annotationId: z.string().uuid().describe("ID of the annotation"),
+});
+
+export const zAddAnnotationBody = z.object({
+  tableName: z.string(),
+  rowId: z.string().min(1),
+  annotation: z.object({
+    type: zAnnotationType,
+    content: zAnnotationContent,
+  }),
+});
+
+export const zAddAnnotationsBulkBody = z.object({
+  tableName: z.string(),
+  rowIds: z.array(z.string().min(1)).min(1),
+  annotation: z.object({
+    type: zAnnotationType,
+    content: zAnnotationContent,
+  }),
+});
+
+export const zListAnnotationsQuery = z.object({
+  page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
+  tableName: z.string().describe("Name of the data table"),
+});
+
+export const zUpdateAnnotationBody = z.object({
+  content: zAnnotationContent.describe("Updated content"),
+});
+
+export const zAnnotationDeleteBulkPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+});
+
+export const zAnnotationDeleteBulkBody = z.object({
+  tableName: z.string().describe("Name of the data table"),
+  rowIds: z.array(z.string().min(1)).min(1).describe("Rows IDs to delete"),
+  type: zAnnotationType.describe("Type of annotations to delete"),
+});
+
+export const zAnnotationRowsAffected = z.object({
+  rowsAffected: z.number().int(),
 });
 
 // Experiment data schema
@@ -852,6 +909,12 @@ export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVi
 // Annotation types
 export type AnnotationType = z.infer<typeof zAnnotationType>;
 export type AnnotationFlagType = z.infer<typeof zAnnotationFlagType>;
+export type AnnotationContent = z.infer<typeof zAnnotationContent>;
 export type AnnotationCommentContent = z.infer<typeof zAnnotationCommentContent>;
 export type AnnotationFlagContent = z.infer<typeof zAnnotationFlagContent>;
 export type Annotation = z.infer<typeof zAnnotation>;
+export type AddAnnotationBody = z.infer<typeof zAddAnnotationBody>;
+export type AddAnnotationsBulkBody = z.infer<typeof zAddAnnotationsBulkBody>;
+export type UpdateAnnotationBody = z.infer<typeof zUpdateAnnotationBody>;
+export type DeleteAnnotationsBulkBody = z.infer<typeof zAnnotationDeleteBulkBody>;
+export type AnnotationRowsAffected = z.infer<typeof zAnnotationRowsAffected>;

@@ -1,8 +1,10 @@
 import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
 import React from "react";
+import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/experiment-data-table-annotations-cell";
 import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
+import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 
@@ -11,13 +13,19 @@ import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell
 import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
 import { ExperimentDataTableUserCell } from "./experiment-data-table-user-cell";
 
+const ANNOTATIONS_STRUCT_STRING =
+  "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>";
+
 export function formatValue(
   value: unknown,
   type: string,
+  rowId: string,
   columnName?: string,
   onChartHover?: (data: number[], columnName: string) => void,
   onChartLeave?: () => void,
   onChartClick?: (data: number[], columnName: string) => void,
+  onAddAnnotation?: (rowIds: string[], annotationType: AnnotationType) => void,
+  onDeleteAnnotations?: (rowIds: string[], annotationType: AnnotationType) => void,
 ) {
   switch (type) {
     case "DOUBLE":
@@ -30,6 +38,17 @@ export function formatValue(
     case "USER":
       return (
         <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
+      );
+    case "STRING":
+      return value as string;
+    case ANNOTATIONS_STRUCT_STRING:
+      return (
+        <ExperimentDataTableAnnotationsCell
+          data={value as string}
+          rowId={rowId}
+          onAddAnnotation={onAddAnnotation}
+          onDeleteAnnotations={onDeleteAnnotations}
+        />
       );
     case "ARRAY":
     case "ARRAY<DOUBLE>":
