@@ -42,6 +42,7 @@ jobs:
       id-token: write
       contents: read
     env:
+      environment: ${{ inputs.environment }}
       TF_VAR_terraform_state_s3_bucket_name: ${{ secrets.TERRAFORM_STATE_S3_BUCKET_NAME }}
       TF_VAR_docusaurus_s3_bucket_name: ${{ secrets.DOCUSAURUS_S3_BUCKET_NAME }}
       TF_VAR_databricks_bucket_name: ${{ secrets.DATABRICKS_S3_BUCKET_NAME }}
@@ -64,17 +65,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Run OpenTofu Operations
-        uses: ./.github/actions/tofu
+      - name: Setup OpenTofu
+        uses: ./.github/actions/tofu/tofu-setup
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.6.0"
-          environment: "${{ inputs.environment }}"
 
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+
+      - name: OpenTofu Plan
+        uses: ./.github/actions/tofu/tofu-plan
+
+      # # Auto-apply for dev environment only
       # - name: Apply Infrastructure
-      #   working-directory: infrastructure/env/${{ inputs.environment }}
-      #   run: tofu apply -auto-approve
+      #   if: ${{ inputs.environment == 'dev' }}
+      #   uses: ./.github/actions/tofu/tofu-apply
 
   # Job 3: Deploy Artifacts
   deploy:
@@ -107,15 +114,28 @@ jobs:
             exit 1
           fi
 
-  # # Job 4: Deploy Next.js with OpenNext
-  # deploy-nextjs:
-  #   name: Deploy Next.js with OpenNext
-  #   needs: [build_lint_test, tofu]
-  #   if: needs.build_lint_test.outputs.has_affected_apps == 'true'
-  #   uses: ./.github/workflows/deploy-nextjs-opennext.yml
-  #   with:
-  #     environment: ${{ inputs.environment }}
-  #   secrets: inherit
-  #   permissions:
-  #     id-token: write
-  #     contents: read
+  # Deploy Web
+  deploy-web:
+    name: Deploy Web (Next.js)
+    needs: [build_lint_test, tofu]
+    if: contains(needs.build_lint_test.outputs.affected_apps, 'web')
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+
+  # Deploy Backend
+  deploy-backend:
+    name: Deploy Backend (NestJS)
+    needs: [build_lint_test, tofu]
+    if: contains(needs.build_lint_test.outputs.affected_apps, 'backend')
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
