@@ -6,6 +6,7 @@ import { useTheme } from "~/hooks/use-theme";
 
 import { Chart } from "./chart";
 import { KeyValue } from "./key-value";
+import { MacroMessages } from "./macro-messages";
 import { MeasurementHeader } from "./measurement-header";
 
 interface ProcessedMeasurementPreviewProps {
@@ -57,18 +58,36 @@ export function ProcessedMeasurementPreview({
         contentContainerStyle={{ paddingBottom: 20 }}
       >
         <View className="p-4">
-          {outputs.map((output, outputIndex) =>
-            Object.keys(output).map((key) => {
-              const value = output[key];
-              if (typeof value === "string" || typeof value === "number") {
-                return <KeyValue key={`${outputIndex}-${key}`} value={value} name={key} />;
-              }
-              if (Array.isArray(value) && typeof value[0] === "number") {
-                return <Chart key={`${outputIndex}-${key}`} name={key} values={value} />;
-              }
-              return null;
-            }),
-          )}
+          {outputs.map((output, outputIndex) => {
+            const messageGroup = output.messages;
+            const hasMessages =
+              messageGroup &&
+              (messageGroup.info?.length ??
+                messageGroup.warning?.length ??
+                messageGroup.danger?.length);
+
+            return (
+              <View key={outputIndex} className="gap-4">
+                {hasMessages && (
+                  <View>
+                    <MacroMessages messages={[messageGroup]} />
+                  </View>
+                )}
+                {Object.keys(output)
+                  .filter((key) => key !== "messages")
+                  .map((key) => {
+                    const value = output[key];
+                    if (typeof value === "string" || typeof value === "number") {
+                      return <KeyValue key={key} value={value} name={key} />;
+                    }
+                    if (Array.isArray(value) && typeof value[0] === "number") {
+                      return <Chart key={key} name={key} values={value} />;
+                    }
+                    return null;
+                  })}
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
     </View>
