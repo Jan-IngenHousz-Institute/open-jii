@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "main": "index.tsx",
   "scripts": {
     "clean": "git clean -xdf .cache .expo .turbo android ios node_modules",
