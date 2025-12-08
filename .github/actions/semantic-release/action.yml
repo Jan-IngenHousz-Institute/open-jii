@@ -25,9 +25,14 @@ runs:
       shell: bash
       run: |
         echo "📥 Installing semantic-release and plugins from tools/release/package.json..."
-        pnpm install --filter @open-jii/release-tools --frozen-lockfile
+        # Install all workspace dependencies (includes tools/release)
+        pnpm install --frozen-lockfile
         
-        echo "$GITHUB_WORKSPACE/node_modules/.bin" >> $GITHUB_PATH
+        # Verify installation
+        if [ ! -f "node_modules/.bin/semantic-release" ]; then
+          echo "⚠️ semantic-release not found in node_modules, falling back to direct install"
+          cd tools/release && pnpm install --frozen-lockfile && cd ../..
+        fi
     
     - name: Process Releases
       id: release

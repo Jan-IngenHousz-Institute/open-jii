@@ -1,8 +1,8 @@
 packages:
   - "apps/*"
-  - "apps/tools/*"
   - "packages/*"
   - "tooling/*"
+  - "tools/*"
 
 patchedDependencies:
   react-native-usb-serialport-for-android: patches/react-native-usb-serialport-for-android.patch
