@@ -49,7 +49,14 @@ describe("AddAnnotations", () => {
       userId: testUserId,
     });
 
-    // Mock DatabricksAdapter to return error
+    // Mock DatabricksAdapter - first listTables shows no annotations table exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValueOnce(
+      success({
+        tables: [], // No annotations table exists
+        next_page_token: undefined,
+      }),
+    );
+
     vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
       .mockResolvedValueOnce(
         success({
@@ -212,6 +219,14 @@ describe("AddAnnotations", () => {
       userId: testUserId,
     });
 
+    // Mock listTables to show no annotations table exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValueOnce(
+      success({
+        tables: [],
+        next_page_token: undefined,
+      }),
+    );
+
     // Mock table creation to fail
     vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
       failure({
@@ -255,6 +270,14 @@ describe("AddAnnotations", () => {
       visibility: "private",
       userId: testUserId,
     });
+
+    // Mock listTables to show no annotations table exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValueOnce(
+      success({
+        tables: [],
+        next_page_token: undefined,
+      }),
+    );
 
     // Mock table creation and alter to succeed, then insert to fail
     vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
@@ -314,6 +337,14 @@ describe("AddAnnotations", () => {
       name: "test-experiment-flag",
       status: "active",
     });
+
+    // Mock listTables to show no annotations table exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValueOnce(
+      success({
+        tables: [],
+        next_page_token: undefined,
+      }),
+    );
 
     // Mock DatabricksAdapter methods
     vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
@@ -380,6 +411,14 @@ describe("AddAnnotations", () => {
       status: "active",
     });
 
+    // Mock listTables to show no annotations table exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValueOnce(
+      success({
+        tables: [],
+        next_page_token: undefined,
+      }),
+    );
+
     // Mock DatabricksAdapter methods
     vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
       .mockResolvedValueOnce(
@@ -439,5 +478,78 @@ describe("AddAnnotations", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.rowsAffected).toBe(1);
+  });
+
+  it("should skip table creation when annotations table already exists", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      userId: testUserId,
+      name: "test-experiment-existing-table",
+      status: "active",
+    });
+
+    // Mock listTables to show annotations table already exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValueOnce(
+      success({
+        tables: [
+          {
+            name: "annotations",
+            catalog_name: "test_catalog",
+            schema_name: "test_schema",
+            table_type: "MANAGED",
+            created_at: Date.now(),
+          },
+          {
+            name: "other_table",
+            catalog_name: "test_catalog",
+            schema_name: "test_schema",
+            table_type: "MANAGED",
+            created_at: Date.now(),
+          },
+        ],
+        next_page_token: undefined,
+      }),
+    );
+
+    // Mock only the INSERT operation (no CREATE/ALTER since table exists)
+    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValueOnce(
+      success({
+        columns: [
+          { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+          { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+        ],
+        rows: [["1", "1"]],
+        totalRows: 1,
+        truncated: false,
+      }),
+    ); // INSERT
+
+    // Mock the refresh silver data call
+    vi.spyOn(databricksAdapter, "refreshSilverData").mockResolvedValue(
+      success({ update_id: "mock-update-id" }),
+    );
+
+    const newAnnotation: AddAnnotationsBulkBody = {
+      tableName: "experiment_data_table",
+      rowIds: ["row1"],
+      annotation: {
+        type: "comment",
+        content: {
+          type: "comment",
+          text: "This is a test comment for existing table",
+        },
+      },
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, newAnnotation, testUserId);
+
+    // Assert - operation should succeed and only call INSERT, not CREATE/ALTER
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.rowsAffected).toBe(1);
+
+    // Verify that executeExperimentSqlQuery was called only once (for INSERT)
+    expect(databricksAdapter.executeExperimentSqlQuery).toHaveBeenCalledTimes(1);
   });
 });

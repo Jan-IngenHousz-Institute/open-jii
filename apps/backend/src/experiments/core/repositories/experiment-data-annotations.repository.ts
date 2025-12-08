@@ -100,7 +100,28 @@ export class ExperimentDataAnnotationsRepository {
   async ensureTableExists(
     experimentName: string,
     experimentId: string,
-  ): Promise<Result<SchemaData>> {
+  ): Promise<Result<SchemaData | null>> {
+    // First check if the annotations table already exists
+    const tablesResult = await this.databricksPort.listTables(experimentName, experimentId);
+    if (tablesResult.isFailure()) {
+      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
+    }
+
+    // Check if annotations table exists
+    const annotationsTableExists = tablesResult.value.tables.some(
+      (table) => table.name === "annotations",
+    );
+
+    // If table already exists, return success without creating
+    if (annotationsTableExists) {
+      return success(null);
+    }
+
+    this.logger.debug(
+      `Annotation table not found, creating annotations table for experiment ${experimentId}`,
+    );
+
+    // Create the table if it doesn't exist
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS annotations (
         id STRING NOT NULL PRIMARY KEY,

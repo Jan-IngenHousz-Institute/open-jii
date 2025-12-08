@@ -53,6 +53,117 @@ describe("ExperimentDataAnnotationsRepository", () => {
     await testApp.teardown();
   });
 
+  describe("ensureTableExists", () => {
+    it("should create table when it does not exist", async () => {
+      // Mock listTables to show no annotations table exists
+      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
+        success({
+          tables: [],
+          next_page_token: undefined,
+        }),
+      );
+
+      // Mock CREATE TABLE and ALTER TABLE operations
+      vi.spyOn(databricksPort, "executeExperimentSqlQuery")
+        .mockResolvedValueOnce(
+          success({
+            columns: [],
+            rows: [],
+            totalRows: 0,
+            truncated: false,
+          }),
+        ) // CREATE TABLE
+        .mockResolvedValueOnce(
+          success({
+            columns: [],
+            rows: [],
+            totalRows: 0,
+            truncated: false,
+          }),
+        ); // ALTER TABLE
+
+      const result = await repository.ensureTableExists(mockExperimentName, mockExperimentId);
+
+      assertSuccess(result);
+      expect(databricksPort.listTables).toHaveBeenCalledWith(mockExperimentName, mockExperimentId);
+      expect(databricksPort.executeExperimentSqlQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it("should skip table creation when table already exists", async () => {
+      // Mock listTables to show annotations table exists
+      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
+        success({
+          tables: [
+            {
+              name: "annotations",
+              catalog_name: "test_catalog",
+              schema_name: "test_schema",
+              table_type: "MANAGED",
+              created_at: Date.now(),
+            },
+          ],
+          next_page_token: undefined,
+        }),
+      );
+
+      // Set up spy for executeExperimentSqlQuery (should not be called)
+      const executeQuerySpy = vi.spyOn(databricksPort, "executeExperimentSqlQuery");
+
+      const result = await repository.ensureTableExists(mockExperimentName, mockExperimentId);
+
+      assertSuccess(result);
+      expect(result.value).toBeNull(); // Returns null when table exists
+      expect(databricksPort.listTables).toHaveBeenCalledWith(mockExperimentName, mockExperimentId);
+      expect(executeQuerySpy).not.toHaveBeenCalled();
+    });
+
+    it("should handle listTables failure", async () => {
+      // Mock listTables to fail
+      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
+        failure({
+          message: "Failed to list tables",
+          code: "DATABRICKS_ERROR",
+          statusCode: 500,
+          name: "DatabricksError",
+        }),
+      );
+
+      // Set up spy for executeExperimentSqlQuery (should not be called)
+      const executeQuerySpy = vi.spyOn(databricksPort, "executeExperimentSqlQuery");
+
+      const result = await repository.ensureTableExists(mockExperimentName, mockExperimentId);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to list tables");
+      expect(executeQuerySpy).not.toHaveBeenCalled();
+    });
+
+    it("should handle CREATE TABLE failure", async () => {
+      // Mock listTables to show no annotations table exists
+      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
+        success({
+          tables: [],
+          next_page_token: undefined,
+        }),
+      );
+
+      // Mock CREATE TABLE to fail
+      vi.spyOn(databricksPort, "executeExperimentSqlQuery").mockResolvedValueOnce(
+        failure({
+          message: "Failed to create table",
+          code: "DATABRICKS_ERROR",
+          statusCode: 500,
+          name: "DatabricksError",
+        }),
+      );
+
+      const result = await repository.ensureTableExists(mockExperimentName, mockExperimentId);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to create annotations table");
+    });
+  });
+
   describe("storeAnnotations", () => {
     const createValidAnnotation = (): CreateAnnotationDto => ({
       userId: mockUserId,
