@@ -123,13 +123,6 @@ jobs:
           echo "🚀 Mobile app released!"
           echo "Version: ${{ steps.mobile_release.outputs.version }}"
           echo "Tag: ${{ steps.mobile_release.outputs.tag }}"
-          # echo ""
-          # echo "📋 Next steps:"
-          # echo "  1. Connect this job to your EAS build workflow"
-          # echo "  2. Build AAB/APK with the released version"
-          # echo "  3. Upload to Play Store/App Store"
-          # echo ""
-          # echo "🔗 Documentation: https://docs.openjii.org/deployment/mobile"
 
   # Web deployment job (triggered when web is released)
   deploy-web:

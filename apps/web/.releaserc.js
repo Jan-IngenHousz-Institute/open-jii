@@ -14,7 +14,7 @@ export default {
       '@semantic-release/exec',
       {
         // Generate release summary JSON for deployment workflows
-        prepareCmd: `echo '{"app":"web","version":"\${nextRelease.version}","tag":"web-v\${nextRelease.version}","changelog":"\${nextRelease.notes}"}' > ../../release-summary-web.json`,
+        prepareCmd: `jq -n --arg app "web" --arg version "\${nextRelease.version}" --arg tag "web-v\${nextRelease.version}" --arg changelog "\${nextRelease.notes}" '{app: $app, version: $version, tag: $tag, changelog: $changelog}' > ../../release-summary-web.json`,
       },
     ],
   ],

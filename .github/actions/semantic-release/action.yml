@@ -21,17 +21,15 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Install semantic-release globally
+    - name: Install semantic-release and plugins
       shell: bash
       run: |
-        echo "📥 Installing semantic-release and plugins..."
-        npm install -g semantic-release@24 \
-          @semantic-release/changelog@6 \
-          @semantic-release/git@10 \
-          @semantic-release/github@11 \
-          @semantic-release/exec@6 \
-          conventional-changelog-conventionalcommits@8 \
-          semantic-release-monorepo@8
+        echo "📥 Installing semantic-release and plugins from tools/release/package.json..."
+        cd tools/release
+        npm ci --prefer-offline
+        cd ../..
+        
+        echo "$GITHUB_WORKSPACE/tools/release/node_modules/.bin" >> $GITHUB_PATH
     
     - name: Process Releases
       id: release
@@ -86,21 +84,29 @@ runs:
           
           if [ "$DRY_RUN" = "true" ]; then
             echo "🔍 DRY RUN MODE - Preview only"
-            npx semantic-release --dry-run --no-ci 2>&1 | tee release-output.txt || true
+            npx semantic-release --dry-run 2>&1 | tee release-output.txt || true
           else
             echo "🚀 Creating release..."
-            npx semantic-release --no-ci 2>&1 | tee release-output.txt || true
+            npx semantic-release 2>&1 | tee release-output.txt || true
           fi
           
           # Capture release info
           if grep -q "Published release" release-output.txt; then
-            VERSION=$(grep "Published release" release-output.txt | grep -oP '\d+\.\d+\.\d+' | head -1)
-            echo "✅ Release created: $APP v$VERSION"
-            RELEASES_JSON=$(echo $RELEASES_JSON | jq --arg app "$APP" --arg ver "$VERSION" '.[$app] = $ver')
+            VERSION=$(grep "Published release" release-output.txt | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -n "$VERSION" ]; then
+              echo "✅ Release created: $APP v$VERSION"
+              RELEASES_JSON=$(echo $RELEASES_JSON | jq --arg app "$APP" --arg ver "$VERSION" '.[$app] = $ver')
+            else
+              echo "⚠️ Could not extract version for $APP after release."
+            fi
           elif [ "$DRY_RUN" = "true" ] && grep -q "The next release version is" release-output.txt; then
-            VERSION=$(grep "The next release version is" release-output.txt | grep -oP '\d+\.\d+\.\d+' | head -1)
-            echo "🔍 Preview: Next version will be $APP v$VERSION"
-            RELEASES_JSON=$(echo $RELEASES_JSON | jq --arg app "$APP" --arg ver "$VERSION" '.[$app] = $ver')
+            VERSION=$(grep "The next release version is" release-output.txt | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -n "$VERSION" ]; then
+              echo "🔍 Preview: Next version will be $APP v$VERSION"
+              RELEASES_JSON=$(echo $RELEASES_JSON | jq --arg app "$APP" --arg ver "$VERSION" '.[$app] = $ver')
+            else
+              echo "⚠️ Could not extract next version for $APP in dry run."
+            fi
           else
             echo "ℹ️ No release needed for $APP (no relevant changes)"
           fi
