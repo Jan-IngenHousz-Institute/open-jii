@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
     "build-apk": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile preview --local && rm .npmrc",
-    "build-aab": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile production --local && rm .npmrc",
+    "build-aab-locally": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile production --local && rm .npmrc",
+    "build-aab": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile production && rm .npmrc",
     "lint": "eslint 'src/**/*' --fix",
     "typecheck": "tsc --noEmit",
     "postinstall": "cd ../../packages/api && pnpm run build"
