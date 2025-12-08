@@ -1,16 +1,15 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import {
-  AddAnnotationsBulkBody,
-  AnnotationCommentContent,
-  AnnotationFlagContent,
-  AnnotationRowsAffected,
-} from "@repo/api";
+import { AddAnnotationsBulkBody, AnnotationRowsAffected } from "@repo/api";
 
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../../common/utils/fp-utils";
 import { UserRepository } from "../../../../../users/core/repositories/user.repository";
+import {
+  isCommentContent,
+  isFlagContent,
+} from "../../../../core/models/experiment-data-annotation.model";
 import type { CreateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
@@ -84,25 +83,29 @@ export class AddAnnotationsUseCase {
           ? `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || null
           : null;
 
-        const newAnnotations: CreateAnnotationDto[] = [];
-        for (const rowId of data.rowIds) {
-          const newAnnotation: CreateAnnotationDto = {
+        const newAnnotations = data.rowIds.map((rowId) => {
+          const base: CreateAnnotationDto = {
             userId,
             userName,
             tableName: data.tableName,
             rowId,
             type: data.annotation.type,
           };
-          if (data.annotation.type === "comment") {
-            const content = data.annotation.content as unknown as AnnotationCommentContent;
-            newAnnotation.contentText = content.text;
-          } else {
-            const content = data.annotation.content as unknown as AnnotationFlagContent;
-            newAnnotation.flagType = content.flagType;
-            newAnnotation.contentText = content.text ?? null;
+
+          if (isCommentContent(data.annotation.content)) {
+            return { ...base, contentText: data.annotation.content.text };
           }
-          newAnnotations.push(newAnnotation);
-        }
+
+          if (isFlagContent(data.annotation.content)) {
+            return {
+              ...base,
+              flagType: data.annotation.content.flagType,
+              contentText: data.annotation.content.text ?? null,
+            };
+          }
+
+          return base;
+        });
 
         const result = await this.experimentDataAnnotationsRepository.storeAnnotations(
           experiment.name,

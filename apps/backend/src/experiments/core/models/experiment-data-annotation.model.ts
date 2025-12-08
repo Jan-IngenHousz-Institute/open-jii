@@ -1,6 +1,28 @@
 /**
  * Experiment annotation interfaces for storing comments and flags on experiment data
  */
+import type { AnnotationCommentContent, AnnotationFlagContent } from "@repo/api";
+
+// Type guards
+export function isCommentContent(content: unknown): content is AnnotationCommentContent {
+  return (
+    typeof content === "object" &&
+    content !== null &&
+    "type" in content &&
+    content.type === "comment" &&
+    "text" in content
+  );
+}
+
+export function isFlagContent(content: unknown): content is AnnotationFlagContent {
+  return (
+    typeof content === "object" &&
+    content !== null &&
+    "type" in content &&
+    content.type === "flag" &&
+    "flagType" in content
+  );
+}
 
 // Base annotation interface
 export interface BaseAnnotation {
