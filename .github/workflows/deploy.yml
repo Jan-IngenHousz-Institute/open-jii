@@ -3,6 +3,9 @@
 
 name: Deployment Workflow
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
