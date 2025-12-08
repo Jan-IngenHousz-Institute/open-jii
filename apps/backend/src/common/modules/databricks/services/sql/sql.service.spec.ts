@@ -309,5 +309,51 @@ describe("DatabricksSqlService", () => {
       assertFailure(result);
       expect(result.error.message).toContain("Databricks SQL query execution");
     });
+
+    it("should successfully execute a SQL query with DDL statement and return results", async () => {
+      const ddlSqlStatement = "CREATE TABLE test_table (column1 STRING, column2 INT)";
+      const mockTableData = {
+        columns: [],
+        rows: [],
+        totalRows: 0,
+        truncated: false,
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 0,
+            },
+            total_row_count: 0,
+            truncated: false,
+          },
+          result: {
+            data_array: 0,
+            chunk_index: 0,
+            row_count: 0,
+            row_offset: 0,
+          },
+        });
+
+      // Execute SQL query
+      const result = await sqlService.executeSqlQuery(schemaName, ddlSqlStatement);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockTableData);
+    });
   });
 });

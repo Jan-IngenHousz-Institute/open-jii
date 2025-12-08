@@ -1,0 +1,48 @@
+import { tsr } from "~/lib/tsr";
+
+import type { ExperimentDataResponse } from "@repo/api";
+
+import { useExperimentAnnotationOptimisticUpdate } from "../useExperimentAnnotationOptimisticUpdate/useExperimentAnnotationOptimisticUpdate";
+
+export const useExperimentAnnotationDelete = () => {
+  const queryClient = tsr.useQueryClient();
+  const { remove } = useExperimentAnnotationOptimisticUpdate();
+
+  return tsr.experiments.deleteAnnotation.useMutation({
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["experiment", variables.params.id] });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueriesData({
+        queryKey: ["experiment", variables.params.id],
+      });
+
+      // Optimistically update the cache by removing the annotation
+      queryClient.setQueriesData(
+        { queryKey: ["experiment", variables.params.id] },
+        (oldData: unknown) => {
+          const fullResponse = oldData as { body: ExperimentDataResponse };
+          if (!fullResponse.body[0]?.data) return oldData;
+
+          const updatedBody = remove(fullResponse.body, variables.params.annotationId);
+
+          return { ...fullResponse, body: updatedBody };
+        },
+      );
+
+      // Return context object with snapshotted value
+      return { previousData };
+    },
+    onError: async (err, variables, context) => {
+      // If the mutation fails, use the context to roll back
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      // Only refetch on error to restore server state
+      await queryClient.invalidateQueries({ queryKey: ["experiment", variables.params.id] });
+    },
+  });
+};

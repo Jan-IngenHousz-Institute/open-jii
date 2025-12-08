@@ -15,12 +15,20 @@ export interface DatabricksPipelineByNameParams {
 export interface DatabricksPipelineStartUpdateParams {
   pipelineId: string;
   // Parameters that can be passed to the update
+  cause?:
+    | "API_CALL"
+    | "RETRY_ON_FAILURE"
+    | "SERVICE_UPGRADE"
+    | "SCHEMA_CHANGE"
+    | "JOB_TASK"
+    | "USER_ACTION"
+    | "INFRASTRUCTURE_MAINTENANCE";
   fullRefresh?: boolean;
-  refreshSelection?: {
-    refreshAllData?: boolean;
-    datasetNames?: string[];
-  };
-  parameters?: Record<string, unknown>;
+  // A list of tables to update with fullRefresh
+  fullRefreshSelection?: string[];
+  // A list of tables to update without fullRefresh
+  refreshSelection?: string[];
+  validateOnly?: boolean;
 }
 
 export interface DatabricksPipelineSummary {
