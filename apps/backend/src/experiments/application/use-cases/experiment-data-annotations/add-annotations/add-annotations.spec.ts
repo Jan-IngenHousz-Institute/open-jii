@@ -550,6 +550,7 @@ describe("AddAnnotations", () => {
     expect(result.value.rowsAffected).toBe(1);
 
     // Verify that executeExperimentSqlQuery was called only once (for INSERT)
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksAdapter.executeExperimentSqlQuery).toHaveBeenCalledTimes(1);
   });
 });
