@@ -1,0 +1,132 @@
+name: "Semantic Release"
+description: "Creates versioned releases for affected apps with Turborepo-style changelogs"
+
+inputs:
+  affected_apps:
+    description: "JSON array of affected app names (from detect-affected-packages)"
+    required: true
+  github_token:
+    description: "GitHub token for creating releases"
+    required: true
+  dry_run:
+    description: "Run in dry-run mode (for PR previews)"
+    required: false
+    default: 'false'
+
+outputs:
+  releases_created:
+    description: "JSON object with release info per app"
+    value: ${{ steps.release.outputs.releases_created }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install semantic-release and plugins
+      shell: bash
+      run: |
+        echo "📥 Installing semantic-release and plugins from tools/release/package.json..."
+        pnpm install --filter @open-jii/release-tools --frozen-lockfile
+        
+        echo "$GITHUB_WORKSPACE/node_modules/.bin" >> $GITHUB_PATH
+    
+    - name: Process Releases
+      id: release
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        AFFECTED_APPS='${{ inputs.affected_apps }}'
+        
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📦 Processing releases for affected apps"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Affected apps: $AFFECTED_APPS"
+        echo "Dry run: $DRY_RUN"
+        echo ""
+        
+        # Parse apps array
+        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+        
+        if [ ${#APPS[@]} -eq 0 ]; then
+          echo "⚠️ No affected apps to release"
+          echo "releases_created={}" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        RELEASES_JSON="{}"
+        
+        # Process each app
+        for APP in "${APPS[@]}"; do
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 Processing: $APP"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Determine the app path
+          APP_PATH="apps/$APP"
+          
+          if [ ! -d "$APP_PATH" ]; then
+            echo "⚠️ Directory $APP_PATH not found, skipping..."
+            continue
+          fi
+          
+          # Check if app has release config
+          if [ ! -f "$APP_PATH/.releaserc.js" ]; then
+            echo "⚠️ No .releaserc.js found for $APP, skipping..."
+            continue
+          fi
+          
+          # Run semantic-release for this app
+          cd "$APP_PATH"
+          
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "🔍 DRY RUN MODE - Preview only"
+            npx semantic-release --dry-run 2>&1 | tee release-output.txt || true
+          else
+            echo "🚀 Creating release..."
+            npx semantic-release 2>&1 | tee release-output.txt || true
+          fi
+          
+          # Capture release info
+          if grep -q "Published release" release-output.txt; then
+            VERSION=$(grep "Published release" release-output.txt | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -n "$VERSION" ]; then
+              echo "✅ Release created: $APP v$VERSION"
+              RELEASES_JSON=$(echo $RELEASES_JSON | jq --arg app "$APP" --arg ver "$VERSION" '.[$app] = $ver')
+            else
+              echo "⚠️ Could not extract version for $APP after release."
+            fi
+          elif [ "$DRY_RUN" = "true" ] && grep -q "The next release version is" release-output.txt; then
+            VERSION=$(grep "The next release version is" release-output.txt | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -n "$VERSION" ]; then
+              echo "🔍 Preview: Next version will be $APP v$VERSION"
+              RELEASES_JSON=$(echo $RELEASES_JSON | jq --arg app "$APP" --arg ver "$VERSION" '.[$app] = $ver')
+            else
+              echo "⚠️ Could not extract next version for $APP in dry run."
+            fi
+          else
+            echo "ℹ️ No release needed for $APP (no relevant changes)"
+          fi
+          
+          rm -f release-output.txt
+          cd ../..
+        done
+        
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "✨ Release Summary"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "$RELEASES_JSON" | jq '.'
+        
+        # Set output
+        echo "releases_created=$RELEASES_JSON" >> $GITHUB_OUTPUT
+        
+    - name: Upload Release Artifacts
+      uses: actions/upload-artifact@v4
+      if: inputs.dry_run == 'false'
+      with:
+        name: release-metadata
+        path: |
+          release-summary-*.json
+        if-no-files-found: ignore
