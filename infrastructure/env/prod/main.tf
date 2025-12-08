@@ -1159,6 +1159,14 @@ module "backend_ecs" {
     {
       name  = "AWS_REGION"
       value = var.aws_region
+    },
+    {
+      name  = "POSTHOG_KEY"
+      value = var.posthog_key
+    },
+    {
+      name  = "POSTHOG_HOST"
+      value = var.posthog_host
     }
   ]
 
