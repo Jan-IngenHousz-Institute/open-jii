@@ -1,5 +1,5 @@
 import React from "react";
-import { useExperimentAnnotationDeleteBulk } from "~/hooks/experiment/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk";
+import { useExperimentAnnotationDeleteBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk";
 
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";

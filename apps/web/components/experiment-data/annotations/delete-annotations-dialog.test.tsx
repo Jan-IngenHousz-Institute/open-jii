@@ -23,7 +23,7 @@ vi.mock("@repo/i18n", () => ({
 
 // Mock the hook
 vi.mock(
-  "~/hooks/experiment/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk",
+  "~/hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk",
   () => ({
     useExperimentAnnotationDeleteBulk: useExperimentDeleteAnnotationsBulkMock,
   }),

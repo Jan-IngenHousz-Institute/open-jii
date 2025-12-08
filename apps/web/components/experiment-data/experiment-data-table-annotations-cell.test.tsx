@@ -254,7 +254,7 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     const commentBadge = screen.getByText("1");
     fireEvent.click(commentBadge);
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.unknownUser")).toBeInTheDocument();
     expect(screen.getByText("Anonymous comment")).toBeInTheDocument();
   });
 

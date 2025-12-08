@@ -486,7 +486,11 @@
       "addFlag": "Markierung hinzufügen",
       "removeAllComments": "Alle Kommentare entfernen",
       "removeAllFlags": "Alle Markierungen entfernen"
-    }
+    },
+    "you": "Sie",
+    "unknownUser": "Unbekannter Benutzer",
+    "preview": "Vorschau",
+    "previewNote": "Dies ist eine Vorschau. Ihre Anmerkung wird verarbeitet und erscheint bald dauerhaft. Eine Aktualisierung blendet diese Vorschau aus."
   },
   "landingPage": {
     "latestArticles": "Neueste artikel"

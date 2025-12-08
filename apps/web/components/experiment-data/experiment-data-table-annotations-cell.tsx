@@ -63,9 +63,10 @@ function FlagsBadge({ count }: { count: number }) {
   );
 }
 
-function AnnotationItem({ annotation }: { annotation: Annotation }) {
+function AnnotationItem({ annotation }: { annotation: Annotation & { preview?: boolean } }) {
   const { t } = useTranslation();
   const content = annotation.content;
+  const isPreview = annotation.preview === true;
 
   const isFlag = (
     annotation: Annotation,
@@ -93,18 +94,37 @@ function AnnotationItem({ annotation }: { annotation: Annotation }) {
     );
   };
 
+  // Localize the user name
+  const displayName =
+    annotation.createdByName === "You"
+      ? t("experimentDataAnnotations.you")
+      : (annotation.createdByName ?? t("experimentDataAnnotations.unknownUser"));
+
   return (
-    <div className="bg-muted/50 rounded-lg border p-3">
+    <div
+      className={`rounded-lg border p-3 ${isPreview ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30" : "bg-muted/50"}`}
+    >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">
-            {annotation.createdByName ?? "Unknown User"}
-          </span>
+          <span className="text-sm font-semibold">{displayName}</span>
+          {isPreview && (
+            <Badge
+              variant="outline"
+              className="border-blue-300 bg-blue-100 text-xs text-blue-700 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-300"
+            >
+              {t("experimentDataAnnotations.preview")}
+            </Badge>
+          )}
           {isFlag(annotation) && <FlagTypeBadge />}
         </div>
         <span className="text-muted-foreground text-xs">{formatDate(annotation.createdAt)}</span>
       </div>
       <p className="text-foreground text-sm leading-relaxed">{content.text}</p>
+      {isPreview && (
+        <div className="mt-2 text-xs italic text-blue-600 dark:text-blue-400">
+          {t("experimentDataAnnotations.previewNote")}
+        </div>
+      )}
     </div>
   );
 }

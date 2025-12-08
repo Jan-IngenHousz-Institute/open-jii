@@ -131,13 +131,19 @@ vi.mock("@repo/ui/components", () => ({
 }));
 
 // Mock the hooks
-vi.mock("~/hooks/experiment/useExperimentAnnotationAdd/useExperimentAnnotationAdd", () => ({
-  useExperimentAnnotationAdd: useExperimentAnnotationAddMock,
-}));
+vi.mock(
+  "~/hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd",
+  () => ({
+    useExperimentAnnotationAdd: useExperimentAnnotationAddMock,
+  }),
+);
 
-vi.mock("~/hooks/experiment/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk", () => ({
-  useExperimentAnnotationAddBulk: useExperimentAnnotationAddBulkMock,
-}));
+vi.mock(
+  "~/hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk",
+  () => ({
+    useExperimentAnnotationAddBulk: useExperimentAnnotationAddBulkMock,
+  }),
+);
 
 // Mock toast
 vi.mock("@repo/ui/hooks", () => ({

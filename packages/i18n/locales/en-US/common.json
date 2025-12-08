@@ -549,7 +549,11 @@
       "removeAllComments": "Remove all comments",
       "removeAllFlags": "Remove all flags"
     },
-    "details": "Show table details"
+    "details": "Show table details",
+    "you": "You",
+    "unknownUser": "Unknown User",
+    "preview": "Preview",
+    "previewNote": "This is a preview. Your annotation is being processed and will appear permanently soon. Refreshing will hide this preview."
   },
   "landingPage": {
     "latestArticles": "Latest articles"
