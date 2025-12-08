@@ -25,11 +25,9 @@ runs:
       shell: bash
       run: |
         echo "📥 Installing semantic-release and plugins from tools/release/package.json..."
-        cd tools/release
-        npm ci --prefer-offline
-        cd ../..
+        pnpm install --filter @open-jii/release-tools --frozen-lockfile
         
-        echo "$GITHUB_WORKSPACE/tools/release/node_modules/.bin" >> $GITHUB_PATH
+        echo "$GITHUB_WORKSPACE/node_modules/.bin" >> $GITHUB_PATH
     
     - name: Process Releases
       id: release
