@@ -24,8 +24,8 @@ runs:
     - name: Install semantic-release and plugins
       shell: bash
       run: |
-        echo "📥 Installing semantic-release and plugins from tools/release/package.json..."
-        # Install all workspace dependencies (includes tools/release)
+        echo "📥 Installing semantic-release and plugins from tooling/release/package.json..."
+        # Install all workspace dependencies (includes tooling/release)
         pnpm install --frozen-lockfile
     
     - name: Process Releases
@@ -81,10 +81,10 @@ runs:
           
           if [ "$DRY_RUN" = "true" ]; then
             echo "🔍 DRY RUN MODE - Preview only"
-            npx semantic-release --dry-run 2>&1 | tee release-output.txt || true
+            ../../tooling/release/node_modules/.bin/semantic-release --dry-run 2>&1 | tee release-output.txt || true
           else
             echo "🚀 Creating release..."
-            npx semantic-release 2>&1 | tee release-output.txt || true
+            ../../tooling/release/node_modules/.bin/semantic-release 2>&1 | tee release-output.txt || true
           fi
           
           # Capture release info
