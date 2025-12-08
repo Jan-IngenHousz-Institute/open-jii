@@ -38,6 +38,21 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
   }
 
+  # Custom error pages for client-side routing (SPA/Docusaurus support)
+  custom_error_response {
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"
