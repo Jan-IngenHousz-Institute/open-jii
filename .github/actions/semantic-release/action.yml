@@ -27,12 +27,6 @@ runs:
         echo "📥 Installing semantic-release and plugins from tools/release/package.json..."
         # Install all workspace dependencies (includes tools/release)
         pnpm install --frozen-lockfile
-        
-        # Verify installation
-        if [ ! -f "node_modules/.bin/semantic-release" ]; then
-          echo "⚠️ semantic-release not found in node_modules, falling back to direct install"
-          cd tools/release && pnpm install --frozen-lockfile && cd ../..
-        fi
     
     - name: Process Releases
       id: release
