@@ -1964,7 +1964,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value[0].data?.columns.some((col) => col.name === "measurement")).toBe(true);
   });
 
-  it("should filter out tables with downstream: true (intermediate processing tables)", async () => {
+  it("should filter out tables with downstream: true (intermediate processing tables) or named 'annotations'", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -1993,6 +1993,14 @@ describe("GetExperimentDataUseCase", () => {
             schema_name: `exp_test_experiment_${experiment.id}`,
             properties: {
               downstream: "true", // Should be filtered out
+            },
+          },
+          {
+            name: "annotations", // Should be filtered out
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "false",
             },
           },
           {
