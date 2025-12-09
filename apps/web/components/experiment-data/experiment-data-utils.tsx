@@ -21,8 +21,6 @@ export function formatValue(
   type: string,
   rowId: string,
   columnName?: string,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
   onChartClick?: (data: number[], columnName: string) => void,
   onAddAnnotation?: (rowIds: string[], annotationType: AnnotationType) => void,
   onDeleteAnnotations?: (rowIds: string[], annotationType: AnnotationType) => void,
@@ -59,8 +57,6 @@ export function formatValue(
         <ExperimentDataTableChartCell
           data={value as string} // Pass the raw string value to be parsed
           columnName={columnName ?? "Chart"}
-          onHover={onChartHover}
-          onLeave={onChartLeave}
           onClick={onChartClick}
         />
       );
@@ -91,8 +87,6 @@ export function formatValue(
           <ExperimentDataTableChartCell
             data={value as string}
             columnName={columnName ?? "Chart"}
-            onHover={onChartHover}
-            onLeave={onChartLeave}
             onClick={onChartClick}
           />
         );
@@ -106,7 +100,7 @@ export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGr
   return headerGroups.map((headerGroup) => (
     <TableHeader key={headerGroup.id}>
       <TableRow className="h-2">
-        {headerGroup.headers.map((header) => {
+        {headerGroup.headers.map((header, headerIndex) => {
           const columnDef = header.column.columnDef;
           const meta = columnDef.meta as { type?: string } | undefined;
           const isNumericColumn =
@@ -117,7 +111,7 @@ export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGr
 
           return (
             <TableHead
-              key={header.id}
+              key={`${headerGroup.id}-${header.id}-${headerIndex}`}
               className={isNumericColumn ? "text-right" : "text-left"}
               style={{
                 minWidth: header.column.columnDef.size,
@@ -152,9 +146,9 @@ export function ExperimentDataRows({
     );
   return rows.map((row) => (
     <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-      {row.getVisibleCells().map((cell) => (
+      {row.getVisibleCells().map((cell, cellIndex) => (
         <TableCell
-          key={cell.id}
+          key={`${cell.id}-${cellIndex}`}
           style={{
             minWidth: cell.column.columnDef.size,
           }}

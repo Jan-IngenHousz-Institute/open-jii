@@ -1,4 +1,3 @@
-import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -6,6 +5,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ExperimentTableMetadata } from "@repo/api";
 import type { DataColumn } from "@repo/api";
 import { Form } from "@repo/ui/components";
 
@@ -85,31 +85,26 @@ vi.mock("../chart-preview/chart-preview-modal", () => ({
 }));
 
 // Helper to create mock sample tables for testing
-const createMockSampleTable = (
+const createMockExperimentTableMetadata = (
   name: string,
   displayName: string,
   columns: DataColumn[],
   totalRows: number,
-): SampleTable => ({
+): ExperimentTableMetadata => ({
   name,
   displayName,
-  columns,
-  tableMetadata: {
-    // For tests, we can provide a minimal column structure that satisfies the type
-    columns: columns.map((col) => ({
-      accessorKey: col.name,
-      header: col.name,
-      cell: (info: { getValue: () => unknown }) => info.getValue(),
-    })),
-    totalRows,
-    totalPages: 1,
-  },
-  tableRows: [],
+  totalRows,
+  columns: columns.map((col, index) => ({
+    name: col.name,
+    type_name: col.type_name,
+    type_text: col.type_text,
+    position: index,
+  })),
 });
 
 // Sample tables for testing
-const mockTables: SampleTable[] = [
-  createMockSampleTable(
+const mockTables: ExperimentTableMetadata[] = [
+  createMockExperimentTableMetadata(
     "measurements",
     "Measurements",
     [
@@ -119,7 +114,7 @@ const mockTables: SampleTable[] = [
     ],
     100,
   ),
-  createMockSampleTable(
+  createMockExperimentTableMetadata(
     "sensors",
     "Sensors",
     [

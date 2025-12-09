@@ -7,11 +7,18 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
 import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
-import { ExperimentDataSampleTables } from "~/components/experiment-data/experiment-data-sample-tables";
-import { useLocale } from "~/hooks/useLocale";
+import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
+import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import { useTranslation } from "@repo/i18n/client";
-import { Button } from "@repo/ui/components";
+import {
+  Button,
+  NavTabs,
+  NavTabsContent,
+  NavTabsList,
+  NavTabsTrigger,
+  Skeleton,
+} from "@repo/ui/components";
 
 interface ExperimentDataPageProps {
   params: Promise<{ id: string; locale: string }>;
@@ -20,16 +27,44 @@ interface ExperimentDataPageProps {
 export default function ExperimentDataPage({ params }: ExperimentDataPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
+  const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
-  const locale = useLocale();
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
 
-  if (isLoading) {
-    return <div>{t("loading")}</div>;
+  if (isLoading || isLoadingTables) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return <ErrorDisplay error={error} title={t("failedToLoad")} />;
+  }
+
+  if (tablesError) {
+    return <ErrorDisplay error={tablesError} title={t("failedToLoad")} />;
   }
 
   if (!data) {
@@ -41,6 +76,31 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   // Check if experiment is archived - if so, redirect to not found (should use archive route)
   if (experiment.status === "archived") {
     notFound();
+  }
+
+  if (!tables || tables.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
+            <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
+          </div>
+          <Button onClick={() => setUploadModalOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            {t("experimentData.uploadData")}
+          </Button>
+        </div>
+
+        <div className="text-muted-foreground py-12 text-center">{t("experimentData.noData")}</div>
+
+        <DataUploadModal
+          experimentId={id}
+          open={uploadModalOpen}
+          onOpenChange={setUploadModalOpen}
+        />
+      </div>
+    );
   }
 
   return (
@@ -56,7 +116,22 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </Button>
       </div>
 
-      <ExperimentDataSampleTables experimentId={id} sampleSize={5} locale={locale} />
+      <NavTabs defaultValue={tables[0].name} className="w-full">
+        <NavTabsList>
+          {tables.map((table) => (
+            <NavTabsTrigger key={table.name} value={table.name}>
+              <span className="truncate">
+                {table.displayName} ({table.totalRows})
+              </span>
+            </NavTabsTrigger>
+          ))}
+        </NavTabsList>
+        {tables.map((table) => (
+          <NavTabsContent key={table.name} value={table.name} className="mt-6">
+            <ExperimentDataTable experimentId={id} tableName={table.name} pageSize={10} />
+          </NavTabsContent>
+        ))}
+      </NavTabs>
 
       <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
     </div>

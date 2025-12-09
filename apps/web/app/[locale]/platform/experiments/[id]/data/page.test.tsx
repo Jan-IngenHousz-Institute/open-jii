@@ -59,10 +59,25 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
   ),
 }));
 
-vi.mock("~/components/experiment-data/experiment-data-sample-tables", () => ({
-  ExperimentDataSampleTables: ({ experimentId }: { experimentId: string }) => (
-    <div data-testid="experiment-data-sample-tables" data-experiment-id={experimentId}>
-      Sample Tables
+const mockUseExperimentTables = vi.fn();
+vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
+  useExperimentTables: (): unknown => mockUseExperimentTables(),
+}));
+
+vi.mock("~/components/experiment-data/experiment-data-table", () => ({
+  ExperimentDataTable: ({
+    experimentId,
+    tableName,
+  }: {
+    experimentId: string;
+    tableName: string;
+  }) => (
+    <div
+      data-testid="experiment-data-table"
+      data-experiment-id={experimentId}
+      data-table-name={tableName}
+    >
+      Table: {tableName}
     </div>
   ),
 }));
@@ -72,6 +87,23 @@ vi.mock("@repo/ui/components", () => ({
     <button data-testid="button" onClick={onClick}>
       {children}
     </button>
+  ),
+  NavTabs: ({ children, defaultValue }: { children: React.ReactNode; defaultValue: string }) => (
+    <div data-testid="nav-tabs" data-default-value={defaultValue}>
+      {children}
+    </div>
+  ),
+  NavTabsList: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="nav-tabs-list">{children}</div>
+  ),
+  NavTabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <button data-testid={`nav-tab-trigger-${value}`}>{children}</button>
+  ),
+  NavTabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <div data-testid={`nav-tab-content-${value}`}>{children}</div>
+  ),
+  Skeleton: ({ className }: { className?: string }) => (
+    <div data-testid="skeleton" className={className} />
   ),
 }));
 
@@ -95,27 +127,37 @@ describe("ExperimentDataPage", () => {
     error: null,
   };
 
+  const mockTablesData = {
+    tables: [
+      { name: "measurements", displayName: "Measurements", totalRows: 100 },
+      { name: "device", displayName: "Device Data", totalRows: 50 },
+    ],
+    isLoading: false,
+    error: null,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseExperiment.mockReturnValue(mockExperimentData);
+    mockUseExperimentTables.mockReturnValue(mockTablesData);
     mockUseLocale.mockReturnValue("en-US");
     mockUseTranslation.mockReturnValue({
       t: (key: string) => key,
     });
   });
 
-  it("renders the experiment data page with all components when loaded", async () => {
+  it("renders the experiment data page with tabs when loaded", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText("experimentData.title")).toBeInTheDocument();
       expect(screen.getByText("experimentData.description")).toBeInTheDocument();
       expect(screen.getByTestId("button")).toBeInTheDocument();
-      expect(screen.getByTestId("experiment-data-sample-tables")).toBeInTheDocument();
+      expect(screen.getByTestId("nav-tabs")).toBeInTheDocument();
+      expect(screen.getByTestId("nav-tabs-list")).toBeInTheDocument();
     });
   });
-
-  it("displays loading state", async () => {
+  it("displays loading state when experiment is loading", async () => {
     mockUseExperiment.mockReturnValue({
       ...mockExperimentData,
       isLoading: true,
@@ -125,11 +167,27 @@ describe("ExperimentDataPage", () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByText("loading")).toBeInTheDocument();
+      const skeletons = screen.getAllByTestId("skeleton");
+      expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 
-  it("displays error state", async () => {
+  it("displays loading state when tables are loading", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      ...mockTablesData,
+      isLoading: true,
+      tables: null,
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const skeletons = screen.getAllByTestId("skeleton");
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("displays error state for experiment error", async () => {
     const error = new Error("Test error");
     mockUseExperiment.mockReturnValue({
       ...mockExperimentData,
@@ -148,10 +206,51 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("displays not found message when no data", async () => {
-    mockUseExperiment.mockReturnValue({
-      ...mockExperimentData,
-      data: null,
+  it("displays error state for tables error", async () => {
+    const error = new Error("Tables error");
+    mockUseExperimentTables.mockReturnValue({
+      ...mockTablesData,
+      isLoading: false,
+      tables: null,
+      error,
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("error-display")).toBeInTheDocument();
+      expect(screen.getByTestId("error-display")).toHaveTextContent(
+        "failedToLoad: Error: Tables error",
+      );
+    });
+  });
+
+  it("renders tab triggers for each table with row counts", async () => {
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const measurementsTab = screen.getByTestId("nav-tab-trigger-measurements");
+      expect(measurementsTab).toBeInTheDocument();
+      expect(measurementsTab).toHaveTextContent("Measurements (100)");
+
+      const deviceTab = screen.getByTestId("nav-tab-trigger-device");
+      expect(deviceTab).toBeInTheDocument();
+      expect(deviceTab).toHaveTextContent("Device Data (50)");
+    });
+  });
+
+  it("renders table content for each tab", async () => {
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("nav-tab-content-measurements")).toBeInTheDocument();
+      expect(screen.getByTestId("nav-tab-content-device")).toBeInTheDocument();
+    });
+  });
+
+  it("displays no data message when tables array is empty", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [],
       isLoading: false,
       error: null,
     });
@@ -159,7 +258,7 @@ describe("ExperimentDataPage", () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByText("notFound")).toBeInTheDocument();
+      expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
     });
   });
 
@@ -181,12 +280,13 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("passes correct experiment ID to components", async () => {
+  it("passes correct experiment ID and table name to ExperimentDataTable", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      const samplesTable = screen.getByTestId("experiment-data-sample-tables");
-      expect(samplesTable).toHaveAttribute("data-experiment-id", "exp-123");
+      const measurementsTable = screen.getAllByTestId("experiment-data-table")[0];
+      expect(measurementsTable).toHaveAttribute("data-experiment-id", "exp-123");
+      expect(measurementsTable).toHaveAttribute("data-table-name", "measurements");
     });
   });
 
@@ -225,6 +325,69 @@ describe("ExperimentDataPage", () => {
       const description = container.querySelector("p");
       expect(description).toBeInTheDocument();
       expect(description).toHaveClass("text-muted-foreground", "text-sm");
+    });
+  });
+
+  it("displays skeleton while experiment is loading", async () => {
+    mockUseExperiment.mockReturnValue({
+      ...mockExperimentData,
+      isLoading: true,
+      data: null,
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const skeletons = screen.getAllByTestId("skeleton");
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("displays skeleton while tables metadata is loading", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      ...mockTablesData,
+      isLoading: true,
+      tables: null,
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const skeletons = screen.getAllByTestId("skeleton");
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("renders NavTabs component with correct default value", async () => {
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const navTabs = screen.getByTestId("nav-tabs");
+      expect(navTabs).toHaveAttribute("data-default-value", "measurements");
+    });
+  });
+
+  it("truncates long table names in tabs", async () => {
+    const longTableName = "very_long_table_name_that_should_be_truncated";
+    mockUseExperimentTables.mockReturnValue({
+      tables: [
+        {
+          name: longTableName,
+          displayName: "Very Long Table Name That Should Be Truncated",
+          totalRows: 100,
+        },
+      ],
+      isLoading: false,
+      error: null,
+    });
+
+    const { container } = render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const trigger = screen.getByTestId(`nav-tab-trigger-${longTableName}`);
+      expect(trigger).toBeInTheDocument();
+      // The truncate class should be present in the parent structure
+      expect(container.querySelector(".truncate")).toBeInTheDocument();
     });
   });
 });

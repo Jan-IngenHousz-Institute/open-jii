@@ -5,16 +5,12 @@ import React, { useMemo } from "react";
 interface ExperimentDataTableChartCellProps {
   data: number[] | string;
   columnName: string;
-  onHover?: (data: number[], columnName: string) => void;
-  onLeave?: () => void;
   onClick?: (data: number[], columnName: string) => void;
 }
 
 export function ExperimentDataTableChartCell({
   data,
   columnName,
-  onHover,
-  onLeave,
   onClick,
 }: ExperimentDataTableChartCellProps) {
   // Parse the array data - it comes as a string like "[1.2,3.4,5.6]" or JSON array
@@ -67,19 +63,14 @@ export function ExperimentDataTableChartCell({
     return `M ${points.join(" L ")}`;
   }, [parsedData]);
 
-  const handleHover = () => {
-    if (parsedData.length > 0) {
-      onHover?.(parsedData, columnName);
-    }
-  };
-
-  const handleLeave = () => {
-    onLeave?.();
-  };
-
   const handleClick = () => {
     if (parsedData.length > 0) {
       onClick?.(parsedData, columnName);
+      // Scroll to the chart
+      const chartElement = document.getElementById("experiment-data-chart");
+      if (chartElement) {
+        chartElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
     }
   };
 
@@ -89,9 +80,7 @@ export function ExperimentDataTableChartCell({
 
   return (
     <div
-      className="hover:bg-muted/50 relative flex h-8 w-20 cursor-pointer items-center justify-center rounded p-1"
-      onMouseEnter={handleHover}
-      onMouseLeave={handleLeave}
+      className="hover:bg-muted/30 relative flex h-8 w-20 cursor-pointer items-center justify-center rounded p-1 transition-colors"
       onClick={handleClick}
     >
       <svg width="80" height="24" viewBox="0 0 80 24" className="overflow-visible">

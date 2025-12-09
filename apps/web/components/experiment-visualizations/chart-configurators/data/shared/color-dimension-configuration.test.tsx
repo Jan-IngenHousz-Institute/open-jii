@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import ColorDimensionConfiguration from "./color-dimension-configuration";
@@ -33,7 +33,7 @@ beforeAll(() => {
 });
 
 // Sample table data
-const mockTable: SampleTable = {
+const mockTable: ExperimentTableWithColumns = {
   name: "test-table",
   tableMetadata: {
     columns: [],
@@ -58,7 +58,7 @@ function TestWrapper({
   onRemoveDataSource = vi.fn(),
 }: {
   defaultValues?: Partial<ChartFormValues>;
-  table?: SampleTable;
+  table?: ExperimentTableWithColumns;
   colorAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
   onAppendDataSource?: (dataSource: {
     tableName: string;

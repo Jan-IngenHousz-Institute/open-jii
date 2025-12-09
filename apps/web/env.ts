@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
   ENVIRONMENT_PREFIX: z.string().optional().default("dev"),
-  NEXT_PUBLIC_BASE_URL: z.string().url().optional().default("http://localhost:3000"),
+  NEXT_PUBLIC_BASE_URL: z.string().url().optional().default("https://dev.openjii.org"),
   // PostHog configuration - Optional for development
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional().default("https://eu.i.posthog.com"),

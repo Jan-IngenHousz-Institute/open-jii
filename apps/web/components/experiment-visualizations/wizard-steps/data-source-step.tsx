@@ -1,6 +1,9 @@
 "use client";
 
-import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import type {
+  ExperimentTableMetadata,
+  ExperimentTableWithColumns,
+} from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -23,6 +26,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
   WizardStepButtons,
 } from "@repo/ui/components";
 import type { WizardStepProps } from "@repo/ui/components";
@@ -48,7 +52,7 @@ function ChartTypeConfigurator({
 }: {
   chartType: "line" | "scatter";
   form: UseFormReturn<ChartFormValues>;
-  table: SampleTable;
+  table: ExperimentTableWithColumns;
 }) {
   const commonProps = {
     form,
@@ -66,7 +70,7 @@ function ChartTypeConfigurator({
 }
 
 interface DataSourceStepProps extends WizardStepProps<ChartFormValues> {
-  tables: SampleTable[];
+  tables: ExperimentTableMetadata[];
   experimentId: string;
   isPreviewOpen: boolean;
   onPreviewClose: () => void;
@@ -93,8 +97,13 @@ export function DataSourceStep({
     form.getValues("dataConfig.tableName") || (tables.length > 0 ? tables[0].name : undefined),
   );
 
-  // Find the selected table
-  const selectedTable = tables.find((table) => table.name === selectedTableName);
+  // Find the selected table metadata
+  const selectedTableMetadata = tables.find((table) => table.name === selectedTableName);
+
+  // Use the table with columns directly from the tables prop
+  const selectedTable: ExperimentTableWithColumns | undefined = selectedTableMetadata?.columns
+    ? (selectedTableMetadata as ExperimentTableWithColumns)
+    : undefined;
 
   // Handle table change
   const handleTableChange = (tableName: string) => {

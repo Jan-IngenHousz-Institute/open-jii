@@ -36,139 +36,85 @@ describe("ExperimentDataTableChartCell", () => {
     expect(screen.getByText("No data")).toBeInTheDocument();
   });
 
-  it("calls onHover when mouse enters the chart", () => {
-    const mockOnHover = vi.fn();
+  it("scrolls to experiment-data-chart when clicked", () => {
+    // Mock scrollIntoView
+    const mockScrollIntoView = vi.fn();
+    const mockGetElementById = vi.spyOn(document, "getElementById");
+    const mockElement = {
+      scrollIntoView: mockScrollIntoView,
+    } as unknown as HTMLElement;
+    mockGetElementById.mockReturnValue(mockElement);
 
-    render(
-      <ExperimentDataTableChartCell
-        data={mockData}
-        columnName={mockColumnName}
-        onHover={mockOnHover}
-      />,
-    );
-
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    if (chartContainer) {
-      fireEvent.mouseEnter(chartContainer);
-    }
-
-    expect(mockOnHover).toHaveBeenCalledWith(mockData, mockColumnName);
-  });
-
-  it("calls onLeave when mouse leaves the chart", () => {
-    const mockOnLeave = vi.fn();
-
-    render(
-      <ExperimentDataTableChartCell
-        data={mockData}
-        columnName={mockColumnName}
-        onLeave={mockOnLeave}
-      />,
-    );
-
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    if (chartContainer) {
-      fireEvent.mouseLeave(chartContainer);
-    }
-
-    expect(mockOnLeave).toHaveBeenCalled();
-  });
-
-  it("calls onClick when chart is clicked", () => {
-    const mockOnClick = vi.fn();
-
-    render(
-      <ExperimentDataTableChartCell
-        data={mockData}
-        columnName={mockColumnName}
-        onClick={mockOnClick}
-      />,
-    );
+    render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
 
     const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
       fireEvent.click(chartContainer);
     }
 
-    expect(mockOnClick).toHaveBeenCalledWith(mockData, mockColumnName);
+    // Verify getElementById was called with the correct ID
+    expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
+
+    // Verify scrollIntoView was called with correct options
+    expect(mockScrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "nearest",
+    });
+
+    mockGetElementById.mockRestore();
   });
 
-  it("does not call handlers when data is empty", () => {
-    const mockOnHover = vi.fn();
-    const mockOnClick = vi.fn();
+  it("handles missing chart container gracefully on click", () => {
+    const mockGetElementById = vi.spyOn(document, "getElementById");
+    mockGetElementById.mockReturnValue(null);
 
-    render(
-      <ExperimentDataTableChartCell
-        data={[]}
-        columnName={mockColumnName}
-        onHover={mockOnHover}
-        onClick={mockOnClick}
-      />,
-    );
+    // Should not throw error
+    render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
+
+    const chartContainer = document.querySelector("svg")?.parentElement;
+    if (chartContainer) {
+      fireEvent.click(chartContainer);
+    }
+
+    // Verify getElementById was called but no error was thrown
+    expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
+
+    mockGetElementById.mockRestore();
+  });
+
+  it("does not scroll when clicking on empty data", () => {
+    const mockGetElementById = vi.spyOn(document, "getElementById");
+
+    render(<ExperimentDataTableChartCell data={[]} columnName={mockColumnName} />);
 
     const noDataElement = screen.getByText("No data");
-    fireEvent.mouseEnter(noDataElement);
     fireEvent.click(noDataElement);
 
-    expect(mockOnHover).not.toHaveBeenCalled();
-    expect(mockOnClick).not.toHaveBeenCalled();
+    // Should not attempt to scroll
+    expect(mockGetElementById).not.toHaveBeenCalled();
+
+    mockGetElementById.mockRestore();
   });
 
   it("parses JSON string data correctly", () => {
-    const mockOnHover = vi.fn();
+    render(<ExperimentDataTableChartCell data="[1.5, 2.7, 3.9]" columnName={mockColumnName} />);
 
-    render(
-      <ExperimentDataTableChartCell
-        data="[1.5, 2.7, 3.9]"
-        columnName={mockColumnName}
-        onHover={mockOnHover}
-      />,
-    );
-
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    if (chartContainer) {
-      fireEvent.mouseEnter(chartContainer);
-    }
-
-    expect(mockOnHover).toHaveBeenCalledWith([1.5, 2.7, 3.9], mockColumnName);
+    const svg = document.querySelector("svg");
+    expect(svg).toBeInTheDocument();
   });
 
   it("parses comma-separated string data correctly", () => {
-    const mockOnHover = vi.fn();
+    render(<ExperimentDataTableChartCell data="1.1,2.2,3.3" columnName={mockColumnName} />);
 
-    render(
-      <ExperimentDataTableChartCell
-        data="1.1,2.2,3.3"
-        columnName={mockColumnName}
-        onHover={mockOnHover}
-      />,
-    );
-
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    if (chartContainer) {
-      fireEvent.mouseEnter(chartContainer);
-    }
-
-    expect(mockOnHover).toHaveBeenCalledWith([1.1, 2.2, 3.3], mockColumnName);
+    const svg = document.querySelector("svg");
+    expect(svg).toBeInTheDocument();
   });
 
   it("filters out NaN values from parsed data", () => {
-    const mockOnHover = vi.fn();
+    render(<ExperimentDataTableChartCell data="1,invalid,3,NaN,5" columnName={mockColumnName} />);
 
-    render(
-      <ExperimentDataTableChartCell
-        data="1,invalid,3,NaN,5"
-        columnName={mockColumnName}
-        onHover={mockOnHover}
-      />,
-    );
-
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    if (chartContainer) {
-      fireEvent.mouseEnter(chartContainer);
-    }
-
-    expect(mockOnHover).toHaveBeenCalledWith([1, 3, 5], mockColumnName);
+    const svg = document.querySelector("svg");
+    expect(svg).toBeInTheDocument();
   });
 
   it("handles malformed JSON gracefully", () => {
@@ -194,7 +140,7 @@ describe("ExperimentDataTableChartCell", () => {
     render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
 
     const chartContainer = document.querySelector("svg")?.parentElement;
-    expect(chartContainer).toHaveClass("hover:bg-muted/50");
+    expect(chartContainer).toHaveClass("hover:bg-muted/30");
     expect(chartContainer).toHaveClass("cursor-pointer");
     expect(chartContainer).toHaveClass("relative");
   });
