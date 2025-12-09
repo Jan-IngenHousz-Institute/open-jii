@@ -66,11 +66,13 @@ export function ExperimentDataTableChartCell({
   const handleClick = () => {
     if (parsedData.length > 0) {
       onClick?.(parsedData, columnName);
-      // Scroll to the chart
-      const chartElement = document.getElementById("experiment-data-chart");
-      if (chartElement) {
-        chartElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
+      // Scroll to the chart after a short delay to ensure it's rendered
+      setTimeout(() => {
+        const chartElement = document.getElementById("experiment-data-chart");
+        if (chartElement) {
+          chartElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
     }
   };
 
