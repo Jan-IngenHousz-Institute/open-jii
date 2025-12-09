@@ -81,11 +81,15 @@ export class UpdateExperimentVisualizationUseCase {
             );
           }
 
+          if (!experiment.schemaName) {
+            this.logger.error(`Experiment ${visualization.experimentId} has no schema name`);
+            return failure(AppError.internal("Experiment schema not provisioned"));
+          }
+
           // Validate data sources if provided
           const dataSourceValidation = await this.databricksPort.validateDataSources(
             data.dataConfig,
-            experiment.name,
-            visualization.experimentId,
+            experiment.schemaName,
           );
 
           if (dataSourceValidation.isFailure()) {

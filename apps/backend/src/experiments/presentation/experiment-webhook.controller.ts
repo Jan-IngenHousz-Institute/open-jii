@@ -23,6 +23,8 @@ export class ExperimentWebhookController {
         const result = await this.updateProvisioningStatusUseCase.execute({
           experimentId: params.id,
           status: body.status,
+          pipelineId: body.pipelineId,
+          schemaName: body.schemaName,
         });
 
         if (result.isSuccess()) {

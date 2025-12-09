@@ -185,6 +185,9 @@ export const experiments = pgTable("experiments", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
+  // Databricks pipeline and schema information
+  pipelineId: varchar("pipeline_id", { length: 255 }),
+  schemaName: varchar("schema_name", { length: 255 }),
   ...timestamps,
 });
 

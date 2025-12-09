@@ -24,6 +24,7 @@ import {
   organizations,
   flows,
   macros,
+  eq,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -326,7 +327,12 @@ export class TestHarness {
     status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
     embargoUntil?: Date;
+    schemaName?: string;
+    pipelineId?: string;
   }) {
+    // Generate schemaName if not provided
+    const cleanName = data.name.toLowerCase().trim().replace(/ /g, "_");
+
     const [experiment] = await this.database
       .insert(experiments)
       .values({
@@ -336,12 +342,30 @@ export class TestHarness {
         visibility: data.visibility ?? "private",
         embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         createdBy: data.userId,
+        schemaName:
+          data.schemaName ?? `exp_${cleanName}_${faker.string.alphanumeric(8).toLowerCase()}`,
+        pipelineId: data.pipelineId,
       })
       .returning();
 
-    const experimentAdmin = await this.addExperimentMember(experiment.id, data.userId, "admin");
+    // Set schemaName automatically after creation if not provided
+    const finalExperiment = experiment.schemaName
+      ? experiment
+      : (
+          await this.database
+            .update(experiments)
+            .set({ schemaName: `exp_${cleanName}_${experiment.id}` })
+            .where(eq(experiments.id, experiment.id))
+            .returning()
+        )[0];
 
-    return { experiment, experimentAdmin };
+    const experimentAdmin = await this.addExperimentMember(
+      finalExperiment.id,
+      data.userId,
+      "admin",
+    );
+
+    return { experiment: finalExperiment, experimentAdmin };
   }
 
   /**
