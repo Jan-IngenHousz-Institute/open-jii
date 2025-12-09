@@ -15,13 +15,24 @@ export class UpdateProvisioningStatusUseCase {
   async execute({
     experimentId,
     status,
+    pipelineId,
+    schemaName,
   }: {
     experimentId: string;
     status: ExperimentProvisioningStatus;
+    pipelineId?: string;
+    schemaName?: string;
   }): Promise<Result<ExperimentDto["status"]>> {
     this.logger.log(
       `Processing Databricks workflow status update for experiment ID ${experimentId} with status ${status}`,
     );
+
+    if (pipelineId) {
+      this.logger.log(`Pipeline ID: ${pipelineId}`);
+    }
+    if (schemaName) {
+      this.logger.log(`Schema Name: ${schemaName}`);
+    }
 
     // Get the current experiment status first to make the operation idempotent
     const experimentResult = await this.experimentRepository.findOne(experimentId);
@@ -41,8 +52,21 @@ export class UpdateProvisioningStatusUseCase {
 
       const targetStatus = experimentStatusResult.value;
 
-      // If the experiment is already in the target state, return success without changing
-      if (experiment.status === targetStatus) {
+      // Prepare update data
+      const updateData: Partial<ExperimentDto> = {
+        status: targetStatus,
+      };
+
+      // Include pipelineId and schemaName if provided
+      if (pipelineId) {
+        updateData.pipelineId = pipelineId;
+      }
+      if (schemaName) {
+        updateData.schemaName = schemaName;
+      }
+
+      // If the experiment is already in the target state and no new metadata, return success without changing
+      if (experiment.status === targetStatus && !pipelineId && !schemaName) {
         this.logger.log(
           `Experiment ${experimentId} is already in ${targetStatus} state. No update needed.`,
         );
@@ -53,9 +77,10 @@ export class UpdateProvisioningStatusUseCase {
         `Updating experiment ${experimentId} status from ${experiment.status} to ${targetStatus}`,
       );
 
-      const updateExperimentStatusResult = await this.experimentRepository.update(experimentId, {
-        status: targetStatus,
-      });
+      const updateExperimentStatusResult = await this.experimentRepository.update(
+        experimentId,
+        updateData,
+      );
 
       if (updateExperimentStatusResult.isFailure()) {
         this.logger.error(

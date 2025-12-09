@@ -119,6 +119,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: true,
           hasArchiveAccess: true,
@@ -170,8 +171,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
       expect(checkAccessSpy).toHaveBeenCalledWith(experiment.id, testUserId);
       expect(validateDataSourcesSpy).toHaveBeenCalledWith(
         mockRequest.dataConfig,
-        "Test Experiment",
-        experiment.id,
+        expect.stringContaining("exp_test_experiment_"),
       );
       expect(createVisualizationSpy).toHaveBeenCalledWith(experiment.id, mockRequest, testUserId);
     });
@@ -238,6 +238,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: faker.string.uuid(), // Different user
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: false,
           hasArchiveAccess: false,
@@ -308,6 +309,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: true,
           hasArchiveAccess: true,
@@ -352,6 +354,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: true,
           hasArchiveAccess: true,

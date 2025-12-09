@@ -102,7 +102,7 @@ export class ExperimentDataAnnotationsRepository {
     experimentId: string,
   ): Promise<Result<SchemaData | null>> {
     // First check if the annotations table already exists
-    const tablesResult = await this.databricksPort.listTables(experimentName, experimentId);
+    const tablesResult = await this.databricksPort.listTables(experimentName);
     if (tablesResult.isFailure()) {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
