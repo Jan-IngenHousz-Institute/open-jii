@@ -12,9 +12,14 @@ import { CtfImage } from "../contentful";
 interface ArticleAuthorProps {
   article: PageBlogPostFieldsFragment;
   noAvatar?: boolean;
+  isTile?: boolean;
 }
 
-export const ArticleAuthor: FC<ArticleAuthorProps> = ({ article, noAvatar = false }) => {
+export const ArticleAuthor: FC<ArticleAuthorProps> = ({
+  article,
+  noAvatar = false,
+  isTile = false,
+}) => {
   const { author } = useContentfulLiveUpdates(article);
   const inspectorProps = useContentfulInspectorMode({
     entryId: author?.sys.id,
@@ -39,9 +44,19 @@ export const ArticleAuthor: FC<ArticleAuthorProps> = ({ article, noAvatar = fals
           />
         )}
       </div>
-      <span className="text-gray600 leading-none" {...inspectorProps({ fieldId: "name" })}>
-        {author?.name}
-      </span>
+      <div className="flex flex-col">
+        <span className="text-gray600 leading-none" {...inspectorProps({ fieldId: "name" })}>
+          {author?.name}
+        </span>
+        {author?.profession && !noAvatar && (
+          <span
+            className={`mt-1 text-sm ${isTile ? "text-gray-400" : "text-gray-500"}`}
+            {...inspectorProps({ fieldId: "profession" })}
+          >
+            {author.profession}
+          </span>
+        )}
+      </div>
     </div>
   );
 };

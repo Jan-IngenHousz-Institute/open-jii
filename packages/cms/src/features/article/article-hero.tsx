@@ -65,7 +65,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
           </div>
         )}
 
-        <div className={cn("text-gray-600")} {...inspectorProps({ fieldId: "publishedDate" })}>
+        <div className={cn("text-gray-500")} {...inspectorProps({ fieldId: "publishedDate" })}>
           <FormatDate date={safePublishedDate} />
         </div>
         <h1

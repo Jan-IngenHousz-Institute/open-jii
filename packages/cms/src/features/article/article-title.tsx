@@ -131,7 +131,7 @@ export const ArticleTile = ({
 
           {/* AUTHOR */}
           <div className="mt-3">
-            <ArticleAuthor article={article} />
+            <ArticleAuthor article={article} isTile />
           </div>
         </div>
       </article>
