@@ -92,150 +92,150 @@ jobs:
             echo "$RELEASES" | jq -r 'to_entries | .[] | "- **\(.key)**: v\(.value) (tag: `\(.key)-v\(.value)`)"' >> $GITHUB_STEP_SUMMARY
           fi
 
-  # Mobile deployment job (triggered when mobile is released)
-  deploy-mobile:
-    name: Deploy Mobile
-    needs: release
-    if: contains(needs.release.outputs.releases_created, 'mobile')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # # Mobile deployment job (triggered when mobile is released)
+  # deploy-mobile:
+  #   name: Deploy Mobile
+  #   needs: release
+  #   if: contains(needs.release.outputs.releases_created, 'mobile')
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
       
-      - name: Download Release Metadata
-        uses: actions/download-artifact@v4
-        with:
-          name: release-metadata
+  #     - name: Download Release Metadata
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: release-metadata
       
-      - name: Parse Mobile Release Info
-        id: mobile_release
-        run: |
-          if [ -f "release-summary-mobile.json" ]; then
-            VERSION=$(jq -r '.version' release-summary-mobile.json)
-            TAG=$(jq -r '.tag' release-summary-mobile.json)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "✅ Mobile release: $TAG"
-          fi
+  #     - name: Parse Mobile Release Info
+  #       id: mobile_release
+  #       run: |
+  #         if [ -f "release-summary-mobile.json" ]; then
+  #           VERSION=$(jq -r '.version' release-summary-mobile.json)
+  #           TAG=$(jq -r '.tag' release-summary-mobile.json)
+  #           echo "version=$VERSION" >> $GITHUB_OUTPUT
+  #           echo "tag=$TAG" >> $GITHUB_OUTPUT
+  #           echo "✅ Mobile release: $TAG"
+  #         fi
       
-      - name: Log Deployment Info
-        run: |
-          echo "🚀 Mobile app released!"
-          echo "Version: ${{ steps.mobile_release.outputs.version }}"
-          echo "Tag: ${{ steps.mobile_release.outputs.tag }}"
+  #     - name: Log Deployment Info
+  #       run: |
+  #         echo "🚀 Mobile app released!"
+  #         echo "Version: ${{ steps.mobile_release.outputs.version }}"
+  #         echo "Tag: ${{ steps.mobile_release.outputs.tag }}"
 
-  # Web deployment job (triggered when web is released)
-  deploy-web:
-    name: Deploy Web
-    needs: release
-    if: contains(needs.release.outputs.releases_created, 'web')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # # Web deployment job (triggered when web is released)
+  # deploy-web:
+  #   name: Deploy Web
+  #   needs: release
+  #   if: contains(needs.release.outputs.releases_created, 'web')
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
       
-      - name: Download Release Metadata
-        uses: actions/download-artifact@v4
-        with:
-          name: release-metadata
+  #     - name: Download Release Metadata
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: release-metadata
       
-      - name: Parse Web Release Info
-        id: web_release
-        run: |
-          if [ -f "release-summary-web.json" ]; then
-            VERSION=$(jq -r '.version' release-summary-web.json)
-            TAG=$(jq -r '.tag' release-summary-web.json)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "✅ Web release: $TAG"
-          fi
+  #     - name: Parse Web Release Info
+  #       id: web_release
+  #       run: |
+  #         if [ -f "release-summary-web.json" ]; then
+  #           VERSION=$(jq -r '.version' release-summary-web.json)
+  #           TAG=$(jq -r '.tag' release-summary-web.json)
+  #           echo "version=$VERSION" >> $GITHUB_OUTPUT
+  #           echo "tag=$TAG" >> $GITHUB_OUTPUT
+  #           echo "✅ Web release: $TAG"
+  #         fi
       
-      - name: Log Deployment Info
-        run: |
-          echo "🚀 Web app released!"
-          echo "Version: ${{ steps.web_release.outputs.version }}"
-          echo "Tag: ${{ steps.web_release.outputs.tag }}"
-          echo ""
-          echo "📋 Next steps:"
-          echo "  1. Connect this job to your web deployment workflow"
-          echo "  2. Deploy to production environment"
-          echo ""
-          echo "🔗 Production: https://openjii.org"
-          echo "🔗 Documentation: https://docs.openjii.org/deployment/web"
+  #     - name: Log Deployment Info
+  #       run: |
+  #         echo "🚀 Web app released!"
+  #         echo "Version: ${{ steps.web_release.outputs.version }}"
+  #         echo "Tag: ${{ steps.web_release.outputs.tag }}"
+  #         echo ""
+  #         echo "📋 Next steps:"
+  #         echo "  1. Connect this job to your web deployment workflow"
+  #         echo "  2. Deploy to production environment"
+  #         echo ""
+  #         echo "🔗 Production: https://openjii.org"
+  #         echo "🔗 Documentation: https://docs.openjii.org/deployment/web"
 
-  # Backend deployment job (triggered when backend is released)
-  deploy-backend:
-    name: Deploy Backend
-    needs: release
-    if: contains(needs.release.outputs.releases_created, 'backend')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # # Backend deployment job (triggered when backend is released)
+  # deploy-backend:
+  #   name: Deploy Backend
+  #   needs: release
+  #   if: contains(needs.release.outputs.releases_created, 'backend')
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
       
-      - name: Download Release Metadata
-        uses: actions/download-artifact@v4
-        with:
-          name: release-metadata
+  #     - name: Download Release Metadata
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: release-metadata
       
-      - name: Parse Backend Release Info
-        id: backend_release
-        run: |
-          if [ -f "release-summary-backend.json" ]; then
-            VERSION=$(jq -r '.version' release-summary-backend.json)
-            TAG=$(jq -r '.tag' release-summary-backend.json)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "✅ Backend release: $TAG"
-          fi
+  #     - name: Parse Backend Release Info
+  #       id: backend_release
+  #       run: |
+  #         if [ -f "release-summary-backend.json" ]; then
+  #           VERSION=$(jq -r '.version' release-summary-backend.json)
+  #           TAG=$(jq -r '.tag' release-summary-backend.json)
+  #           echo "version=$VERSION" >> $GITHUB_OUTPUT
+  #           echo "tag=$TAG" >> $GITHUB_OUTPUT
+  #           echo "✅ Backend release: $TAG"
+  #         fi
       
-      - name: Log Deployment Info
-        run: |
-          echo "🚀 Backend released!"
-          echo "Version: ${{ steps.backend_release.outputs.version }}"
-          echo "Tag: ${{ steps.backend_release.outputs.tag }}"
-          echo ""
-          echo "📋 Next steps:"
-          echo "  1. Connect this job to your backend deployment workflow"
-          echo "  2. Deploy to ECS/Lambda"
-          echo ""
-          echo "🔗 API: https://api.openjii.org"
-          echo "🔗 Documentation: https://docs.openjii.org/deployment/backend"
+  #     - name: Log Deployment Info
+  #       run: |
+  #         echo "🚀 Backend released!"
+  #         echo "Version: ${{ steps.backend_release.outputs.version }}"
+  #         echo "Tag: ${{ steps.backend_release.outputs.tag }}"
+  #         echo ""
+  #         echo "📋 Next steps:"
+  #         echo "  1. Connect this job to your backend deployment workflow"
+  #         echo "  2. Deploy to ECS/Lambda"
+  #         echo ""
+  #         echo "🔗 API: https://api.openjii.org"
+  #         echo "🔗 Documentation: https://docs.openjii.org/deployment/backend"
 
-  # Docs deployment job (triggered when docs is released)
-  deploy-docs:
-    name: Deploy Docs
-    needs: release
-    if: contains(needs.release.outputs.releases_created, 'docs')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # # Docs deployment job (triggered when docs is released)
+  # deploy-docs:
+  #   name: Deploy Docs
+  #   needs: release
+  #   if: contains(needs.release.outputs.releases_created, 'docs')
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
       
-      - name: Download Release Metadata
-        uses: actions/download-artifact@v4
-        with:
-          name: release-metadata
+  #     - name: Download Release Metadata
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: release-metadata
       
-      - name: Parse Docs Release Info
-        id: docs_release
-        run: |
-          if [ -f "release-summary-docs.json" ]; then
-            VERSION=$(jq -r '.version' release-summary-docs.json)
-            TAG=$(jq -r '.tag' release-summary-docs.json)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "✅ Docs release: $TAG"
-          fi
+  #     - name: Parse Docs Release Info
+  #       id: docs_release
+  #       run: |
+  #         if [ -f "release-summary-docs.json" ]; then
+  #           VERSION=$(jq -r '.version' release-summary-docs.json)
+  #           TAG=$(jq -r '.tag' release-summary-docs.json)
+  #           echo "version=$VERSION" >> $GITHUB_OUTPUT
+  #           echo "tag=$TAG" >> $GITHUB_OUTPUT
+  #           echo "✅ Docs release: $TAG"
+  #         fi
       
-      - name: Log Deployment Info
-        run: |
-          echo "🚀 Docs released!"
-          echo "Version: ${{ steps.docs_release.outputs.version }}"
-          echo "Tag: ${{ steps.docs_release.outputs.tag }}"
-          echo ""
-          echo "📋 Next steps:"
-          echo "  1. Connect this job to your docs deployment workflow"
-          echo "  2. Build and deploy Docusaurus site"
-          echo ""
-          echo "🔗 Documentation: https://docs.openjii.org"
+  #     - name: Log Deployment Info
+  #       run: |
+  #         echo "🚀 Docs released!"
+  #         echo "Version: ${{ steps.docs_release.outputs.version }}"
+  #         echo "Tag: ${{ steps.docs_release.outputs.tag }}"
+  #         echo ""
+  #         echo "📋 Next steps:"
+  #         echo "  1. Connect this job to your docs deployment workflow"
+  #         echo "  2. Build and deploy Docusaurus site"
+  #         echo ""
+  #         echo "🔗 Documentation: https://docs.openjii.org"
