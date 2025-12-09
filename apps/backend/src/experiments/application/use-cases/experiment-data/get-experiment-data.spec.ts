@@ -20,7 +20,6 @@ describe("GetExperimentDataUseCase", () => {
   const MOCK_WAIT_TIMEOUT = "50s";
   const MOCK_DISPOSITION = "INLINE";
   const MOCK_FORMAT = "JSON_ARRAY";
-  const SAMPLE_DATA_LIMIT = 5;
 
   beforeAll(async () => {
     await testApp.setup();

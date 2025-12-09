@@ -26,7 +26,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Skeleton,
   WizardStepButtons,
 } from "@repo/ui/components";
 import type { WizardStepProps } from "@repo/ui/components";

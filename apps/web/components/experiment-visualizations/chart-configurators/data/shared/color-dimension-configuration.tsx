@@ -1,10 +1,9 @@
 "use client";
 
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import React from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import { ExperimentTableMetadata } from "@repo/api";
+import type { ExperimentTableMetadata } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Badge,

@@ -1,8 +1,8 @@
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import ScatterChartDataConfigurator from "./scatter-chart-data-configurator";
