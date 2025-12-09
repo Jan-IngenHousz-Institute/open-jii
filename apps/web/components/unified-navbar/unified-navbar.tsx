@@ -76,7 +76,7 @@ function UserMenu({
             <User className="h-4 w-4" />
           )}
           <ChevronDown
-            className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"} `}
+            className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
           />
         </Button>
       </DropdownMenuTrigger>
