@@ -324,8 +324,9 @@ export class GetExperimentDataUseCase {
     }
 
     // Filter tables to only include those with downstream: "false" (final/enriched tables for user consumption)
+    // and exclude annotations table.
     const finalTables = tablesResult.value.tables.filter(
-      (table) => table.properties?.downstream === "false",
+      (table) => table.properties?.downstream === "false" && table.name !== "annotations",
     );
 
     // Make sure 'device' table is last if it exists and is marked as final

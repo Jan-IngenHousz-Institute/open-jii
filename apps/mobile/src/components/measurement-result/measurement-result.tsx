@@ -6,6 +6,7 @@ import { View, Modal, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import { applyMacro } from "~/utils/process-scan/process-scan";
 
+import { MacroMessages, MacroMessageGroup } from "./components/macro-messages";
 import { ProcessedMeasurementPreview } from "./components/processed-measurement-preview";
 import { RawMeasurementPreview } from "./components/raw-measurement-preview";
 
@@ -29,6 +30,11 @@ export function MeasurementResult({
   const { result: processedMeasurement, error: processingError } = useAsync(async () => {
     return await applyMacro(rawMeasurement, macro.code);
   }, [rawMeasurement, macro.code]);
+
+  const messageGroups: MacroMessageGroup[] =
+    processedMeasurement
+      ?.map((output) => output.messages)
+      .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
 
   return (
     <>
@@ -87,6 +93,12 @@ export function MeasurementResult({
             </View>
           )}
         </View>
+
+        {messageGroups.length > 0 && (
+          <View className="mt-4">
+            <MacroMessages messages={messageGroups} />
+          </View>
+        )}
       </View>
 
       <Modal visible={showRaw} animationType="slide" presentationStyle="fullScreen">

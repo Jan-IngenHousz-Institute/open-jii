@@ -186,6 +186,15 @@ export class DatabricksSqlService {
     if (!response.manifest || !response.result) {
       throw AppError.internal("Invalid SQL statement response: missing manifest or result data");
     }
+    // DDL statement do not return any schema data
+    if (response.manifest.schema.column_count === 0) {
+      return {
+        columns: [],
+        rows: [],
+        totalRows: 0,
+        truncated: false,
+      };
+    }
 
     const columns = response.manifest.schema.columns.map((column) => ({
       name: column.name,
