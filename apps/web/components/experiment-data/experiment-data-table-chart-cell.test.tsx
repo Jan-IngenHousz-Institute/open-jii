@@ -37,6 +37,8 @@ describe("ExperimentDataTableChartCell", () => {
   });
 
   it("scrolls to experiment-data-chart when clicked", () => {
+    vi.useFakeTimers();
+
     // Mock scrollIntoView
     const mockScrollIntoView = vi.fn();
     const mockGetElementById = vi.spyOn(document, "getElementById");
@@ -52,19 +54,25 @@ describe("ExperimentDataTableChartCell", () => {
       fireEvent.click(chartContainer);
     }
 
+    // Fast-forward time to trigger setTimeout
+    vi.advanceTimersByTime(100);
+
     // Verify getElementById was called with the correct ID
     expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
 
     // Verify scrollIntoView was called with correct options
     expect(mockScrollIntoView).toHaveBeenCalledWith({
       behavior: "smooth",
-      block: "nearest",
+      block: "start",
     });
 
     mockGetElementById.mockRestore();
+    vi.useRealTimers();
   });
 
   it("handles missing chart container gracefully on click", () => {
+    vi.useFakeTimers();
+
     const mockGetElementById = vi.spyOn(document, "getElementById");
     mockGetElementById.mockReturnValue(null);
 
@@ -76,10 +84,14 @@ describe("ExperimentDataTableChartCell", () => {
       fireEvent.click(chartContainer);
     }
 
+    // Fast-forward time to trigger setTimeout
+    vi.advanceTimersByTime(100);
+
     // Verify getElementById was called but no error was thrown
     expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
 
     mockGetElementById.mockRestore();
+    vi.useRealTimers();
   });
 
   it("does not scroll when clicking on empty data", () => {
