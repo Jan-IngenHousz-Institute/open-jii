@@ -128,14 +128,14 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
 
   return (
     <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-4">
+      <div className="mx-auto max-w-7xl px-4 py-12">
         <div className="mx-auto max-w-4xl">
-          <h2
-            className="text-4xl font-semibold tracking-tight sm:text-5xl"
+          <h1
+            className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
             {...inspectorProps({ fieldId: "title" })}
           >
             {currentFaq.title}
-          </h2>
+          </h1>
           {currentFaq.intro && (
             <p className="mt-6 text-base/7 text-gray-600" {...inspectorProps({ fieldId: "intro" })}>
               {currentFaq.intro}

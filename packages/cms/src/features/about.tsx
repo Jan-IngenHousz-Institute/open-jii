@@ -33,22 +33,22 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
   });
 
   return (
-    <div className="from-accent-light relative isolate overflow-hidden bg-gradient-to-br via-white to-white pb-6">
+    <div className="from-jii-bright-green/40 relative isolate overflow-hidden bg-gradient-to-br via-white to-white pb-6">
       {/* Top fade */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-4 bg-gradient-to-b from-white to-transparent" />
 
       {/* Background skew block */}
       <div
         aria-hidden="true"
-        className="shadow-primary/10 ring-accent-light absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
+        className="shadow-primary/10 ring-jii-bright-green/20 absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
       />
 
       {/* Middle container */}
-      <div className="mx-auto max-w-7xl px-4 py-4">
+      <div className="mx-auto max-w-7xl px-4 py-12">
         <div className="mx-auto max-w-2xl lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6 xl:grid-cols-1 xl:grid-rows-1 xl:gap-x-8">
           {/* TITLE */}
           <h1
-            className="max-w-2xl text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
+            className="max-w-2xl pr-10 text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
             {...inspectorProps({ fieldId: "title" })}
           >
             {currentAbout.title}

@@ -157,6 +157,7 @@ vi.mock("lucide-react", () => {
     LogIn: Icon,
     Sprout: Icon,
     MessageCircleQuestion: Icon,
+    ChevronDown: Icon,
   };
 });
 
@@ -265,9 +266,13 @@ describe("<UnifiedNavbar />", () => {
 
     const trigger = screen.getAllByTestId("dropdown-trigger")[0];
 
-    expect(within(trigger).getByText("Ada Lovelace")).toBeInTheDocument();
-    const avatarImage = screen.getAllByTestId("avatar-image")[0];
+    // Avatar should be in the trigger
+    const avatarImage = within(trigger).getByTestId("avatar-image");
     expect(avatarImage).toHaveAttribute("src", "https://example.com/ada.png");
+
+    // Display name should be in the dropdown content
+    const dropdownContent = screen.getAllByTestId("dropdown-content")[0];
+    expect(within(dropdownContent).getByText("Ada Lovelace")).toBeInTheDocument();
   });
 
   it("renders account + sign out entries inside desktop dropdown content", () => {

@@ -11,9 +11,10 @@ import { CtfImage } from "../contentful";
 
 interface ArticleAuthorProps {
   article: PageBlogPostFieldsFragment;
+  noAvatar?: boolean;
 }
 
-export const ArticleAuthor: FC<ArticleAuthorProps> = ({ article }) => {
+export const ArticleAuthor: FC<ArticleAuthorProps> = ({ article, noAvatar = false }) => {
   const { author } = useContentfulLiveUpdates(article);
   const inspectorProps = useContentfulInspectorMode({
     entryId: author?.sys.id,
@@ -22,22 +23,23 @@ export const ArticleAuthor: FC<ArticleAuthorProps> = ({ article }) => {
   return (
     <div className="flex items-center">
       <div
-        className="border-blue500 mr-2 overflow-hidden rounded-full border"
+        className={`${noAvatar ? "mr-0" : "mr-2"} overflow-hidden rounded-full`}
         {...inspectorProps({ fieldId: "avatar" })}
       >
-        {author?.avatar && (
+        {author?.avatar && !noAvatar && (
           <CtfImage
             nextImageProps={{
-              width: 28,
-              height: 28,
+              width: 52,
+              height: 52,
               sizes: undefined,
               placeholder: undefined,
+              className: "object-cover aspect-square",
             }}
             {...author.avatar}
           />
         )}
       </div>
-      <span className="text-gray600 text-xs leading-none" {...inspectorProps({ fieldId: "name" })}>
+      <span className="text-gray600 leading-none" {...inspectorProps({ fieldId: "name" })}>
         {author?.name}
       </span>
     </div>

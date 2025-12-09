@@ -77,8 +77,8 @@ export default async function Page({ params }: BlogPageProps) {
   }
 
   return (
-    <>
-      <Container className="mt-4">
+    <div className="py-12">
+      <Container>
         <ArticleHero article={blogPost} isFeatured={isFeatured} isReversedLayout={true} />
       </Container>
       <Container className="mt-8 max-w-4xl">
@@ -95,6 +95,6 @@ export default async function Page({ params }: BlogPageProps) {
           />
         </Container>
       )}
-    </>
+    </div>
   );
 }

@@ -1,7 +1,16 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { User, Home, BookOpen, LogOut, Menu, Sprout, MessageCircleQuestion } from "lucide-react";
+import {
+  User,
+  Home,
+  BookOpen,
+  LogOut,
+  Menu,
+  Sprout,
+  MessageCircleQuestion,
+  ChevronDown,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,22 +50,23 @@ function UserMenu({
   displayName: string;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
 
   if (!session?.user) {
     return null;
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="flex gap-2"
+          className="group flex gap-2 hover:bg-transparent focus:bg-transparent"
           aria-label={t("auth.userMenu", "User menu")}
         >
           {session.user.image ? (
-            <Avatar className="h-6 w-6">
+            <Avatar className="group-hover:bg-jii-medium-green/20 h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_theme(colors.jii-medium-green)]">
               <AvatarImage src={session.user.image} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
@@ -65,7 +75,9 @@ function UserMenu({
           ) : (
             <User className="h-4 w-4" />
           )}
-          <span className="hidden max-w-32 truncate sm:inline">{displayName}</span>
+          <ChevronDown
+            className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"} `}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -228,7 +240,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
-            src="/openJII-logo-BW-vertical-white.svg"
+            src="/openJII-logo-BW-vertical-white.png"
             alt="openJII logo"
             width={210}
             height={52}
@@ -280,8 +292,9 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   variant="ghost"
                   size="sm"
                   aria-label={t("navigation.menu", "Navigation menu")}
+                  className="group hover:bg-transparent focus:bg-transparent"
                 >
-                  <Menu className="h-4 w-4" />
+                  <Menu className="group-hover:text-jii-medium-green h-4 w-4 text-white transition-colors duration-200" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="font-notosans w-56">

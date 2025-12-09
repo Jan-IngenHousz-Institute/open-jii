@@ -61,22 +61,26 @@ export const ArticleTile = ({
 
           {/* CONTENT */}
           <div className="relative z-10 mt-auto px-6 pb-6">
-            <div className="flex flex-wrap items-center gap-y-1 text-sm text-gray-300">
-              <time className="mr-8" {...inspectorProps({ fieldId: "publishedDate" })}>
-                <FormatDate date={safePublishedDate} />
-              </time>
+            <div className="flex flex-wrap items-center gap-y-1 overflow-hidden text-sm text-gray-300">
+              {/* AUTHOR */}
+              <div className="mr-8">
+                <ArticleAuthor article={article} noAvatar />
+              </div>
 
               <div className="-ml-4 flex items-center gap-x-4">
                 <svg viewBox="0 0 2 2" className="-ml-0.5 h-0.5 w-0.5 flex-none fill-white/50">
                   <circle r="1" cx="1" cy="1" />
                 </svg>
-                <ArticleAuthor article={article} />
+
+                <time {...inspectorProps({ fieldId: "publishedDate" })}>
+                  <FormatDate date={safePublishedDate} />
+                </time>
               </div>
             </div>
 
             {title && (
               <h3
-                className="mt-3 text-lg font-semibold leading-6 text-white"
+                className="mt-1 text-lg font-semibold leading-6 text-white"
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {title}
@@ -109,30 +113,26 @@ export const ArticleTile = ({
         <div className="inset-ring inset-ring-gray-900/10 pointer-events-none absolute inset-0 -z-10 rounded-2xl" />
 
         {/* CONTENT */}
-        <div className="relative z-10 mt-auto px-8 pb-8">
-          {/* DATE + AUTHOR */}
-          <div className="flex flex-wrap items-center gap-y-1 text-sm text-gray-300">
-            <time className="mr-8" {...inspectorProps({ fieldId: "publishedDate" })}>
-              <FormatDate date={safePublishedDate} />
-            </time>
-
-            <div className="-ml-4 flex items-center gap-x-4">
-              <svg viewBox="0 0 2 2" className="-ml-0.5 h-0.5 w-0.5 flex-none fill-white/50">
-                <circle r="1" cx="1" cy="1" />
-              </svg>
-              <ArticleAuthor article={article} />
-            </div>
-          </div>
+        <div className="relative z-10 mt-auto px-8 pb-8 text-gray-300">
+          {/* DATE */}
+          <time className="text-sm" {...inspectorProps({ fieldId: "publishedDate" })}>
+            <FormatDate date={safePublishedDate} />
+          </time>
 
           {/* TITLE */}
           {title && (
             <h3
-              className="mt-3 text-lg font-semibold leading-6 text-white"
+              className="mt-1 text-xl font-semibold leading-6 text-white"
               {...inspectorProps({ fieldId: "title" })}
             >
               {title}
             </h3>
           )}
+
+          {/* AUTHOR */}
+          <div className="mt-3">
+            <ArticleAuthor article={article} />
+          </div>
         </div>
       </article>
     </Link>
