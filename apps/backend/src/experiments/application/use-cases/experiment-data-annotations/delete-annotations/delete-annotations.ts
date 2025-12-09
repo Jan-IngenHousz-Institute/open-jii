@@ -69,16 +69,18 @@ export class DeleteAnnotationsUseCase {
           }
 
           // Trigger silver data refresh to update enriched tables with deleted annotation
-          const refreshResult = await this.databricksPort.refreshSilverData(
-            experiment.name,
-            experimentId,
-          );
-
-          if (refreshResult.isFailure()) {
-            this.logger.warn(
-              `Failed to trigger silver data refresh after deleting annotation: ${refreshResult.error.message}`,
+          if (experiment.schemaName && experiment.pipelineId) {
+            const refreshResult = await this.databricksPort.refreshSilverData(
+              experiment.schemaName,
+              experiment.pipelineId,
             );
-            // Don't fail the whole operation, just log the warning
+
+            if (refreshResult.isFailure()) {
+              this.logger.warn(
+                `Failed to trigger silver data refresh after deleting annotation: ${refreshResult.error.message}`,
+              );
+              // Don't fail the whole operation, just log the warning
+            }
           }
 
           return success(result.value);
@@ -96,16 +98,18 @@ export class DeleteAnnotationsUseCase {
           }
 
           // Trigger silver data refresh to update enriched tables with deleted annotations
-          const refreshResult = await this.databricksPort.refreshSilverData(
-            experiment.name,
-            experimentId,
-          );
-
-          if (refreshResult.isFailure()) {
-            this.logger.warn(
-              `Failed to trigger silver data refresh after bulk deleting annotations: ${refreshResult.error.message}`,
+          if (experiment.schemaName && experiment.pipelineId) {
+            const refreshResult = await this.databricksPort.refreshSilverData(
+              experiment.schemaName,
+              experiment.pipelineId,
             );
-            // Don't fail the whole operation, just log the warning
+
+            if (refreshResult.isFailure()) {
+              this.logger.warn(
+                `Failed to trigger silver data refresh after bulk deleting annotations: ${refreshResult.error.message}`,
+              );
+              // Don't fail the whole operation, just log the warning
+            }
           }
 
           return success(result.value);

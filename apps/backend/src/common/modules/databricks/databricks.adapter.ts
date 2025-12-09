@@ -280,33 +280,33 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
+   * @param pipelineId - The Databricks pipeline ID
    * @returns Result containing the pipeline update response or an error
    */
   async triggerExperimentPipelineSilverRefresh(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
+    pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    return this.refreshSilverData(experimentName, experimentId);
+    return this.refreshSilverData(schemaName, pipelineId);
   }
 
   /**
    * Refresh all silver quality tables for an experiment with full refresh
    * This is a convenience method that wraps triggerExperimentPipelineSilverRefresh
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
+   * @param pipelineId - The Databricks pipeline ID
    * @returns Result containing the pipeline update response or an error
    */
   async refreshSilverData(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
+    pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log(`Refreshing silver data for experiment ${experimentName} (${experimentId})`);
+    this.logger.log(`Refreshing silver data for schema ${schemaName} using pipeline ${pipelineId}`);
 
     // First, get the list of tables in the experiment
-    const tablesResult = await this.listTables(experimentName);
+    const tablesResult = await this.listTables(schemaName);
 
     if (tablesResult.isFailure()) {
       this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
@@ -319,9 +319,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       .map((table) => table.name);
 
     if (silverTables.length === 0) {
-      this.logger.warn(`No silver quality tables found for experiment ${experimentName}`);
+      this.logger.warn(`No silver quality tables found for schema ${schemaName}`);
       return failure(
-        AppError.notFound(`No silver quality tables found for experiment ${experimentName}`),
+        AppError.notFound(`No silver quality tables found for schema ${schemaName}`),
       );
     }
 
@@ -330,7 +330,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     );
 
     // Trigger the pipeline with full refresh for silver tables
-    return this.triggerExperimentPipeline(experimentName, experimentId, {
+    // Use schemaName for experimentId logging since we only have schemaName available
+    return this.triggerExperimentPipeline(pipelineId, schemaName, {
       fullRefreshSelection: silverTables,
     });
   }

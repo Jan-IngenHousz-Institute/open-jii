@@ -85,7 +85,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const result = await repository.ensureTableExists(mockExperimentName, mockExperimentId);
 
       assertSuccess(result);
-      expect(databricksPort.listTables).toHaveBeenCalledWith(mockExperimentName, mockExperimentId);
+      const expectedSchemaName = `exp_${mockExperimentName}_${mockExperimentId}`;
+      expect(databricksPort.listTables).toHaveBeenCalledWith(expectedSchemaName);
       expect(databricksPort.executeExperimentSqlQuery).toHaveBeenCalledTimes(2);
     });
 
@@ -113,7 +114,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
       assertSuccess(result);
       expect(result.value).toBeNull(); // Returns null when table exists
-      expect(databricksPort.listTables).toHaveBeenCalledWith(mockExperimentName, mockExperimentId);
+      const expectedSchemaName = `exp_${mockExperimentName}_${mockExperimentId}`;
+      expect(databricksPort.listTables).toHaveBeenCalledWith(expectedSchemaName);
       expect(executeQuerySpy).not.toHaveBeenCalled();
     });
 
