@@ -149,6 +149,7 @@ locals {
         "lambda:GetFunctionCodeSigningConfig",
         "lambda:GetFunctionConcurrency",
         "lambda:ListFunctions",
+        "lambda:ListVersionsByFunction",
         "lambda:TagResource",
         "lambda:UntagResource",
         "lambda:ListTags"
@@ -178,7 +179,18 @@ locals {
         "cloudfront:ListTagsForResource",
         "cloudfront:CreateInvalidation",
         "cloudfront:GetInvalidation",
-        "cloudfront:ListInvalidations"
+        "cloudfront:ListInvalidations",
+        "cloudfront:CreateFunction",
+        "cloudfront:DeleteFunction",
+        "cloudfront:UpdateFunction",
+        "cloudfront:DescribeFunction",
+        "cloudfront:GetFunction",
+        "cloudfront:CreateCachePolicy",
+        "cloudfront:GetCachePolicy",
+        "cloudfront:DeleteCachePolicy",
+        "cloudfront:CreateOriginRequestPolicy",
+        "cloudfront:GetOriginRequestPolicy",
+        "cloudfront:DeleteOriginRequestPolicy"
       ]
       resource = "*"
     }
@@ -279,10 +291,33 @@ locals {
         "iam:CreateOpenIDConnectProvider",
         "iam:DeleteOpenIDConnectProvider",
         "iam:GetOpenIDConnectProvider",
+        "iam:CreateUser",
+        "iam:DeleteUser",
+        "iam:GetUser",
         "iam:TagRole",
         "iam:TagPolicy",
+        "iam:TagUser",
         "iam:TagOpenIDConnectProvider",
         "iam:ListAttachedRolePolicies"
+      ]
+      resource = "*"
+    }
+
+    kms = {
+      actions = [
+        "kms:CreateKey",
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:PutKeyPolicy",
+        "kms:CreateAlias",
+        "kms:DeleteAlias",
+        "kms:ListAliases",
+        "kms:ListResourceTags",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:ScheduleKeyDeletion",
+        "kms:EnableKeyRotation",
+        "kms:DisableKeyRotation"
       ]
       resource = "*"
     }
@@ -298,6 +333,7 @@ locals {
         "logs:FilterLogEvents",
         "logs:DeleteLogGroup",
         "logs:ListTagsLogGroup",
+        "logs:ListTagsForResource",
         "logs:PutRetentionPolicy"
       ]
       resource = "*"
@@ -363,6 +399,8 @@ locals {
         "ec2:DescribeAddresses",
         "ec2:DescribeNatGateways",
         "ec2:DescribePrefixLists",
+        "ec2:DescribeManagedPrefixLists",
+        "ec2:DescribeNetworkAcls",
         "ec2:DescribeAddressesAttribute"
       ]
       resource = "*"
@@ -382,6 +420,11 @@ locals {
         "rds:DeleteDBSubnetGroup",
         "rds:ModifyDBSubnetGroup",
         "rds:DescribeDBSubnetGroups",
+        "rds:CreateDBClusterParameterGroup",
+        "rds:DeleteDBClusterParameterGroup",
+        "rds:ModifyDBClusterParameterGroup",
+        "rds:DescribeDBClusterParameterGroups",
+        "rds:DescribeDBClusterParameters",
         "rds:AddTagsToResource",
         "rds:ListTagsForResource",
         "rds:RemoveTagsFromResource",
@@ -398,6 +441,9 @@ locals {
         "secretsmanager:DescribeSecret",
         "secretsmanager:PutSecretValue",
         "secretsmanager:UpdateSecret",
+        "secretsmanager:GetResourcePolicy",
+        "secretsmanager:PutResourcePolicy",
+        "secretsmanager:DeleteResourcePolicy",
         "secretsmanager:TagResource",
         "secretsmanager:UntagResource",
         "secretsmanager:ListTagsForResource"
@@ -410,9 +456,17 @@ locals {
         "ses:CreateIdentity",
         "ses:DeleteIdentity",
         "ses:GetIdentityVerificationAttributes",
+        "ses:GetIdentityDkimAttributes",
+        "ses:GetIdentityMailFromDomainAttributes",
         "ses:ListIdentities",
         "ses:VerifyEmailIdentity",
         "ses:GetEmailIdentity",
+        "ses:CreateReceiptRuleSet",
+        "ses:DeleteReceiptRuleSet",
+        "ses:DescribeReceiptRuleSet",
+        "ses:CreateConfigurationSet",
+        "ses:DeleteConfigurationSet",
+        "ses:DescribeConfigurationSet",
         "ses:TagResource",
         "ses:UntagResource"
       ]
@@ -460,6 +514,10 @@ locals {
         "geo:DeleteMap",
         "geo:DescribeMap",
         "geo:ListMaps",
+        "geo:CreatePlaceIndex",
+        "geo:DeletePlaceIndex",
+        "geo:DescribePlaceIndex",
+        "geo:ListPlaceIndexes",
         "geo:TagResource",
         "geo:UntagResource",
         "geo:ListTagsForResource"
@@ -600,9 +658,40 @@ locals {
       ]
       resource = "*"
     }
+
+    eventbridge = {
+      actions = [
+        "events:PutRule",
+        "events:DeleteRule",
+        "events:DescribeRule",
+        "events:EnableRule",
+        "events:DisableRule",
+        "events:PutTargets",
+        "events:RemoveTargets",
+        "events:ListTargetsByRule",
+        "events:ListTagsForResource",
+        "events:TagResource",
+        "events:UntagResource"
+      ]
+      resource = "*"
+    }
+
+    acm = {
+      actions = [
+        "acm:RequestCertificate",
+        "acm:DescribeCertificate",
+        "acm:ListCertificates",
+        "acm:GetCertificate",
+        "acm:DeleteCertificate",
+        "acm:AddTagsToCertificate",
+        "acm:RemoveTagsFromCertificate",
+        "acm:ListTagsForCertificate"
+      ]
+      resource = "*"
+    }
   }
 
-  # Combine all service permissions into two comprehensive policy
+  # Combine all service permissions into five comprehensive policy
   all_policy_statements = [
     for service_key, service_config in local.service_policies : {
       Effect   = "Allow"
@@ -612,13 +701,17 @@ locals {
     }
   ]
 
-  # Split policies into two groups to avoid 10KB size limit
-  policy_statements_part1 = slice(local.all_policy_statements, 0, length(local.all_policy_statements) / 2)
-  policy_statements_part2 = slice(local.all_policy_statements, length(local.all_policy_statements) / 2, length(local.all_policy_statements))
+  # Split policies into five groups to avoid 10KB size limit
+  fifth_length = floor(length(local.all_policy_statements) / 5)
+  policy_statements_part1 = slice(local.all_policy_statements, 0, local.fifth_length)
+  policy_statements_part2 = slice(local.all_policy_statements, local.fifth_length, local.fifth_length * 2)
+  policy_statements_part3 = slice(local.all_policy_statements, local.fifth_length * 2, local.fifth_length * 3)
+  policy_statements_part4 = slice(local.all_policy_statements, local.fifth_length * 3, local.fifth_length * 4)
+  policy_statements_part5 = slice(local.all_policy_statements, local.fifth_length * 4, length(local.all_policy_statements))
 }
 
 resource "aws_iam_role_policy" "oidc_role_inline_policy_part1" {
-  name = "${var.role_name}InlinePolicy1"
+  name = "${var.role_name}InlinePolicy1-v2"
   role = aws_iam_role.oidc_role.id
 
   policy = jsonencode({
@@ -628,11 +721,41 @@ resource "aws_iam_role_policy" "oidc_role_inline_policy_part1" {
 }
 
 resource "aws_iam_role_policy" "oidc_role_inline_policy_part2" {
-  name = "${var.role_name}InlinePolicy2"
+  name = "${var.role_name}InlinePolicy2-v2"
   role = aws_iam_role.oidc_role.id
 
   policy = jsonencode({
     Version   = "2012-10-17"
     Statement = local.policy_statements_part2
+  })
+}
+
+resource "aws_iam_role_policy" "oidc_role_inline_policy_part3" {
+  name = "${var.role_name}InlinePolicy3-v2"
+  role = aws_iam_role.oidc_role.id
+
+  policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = local.policy_statements_part3
+  })
+}
+
+resource "aws_iam_role_policy" "oidc_role_inline_policy_part4" {
+  name = "${var.role_name}InlinePolicy4-v2"
+  role = aws_iam_role.oidc_role.id
+
+  policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = local.policy_statements_part4
+  })
+}
+
+resource "aws_iam_role_policy" "oidc_role_inline_policy_part5" {
+  name = "${var.role_name}InlinePolicy5-v2"
+  role = aws_iam_role.oidc_role.id
+
+  policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = local.policy_statements_part5
   })
 }
