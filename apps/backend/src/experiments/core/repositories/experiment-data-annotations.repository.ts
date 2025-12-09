@@ -101,8 +101,12 @@ export class ExperimentDataAnnotationsRepository {
     experimentName: string,
     experimentId: string,
   ): Promise<Result<SchemaData | null>> {
+    // Construct schema name
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+
     // First check if the annotations table already exists
-    const tablesResult = await this.databricksPort.listTables(experimentName);
+    const tablesResult = await this.databricksPort.listTables(schemaName);
     if (tablesResult.isFailure()) {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }

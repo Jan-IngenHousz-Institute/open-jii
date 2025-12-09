@@ -856,6 +856,7 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("triggerExperimentPipeline", () => {
+    const experimentName = "Test Experiment";
     const experimentId = "123-456-789";
     const pipelineId = "pipeline-abc123";
 
@@ -913,8 +914,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should trigger pipeline with full refresh option", async () => {
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
       const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
 
@@ -924,29 +923,6 @@ describe("DatabricksAdapter", () => {
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
-
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
 
       // Mock start pipeline update API call with full refresh
       nock(databricksHost)
@@ -961,11 +937,9 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute trigger experiment pipeline with full refresh
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-        { fullRefresh: true },
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
+        fullRefresh: true,
+      });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -976,8 +950,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should trigger pipeline with full refresh selection", async () => {
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
       const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const tablesToRefresh = ["table1", "table2"];
@@ -988,29 +960,6 @@ describe("DatabricksAdapter", () => {
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
-
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
 
       // Mock start pipeline update API call with full refresh selection
       nock(databricksHost)
@@ -1030,11 +979,9 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute trigger experiment pipeline with full refresh selection
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-        { fullRefreshSelection: tablesToRefresh },
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
+        fullRefreshSelection: tablesToRefresh,
+      });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1045,8 +992,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should trigger pipeline with refresh selection", async () => {
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
       const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const tablesToRefresh = ["table3"];
@@ -1057,29 +1002,6 @@ describe("DatabricksAdapter", () => {
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
-
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
 
       // Mock start pipeline update API call with refresh selection
       nock(databricksHost)
@@ -1098,11 +1020,9 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute trigger experiment pipeline with refresh selection
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-        { refreshSelection: tablesToRefresh },
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
+        refreshSelection: tablesToRefresh,
+      });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1114,14 +1034,10 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("refreshSilverData", () => {
-    const experimentName = "Test Experiment";
-    const experimentId = "123-456-789";
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
-    const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+    const schemaName = "exp_test_experiment_123-456-789";
+    const pipelineId = "pipeline-abc123";
 
     it("should refresh silver tables successfully", async () => {
-      const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const silverTable1 = "silver_table_1";
       const silverTable2 = "silver_table_2";
@@ -1160,29 +1076,6 @@ describe("DatabricksAdapter", () => {
           ],
         });
 
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
-
       // Mock start pipeline update API call with full refresh selection
       nock(databricksHost)
         .post(
@@ -1202,7 +1095,7 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1236,7 +1129,7 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is failure (no silver tables found)
       expect(result.isFailure()).toBe(true);
@@ -1259,7 +1152,7 @@ describe("DatabricksAdapter", () => {
       });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);
@@ -1292,40 +1185,29 @@ describe("DatabricksAdapter", () => {
           ],
         });
 
-      // Mock token request for pipeline operations
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list pipelines with empty results (pipeline not found)
+      // Mock pipeline update failure
       nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [],
+        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
+        .reply(404, {
+          error_code: "RESOURCE_DOES_NOT_EXIST",
+          message: "Pipeline not found",
         });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain("not found");
+      expect(result.error.message).toContain("Pipeline");
     });
   });
 
   describe("triggerExperimentPipelineSilverRefresh", () => {
-    const experimentName = "Test Experiment";
-    const experimentId = "123-456-789";
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
-    const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+    const schemaName = "exp_test_experiment_123-456-789";
+    const pipelineId = "pipeline-abc123";
 
     it("should successfully trigger silver refresh", async () => {
-      const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const silverTable1 = "silver_table_1";
 
@@ -1351,29 +1233,6 @@ describe("DatabricksAdapter", () => {
           ],
         });
 
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
-
       // Mock start pipeline update API call
       nock(databricksHost)
         .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
@@ -1383,8 +1242,8 @@ describe("DatabricksAdapter", () => {
 
       // Execute trigger experiment pipeline silver refresh
       const result = await databricksAdapter.triggerExperimentPipelineSilverRefresh(
-        experimentName,
-        experimentId,
+        schemaName,
+        pipelineId,
       );
 
       // Assert result is success

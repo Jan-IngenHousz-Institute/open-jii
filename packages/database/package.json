@@ -25,6 +25,7 @@
     "env:test": "dotenv -e .env.test --",
     "db:seed": "pnpm env:default tsx scripts/seed.ts",
     "db:reset": "pnpm env:default tsx scripts/reset.ts",
+    "db:set-local-constants": "pnpm env:default tsx scripts/set-local-constants.ts",
     "db:migrate": "pnpm env:default drizzle-kit migrate",
     "db:studio": "pnpm env:default drizzle-kit studio",
     "db:push": "pnpm env:default drizzle-kit push",
