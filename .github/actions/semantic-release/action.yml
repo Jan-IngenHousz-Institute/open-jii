@@ -118,8 +118,8 @@ runs:
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "$RELEASES_JSON" | jq '.'
         
-        # Set output
-        echo "releases_created=$RELEASES_JSON" >> $GITHUB_OUTPUT
+        # Set output (compact JSON on a single line)
+        echo "releases_created=$(echo $RELEASES_JSON | jq -c '.')" >> $GITHUB_OUTPUT
         
     - name: Upload Release Artifacts
       uses: actions/upload-artifact@v4

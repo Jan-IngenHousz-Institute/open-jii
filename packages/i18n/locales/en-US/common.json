@@ -456,74 +456,104 @@
     "rows": "rows"
   },
   "experimentDataAnnotations": {
-    "title": "Comments & Flags",
-    "columnHeader": "Comments & Flags",
+    "title": "Comments",
+    "columnHeader": "Comments",
+    "annotations": "Annotations",
+    "comments": "Comments",
+    "flags": "Flags",
+    "addComment": "Add comment",
+    "addFlag": "Add flag",
     "titleComments": "Comments",
-    "titleFlags": "Flags",
-    "flagType": {
-      "needs_review": "Needs Review",
-      "outlier": "Outlier"
-    },
     "commentDialog": {
       "title": "Add Comment",
       "description": "Add a comment to the measurement",
       "textLabel": "Comment",
       "textPlaceholder": "Enter your comment here...",
-      "add": "Add Comment"
+      "add": "Add Comment",
+      "addPending": "Adding Comment..."
     },
     "commentDialogBulk": {
       "title": "Bulk Add Comment",
       "description": "Add the same comment to {{count}} selected measurements",
       "textLabel": "Comment",
       "textPlaceholder": "Enter your comment here...",
-      "add": "Add to {{count}} Row(s)"
+      "add": "Add to {{count}} Row(s)",
+      "addPending": "Adding to {{count}} Row(s)..."
     },
     "flagDialog": {
       "title": "Add Flag",
-      "description": "Flag the measurement",
-      "flagLabel": "Flag Type",
-      "flagPlaceholder": "Select flag type",
+      "description": "Add a flag to the measurement",
       "textLabel": "Reason",
-      "textPlaceholder": "Explain why this measurement is being flagged...",
-      "add": "Add Flag"
+      "textPlaceholder": "Explain why this data is flagged...",
+      "add": "Add Flag",
+      "addPending": "Adding Flag..."
     },
     "flagDialogBulk": {
       "title": "Bulk Add Flag",
-      "description": "Flag {{count}} selected measurements",
-      "flagLabel": "Flag Type",
-      "flagPlaceholder": "Select flag type",
+      "description": "Add the same flag to {{count}} selected measurements",
       "textLabel": "Reason",
-      "textPlaceholder": "Explain why these measurements are being flagged...",
-      "add": "Flag {{count}} Row(s)"
+      "textPlaceholder": "Explain why this data is flagged...",
+      "add": "Add to {{count}} Row(s)",
+      "addPending": "Adding to {{count}} Row(s)..."
     },
     "commentDeleteDialog": {
       "title": "Are you absolutely sure?",
       "description": "This action cannot be undone. This will permanently delete all comments from the selected {{count}} row(s).",
-      "delete": "Delete"
+      "delete": "Delete",
+      "deletePending": "Deleting..."
     },
     "flagDeleteDialog": {
       "title": "Are you absolutely sure?",
       "description": "This action cannot be undone. This will permanently delete all flags from the selected {{count}} row(s).",
-      "delete": "Delete"
+      "delete": "Delete",
+      "deletePending": "Deleting..."
     },
-    "noAnnotations": "No comments or flags yet.",
+    "noAnnotations": "No annotations yet.",
     "noAnnotationsDescription": "Use the buttons above to add one.",
-    "updated": "Comments and flags updated",
+    "updated": "Annotations updated",
     "deleted": {
       "comment": "Comment deleted",
       "comments": "Comments deleted",
       "flag": "Flag deleted",
       "flags": "Flags deleted"
     },
+    "typeLabel": "Annotation Type",
+    "comment": "Comment",
+    "flag": "Flag",
+    "commentText": "Comment",
+    "commentPlaceholder": "Add your comment here...",
+    "flagType": "Flag Type",
+    "selectFlagType": "Select a flag type",
+    "flagTypes": {
+      "outlier": "Outlier",
+      "needs_review": "Needs Review"
+    },
+    "flagReason": "Reason",
+    "flagReasonPlaceholder": "Explain why this data is flagged...",
+    "add": "Add",
+    "adding": "Adding...",
+    "addAnnotation": {
+      "title": "Add Annotation",
+      "description": "Add an annotation to this row."
+    },
+    "addAnnotationBulk": {
+      "title": "Add Annotation to Multiple Rows",
+      "description": "Add the same annotation to {{count}} selected rows."
+    },
     "bulkActions": {
       "actions": "Actions",
       "selected": "selected",
+      "noRowsSelected": "No rows selected",
       "addComment": "Add comment",
       "addFlag": "Add flag",
       "removeAllComments": "Remove all comments",
       "removeAllFlags": "Remove all flags"
     },
-    "details": "Show table details"
+    "details": "Show table details",
+    "you": "You",
+    "unknownUser": "Unknown User",
+    "preview": "Preview",
+    "previewNote": "This is a preview. Your annotation is being processed and will appear permanently soon. Refreshing will hide this preview."
   },
   "landingPage": {
     "latestArticles": "Latest articles"
