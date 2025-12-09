@@ -214,7 +214,7 @@ export default function ColorDimensionConfiguration({
                   {t("configuration.columns.noColorMapping")}
                 </span>
               </SelectItem>
-              {table.columns.map((column) => (
+              {table.columns?.map((column) => (
                 <SelectItem key={column.name} value={column.name}>
                   <div className="flex items-center gap-2">
                     <span>{column.name}</span>
