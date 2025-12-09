@@ -320,9 +320,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     if (silverTables.length === 0) {
       this.logger.warn(`No silver quality tables found for schema ${schemaName}`);
-      return failure(
-        AppError.notFound(`No silver quality tables found for schema ${schemaName}`),
-      );
+      return failure(AppError.notFound(`No silver quality tables found for schema ${schemaName}`));
     }
 
     this.logger.log(
