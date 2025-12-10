@@ -23,7 +23,8 @@ resource "aws_iam_role" "oidc_role" {
             "token.actions.githubusercontent.com:sub" : [
               "repo:${var.repository}:ref:refs/heads/${var.branch}",
               "repo:${var.repository}:pull_request",
-              "repo:${var.repository}:environment:${var.github_environment}"
+              "repo:${var.repository}:environment:${var.github_environment}",
+              "repo:${var.repository}:environment:pr"
             ]
           },
           "StringEquals" : {
