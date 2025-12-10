@@ -4,7 +4,7 @@
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
 %pip install mini-racer==0.12.4
-%pip install /Workspace/Shared/wheels/multispeq-0.3.0-py3-none-any.whl
+%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
 # %pip install /Workspace/Shared/wheels/rpy2-3.6.4-py3-none-any.whl # Disabled R support for now, doesn't really work on serverless compute, maybe on custom clusters
 %pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
@@ -520,7 +520,7 @@ def enriched_{macro_table_name}_table():
     # The annotations column from upstream is already present and will be merged with database annotations
     enriched_df = add_annotation_column(
         enriched_with_user_data_df,
-        "macro_{macro_table_name}",
+        "enriched_macro_{macro_table_name}",
         CATALOG_NAME,
         EXPERIMENT_SCHEMA,
         spark
