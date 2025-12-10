@@ -95,7 +95,7 @@ jobs:
           
       - name: Create Semantic Releases
         id: semantic_release
-        if: steps.check_apps.outputs.app_count != 0
+        if: steps.check_apps.outputs.app_count > 0
         uses: ./.github/actions/semantic-release
         with:
           affected_apps: ${{ steps.filter_apps.outputs.release_apps }}
