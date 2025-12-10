@@ -81,6 +81,8 @@ export default {
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
+          dark: "#011111",
+          light: "#68737B",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

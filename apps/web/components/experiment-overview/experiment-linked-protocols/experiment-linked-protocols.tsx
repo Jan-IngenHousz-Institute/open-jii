@@ -16,11 +16,13 @@ import { ProtocolCard, ProtocolSelector } from "./protocol-card";
 interface ExperimentLinkedProtocolsProps {
   experimentId: string;
   isArchived?: boolean;
+  hasAccess?: boolean;
 }
 
 export function ExperimentLinkedProtocols({
   experimentId,
   isArchived = false,
+  hasAccess = false,
 }: ExperimentLinkedProtocolsProps) {
   const locale = useLocale();
   const { data: flowData, isLoading, error } = useExperimentFlow(experimentId);
@@ -94,10 +96,12 @@ export function ExperimentLinkedProtocols({
               {t("protocols.noFlowYet")}
             </p>
 
-            <Link
-              href={`/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/flow`}
-            >
-              <Button variant="outline" className="bg-surface">
+            <Link href={`/${locale}/platform/experiments/${experimentId}/flow`}>
+              <Button
+                variant="outline"
+                className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
+                disabled={isArchived || !hasAccess}
+              >
                 {t("protocols.createFlow")}
               </Button>
             </Link>
@@ -147,11 +151,12 @@ export function ExperimentLinkedProtocols({
             <p className="text-muted-foreground mb-4 text-center text-sm">
               {t("protocols.noProtocolsLinked")}
             </p>
-            <Link
-              href={`/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/flow`}
-              passHref
-            >
-              <Button variant="outline" className="bg-surface">
+            <Link href={`/${locale}/platform/experiments/${experimentId}/flow`} passHref>
+              <Button
+                variant="outline"
+                className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
+                disabled={isArchived || !hasAccess}
+              >
                 {t("protocols.goToFlow")}
               </Button>
             </Link>

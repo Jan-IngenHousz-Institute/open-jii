@@ -70,7 +70,7 @@ export function ExperimentArchive({ experimentId, isArchived }: ExperimentArchiv
   return (
     <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="bg-surface-dark w-full md:w-fit">
+        <Button variant="outline" className="bg-surface hover:bg-surface-light w-full md:w-fit">
           {isArchived
             ? t("experimentSettings.unarchiveExperiment")
             : t("experimentSettings.archiveExperiment")}

@@ -114,7 +114,7 @@ export function ExperimentTitle({
             onClick={handleTitleCancel}
             disabled={isUpdating}
             data-role="edit-action"
-            className="text-destructive hover:text-destructive/80 disabled:opacity-50"
+            className="hover:bg-badge-featured"
             aria-label="Cancel"
           >
             <X className="h-6 w-6" />
@@ -124,7 +124,7 @@ export function ExperimentTitle({
             onClick={handleTitleSave}
             disabled={isUpdating}
             data-role="edit-action"
-            className="text-primary hover:text-primary/80 disabled:opacity-50"
+            className="text-primary hover:bg-badge-featured"
             aria-label="Save"
           >
             <Check className="h-6 w-6" />
@@ -132,7 +132,7 @@ export function ExperimentTitle({
         </div>
       ) : (
         <CardTitle
-          className={`text-2xl transition-all duration-300 ${hasAccess && !isArchived ? "hover:bg-muted cursor-pointer rounded-md px-1" : ""}`}
+          className={`text-2xl transition-all duration-300 ${hasAccess && !isArchived ? "hover:bg-muted -ml-1 cursor-pointer rounded-md px-1" : ""}`}
           onClick={handleTitleClick}
         >
           {name}
