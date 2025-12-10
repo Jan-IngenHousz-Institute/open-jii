@@ -125,7 +125,7 @@ def sample():
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
     )
     
-    # Process sample data and include questions columns directly
+    # Process sample data and include questions and annotations columns directly
     return (
         base_df
         .select(
@@ -134,6 +134,7 @@ def sample():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("annotations"),
             F.col("user_id"),
             F.col("macros"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
@@ -144,6 +145,7 @@ def sample():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("annotations"),
             F.col("user_id"),
             F.col("macros"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
@@ -361,7 +363,8 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
         "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
-        "processed_timestamp timestamp, macro_output_json string, user_id string"
+        "processed_timestamp timestamp, macro_output_json string, user_id string, "
+        "annotations array<struct<id:string,rowId:string,type:string,content:struct<text:string,flagType:string>,createdBy:string,createdByName:string,createdAt:timestamp,updatedAt:timestamp>>"
     )
     
     # Convert StructType to a string representation for the exec'd code
@@ -399,6 +402,7 @@ def {macro_table_name}_table():
                 "sample": row.get("sample"),
                 "macros": row.get("macros"),
                 "questions": row.get("questions"),
+                "annotations": row.get("annotations"),
                 "user_id": row.get("user_id")
             }}
             input_data = {{k: v for k, v in input_data.items() if v is not None}}
@@ -414,7 +418,7 @@ def {macro_table_name}_table():
                 debug_str = f"error: {{str(e)}}"
             
             # Create result row with base fields only
-            result_row = {{
+            result_row = {
                 "id": row.get("id"),
                 "device_id": row.get("device_id"),
                 "device_name": row.get("device_name"),
@@ -422,8 +426,9 @@ def {macro_table_name}_table():
                 "questions": row.get("questions"),
                 "user_id": row.get("user_id"),
                 "processed_timestamp": pd.Timestamp.now(),
-                "macro_output_json": debug_str
-            }}
+                "macro_output_json": debug_str,
+                "annotations": row.get("annotations")
+            }
             
             results.append(result_row)
         
@@ -432,7 +437,7 @@ def {macro_table_name}_table():
         else:
             # Return empty DataFrame with correct columns
             return pd.DataFrame(columns=[
-                "id", "device_id", "device_name", "timestamp", "questions", "processed_timestamp", "macro_output_json", "user_id"
+                "id", "device_id", "device_name", "timestamp", "questions", "processed_timestamp", "macro_output_json", "user_id", "annotations"
             ])
 
     # Apply the pandas UDF to get the base data with JSON
@@ -463,6 +468,7 @@ def {macro_table_name}_table():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("annotations"),
             F.col("user_id"),
             F.col("processed_timestamp"),
             # Parsed macro fields
@@ -510,7 +516,8 @@ def enriched_{macro_table_name}_table():
     # Add user metadata column and remove the original questions array column
     enriched_with_user_data_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
-    # Add annotation columns
+    # Add annotation columns from database (enrichment UDF)
+    # The annotations column from upstream is already present and will be merged with database annotations
     enriched_df = add_annotation_column(
         enriched_with_user_data_df,
         "macro_{macro_table_name}",
@@ -588,9 +595,8 @@ def enriched_sample():
     # Add user metadata column and remove the original questions array column
     enriched_df = add_user_data_column(sample_with_questions.drop("questions"), ENVIRONMENT, dbutils)
     
-    # Add annotation columns
-    # Note: In streaming context, annotations are added as null columns
-    # The actual join with annotations happens in batch queries on the materialized table
+    # Add annotation columns from database (enrichment UDF)
+    # The annotations column from upstream is already present and will be merged with database annotations
     enriched_df = add_annotation_column(
         enriched_df, 
         SAMPLE_TABLE, 
