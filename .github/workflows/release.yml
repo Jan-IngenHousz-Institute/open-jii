@@ -82,9 +82,20 @@ jobs:
           }
           echo "release_apps=$RELEASE_APPS" >> $GITHUB_OUTPUT
           echo "Filtered apps for release: $RELEASE_APPS"
+      
+      - name: Check if Apps Remain After Filtering
+        id: check_apps
+        run: |
+          RELEASE_APPS='${{ steps.filter_apps.outputs.release_apps }}'
+          APP_COUNT=$(echo "$RELEASE_APPS" | jq 'length')
+          echo "app_count=$APP_COUNT" >> $GITHUB_OUTPUT
+          if [ "$APP_COUNT" -eq 0 ]; then
+            echo "⚠️ No apps to release after filtering @repo/* packages"
+          fi
           
       - name: Create Semantic Releases
         id: semantic_release
+        if: steps.check_apps.outputs.app_count != 0
         uses: ./.github/actions/semantic-release
         with:
           affected_apps: ${{ steps.filter_apps.outputs.release_apps }}
