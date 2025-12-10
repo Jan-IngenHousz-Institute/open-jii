@@ -418,7 +418,7 @@ def {macro_table_name}_table():
                 debug_str = f"error: {{str(e)}}"
             
             # Create result row with base fields only
-            result_row = {
+            result_row = {{
                 "id": row.get("id"),
                 "device_id": row.get("device_id"),
                 "device_name": row.get("device_name"),
@@ -428,7 +428,7 @@ def {macro_table_name}_table():
                 "processed_timestamp": pd.Timestamp.now(),
                 "macro_output_json": debug_str,
                 "annotations": row.get("annotations")
-            }
+            }}
             
             results.append(result_row)
         
