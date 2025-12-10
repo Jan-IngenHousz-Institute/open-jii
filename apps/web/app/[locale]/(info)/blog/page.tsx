@@ -80,28 +80,35 @@ export default async function Page({ params }: LandingPageProps) {
 
   return (
     <TranslationsProvider locale={locale} resources={resources}>
-      <Container>
-        <Link href={`/${locale}/blog/${page.featuredBlogPost.slug}`}>
-          <ArticleHero article={page.featuredBlogPost} />
-        </Link>
-      </Container>
+      <div className="from-jii-bright-green/40 relative isolate overflow-hidden bg-gradient-to-br via-white to-white pb-6">
+        {/* Top fade */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-4 bg-gradient-to-b from-white to-transparent" />
 
-      {/* Tutorial: contentful-and-the-starter-template.md */}
-      {/* Uncomment the line below to make the Greeting field available to render */}
-      {/*<Container>*/}
-      {/*  <div className="my-5 bg-colorTextLightest p-5 text-colorBlueLightest">{page.greeting}</div>*/}
-      {/*</Container>*/}
-
-      <Container className="my-8 md:mb-10 lg:mb-16">
-        <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
-          {t("landingPage.latestArticles")}
-        </h2>
-        <ArticleTileGrid
-          className="md:grid-cols-2 lg:grid-cols-3"
-          articles={posts}
-          locale={locale}
+        {/* Background skew block */}
+        <div
+          aria-hidden="true"
+          className="shadow-primary/10 ring-jii-bright-green/20 absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
         />
-      </Container>
+
+        <div className="py-12">
+          <Container>
+            <Link href={`/${locale}/blog/${page.featuredBlogPost.slug}`}>
+              <ArticleHero article={page.featuredBlogPost} isFeatured={true} />
+            </Link>
+          </Container>
+
+          <Container className="my-8">
+            <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
+              {t("landingPage.latestArticles")}
+            </h2>
+            <ArticleTileGrid
+              className="md:grid-cols-2 lg:grid-cols-3"
+              articles={posts}
+              locale={locale}
+            />
+          </Container>
+        </div>
+      </div>
     </TranslationsProvider>
   );
 }

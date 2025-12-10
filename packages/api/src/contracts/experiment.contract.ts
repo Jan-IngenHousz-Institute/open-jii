@@ -32,6 +32,13 @@ import {
   zPlaceSearchResponse,
   zGeocodeQuery,
   zGeocodeResponse,
+  zAddAnnotationBody,
+  zAnnotationPathParam,
+  zAddAnnotationsBulkBody,
+  zUpdateAnnotationBody,
+  zAnnotationDeleteBulkPathParam,
+  zAnnotationDeleteBulkBody,
+  zAnnotationRowsAffected,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -479,5 +486,70 @@ export const experimentContract = c.router({
     },
     summary: "Delete experiment visualization",
     description: "Permanently deletes a visualization",
+  },
+
+  // Annotation endpoints
+  addAnnotation: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/data/annotations",
+    pathParams: zIdPathParam,
+    body: zAddAnnotationBody,
+    responses: {
+      201: zAnnotationRowsAffected,
+      400: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Add annotation to experiment data",
+  },
+
+  addAnnotationsBulk: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/data/annotations/bulk",
+    pathParams: zIdPathParam,
+    body: zAddAnnotationsBulkBody,
+    responses: {
+      201: zAnnotationRowsAffected,
+      400: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Add multiple annotations to experiment data",
+  },
+
+  updateAnnotation: {
+    method: "PATCH",
+    path: "/api/v1/experiments/:id/data/annotations/:annotationId",
+    pathParams: zAnnotationPathParam,
+    body: zUpdateAnnotationBody,
+    responses: {
+      204: zAnnotationRowsAffected,
+      404: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Update annotation",
+  },
+
+  deleteAnnotation: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/data/annotations/:annotationId",
+    pathParams: zAnnotationPathParam,
+    responses: {
+      204: zAnnotationRowsAffected,
+      404: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Delete annotation",
+  },
+
+  deleteAnnotationsBulk: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/data/annotations/bulk-delete",
+    pathParams: zAnnotationDeleteBulkPathParam,
+    body: zAnnotationDeleteBulkBody,
+    responses: {
+      204: zAnnotationRowsAffected,
+      404: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Delete multiple annotations",
   },
 });

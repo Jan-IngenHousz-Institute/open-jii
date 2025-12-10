@@ -1,4 +1,5 @@
 import React from "react";
+import { useExperimentAnnotationDeleteBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk";
 
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -19,8 +20,8 @@ export interface DeleteAnnotationsDialogProps {
   tableName: string;
   rowIds: string[];
   type: AnnotationType;
-  bulkOpen: boolean;
-  setBulkOpen: (value: React.SetStateAction<boolean>) => void;
+  open: boolean;
+  setOpen: (value: React.SetStateAction<boolean>) => void;
   clearSelection: () => void;
 }
 
@@ -29,23 +30,27 @@ export function DeleteAnnotationsDialog({
   tableName,
   rowIds,
   type,
-  bulkOpen,
-  setBulkOpen,
+  open,
+  setOpen,
   clearSelection,
 }: DeleteAnnotationsDialogProps) {
+  const { mutateAsync: deleteAnnotationsBulk, isPending } = useExperimentAnnotationDeleteBulk();
   const { t } = useTranslation();
   const count = rowIds.length;
+  const isPendingSuffix = isPending ? "Pending" : "";
 
-  function onDelete() {
-    // TODO: Implement API call to delete annotations and remove logging statement
-    console.log("onSubmit", { experimentId, tableName, rowIds, type });
+  async function onDelete() {
+    await deleteAnnotationsBulk({
+      params: { id: experimentId },
+      body: { tableName, rowIds, type },
+    });
     toast({ description: t(`experimentDataAnnotations.deleted.${type}s`) });
     clearSelection();
-    setBulkOpen(false);
+    setOpen(false);
   }
 
   return (
-    <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t(`experimentDataAnnotations.${type}DeleteDialog.title`)}</DialogTitle>
@@ -57,8 +62,8 @@ export function DeleteAnnotationsDialog({
           <DialogClose asChild>
             <Button variant="outline">{t("common.cancel")}</Button>
           </DialogClose>
-          <Button type="submit" onClick={onDelete}>
-            {t(`experimentDataAnnotations.${type}DeleteDialog.delete`)}
+          <Button type="submit" onClick={onDelete} disabled={isPending}>
+            {t(`experimentDataAnnotations.${type}DeleteDialog.delete${isPendingSuffix}`)}
           </Button>
         </DialogFooter>
       </DialogContent>

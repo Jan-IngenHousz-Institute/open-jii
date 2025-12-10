@@ -72,7 +72,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
           {/* OpenJII Brand/Description aligned left */}
           <div className="flex flex-col items-start">
             <Image
-              src="/openJII-logo-BW-horizontal-white.svg"
+              src="/openJII-logo-BW-horizontal-white.png"
               alt="OpenJII Logo"
               width={140}
               height={80}

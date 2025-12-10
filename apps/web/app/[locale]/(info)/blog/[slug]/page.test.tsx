@@ -244,7 +244,7 @@ describe("BlogSlugPage", () => {
 
       render(await BlogSlugPage(defaultProps));
 
-      expect(screen.getByTestId("article-tile-grid")).toHaveTextContent("0 related articles");
+      expect(screen.queryByTestId("article-tile-grid")).not.toBeInTheDocument();
     });
 
     it("displays related articles from the blog post data", async () => {

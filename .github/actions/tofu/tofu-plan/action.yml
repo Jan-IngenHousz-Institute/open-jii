@@ -6,4 +6,6 @@ runs:
     - name: OpenTofu Plan
       shell: bash
       working-directory: infrastructure/env/${{ env.environment }}
-      run: tofu plan -no-color
+      run: |
+        exec 2>&1
+        tofu plan -no-color

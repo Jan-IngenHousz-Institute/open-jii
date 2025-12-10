@@ -47,39 +47,36 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
         });
 
         return (
-          <div key={feature.sys.id} className="relative">
-            <dt
-              className="ml-9 inline-block font-semibold text-white"
-              {...featureInspectorProps({ fieldId: "title" })}
+          <div key={feature.sys.id} className="flex items-start space-x-2">
+            {/* Icon */}
+            <div
+              className="-mt-2.5 flex h-12 w-12 shrink-0 items-center justify-center"
+              {...featureInspectorProps({ fieldId: "icon" })}
             >
-              {/* Icon */}
-              <div className="absolute left-1 inline-flex h-6 w-6 items-center justify-center">
-                {feature.icon?.url ? (
-                  <Image
-                    src={feature.icon.url}
-                    alt={feature.icon.title ?? "Feature icon"}
-                    width={24}
-                    height={24}
-                    className="h-6 w-6"
-                    {...featureInspectorProps({ fieldId: "icon" })}
-                  />
-                ) : (
-                  <span className="h-6 w-6" />
-                )}
-              </div>
+              {feature.icon?.url && (
+                <Image
+                  src={feature.icon.url}
+                  alt={feature.icon.title ?? "Feature icon"}
+                  width={80}
+                  height={80}
+                  className="h-10 w-10"
+                />
+              )}
+            </div>
 
-              {/* Feature Title */}
-              {feature.title}
-            </dt>
+            {/* Text content */}
+            <div>
+              <h3
+                className="text-lg font-semibold text-white"
+                {...featureInspectorProps({ fieldId: "title" })}
+              >
+                {feature.title}
+              </h3>
 
-            {/* Feature Subtitle */}
-            <dd
-              className="inline text-gray-300"
-              {...featureInspectorProps({ fieldId: "subtitle" })}
-            >
-              {" "}
-              {feature.subtitle}
-            </dd>
+              <p className="mt-1 text-gray-300" {...featureInspectorProps({ fieldId: "subtitle" })}>
+                {feature.subtitle}
+              </p>
+            </div>
           </div>
         );
       });

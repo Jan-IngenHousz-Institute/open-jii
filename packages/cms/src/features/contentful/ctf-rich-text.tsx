@@ -80,6 +80,24 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
       <blockquote className="my-8 border-l-4 border-gray-300/70 pl-6">{children}</blockquote>
     ),
 
+    // Tables
+    [BLOCKS.TABLE]: (node: Node, children: React.ReactNode) => (
+      <div className="my-6 overflow-x-auto">
+        <table className="min-w-full border-collapse border border-gray-300">
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    ),
+    [BLOCKS.TABLE_ROW]: (node: Node, children: React.ReactNode) => <tr>{children}</tr>,
+    [BLOCKS.TABLE_HEADER_CELL]: (node: Node, children: React.ReactNode) => (
+      <th className="border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold">
+        {children}
+      </th>
+    ),
+    [BLOCKS.TABLE_CELL]: (node: Node, children: React.ReactNode) => (
+      <td className="border border-gray-300 px-4 py-2">{children}</td>
+    ),
+
     // Inline hyperlinks
     [INLINES.HYPERLINK]: (node: Node, children: React.ReactNode) => {
       const uri = (node.data as { uri?: string })?.uri ?? "#";
@@ -88,7 +106,7 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
           href={uri}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-emerald-700 hover:underline"
+          className="text-primary hover:underline"
         >
           {children}
         </Link>

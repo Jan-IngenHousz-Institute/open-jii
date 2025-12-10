@@ -1,7 +1,16 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { User, Home, BookOpen, LogOut, Menu, Sprout, MessageCircleQuestion } from "lucide-react";
+import {
+  User,
+  Home,
+  BookOpen,
+  LogOut,
+  Menu,
+  Sprout,
+  MessageCircleQuestion,
+  ChevronDown,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,22 +50,23 @@ function UserMenu({
   displayName: string;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
 
   if (!session?.user) {
     return null;
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="flex gap-2"
+          className="group flex gap-2 hover:bg-transparent focus:bg-transparent"
           aria-label={t("auth.userMenu", "User menu")}
         >
           {session.user.image ? (
-            <Avatar className="h-6 w-6">
+            <Avatar className="group-hover:bg-jii-medium-green/20 h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_theme(colors.jii-medium-green)]">
               <AvatarImage src={session.user.image} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
@@ -65,7 +75,9 @@ function UserMenu({
           ) : (
             <User className="h-4 w-4" />
           )}
-          <span className="hidden max-w-32 truncate sm:inline">{displayName}</span>
+          <ChevronDown
+            className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -158,7 +170,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         href: `/${locale}`,
         label: t("navigation.home", "Home"),
         icon: Home,
-        isActive: pathname === `/${locale}`,
+        isActive: pathname === `/${locale}` || pathname === `/${locale}/`,
       },
       {
         href: `/${locale}/about`,
@@ -193,7 +205,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     [locale, t, pathname],
   );
 
-  const isLightMode =
+  const isGreenMode =
     pathname.startsWith(`/${locale}/about`) ||
     pathname.startsWith(`/${locale}/blog`) ||
     pathname.startsWith(`/${locale}/faq`) ||
@@ -205,7 +217,6 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     {
       variants: {
         mode: {
-          light: "bg-white/60 backdrop-blur-md border-b border-white/60",
           dark: "bg-gradient-to-b from-black/80 to-transparent",
           green: "bg-sidebar border-b border-white/40 shadow-lg",
         },
@@ -216,31 +227,20 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     },
   );
 
-  const getNavbarMode = (): "light" | "dark" | "green" => {
-    if (isHomePage && !isIntersecting) {
+  const getNavbarMode = (): "dark" | "green" => {
+    if ((isHomePage && !isIntersecting) || isGreenMode) {
       return "green";
-    }
-    if (isLightMode) {
-      return "light";
     }
     return "dark";
   };
 
   return (
     <header className={navbarBackgroundVariants({ mode: getNavbarMode() })}>
-      <nav
-        className={`font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 ${
-          isLightMode ? "text-black" : "text-white"
-        }`}
-      >
+      <nav className="font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 text-white">
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
-            src={
-              isLightMode
-                ? "/openJII-logo-vertical-yellow.svg"
-                : "/openJII-logo-BW-vertical-white.svg"
-            }
+            src="/openJII-logo-BW-vertical-white.png"
             alt="openJII logo"
             width={210}
             height={52}
@@ -255,22 +255,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
 
             // Remove hover effect for selected (active) nav item
             const linkClass = item.isActive
-              ? `flex items-center space-x-2 text-sm font-medium ${
-                  isLightMode ? "text-primary font-bold" : "text-jii-bright-green font-bold"
-                }`
-              : `flex items-center space-x-2 text-sm font-medium transition-colors ${
-                  isLightMode
-                    ? "text-muted-foreground hover:text-primary"
-                    : "text-white hover:text-jii-medium-green"
-                }`;
+              ? "flex items-center space-x-2 text-sm font-medium text-jii-bright-green font-bold"
+              : "flex items-center space-x-2 text-sm font-medium transition-colors text-white hover:text-jii-medium-green";
 
             const iconClass = item.isActive
-              ? isLightMode
-                ? "h-4 w-4 text-jii-dark-green"
-                : "h-4 w-4 text-jii-bright-green"
-              : isLightMode
-                ? "h-4 w-4 text-muted-foreground group-hover:text-primary"
-                : "h-4 w-4 text-white group-hover:text-jii-medium-green";
+              ? "h-4 w-4 text-jii-bright-green"
+              : "h-4 w-4 text-white group-hover:text-jii-medium-green";
 
             return (
               <Link
@@ -302,8 +292,9 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   variant="ghost"
                   size="sm"
                   aria-label={t("navigation.menu", "Navigation menu")}
+                  className="group hover:bg-transparent focus:bg-transparent"
                 >
-                  <Menu className="h-4 w-4" />
+                  <Menu className="group-hover:text-jii-medium-green h-4 w-4 text-white transition-colors duration-200" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="font-notosans w-56">

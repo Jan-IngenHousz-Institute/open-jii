@@ -304,19 +304,24 @@ export class DatabricksPipelinesService {
         // Prepare request body based on provided parameters
         const requestBody: Record<string, unknown> = {};
 
+        if (params.cause !== undefined) {
+          requestBody.cause = params.cause;
+        }
+
         if (params.fullRefresh !== undefined) {
           requestBody.full_refresh = params.fullRefresh;
         }
 
-        if (params.refreshSelection) {
-          requestBody.refresh_selection = {
-            refresh_all_data: params.refreshSelection.refreshAllData,
-            dataset_names: params.refreshSelection.datasetNames,
-          };
+        if (params.fullRefreshSelection !== undefined && params.fullRefreshSelection.length > 0) {
+          requestBody.full_refresh_selection = params.fullRefreshSelection;
         }
 
-        if (params.parameters) {
-          requestBody.parameters = params.parameters;
+        if (params.refreshSelection !== undefined && params.refreshSelection.length > 0) {
+          requestBody.refresh_selection = params.refreshSelection;
+        }
+
+        if (params.validateOnly !== undefined) {
+          requestBody.validate_only = params.validateOnly;
         }
 
         const result = await tryCatch(

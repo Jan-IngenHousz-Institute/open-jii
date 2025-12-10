@@ -4,7 +4,7 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
@@ -62,12 +62,12 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
         {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
         <Button
-          className="text-primary bg-badge-featured rounded-md px-5 py-6 text-sm font-semibold shadow transition hover:bg-white"
+          className="text-primary bg-badge-featured group rounded-md px-5 py-6 text-sm font-semibold shadow transition-all duration-300 ease-out hover:scale-[1.03] hover:bg-white"
           {...buttonInspectorProps({ fieldId: "label" })}
         >
           <div className="flex items-center space-x-2">
             <span>{button.label}</span>
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4 transform transition-transform duration-300 ease-out group-hover:translate-x-1" />
           </div>
         </Button>
       </Link>
@@ -137,6 +137,11 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
               renderButton(currentHero.buttonsCollection.items[0])}
           </div>
         </div>
+      </div>
+
+      {/* Bouncing down arrow */}
+      <div className="absolute inset-x-0 bottom-8 flex animate-bounce justify-center">
+        <ChevronDown className="mx-auto h-8 w-8 text-white" />
       </div>
     </section>
   );
