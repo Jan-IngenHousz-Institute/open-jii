@@ -14,7 +14,7 @@ export default {
       '@semantic-release/exec',
       {
         // Generate release summary JSON for deployment workflows
-        prepareCmd: `echo "\${nextRelease.notes}" | jq -Rs --arg app "backend" --arg version "\${nextRelease.version}" --arg tag "backend-v\${nextRelease.version}" '{app: $app, version: $version, tag: $tag, changelog: .}' > ../../release-summary-backend.json`,
+        prepareCmd: `printf '%s' "\${nextRelease.notes}" | jq -Rs --arg app "backend" --arg version "\${nextRelease.version}" --arg tag "backend-v\${nextRelease.version}" '{app: $app, version: $version, tag: $tag, changelog: .}' > ../../release-summary-backend.json`,
       },
     ],
   ],

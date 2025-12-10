@@ -81,10 +81,21 @@ runs:
           
           if [ "$DRY_RUN" = "true" ]; then
             echo "🔍 DRY RUN MODE - Preview only"
-            ../../tooling/release/node_modules/.bin/semantic-release --dry-run 2>&1 | tee release-output.txt || true
+            ../../tooling/release/node_modules/.bin/semantic-release --dry-run 2>&1 | tee release-output.txt
+            RELEASE_EXIT_CODE=$?
           else
             echo "🚀 Creating release..."
-            ../../tooling/release/node_modules/.bin/semantic-release 2>&1 | tee release-output.txt || true
+            ../../tooling/release/node_modules/.bin/semantic-release 2>&1 | tee release-output.txt
+            RELEASE_EXIT_CODE=$?
+          fi
+          
+          # Check if semantic-release failed
+          if [ $RELEASE_EXIT_CODE -ne 0 ]; then
+            echo "❌ semantic-release failed for $APP with exit code $RELEASE_EXIT_CODE"
+            cat release-output.txt
+            rm -f release-output.txt
+            cd ../..
+            exit $RELEASE_EXIT_CODE
           fi
           
           # Capture release info
