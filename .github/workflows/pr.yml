@@ -179,7 +179,7 @@ jobs:
     name: OpenTofu
     needs: build_lint_test
     runs-on: ubuntu-latest
-    environment: dev
+    environment: pr
     concurrency:
       group: opentofu-dev
       cancel-in-progress: false
