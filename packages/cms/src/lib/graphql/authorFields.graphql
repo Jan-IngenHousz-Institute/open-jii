@@ -4,6 +4,7 @@ fragment AuthorFields on ComponentAuthor {
     id
   }
   name
+  profession
   avatar {
     ...ImageFields
   }
