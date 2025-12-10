@@ -76,7 +76,10 @@ jobs:
         run: |
           # Filter out @repo/* packages - only keep actual apps (backend, web, mobile, docs)
           AFFECTED_APPS='${{ needs.detect.outputs.affected_apps }}'
-          RELEASE_APPS=$(echo "$AFFECTED_APPS" | jq -c '[.[] | select(startswith("@repo/") | not)]')
+          RELEASE_APPS=$(echo "$AFFECTED_APPS" | jq -c '[.[] | select(startswith("@repo/") | not)]') || {
+            echo "Error: Failed to filter apps"
+            exit 1
+          }
           echo "release_apps=$RELEASE_APPS" >> $GITHUB_OUTPUT
           echo "Filtered apps for release: $RELEASE_APPS"
           
