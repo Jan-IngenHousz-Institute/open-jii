@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { sql } from "drizzle-orm";
+
 import { db } from "../src/database";
 import { experiments } from "../src/schema";
 
@@ -79,8 +80,9 @@ export default async function setLocalConstants() {
       });
     }
 
-    console.log("\nSetup complete! All new experiments will automatically get the local constants.");
-
+    console.log(
+      "\nSetup complete! All new experiments will automatically get the local constants.",
+    );
   } catch (error) {
     console.error("Error setting up local constants:", error);
     throw error;
@@ -88,6 +90,4 @@ export default async function setLocalConstants() {
 }
 
 // Auto-run when executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  setLocalConstants().catch(console.error);
-}
+setLocalConstants().catch(console.error);
