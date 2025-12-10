@@ -107,25 +107,35 @@ export function ExperimentDescription({
             onChange={setEditedDescription}
             placeholder={t("form.descriptionPlaceholder")}
             isDisabled={isUpdating}
+            autoFocus
+            onBlur={(e: React.FocusEvent) => {
+              const next = e.relatedTarget as HTMLElement | null;
+
+              if (next?.dataset.role === "edit-action") return;
+
+              handleDescriptionCancel();
+            }}
           />
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              onClick={handleDescriptionSave}
-              disabled={isUpdating}
-              className="text-primary hover:text-primary/80 disabled:opacity-50"
-            >
-              <Check className="mr-2 h-4 w-4" />
-              Save
-            </Button>
-            <Button
-              variant="outline"
               onClick={handleDescriptionCancel}
               disabled={isUpdating}
+              data-role="edit-action"
               className="text-destructive hover:text-destructive/80 disabled:opacity-50"
             >
               <X className="mr-2 h-4 w-4" />
-              Cancel
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDescriptionSave}
+              disabled={isUpdating}
+              data-role="edit-action"
+              className="text-primary hover:text-primary/80 disabled:opacity-50"
+            >
+              <Check className="mr-2 h-4 w-4" />
+              {t("save")}
             </Button>
           </div>
         </div>

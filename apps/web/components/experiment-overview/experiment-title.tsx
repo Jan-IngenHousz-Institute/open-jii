@@ -101,24 +101,33 @@ export function ExperimentTitle({
             className="text-2xl font-semibold"
             disabled={isUpdating}
             autoFocus
+            onBlur={(e) => {
+              const next = e.relatedTarget as HTMLElement | null;
+
+              if (next?.dataset.role === "edit-action") return;
+
+              handleTitleCancel();
+            }}
           />
-          <Button
-            variant="outline"
-            onClick={handleTitleSave}
-            disabled={isUpdating}
-            className="text-primary hover:text-primary/80 disabled:opacity-50"
-            aria-label="Save"
-          >
-            <Check className="h-6 w-6" />
-          </Button>
           <Button
             variant="outline"
             onClick={handleTitleCancel}
             disabled={isUpdating}
+            data-role="edit-action"
             className="text-destructive hover:text-destructive/80 disabled:opacity-50"
             aria-label="Cancel"
           >
             <X className="h-6 w-6" />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleTitleSave}
+            disabled={isUpdating}
+            data-role="edit-action"
+            className="text-primary hover:text-primary/80 disabled:opacity-50"
+            aria-label="Save"
+          >
+            <Check className="h-6 w-6" />
           </Button>
         </div>
       ) : (
