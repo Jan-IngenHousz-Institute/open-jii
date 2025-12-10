@@ -132,7 +132,7 @@ export function ExperimentVisibilityForm({
                           variant="outline"
                           disabled={isArchived || isSavingEmbargo}
                           className={cn(
-                            "w-full justify-between font-normal",
+                            "hover:bg-surface-light w-full justify-between font-normal disabled:hover:bg-transparent",
                             !selectedDate && "text-muted-foreground",
                           )}
                         >
