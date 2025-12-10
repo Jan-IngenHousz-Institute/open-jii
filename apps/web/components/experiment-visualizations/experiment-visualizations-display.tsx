@@ -15,6 +15,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  Skeleton,
 } from "@repo/ui/components";
 
 import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
@@ -74,9 +75,7 @@ export default function ExperimentVisualizationsDisplay({
           <CardTitle>{t("ui.title")}</CardTitle>
           <CardDescription>{t("selector.noVisualizations")}</CardDescription>
         </div>
-        <div className="animate-pulse space-y-2">
-          <div className="h-[250px] rounded bg-gray-200"></div>
-        </div>
+        <Skeleton className="h-[250px]" />
       </div>
     );
   }
@@ -88,7 +87,7 @@ export default function ExperimentVisualizationsDisplay({
           <CardTitle>{t("ui.title")}</CardTitle>
           <CardDescription>{t("selector.noVisualizations")}</CardDescription>
         </div>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
               <svg
@@ -119,7 +118,7 @@ export default function ExperimentVisualizationsDisplay({
                 href={`/en-US/platform/experiments/${experimentId}/analysis/visualizations`}
                 passHref
               >
-                <Button variant="outline" className="bg-surface hover:bg-surface-ligh">
+                <Button variant="outline" className="bg-surface hover:bg-surface-light">
                   {t("selector.createVisualization")}
                 </Button>
               </Link>
@@ -135,7 +134,7 @@ export default function ExperimentVisualizationsDisplay({
       <div className="p-0">
         <CardTitle>{t("ui.title")}</CardTitle>
       </div>
-      <Card>
+      <Card className="shadow-none">
         <CardContent className="space-y-6 pt-6">
           <div>
             <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
