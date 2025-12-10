@@ -6,4 +6,4 @@ runs:
     - name: OpenTofu Apply
       shell: bash
       working-directory: infrastructure/env/${{ env.environment }}
-      run: tofu apply -auto-approve -no-color
+      run: tofu apply -auto-approve
