@@ -8,4 +8,4 @@ runs:
       working-directory: infrastructure/env/${{ env.environment }}
       run: |
         exec 2>&1
-        tofu plan -no-color
+        tofu plan 
