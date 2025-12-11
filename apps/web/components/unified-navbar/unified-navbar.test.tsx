@@ -156,6 +156,8 @@ vi.mock("lucide-react", () => {
     Menu: Icon,
     LogIn: Icon,
     Sprout: Icon,
+    MessageCircleQuestion: Icon,
+    ChevronDown: Icon,
   };
 });
 
@@ -264,9 +266,13 @@ describe("<UnifiedNavbar />", () => {
 
     const trigger = screen.getAllByTestId("dropdown-trigger")[0];
 
-    expect(within(trigger).getByText("Ada Lovelace")).toBeInTheDocument();
-    const avatarImage = screen.getAllByTestId("avatar-image")[0];
+    // Avatar should be in the trigger
+    const avatarImage = within(trigger).getByTestId("avatar-image");
     expect(avatarImage).toHaveAttribute("src", "https://example.com/ada.png");
+
+    // Display name should be in the dropdown content
+    const dropdownContent = screen.getAllByTestId("dropdown-content")[0];
+    expect(within(dropdownContent).getByText("Ada Lovelace")).toBeInTheDocument();
   });
 
   it("renders account + sign out entries inside desktop dropdown content", () => {
@@ -285,7 +291,7 @@ describe("<UnifiedNavbar />", () => {
     expect(signOutLink).toBeInTheDocument();
   });
 
-  it("navigates to logout API route when sign out is clicked", () => {
+  it("navigates to signout page when sign out is clicked", () => {
     renderNavbar({
       locale: "en-US",
       pathname: "/en-US/blog",
@@ -295,10 +301,10 @@ describe("<UnifiedNavbar />", () => {
     const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
     const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
 
-    expect(signOutLink).toHaveAttribute("href", "/api/auth/logout");
+    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
   });
 
-  it("navigates to logout API route when currently on /platform", () => {
+  it("navigates to signout page when currently on /platform", () => {
     renderNavbar({
       locale: "en-US",
       pathname: "/en-US/platform",
@@ -308,11 +314,100 @@ describe("<UnifiedNavbar />", () => {
     const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
     const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
 
-    expect(signOutLink).toHaveAttribute("href", "/api/auth/logout");
+    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
   });
 
   it("mobile menu trigger is present (icon button)", () => {
     renderNavbar({ locale: "en-US", pathname: "/en-US" });
     expect(screen.getByRole("button", { name: /Navigation menu/i })).toBeInTheDocument();
+  });
+
+  it("applies overlay/transparent navbar on platform-related pages", () => {
+    renderNavbar({ locale: "en-US", pathname: "/en-US/platform" });
+
+    const header = screen.getByRole("banner");
+    expect(header.className).toMatch(/from-black\/80/); // overlay gradient
+  });
+
+  it("uses dark gradient mode on non-light, non-overlay routes", () => {
+    renderNavbar({ locale: "en-US", pathname: "/en-US/some-random-page" });
+
+    const header = screen.getByRole("banner");
+    expect(header.className).toMatch(/from-black\/80/);
+  });
+
+  it("renders mobile auth section correctly when logged in", () => {
+    renderNavbar({
+      locale: "en-US",
+      pathname: "/en-US",
+      session: makeSession(),
+    });
+
+    const dropdown = screen.getAllByTestId("dropdown-content")[0];
+
+    expect(within(dropdown).getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(within(dropdown).getByTestId("avatar-image")).toBeInTheDocument();
+  });
+
+  it("sets up intersection observer when isHomePage is true", () => {
+    const observeMock = vi.fn();
+    const unobserveMock = vi.fn();
+    const mockIntersectionObserver = vi.fn(() => ({
+      observe: observeMock,
+      unobserve: unobserveMock,
+      disconnect: vi.fn(),
+    }));
+
+    vi.stubGlobal("IntersectionObserver", mockIntersectionObserver);
+
+    // Create a mock hero section
+    const heroSection = document.createElement("section");
+    const main = document.createElement("main");
+    main.appendChild(heroSection);
+    document.body.appendChild(main);
+
+    const { unmount } = render(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
+      >
+        <UnifiedNavbar locale="en-US" session={null} isHomePage={true} />
+      </QueryClientProvider>,
+    );
+
+    expect(mockIntersectionObserver).toHaveBeenCalledWith(expect.any(Function), {
+      threshold: 0,
+      rootMargin: "-64px 0px 0px 0px",
+    });
+    expect(observeMock).toHaveBeenCalledWith(heroSection);
+
+    unmount();
+    expect(unobserveMock).toHaveBeenCalledWith(heroSection);
+
+    // Cleanup
+    document.body.removeChild(main);
+    vi.unstubAllGlobals();
+  });
+
+  it("renders mobile navigation links with active state", () => {
+    renderNavbar({
+      locale: "en-US",
+      pathname: "/en-US/about",
+    });
+
+    const mobileDropdowns = screen.getAllByTestId("dropdown-content");
+    const mobileDropdown = mobileDropdowns[mobileDropdowns.length - 1];
+
+    const mobileLinks = within(mobileDropdown).getAllByRole("link");
+
+    const aboutLink = mobileLinks.find((link) => link.textContent?.includes("About"));
+    expect(aboutLink).toHaveAttribute("aria-current", "page");
+    expect(aboutLink).toHaveClass("bg-accent");
+
+    const homeLink = mobileLinks.find((link) => link.textContent?.includes("Home"));
+    expect(homeLink).not.toHaveAttribute("aria-current");
   });
 });

@@ -23,6 +23,24 @@ fragment PageHomeMissionFields on PageHomeMission {
       environmentId
     }
   }
+  imagesCollection {
+    items {
+      ...ImageFields
+    }
+  }
+}
+
+fragment ImageFields on Asset {
+  __typename
+  sys {
+    id
+  }
+  title
+  description
+  width
+  height
+  url
+  contentType
 }
 
 query pageHomeMission($locale: String, $preview: Boolean) {

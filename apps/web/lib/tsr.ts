@@ -1,8 +1,8 @@
-import { tsRestFetchApi } from "@ts-rest/core";
+import { initContract, tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 
-import { contract } from "@repo/api";
+import { experimentContract, macroContract, protocolContract, userContract } from "@repo/api";
 
 const customApiFetcher = async (args: ApiFetcherArgs) => {
   const enhancedHeaders = {
@@ -14,6 +14,17 @@ const customApiFetcher = async (args: ApiFetcherArgs) => {
     headers: enhancedHeaders,
   });
 };
+
+// Initialize the main contract
+const c = initContract();
+
+// Export the main API contract
+export const contract = c.router({
+  experiments: experimentContract,
+  macros: macroContract,
+  protocols: protocolContract,
+  users: userContract,
+});
 
 export const tsr = initTsrReactQuery(contract, {
   baseUrl: "http://localhost:3020",

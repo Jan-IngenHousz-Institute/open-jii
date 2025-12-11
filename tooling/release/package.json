@@ -1,0 +1,19 @@
+{
+  "name": "@open-jii/release-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Release automation tools for Open-JII monorepo",
+  "scripts": {
+    "release": "semantic-release"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.0",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "semantic-release": "^24.2.0",
+    "semantic-release-monorepo": "^8.0.2"
+  }
+}

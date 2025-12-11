@@ -5,7 +5,6 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import type { Document } from "@contentful/rich-text-types";
-import { Globe } from "lucide-react";
 import Image from "next/image";
 import React from "react";
 
@@ -36,64 +35,78 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
     entryId: currentMission?.sys?.id,
     locale,
   });
+
+  const images = currentMission.imagesCollection?.items?.filter((img) => !!img?.url) ?? [];
+
   return (
-    <section className="mx-auto mt-16 flex w-full max-w-7xl flex-col items-center gap-12 rounded-3xl border border-white/20 bg-white/60 p-12 shadow-2xl backdrop-blur-sm md:flex-row md:items-stretch md:gap-16">
-      <div className="flex-1 text-left">
-        <h2
-          className="from-jii-medium-green to-jii-dark-green mb-6 bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent"
-          {...inspectorProps({ fieldId: "title" })}
-        >
-          {currentMission.title}
-        </h2>
-
-        {/* About Rich Text */}
-        {currentMission.about?.json && (
-          <div className="mb-8 text-lg" {...inspectorProps({ fieldId: "about" })}>
-            <CtfRichText json={currentMission.about.json as Document} />
-          </div>
-        )}
-
-        {/* Mission Section */}
-        <div className="rounded-2xl border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-50 to-blue-50 p-8">
-          <h3
-            className="mb-4 flex items-center space-x-2 text-2xl font-bold text-emerald-700"
+    <div className="bg-white py-16">
+      <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
+        {/* --- TOP TITLE SECTION --- */}
+        <div className="max-w-4xl">
+          <h1
+            className="mt-2 text-pretty text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl"
             {...inspectorProps({ fieldId: "subtitle" })}
           >
-            <Globe className="h-6 w-6" />
-            <span>{currentMission.subtitle}</span>
-          </h3>
+            {currentMission.subtitle}
+          </h1>
 
           {currentMission.mission?.json && (
             <div
-              className="font-medium leading-relaxed text-gray-700"
+              className="mt-6 text-xl leading-8 text-gray-700"
               {...inspectorProps({ fieldId: "mission" })}
             >
               <CtfRichText json={currentMission.mission.json as Document} />
             </div>
           )}
         </div>
-      </div>
 
-      {/* Image section */}
-      {currentMission.image?.url && (
-        <div className="w-full md:flex-1">
-          <div
-            className="group relative h-full overflow-hidden rounded-2xl"
-            {...inspectorProps({ fieldId: "image" })}
-          >
-            <div className="h-full w-full">
-              <Image
-                src={currentMission.image.url}
-                alt={currentMission.image.title ?? "Scientific research and collaboration"}
-                width={600}
-                height={400}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/20 to-transparent"></div>
+        {/* --- GRID SECTION (TEXT + IMAGES) --- */}
+        <section className="mt-20 grid grid-cols-1 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-16">
+          {/* --- LEFT COLUMN: SUBTITLE + MISSION --- */}
+          <div className="lg:pr-8">
+            <h2
+              className="text-pretty text-3xl font-semibold tracking-tight text-gray-900"
+              {...inspectorProps({ fieldId: "title" })}
+            >
+              {currentMission.title}
+            </h2>
+
+            {currentMission.about?.json && (
+              <div
+                className="mt-6 text-lg leading-7 text-gray-600"
+                {...inspectorProps({ fieldId: "about" })}
+              >
+                <CtfRichText json={currentMission.about.json as Document} />
+              </div>
+            )}
           </div>
-        </div>
-      )}
-    </section>
+
+          {/* --- RIGHT COLUMN: IMAGE GRID --- */}
+          <div className="overflow-hidden pt-16 lg:row-span-2 lg:-mr-16 lg:overflow-visible xl:mr-auto">
+            <div
+              className="-mx-8 grid grid-cols-2 gap-4 sm:-mx-16 sm:grid-cols-4 lg:mx-0 lg:grid-cols-2 xl:gap-8"
+              {...inspectorProps({ fieldId: "images" })}
+            >
+              {images.map((img, index) => (
+                <div
+                  key={img?.sys.id}
+                  className={`aspect-square overflow-hidden rounded-xl shadow-xl outline outline-1 -outline-offset-1 outline-black/10 ${index % 2 === 1 ? "-mt-8 lg:-mt-40" : ""} `}
+                >
+                  {img?.url && (
+                    <Image
+                      src={img.url}
+                      alt={img.title ?? `Mission image ${index + 1}`}
+                      width={560}
+                      height={560}
+                      className="block h-full w-full object-cover"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
   );
 };

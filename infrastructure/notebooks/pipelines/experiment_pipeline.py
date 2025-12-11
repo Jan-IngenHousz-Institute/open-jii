@@ -4,7 +4,7 @@
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
 %pip install mini-racer==0.12.4
-%pip install /Workspace/Shared/wheels/multispeq-0.3.0-py3-none-any.whl
+%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
 # %pip install /Workspace/Shared/wheels/rpy2-3.6.4-py3-none-any.whl # Disabled R support for now, doesn't really work on serverless compute, maybe on custom clusters
 %pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
@@ -29,7 +29,7 @@ from typing import Dict, Any, List
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
 # Import our enrichment library  
-from enrich import add_user_data_column, get_experiment_question_labels, add_question_columns
+from enrich import add_user_data_column, get_experiment_question_labels, add_question_columns, add_annotation_column
 
 # COMMAND ----------
 
@@ -125,7 +125,7 @@ def sample():
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
     )
     
-    # Process sample data and include questions columns directly
+    # Process sample data and include questions and annotations columns directly
     return (
         base_df
         .select(
@@ -134,6 +134,7 @@ def sample():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("annotations"),
             F.col("user_id"),
             F.col("macros"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
@@ -144,6 +145,7 @@ def sample():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("annotations"),
             F.col("user_id"),
             F.col("macros"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
@@ -361,7 +363,8 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
         "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
-        "processed_timestamp timestamp, macro_output_json string, user_id string"
+        "processed_timestamp timestamp, macro_output_json string, user_id string, "
+        "annotations array<struct<id:string,rowId:string,type:string,content:struct<text:string,flagType:string>,createdBy:string,createdByName:string,createdAt:timestamp,updatedAt:timestamp>>"
     )
     
     # Convert StructType to a string representation for the exec'd code
@@ -399,6 +402,7 @@ def {macro_table_name}_table():
                 "sample": row.get("sample"),
                 "macros": row.get("macros"),
                 "questions": row.get("questions"),
+                "annotations": row.get("annotations"),
                 "user_id": row.get("user_id")
             }}
             input_data = {{k: v for k, v in input_data.items() if v is not None}}
@@ -422,7 +426,8 @@ def {macro_table_name}_table():
                 "questions": row.get("questions"),
                 "user_id": row.get("user_id"),
                 "processed_timestamp": pd.Timestamp.now(),
-                "macro_output_json": debug_str
+                "macro_output_json": debug_str,
+                "annotations": row.get("annotations")
             }}
             
             results.append(result_row)
@@ -432,7 +437,7 @@ def {macro_table_name}_table():
         else:
             # Return empty DataFrame with correct columns
             return pd.DataFrame(columns=[
-                "id", "device_id", "device_name", "timestamp", "questions", "processed_timestamp", "macro_output_json", "user_id"
+                "id", "device_id", "device_name", "timestamp", "questions", "processed_timestamp", "macro_output_json", "user_id", "annotations"
             ])
 
     # Apply the pandas UDF to get the base data with JSON
@@ -463,6 +468,7 @@ def {macro_table_name}_table():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("annotations"),
             F.col("user_id"),
             F.col("processed_timestamp"),
             # Parsed macro fields
@@ -475,10 +481,10 @@ def {macro_table_name}_table():
         print(f"JSON parsing failed for macro {macro_name}: {{e}}")
         return processed_df
 
-# Enriched macro table with user metadata
+# Enriched macro table with user metadata and annotations
 @dlt.table(
     name="enriched_macro_{macro_table_name}",
-    comment="Enriched output from macro: {macro_name} with user metadata",
+    comment="Enriched output from macro: {macro_name} with user metadata and annotations",
     table_properties={{
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
@@ -488,8 +494,8 @@ def {macro_table_name}_table():
 )
 def enriched_{macro_table_name}_table():
     """
-    Create an enriched macro table by combining macro output with user metadata.
-    This creates a silver layer table with denormalized user information and individual question columns.
+    Create an enriched macro table by combining macro output with user metadata and annotations.
+    This creates a silver layer table with denormalized user information and annotation data.
     """
     
     # Read from the silver macro table (this creates the dependency)
@@ -508,8 +514,17 @@ def enriched_{macro_table_name}_table():
     macro_with_questions = add_question_columns(macro_df, question_labels)
     
     # Add user metadata column and remove the original questions array column
-    from enrich import add_user_data_column
-    enriched_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
+    enriched_with_user_data_df = add_user_data_column(macro_with_questions.drop("questions"), ENVIRONMENT, dbutils)
+    
+    # Add annotation columns from database (enrichment UDF)
+    # The annotations column from upstream is already present and will be merged with database annotations
+    enriched_df = add_annotation_column(
+        enriched_with_user_data_df,
+        "enriched_macro_{macro_table_name}",
+        CATALOG_NAME,
+        EXPERIMENT_SCHEMA,
+        spark
+    )
     
     return enriched_df
 '''
@@ -546,7 +561,7 @@ else:
 # DBTITLE 1,Enriched Sample Table (Silver Layer)
 @dlt.table(
     name=ENRICHED_SAMPLE_TABLE,
-    comment="Silver layer sample table enriched with user profile metadata",
+    comment="Silver layer sample table enriched with user profile metadata and annotations",
     table_properties={
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
@@ -579,6 +594,16 @@ def enriched_sample():
     
     # Add user metadata column and remove the original questions array column
     enriched_df = add_user_data_column(sample_with_questions.drop("questions"), ENVIRONMENT, dbutils)
+    
+    # Add annotation columns from database (enrichment UDF)
+    # The annotations column from upstream is already present and will be merged with database annotations
+    enriched_df = add_annotation_column(
+        enriched_df, 
+        SAMPLE_TABLE, 
+        CATALOG_NAME, 
+        EXPERIMENT_SCHEMA, 
+        spark
+    )
     
     return enriched_df
 

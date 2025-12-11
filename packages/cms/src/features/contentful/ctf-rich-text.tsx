@@ -40,22 +40,22 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
   renderNode: {
     // Headings
     [BLOCKS.HEADING_1]: (node: Node, children: React.ReactNode) => (
-      <h1 className="my-8 text-4xl font-bold text-gray-900">{children}</h1>
+      <h1 className="my-8 text-4xl font-bold">{children}</h1>
     ),
     [BLOCKS.HEADING_2]: (node: Node, children: React.ReactNode) => (
-      <h2 className="my-6 text-3xl font-semibold text-gray-900">{children}</h2>
+      <h2 className="my-6 text-3xl font-semibold">{children}</h2>
     ),
     [BLOCKS.HEADING_3]: (node: Node, children: React.ReactNode) => (
-      <h3 className="my-5 text-2xl font-semibold text-gray-900">{children}</h3>
+      <h3 className="my-5 text-2xl font-semibold">{children}</h3>
     ),
     [BLOCKS.HEADING_4]: (node: Node, children: React.ReactNode) => (
-      <h4 className="my-4 text-xl font-semibold text-gray-900">{children}</h4>
+      <h4 className="my-4 text-xl font-semibold">{children}</h4>
     ),
     [BLOCKS.HEADING_5]: (node: Node, children: React.ReactNode) => (
-      <h5 className="my-3 text-lg font-semibold text-gray-900">{children}</h5>
+      <h5 className="my-3 text-lg font-semibold">{children}</h5>
     ),
     [BLOCKS.HEADING_6]: (node: Node, children: React.ReactNode) => (
-      <h6 className="my-2 text-base font-semibold text-gray-900">{children}</h6>
+      <h6 className="my-2 text-base font-semibold">{children}</h6>
     ),
 
     // Paragraphs
@@ -72,12 +72,30 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
     ),
 
     [BLOCKS.LIST_ITEM]: (node: Node, children: React.ReactNode) => (
-      <li className="leading-relaxed text-gray-700 [&>p]:my-0">{children}</li>
+      <li className="leading-relaxed [&>p]:my-0">{children}</li>
     ),
 
     // Blockquote
     [BLOCKS.QUOTE]: (node: Node, children: React.ReactNode) => (
       <blockquote className="my-8 border-l-4 border-gray-300/70 pl-6">{children}</blockquote>
+    ),
+
+    // Tables
+    [BLOCKS.TABLE]: (node: Node, children: React.ReactNode) => (
+      <div className="my-6 overflow-x-auto">
+        <table className="min-w-full border-collapse border border-gray-300">
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    ),
+    [BLOCKS.TABLE_ROW]: (node: Node, children: React.ReactNode) => <tr>{children}</tr>,
+    [BLOCKS.TABLE_HEADER_CELL]: (node: Node, children: React.ReactNode) => (
+      <th className="border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold">
+        {children}
+      </th>
+    ),
+    [BLOCKS.TABLE_CELL]: (node: Node, children: React.ReactNode) => (
+      <td className="border border-gray-300 px-4 py-2">{children}</td>
     ),
 
     // Inline hyperlinks
@@ -88,7 +106,7 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
           href={uri}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-emerald-700 hover:underline"
+          className="text-primary hover:underline"
         >
           {children}
         </Link>
@@ -112,7 +130,7 @@ export const CtfRichText = ({ json, links }: ContentfulRichTextInterface) => {
   const baseOptions = contentfulBaseRichTextOptions({ json, links });
 
   return (
-    <div className="w-full break-words leading-relaxed text-gray-700">
+    <div className="w-full break-words leading-relaxed text-gray-900">
       {documentToReactComponents(json, baseOptions)}
     </div>
   );

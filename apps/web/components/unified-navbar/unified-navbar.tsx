@@ -1,11 +1,20 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { User, Home, BookOpen, LogOut, Menu, Sprout } from "lucide-react";
+import {
+  User,
+  Home,
+  BookOpen,
+  LogOut,
+  Menu,
+  Sprout,
+  MessageCircleQuestion,
+  ChevronDown,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Session } from "@repo/auth/types";
@@ -20,12 +29,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components";
+import { cva } from "@repo/ui/lib/utils";
 
 import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
 
 interface UnifiedNavbarProps {
   locale: string;
   session: Session | null;
+  isHomePage?: boolean;
 }
 
 // Extract UserMenu as a separate component to prevent re-renders
@@ -39,22 +50,23 @@ function UserMenu({
   displayName: string;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
 
   if (!session?.user) {
     return null;
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="flex gap-2"
+          className="group flex gap-2 hover:bg-transparent focus:bg-transparent"
           aria-label={t("auth.userMenu", "User menu")}
         >
           {session.user.image ? (
-            <Avatar className="h-6 w-6">
+            <Avatar className="group-hover:bg-jii-medium-green/20 h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_theme(colors.jii-medium-green)]">
               <AvatarImage src={session.user.image} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
@@ -63,7 +75,9 @@ function UserMenu({
           ) : (
             <User className="h-4 w-4" />
           )}
-          <span className="hidden max-w-32 truncate sm:inline">{displayName}</span>
+          <ChevronDown
+            className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -99,7 +113,10 @@ function UserMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/api/auth/logout" className="flex w-full cursor-default items-center">
+          <Link
+            href={`/${locale}/platform/signout?hideBackground=true`}
+            className="flex w-full cursor-default items-center"
+          >
             <LogOut className="mr-2 h-4 w-4" />
             {t("auth.signOut", "Sign Out")}
           </Link>
@@ -109,14 +126,42 @@ function UserMenu({
   );
 }
 
-export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
+export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNavbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const [isIntersecting, setIsIntersecting] = useState(true);
 
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
   const profile = userProfile?.body;
   const displayName =
     profile?.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : "";
+
+  // Intersection observer for hero section (only on home page)
+  useEffect(() => {
+    if (!isHomePage) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsIntersecting(entry.isIntersecting);
+      },
+      {
+        threshold: 0,
+        rootMargin: "-64px 0px 0px 0px", // Navbar height offset
+      },
+    );
+
+    // Target the hero section
+    const heroSection = document.querySelector("main > section:first-child");
+    if (heroSection) {
+      observer.observe(heroSection);
+    }
+
+    return () => {
+      if (heroSection) {
+        observer.unobserve(heroSection);
+      }
+    };
+  }, [isHomePage]);
 
   // Navigation items
   const navItems = useMemo(
@@ -125,11 +170,11 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
         href: `/${locale}`,
         label: t("navigation.home", "Home"),
         icon: Home,
-        isActive: pathname === `/${locale}`,
+        isActive: pathname === `/${locale}` || pathname === `/${locale}/`,
       },
       {
         href: `/${locale}/about`,
-        label: t("navigation.about", "About"),
+        label: t("navigation.about", "About JII"),
         icon: User,
         isActive: pathname.startsWith(`/${locale}/about`),
       },
@@ -138,6 +183,12 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
         label: t("navigation.blog", "Blog"),
         icon: BookOpen,
         isActive: pathname.startsWith(`/${locale}/blog`),
+      },
+      {
+        href: `/${locale}/faq`,
+        label: t("navigation.faq", "FAQ"),
+        icon: MessageCircleQuestion,
+        isActive: pathname.startsWith(`/${locale}/faq`),
       },
       {
         href: `/${locale}/platform`,
@@ -154,45 +205,42 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
     [locale, t, pathname],
   );
 
-  // Absolute positioning for overlay effect on the pages below
-  const isOverlay =
-    pathname.startsWith(`/${locale}/platform`) ||
-    pathname.startsWith(`/${locale}/login`) ||
-    pathname.startsWith(`/${locale}/register`) ||
-    pathname.startsWith(`/api/auth/verify-request`) ||
-    pathname.startsWith(`/${locale}/verify-request`);
-
-  const isLightNavbar =
-    pathname === `/` ||
-    pathname === `/${locale}` ||
+  const isGreenMode =
     pathname.startsWith(`/${locale}/about`) ||
     pathname.startsWith(`/${locale}/blog`) ||
     pathname.startsWith(`/${locale}/faq`) ||
     pathname.startsWith(`/${locale}/policies`);
 
+  // Determine navbar background based on intersection state
+  const navbarBackgroundVariants = cva(
+    "pointer-events-auto sticky left-0 top-0 z-50 w-full transition-colors duration-300",
+    {
+      variants: {
+        mode: {
+          dark: "bg-gradient-to-b from-black/80 to-transparent",
+          green: "bg-sidebar border-b border-white/40 shadow-lg",
+        },
+      },
+      defaultVariants: {
+        mode: "dark",
+      },
+    },
+  );
+
+  const getNavbarMode = (): "dark" | "green" => {
+    if ((isHomePage && !isIntersecting) || isGreenMode) {
+      return "green";
+    }
+    return "dark";
+  };
+
   return (
-    <header
-      className={`z-50 w-full ${
-        isOverlay
-          ? "pointer-events-auto absolute left-0 top-0 bg-gradient-to-b from-black/80 to-transparent text-white"
-          : isLightNavbar
-            ? "border-border sticky top-0 border-b bg-white/60 text-black backdrop-blur-md"
-            : "sticky top-0 bg-gradient-to-b from-black/80 to-transparent text-white"
-      }`}
-    >
-      <nav
-        className={`font-notosans container mx-auto grid h-16 grid-cols-3 items-center px-4 ${
-          isLightNavbar ? "text-black" : "text-white"
-        }`}
-      >
+    <header className={navbarBackgroundVariants({ mode: getNavbarMode() })}>
+      <nav className="font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 text-white">
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
-            src={
-              isLightNavbar
-                ? "/openJII-logo-vertical-yellow.svg"
-                : "/openJII-logo-BW-vertical-white.svg"
-            }
+            src="/openJII-logo-BW-vertical-white.png"
             alt="openJII logo"
             width={210}
             height={52}
@@ -207,22 +255,12 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
 
             // Remove hover effect for selected (active) nav item
             const linkClass = item.isActive
-              ? `flex items-center space-x-2 text-sm font-medium ${
-                  isLightNavbar ? "text-primary font-bold" : "text-jii-bright-green font-bold"
-                }`
-              : `flex items-center space-x-2 text-sm font-medium transition-colors ${
-                  isLightNavbar
-                    ? "text-muted-foreground hover:text-primary"
-                    : "text-white/70 hover:text-white"
-                }`;
+              ? "flex items-center space-x-2 text-sm font-medium text-jii-bright-green font-bold"
+              : "flex items-center space-x-2 text-sm font-medium transition-colors text-white hover:text-jii-medium-green";
 
             const iconClass = item.isActive
-              ? isLightNavbar
-                ? "h-4 w-4 text-jii-dark-green"
-                : "h-4 w-4 text-jii-bright-green"
-              : isLightNavbar
-                ? "h-4 w-4 text-muted-foreground group-hover:text-primary"
-                : "h-4 w-4 text-white/70 group-hover:text-white";
+              ? "h-4 w-4 text-jii-bright-green"
+              : "h-4 w-4 text-white group-hover:text-jii-medium-green";
 
             return (
               <Link
@@ -232,7 +270,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                 aria-current={item.isActive ? "page" : undefined}
               >
                 <Icon className={iconClass} />
-                <span>{item.label}</span>
+                <span className="whitespace-nowrap">{item.label}</span>
               </Link>
             );
           })}
@@ -254,8 +292,9 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                   variant="ghost"
                   size="sm"
                   aria-label={t("navigation.menu", "Navigation menu")}
+                  className="group hover:bg-transparent focus:bg-transparent"
                 >
-                  <Menu className="h-4 w-4" />
+                  <Menu className="group-hover:text-jii-medium-green h-4 w-4 text-white transition-colors duration-200" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="font-notosans w-56">
@@ -273,7 +312,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                         aria-current={item.isActive ? "page" : undefined}
                       >
                         <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <span className="whitespace-nowrap">{item.label}</span>
                       </Link>
                     </DropdownMenuItem>
                   );
@@ -317,7 +356,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link
-                        href="/api/auth/logout"
+                        href={`/${locale}/platform/signout?hideBackground=true`}
                         className="flex w-full cursor-default items-center"
                       >
                         <LogOut className="mr-2 h-4 w-4" />

@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  detect:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.detect.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for semantic versioning
+          
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+          
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+
+  build:
+    name: Build Affected Apps
+    needs: detect
+    if: needs.detect.outputs.has_affected_apps == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+          
+      - name: Build Packages
+        uses: ./.github/actions/build-packages
+        with:
+          affected_apps: ${{ needs.detect.outputs.affected_apps }}
+
+  release:
+    name: Create Releases
+    needs: [detect, build]
+    if: needs.detect.outputs.has_affected_apps == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.semantic_release.outputs.releases_created }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+      
+      - name: Filter Apps for Release
+        id: filter_apps
+        run: |
+          # Filter out @repo/* packages - only keep actual apps (backend, web, mobile, docs)
+          AFFECTED_APPS='${{ needs.detect.outputs.affected_apps }}'
+          RELEASE_APPS=$(echo "$AFFECTED_APPS" | jq -c '[.[] | select(startswith("@repo/") | not)]') || {
+            echo "Error: Failed to filter apps"
+            exit 1
+          }
+          echo "release_apps=$RELEASE_APPS" >> $GITHUB_OUTPUT
+          echo "Filtered apps for release: $RELEASE_APPS"
+      
+      - name: Check if Apps Remain After Filtering
+        id: check_apps
+        run: |
+          RELEASE_APPS='${{ steps.filter_apps.outputs.release_apps }}'
+          APP_COUNT=$(echo "$RELEASE_APPS" | jq 'length')
+          echo "app_count=$APP_COUNT" >> $GITHUB_OUTPUT
+          if [ "$APP_COUNT" -eq 0 ]; then
+            echo "⚠️ No apps to release after filtering @repo/* packages"
+          fi
+          
+      - name: Create Semantic Releases
+        id: semantic_release
+        if: steps.check_apps.outputs.app_count > 0
+        uses: ./.github/actions/semantic-release
+        with:
+          affected_apps: ${{ steps.filter_apps.outputs.release_apps }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: 'false'
+      
+      - name: Release Summary
+        run: |
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          RELEASES='${{ steps.semantic_release.outputs.releases_created }}'
+          if [ "$RELEASES" = "{}" ]; then
+            echo "No new releases created." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "The following releases were created:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "$RELEASES" | jq -r 'to_entries | .[] | "- **\(.key)**: v\(.value) (tag: `\(.key)-v\(.value)`)"' >> $GITHUB_STEP_SUMMARY
+          fi

@@ -3,6 +3,16 @@ import { File } from "expo-file-system";
 
 import mathLibResource from "./math.lib.js.txt";
 
+interface MacroOutputMessages {
+  messages?: {
+    info?: string[];
+    warning?: string[];
+    danger?: string[];
+  };
+}
+
+export type MacroOutput = MacroOutputMessages & Record<string, any>;
+
 async function loadMathLib() {
   const asset = Asset.fromModule(mathLibResource);
   await asset.downloadAsync();
@@ -13,7 +23,7 @@ async function loadMathLib() {
 
 const mathLibSourcePromise = loadMathLib();
 
-async function executeMacro(code: string, json: object) {
+async function executeMacro(code: string, json: object): Promise<MacroOutput> {
   const mathLibSource = await mathLibSourcePromise;
   // Wrap the macro code in an IIFE to isolate its scope from mathLibSource variables
   // This prevents variable name conflicts while still allowing access to mathLib functions
@@ -26,7 +36,7 @@ async function executeMacro(code: string, json: object) {
   return fn(json);
 }
 
-export async function applyMacro(result: object, macroCodeBase64: string): Promise<object[]> {
+export async function applyMacro(result: object, macroCodeBase64: string): Promise<MacroOutput[]> {
   if (!("sample" in result)) {
     throw new Error("Result does not contain sample data");
   }
@@ -41,7 +51,10 @@ export async function applyMacro(result: object, macroCodeBase64: string): Promi
 
   const code = atob(macroCodeBase64);
   console.log("executing macro");
-  const output: object[] = await Promise.all(samples.map((sample) => executeMacro(code, sample)));
+  const output: MacroOutput[] = await Promise.all(
+    samples.map((sample) => executeMacro(code, sample)),
+  );
+  console.log("output", JSON.stringify(output, null, 2));
 
   return output;
 }

@@ -89,3 +89,6 @@ pids
 *.pid.lock
 
 .cache
+
+# Release automation generated files
+release-summary-*.json

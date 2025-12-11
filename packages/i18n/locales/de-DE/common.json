@@ -394,73 +394,103 @@
     "rows": "Zeilen"
   },
   "experimentDataAnnotations": {
-    "title": "Kommentare & Markierungen",
-    "columnHeader": "Kommentare & Markierungen",
+    "title": "Kommentare",
+    "columnHeader": "Kommentare",
+    "annotations": "Anmerkungen",
+    "comments": "Kommentare",
+    "flags": "Markierungen",
+    "addComment": "Kommentar hinzufügen",
+    "addFlag": "Markierung hinzufügen",
     "titleComments": "Kommentare",
-    "titleFlags": "Markierungen",
-    "flagType": {
-      "needs_review": "Überprüfung erforderlich",
-      "outlier": "Ausreißer"
-    },
     "commentDialog": {
       "title": "Kommentar hinzufügen",
       "description": "Fügen Sie einen Kommentar zur Messung hinzu",
       "textLabel": "Kommentar",
       "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
-      "add": "Kommentar hinzufügen"
+      "add": "Kommentar hinzufügen",
+      "addPending": "Kommentar wird hinzugefügt..."
     },
     "commentDialogBulk": {
       "title": "Kommentar für mehrere hinzufügen",
       "description": "Fügen Sie denselben Kommentar zu {{count}} ausgewählten Messungen hinzu",
       "textLabel": "Kommentar",
       "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
-      "add": "Zu {{count}} Zeile(n) hinzufügen"
+      "add": "Zu {{count}} Zeile(n) hinzufügen",
+      "addPending": "Wird zu {{count}} Zeile(n) hinzugefügt..."
     },
     "flagDialog": {
       "title": "Markierung hinzufügen",
-      "description": "Markieren Sie die Messung",
-      "flagLabel": "Markierungstyp",
-      "flagPlaceholder": "Markierungstyp auswählen",
+      "description": "Eine Markierung zur Messung hinzufügen",
       "textLabel": "Grund",
-      "textPlaceholder": "Erklären Sie, warum diese Messung markiert wird...",
-      "add": "Markierung hinzufügen"
+      "textPlaceholder": "Erklären Sie, warum diese Daten markiert sind...",
+      "add": "Markierung hinzufügen",
+      "addPending": "Markierung wird hinzugefügt..."
     },
     "flagDialogBulk": {
-      "title": "Markierung für mehrere hinzufügen",
-      "description": "{{count}} ausgewählte Messungen markieren",
-      "flagLabel": "Markierungstyp",
-      "flagPlaceholder": "Markierungstyp auswählen",
+      "title": "Massenmarkierung hinzufügen",
+      "description": "Dieselbe Markierung zu {{count}} ausgewählten Messungen hinzufügen",
       "textLabel": "Grund",
-      "textPlaceholder": "Erklären Sie, warum diese Messungen markiert werden...",
-      "add": "{{count}} Zeile(n) markieren"
+      "textPlaceholder": "Erklären Sie, warum diese Daten markiert sind...",
+      "add": "Zu {{count}} Zeile(n) hinzufügen",
+      "addPending": "Wird zu {{count}} Zeile(n) hinzugefügt..."
     },
     "commentDeleteDialog": {
       "title": "Sind Sie absolut sicher?",
       "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Kommentare aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "deletePending": "Wird gelöscht..."
     },
     "flagDeleteDialog": {
       "title": "Sind Sie absolut sicher?",
       "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Markierungen aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "deletePending": "Wird gelöscht..."
     },
-    "noAnnotations": "Noch keine Kommentare oder Markierungen.",
-    "noAnnotationsDescription": "Verwenden Sie die obigen Schaltflächen, um einen hinzuzufügen.",
-    "updated": "Kommentare und Markierungen aktualisiert",
+    "noAnnotations": "Noch keine Anmerkungen.",
+    "noAnnotationsDescription": "Verwenden Sie die obigen Schaltflächen, um eine hinzuzufügen.",
+    "updated": "Anmerkungen aktualisiert",
     "deleted": {
       "comment": "Kommentar gelöscht",
       "comments": "Kommentare gelöscht",
       "flag": "Markierung gelöscht",
       "flags": "Markierungen gelöscht"
     },
+    "typeLabel": "Anmerkungstyp",
+    "comment": "Kommentar",
+    "flag": "Markierung",
+    "commentText": "Kommentar",
+    "commentPlaceholder": "Fügen Sie hier Ihren Kommentar hinzu...",
+    "flagType": "Markierungstyp",
+    "selectFlagType": "Wählen Sie einen Markierungstyp",
+    "flagTypes": {
+      "outlier": "Ausreißer",
+      "needs_review": "Überprüfung erforderlich"
+    },
+    "flagReason": "Grund",
+    "flagReasonPlaceholder": "Erklären Sie, warum diese Daten markiert sind...",
+    "add": "Hinzufügen",
+    "adding": "Wird hinzugefügt...",
+    "addAnnotation": {
+      "title": "Anmerkung hinzufügen",
+      "description": "Fügen Sie dieser Zeile eine Anmerkung hinzu."
+    },
+    "addAnnotationBulk": {
+      "title": "Anmerkung zu mehreren Zeilen hinzufügen",
+      "description": "Fügen Sie die gleiche Anmerkung zu {{count}} ausgewählten Zeilen hinzu."
+    },
     "bulkActions": {
       "actions": "Aktionen",
       "selected": "ausgewählt",
+      "noRowsSelected": "Keine Zeilen ausgewählt",
       "addComment": "Kommentar hinzufügen",
       "addFlag": "Markierung hinzufügen",
       "removeAllComments": "Alle Kommentare entfernen",
       "removeAllFlags": "Alle Markierungen entfernen"
-    }
+    },
+    "you": "Sie",
+    "unknownUser": "Unbekannter Benutzer",
+    "preview": "Vorschau",
+    "previewNote": "Dies ist eine Vorschau. Ihre Anmerkung wird verarbeitet und erscheint bald dauerhaft. Eine Aktualisierung blendet diese Vorschau aus."
   },
   "landingPage": {
     "latestArticles": "Neueste artikel"
