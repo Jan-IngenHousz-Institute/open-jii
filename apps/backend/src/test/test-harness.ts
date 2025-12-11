@@ -293,7 +293,6 @@ export class TestHarness {
     const [user] = await this.database
       .insert(users)
       .values({
-        id: crypto.randomUUID(),
         email,
         name,
         emailVerified,
