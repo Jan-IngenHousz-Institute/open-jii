@@ -20,6 +20,5 @@ export const getAnonymizedAvatarUrl = (): SQL<string> =>
 export const getAnonymizedEmail = (): SQL<string> =>
   sql`CASE WHEN ${profiles.activated} = true THEN ${users.email} ELSE NULL END`;
 
-
 export const getAnonymizedOrganizationName = (): SQL<string | null> =>
   sql`CASE WHEN ${profiles.activated} = true THEN ${organizations.name} ELSE NULL END`;

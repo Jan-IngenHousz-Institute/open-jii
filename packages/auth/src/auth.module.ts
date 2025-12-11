@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
+
 import { getAuth } from "./better-auth";
 
 @Module({
