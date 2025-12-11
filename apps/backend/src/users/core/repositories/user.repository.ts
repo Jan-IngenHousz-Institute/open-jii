@@ -50,7 +50,6 @@ export class UserRepository {
         .insert(users)
         .values({
           ...createUserDto,
-          id: crypto.randomUUID(),
         })
         .returning(),
     );
