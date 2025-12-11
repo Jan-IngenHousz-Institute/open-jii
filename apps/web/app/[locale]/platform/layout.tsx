@@ -49,8 +49,6 @@ export default async function AppLayout({
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 
-  const pathname = (await headers()).get("x-current-path") ?? "/";
-
   return (
     <SidebarProvider>
       <AppSidebarWrapper locale={locale} user={session.user} />
@@ -60,7 +58,7 @@ export default async function AppLayout({
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-              <Breadcrumbs pathname={pathname} pageTitle={pageTitle} locale={locale} />
+              <Breadcrumbs pageTitle={pageTitle} locale={locale} />
             </div>
             <div className="flex items-center gap-2">
               <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />

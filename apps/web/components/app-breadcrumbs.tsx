@@ -1,6 +1,9 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import React from "react";
 
-import initTranslations from "@repo/i18n/server";
+import { useTranslation } from "@repo/i18n";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,12 +13,11 @@ import {
 } from "@repo/ui/components";
 
 interface BreadcrumbsProps {
-  pathname: string;
-  pageTitle?: string;
   locale: string;
+  pageTitle?: string;
 }
 
-// Translation key mapping for breadcrumb items
+// Translation mapping from old code
 const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
   platform: "breadcrumbs.platform",
   experiments: "breadcrumbs.experiments",
@@ -31,22 +33,19 @@ function getTitle(title: string, overrideTitle?: string, t?: (key: string) => st
 
   const translationKey = BREADCRUMB_TRANSLATIONS[title];
   if (translationKey && t) {
-    return translationKey.startsWith("breadcrumbs.") ? t(translationKey) : translationKey;
+    return t(translationKey);
   }
 
-  // Fallback to capitalize first letter
+  // Default: Capitalize the segment
   return title.charAt(0).toUpperCase() + title.slice(1);
 }
 
-export async function Breadcrumbs({ pathname, pageTitle, locale }: BreadcrumbsProps) {
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
+export function Breadcrumbs({ locale, pageTitle }: BreadcrumbsProps) {
+  const pathname = usePathname();
+  const { t } = useTranslation("common");
 
-  const pathNames = pathname.split("/").filter((path) => path);
-  // Remove the first item which is the locale (e.g., 'en-US', 'de-DE')
-  const pathNamesWithoutLocale = pathNames.slice(1);
+  const segments = pathname.split("/").filter(Boolean);
+  const segmentsWithoutLocale = segments.slice(1);
 
   return (
     <Breadcrumb>
@@ -54,11 +53,13 @@ export async function Breadcrumbs({ pathname, pageTitle, locale }: BreadcrumbsPr
         <BreadcrumbItem>
           <BreadcrumbLink href={`/${locale}/platform`}>{t("breadcrumbs.home")}</BreadcrumbLink>
         </BreadcrumbItem>
-        {pathNamesWithoutLocale.map((link, index) => {
-          const href = `/${locale}/${pathNamesWithoutLocale.slice(0, index + 1).join("/")}`;
+
+        {segmentsWithoutLocale.map((segment, index) => {
+          const href = `/${locale}/${segmentsWithoutLocale.slice(0, index + 1).join("/")}`;
+
           const title = getTitle(
-            link,
-            index === pathNamesWithoutLocale.length - 1 ? pageTitle : undefined,
+            segment,
+            index === segmentsWithoutLocale.length - 1 ? pageTitle : undefined,
             t,
           );
 
