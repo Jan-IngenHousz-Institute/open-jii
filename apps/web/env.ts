@@ -34,7 +34,6 @@ const parseEnv = () => {
       CONTENTFUL_PREVIEW_SECRET: process.env.CONTENTFUL_PREVIEW_SECRET,
       CONTENTFUL_SPACE_ENVIRONMENT: process.env.CONTENTFUL_SPACE_ENVIRONMENT,
       NEXT_PUBLIC_ENABLE_DEVTOOLS: process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS,
-      TSR_API_URL: process.env.TSR_API_URL,
     };
 
     return envSchema.parse(rawEnv);
