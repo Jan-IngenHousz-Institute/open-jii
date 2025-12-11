@@ -45,7 +45,15 @@ export class UserRepository {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Result<UserDto[]>> {
-    return tryCatch(() => this.database.insert(users).values(createUserDto).returning());
+    return tryCatch(() =>
+      this.database
+        .insert(users)
+        .values({
+          ...createUserDto,
+          id: crypto.randomUUID(),
+        })
+        .returning(),
+    );
   }
 
   async findOne(id: string): Promise<Result<UserDto | null>> {
@@ -208,10 +216,10 @@ export class UserRepository {
         await tx
           .update(users)
           .set({
-            email: null,
+            email: `deleted-${id}@example.com`, // Email is unique and not null, so we need a placeholder
             name: `Deleted User`,
             image: null,
-            emailVerified: null,
+            emailVerified: false, // Boolean not null
           })
           .where(eq(users.id, id));
       });

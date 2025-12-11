@@ -278,21 +278,27 @@ export class TestHarness {
   public async createTestUser({
     email = faker.internet.email(),
     name = faker.person.fullName(),
-    emailVerified = null,
+    emailVerified = false,
     image = null,
     activated = true,
     createProfile = true,
   }: {
     email?: string;
     name?: string;
-    emailVerified?: Date | null;
+    emailVerified?: boolean;
     image?: string | null;
     activated?: boolean;
     createProfile?: boolean;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
-      .values({ email, name, emailVerified, image })
+      .values({
+        id: crypto.randomUUID(),
+        email,
+        name,
+        emailVerified,
+        image,
+      })
       .returning();
 
     if (createProfile) {

@@ -802,15 +802,6 @@ importers:
 
   packages/auth:
     dependencies:
-      '@auth/core':
-        specifier: ^0.41.1
-        version: 0.41.1(nodemailer@7.0.11)
-      '@auth/drizzle-adapter':
-        specifier: ^1.11.1
-        version: 1.11.1(nodemailer@7.0.11)
-      '@auth/express':
-        specifier: ^0.12.1
-        version: 0.12.1(express@5.1.0)(nodemailer@7.0.11)
       '@nestjs/common':
         specifier: ^11.1.8
         version: 11.1.8(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -835,9 +826,6 @@ importers:
       next:
         specifier: 'catalog:'
         version: 15.5.7(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      next-auth:
-        specifier: 5.0.0-beta.30
-        version: 5.0.0-beta.30(next@15.5.7(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(nodemailer@7.0.11)(react@19.1.0)
       nodemailer:
         specifier: 'catalog:'
         version: 7.0.11
@@ -1514,28 +1502,6 @@ packages:
 
   '@asamuzakjp/css-color@3.1.7':
     resolution: {integrity: sha512-Ok5fYhtwdyJQmU1PpEv6Si7Y+A4cYb8yNM9oiIJC9TzXPMuN9fvdonKJqcnz9TbFqV6bQ8z0giRq0iaOpGZV2g==}
-
-  '@auth/core@0.41.1':
-    resolution: {integrity: sha512-t9cJ2zNYAdWMacGRMT6+r4xr1uybIdmYa49calBPeTqwgAFPV/88ac9TEvCR85pvATiSPt8VaNf+Gt24JIT/uw==}
-    peerDependencies:
-      '@simplewebauthn/browser': ^9.0.1
-      '@simplewebauthn/server': ^9.0.2
-      nodemailer: ^7.0.7
-    peerDependenciesMeta:
-      '@simplewebauthn/browser':
-        optional: true
-      '@simplewebauthn/server':
-        optional: true
-      nodemailer:
-        optional: true
-
-  '@auth/drizzle-adapter@1.11.1':
-    resolution: {integrity: sha512-cQTvDZqsyF7RPhDm/B6SvqdVP9EzQhy3oM4Muu7fjjmSYFLbSR203E6dH631ZHSKDn2b4WZkfMnjPDzRsPSAeA==}
-
-  '@auth/express@0.12.1':
-    resolution: {integrity: sha512-DJHrolXcxs3VpXW6/rw+Pz1W1H2MTXCyHBpzRsJDAmP0BLB1RgeKjdOndj/ytVuoRFhTU8y6D/iwYkKU7aV3Ag==}
-    peerDependencies:
-      express: ^4.18.2 || ^5.0.0
 
   '@aws-crypto/sha256-browser@5.2.0':
     resolution: {integrity: sha512-AXfN/lGotSQwu6HNcEsIASo7kWXZ5HYWvfOmSNKDsEqC4OashTp8alTmaz+F7TC2L083SFv5RdB+qU3Vs1kZqw==}
@@ -5197,9 +5163,6 @@ packages:
 
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
-
-  '@panva/hkdf@1.2.1':
-    resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
 
   '@paralleldrive/cuid2@2.2.2':
     resolution: {integrity: sha512-ZOBkgDwEdoYVlSeRbYYXs0S9MejQofiVYoTbKzy/6GQa39/q5tQU2IX46+shYnUkpEl3wc+J6wRlar7r2EK2xA==}
@@ -12629,9 +12592,6 @@ packages:
   jose@5.10.0:
     resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
 
-  jose@6.0.11:
-    resolution: {integrity: sha512-QxG7EaliDARm1O1S8BGakqncGT9s25bKL1WSf6/oa17Tkqwi8D2ZNglqCF+DsYF88/rV66Q/Q2mFAy697E1DUg==}
-
   jose@6.1.3:
     resolution: {integrity: sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==}
 
@@ -13867,22 +13827,6 @@ packages:
   nested-error-stacks@2.0.1:
     resolution: {integrity: sha512-SrQrok4CATudVzBS7coSz26QRSmlK9TzzoFbeKfcPBUFPjcQM9Rqvr/DlJkOrwI/0KcgvMub1n1g5Jt9EgRn4A==}
 
-  next-auth@5.0.0-beta.30:
-    resolution: {integrity: sha512-+c51gquM3F6nMVmoAusRJ7RIoY0K4Ts9HCCwyy/BRoe4mp3msZpOzYMyb5LAYc1wSo74PMQkGDcaghIO7W6Xjg==}
-    peerDependencies:
-      '@simplewebauthn/browser': ^9.0.1
-      '@simplewebauthn/server': ^9.0.2
-      next: ^14.0.0-0 || ^15.0.0 || ^16.0.0
-      nodemailer: ^7.0.7
-      react: 19.1.0
-    peerDependenciesMeta:
-      '@simplewebauthn/browser':
-        optional: true
-      '@simplewebauthn/server':
-        optional: true
-      nodemailer:
-        optional: true
-
   next-i18n-router@5.5.2:
     resolution: {integrity: sha512-RI4mMu3ew8hUIHjA94hbRX4NptmJQzDoq/qayBilnj8MPsoLmr6juP/b3YH0awGkWP/R+8gfk28qjb8HpBGhdw==}
 
@@ -14166,9 +14110,6 @@ packages:
   oauth2orize@1.12.0:
     resolution: {integrity: sha512-j4XtFDQUBsvUHPjUmvmNDUDMYed2MphMIJBhyxVVe8hGCjkuYnjIsW+D9qk8c5ciXRdnk6x6tEbiO6PLeOZdCQ==}
     engines: {node: '>= 0.4.0'}
-
-  oauth4webapi@3.5.1:
-    resolution: {integrity: sha512-txg/jZQwcbaF7PMJgY7aoxc9QuCxHVFMiEkDIJ60DwDz3PbtXPQnrzo+3X4IRYGChIwWLabRBRpf1k9hO9+xrQ==}
 
   ob1@0.83.2:
     resolution: {integrity: sha512-XlK3w4M+dwd1g1gvHzVbxiXEbUllRONEgcF2uEO0zm4nxa0eKlh41c6N65q1xbiDOeKKda1tvNOAD33fNjyvCg==}
@@ -15178,11 +15119,6 @@ packages:
 
   potpack@2.1.0:
     resolution: {integrity: sha512-pcaShQc1Shq0y+E7GqJqvZj8DTthWV1KeHGdi0Z6IAin2Oi3JnLCOfwnCo84qc+HAp52wT9nK9H7FAJp5a44GQ==}
-
-  preact-render-to-string@6.5.11:
-    resolution: {integrity: sha512-ubnauqoGczeGISiOh6RjX0/cdaF8v/oDXIjO85XALCQjwQP+SB4RDXXtvZ6yTYSjG+PC1QRP2AhPgCEsM2EvUw==}
-    peerDependencies:
-      preact: '>=10'
 
   preact@10.24.3:
     resolution: {integrity: sha512-Z2dPnBnMUfyQfSQ+GBdsGa16hz35YmLmtTLhM169uW944hYL6xzTYkJjC07j+Wosz733pMWx0fgON3JNw1jJQA==}
@@ -18638,33 +18574,6 @@ snapshots:
       '@csstools/css-parser-algorithms': 3.0.5(@csstools/css-tokenizer@3.0.4)
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
-
-  '@auth/core@0.41.1(nodemailer@7.0.11)':
-    dependencies:
-      '@panva/hkdf': 1.2.1
-      jose: 6.0.11
-      oauth4webapi: 3.5.1
-      preact: 10.24.3
-      preact-render-to-string: 6.5.11(preact@10.24.3)
-    optionalDependencies:
-      nodemailer: 7.0.11
-
-  '@auth/drizzle-adapter@1.11.1(nodemailer@7.0.11)':
-    dependencies:
-      '@auth/core': 0.41.1(nodemailer@7.0.11)
-    transitivePeerDependencies:
-      - '@simplewebauthn/browser'
-      - '@simplewebauthn/server'
-      - nodemailer
-
-  '@auth/express@0.12.1(express@5.1.0)(nodemailer@7.0.11)':
-    dependencies:
-      '@auth/core': 0.41.1(nodemailer@7.0.11)
-      express: 5.1.0
-    transitivePeerDependencies:
-      - '@simplewebauthn/browser'
-      - '@simplewebauthn/server'
-      - nodemailer
 
   '@aws-crypto/sha256-browser@5.2.0':
     dependencies:
@@ -24478,8 +24387,6 @@ snapshots:
       outvariant: 1.4.3
 
   '@open-draft/until@2.1.0': {}
-
-  '@panva/hkdf@1.2.1': {}
 
   '@paralleldrive/cuid2@2.2.2':
     dependencies:
@@ -33661,8 +33568,6 @@ snapshots:
 
   jose@5.10.0: {}
 
-  jose@6.0.11: {}
-
   jose@6.1.3: {}
 
   js-file-download@0.4.12: {}
@@ -35418,14 +35323,6 @@ snapshots:
 
   nested-error-stacks@2.0.1: {}
 
-  next-auth@5.0.0-beta.30(next@15.5.7(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(nodemailer@7.0.11)(react@19.1.0):
-    dependencies:
-      '@auth/core': 0.41.1(nodemailer@7.0.11)
-      next: 15.5.7(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      react: 19.1.0
-    optionalDependencies:
-      nodemailer: 7.0.11
-
   next-i18n-router@5.5.2:
     dependencies:
       '@formatjs/intl-localematcher': 0.5.10
@@ -35755,8 +35652,6 @@ snapshots:
       utils-merge: 1.0.1
     transitivePeerDependencies:
       - supports-color
-
-  oauth4webapi@3.5.1: {}
 
   ob1@0.83.2:
     dependencies:
@@ -36851,10 +36746,6 @@ snapshots:
   potpack@1.0.2: {}
 
   potpack@2.1.0: {}
-
-  preact-render-to-string@6.5.11(preact@10.24.3):
-    dependencies:
-      preact: 10.24.3
 
   preact@10.24.3: {}
 

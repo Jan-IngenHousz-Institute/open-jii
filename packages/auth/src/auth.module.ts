@@ -1,12 +1,16 @@
 import { Module } from "@nestjs/common";
-import { BetterAuthModule } from "@thallesp/nestjs-better-auth";
-
-import { auth } from "./better-auth";
+import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
+import { getAuth } from "./better-auth";
 
 @Module({
   imports: [
-    BetterAuthModule.forRoot({
-      auth,
+    BetterAuthModule.forRootAsync({
+      useFactory: async () => {
+        const auth = await getAuth();
+        return {
+          auth,
+        };
+      },
     }),
   ],
   exports: [BetterAuthModule],

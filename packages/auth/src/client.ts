@@ -1,2 +1,3 @@
-export { SessionProvider } from "next-auth/react";
-export { useSession } from "next-auth/react";
+import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient();

@@ -45,9 +45,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@auth/core": "^0.41.1",
-    "@auth/drizzle-adapter": "^1.11.1",
-    "@auth/express": "^0.12.1",
     "@nestjs/common": "^11.1.8",
     "@nestjs/core": "^11.1.8",
     "@react-email/components": "catalog:react-email",
@@ -56,7 +53,6 @@
     "@thallesp/nestjs-better-auth": "^2.2.0",
     "better-auth": "^1.4.6",
     "next": "catalog:",
-    "next-auth": "5.0.0-beta.30",
     "nodemailer": "catalog:",
     "qrcode": "^1.5.4",
     "react": "catalog:react19",

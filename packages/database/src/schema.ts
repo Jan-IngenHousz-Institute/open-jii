@@ -25,7 +25,7 @@ const timestamps = {
     .notNull(),
 };
 
-export const user = pgTable("user", {
+export const users = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
@@ -35,11 +35,11 @@ export const user = pgTable("user", {
   ...timestamps,
 });
 
-export const account = pgTable("account", {
+export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   userId: text("userId")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   accountId: text("accountId").notNull(),
   providerId: text("providerId").notNull(),
   accessToken: text("accessToken"),
@@ -52,11 +52,11 @@ export const account = pgTable("account", {
   ...timestamps,
 });
 
-export const session = pgTable("session", {
+export const sessions = pgTable("session", {
   id: text("id").primaryKey(),
   userId: text("userId")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expiresAt").notNull(),
   ipAddress: text("ipAddress"),
@@ -78,7 +78,7 @@ export const authenticators = pgTable(
     credentialID: text("credentialID").notNull().unique(),
     userId: text("userId")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     providerAccountId: text("providerAccountId").notNull(),
     credentialPublicKey: text("credentialPublicKey").notNull(),
     counter: integer("counter").notNull(),
@@ -117,7 +117,7 @@ export const profiles = pgTable("profiles", {
   activated: boolean("activated").default(true).notNull(),
   deletedAt: timestamp("deleted_at"),
   userId: text("user_id")
-    .references(() => user.id)
+    .references(() => users.id)
     .unique()
     .notNull(),
   organizationId: uuid("organization_id").references(() => organizations.id),
@@ -170,7 +170,7 @@ export const experiments = pgTable("experiments", {
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
     .notNull(),
   createdBy: text("created_by")
-    .references(() => user.id)
+    .references(() => users.id)
     .notNull(),
   ...timestamps,
 });
@@ -184,7 +184,7 @@ export const experimentMembers = pgTable(
       .references(() => experiments.id)
       .notNull(),
     userId: text("user_id")
-      .references(() => user.id)
+      .references(() => users.id)
       .notNull(),
     role: experimentMembersEnum("role").default("member").notNull(),
     joinedAt: timestamp("joined_at")
@@ -220,7 +220,7 @@ export const experimentProtocols = pgTable(
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id")
-    .references(() => user.id)
+    .references(() => users.id)
     .notNull(),
   action: text("action").notNull(),
   timestamp: timestamp("timestamp")
@@ -237,7 +237,7 @@ export const protocols = pgTable("protocols", {
   code: jsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
   createdBy: text("created_by")
-    .references(() => user.id)
+    .references(() => users.id)
     .notNull(),
   ...timestamps,
 });
@@ -254,7 +254,7 @@ export const macros = pgTable("macros", {
   language: macroLanguageEnum("language").notNull(),
   code: text("code").notNull(), // Base64 encoded content of the macro code
   createdBy: text("created_by")
-    .references(() => user.id)
+    .references(() => users.id)
     .notNull(),
   ...timestamps,
 });
@@ -339,7 +339,7 @@ export const experimentVisualizations = pgTable("experiment_visualizations", {
   // Data source configuration - which tables and columns to use
   dataConfig: jsonb("data_config").notNull(),
   createdBy: text("created_by")
-    .references(() => user.id)
+    .references(() => users.id)
     .notNull(),
   ...timestamps,
 });

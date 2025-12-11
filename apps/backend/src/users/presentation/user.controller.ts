@@ -85,7 +85,10 @@ export class UserController {
         this.logger.log(`User ${params.id} retrieved`);
         return {
           status: StatusCodes.OK,
-          body: formattedUser,
+          body: {
+            ...formattedUser,
+            emailVerified: user.emailVerified ? "true" : "false",
+          },
         };
       }
 

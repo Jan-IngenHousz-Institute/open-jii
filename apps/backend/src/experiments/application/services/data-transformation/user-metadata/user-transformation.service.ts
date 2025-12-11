@@ -89,7 +89,7 @@ export class UserTransformationService extends DataTransformationService {
 
       const userObject: UserObject = {
         id: userId,
-        name: userName,
+        name: userName ?? "Unknown",
         image: userImage,
       };
 

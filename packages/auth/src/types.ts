@@ -1,4 +1,7 @@
-import { auth } from "./better-auth";
+import { getAuth } from "./better-auth";
 
-export type Session = typeof auth.$Infer.Session;
-export type User = typeof auth.$Infer.User;
+type AuthInstance = Awaited<ReturnType<typeof getAuth>>;
+
+export type AuthResponse = AuthInstance["$Infer"]["Session"];
+export type User = AuthResponse["user"];
+export type Session = AuthResponse["session"];
