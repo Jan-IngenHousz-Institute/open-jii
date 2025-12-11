@@ -92,3 +92,6 @@ pids
 
 # Release automation generated files
 release-summary-*.json
+
+# Zip files
+*.zip
