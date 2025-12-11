@@ -3,8 +3,8 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]),
   ENVIRONMENT_PREFIX: z.string().optional().default("dev"),
-  NEXT_PUBLIC_BASE_URL: z.string().url(),
-  NEXT_PUBLIC_API_URL: z.string().url(),
+  NEXT_PUBLIC_BASE_URL: z.string().url().default("http://localhost:3000"),
+  NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:3020"),
   NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
   // PostHog configuration - Optional for development
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
