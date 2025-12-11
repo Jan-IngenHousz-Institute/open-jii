@@ -3,12 +3,21 @@ description: "Initializes OpenTofu and validates the configuration"
 runs:
   using: "composite"
   steps:
+    - name: Resolve Environment
+      shell: bash
+      run: |
+        if [[ "${{ env.environment }}" == "prod" ]]; then
+          echo "RESOLVED_ENV=prod" >> "$GITHUB_ENV"
+        else
+          echo "RESOLVED_ENV=dev" >> "$GITHUB_ENV"
+        fi
+    
     - name: OpenTofu Init
       shell: bash
-      working-directory: infrastructure/env/${{ env.environment }}
+      working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
       run: tofu init
 
     - name: OpenTofu Validate
       shell: bash
-      working-directory: infrastructure/env/${{ env.environment }}
+      working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
       run: tofu validate
