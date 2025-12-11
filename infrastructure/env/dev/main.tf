@@ -1320,7 +1320,7 @@ module "location_service" {
   data_source      = "Esri"
   description      = "Place Index for openJII search and geocoding operations"
   intended_use     = "SingleUse"
-  iam_policy_name  = "openJII-${var.environment}-LocationServicePolicy"
+  iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
 
   tags = {
     Environment = var.environment
