@@ -52,6 +52,21 @@ jobs:
           environment: ${{ inputs.environment }}
           prefix: "/migration"
 
+      - name: Normalize migration env vars
+        run: |
+          echo "Normalizing SSM env vars to MIGRATION_RUNNER_* aliases"
+
+          # Map SSM-derived basenames to expected MIGRATION_RUNNER_* variables
+          [[ -n "${ECS_CLUSTER_NAME:-}" ]] && echo "MIGRATION_RUNNER_ECS_CLUSTER_NAME=$ECS_CLUSTER_NAME" >> $GITHUB_ENV
+          [[ -n "${TASK_DEFINITION_FAMILY:-}" ]] && echo "MIGRATION_RUNNER_TASK_DEFINITION_FAMILY=$TASK_DEFINITION_FAMILY" >> $GITHUB_ENV
+          [[ -n "${CONTAINER_NAME:-}" ]] && echo "MIGRATION_RUNNER_CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
+          [[ -n "${SUBNETS:-}" ]] && echo "MIGRATION_RUNNER_SUBNETS=$SUBNETS" >> $GITHUB_ENV
+          [[ -n "${SECURITY_GROUP_ID:-}" ]] && echo "MIGRATION_RUNNER_SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
+          [[ -n "${ECR_REPOSITORY_NAME:-}" ]] && echo "MIGRATION_RUNNER_ECR_REPOSITORY_NAME=$ECR_REPOSITORY_NAME" >> $GITHUB_ENV
+
+          # Convenience alias
+          [[ -n "${ECR_REPOSITORY_NAME:-}" ]] && echo "ECR_REPOSITORY=$ECR_REPOSITORY_NAME" >> $GITHUB_ENV
+
       - name: Set derived environment variables
         run: |
           # Set log group name based on environment
