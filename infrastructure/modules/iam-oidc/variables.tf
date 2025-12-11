@@ -36,3 +36,16 @@ variable "branch" {
   type        = string
   default     = "main"
 }
+
+
+variable "environment" {
+  description = "Environment name (used for terraform backend bucket naming)"
+  type        = string
+  default     = "dev"
+}
+
+variable "github_environment" {
+  description = "The GitHub environment allowed to assume the role (used in the OIDC condition)."
+  type        = string
+  default     = "dev"
+}
