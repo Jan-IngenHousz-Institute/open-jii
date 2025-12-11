@@ -1347,6 +1347,7 @@ module "ssm_opennext_outputs" {
       description = "S3 bucket name for OpenNext cache"
       type        = "String"
     }
+    # Frontend Lambdas Outputs
     server_function = {
       name        = "/opennext/${var.environment}/server-function"
       value       = module.opennext.server_function_name
@@ -1377,12 +1378,35 @@ module "ssm_opennext_outputs" {
       description = "CloudFront distribution ID for OpenNext"
       type        = "String"
     }
+    # Backend ECS Outputs
+    backend_task_definition_family = {
+      name        = "/backend/${var.environment}/ecs/task-definition-family"
+      value       = module.backend_ecs.ecs_task_definition_family
+      description = "ECS task definition family for backend service"
+      type        = "String"
+      tier        = "Standard"
+    }
+    backend_task_definition_arn = {
+      name        = "/backend/${var.environment}/ecs/task-definition-arn"
+      value       = module.backend_ecs.ecs_task_definition_arn
+      description = "Full ARN (family + revision) of backend ECS task definition"
+      type        = "String"
+      tier        = "Standard"
+    }
+    backend_container_name = {
+      name        = "/backend/${var.environment}/ecs/container-name"
+      value       = module.backend_ecs.container_name
+      description = "Primary container name for backend task definition"
+      type        = "String"
+      tier        = "Standard"
+    }
     dynamodb_table = {
       name        = "/opennext/${var.environment}/dynamodb-table-name"
       value       = module.opennext.dynamodb_table_name
       description = "DynamoDB table name for OpenNext cache/revalidation"
       type        = "String"
     }
+    # Database Migration ECS Outputs
     migration_runner_ecr_repository = {
       name        = "/migration/${var.environment}/ecr-repository-name"
       value       = module.migration_runner_ecr.repository_name
@@ -1419,6 +1443,7 @@ module "ssm_opennext_outputs" {
       description = "Security group ID for the database migration task"
       type        = "SecureString"
     }
+    # Docusaurus Site Outputs
     docs_bucket = {
       name        = "/docs/${var.environment}/docs-bucket"
       value       = module.docusaurus_s3.bucket_name
