@@ -1,6 +1,6 @@
 # Introduction
 
-The MultispeQ MQTT Interface (MMI) is a command-line tool that facilitates communication between MultispeQ devices and MQTT brokers. It serves as a bridge that enables seamless data flow from devices to cloud infrastructure, making it an essential component in the OpenJII ecosystem for development purposes.
+The MultispeQ MQTT Interface (MMI) is a command-line tool that facilitates communication between MultispeQ devices and MQTT brokers. It serves as a bridge that enables seamless data flow from devices to cloud infrastructure, making it an essential component in the openJII ecosystem for development purposes.
 
 ![MultispeQ MQTT Interface](../../../../static/img/openjii-mmi-cli-tool-screenshot.png)
 
@@ -49,7 +49,7 @@ The MultispeQ MQTT Interface is designed to support development-related use case
 
 This tool is primarily intended for developers:
 
-- **Software Engineers** working on the OpenJII ecosystem
+- **Software Engineers** working on the openJII ecosystem
 - **Device Firmware Developers** testing device communication
 - **Backend Developers** integrating MultispeQ data into applications
 - **QA Engineers** validating system functionality

@@ -1,4 +1,4 @@
-# Robots.txt for OpenJII Documentation
+# Robots.txt for openJII Documentation
 # https://www.robotstxt.org/robotstxt.html
 
 # Block all crawlers

@@ -1,5 +1,5 @@
 # Databricks notebook source
-# DBTITLE 1,OpenJII Experiment Pipeline
+# DBTITLE 1,openJII Experiment Pipeline
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
@@ -573,7 +573,7 @@ else:
 def enriched_sample():
     """
     Create an enriched sample table by combining sample data with user metadata
-    from the OpenJII backend API. This creates a silver layer table with denormalized
+    from the openJII backend API. This creates a silver layer table with denormalized
     user information for easier analytics and individual question columns.
     """
     

@@ -1,5 +1,5 @@
 """
-Macro Processing Library for OpenJII MultispeQ Data
+Macro Processing Library for openJII MultispeQ Data
 
 This module provides utilities for executing JavaScript and Python macros
 on MultispeQ measurement data within Databricks pipelines.

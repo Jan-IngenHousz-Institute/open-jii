@@ -7,7 +7,7 @@
 
 ## Context
 
-The OpenJII platform collects sensor data from agricultural IoT devices across multiple experiments, creating unique data processing challenges. This data must support both operational analytics for platform management and specialized scientific analysis for researchers. The ingestion architecture must handle streaming data from AWS Kinesis while supporting both real-time monitoring and batch analytical processing.
+The openJII platform collects sensor data from agricultural IoT devices across multiple experiments, creating unique data processing challenges. This data must support both operational analytics for platform management and specialized scientific analysis for researchers. The ingestion architecture must handle streaming data from AWS Kinesis while supporting both real-time monitoring and batch analytical processing.
 
 A key challenge is balancing centralized governance with experiment-specific flexibility. Sensor data should be processed once for common transformations while allowing researchers to apply specialized scientific transformations without affecting other experiments. Additionally, computing resources should be utilized efficiently, processing data for experiments only when necessary rather than on rigid schedules.
 
