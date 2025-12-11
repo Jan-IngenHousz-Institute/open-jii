@@ -1,9 +1,5 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink } from "better-auth/plugins";
-
 import { db } from "@repo/database";
-import { users, sessions, accounts, verification } from "@repo/database/schema";
+import { users, sessions, accounts, verificationTokens } from "@repo/database/schema";
 
 import { NodeMailerAuthEmailAdapter } from "./adapters/email.adapter";
 
@@ -17,6 +13,10 @@ export const getAuth = async (): Promise<any> => {
     return authInstance;
   }
 
+  const { betterAuth } = await import("better-auth");
+  const { drizzleAdapter } = await import("better-auth/adapters/drizzle");
+  const { magicLink } = await import("better-auth/plugins");
+
   const emailAdapter = new NodeMailerAuthEmailAdapter();
 
   authInstance = betterAuth({
@@ -29,7 +29,8 @@ export const getAuth = async (): Promise<any> => {
         session: sessions,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         account: accounts,
-        verification,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        verification: verificationTokens,
       },
     }),
     advanced: {

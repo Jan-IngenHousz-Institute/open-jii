@@ -103,7 +103,7 @@ export class ProtocolRepository {
       }
 
       const augmentedResult = result[0].protocols as unknown as ProtocolDto;
-      augmentedResult.createdByName ??= result[0].user?.name;
+      augmentedResult.createdByName ??= result[0].users?.name ?? undefined;
       return augmentedResult;
     });
   }

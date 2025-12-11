@@ -1,7 +1,6 @@
 import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 import { toDataURL } from "qrcode";
-// @ts-expect-error - React types missing
 import React from "react";
 
 import { VerificationRequest } from "@repo/transactional/emails/verification-request";
