@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 
+import { AuthModule } from "@repo/auth";
+
 import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
@@ -28,6 +30,7 @@ import { UserModule } from "./users/user.module";
     MacroModule,
     ProtocolModule,
     UserModule,
+    AuthModule,
     HealthModule,
   ],
 })

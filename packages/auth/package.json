@@ -2,6 +2,10 @@
   "name": "@repo/auth",
   "version": "0.0.1",
   "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
     "./adapter": {
       "types": "./src/adapter.d.ts",
       "default": "./dist/adapter.js"
@@ -44,9 +48,13 @@
     "@auth/core": "^0.41.1",
     "@auth/drizzle-adapter": "^1.11.1",
     "@auth/express": "^0.12.1",
+    "@nestjs/common": "^11.1.8",
+    "@nestjs/core": "^11.1.8",
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
+    "@thallesp/nestjs-better-auth": "^2.2.0",
+    "better-auth": "^1.4.6",
     "next": "catalog:",
     "next-auth": "5.0.0-beta.30",
     "nodemailer": "catalog:",

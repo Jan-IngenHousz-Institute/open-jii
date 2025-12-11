@@ -50,6 +50,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-auth": "^1.4.6",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.41.0",
     "postgres": "^3.4.5",

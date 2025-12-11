@@ -1,9 +1,20 @@
 import { NestFactory } from "@nestjs/core";
+import { json, urlencoded } from "express";
 
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+
+  app.use((req: any, res: any, next: any) => {
+    if (req.path.startsWith("/api/auth")) {
+      next();
+    } else {
+      json()(req, res, () => {
+        urlencoded({ extended: true })(req, res, next);
+      });
+    }
+  });
 
   const corsEnabled = process.env.CORS_ENABLED !== "false";
   if (corsEnabled) {

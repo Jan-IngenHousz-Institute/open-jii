@@ -25,73 +25,60 @@ const timestamps = {
     .notNull(),
 };
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name"),
-  email: text("email").unique(),
-  emailVerified: timestamp("emailVerified", { mode: "date" }),
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("emailVerified").notNull().default(false),
   image: text("image"),
   registered: boolean("registered").notNull().default(false),
   ...timestamps,
 });
 
-export const accounts = pgTable(
-  "accounts",
-  {
-    userId: uuid("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").$type<"email" | "oauth" | "oidc" | "webauthn">().notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("providerAccountId").notNull(),
-    refresh_token: text("refresh_token"),
-    access_token: text("access_token"),
-    expires_at: bigint("expires_at", { mode: "number" }),
-    token_type: text("token_type"),
-    scope: text("scope"),
-    id_token: text("id_token"),
-    session_state: text("session_state"),
-  },
-  (account) => [
-    {
-      compoundKey: primaryKey({
-        columns: [account.provider, account.providerAccountId],
-      }),
-    },
-  ],
-);
-
-export const sessions = pgTable("sessions", {
-  sessionToken: text("sessionToken").primaryKey(),
-  userId: uuid("userId")
+export const account = pgTable("account", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { mode: "date" }).notNull(),
+    .references(() => user.id, { onDelete: "cascade" }),
+  accountId: text("accountId").notNull(),
+  providerId: text("providerId").notNull(),
+  accessToken: text("accessToken"),
+  refreshToken: text("refreshToken"),
+  accessTokenExpiresAt: timestamp("accessTokenExpiresAt"),
+  refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt"),
+  scope: text("scope"),
+  idToken: text("idToken"),
+  password: text("password"),
+  ...timestamps,
 });
 
-export const verificationTokens = pgTable(
-  "verification_tokens",
-  {
-    identifier: text("identifier").notNull(),
-    token: text("token").notNull(),
-    expires: timestamp("expires", { mode: "date" }).notNull(),
-  },
-  (verificationToken) => [
-    {
-      compositePk: primaryKey({
-        columns: [verificationToken.identifier, verificationToken.token],
-      }),
-    },
-  ],
-);
+export const session = pgTable("session", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  ipAddress: text("ipAddress"),
+  userAgent: text("userAgent"),
+  ...timestamps,
+});
+
+export const verification = pgTable("verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  ...timestamps,
+});
 
 export const authenticators = pgTable(
   "authenticators",
   {
     credentialID: text("credentialID").notNull().unique(),
-    userId: uuid("userId")
+    userId: text("userId")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     providerAccountId: text("providerAccountId").notNull(),
     credentialPublicKey: text("credentialPublicKey").notNull(),
     counter: integer("counter").notNull(),
@@ -129,8 +116,8 @@ export const profiles = pgTable("profiles", {
   avatarUrl: varchar("avatar_url", { length: 500 }),
   activated: boolean("activated").default(true).notNull(),
   deletedAt: timestamp("deleted_at"),
-  userId: uuid("user_id")
-    .references(() => users.id)
+  userId: text("user_id")
+    .references(() => user.id)
     .unique()
     .notNull(),
   organizationId: uuid("organization_id").references(() => organizations.id),
@@ -182,8 +169,8 @@ export const experiments = pgTable("experiments", {
   embargoUntil: timestamp("embargo_until")
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
     .notNull(),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
+  createdBy: text("created_by")
+    .references(() => user.id)
     .notNull(),
   ...timestamps,
 });
@@ -196,8 +183,8 @@ export const experimentMembers = pgTable(
     experimentId: uuid("experiment_id")
       .references(() => experiments.id)
       .notNull(),
-    userId: uuid("user_id")
-      .references(() => users.id)
+    userId: text("user_id")
+      .references(() => user.id)
       .notNull(),
     role: experimentMembersEnum("role").default("member").notNull(),
     joinedAt: timestamp("joined_at")
@@ -232,8 +219,8 @@ export const experimentProtocols = pgTable(
 // Audit Log Table
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .references(() => users.id)
+  userId: text("user_id")
+    .references(() => user.id)
     .notNull(),
   action: text("action").notNull(),
   timestamp: timestamp("timestamp")
@@ -249,8 +236,8 @@ export const protocols = pgTable("protocols", {
   description: text("description"),
   code: jsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
+  createdBy: text("created_by")
+    .references(() => user.id)
     .notNull(),
   ...timestamps,
 });
@@ -266,8 +253,8 @@ export const macros = pgTable("macros", {
   description: text("description"),
   language: macroLanguageEnum("language").notNull(),
   code: text("code").notNull(), // Base64 encoded content of the macro code
-  createdBy: uuid("created_by")
-    .references(() => users.id)
+  createdBy: text("created_by")
+    .references(() => user.id)
     .notNull(),
   ...timestamps,
 });
@@ -351,8 +338,8 @@ export const experimentVisualizations = pgTable("experiment_visualizations", {
   config: jsonb("config").notNull(),
   // Data source configuration - which tables and columns to use
   dataConfig: jsonb("data_config").notNull(),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
+  createdBy: text("created_by")
+    .references(() => user.id)
     .notNull(),
   ...timestamps,
 });
