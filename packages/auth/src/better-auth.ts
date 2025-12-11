@@ -32,6 +32,11 @@ export const getAuth = async (): Promise<any> => {
         verification,
       },
     }),
+    advanced: {
+      database: {
+        generateId: () => crypto.randomUUID(),
+      },
+    },
     socialProviders: {
       github: {
         clientId: process.env.GITHUB_CLIENT_ID ?? "",

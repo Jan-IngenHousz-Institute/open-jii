@@ -26,7 +26,7 @@ const timestamps = {
 };
 
 export const users = pgTable("user", {
-  id: text("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("emailVerified").notNull().default(false),
@@ -37,7 +37,7 @@ export const users = pgTable("user", {
 
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
-  userId: text("userId")
+  userId: uuid("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   accountId: text("accountId").notNull(),
@@ -54,7 +54,7 @@ export const accounts = pgTable("account", {
 
 export const sessions = pgTable("session", {
   id: text("id").primaryKey(),
-  userId: text("userId")
+  userId: uuid("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
@@ -76,7 +76,7 @@ export const authenticators = pgTable(
   "authenticators",
   {
     credentialID: text("credentialID").notNull().unique(),
-    userId: text("userId")
+    userId: uuid("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     providerAccountId: text("providerAccountId").notNull(),
@@ -116,7 +116,7 @@ export const profiles = pgTable("profiles", {
   avatarUrl: varchar("avatar_url", { length: 500 }),
   activated: boolean("activated").default(true).notNull(),
   deletedAt: timestamp("deleted_at"),
-  userId: text("user_id")
+  userId: uuid("user_id")
     .references(() => users.id)
     .unique()
     .notNull(),
@@ -169,7 +169,7 @@ export const experiments = pgTable("experiments", {
   embargoUntil: timestamp("embargo_until")
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
     .notNull(),
-  createdBy: text("created_by")
+  createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
   ...timestamps,
@@ -183,7 +183,7 @@ export const experimentMembers = pgTable(
     experimentId: uuid("experiment_id")
       .references(() => experiments.id)
       .notNull(),
-    userId: text("user_id")
+    userId: uuid("user_id")
       .references(() => users.id)
       .notNull(),
     role: experimentMembersEnum("role").default("member").notNull(),
@@ -219,7 +219,7 @@ export const experimentProtocols = pgTable(
 // Audit Log Table
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id")
+  userId: uuid("user_id")
     .references(() => users.id)
     .notNull(),
   action: text("action").notNull(),
@@ -236,7 +236,7 @@ export const protocols = pgTable("protocols", {
   description: text("description"),
   code: jsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
-  createdBy: text("created_by")
+  createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
   ...timestamps,
@@ -253,7 +253,7 @@ export const macros = pgTable("macros", {
   description: text("description"),
   language: macroLanguageEnum("language").notNull(),
   code: text("code").notNull(), // Base64 encoded content of the macro code
-  createdBy: text("created_by")
+  createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
   ...timestamps,
@@ -338,7 +338,7 @@ export const experimentVisualizations = pgTable("experiment_visualizations", {
   config: jsonb("config").notNull(),
   // Data source configuration - which tables and columns to use
   dataConfig: jsonb("data_config").notNull(),
-  createdBy: text("created_by")
+  createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
   ...timestamps,
