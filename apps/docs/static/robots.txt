@@ -1,0 +1,6 @@
+# Robots.txt for openJII Documentation
+# https://www.robotstxt.org/robotstxt.html
+
+# Block all crawlers
+User-agent: *
+Disallow: /
