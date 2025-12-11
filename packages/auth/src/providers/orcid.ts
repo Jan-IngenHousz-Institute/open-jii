@@ -127,7 +127,7 @@ export default function ORCID<P extends ORCIDProfile>(
       params: {
         scope: "/authenticate",
         response_type: "code",
-        redirect_uri: "https://dev.openjii.org" + "/api/auth/callback/orcid",
+        redirect_uri: process.env.NEXT_PUBLIC_BASE_URL + "/api/auth/callback/orcid",
       },
     },
     token: {

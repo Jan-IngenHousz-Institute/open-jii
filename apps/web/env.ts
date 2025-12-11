@@ -1,19 +1,20 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z.enum(["development", "production", "test"]),
   ENVIRONMENT_PREFIX: z.string().optional().default("dev"),
-  NEXT_PUBLIC_BASE_URL: z.string().url().optional().default("http://localhost:3000"),
+  NEXT_PUBLIC_BASE_URL: z.string().url(),
+  NEXT_PUBLIC_API_URL: z.string().url(),
+  NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
   // PostHog configuration - Optional for development
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional().default("https://eu.i.posthog.com"),
-  VERCEL_AUTOMATION_BYPASS_SECRET: z.string().optional(),
   CONTENTFUL_SPACE_ID: z.string().optional(),
   CONTENTFUL_ACCESS_TOKEN: z.string().optional(),
   CONTENTFUL_PREVIEW_ACCESS_TOKEN: z.string().optional(),
   CONTENTFUL_PREVIEW_SECRET: z.string().optional(),
   CONTENTFUL_SPACE_ENVIRONMENT: z.string().optional().default("master"),
-  NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
+  VERCEL_AUTOMATION_BYPASS_SECRET: z.string().optional(),
 });
 
 const parseEnv = () => {
@@ -33,6 +34,7 @@ const parseEnv = () => {
       CONTENTFUL_PREVIEW_SECRET: process.env.CONTENTFUL_PREVIEW_SECRET,
       CONTENTFUL_SPACE_ENVIRONMENT: process.env.CONTENTFUL_SPACE_ENVIRONMENT,
       NEXT_PUBLIC_ENABLE_DEVTOOLS: process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS,
+      TSR_API_URL: process.env.TSR_API_URL,
     };
 
     return envSchema.parse(rawEnv);
