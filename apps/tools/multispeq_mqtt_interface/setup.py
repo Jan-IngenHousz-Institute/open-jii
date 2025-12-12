@@ -10,7 +10,7 @@ setup(
     version='0.1.0',
     author='JII',
     author_email='ji-institute@info.nl',
-    description='A command-line interface for interacting with the OpenJII MQTT broker in MultispeQ applications.',
+    description='A command-line interface for interacting with the openJII MQTT broker in MultispeQ applications.',
     packages=find_packages(where='src'),
     py_modules=["main"],
     package_dir={'': 'src'},

@@ -1,6 +1,6 @@
 # Topic Structure
 
-This document describes the MQTT topic structure used by the MultispeQ MQTT Interface tool. Understanding the topic structure is essential for configuring the tool and integrating it with the OpenJII platform.
+This document describes the MQTT topic structure used by the MultispeQ MQTT Interface tool. Understanding the topic structure is essential for configuring the tool and integrating it with the openJII platform.
 
 ## Topic Hierarchy
 

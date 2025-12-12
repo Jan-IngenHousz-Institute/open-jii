@@ -616,7 +616,7 @@ module "auth_secrets" {
   source = "../../modules/secrets-manager"
 
   name        = "openjii-auth-secrets-${var.environment}"
-  description = "Authentication and OAuth secrets for the OpenJII services"
+  description = "Authentication and OAuth secrets for the openJII services"
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
@@ -641,7 +641,7 @@ module "databricks_secrets" {
   source = "../../modules/secrets-manager"
 
   name        = "openjii-databricks-secrets-${var.environment}"
-  description = "Databricks connection secrets for the OpenJII services"
+  description = "Databricks connection secrets for the openJII services"
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
@@ -671,7 +671,7 @@ module "contentful_secrets" {
   source = "../../modules/secrets-manager"
 
   name        = "openjii-contentful-secrets-${var.environment}"
-  description = "Contentful API secrets for the OpenJII services"
+  description = "Contentful API secrets for the openJII services"
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
@@ -1274,7 +1274,7 @@ module "docs_cloudfront" {
   # TODO: Add tags, logging configuration
 }
 
-# Route53 configuration for OpenJII services
+# Route53 configuration for openJII services
 module "route53" {
   source = "../../modules/route53"
 
@@ -1330,7 +1330,7 @@ module "location_service" {
 
   place_index_name = "open-jii-${var.environment}-places-index"
   data_source      = "Esri"
-  description      = "Place Index for OpenJII search and geocoding operations"
+  description      = "Place Index for openJII search and geocoding operations"
   intended_use     = "SingleUse"
   iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
 

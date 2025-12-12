@@ -10,14 +10,14 @@ export default function ApiIndexPage(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
 
   return (
-    <Layout title="API Documentation" description="OpenJII API Documentation Hub">
+    <Layout title="API Documentation" description="openJII API Documentation Hub">
       <Head>
-        <meta name="description" content="OpenJII API Documentation Hub" />
+        <meta name="description" content="openJII API Documentation Hub" />
       </Head>
       <main className={styles.apiContainer}>
         <div className={styles.apiHeader}>
-          <h1>OpenJII API Documentation</h1>
-          <p>Explore and test the OpenJII platform APIs</p>
+          <h1>openJII API Documentation</h1>
+          <p>Explore and test the openJII platform APIs</p>
         </div>
 
         <div className={styles.apiCardContainer}>

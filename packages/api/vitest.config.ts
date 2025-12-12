@@ -13,6 +13,7 @@ export default mergeConfig(
           "**/*.spec.ts", // Test files
           "**/*.test.ts", // Test files
           "**/test/**", // Test utilities
+          "**/openapi.ts",
         ],
       },
     },

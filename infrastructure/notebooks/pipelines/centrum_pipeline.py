@@ -1,7 +1,7 @@
 # Databricks notebook source
-# DBTITLE 1,OpenJII Medallion Architecture Pipeline
+# DBTITLE 1,openJII Medallion Architecture Pipeline
 # This notebook implements the complete medallion architecture (Bronze-Silver-Gold)
-# for OpenJII IoT sensor data processing following the dual medallion pattern
+# for openJII IoT sensor data processing following the dual medallion pattern
 
 # COMMAND ----------
 
@@ -28,6 +28,23 @@ macro_schema = StructType([
     StructField("filename", StringType(), True)
 ])
 
+# Define annotation schema to match the database structure
+annotation_content_schema = StructType([
+    StructField("text", StringType(), True),
+    StructField("flagType", StringType(), True)
+])
+
+annotation_schema = StructType([
+    StructField("id", StringType(), True),
+    StructField("rowId", StringType(), True),
+    StructField("type", StringType(), True),
+    StructField("content", annotation_content_schema, True),
+    StructField("createdBy", StringType(), True),
+    StructField("createdByName", StringType(), True),
+    StructField("createdAt", TimestampType(), True),
+    StructField("updatedAt", TimestampType(), True)
+])
+
 sensor_schema = StructType([
     StructField("topic", StringType(), False),
     StructField("device_name", StringType(), True),
@@ -40,7 +57,8 @@ sensor_schema = StructType([
     StructField("output", StringType(), True),
     StructField("questions", ArrayType(question_schema), True),
     StructField("user_id", StringType(), True),
-    StructField("macros", ArrayType(macro_schema), True)
+    StructField("macros", ArrayType(macro_schema), True),
+    StructField("annotations", ArrayType(annotation_schema), True)
 ])
 
 # COMMAND ----------
@@ -202,6 +220,12 @@ def clean_data():
         F.col("parsed_data.questions")
     )
     
+    # Extract annotations from the parsed_data
+    df = df.withColumn(
+        "annotations",
+        F.coalesce(F.col("parsed_data.annotations"), F.array())
+    )
+    
     # Create a unique id for each row
     # Hash based on experiment_id, device_id, timestamp, sample, and ingestion_timestamp
     # This ensures each ingestion gets a unique ID, even for duplicate measurements
@@ -218,6 +242,24 @@ def clean_data():
         )
     )
     
+    # Populate missing annotation IDs and rowIds
+    # If annotations come from payload without IDs, generate them here
+    df = df.withColumn(
+        "annotations",
+        F.expr("""
+            transform(annotations, a -> struct(
+                coalesce(a.id, uuid()) as id,
+                coalesce(a.rowId, cast(id as string)) as rowId,
+                a.type as type,
+                a.content as content,
+                a.createdBy as createdBy,
+                a.createdByName as createdByName,
+                coalesce(a.createdAt, current_timestamp()) as createdAt,
+                coalesce(a.updatedAt, current_timestamp()) as updatedAt
+            ))
+        """)
+    )
+    
     # Select final columns for silver layer
     return df.select(
         "id",
@@ -230,6 +272,7 @@ def clean_data():
         "output",
         "macros",
         "questions",
+        "annotations",
         "user_id",
         "experiment_id",
         "timestamp",

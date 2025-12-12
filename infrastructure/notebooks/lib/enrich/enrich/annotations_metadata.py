@@ -31,16 +31,19 @@ annotation_schema = StructType([
 def add_annotation_column(df, table_name: str, catalog_name: str, experiment_schema: str, spark):
     """
     Add annotation data as an array of structs to DataFrame by joining with the annotations table.
+    If the DataFrame already has an 'annotations' column from upstream (e.g., from the payload),
+    this function will merge those annotations with annotations from the database.
     
     Args:
         df: PySpark DataFrame with 'id' column (used as row_id for joining)
+            May optionally have an existing 'annotations' column to merge with
         table_name: Name of the table being annotated (used to filter annotations)
         catalog_name: Databricks catalog name
         experiment_schema: Experiment schema name
         spark: SparkSession instance
         
     Returns:
-        DataFrame with additional annotation column:
+        DataFrame with merged annotation column:
         - annotations: array<struct<
             id: string,
             rowId: string,
@@ -58,7 +61,7 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         
     Note:
         If the annotations table doesn't exist or an error occurs,
-        the function will add an empty array column and continue without failing.
+        the function will preserve existing annotations or add an empty array column.
     """
     try:
         annotation_table_name = f"{catalog_name}.`{experiment_schema}`.annotations"
@@ -103,7 +106,15 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         grouped_count = annotations_grouped.count()
         print(f"Grouped into {grouped_count} unique row_ids")
         
-        # Left join with annotations and handle null case
+        # Check if DataFrame already has an annotations column from upstream
+        has_existing_annotations = "annotations" in df.columns
+        
+        if has_existing_annotations:
+            print("Found existing annotations column from upstream - will merge with database annotations")
+            # Rename existing annotations to avoid conflict during join
+            df = df.withColumnRenamed("annotations", "upstream_annotations")
+        
+        # Left join with annotations from database
         enriched_df = (
             df.join(
                 annotations_grouped,
@@ -111,11 +122,25 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
                 "left"
             )
             .drop("row_id")
-            .withColumn(
+        )
+        
+        if has_existing_annotations:
+            # Merge upstream annotations with database annotations
+            # Use concat to combine both arrays, handling nulls appropriately
+            enriched_df = enriched_df.withColumn(
+                "annotations",
+                F.concat(
+                    F.coalesce(F.col("upstream_annotations"), F.array()),
+                    F.coalesce(F.col("annotations"), F.array())
+                )
+            ).drop("upstream_annotations")
+            print("Merged upstream annotations with database annotations")
+        else:
+            # No existing annotations, just use database annotations or empty array
+            enriched_df = enriched_df.withColumn(
                 "annotations",
                 F.when(F.col("annotations").isNull(), F.array()).otherwise(F.col("annotations"))
             )
-        )
         
         print(f"Join completed successfully")
         
@@ -123,10 +148,15 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         
     except Exception as e:
         print(f"Warning: Could not join with annotations table: {str(e)}")
-        print("Continuing without annotation data...")
+        print("Continuing without database annotation data...")
         
-        # Return original df with empty array column using the global schema definition
-        return df.withColumn(
-            "annotations",
-            F.array().cast(ArrayType(annotation_schema))
-        )
+        # Check if DataFrame already has annotations from upstream
+        if "annotations" in df.columns:
+            print("Preserving existing annotations from upstream")
+            return df
+        else:
+            # Return original df with empty array column using the global schema definition
+            return df.withColumn(
+                "annotations",
+                F.array().cast(ArrayType(annotation_schema))
+            )

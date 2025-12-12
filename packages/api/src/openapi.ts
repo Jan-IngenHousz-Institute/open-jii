@@ -9,9 +9,9 @@ const openApiDocument = generateOpenApi(
   contract,
   {
     info: {
-      title: "OpenJII API",
+      title: "openJII API",
       version: "1.0.0",
-      description: "REST API documentation for the OpenJII platform",
+      description: "REST API documentation for the openJII platform",
     },
     servers: [
       {

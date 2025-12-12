@@ -7,7 +7,7 @@
 
 ## Context
 
-The OpenJII platform manages agricultural sensor data across diverse field experiments, requiring a governance framework that ensures consistency, security, and scientific reproducibility. Researchers conduct experiments with various sensor-plant combinations, collecting data that must be both isolated for scientific integrity and accessible for collaboration.
+The openJII platform manages agricultural sensor data across diverse field experiments, requiring a governance framework that ensures consistency, security, and scientific reproducibility. Researchers conduct experiments with various sensor-plant combinations, collecting data that must be both isolated for scientific integrity and accessible for collaboration.
 
 Agricultural research demands rigorous data isolation between experiments while still enabling platform-wide analytics. Scientists need assurance that their experimental data remains unaffected by other experiments, yet administrators require cross-experiment insights to manage the platform effectively.
 
@@ -21,7 +21,7 @@ We will implement a data governance framework leveraging Databricks Unity Catalo
 
 ### Catalog Structure
 
-We will use a single catalog (e.g., `openjii_dev`) covering the entire domain of OpenJII-managed experiments. This approach simplifies security policy enforcement by allowing permissions to cascade to underlying objects while minimizing fragmentation. The unified catalog provides a clean namespace that encompasses all platform data while still allowing for future expansion if distinct data domains emerge.
+We will use a single catalog (e.g., `openjii_dev`) covering the entire domain of openJII-managed experiments. This approach simplifies security policy enforcement by allowing permissions to cascade to underlying objects while minimizing fragmentation. The unified catalog provides a clean namespace that encompasses all platform data while still allowing for future expansion if distinct data domains emerge.
 
 ### Schema Architecture
 
@@ -85,4 +85,4 @@ The proposed data governance model establishes a sophisticated framework that pr
 
 The dual medallion architecture with separate gold tiers for platform operations and scientific research acknowledges the distinct analytical needs of these domains and prevents compromise in either area. This approach aligns perfectly with the requirements of agricultural IoT research, where scientific reproducibility and data isolation are paramount.
 
-Despite the increased complexity and storage requirements, the architecture's benefits in scientific integrity, security, and scalability make it the optimal choice for the OpenJII platform. The framework establishes a foundation that will support diverse agricultural experiments while maintaining the rigor required for scientific research.
+Despite the increased complexity and storage requirements, the architecture's benefits in scientific integrity, security, and scalability make it the optimal choice for the openJII platform. The framework establishes a foundation that will support diverse agricultural experiments while maintaining the rigor required for scientific research.

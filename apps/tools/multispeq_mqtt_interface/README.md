@@ -1,12 +1,12 @@
 # MultispeQ MQTT Interface
 
-This tool provides an interface to connect MultispeQ devices to the OpenJII Platform via MQTT. It enables secure communication between MultispeQ devices and AWS IoT Core for real-time data transmission and analysis.
+This tool provides an interface to connect MultispeQ devices to the openJII Platform via MQTT. It enables secure communication between MultispeQ devices and AWS IoT Core for real-time data transmission and analysis.
 
 > **Note**: This tool is currently in active development and intended for development purposes only. APIs and functionality may change without notice.
 
 ## Overview
 
-The MultispeQ MQTT Interface facilitates bi-directional communication between MultispeQ devices and the OpenJII cloud infrastructure. It handles device authentication, message formatting, and ensures data is properly routed to AWS Timestream and Kinesis for storage and processing.
+The MultispeQ MQTT Interface facilitates bi-directional communication between MultispeQ devices and the openJII cloud infrastructure. It handles device authentication, message formatting, and ensures data is properly routed to AWS Timestream and Kinesis for storage and processing.
 
 ```mermaid
 graph TD
@@ -176,7 +176,7 @@ pnpm build
 
 ## Related Documentation
 
-- [OpenJII Documentation Hub](https://docs.openjii.org)
+- [openJII Documentation Hub](https://docs.openjii.org)
 - [AWS IoT Core Documentation](https://docs.aws.amazon.com/iot/latest/developerguide/what-is-aws-iot.html)
 
 ## Contributing
@@ -185,4 +185,4 @@ Please refer to the [Contributing Guidelines](../../../CONTRIBUTING.md) in the r
 
 ## License
 
-This project is licensed under the same license as the parent OpenJII project. See the [License](../../../LICENSE) file in the repository root for details.
+This project is licensed under the same license as the parent openJII project. See the [License](../../../LICENSE) file in the repository root for details.

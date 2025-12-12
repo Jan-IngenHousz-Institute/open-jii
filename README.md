@@ -1,14 +1,14 @@
-# OpenJII Platform
+# openJII Platform
 
 <p align="center">
-  <img src="./apps/docs/static/img/logo.png" alt="OpenJII Logo" width="200"/>
+  <img src="./apps/docs/static/img/logo.png" alt="openJII Logo" width="200"/>
 </p>
 
-An open-source platform for agricultural IoT research and plant phenotyping developed by the Jan IngenHousz Institute. OpenJII helps researchers collect, process, and analyze sensor data from MultispeQ devices and custom IoT sensors.
+An open-source platform for agricultural IoT research and plant phenotyping developed by the Jan IngenHousz Institute. openJII helps researchers collect, process, and analyze sensor data from MultispeQ devices and custom IoT sensors.
 
-## What is OpenJII?
+## What is openJII?
 
-OpenJII is designed to support plant researchers throughout their workflow:
+openJII is designed to support plant researchers throughout their workflow:
 
 - Collect data from MultispeQ devices and custom IoT sensors
 - Process and analyze data with our pipeline architecture

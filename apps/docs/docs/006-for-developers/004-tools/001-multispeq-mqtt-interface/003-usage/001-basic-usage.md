@@ -1,6 +1,6 @@
 # Basic Usage
 
-The MultispeQ MQTT Interface provides a command-line tool for connecting MultispeQ devices to the OpenJII platform via MQTT. This guide covers the basic operations you'll need to get started.
+The MultispeQ MQTT Interface provides a command-line tool for connecting MultispeQ devices to the openJII platform via MQTT. This guide covers the basic operations you'll need to get started.
 
 ## Starting the Tool
 
@@ -78,7 +78,7 @@ MultispeQ > m
 This command will:
 
 1. Take measurements using the connected MultispeQ device
-2. Format the data according to the OpenJII data model
+2. Format the data according to the openJII data model
 3. Publish the measurements to AWS IoT Core using your configured topic
 
 ### Viewing Current Configuration
