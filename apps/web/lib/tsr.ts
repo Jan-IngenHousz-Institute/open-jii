@@ -1,6 +1,7 @@
 import { initContract, tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
+import { env } from "~/env";
 
 import { experimentContract, macroContract, protocolContract, userContract } from "@repo/api";
 
@@ -27,7 +28,7 @@ export const contract = c.router({
 });
 
 export const tsr = initTsrReactQuery(contract, {
-  baseUrl: "http://localhost:3020",
+  baseUrl: env.NEXT_PUBLIC_API_URL,
   baseHeaders: {
     "x-app-source": "ts-rest",
   },

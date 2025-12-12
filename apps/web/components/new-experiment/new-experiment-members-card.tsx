@@ -154,7 +154,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
             variant="outline"
             disabled={!selectedUser}
             size="default"
-            className="bg-surface"
+            className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
           >
             {t("common.add")}
           </Button>

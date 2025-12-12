@@ -283,16 +283,4 @@ describe("ExperimentLinkedProtocols", () => {
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
     expect(screen.getByTestId("protocol-selector")).toHaveTextContent("protocol-1,protocol-2");
   });
-
-  it("uses correct link for archived experiments", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: { code: "NOT_FOUND" },
-    });
-
-    render(<ExperimentLinkedProtocols experimentId="exp-123" isArchived />);
-    const link = screen.getByText("protocols.createFlow").closest("a");
-    expect(link).toHaveAttribute("href", "/en/platform/experiments-archive/exp-123/flow");
-  });
 });

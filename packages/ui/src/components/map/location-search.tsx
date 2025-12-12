@@ -112,7 +112,7 @@ export const LocationSearch = ({
           }}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full rounded-lg border border-gray-300 bg-white px-10 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-500"
+          className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 w-full rounded-lg border border-gray-300 bg-white px-10 py-2 text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:text-gray-500"
         />
         {isLoading && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
@@ -134,7 +134,7 @@ export const LocationSearch = ({
                   key={`${location.latitude}-${location.longitude}-${index}`}
                   onClick={() => handleLocationSelect(location)}
                   className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
-                    index === selectedIndex ? "bg-blue-50" : ""
+                    index === selectedIndex ? "bg-surface" : ""
                   }`}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >

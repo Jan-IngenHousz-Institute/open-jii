@@ -77,38 +77,23 @@ beforeEach(() => {
 
 describe("<ExperimentArchive />", () => {
   it("renders archive button when not archived", () => {
-    renderWithClient(
-      <ExperimentArchive experimentId={experimentId} isArchived={false} isAdmin={true} />,
-    );
+    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
 
     expect(screen.getByText("experimentSettings.archiveExperiment")).toBeInTheDocument();
     expect(screen.queryByText("experimentSettings.unarchiveExperiment")).not.toBeInTheDocument();
   });
 
   it("renders unarchive button when archived", () => {
-    renderWithClient(
-      <ExperimentArchive experimentId={experimentId} isArchived={true} isAdmin={true} />,
-    );
+    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={true} />);
 
     expect(screen.getByText("experimentSettings.unarchiveExperiment")).toBeInTheDocument();
     expect(screen.queryByText("experimentSettings.archiveExperiment")).not.toBeInTheDocument();
   });
 
-  it("disables button when not admin", () => {
-    renderWithClient(
-      <ExperimentArchive experimentId={experimentId} isArchived={false} isAdmin={false} />,
-    );
-
-    const button = screen.getByText("experimentSettings.archiveExperiment");
-    expect(button).toBeDisabled();
-  });
-
   it("opens archive dialog when archive button is clicked", async () => {
     const user = userEvent.setup();
 
-    renderWithClient(
-      <ExperimentArchive experimentId={experimentId} isArchived={false} isAdmin={true} />,
-    );
+    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
 
     const archiveButton = screen.getByText("experimentSettings.archiveExperiment");
     await user.click(archiveButton);
@@ -122,9 +107,7 @@ describe("<ExperimentArchive />", () => {
     const updateSpy = vi.fn().mockResolvedValue({ ok: true });
     useExperimentUpdateMock.mockReturnValue({ mutateAsync: updateSpy, isPending: false });
 
-    renderWithClient(
-      <ExperimentArchive experimentId={experimentId} isArchived={false} isAdmin={true} />,
-    );
+    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
 
     // Open archive dialog
     const archiveButton = screen.getByText("experimentSettings.archiveExperiment");
@@ -163,9 +146,7 @@ describe("<ExperimentArchive />", () => {
     const updateSpy = vi.fn().mockResolvedValue({ ok: true });
     useExperimentUpdateMock.mockReturnValue({ mutateAsync: updateSpy, isPending: false });
 
-    renderWithClient(
-      <ExperimentArchive experimentId={experimentId} isArchived={true} isAdmin={true} />,
-    );
+    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={true} />);
 
     // Open unarchive dialog
     const unarchiveButton = screen.getByText("experimentSettings.unarchiveExperiment");
@@ -205,9 +186,7 @@ describe("<ExperimentArchive />", () => {
     const updateSpy = vi.fn().mockResolvedValue({ ok: true });
     useExperimentUpdateMock.mockReturnValue({ mutateAsync: updateSpy, isPending: false });
 
-    renderWithClient(
-      <ExperimentArchive experimentId={experimentId} isArchived={false} isAdmin={true} />,
-    );
+    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
 
     // Open archive dialog
     const archiveButton = screen.getByText("experimentSettings.archiveExperiment");

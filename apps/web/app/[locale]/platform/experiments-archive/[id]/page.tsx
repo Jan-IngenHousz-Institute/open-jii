@@ -83,7 +83,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           isArchived
         />
 
-        <ExperimentLinkedProtocols experimentId={id} isArchived />
+        <ExperimentLinkedProtocols experimentId={id} hasAccess={hasAccess} isArchived />
 
         <ExperimentMeasurements experimentId={id} isArchived />
 

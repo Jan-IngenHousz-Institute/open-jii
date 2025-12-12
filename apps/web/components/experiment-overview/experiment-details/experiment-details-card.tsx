@@ -44,7 +44,7 @@ export function ExperimentDetailsCard({
 
   return (
     <div className="w-full md:order-2 md:w-96">
-      <Card className="relative">
+      <Card className="relative shadow-none">
         {/* Collapse Button */}
         <Button
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}

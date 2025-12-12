@@ -101,8 +101,8 @@ describe("ExperimentMeasurements", () => {
     expect(screen.getByText("measurements.lastProcessed")).toBeInTheDocument();
     expect(screen.getByText("device-1")).toBeInTheDocument();
     expect(screen.getByText("device-2")).toBeInTheDocument();
-    expect(screen.getByText("formatted-2023-01-15T10:30:00Z")).toBeInTheDocument();
-    expect(screen.getByText("formatted-2023-01-16T14:45:00Z")).toBeInTheDocument();
+    expect(screen.getByText("2023-01-15")).toBeInTheDocument();
+    expect(screen.getByText("2023-01-16")).toBeInTheDocument();
   });
 
   it("renders see all link for non-archived experiments", () => {

@@ -81,7 +81,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           description={experiment.description ?? ""}
           hasAccess={hasAccess}
         />
-        <ExperimentLinkedProtocols experimentId={id} />
+        <ExperimentLinkedProtocols experimentId={id} hasAccess={hasAccess} />
 
         <ExperimentMeasurements experimentId={id} />
 

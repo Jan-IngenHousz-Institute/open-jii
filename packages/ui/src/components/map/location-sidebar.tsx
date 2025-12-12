@@ -68,7 +68,7 @@ export const LocationSidebarEntry = ({
     <div
       className={`cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:shadow-md ${
         isSelected
-          ? "border-blue-500 bg-blue-50 shadow-md"
+          ? "border-jii-dark-green bg-jii-dark-green/10 shadow-md"
           : "border-gray-200 bg-white hover:border-gray-300"
       }`}
       onClick={onClick}
@@ -79,7 +79,7 @@ export const LocationSidebarEntry = ({
           <div className="flex items-start gap-2">
             <MapPin
               className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                isSelected ? "text-blue-600" : "text-gray-500"
+                isSelected ? "text-jii-dark-green" : "text-gray-500"
               }`}
             />
             <div className="min-w-0 flex-1">
@@ -139,7 +139,7 @@ export const LocationSidebarEntry = ({
                 e.stopPropagation();
                 onNavigate();
               }}
-              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+              className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded p-1.5 text-gray-400 transition-colors"
               title="Navigate to location"
             >
               <Navigation2 className="h-4 w-4" />
@@ -152,7 +152,7 @@ export const LocationSidebarEntry = ({
               const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
               window.open(url, "_blank");
             }}
-            className="rounded p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600"
+            className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded p-1.5 text-gray-400 transition-colors"
             title="Open in Google Maps"
           >
             <ExternalLink className="h-4 w-4" />

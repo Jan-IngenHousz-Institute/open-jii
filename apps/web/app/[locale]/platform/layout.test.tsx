@@ -179,7 +179,16 @@ describe("AppLayout", () => {
     const main = container.querySelector("main");
     expect(main).toBeInTheDocument();
     // Updated to match actual rendered classes
-    expect(main).toHaveClass("mx-auto", "flex", "w-full", "max-w-7xl", "flex-1", "flex-col", "p-4");
+    expect(main).toHaveClass(
+      "mx-auto",
+      "flex",
+      "w-full",
+      "max-w-7xl",
+      "flex-1",
+      "flex-col",
+      "px-8",
+      "py-4",
+    );
   });
 
   it("renders page title when provided", async () => {

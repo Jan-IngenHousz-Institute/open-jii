@@ -23,10 +23,9 @@ import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/
 interface ExperimentArchiveProps {
   experimentId: string;
   isArchived: boolean;
-  isAdmin: boolean;
 }
 
-export function ExperimentArchive({ experimentId, isArchived, isAdmin }: ExperimentArchiveProps) {
+export function ExperimentArchive({ experimentId, isArchived }: ExperimentArchiveProps) {
   const { t } = useTranslation();
   const locale = useLocale();
   const router = useRouter();
@@ -71,7 +70,7 @@ export function ExperimentArchive({ experimentId, isArchived, isAdmin }: Experim
   return (
     <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="bg-surface-dark w-full md:w-fit" disabled={!isAdmin}>
+        <Button variant="outline" className="bg-surface hover:bg-surface-light w-full md:w-fit">
           {isArchived
             ? t("experimentSettings.unarchiveExperiment")
             : t("experimentSettings.archiveExperiment")}

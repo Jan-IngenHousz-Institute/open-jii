@@ -425,7 +425,9 @@
     "edit": "Edit",
     "view": "View",
     "account": "Account",
-    "settings": "Settings"
+    "settings": "Settings",
+    "protocols": "Protocols",
+    "macros": "Macros"
   },
   "experimentData": {
     "title": "Experiment Data",

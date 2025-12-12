@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 import { useLocale } from "~/hooks/useLocale";
-import { formatDate } from "~/util/date";
 
 import {
   Button,
   Card,
   CardContent,
   CardTitle,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -29,15 +29,20 @@ export function ExperimentMeasurements({
   isArchived = false,
 }: ExperimentMeasurementsProps) {
   const locale = useLocale();
-  const { tableRows, isLoading, error } = useExperimentData(experimentId, 1, 4, "device");
+  const { tableRows, isLoading, error } = useExperimentData(
+    experimentId,
+    1,
+    4,
+    "device",
+    "processed_timestamp",
+    "DESC",
+  );
   const { t } = useTranslation("experiments");
   if (isLoading) {
     return (
       <div className="space-y-4">
         <CardTitle>{t("measurements.latestMeasurements")}</CardTitle>
-        <div className="animate-pulse space-y-2">
-          <div className="h-[215px] rounded bg-gray-200"></div>
-        </div>
+        <Skeleton className="h-[215px]" />
       </div>
     );
   }
@@ -46,7 +51,7 @@ export function ExperimentMeasurements({
     return (
       <div className="space-y-4">
         <CardTitle>{t("measurements.latestMeasurements")}</CardTitle>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
               <svg
@@ -86,7 +91,7 @@ export function ExperimentMeasurements({
           </Button>
         </Link>
       </div>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden shadow-none">
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-surface-light">
@@ -110,7 +115,7 @@ export function ExperimentMeasurements({
                     </TableCell>
                     <TableCell className="text-muted-foreground px-6 text-right">
                       {timestamp != null && typeof timestamp === "string"
-                        ? formatDate(timestamp)
+                        ? timestamp.substring(0, 10)
                         : "—"}
                     </TableCell>
                   </TableRow>

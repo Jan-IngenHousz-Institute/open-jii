@@ -70,6 +70,14 @@ export function ExperimentTitle({
     );
   };
 
+  const handleTitleBlur = (e: React.FocusEvent) => {
+    const next = e.relatedTarget as HTMLElement | null;
+
+    if (next?.dataset.role === "edit-action") return;
+
+    handleTitleCancel();
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -101,29 +109,32 @@ export function ExperimentTitle({
             className="text-2xl font-semibold"
             disabled={isUpdating}
             autoFocus
+            onBlur={handleTitleBlur}
           />
-          <Button
-            variant="outline"
-            onClick={handleTitleSave}
-            disabled={isUpdating}
-            className="text-primary hover:text-primary/80 disabled:opacity-50"
-            aria-label="Save"
-          >
-            <Check className="h-6 w-6" />
-          </Button>
           <Button
             variant="outline"
             onClick={handleTitleCancel}
             disabled={isUpdating}
-            className="text-destructive hover:text-destructive/80 disabled:opacity-50"
+            data-role="edit-action"
+            className="hover:bg-badge-featured"
             aria-label="Cancel"
           >
             <X className="h-6 w-6" />
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleTitleSave}
+            disabled={isUpdating}
+            data-role="edit-action"
+            className="text-primary hover:bg-badge-featured"
+            aria-label="Save"
+          >
+            <Check className="h-6 w-6" />
+          </Button>
         </div>
       ) : (
         <CardTitle
-          className={`text-2xl transition-all duration-300 ${hasAccess && !isArchived ? "hover:bg-muted cursor-pointer rounded-md px-1" : ""}`}
+          className={`text-2xl transition-all duration-300 ${hasAccess && !isArchived ? "hover:bg-muted -ml-1 cursor-pointer rounded-md px-1" : ""}`}
           onClick={handleTitleClick}
         >
           {name}
