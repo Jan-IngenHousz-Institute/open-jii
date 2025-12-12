@@ -36,7 +36,7 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
 
   return (
     <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-12">
+      <div className="mx-auto max-w-7xl px-4 py-20">
         <div className="mx-auto max-w-4xl">
           <h1
             className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"

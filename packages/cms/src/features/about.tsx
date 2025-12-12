@@ -33,10 +33,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
   });
 
   return (
-    <div className="from-jii-bright-green/40 relative isolate overflow-hidden bg-gradient-to-br via-white to-white pb-6">
-      {/* Top fade */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-4 bg-gradient-to-b from-white to-transparent" />
-
+    <div className="from-jii-bright-green/40 relative isolate min-h-screen overflow-hidden bg-gradient-to-br via-white to-white">
       {/* Background skew block */}
       <div
         aria-hidden="true"
@@ -44,8 +41,8 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
       />
 
       {/* Middle container */}
-      <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="mx-auto max-w-2xl lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6 xl:grid-cols-1 xl:grid-rows-1 xl:gap-x-8">
+      <div className="mx-auto max-w-7xl px-4 py-20">
+        <div className="mx-auto max-w-2xl lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-x-12 lg:gap-y-6 xl:grid-cols-1 xl:grid-rows-1">
           {/* TITLE */}
           <h1
             className="max-w-2xl pr-10 text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"

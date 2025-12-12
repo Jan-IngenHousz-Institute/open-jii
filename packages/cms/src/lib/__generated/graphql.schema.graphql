@@ -567,6 +567,7 @@ type ComponentPartner implements Entry & _Node {
   logo(locale: String, preview: Boolean, useFallbackLocale: Boolean): Asset
   subtitle(locale: String, useFallbackLocale: Boolean): String
   sys: Sys!
+  url(locale: String, useFallbackLocale: Boolean): String
 }
 
 type ComponentPartnerCollection {
@@ -596,6 +597,13 @@ input ComponentPartnerFilter {
   subtitle_not_contains: String
   subtitle_not_in: [String]
   sys: SysFilter
+  url: String
+  url_contains: String
+  url_exists: Boolean
+  url_in: [String]
+  url_not: String
+  url_not_contains: String
+  url_not_in: [String]
 }
 
 type ComponentPartnerLinkingCollections {
@@ -633,6 +641,8 @@ enum ComponentPartnerOrder {
   sys_publishedAt_DESC
   sys_publishedVersion_ASC
   sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
 }
 
 """
@@ -2183,6 +2193,8 @@ enum PageHomePartnersPartnersCollectionOrder {
   sys_publishedAt_DESC
   sys_publishedVersion_ASC
   sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
 }
 
 """
@@ -2725,6 +2737,13 @@ input cfComponentPartnerNestedFilter {
   subtitle_not_contains: String
   subtitle_not_in: [String]
   sys: SysFilter
+  url: String
+  url_contains: String
+  url_exists: Boolean
+  url_in: [String]
+  url_not: String
+  url_not_contains: String
+  url_not_in: [String]
 }
 
 input cfComponentSeoNestedFilter {

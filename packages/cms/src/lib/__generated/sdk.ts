@@ -947,6 +947,7 @@ export type ComponentPartner = Entry &
     logo?: Maybe<Asset>;
     subtitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
+    url?: Maybe<Scalars["String"]["output"]>;
   };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
@@ -969,6 +970,12 @@ export type ComponentPartnerLogoArgs = {
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
 export type ComponentPartnerSubtitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
+export type ComponentPartnerUrlArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
@@ -1001,6 +1008,13 @@ export type ComponentPartnerFilter = {
   subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
+  url?: InputMaybe<Scalars["String"]["input"]>;
+  url_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  url_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  url_not?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
 export type ComponentPartnerLinkingCollections = {
@@ -1058,6 +1072,8 @@ export enum ComponentPartnerOrder {
   SysPublishedAtDesc = "sys_publishedAt_DESC",
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
 }
 
 /** To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage) */
@@ -3259,6 +3275,8 @@ export enum PageHomePartnersPartnersCollectionOrder {
   SysPublishedAtDesc = "sys_publishedAt_DESC",
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
 }
 
 /** To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding) */
@@ -4293,6 +4311,13 @@ export type CfComponentPartnerNestedFilter = {
   subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
+  url?: InputMaybe<Scalars["String"]["input"]>;
+  url_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  url_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  url_not?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
 export type CfComponentSeoNestedFilter = {
@@ -4748,6 +4773,7 @@ export type PageHomePartnersFieldsFragment = {
 export type PartnerFieldsFragment = {
   __typename: "ComponentPartner";
   subtitle?: string | null;
+  url?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
   logo?: {
     __typename?: "Asset";
@@ -5249,6 +5275,7 @@ export const PartnerFieldsFragmentDoc: ReturnType<typeof gql> = gql`
       }
     }
     subtitle
+    url
   }
 `;
 export const PageHomePartnersFieldsFragmentDoc: ReturnType<typeof gql> = gql`

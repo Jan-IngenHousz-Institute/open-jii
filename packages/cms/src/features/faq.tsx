@@ -127,8 +127,14 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
       });
 
   return (
-    <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-12">
+    <div className="from-jii-bright-green/40 relative isolate min-h-screen overflow-hidden bg-gradient-to-br via-white to-white">
+      {/* Background skew block */}
+      <div
+        aria-hidden="true"
+        className="shadow-primary/10 ring-jii-bright-green/20 absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
+      />
+
+      <div className="mx-auto max-w-7xl px-4 py-20">
         <div className="mx-auto max-w-4xl">
           <h1
             className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"

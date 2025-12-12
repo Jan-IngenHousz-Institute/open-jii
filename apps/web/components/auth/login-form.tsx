@@ -28,7 +28,7 @@ export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string;
       {/* Beta notice badge */}
       <div className="bg-badge-featured border-badge-featured/40 mb-6 rounded-md border px-3 py-2 text-xs sm:text-sm">
         openJII is still under development and currently supports only a small group of beta test
-        users
+        users.
       </div>
 
       {/* Email provider */}
