@@ -4,6 +4,12 @@
 name: Backend Deployment Workflow
 
 on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
   workflow_call:
     inputs:
       environment:
@@ -101,21 +107,6 @@ jobs:
             --query taskDefinition > task-definition.json
 
           echo "ECS_TASK_DEFINITION=task-definition.json" >> "$GITHUB_ENV"
-
-      # - name: Build and push Docker image
-      #   id: build-image
-      #   uses: aws-actions/amazon-ecr-build-and-push-image@v1
-      #   with:
-      #     context: .
-      #     dockerfile: apps/backend/Dockerfile
-      #     push: true
-      #     tags: |
-      #       ${{ github.sha }}
-      #       latest
-      #     repository: ${{ env.ECR_REPOSITORY }}
-      #     build-args: |
-      #       PROJECT=backend
-      #     platforms: linux/amd64
       
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
@@ -124,47 +115,6 @@ jobs:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
-
-
-      # - name: Prepare ECS task definition
-      #   id: render-task-def
-      #   run: |
-      #     CLUSTER_NAME="backend-cluster-${{ env.ENV }}"
-      #     SERVICE_NAME="backend-${{ env.ENV }}"
-
-      #     echo "📝 Downloading and updating ECS task definition..."
-
-      #     # Download current task definition
-      #     aws ecs describe-task-definition \
-      #       --task-definition "$SERVICE_NAME" \
-      #       --query taskDefinition > task-definition.json
-            
-      #     if [ $? -ne 0 ]; then
-      #       echo "::error::Failed to download task definition"
-      #       exit 1
-      #     fi
-
-      #     # Update the container image in the task definition
-      #     jq --arg IMAGE "${{ steps.build-image.outputs.image }}" \
-      #       '.containerDefinitions[0].image = $IMAGE' \
-      #       task-definition.json > updated-task-definition.json
-            
-      #     if [ $? -ne 0 ]; then
-      #       echo "::error::Failed to update task definition with new image"
-      #       exit 1
-      #     fi
-
-      #     # Remove fields that can't be included in RegisterTaskDefinition
-      #     jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
-      #       updated-task-definition.json > final-task-definition.json
-            
-      #     if [ $? -ne 0 ]; then
-      #       echo "::error::Failed to prepare task definition for registration"
-      #       exit 1
-      #     fi
-
-      #     # Set output for the next step
-      #     echo "task-definition=final-task-definition.json" >> $GITHUB_OUTPUT
 
       - name: Deploy to Amazon ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1

@@ -4,6 +4,13 @@
 name: Web Deployment Workflow
 
 on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+        
   workflow_call:
     inputs:
       environment:
@@ -236,45 +243,6 @@ jobs:
           function-name: ${{ env.SERVER_FUNCTION }}
           zip-file: apps/web/.open-next/server-functions/default
           publish: true
-
-      - name: Update Server Function Alias
-        if: steps.deploy-server.outcome == 'success'
-        run: |
-          echo "Server function deployed successfully"
-
-          # Extract version from the deployment
-          VERSION=${{ steps.deploy-server.outputs.version }}
-          echo "Published new version: $VERSION"
-
-          # Get server function name from outputs
-          SERVER_FUNCTION="${{ env.SERVER_FUNCTION }}"
-
-          # Check if we have a deployment alias (create one if it doesn't exist)
-          ALIAS_NAME="production"
-          ALIAS_EXISTS=$(aws lambda list-aliases \
-            --function-name "${SERVER_FUNCTION}" \
-            --query "Aliases[?Name=='$ALIAS_NAME'].Name" \
-            --output text)
-
-          if [[ -z "$ALIAS_EXISTS" ]]; then
-            echo "Creating new '$ALIAS_NAME' alias pointing to version $VERSION"
-            aws lambda create-alias \
-              --function-name "${SERVER_FUNCTION}" \
-              --name "$ALIAS_NAME" \
-              --function-version "$VERSION" \
-              --no-cli-pager \
-              --output json > /dev/null
-          else
-            echo "Updating '$ALIAS_NAME' alias to point to version $VERSION"
-            aws lambda update-alias \
-              --function-name "${SERVER_FUNCTION}" \
-              --name "$ALIAS_NAME" \
-              --function-version "$VERSION" \
-              --no-cli-pager \
-              --output json > /dev/null
-          fi
-
-          echo "Server function updated successfully to version $VERSION with alias $ALIAS_NAME"
 
       - name: Check Image Optimization Function
         id: check-image

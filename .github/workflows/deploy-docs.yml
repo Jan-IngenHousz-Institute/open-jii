@@ -4,12 +4,19 @@
 name: Documentation Deployment Workflow
 
 on:
-    workflow_call:
-        inputs:
-            environment:
-                description: "The deployment environment (dev, staging, prod)"
-                required: true
-                type: string
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+        
+  workflow_call:
+    inputs:
+        environment:
+            description: "The deployment environment (dev, staging, prod)"
+            required: true
+            type: string
 
 jobs:
     deploy-docs:
