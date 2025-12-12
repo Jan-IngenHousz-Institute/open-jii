@@ -13,8 +13,8 @@ export default {
     [
       '@semantic-release/exec',
       {
-        // Generate release summary JSON for deployment workflows
-        prepareCmd: `printf '%s' "\${nextRelease.notes}" | jq -Rs --arg app "backend" --arg version "\${nextRelease.version}" --arg tag "backend-v\${nextRelease.version}" '{app: $app, version: $version, tag: $tag, changelog: .}' > ../../release-summary-backend.json`,
+        // Generate release summary JSON using POSIX sh and semantic-release env vars
+        prepareCmd: 'printf %s "$SEMANTIC_RELEASE_NEXT_RELEASE_NOTES" | jq -Rs --arg app "backend" --arg version "$SEMANTIC_RELEASE_NEXT_RELEASE_VERSION" --arg tag "backend-v$SEMANTIC_RELEASE_NEXT_RELEASE_VERSION" \'{app: $app, version: $version, tag: $tag, changelog: .}\' > ../../release-summary-backend.json',
       },
     ],
   ],
