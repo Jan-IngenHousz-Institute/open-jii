@@ -70,6 +70,14 @@ export function ExperimentTitle({
     );
   };
 
+  const handleTitleBlur = (e: React.FocusEvent) => {
+    const next = e.relatedTarget as HTMLElement | null;
+
+    if (next?.dataset.role === "edit-action") return;
+
+    handleTitleCancel();
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -101,13 +109,7 @@ export function ExperimentTitle({
             className="text-2xl font-semibold"
             disabled={isUpdating}
             autoFocus
-            onBlur={(e) => {
-              const next = e.relatedTarget as HTMLElement | null;
-
-              if (next?.dataset.role === "edit-action") return;
-
-              handleTitleCancel();
-            }}
+            onBlur={handleTitleBlur}
           />
           <Button
             variant="outline"

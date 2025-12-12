@@ -96,6 +96,14 @@ export function ExperimentDescription({
     );
   };
 
+  const handleDescriptionBlur = (e: React.FocusEvent) => {
+    const next = e.relatedTarget as HTMLElement | null;
+
+    if (next?.dataset.role === "edit-action") return;
+
+    handleDescriptionCancel();
+  };
+
   return (
     <div className="space-y-0">
       <h2 className="font-bold">{t("descriptionTitle")}</h2>
@@ -108,13 +116,7 @@ export function ExperimentDescription({
             placeholder={t("form.descriptionPlaceholder")}
             isDisabled={isUpdating}
             autoFocus
-            onBlur={(e: React.FocusEvent) => {
-              const next = e.relatedTarget as HTMLElement | null;
-
-              if (next?.dataset.role === "edit-action") return;
-
-              handleDescriptionCancel();
-            }}
+            onBlur={handleDescriptionBlur}
           />
           <div className="flex justify-end gap-2">
             <Button
