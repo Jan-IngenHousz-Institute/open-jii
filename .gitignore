@@ -92,3 +92,8 @@ pids
 
 # Release automation generated files
 release-summary-*.json
+
+.github/prompts/
+.github/agents/
+.specify/
+specs/
