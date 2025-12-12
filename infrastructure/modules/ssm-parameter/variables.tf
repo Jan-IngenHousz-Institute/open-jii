@@ -1,48 +1,31 @@
-variable "parameter_name" {
-  description = "The name of the SSM parameter (e.g., /open-jii/route53/dev-nameservers)"
-  type        = string
-}
-
-variable "parameter_name_prefix" {
-  description = "Prefix for IAM resources derived from parameter name (e.g., open-jii-dev-nameservers)"
-  type        = string
-}
-
-variable "description" {
-  description = "Description of the SSM parameter"
-  type        = string
-  default     = ""
-}
-
-variable "parameter_type" {
-  description = "Type of the parameter (String, StringList, or SecureString)"
-  type        = string
-  default     = "StringList"
+variable "parameters" {
+  description = "Map of SSM parameters to create. Each key is a unique identifier, and value is an object with 'name', 'value', and optional 'description', 'type', 'tier', and 'tags'"
+  type = map(object({
+    name        = string
+    value       = string
+    description = optional(string, "")
+    type        = optional(string, "String")
+    tier        = optional(string, "Standard")
+    tags        = optional(map(string), {})
+  }))
 
   validation {
-    condition     = contains(["String", "StringList", "SecureString"], var.parameter_type)
-    error_message = "Parameter type must be String, StringList, or SecureString"
+    condition = alltrue([
+      for k, v in var.parameters : contains(["String", "StringList", "SecureString"], v.type)
+    ])
+    error_message = "All parameter types must be String, StringList, or SecureString"
   }
-}
-
-variable "parameter_value" {
-  description = "The value to store in the parameter"
-  type        = string
-}
-
-variable "tier" {
-  description = "The tier of the parameter (Standard or Advanced)"
-  type        = string
-  default     = "Standard"
 
   validation {
-    condition     = contains(["Standard", "Advanced"], var.tier)
-    error_message = "Tier must be Standard or Advanced"
+    condition = alltrue([
+      for k, v in var.parameters : contains(["Standard", "Advanced"], v.tier)
+    ])
+    error_message = "All parameter tiers must be Standard or Advanced"
   }
 }
 
 variable "tags" {
-  description = "Tags to apply to all resources"
+  description = "Tags to apply to the resource"
   type        = map(string)
   default     = {}
 }

@@ -1,0 +1,30 @@
+name: PROD Release Workflow
+
+on:
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: "Target environment for production deployment"
+                required: true
+                default: "prod"
+                type: choice
+                options:
+                    - prod
+
+concurrency:
+    group: production-deploy-${{ inputs.environment }}
+    cancel-in-progress: false
+
+permissions:
+    contents: read
+    actions: read
+    id-token: write
+
+jobs:
+    deploy-environment:
+        name: Deploy to ${{ inputs.environment }}
+        uses: ./.github/workflows/deploy.yml
+        with:
+            environment: ${{ inputs.environment }}
+            deploy_infrastructure: true
+        secrets: inherit

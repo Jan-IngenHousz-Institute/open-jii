@@ -1,0 +1,92 @@
+# Deployment Workflow
+# Main orchestrator for infrastructure and application deployments
+
+name: Deployment Workflow
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment (dev, staging, prod)"
+        required: true
+        type: string
+      deploy_infrastructure:
+        description: "Whether to deploy infrastructure"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  detect-changes:
+    name: Detect Changed Packages
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.detect.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    if: inputs.deploy_infrastructure
+    uses: ./.github/workflows/tofu.yml
+    with:
+      environment: ${{ inputs.environment }}
+      apply: true
+      tofu_version: "1.9.0"
+    secrets: inherit
+
+  database-migrations:
+    name: Database Migrations
+    needs: [detect-changes, deploy-infrastructure]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database')
+    uses: ./.github/workflows/database-migrations.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-backend:
+    name: Deploy Backend
+    needs: [detect-changes, deploy-infrastructure, database-migrations]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend')
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [detect-changes, deploy-infrastructure, deploy-backend]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-docs:
+    name: Deploy Documentation
+    needs: [detect-changes, deploy-infrastructure]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs')
+    uses: ./.github/workflows/deploy-docs.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
