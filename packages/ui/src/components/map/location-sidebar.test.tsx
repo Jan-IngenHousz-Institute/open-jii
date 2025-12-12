@@ -65,7 +65,7 @@ describe("LocationSidebarEntry", () => {
 
     // Get the main container div (outermost div with the styling)
     const container = screen.getByText("Berlin Office").closest('[class*="border"]');
-    expect(container).toHaveClass("border-blue-500", "bg-blue-50");
+    expect(container).toHaveClass("border-jii-dark-green", "bg-jii-dark-green/10");
   });
 
   it("shows default state styling when not selected", () => {
@@ -245,7 +245,7 @@ describe("LocationSidebar", () => {
     );
 
     const selectedEntry = screen.getByText("Berlin Office").closest('[class*="border"]');
-    expect(selectedEntry).toHaveClass("border-blue-500", "bg-blue-50");
+    expect(selectedEntry).toHaveClass("border-jii-dark-green", "bg-jii-dark-green/10");
 
     const unselectedEntry = screen.getByText("Munich Headquarters").closest('[class*="border"]');
     expect(unselectedEntry).toHaveClass("border-gray-200", "bg-white");
@@ -347,7 +347,7 @@ describe("LocationSidebar", () => {
 
     // Should still be selected based on coordinates
     const selectedEntry = screen.getByText("Berlin Office").closest('[class*="border"]');
-    expect(selectedEntry).toHaveClass("border-blue-500", "bg-blue-50");
+    expect(selectedEntry).toHaveClass("border-jii-dark-green", "bg-jii-dark-green/10");
   });
 
   it("renders with unique keys based on coordinates and index", () => {
