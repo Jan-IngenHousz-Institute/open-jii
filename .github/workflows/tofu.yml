@@ -3,7 +3,25 @@
 
 name: OpenTofu Workflow
 
+
 on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (dev, staging, prod)"
+        required: true
+        type: string
+      apply:
+        description: "Whether to apply changes (true) or just plan (false)"
+        required: false
+        type: boolean
+        default: false
+      tofu_version:
+        description: "OpenTofu version to use"
+        required: false
+        type: string
+        default: "1.9.0"
+
   workflow_call:
     inputs:
       environment:
