@@ -149,6 +149,6 @@ This document lists common issues you might encounter while using the MultispeQ 
 - **Enable Debug Logging**: Set the `AWS_LOG_LEVEL` environment variable to `DEBUG` to get detailed logs.
 - **Check Configuration**: Use the `config` command to display the current configuration and verify all settings.
 - **Review Logs**: Check the logs for detailed error messages and stack traces.
-- **Consult Documentation**: Refer to the [OpenJII Documentation Hub](https://docs.openjii.org) for additional guidance.
+- **Consult Documentation**: Refer to the [openJII Documentation Hub](https://docs.openjii.org) for additional guidance.
 
 By following these guidelines, you can resolve common issues and ensure smooth operation of the MultispeQ MQTT Interface tool.

@@ -1,4 +1,4 @@
-# DBTITLE 1,OpenJII Experiment Pipeline Monitor
+# DBTITLE 1,openJII Experiment Pipeline Monitor
 # This notebook monitors experiment pipelines and updates their status
 
 import pyspark.sql.functions as F
