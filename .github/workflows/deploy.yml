@@ -73,20 +73,20 @@ jobs:
       environment: ${{ inputs.environment }}
     secrets: inherit
 
-  # deploy-frontend:
-  #   name: Deploy Frontend
-  #   needs: [detect-changes, deploy-infrastructure, deploy-backend]
-  #   if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
-  #   uses: ./.github/workflows/deploy-nextjs-opennext.yml
-  #   with:
-  #     environment: ${{ inputs.environment }}
-  #   secrets: inherit
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [detect-changes, deploy-infrastructure, deploy-backend]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
 
-  # deploy-docs:
-  #   name: Deploy Documentation
-  #   needs: [detect-changes, deploy-infrastructure]
-  #   if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs')
-  #   uses: ./.github/workflows/deploy-docs.yml
-  #   with:
-  #     environment: ${{ inputs.environment }}
-  #   secrets: inherit
+  deploy-docs:
+    name: Deploy Documentation
+    needs: [detect-changes, deploy-infrastructure]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs')
+    uses: ./.github/workflows/deploy-docs.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
