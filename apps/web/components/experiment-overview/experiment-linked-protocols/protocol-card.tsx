@@ -32,35 +32,35 @@ export function ProtocolCard({
   }
 
   if (error || !protocol) {
-    return <p className="text-muted-foreground text-sm">{t("protocols.unableToLoadProtocol")}</p>;
+    return <p className="text-muted-foreground">{t("protocols.unableToLoadProtocol")}</p>;
   }
 
   return (
     <div className="bg-surface-light space-y-4">
       {/* Metadata */}
-      <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div>
-          <p className="text-muted-foreground">{t("protocols.sensorFamily")}</p>
-          <p className="capitalize">{protocol.family}</p>
+          <p className="text-muted-dark font-semibold">{t("protocols.sensorFamily")}</p>
+          <p className="text-muted-foreground capitalize">{protocol.family}</p>
         </div>
 
         <div>
-          <p className="text-muted-foreground">{t("updated")}</p>
-          <p>{formatDate(protocol.updatedAt)}</p>
+          <p className="text-muted-dark font-semibold">{t("updated")}</p>
+          <p className="text-muted-foreground">{formatDate(protocol.updatedAt)}</p>
         </div>
 
         {protocol.createdByName && (
           <div>
-            <p className="text-muted-foreground">{t("createdBy")}</p>
-            <p>{protocol.createdByName}</p>
+            <p className="text-muted-dark font-semibold">{t("createdBy")}</p>
+            <p className="text-muted-foreground">{protocol.createdByName}</p>
           </div>
         )}
       </div>
 
       {/* Description */}
       {protocol.description && protocol.description !== "<p><br></p>" && (
-        <div className="space-y-1">
-          <p className="text-muted-foreground text-sm font-medium">{t("form.description")}</p>
+        <div className="space-y-0">
+          <p className="text-muted-dark font-semibold">{t("form.description")}</p>
 
           <div className="relative">
             <div className="max-h-32 overflow-hidden">

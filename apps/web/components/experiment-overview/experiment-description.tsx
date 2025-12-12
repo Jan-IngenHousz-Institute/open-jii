@@ -33,7 +33,7 @@ export function ExperimentDescription({
 
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
 
-  const descriptionContainerVariants = cva("transition-all duration-300", {
+  const descriptionContainerVariants = cva("px-1 -ml-1 transition-all duration-300", {
     variants: {
       expanded: {
         true: "max-h-none",
@@ -96,6 +96,14 @@ export function ExperimentDescription({
     );
   };
 
+  const handleDescriptionBlur = (e: React.FocusEvent) => {
+    const next = e.relatedTarget as HTMLElement | null;
+
+    if (next?.dataset.role === "edit-action") return;
+
+    handleDescriptionCancel();
+  };
+
   return (
     <div className="space-y-0">
       <h2 className="font-bold">{t("descriptionTitle")}</h2>
@@ -107,25 +115,27 @@ export function ExperimentDescription({
             onChange={setEditedDescription}
             placeholder={t("form.descriptionPlaceholder")}
             isDisabled={isUpdating}
+            autoFocus
+            onBlur={handleDescriptionBlur}
           />
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              onClick={handleDescriptionSave}
+              onClick={handleDescriptionCancel}
               disabled={isUpdating}
-              className="text-primary hover:text-primary/80 disabled:opacity-50"
+              data-role="edit-action"
+              className="hover:bg-badge-featured"
             >
-              <Check className="mr-2 h-4 w-4" />
-              Save
+              <X className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
-              onClick={handleDescriptionCancel}
+              onClick={handleDescriptionSave}
               disabled={isUpdating}
-              className="text-destructive hover:text-destructive/80 disabled:opacity-50"
+              data-role="edit-action"
+              className="text-primary hover:bg-badge-featured"
             >
-              <X className="mr-2 h-4 w-4" />
-              Cancel
+              <Check className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -145,7 +155,7 @@ export function ExperimentDescription({
 
             {/* Fade gradient ONLY if long and collapsed */}
             {!isDescriptionShort && !isDescriptionExpanded && (
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent" />
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 -ml-1 h-16 bg-gradient-to-t from-white to-transparent" />
             )}
           </div>
 
