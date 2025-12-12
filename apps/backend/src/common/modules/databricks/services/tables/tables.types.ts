@@ -1,3 +1,16 @@
+export interface ColumnInfo {
+  name: string;
+  type_text: string;
+  type_name: string;
+  position: number;
+  nullable?: boolean;
+  comment?: string;
+  type_json?: string;
+  type_precision?: number;
+  type_scale?: number;
+  partition_index?: number;
+}
+
 export interface Table {
   name: string;
   catalog_name: string;
@@ -5,6 +18,7 @@ export interface Table {
   table_type: string;
   comment?: string;
   created_at: number;
+  columns?: ColumnInfo[];
   properties?: {
     display_name?: string;
     downstream?: "true" | "false";

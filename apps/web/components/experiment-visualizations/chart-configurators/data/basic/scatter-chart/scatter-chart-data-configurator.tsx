@@ -1,8 +1,8 @@
 "use client";
 
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useFieldArray } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import ColorDimensionConfiguration from "../../shared/color-dimension-configuration";
@@ -11,7 +11,7 @@ import YAxisConfiguration from "../../shared/y-axis-configuration";
 
 interface ScatterChartDataConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
-  table: SampleTable;
+  table: ExperimentTableWithColumns;
 }
 
 export default function ScatterChartDataConfigurator({

@@ -1,10 +1,10 @@
-import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ExperimentTableMetadata } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import type { WizardFormProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
@@ -56,32 +56,30 @@ describe("NewVisualizationForm", () => {
   const mockT = vi.fn((key: string) => key);
   const mockToast = vi.fn();
 
-  const mockSampleTables: SampleTable[] = [
+  const mockExperimentTableMetadatas: ExperimentTableMetadata[] = [
     {
       name: "measurements",
       displayName: "Measurements",
-      tableMetadata: {} as never,
-      tableRows: [],
+      totalRows: 100,
       columns: [
-        { name: "time", type_name: "TIMESTAMP", type_text: "timestamp" },
-        { name: "temperature", type_name: "DOUBLE", type_text: "double" },
+        { name: "time", type_name: "TIMESTAMP", type_text: "timestamp", position: 0 },
+        { name: "temperature", type_name: "DOUBLE", type_text: "double", position: 1 },
       ],
     },
     {
       name: "observations",
       displayName: "Observations",
-      tableMetadata: {} as never,
-      tableRows: [],
+      totalRows: 50,
       columns: [
-        { name: "date", type_name: "TIMESTAMP", type_text: "timestamp" },
-        { name: "value", type_name: "DOUBLE", type_text: "double" },
+        { name: "date", type_name: "TIMESTAMP", type_text: "timestamp", position: 0 },
+        { name: "value", type_name: "DOUBLE", type_text: "double", position: 1 },
       ],
     },
   ];
 
   const defaultProps = {
     experimentId: "exp-123",
-    sampleTables: mockSampleTables,
+    tables: mockExperimentTableMetadatas,
     onSuccess: mockOnSuccess,
     isPreviewOpen: false,
     onPreviewClose: mockOnPreviewClose,
@@ -148,7 +146,7 @@ describe("NewVisualizationForm", () => {
     });
 
     it("should initialize with empty table name when no tables available", () => {
-      render(<NewVisualizationForm {...defaultProps} sampleTables={[]} />);
+      render(<NewVisualizationForm {...defaultProps} tables={[]} />);
 
       expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
       // WizardForm should be called with defaultValues containing empty tableName
@@ -375,7 +373,7 @@ describe("NewVisualizationForm", () => {
     });
 
     it("should set table name to empty string when no tables provided", () => {
-      render(<NewVisualizationForm {...defaultProps} sampleTables={[]} />);
+      render(<NewVisualizationForm {...defaultProps} tables={[]} />);
 
       expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
       // Should handle empty table list gracefully

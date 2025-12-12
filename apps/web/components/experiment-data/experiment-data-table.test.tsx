@@ -417,7 +417,9 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("experimentDataTable.loading")).toBeInTheDocument();
+    // Should render multiple skeleton components
+    const skeletons = screen.getAllByTestId("skeleton");
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it("should render error state", () => {

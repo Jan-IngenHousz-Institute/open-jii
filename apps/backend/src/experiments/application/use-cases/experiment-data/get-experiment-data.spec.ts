@@ -20,7 +20,6 @@ describe("GetExperimentDataUseCase", () => {
   const MOCK_WAIT_TIMEOUT = "50s";
   const MOCK_DISPOSITION = "INLINE";
   const MOCK_FORMAT = "JSON_ARRAY";
-  const SAMPLE_DATA_LIMIT = 5;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -597,523 +596,12 @@ describe("GetExperimentDataUseCase", () => {
     });
   });
 
-  it("should return table list and sample data when no table name is specified", async () => {
-    // Create an experiment in the database
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      description: "Test Description",
-      status: "active",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    // Mock the Databricks methods
-    const mockTables = {
-      tables: [
-        {
-          name: "table1",
-          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_test_experiment_${experiment.id}`,
-          properties: {
-            downstream: "false",
-          },
-        },
-        {
-          name: "table2",
-          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_test_experiment_${experiment.id}`,
-          properties: {
-            downstream: "false",
-          },
-        },
-      ],
-    };
-
-    // Mock sample data for each table
-    const mockSampleData1 = {
-      columns: [
-        { name: "column1", type_name: "string", type_text: "string" },
-        { name: "column2", type_name: "number", type_text: "number" },
-      ],
-      rows: [
-        ["value1", "1"],
-        ["value2", "2"],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
-
-    const mockSampleData2 = {
-      columns: [
-        { name: "column1", type_name: "string", type_text: "string" },
-        { name: "column2", type_name: "number", type_text: "number" },
-      ],
-      rows: [
-        ["value3", "3"],
-        ["value4", "4"],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
-
-    // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-      access_token: "mock-token",
-      expires_in: 3600,
-      token_type: "Bearer",
-    });
-
-    // Mock listTables API call
-    nock(DATABRICKS_HOST)
-      .get(DatabricksTablesService.TABLES_ENDPOINT)
-      .query(true)
-      .reply(200, mockTables);
-
-    // Mock SQL query for describing columns
-    const mockMetadata = {
-      columns: [
-        { name: "col_name", type_name: "STRING", type_text: "STRING" },
-        { name: "data_type", type_name: "STRING", type_text: "STRING" },
-        { name: "comment", type_name: "STRING", type_text: "STRING" },
-      ],
-      rows: [
-        ["column1", "STRING", null],
-        ["column2", "NUMBER", null],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "DESCRIBE table1",
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-meta-data-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockMetadata.columns.length,
-            columns: mockMetadata.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockMetadata.totalRows,
-          truncated: mockMetadata.truncated,
-        },
-        result: {
-          data_array: mockMetadata.rows,
-          chunk_index: 0,
-          row_count: mockMetadata.rows.length,
-          row_offset: 0,
-        },
-      });
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "DESCRIBE table2",
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-meta-data-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockMetadata.columns.length,
-            columns: mockMetadata.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockMetadata.totalRows,
-          truncated: mockMetadata.truncated,
-        },
-        result: {
-          data_array: mockMetadata.rows,
-          chunk_index: 0,
-          row_count: mockMetadata.rows.length,
-          row_offset: 0,
-        },
-      });
-
-    // Mock SQL query for sample data - first table ("table1")
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: `SELECT * FROM table1 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-sample1-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockSampleData1.columns.length,
-            columns: mockSampleData1.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockSampleData1.totalRows,
-          truncated: mockSampleData1.truncated,
-        },
-        result: {
-          data_array: mockSampleData1.rows,
-          chunk_index: 0,
-          row_count: mockSampleData1.rows.length,
-          row_offset: 0,
-        },
-      });
-
-    // Mock SQL query for sample data - second table ("table2")
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: `SELECT * FROM table2 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-sample2-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockSampleData2.columns.length,
-            columns: mockSampleData2.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockSampleData2.totalRows,
-          truncated: mockSampleData2.truncated,
-        },
-        result: {
-          data_array: mockSampleData2.rows,
-          chunk_index: 0,
-          row_count: mockSampleData2.rows.length,
-          row_offset: 0,
-        },
-      });
-
-    // Act
-    const result = await useCase.execute(experiment.id, testUserId, {
-      page: 1,
-      pageSize: 5,
-    });
-
-    // Assert result is success
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-
-    // Verify response structure with our new array-based format
-    expect(Array.isArray(result.value)).toBe(true);
-    expect(result.value).toHaveLength(2); // Should have 2 tables
-
-    // Check first table
-    expect(result.value[0]).toMatchObject({
-      name: mockTables.tables[0].name,
-      displayName: mockTables.tables[0].name,
-      catalog_name: mockTables.tables[0].catalog_name,
-      schema_name: mockTables.tables[0].schema_name,
-      page: 1,
-      pageSize: 5,
-      totalPages: 1,
-    });
-
-    // Check second table
-    expect(result.value[1]).toMatchObject({
-      name: mockTables.tables[1].name,
-      displayName: mockTables.tables[1].name,
-      catalog_name: mockTables.tables[1].catalog_name,
-      schema_name: mockTables.tables[1].schema_name,
-      page: 1,
-      pageSize: 5,
-      totalPages: 1,
-    });
-
-    // Check data exists for each table
-    expect(result.value[0].data).toBeDefined();
-    expect(result.value[1].data).toBeDefined();
-  });
-
-  it("should return table list when no table name is specified and place device table last", async () => {
-    // Create an experiment in the database
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      description: "Test Description",
-      status: "active",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    // Mock the Databricks methods
-    const mockTables = {
-      tables: [
-        {
-          name: "device",
-          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_test_experiment_${experiment.id}`,
-          properties: {
-            downstream: "false",
-          },
-        },
-        {
-          name: "sample",
-          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_test_experiment_${experiment.id}`,
-          properties: {
-            downstream: "false",
-          },
-        },
-      ],
-    };
-
-    // Mock sample data for each table
-    const mockSampleData1 = {
-      columns: [
-        { name: "column1", type_name: "string", type_text: "string" },
-        { name: "column2", type_name: "number", type_text: "number" },
-      ],
-      rows: [
-        ["value1", "1"],
-        ["value2", "2"],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
-
-    const mockSampleData2 = {
-      columns: [
-        { name: "column1", type_name: "string", type_text: "string" },
-        { name: "column2", type_name: "number", type_text: "number" },
-      ],
-      rows: [
-        ["value3", "3"],
-        ["value4", "4"],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
-
-    // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-      access_token: "mock-token",
-      expires_in: 3600,
-      token_type: "Bearer",
-    });
-
-    // Mock listTables API call
-    nock(DATABRICKS_HOST)
-      .get(DatabricksTablesService.TABLES_ENDPOINT)
-      .query(true)
-      .reply(200, mockTables);
-
-    // Mock SQL query for describing columns for both tables
-    const mockMetadata = {
-      columns: [
-        { name: "col_name", type_name: "STRING", type_text: "STRING" },
-        { name: "data_type", type_name: "STRING", type_text: "STRING" },
-        { name: "comment", type_name: "STRING", type_text: "STRING" },
-      ],
-      rows: [
-        ["column1", "STRING", null],
-        ["column2", "NUMBER", null],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "DESCRIBE device",
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-meta-data-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockMetadata.columns.length,
-            columns: mockMetadata.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockMetadata.totalRows,
-          truncated: mockMetadata.truncated,
-        },
-        result: {
-          data_array: mockMetadata.rows,
-          chunk_index: 0,
-          row_count: mockMetadata.rows.length,
-          row_offset: 0,
-        },
-      });
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "DESCRIBE sample",
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-meta-data-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockMetadata.columns.length,
-            columns: mockMetadata.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockMetadata.totalRows,
-          truncated: mockMetadata.truncated,
-        },
-        result: {
-          data_array: mockMetadata.rows,
-          chunk_index: 0,
-          row_count: mockMetadata.rows.length,
-          row_offset: 0,
-        },
-      });
-
-    // Mock SQL query for sample data - first table ("device")
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: `SELECT * FROM device LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-sample1-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockSampleData1.columns.length,
-            columns: mockSampleData1.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockSampleData1.totalRows,
-          truncated: mockSampleData1.truncated,
-        },
-        result: {
-          data_array: mockSampleData1.rows,
-          chunk_index: 0,
-          row_count: mockSampleData1.rows.length,
-          row_offset: 0,
-        },
-      });
-
-    // Mock SQL query for sample data - second table ("sample")
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: `SELECT * FROM sample LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-sample2-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockSampleData2.columns.length,
-            columns: mockSampleData2.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockSampleData2.totalRows,
-          truncated: mockSampleData2.truncated,
-        },
-        result: {
-          data_array: mockSampleData2.rows,
-          chunk_index: 0,
-          row_count: mockSampleData2.rows.length,
-          row_offset: 0,
-        },
-      });
-
-    // Act
-    const result = await useCase.execute(experiment.id, testUserId, {
-      page: 1,
-      pageSize: 5,
-    });
-
-    // Assert result is success
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-
-    // Verify response structure with our new array-based format
-    expect(Array.isArray(result.value)).toBe(true);
-    expect(result.value).toHaveLength(2); // Should have 2 tables
-
-    // Check first table which should be "sample" (not "device")
-    expect(result.value[0]).toMatchObject({
-      name: mockTables.tables[1].name,
-      displayName: mockTables.tables[1].name,
-      catalog_name: mockTables.tables[1].catalog_name,
-      schema_name: mockTables.tables[1].schema_name,
-      page: 1,
-      pageSize: 5,
-      totalPages: 1,
-    });
-
-    // Check second table which should be "device"
-    expect(result.value[1]).toMatchObject({
-      name: mockTables.tables[0].name,
-      displayName: mockTables.tables[0].name,
-      catalog_name: mockTables.tables[0].catalog_name,
-      schema_name: mockTables.tables[0].schema_name,
-      page: 1,
-      pageSize: 5,
-      totalPages: 1,
-    });
-
-    // Check data exists for each table
-    expect(result.value[0].data).toBeDefined();
-    expect(result.value[1].data).toBeDefined();
-  });
-
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Act
     const result = await useCase.execute(nonExistentId, testUserId, {
+      tableName: "non_existent_table",
       page: 1,
       pageSize: 20,
     });
@@ -1141,6 +629,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Act
     const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "some_table",
       page: 1,
       pageSize: 20,
     });
@@ -1217,6 +706,7 @@ describe("GetExperimentDataUseCase", () => {
       rows: [
         ["column1", "STRING", null],
         ["column2", "NUMBER", null],
+        ["timestamp", "TIMESTAMP", null],
       ],
       totalRows: 2,
       truncated: false,
@@ -1253,10 +743,40 @@ describe("GetExperimentDataUseCase", () => {
         },
       });
 
-    // Mock SQL query for sample data ("public_table")
+    // Mock SQL query for COUNT (needed for pagination)
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: `SELECT * FROM public_table LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        statement: "SELECT COUNT(*) as count FROM public_table",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_public_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-count-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: 1,
+            columns: [{ name: "count", type_name: "LONG", type_text: "LONG", position: 0 }],
+          },
+          total_row_count: 1,
+          truncated: false,
+        },
+        result: {
+          data_array: [["2"]],
+          chunk_index: 0,
+          row_count: 1,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query for sample data ("public_table") with ORDER BY and pagination
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT * FROM public_table ORDER BY timestamp DESC LIMIT 5 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_public_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
@@ -1288,6 +808,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Act
     const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "public_table",
       page: 1,
       pageSize: 5, // Using the default 5 now
     });
@@ -1303,7 +824,7 @@ describe("GetExperimentDataUseCase", () => {
     // Verify the table data
     expect(result.value[0].name).toBe(mockTables.tables[0].name);
     expect(result.value[0].displayName).toBe(mockTables.tables[0].name);
-    expect(result.value[0].catalog_name).toBe(mockTables.tables[0].catalog_name);
+    expect(result.value[0].catalog_name).toBe(experiment.name); // catalog_name is the experiment name
     expect(result.value[0].schema_name).toBe(mockTables.tables[0].schema_name);
   });
 
@@ -1533,6 +1054,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Act
     const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "measurements",
       page: 1,
       pageSize: 20,
     });
@@ -1962,100 +1484,6 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value[0].data?.columns).toHaveLength(2); // measurement + user columns
     expect(result.value[0].data?.columns.some((col) => col.name === "user")).toBe(true);
     expect(result.value[0].data?.columns.some((col) => col.name === "measurement")).toBe(true);
-  });
-
-  it("should filter out tables with downstream: true (intermediate processing tables) or named 'annotations'", async () => {
-    // Create an experiment in the database
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      description: "Test Description",
-      status: "active",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-      access_token: "mock-token",
-      expires_in: 3600,
-      token_type: "Bearer",
-    });
-
-    // Mock listTables API call with mixed downstream properties
-    nock(DATABRICKS_HOST)
-      .get(DatabricksTablesService.TABLES_ENDPOINT)
-      .query(true)
-      .reply(200, {
-        tables: [
-          {
-            name: "raw_sample_data",
-            catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
-            properties: {
-              downstream: "true", // Should be filtered out
-            },
-          },
-          {
-            name: "annotations", // Should be filtered out
-            catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
-            properties: {
-              downstream: "false",
-            },
-          },
-          {
-            name: "enriched_sample_data",
-            catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
-            properties: {
-              downstream: "false", // Should be included
-            },
-          },
-          {
-            name: "macro_processing_temp",
-            catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
-            properties: {
-              downstream: "true", // Should be filtered out
-            },
-          },
-        ],
-      });
-
-    // Only need to mock data for the downstream: false table
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
-      .reply(200, {
-        statement_id: "mock-statement-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: 1,
-            columns: [{ name: "id", type_name: "STRING", type_text: "STRING", position: 0 }],
-          },
-          total_row_count: 1,
-          truncated: false,
-        },
-        result: {
-          data_array: [["test-id"]],
-          chunk_index: 0,
-          row_count: 1,
-          row_offset: 0,
-        },
-      });
-
-    // Act
-    const result = await useCase.execute(experiment.id, testUserId, {
-      page: 1,
-      pageSize: 5,
-    });
-
-    // Assert - should only return tables with downstream: false
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value).toHaveLength(1); // Only one table should be returned
-    expect(result.value[0].name).toBe("enriched_sample_data");
-    expect(result.value[0].displayName).toBe("enriched_sample_data");
   });
 
   it("should return forbidden error when trying to access table with downstream: true", async () => {

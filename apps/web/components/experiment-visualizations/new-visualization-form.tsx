@@ -1,9 +1,9 @@
 "use client";
 
-import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { Loader2 } from "lucide-react";
 
+import type { ExperimentTableMetadata } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import type { WizardStepProps } from "@repo/ui/components";
 import { WizardForm } from "@repo/ui/components";
@@ -21,7 +21,7 @@ import { DataSourceStep, dataSourceSchema } from "./wizard-steps/data-source-ste
 
 interface NewVisualizationFormProps {
   experimentId: string;
-  sampleTables: SampleTable[];
+  tables: ExperimentTableMetadata[];
   onSuccess: (visualizationId: string) => void;
   isLoading?: boolean;
   isPreviewOpen: boolean;
@@ -30,7 +30,7 @@ interface NewVisualizationFormProps {
 
 export default function NewVisualizationForm({
   experimentId,
-  sampleTables,
+  tables,
   onSuccess,
   isLoading: isLoadingTables = false,
   isPreviewOpen,
@@ -54,7 +54,7 @@ export default function NewVisualizationForm({
     chartFamily: "basic",
     chartType: "line",
     config: getDefaultChartConfig("line"),
-    dataConfig: getDefaultDataConfig(sampleTables.length > 0 ? sampleTables[0].name : undefined),
+    dataConfig: getDefaultDataConfig(tables.length > 0 ? tables[0].name : undefined),
   };
 
   // Wizard steps configuration
@@ -92,7 +92,7 @@ export default function NewVisualizationForm({
       component: (props: WizardStepProps<ChartFormValues>) => (
         <DataSourceStep
           {...props}
-          tables={sampleTables}
+          tables={tables}
           experimentId={experimentId}
           isPreviewOpen={isPreviewOpen}
           onPreviewClose={onPreviewClose}

@@ -668,19 +668,20 @@ describe("Experiment Schema", () => {
   // ----- Data queries & tables -----
   describe("Data queries & tables", () => {
     it("zExperimentDataQuery defaults & coercion", () => {
-      const d1 = zExperimentDataQuery.parse({});
+      const d1 = zExperimentDataQuery.parse({ tableName: "test_table" });
       expect(d1.page).toBeUndefined();
       expect(d1.pageSize).toBeUndefined();
       expect(d1.orderBy).toBeUndefined();
       expect(d1.orderDirection).toBeUndefined();
 
-      const d2 = zExperimentDataQuery.parse({ page: "3", pageSize: "10" });
+      const d2 = zExperimentDataQuery.parse({ tableName: "test_table", page: "3", pageSize: "10" });
       expect(d2.page).toBe(3);
       expect(d2.pageSize).toBe(10);
       expect(d2.orderBy).toBeUndefined();
       expect(d2.orderDirection).toBeUndefined();
 
       const d3 = zExperimentDataQuery.parse({
+        tableName: "test_table",
         orderBy: "timestamp",
         orderDirection: "DESC",
       });

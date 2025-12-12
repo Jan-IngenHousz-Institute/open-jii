@@ -1,8 +1,8 @@
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import YAxisConfiguration from "./y-axis-configuration";
@@ -24,7 +24,7 @@ beforeAll(() => {
 });
 
 // Mock table data
-const mockTable: SampleTable = {
+const mockTable: ExperimentTableWithColumns = {
   name: "test-table",
   tableMetadata: {
     columns: [],
@@ -50,7 +50,7 @@ function TestWrapper({
   isColorColumnSelected = false,
 }: {
   defaultValues?: Partial<ChartFormValues>;
-  table?: SampleTable;
+  table?: ExperimentTableWithColumns;
   yAxisDataSources?: { field: { id: string; columnName: string; role: string }; index: number }[];
   onAddSeries?: () => void;
   onRemoveSeries?: (index: number) => void;

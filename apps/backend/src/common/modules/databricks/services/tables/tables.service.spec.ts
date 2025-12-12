@@ -80,6 +80,7 @@ describe("DatabricksTablesService", () => {
         .query({
           catalog_name: "test_catalog",
           schema_name: schemaName,
+          omit_columns: false,
         })
         .reply(200, mockTablesResponse);
 

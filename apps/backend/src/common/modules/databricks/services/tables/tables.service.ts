@@ -45,6 +45,7 @@ export class DatabricksTablesService {
           params: {
             catalog_name: this.configService.getCatalogName(),
             schema_name: schemaName,
+            omit_columns: false, // Include column information in the response
           },
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
         });
@@ -58,6 +59,7 @@ export class DatabricksTablesService {
             table_type: table.table_type,
             comment: table.comment,
             created_at: table.created_at,
+            columns: table.columns,
             properties: table.properties,
           })),
         };

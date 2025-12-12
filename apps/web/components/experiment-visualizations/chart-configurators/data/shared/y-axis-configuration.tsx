@@ -1,8 +1,8 @@
 "use client";
 
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { Plus, Trash2, Layers } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { DataColumn } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -32,7 +32,7 @@ import { getDefaultSeriesColor } from "../../chart-configurator-util";
 
 interface YAxisConfigurationProps {
   form: UseFormReturn<ChartFormValues>;
-  table: SampleTable;
+  table: ExperimentTableWithColumns;
   yAxisDataSources: { field: { id: string; columnName: string; role: string }; index: number }[];
   addYAxisSeries: () => void;
   removeDataSource: (index: number) => void;

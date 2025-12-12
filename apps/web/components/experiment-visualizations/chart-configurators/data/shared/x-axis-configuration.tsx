@@ -1,7 +1,7 @@
 "use client";
 
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import type { UseFormReturn } from "react-hook-form";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { DataColumn } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -24,7 +24,7 @@ import type { ChartFormValues } from "../../chart-configurator-util";
 
 interface XAxisConfigurationProps {
   form: UseFormReturn<ChartFormValues>;
-  table: SampleTable;
+  table: ExperimentTableWithColumns;
   xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
 }
 

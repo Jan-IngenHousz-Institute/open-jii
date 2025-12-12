@@ -120,13 +120,14 @@ export class GetExperimentDataUseCase {
             orderDirection,
           );
         } else {
-          // Multiple tables with sample data
-          this.logger.debug(`Fetching data for experiment ${experimentId} in sampling mode`);
-          return await this.fetchMultipleTablesSample(
-            schemaName,
-            experiment,
-            pageSize,
-            experimentId,
+          // No tableName provided - this is deprecated behavior
+          this.logger.warn(
+            `Deprecated: getExperimentData called without tableName for experiment ${experimentId}`,
+          );
+          return failure(
+            AppError.badRequest(
+              "tableName parameter is required. Use /tables endpoint for metadata or /tables/:tableName for data.",
+            ),
           );
         }
       },
@@ -304,81 +305,6 @@ export class GetExperimentDataUseCase {
         totalPages,
       },
     ];
-
-    return success(response);
-  }
-
-  /**
-   * Fetch multiple tables with sample data
-   */
-  private async fetchMultipleTablesSample(
-    schemaName: string,
-    experiment: ExperimentDto,
-    pageSize: number,
-    experimentId: string,
-  ): Promise<Result<ExperimentDataDto>> {
-    const tablesResult = await this.databricksPort.listTables(experiment.name, experimentId);
-
-    if (tablesResult.isFailure()) {
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    // Filter tables to only include those with downstream: "false" (final/enriched tables for user consumption)
-    // and exclude annotations table.
-    const finalTables = tablesResult.value.tables.filter(
-      (table) => table.properties?.downstream === "false" && table.name !== "annotations",
-    );
-
-    // Make sure 'device' table is last if it exists and is marked as final
-    const tables: Table[] = [];
-    let deviceTable: Table | undefined;
-    for (const table of finalTables) {
-      if (table.name === "device") deviceTable = table;
-      else tables.push(table);
-    }
-    if (deviceTable) tables.push(deviceTable);
-
-    const response: ExperimentDataDto = [];
-
-    // Fetch sample data for each table
-    for (const table of tables) {
-      let sqlQuery = `SELECT * FROM ${table.name}`;
-
-      // Add ORDER BY clause
-      const orderByClauseResult = await this.getOrderByClause(
-        experiment.name,
-        experimentId,
-        table.name,
-      );
-      if (orderByClauseResult.isFailure()) {
-        return orderByClauseResult;
-      }
-      sqlQuery += orderByClauseResult.value;
-      sqlQuery += ` LIMIT ${pageSize}`;
-
-      const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
-
-      const tableInfo: TableDataDto = {
-        name: table.name,
-        displayName: table.properties?.display_name ?? table.name,
-        catalog_name: table.catalog_name,
-        schema_name: table.schema_name,
-        page: 1,
-        pageSize,
-        totalPages: 1,
-        totalRows: dataResult.isSuccess() ? dataResult.value.totalRows : 0,
-      };
-
-      if (dataResult.isSuccess()) {
-        tableInfo.data = await this.transformSchemaData(dataResult.value);
-      } else {
-        this.logger.warn(
-          `Failed to get sample data for table ${table.name}: ${dataResult.error.message}`,
-        );
-      }
-
-      response.push(tableInfo);
-    }
 
     return success(response);
   }

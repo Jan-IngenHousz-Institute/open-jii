@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
-import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ExperimentTableMetadata } from "@repo/api";
 import type { ExperimentVisualization } from "@repo/api";
 import type { WizardFormProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
@@ -118,15 +118,14 @@ describe("EditVisualizationForm", () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockSampleTables: SampleTable[] = [
+  const mockExperimentTableMetadatas: ExperimentTableMetadata[] = [
     {
       name: "test_table",
+      displayName: "Test Table",
       totalRows: 100,
-      tableMetadata: {} as never,
-      tableRows: [],
       columns: [
-        { name: "x", type_name: "DOUBLE", type_text: "double" },
-        { name: "y", type_name: "DOUBLE", type_text: "double" },
+        { name: "x", type_name: "DOUBLE", type_text: "double", position: 0 },
+        { name: "y", type_name: "DOUBLE", type_text: "double", position: 1 },
       ],
     },
   ];
@@ -147,7 +146,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={mockVisualization}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={true}
           isPreviewOpen={false}
@@ -172,7 +171,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={mockVisualization}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -198,7 +197,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={mockVisualization}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -250,7 +249,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={visualizationWithEmptySource}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -295,7 +294,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={visualizationWithWhitespace}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -338,7 +337,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={visualizationWithAliases}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -376,7 +375,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={mockVisualization}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -413,7 +412,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={mockVisualization}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -442,7 +441,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={visualizationWithoutDesc}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}
@@ -466,7 +465,7 @@ describe("EditVisualizationForm", () => {
         <EditVisualizationForm
           experimentId={mockExperimentId}
           visualization={mockVisualization}
-          sampleTables={mockSampleTables}
+          tables={mockExperimentTableMetadatas}
           onSuccess={mockOnSuccess}
           isLoading={false}
           isPreviewOpen={false}

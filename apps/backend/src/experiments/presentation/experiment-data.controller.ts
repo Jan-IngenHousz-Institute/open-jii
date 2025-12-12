@@ -12,6 +12,7 @@ import { AsyncQueue } from "../../common/utils/async-queue";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
+import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 
@@ -22,10 +23,37 @@ export class ExperimentDataController {
 
   constructor(
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
+    private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
     private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
     private readonly downloadExperimentDataUseCase: DownloadExperimentDataUseCase,
   ) {}
+
+  @TsRestHandler(contract.experiments.getExperimentTables)
+  getExperimentTables(@CurrentUser() user: { id: string }) {
+    return tsRestHandler(contract.experiments.getExperimentTables, async ({ params }) => {
+      const { id: experimentId } = params;
+
+      this.logger.log(
+        `Processing tables metadata request for experiment ${experimentId} by user ${user.id}`,
+      );
+
+      const result = await this.getExperimentTablesUseCase.execute(experimentId, user.id);
+
+      if (result.isSuccess()) {
+        const data = result.value;
+
+        this.logger.log(`Successfully retrieved table metadata for experiment ${experimentId}`);
+
+        return {
+          status: StatusCodes.OK,
+          body: data,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
 
   @TsRestHandler(contract.experiments.getExperimentData)
   getExperimentData(@CurrentUser() user: { id: string }) {
@@ -33,7 +61,9 @@ export class ExperimentDataController {
       const { id: experimentId } = params;
       const { page, pageSize, tableName, columns, orderBy, orderDirection } = query;
 
-      this.logger.log(`Processing data request for experiment ${experimentId} by user ${user.id}`);
+      this.logger.log(
+        `Processing legacy data request for experiment ${experimentId} by user ${user.id}`,
+      );
 
       const result = await this.getExperimentDataUseCase.execute(experimentId, user.id, {
         page,
