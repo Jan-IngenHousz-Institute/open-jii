@@ -274,6 +274,14 @@
                         "type": "string",
                         "format": "uuid"
                       },
+                      "ownerFirstName": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "ownerLastName": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time"
@@ -474,6 +482,14 @@
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "ownerFirstName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "ownerLastName": {
+                      "type": "string",
+                      "nullable": true
                     },
                     "createdAt": {
                       "type": "string",
@@ -757,6 +773,14 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "ownerFirstName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "ownerLastName": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -998,6 +1022,14 @@
                         "createdBy": {
                           "type": "string",
                           "format": "uuid"
+                        },
+                        "ownerFirstName": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "ownerLastName": {
+                          "type": "string",
+                          "nullable": true
                         },
                         "createdAt": {
                           "type": "string",
@@ -6234,6 +6266,598 @@
         }
       }
     },
+    "/api/v1/experiments/{id}/data/annotations": {
+      "post": {
+        "summary": "Add annotation to experiment data",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.addAnnotation",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tableName": {
+                    "type": "string"
+                  },
+                  "rowId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "annotation": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["comment", "flag"]
+                      },
+                      "content": {
+                        "discriminator": {
+                          "propertyName": "type"
+                        },
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": ["comment"]
+                              },
+                              "text": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 255
+                              }
+                            },
+                            "required": ["type", "text"]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": ["flag"]
+                              },
+                              "flagType": {
+                                "type": "string",
+                                "enum": ["outlier", "needs_review"]
+                              },
+                              "text": {
+                                "type": "string",
+                                "maxLength": 255
+                              }
+                            },
+                            "required": ["type", "flagType"]
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["type", "content"]
+                  }
+                },
+                "required": ["tableName", "rowId", "annotation"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rowsAffected": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["rowsAffected"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/annotations/bulk": {
+      "post": {
+        "summary": "Add multiple annotations to experiment data",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.addAnnotationsBulk",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tableName": {
+                    "type": "string"
+                  },
+                  "rowIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "annotation": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["comment", "flag"]
+                      },
+                      "content": {
+                        "discriminator": {
+                          "propertyName": "type"
+                        },
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": ["comment"]
+                              },
+                              "text": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 255
+                              }
+                            },
+                            "required": ["type", "text"]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": ["flag"]
+                              },
+                              "flagType": {
+                                "type": "string",
+                                "enum": ["outlier", "needs_review"]
+                              },
+                              "text": {
+                                "type": "string",
+                                "maxLength": 255
+                              }
+                            },
+                            "required": ["type", "flagType"]
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["type", "content"]
+                  }
+                },
+                "required": ["tableName", "rowIds", "annotation"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rowsAffected": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["rowsAffected"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/annotations/{annotationId}": {
+      "patch": {
+        "summary": "Update annotation",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "annotationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the annotation"
+          }
+        ],
+        "operationId": "experiments.updateAnnotation",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "discriminator": {
+                      "propertyName": "type"
+                    },
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["comment"]
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255
+                          }
+                        },
+                        "required": ["type", "text"]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["flag"]
+                          },
+                          "flagType": {
+                            "type": "string",
+                            "enum": ["outlier", "needs_review"]
+                          },
+                          "text": {
+                            "type": "string",
+                            "maxLength": 255
+                          }
+                        },
+                        "required": ["type", "flagType"]
+                      }
+                    ],
+                    "description": "Updated content"
+                  }
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "204",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rowsAffected": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["rowsAffected"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete annotation",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "annotationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the annotation"
+          }
+        ],
+        "operationId": "experiments.deleteAnnotation",
+        "responses": {
+          "204": {
+            "description": "204",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rowsAffected": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["rowsAffected"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/annotations/bulk-delete": {
+      "post": {
+        "summary": "Delete multiple annotations",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.deleteAnnotationsBulk",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tableName": {
+                    "type": "string",
+                    "description": "Name of the data table"
+                  },
+                  "rowIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1,
+                    "description": "Rows IDs to delete"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["comment", "flag"],
+                    "description": "Type of annotations to delete"
+                  }
+                },
+                "required": ["tableName", "rowIds", "type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "204",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rowsAffected": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["rowsAffected"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/macros": {
       "get": {
         "description": "Returns a list of macros based on the specified filter criteria",
@@ -7808,9 +8432,9 @@
     }
   },
   "info": {
-    "title": "OpenJII API",
+    "title": "openJII API",
     "version": "1.0.0",
-    "description": "REST API documentation for the OpenJII platform"
+    "description": "REST API documentation for the openJII platform"
   },
   "servers": [
     {

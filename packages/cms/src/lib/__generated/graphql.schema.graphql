@@ -146,6 +146,7 @@ type ComponentAuthor implements Entry & _Node {
   internalName(locale: String, useFallbackLocale: Boolean): String
   linkedFrom(allowedLocales: [String]): ComponentAuthorLinkingCollections
   name(locale: String, useFallbackLocale: Boolean): String
+  profession(locale: String, useFallbackLocale: Boolean): String
   sys: Sys!
 }
 
@@ -175,6 +176,13 @@ input ComponentAuthorFilter {
   name_not: String
   name_not_contains: String
   name_not_in: [String]
+  profession: String
+  profession_contains: String
+  profession_exists: Boolean
+  profession_in: [String]
+  profession_not: String
+  profession_not_contains: String
+  profession_not_in: [String]
   sys: SysFilter
 }
 
@@ -207,6 +215,8 @@ enum ComponentAuthorOrder {
   internalName_DESC
   name_ASC
   name_DESC
+  profession_ASC
+  profession_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -2604,6 +2614,13 @@ input cfComponentAuthorNestedFilter {
   name_not: String
   name_not_contains: String
   name_not_in: [String]
+  profession: String
+  profession_contains: String
+  profession_exists: Boolean
+  profession_in: [String]
+  profession_not: String
+  profession_not_contains: String
+  profession_not_in: [String]
   sys: SysFilter
 }
 

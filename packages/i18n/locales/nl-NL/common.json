@@ -227,7 +227,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welkom bij OpenJII",
+    "welcome": "Welkom bij openJII",
     "recentExperiments": "Recente experimenten",
     "statistics": "Statistieken",
     "quickActions": "Snelle acties"
@@ -334,5 +334,19 @@
     "back": "Terug",
     "details": "Toon tabeldetails",
     "download": "Tabel downloaden"
+  },
+  "experimentDataAnnotations": {
+    "title": "Opmerkingen",
+    "columnHeader": "Opmerkingen",
+    "annotations": "Annotaties",
+    "comments": "Opmerkingen",
+    "flags": "Vlaggen",
+    "addComment": "Opmerking toevoegen",
+    "addFlag": "Vlag toevoegen",
+    "titleComments": "Opmerkingen",
+    "you": "Jij",
+    "unknownUser": "Onbekende gebruiker",
+    "preview": "Voorvertoning",
+    "previewNote": "Dit is een voorvertoning. Uw annotatie wordt verwerkt en zal binnenkort permanent verschijnen. Verversen zal deze voorvertoning verbergen."
   }
 }

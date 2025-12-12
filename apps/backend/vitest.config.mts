@@ -30,6 +30,7 @@ export default mergeConfig(
           "src/test/**", // Test utilities and setup
           "**/*.spec.ts", // Test files
           "**/*.test.ts", // Test files
+          ".releaserc.js", // Semantic release configuration
         ],
       },
     },

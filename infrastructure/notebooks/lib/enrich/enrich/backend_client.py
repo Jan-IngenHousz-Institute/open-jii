@@ -1,7 +1,7 @@
 """
 Backend Client
 
-Provides authenticated HTTP client for communicating with OpenJII backend API
+Provides authenticated HTTP client for communicating with openJII backend API
 from Databricks pipelines.
 """
 
@@ -22,7 +22,7 @@ class BackendIntegrationError(Exception):
 
 class BackendClient:
     """
-    Authenticated HTTP client for OpenJII backend API with HMAC authentication.
+    Authenticated HTTP client for openJII backend API with HMAC authentication.
     
     Handles HMAC signature generation and provides convenient methods for
     common backend operations from Databricks pipelines.
@@ -38,7 +38,7 @@ class BackendClient:
         Initialize the backend client.
         
         Args:
-            base_url: Base URL of the OpenJII backend API
+            base_url: Base URL of the openJII backend API
             api_key_id: API key ID for authentication
             webhook_secret: Secret for HMAC signature generation
             timeout: Request timeout in seconds

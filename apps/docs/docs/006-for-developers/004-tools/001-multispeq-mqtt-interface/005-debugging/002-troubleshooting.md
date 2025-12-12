@@ -104,7 +104,7 @@ mmi --debug
 
 ## Additional Resources
 
-- [OpenJII Documentation Hub](https://docs.openjii.org)
+- [openJII Documentation Hub](https://docs.openjii.org)
 - [AWS IoT Core Documentation](https://docs.aws.amazon.com/iot/latest/developerguide/what-is-aws-iot.html)
 
 By following these troubleshooting steps, you can diagnose and resolve issues with the MultispeQ MQTT Interface tool effectively.

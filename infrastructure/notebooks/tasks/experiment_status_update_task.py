@@ -1,7 +1,7 @@
 # Databricks notebook source
-# DBTITLE 1,OpenJII Experiment Status Update Task
+# DBTITLE 1,openJII Experiment Status Update Task
 """
-This notebook sends experiment provisioning status updates to the OpenJII backend webhook.
+This notebook sends experiment provisioning status updates to the openJII backend webhook.
 It should be executed after the experiment pipeline creation task in a shared job.
 """
 import json
@@ -147,7 +147,7 @@ def extract_parameters(dbutils) -> Dict[str, Any]:
 # DBTITLE 1,Webhook Client
 
 class WebhookClient:
-    """Client for sending status updates to the OpenJII backend webhook with HMAC authentication."""
+    """Client for sending status updates to the openJII backend webhook with HMAC authentication."""
     
     def __init__(self, webhook_url: str, key_scope: str, dbutils):
         self.webhook_url = webhook_url

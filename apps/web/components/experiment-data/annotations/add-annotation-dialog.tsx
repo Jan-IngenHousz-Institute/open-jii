@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Flag, MessageSquare } from "lucide-react";
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import z from "zod";
+import { useExperimentAnnotationAdd } from "~/hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd";
+import { useExperimentAnnotationAddBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk";
 
-import type { AnnotationType } from "@repo/api";
-import { zAnnotationFlagType } from "@repo/api";
+import type { AnnotationContent, AnnotationType } from "@repo/api";
+import { zAnnotationContent } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
@@ -16,7 +16,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   Form,
   FormControl,
   FormField,
@@ -25,7 +24,6 @@ import {
   FormMessage,
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -38,74 +36,93 @@ export interface AddAnnotationDialogProps {
   tableName: string;
   rowIds: string[];
   type: AnnotationType;
-  bulk?: boolean;
-  bulkOpen?: boolean;
-  setBulkOpen?: (value: React.SetStateAction<boolean>) => void;
+  open?: boolean;
+  setOpen?: (value: React.SetStateAction<boolean>) => void;
   clearSelection?: () => void;
 }
-
-const zAddAnnotationFormSchema = z.object({
-  flag: zAnnotationFlagType.optional(),
-  text: z.string().min(1).max(255),
-});
-export type AddAnnotationDialogFormType = z.infer<typeof zAddAnnotationFormSchema>;
 
 export function AddAnnotationDialog({
   experimentId,
   tableName,
   rowIds,
   type,
-  bulk,
-  bulkOpen,
-  setBulkOpen,
+  open,
+  setOpen,
   clearSelection,
 }: AddAnnotationDialogProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = React.useState(false);
 
-  const bulkSuffix = bulk ? "Bulk" : "";
+  const { mutateAsync: addAnnotation, isPending: isPendingSingle } = useExperimentAnnotationAdd();
+  const { mutateAsync: addAnnotationsBulk, isPending: isPendingBulk } =
+    useExperimentAnnotationAddBulk();
+
   const count = rowIds.length;
 
-  const form = useForm<AddAnnotationDialogFormType>({
-    resolver: zodResolver(
-      type === "flag"
-        ? zAddAnnotationFormSchema.extend({ flag: zAnnotationFlagType })
-        : zAddAnnotationFormSchema,
-    ),
-    defaultValues: type === "flag" ? { text: "", flag: undefined } : { text: "" },
+  const isBulk = count > 1;
+  const isPending = isBulk ? isPendingBulk : isPendingSingle;
+
+  const bulkSuffix = isBulk ? "Bulk" : "";
+  const pendingSuffix = isPending ? "Pending" : "";
+
+  const defaultValues: Record<AnnotationType, AnnotationContent> = useMemo(
+    () => ({
+      comment: { type: "comment", text: "" },
+      flag: { type: "flag", flagType: "outlier", text: "" },
+    }),
+    [],
+  );
+
+  const form = useForm<AnnotationContent>({
+    resolver: zodResolver(zAnnotationContent),
+    defaultValues: defaultValues[type],
+    mode: "onChange",
   });
 
-  function onSubmit(formData: AddAnnotationDialogFormType) {
-    // TODO: Implement API call to add annotation and remove logging statement
-    console.log("onSubmit", { formData, experimentId, tableName, rowIds, type });
-    toast({ description: t("experimentDataAnnotations.updated") });
-    if (setBulkOpen !== undefined) {
-      setBulkOpen(false);
+  // Reset form when type changes
+  useEffect(() => {
+    form.reset(defaultValues[type]);
+  }, [defaultValues, type, form]);
+
+  async function handleSubmit(content: AnnotationContent) {
+    if (isBulk) {
+      await addAnnotationsBulk({
+        params: { id: experimentId },
+        body: {
+          tableName,
+          rowIds,
+          annotation: {
+            type,
+            content,
+          },
+        },
+      });
     } else {
-      setOpen(false);
+      await addAnnotation({
+        params: { id: experimentId },
+        body: {
+          tableName,
+          rowId: rowIds[0],
+          annotation: {
+            type,
+            content,
+          },
+        },
+      });
     }
-    if (clearSelection) {
-      clearSelection();
-    }
+
+    toast({ description: t("experimentDataAnnotations.updated") });
+
+    setOpen?.(false);
+    clearSelection?.();
+
+    form.reset();
   }
 
   return (
-    <Dialog open={bulkOpen ?? open} onOpenChange={setBulkOpen ?? setOpen}>
-      {!bulk && (
-        <DialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.title`)}
-          >
-            {type === "comment" && <MessageSquare className="h-4 w-4" />}
-            {type === "flag" && <Flag className="h-4 w-4" />}
-          </Button>
-        </DialogTrigger>
-      )}
-      <DialogContent>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-3xl">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
             <DialogHeader>
               <DialogTitle>
                 {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.title`)}
@@ -116,72 +133,73 @@ export function AddAnnotationDialog({
             </DialogHeader>
             <div className="mb-4 grid gap-4">
               {type === "flag" && (
-                <div className="grid gap-3">
-                  <FormField
-                    control={form.control}
-                    name="flag"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.flagLabel`)}
-                        </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue
-                                placeholder={t(
-                                  `experimentDataAnnotations.${type}Dialog${bulkSuffix}.flagPlaceholder`,
-                                )}
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem value="needs_review">
-                                {t(`experimentDataAnnotations.flagType.needs_review`)}
-                              </SelectItem>
-                              <SelectItem value="outlier">
-                                {t(`experimentDataAnnotations.flagType.outlier`)}
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-              <div className="grid gap-3">
                 <FormField
                   control={form.control}
-                  name="text"
+                  name="flagType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.textLabel`)}
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          value={field.value}
-                          onChange={field.onChange}
-                          rows={4}
-                          placeholder={t(
-                            `experimentDataAnnotations.${type}Dialog${bulkSuffix}.textPlaceholder`,
-                          )}
-                        />
-                      </FormControl>
+                      <FormLabel>{t("experimentDataAnnotations.flagType")}</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={t("experimentDataAnnotations.selectFlagType")}
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="outlier">
+                            {t("experimentDataAnnotations.flagTypes.outlier")}
+                          </SelectItem>
+                          <SelectItem value="needs_review">
+                            {t("experimentDataAnnotations.flagTypes.needsReview")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
+              )}
+              <FormField
+                control={form.control}
+                name="text"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {type === "comment"
+                        ? t(`experimentDataAnnotations.commentDialog${bulkSuffix}.textLabel`)
+                        : t("experimentDataAnnotations.flagReason")}
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        value={field.value}
+                        onChange={field.onChange}
+                        rows={type === "comment" ? 4 : 3}
+                        placeholder={
+                          type === "comment"
+                            ? t(
+                                `experimentDataAnnotations.commentDialog${bulkSuffix}.textPlaceholder`,
+                              )
+                            : t("experimentDataAnnotations.flagReasonPlaceholder")
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">{t("common.cancel")}</Button>
+                <Button type="button" variant="outline">
+                  {t("common.cancel")}
+                </Button>
               </DialogClose>
-              <Button type="submit">
-                {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.add`, { count })}
+              <Button type="submit" disabled={isPending}>
+                {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.add${pendingSuffix}`, {
+                  count,
+                })}
               </Button>
             </DialogFooter>
           </form>

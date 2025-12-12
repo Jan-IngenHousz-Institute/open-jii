@@ -1,6 +1,6 @@
 # 🔑 Cognito Module
 
-This module creates an AWS Cognito Identity Pool that enables unauthenticated identities to securely connect to IoT Core and publish MQTT messages to specific topics. It's designed to support device data ingestion for the OpenJII platform.
+This module creates an AWS Cognito Identity Pool that enables unauthenticated identities to securely connect to IoT Core and publish MQTT messages to specific topics. It's designed to support device data ingestion for the openJII platform.
 
 ## 📖 Overview
 

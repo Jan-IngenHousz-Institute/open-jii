@@ -1,6 +1,5 @@
 packages:
   - "apps/*"
-  - "apps/tools/*"
   - "packages/*"
   - "tooling/*"
 
@@ -20,7 +19,7 @@ catalog:
   "@types/nodemailer": ^6.4.17
   posthog-js: ^1.279.1
   posthog-node: ^5.10.2
-  next: ^15.5.7
+  next: ^15.5.9
 
 catalogs:
   react19:
