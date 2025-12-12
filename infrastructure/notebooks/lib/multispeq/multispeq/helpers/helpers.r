@@ -1,4 +1,4 @@
-# R Helper Functions for OpenJII MultispeQ Data Processing
+# R Helper Functions for openJII MultispeQ Data Processing
 #
 # This file provides R equivalents of the JavaScript/Python helper functions
 # used in MultispeQ macro processing. These functions are made available to

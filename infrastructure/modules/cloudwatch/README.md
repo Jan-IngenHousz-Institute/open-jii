@@ -1,6 +1,6 @@
 # 📊 CloudWatch Logging Module
 
-This module provisions **AWS CloudWatch** resources to enable logging for IoT devices in the OpenJII Platform. It creates IAM roles and policies necessary for IoT Core to write logs to CloudWatch.
+This module provisions **AWS CloudWatch** resources to enable logging for IoT devices in the openJII Platform. It creates IAM roles and policies necessary for IoT Core to write logs to CloudWatch.
 
 ## 📖 Overview
 

@@ -35,10 +35,10 @@ describe("AuthHeroSection", () => {
     expect(screen.getByText("auth.heroDescription")).toBeInTheDocument();
   });
 
-  it("renders OpenJII logo and powered by text", async () => {
+  it("renders openJII logo and powered by text", async () => {
     render(await AuthHeroSection({ locale }));
 
-    const openJiiLogo = screen.getByAltText("OpenJII Logo");
+    const openJiiLogo = screen.getByAltText("openJII Logo");
     expect(openJiiLogo).toBeInTheDocument();
 
     const src = openJiiLogo.getAttribute("src") ?? "";

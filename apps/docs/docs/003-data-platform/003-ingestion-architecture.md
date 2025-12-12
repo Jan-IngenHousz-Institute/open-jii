@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document outlines a data ingestion architecture for the OpenJII platform. The approach uses a dual medallion (Bronze–Silver–Gold) framework applied across a central schema and experiment-specific schemas. The central schema handles overall IoT, plant, and sensor analysis, while dedicated pipelines route experiment-related data from the central raw layer into separate experiment schemas with their own medallion processes.
+This document outlines a data ingestion architecture for the openJII platform. The approach uses a dual medallion (Bronze–Silver–Gold) framework applied across a central schema and experiment-specific schemas. The central schema handles overall IoT, plant, and sensor analysis, while dedicated pipelines route experiment-related data from the central raw layer into separate experiment schemas with their own medallion processes.
 
 ## Architectural Overview
 
@@ -25,7 +25,7 @@ This dual medallion approach creates two distinct gold tiers - one for platform 
 
 ### ELT Approach
 
-OpenJII implements an **ELT (Extract, Load, Transform)** architecture rather than a traditional ETL approach:
+openJII implements an **ELT (Extract, Load, Transform)** architecture rather than a traditional ETL approach:
 
 1. **Extract**:
 
@@ -72,7 +72,7 @@ This design balances centralized governance with experiment-specific flexibility
 
 ### Data Pipelines
 
-The OpenJII data platform uses two types of pipelines that align with our schema structure:
+The openJII data platform uses two types of pipelines that align with our schema structure:
 
 1. **Ingestion Pipeline**: Writes all sensor data into the central `raw_data` table (Bronze layer) in the central schema.
 
@@ -85,7 +85,7 @@ Each experiment schema contains views that filter data from the central layer, e
 
 ### Event-Driven Pipeline Orchestration
 
-Rather than running all experiment pipelines on a fixed schedule, OpenJII uses an event-driven orchestration approach:
+Rather than running all experiment pipelines on a fixed schedule, openJII uses an event-driven orchestration approach:
 
 1. **Central Registry**: The central schema maintains an `experiments` table that tracks configuration and data freshness
 2. **Data Freshness Tracking**: When new data arrives, the system marks affected experiments as having "stale" data
@@ -96,7 +96,7 @@ This approach optimizes computing resources by only processing experiments with 
 
 ### Infrastructure Components
 
-The OpenJII platform provisions all required Databricks components through Terraform:
+The openJII platform provisions all required Databricks components through Terraform:
 
 1. **Unity Catalog Metastore:** Secured S3 storage with IAM-based access control
 2. **Schemas and Tables:** Centrally defined with consistent structure across experiments
@@ -172,7 +172,7 @@ F --> H
 
 ## Design Rationale
 
-Using dual medallion architectures for both the central and experiment-specific schemas enhances data quality, traceability, and scalability. By funneling all OpenJII data into a central raw layer, the system creates a single source of truth that is later refined for specific analytical needs.
+Using dual medallion architectures for both the central and experiment-specific schemas enhances data quality, traceability, and scalability. By funneling all openJII data into a central raw layer, the system creates a single source of truth that is later refined for specific analytical needs.
 
 A key benefit is the balance between standardization and flexibility. Standard storage formats such as Delta Lake and Parquet ensure data consistency and efficient querying, while separate experiment-specific schemas allow custom processing pipelines to operate independently. This separation simplifies troubleshooting and supports reproducibility.
 
@@ -184,7 +184,7 @@ Security is maintained through role-based access controls and regular audits, pr
 
 ## Introduction
 
-OpenJII's architecture requires orchestrating potentially hundreds of experiment-specific data pipelines, each with similar structure but isolated processing requirements. This document outlines our approach to efficient pipeline orchestration using a central experiment registry and event-driven processing model.
+openJII's architecture requires orchestrating potentially hundreds of experiment-specific data pipelines, each with similar structure but isolated processing requirements. This document outlines our approach to efficient pipeline orchestration using a central experiment registry and event-driven processing model.
 
 ## Experiment Registry Pattern
 
@@ -213,7 +213,7 @@ This registry drives all experiment-related operations from schema creation to p
 
 ### Event-Driven Processing
 
-Rather than running all experiment pipelines on a fixed schedule, OpenJII uses an event-driven approach:
+Rather than running all experiment pipelines on a fixed schedule, openJII uses an event-driven approach:
 
 1. **Data Detection**: When new data arrives in the central schema, the system tracks which experiments have received new data
 2. **Status Tracking**: The `readings_status` column in the registry is updated to "stale" for affected experiments
@@ -234,7 +234,7 @@ The Pipeline Orchestrator is a scheduled job that:
 
 ### Templated Pipeline Code
 
-Instead of maintaining separate pipeline code for each experiment, OpenJII uses parameterized templates:
+Instead of maintaining separate pipeline code for each experiment, openJII uses parameterized templates:
 
 ```python
 # Example parameterized pipeline
@@ -319,11 +319,11 @@ if custom_extensions:
 
 ## Conclusion
 
-The event-driven orchestration approach, centered around a comprehensive experiment registry, enables OpenJII to efficiently manage numerous experiment pipelines while maintaining scientific isolation. This pattern optimizes computing resources, simplifies maintenance, and provides clear visibility into platform operations.
+The event-driven orchestration approach, centered around a comprehensive experiment registry, enables openJII to efficiently manage numerous experiment pipelines while maintaining scientific isolation. This pattern optimizes computing resources, simplifies maintenance, and provides clear visibility into platform operations.
 
 ### Further on the architecture
 
-OpenJII implements a dual medallion architecture that extends the traditional Bronze-Silver-Gold lakehouse pattern to support both centralized data governance and experiment-specific scientific integrity. This document explores the rationale, benefits, and implementation considerations for this architecture.
+openJII implements a dual medallion architecture that extends the traditional Bronze-Silver-Gold lakehouse pattern to support both centralized data governance and experiment-specific scientific integrity. This document explores the rationale, benefits, and implementation considerations for this architecture.
 
 The dual medallion approach consists of:
 
