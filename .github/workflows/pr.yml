@@ -180,6 +180,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    concurrency:
+      group: opentofu-dev
+      cancel-in-progress: false
     uses: ./.github/workflows/tofu.yml
     with:
       environment: pr
