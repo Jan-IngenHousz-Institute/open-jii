@@ -36,12 +36,13 @@ export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
     }
 
     return (
-      <ArticleTileGrid
-        className="grid-cols-1 md:grid-cols-2 lg:grid-cols-2"
-        articles={posts}
-        locale={locale}
-        horizontal
-      />
+      <div className="mx-auto">
+        <ArticleTileGrid
+          className="md:grid-cols-2 lg:grid-cols-3"
+          articles={posts}
+          locale={locale}
+        />
+      </div>
     );
   } catch {
     return (
