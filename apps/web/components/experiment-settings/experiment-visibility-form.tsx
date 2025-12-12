@@ -94,7 +94,7 @@ export function ExperimentVisibilityForm({
                 </SelectContent>
               </Select>
               {visibility === "public" && (
-                <div className="bg-surface text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
+                <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
                   <Info className="text-primary h-4 w-4" />
                   <div className="leading-tight">
                     {t("experimentSettings.visibilityCannotBeChanged")}
@@ -132,7 +132,7 @@ export function ExperimentVisibilityForm({
                           variant="outline"
                           disabled={isArchived || isSavingEmbargo}
                           className={cn(
-                            "w-full justify-between font-normal",
+                            "hover:bg-surface-light w-full justify-between font-normal disabled:hover:bg-transparent",
                             !selectedDate && "text-muted-foreground",
                           )}
                         >
@@ -152,7 +152,7 @@ export function ExperimentVisibilityForm({
                     </Popover>
                   </FormControl>
                   {helperText && (
-                    <div className="bg-surface text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
+                    <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
                       <Info className="text-primary h-4 w-4" />
                       <div className="leading-tight">{helperText}</div>
                     </div>

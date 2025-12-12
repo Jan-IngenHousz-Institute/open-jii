@@ -7,7 +7,7 @@ import { parseApiError } from "~/util/apiError";
 
 import type { FlowGraph } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardTitle } from "@repo/ui/components";
+import { Button, Card, CardContent, CardTitle, Skeleton } from "@repo/ui/components";
 
 import { useExperimentFlow } from "../../../hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useProtocol } from "../../../hooks/protocol/useProtocol/useProtocol";
@@ -16,11 +16,13 @@ import { ProtocolCard, ProtocolSelector } from "./protocol-card";
 interface ExperimentLinkedProtocolsProps {
   experimentId: string;
   isArchived?: boolean;
+  hasAccess?: boolean;
 }
 
 export function ExperimentLinkedProtocols({
   experimentId,
   isArchived = false,
+  hasAccess = false,
 }: ExperimentLinkedProtocolsProps) {
   const locale = useLocale();
   const { data: flowData, isLoading, error } = useExperimentFlow(experimentId);
@@ -62,9 +64,7 @@ export function ExperimentLinkedProtocols({
     return (
       <div className="space-y-4">
         <CardTitle>{t("protocols.linkedProtocols")}</CardTitle>
-        <div className="animate-pulse space-y-2">
-          <div className="h-[140px] rounded bg-gray-200"></div>
-        </div>
+        <Skeleton className="h-[140px]" />
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function ExperimentLinkedProtocols({
     return (
       <div className="space-y-4">
         <CardTitle>{t("protocols.linkedProtocols")}</CardTitle>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
               <svg
@@ -94,10 +94,12 @@ export function ExperimentLinkedProtocols({
               {t("protocols.noFlowYet")}
             </p>
 
-            <Link
-              href={`/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/flow`}
-            >
-              <Button variant="outline" className="bg-surface">
+            <Link href={`/${locale}/platform/experiments/${experimentId}/flow`}>
+              <Button
+                variant="outline"
+                className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
+                disabled={isArchived || !hasAccess}
+              >
                 {t("protocols.createFlow")}
               </Button>
             </Link>
@@ -111,7 +113,7 @@ export function ExperimentLinkedProtocols({
     return (
       <div className="space-y-4">
         <CardTitle>{t("protocols.linkedProtocols")}</CardTitle>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground text-center text-sm">
               {t("protocols.unableToLoadExperimentFlow")}
@@ -126,7 +128,7 @@ export function ExperimentLinkedProtocols({
     return (
       <div className="space-y-4">
         <CardTitle>{t("protocols.linkedProtocols")}</CardTitle>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
               <svg
@@ -147,11 +149,12 @@ export function ExperimentLinkedProtocols({
             <p className="text-muted-foreground mb-4 text-center text-sm">
               {t("protocols.noProtocolsLinked")}
             </p>
-            <Link
-              href={`/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/flow`}
-              passHref
-            >
-              <Button variant="outline" className="bg-surface">
+            <Link href={`/${locale}/platform/experiments/${experimentId}/flow`} passHref>
+              <Button
+                variant="outline"
+                className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
+                disabled={isArchived || !hasAccess}
+              >
                 {t("protocols.goToFlow")}
               </Button>
             </Link>
@@ -176,7 +179,7 @@ export function ExperimentLinkedProtocols({
           </Link>
         )}
       </div>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-none shadow-none">
         <CardContent className="bg-surface-light space-y-6 pt-6">
           <div>
             <ProtocolSelector

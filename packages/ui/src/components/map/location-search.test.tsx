@@ -146,18 +146,18 @@ describe("LocationSearch", () => {
 
     // First item should be highlighted
     const firstResult = screen.getByText("Berlin, Germany").closest("button");
-    expect(firstResult).toHaveClass("bg-blue-50");
+    expect(firstResult).toHaveClass("bg-surface");
 
     // Arrow down to select second item
     fireEvent.keyDown(input, { key: "ArrowDown" });
 
     // Second item should be highlighted
     const secondResult = screen.getByText("Berlin, NH, USA").closest("button");
-    expect(secondResult).toHaveClass("bg-blue-50");
+    expect(secondResult).toHaveClass("bg-surface");
 
     // Arrow up to go back to first item
     fireEvent.keyDown(input, { key: "ArrowUp" });
-    expect(firstResult).toHaveClass("bg-blue-50");
+    expect(firstResult).toHaveClass("bg-surface");
   });
 
   it("selects highlighted item with Enter key", async () => {
@@ -276,7 +276,7 @@ describe("LocationSearch", () => {
     const firstResult = screen.getByText("Berlin, Germany").closest("button");
     if (firstResult) {
       fireEvent.mouseEnter(firstResult);
-      expect(firstResult).toHaveClass("bg-blue-50");
+      expect(firstResult).toHaveClass("bg-surface");
     }
   });
 
