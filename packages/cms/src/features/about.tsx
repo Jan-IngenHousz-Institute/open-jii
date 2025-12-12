@@ -42,7 +42,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
 
       {/* Middle container */}
       <div className="mx-auto max-w-7xl px-4 py-20">
-        <div className="mx-auto max-w-2xl lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-x-12 lg:gap-y-6 xl:grid-cols-1 xl:grid-rows-1">
+        <div className="mx-auto max-w-2xl lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-x-14 lg:gap-y-6 xl:grid-cols-1 xl:grid-rows-1">
           {/* TITLE */}
           <h1
             className="max-w-2xl pr-10 text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
