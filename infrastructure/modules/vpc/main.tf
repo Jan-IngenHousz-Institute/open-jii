@@ -27,7 +27,7 @@ resource "aws_internet_gateway" "this" {
 # -----------------------
 resource "aws_security_group" "default" {
   name        = "open-jii-default-sg-${var.environment}"
-  description = "Default security group for openJII VPC"
+  description = "Default security group for OpenJII VPC"
   vpc_id      = aws_vpc.this.id
 
   ingress {
