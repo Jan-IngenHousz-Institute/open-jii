@@ -24,6 +24,7 @@ const parseEnv = () => {
     const rawEnv = {
       NODE_ENV: process.env.NODE_ENV,
       ENVIRONMENT_PREFIX: process.env.ENVIRONMENT_PREFIX,
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
       NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
       NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
       NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
