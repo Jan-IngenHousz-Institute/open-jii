@@ -4,6 +4,18 @@
 name: Database Migrations Workflow
 
 on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+      timeout_minutes:
+        description: "Timeout for migration execution in minutes"
+        required: false
+        type: number
+        default: 10
+        
   workflow_call:
     inputs:
       environment:
