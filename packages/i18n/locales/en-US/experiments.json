@@ -112,6 +112,8 @@
   "updated": "Updated",
   "descriptionTitle": "Description",
   "and": "and",
+  "save": "Save",
+  "cancel": "Cancel",
   "details": {
     "location": {
       "locationsTitle": "Experiment Locations",
