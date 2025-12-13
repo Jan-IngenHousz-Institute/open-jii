@@ -17,10 +17,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.openjii.app",
-      "appleTeamId": "7Q2WX38PT2"
+      "bundleIdentifier": "com.openjii.app"
     },
     "android": {
+      "versionCode": 20,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#D3D3D3"
