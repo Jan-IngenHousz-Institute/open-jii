@@ -2,6 +2,10 @@ name: Submit to Google Play
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
 
 permissions:
   contents: read
