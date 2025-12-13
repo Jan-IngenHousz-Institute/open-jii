@@ -1,16 +1,17 @@
 import { EnvVariablesMap } from "~/types/env-variables";
 
+function get(key: string): string {
+  const publicKey = "EXPO_PUBLIC_" + key;
+  const value = process.env[key] ?? process.env[publicKey];
+
+  if (!value) {
+    throw new Error(`Missing environment variable: ${key} or ${publicKey}`);
+  }
+
+  return value;
+}
+
 export function loadEnvVariablesFromExpo(): EnvVariablesMap {
-  const get = (key: string): string => {
-    const value = process.env[key];
-
-    if (!value) {
-      throw new Error(`Missing environment variable: ${key}`);
-    }
-
-    return value;
-  };
-
   return {
     prod: {
       REGION: get("PROD_REGION"),
