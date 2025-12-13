@@ -34,4 +34,4 @@ jobs:
 
       - name: Build Android App Bundle
         working-directory: apps/mobile
-        run: pnpm run build-aab --non-interactive --no-wait --auto-submit
+        run: pnpm run build-aab
