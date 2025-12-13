@@ -15,6 +15,6 @@ export function GET(request: NextRequest) {
     });
   }
 
-  const redirectUrl = `photosynq://callback?session_token=${encodeURIComponent(sessionToken)}`;
+  const redirectUrl = `openjii://callback?session_token=${encodeURIComponent(sessionToken)}`;
   return NextResponse.redirect(redirectUrl);
 }

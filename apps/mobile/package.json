@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "main": "index.tsx",
   "scripts": {
     "clean": "git clean -xdf .cache .expo .turbo android ios node_modules",
@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
     "build-apk": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile preview --local && rm .npmrc",
-    "build-aab": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile production --local && rm .npmrc",
+    "build-aab-locally": "dotenv -- eas build -p android --profile production --local",
+    "submit-to-google-play": "eas build -p android --profile production --clear-cache  --non-interactive --no-wait --auto-submit",
     "lint": "eslint 'src/**/*' --fix",
     "typecheck": "tsc --noEmit",
     "postinstall": "cd ../../packages/api && pnpm run build"
