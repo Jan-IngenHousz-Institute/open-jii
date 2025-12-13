@@ -4,23 +4,47 @@ import { defineConfig, mergeConfig } from "vitest/config";
 
 import { baseConfig } from "@repo/vitest-config/base";
 
+const commonTestConfig = {
+  environment: "node",
+  globals: true,
+  setupFiles: ["./src/test/setup.ts"],
+  pool: "threads",
+  sequence: {
+    concurrent: false,
+  },
+  fileParallelism: false,
+};
+
+const commonPlugins = [
+  // This is required to build the test files with SWC and proper decorator support
+  swc.vite(),
+];
+
 export default mergeConfig(
   baseConfig,
   defineConfig({
     test: {
-      environment: "node",
-      globals: true,
-      setupFiles: ["./src/test/setup.ts"],
-      pool: "forks",
-      poolOptions: {
-        forks: {
-          singleFork: true,
+      projects: [
+        {
+          test: {
+            ...commonTestConfig,
+            //name: "Non-isolated",
+            isolate: false,
+            include: ["src/**/*.spec.ts", "src/**/*.test.ts"],
+            exclude: ["src/**/notifications.service.spec.ts"],
+          },
+          plugins: commonPlugins,
         },
-      },
-      sequence: {
-        concurrent: false,
-      },
-      fileParallelism: false,
+        {
+          test: {
+            ...commonTestConfig,
+            //name: "Isolated",
+            isolate: true,
+            include: ["src/**/notifications.service.spec.ts"],
+          },
+          plugins: commonPlugins,
+        },
+      ],
       coverage: {
         exclude: [
           // Backend-specific exclusions (extends base config)
@@ -34,9 +58,5 @@ export default mergeConfig(
         ],
       },
     },
-    plugins: [
-      // This is required to build the test files with SWC and proper decorator support
-      swc.vite(),
-    ],
   }),
 );

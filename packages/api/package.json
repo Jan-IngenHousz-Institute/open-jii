@@ -11,7 +11,7 @@
   },
   "private": true,
   "scripts": {
-    "build": "tsc --build --verbose",
+    "build": "tsc --project tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc --watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",
