@@ -90,9 +90,7 @@ describe("GET /api/auth/mobile-redirect", () => {
       expect(response).toBeInstanceOf(NextResponse);
 
       const location = response.headers.get("location");
-      expect(location).toBe(
-        `photosynq://callback?session_token=${encodeURIComponent(sessionToken)}`,
-      );
+      expect(location).toBe(`openjii://callback?session_token=${encodeURIComponent(sessionToken)}`);
     });
   });
 
