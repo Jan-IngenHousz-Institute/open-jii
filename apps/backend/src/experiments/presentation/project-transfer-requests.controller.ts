@@ -1,11 +1,13 @@
 import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api";
+import { contract, TransferRequestStatus } from "@repo/api";
 import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
+import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateTransferRequestUseCase } from "../application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "../application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
@@ -28,18 +30,14 @@ export class ProjectTransferRequestsController {
       const result = await this.createTransferRequestUseCase.execute(user.id, user.email, body);
 
       if (result.isSuccess()) {
+        const request = {
+          ...result.value,
+          status: result.value.status as TransferRequestStatus,
+        };
+
         return {
-          status: 201,
-          body: {
-            requestId: result.value.requestId,
-            userId: result.value.userId,
-            userEmail: result.value.userEmail,
-            sourcePlatform: result.value.sourcePlatform,
-            projectIdOld: result.value.projectIdOld,
-            projectUrlOld: result.value.projectUrlOld,
-            status: result.value.status as "pending" | "completed" | "rejected",
-            requestedAt: result.value.requestedAt.toISOString(),
-          },
+          status: StatusCodes.CREATED,
+          body: formatDates(request),
         };
       }
 
@@ -55,18 +53,14 @@ export class ProjectTransferRequestsController {
       const result = await this.listTransferRequestsUseCase.execute(user.id);
 
       if (result.isSuccess()) {
+        const requests = result.value.map((request) => ({
+          ...request,
+          status: request.status as TransferRequestStatus,
+        }));
+
         return {
-          status: 200,
-          body: result.value.map((request) => ({
-            requestId: request.requestId,
-            userId: request.userId,
-            userEmail: request.userEmail,
-            sourcePlatform: request.sourcePlatform,
-            projectIdOld: request.projectIdOld,
-            projectUrlOld: request.projectUrlOld,
-            status: request.status as "pending" | "completed" | "rejected",
-            requestedAt: request.requestedAt.toISOString(),
-          })),
+          status: StatusCodes.OK,
+          body: formatDatesList(requests),
         };
       }
 

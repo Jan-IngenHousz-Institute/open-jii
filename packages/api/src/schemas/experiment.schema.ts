@@ -234,7 +234,7 @@ export const zTransferRequest = z.object({
 });
 
 export const zCreateTransferRequestBody = z.object({
-  projectIdOld: z.string().min(1, "Project ID is required").max(255),
+  projectIdOld: z.string().min(1, "Project ID is required").max(255).trim(),
   projectUrlOld: z.string().url("Must be a valid URL"),
 });
 

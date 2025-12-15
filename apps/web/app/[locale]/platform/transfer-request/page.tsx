@@ -20,7 +20,7 @@ export default async function TransferRequestPage({ params }: TransferRequestPag
 
   return (
     <div className="space-y-8">
-      <div className="bg-muted/50 rounded-lg border p-4">
+      <div className="bg-muted/50 rounded-xl border p-4">
         <h2 className="mb-2 font-medium">{t("transferRequest.importantNote")}</h2>
         <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
           <li>{t("transferRequest.note1")}</li>

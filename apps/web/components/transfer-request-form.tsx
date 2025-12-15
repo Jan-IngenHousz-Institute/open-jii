@@ -58,7 +58,7 @@ export function TransferRequestForm() {
 
   if (isSuccess) {
     return (
-      <Alert className="border-secondary/30 bg-secondary/10">
+      <Alert className="border-secondary/30 bg-secondary/10 rounded-xl">
         <CheckCircle2 className="text-secondary h-4 w-4" />
 
         <AlertTitle className="text-foreground">{t("transferRequest.successTitle")}</AlertTitle>
@@ -70,7 +70,7 @@ export function TransferRequestForm() {
         <div className="col-span-full">
           <Button
             variant="outline"
-            className="hover:bg-surface-light mt-4 w-full"
+            className="hover:bg-surface-light mt-4 h-12 w-full rounded-xl"
             onClick={() => setIsSuccess(false)}
           >
             {t("transferRequest.submitAnother")}
@@ -93,7 +93,12 @@ export function TransferRequestForm() {
                 {t("transferRequest.projectIdLabel")} <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
-                <Input placeholder={t("transferRequest.projectIdPlaceholder")} {...field} />
+                <Input
+                  placeholder={t("transferRequest.projectIdPlaceholder")}
+                  {...field}
+                  trim
+                  className="h-12 rounded-xl"
+                />
               </FormControl>
               <FormDescription>{t("transferRequest.projectIdDescription")}</FormDescription>
               <FormMessage />
@@ -115,6 +120,7 @@ export function TransferRequestForm() {
                   type="url"
                   placeholder={t("transferRequest.projectUrlPlaceholder")}
                   {...field}
+                  className="h-12 rounded-xl"
                 />
               </FormControl>
               <FormDescription>{t("transferRequest.projectUrlDescription")}</FormDescription>
@@ -127,7 +133,7 @@ export function TransferRequestForm() {
           control={form.control}
           name="consent"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-xl border p-4">
               <FormControl>
                 <Checkbox
                   disabled={isPending}
@@ -145,7 +151,11 @@ export function TransferRequestForm() {
           )}
         />
 
-        <Button type="submit" disabled={isPending} className="w-full">
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 w-full rounded-xl"
+        >
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {t("transferRequest.submitButton")}
         </Button>

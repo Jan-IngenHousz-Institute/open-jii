@@ -157,16 +157,17 @@
   },
   "transferRequest": {
     "title": "Request Project Transfer",
-    "description": "Transfer your existing PhotosynQ projects to openJII. Our team will migrate your data and notify you when complete.",
+    "introText": "We invite you to join openJII and continue your research without interruption. Using the form below, you can request the transfer of your data from the PhotosynQ platform. You remain in full control of what data is migrated and when. You may explore the platform first and request a data transfer later.",
+    "processText": "After submitting the form, our team will transfer your data and notify you once the process is complete. If you have multiple projects you want to transfer, you will have to make separate requests.",
     "yourRequests": "Your Transfer Requests",
     "noRequests": "No transfer requests yet",
     "noRequestsDescription": "You haven't submitted any project transfer requests.",
     "requestedAt": "Requested on",
     "errorLoadingRequests": "Failed to load your transfer requests. Please try again later.",
     "importantNote": "Important Information",
-    "note1": "Project transfers are not immediate and may take some time to process",
-    "note2": "We will contact you at your openJII account email if we need more information",
-    "note3": "You will be notified when the transfer is complete",
+    "note1": "Project transfers are not immediate and may require time to process.",
+    "note2": "We will contact you via your openJII account email if we need additional information.",
+    "note3": "You will receive an email notification once the transfer has been completed.",
     "projectIdLabel": "PhotosynQ Project ID",
     "projectIdPlaceholder": "Enter the Project ID from PhotosynQ",
     "projectIdDescription": "You can find this in your PhotosynQ project URL or settings",
@@ -181,7 +182,8 @@
     "errorTitle": "Submission Failed",
     "errorMessage": "Something went wrong while submitting your request. Please try again later.",
     "formTab": "Form",
-    "historyTab": "History"
+    "historyTab": "History",
+    "errorLoadingRequest": "Error loading transfer requests"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",

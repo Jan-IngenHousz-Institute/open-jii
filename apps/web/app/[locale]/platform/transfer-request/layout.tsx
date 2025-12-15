@@ -26,9 +26,10 @@ export default function TransferRequestLayout({ children }: TransferRequestLayou
 
   return (
     <Card className="mx-auto max-w-2xl space-y-6 p-10">
-      <div>
+      <div className="space-y-4">
         <h1 className="text-2xl font-semibold">{t("transferRequest.title")}</h1>
-        <p className="text-muted-foreground mt-2">{t("transferRequest.description")}</p>
+        <p className="text-muted-foreground">{t("transferRequest.introText")}</p>
+        <p className="text-muted-foreground">{t("transferRequest.processText")}</p>
       </div>
 
       <NavTabs value={activeTab} className="w-full">
