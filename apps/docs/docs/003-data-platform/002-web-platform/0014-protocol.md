@@ -1,7 +1,7 @@
 # Protocols / Macros
 
 
-A protocol is an executable measurement recipe (steps, parameters, timings) the app/sensor follows to collect a Measurement and turns it into raq data.  
+A protocol is an executable measurement recipe (steps, parameters, timings) the app/sensor follows to collect a Measurement and turns it into raw data.  
 A [macro](#macros) is an piece of post-processing code that turns your raw data into more valuable processsed data that is easier to digeest.
 
 
@@ -40,7 +40,7 @@ For advanced usage and authoring of analysis macros, refer to the Developers gui
 
 ## Macros
 
-A macro is an piece of post-processing code that turns your raw data into more valuable processsed data that is easier to digeest.
+A macro is a piece of post-processing code that turns your raw data into more valuable processsed data that is easier to digest.
 
 ## Creating a macro
 
