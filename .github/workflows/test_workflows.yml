@@ -17,8 +17,7 @@ jobs:
     uses: ./.github/workflows/tofu.yml
     with:
       environment: pr         # IMPORTANT: composites map non-prod -> dev anyway
-      apply: false
+      apply: true
       tofu_version: "1.9.0"
     secrets: inherit
 
-    
