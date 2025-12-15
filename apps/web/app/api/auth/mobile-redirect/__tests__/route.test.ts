@@ -41,7 +41,7 @@ describe("GET /api/auth/mobile-redirect", () => {
   });
 
   describe("when session token is present", () => {
-    it("should redirect to photosynq app with session token in development", () => {
+    it("should redirect to openjii app with session token in development", () => {
       const sessionToken = "test-session-token-123";
       const mockRequest = createMockRequest({
         "authjs.dev.session-token": sessionToken,
@@ -56,12 +56,10 @@ describe("GET /api/auth/mobile-redirect", () => {
 
       // Check the redirect URL
       const location = response.headers.get("location");
-      expect(location).toBe(
-        `photosynq://callback?session_token=${encodeURIComponent(sessionToken)}`,
-      );
+      expect(location).toBe(`openjii://callback?session_token=${encodeURIComponent(sessionToken)}`);
     });
 
-    it("should redirect to photosynq app with session token in production", () => {
+    it("should redirect to openjii app with session token in production", () => {
       // Mock production environment
       mockEnv.NODE_ENV = "production";
       mockEnv.ENVIRONMENT_PREFIX = "prod";
@@ -78,9 +76,7 @@ describe("GET /api/auth/mobile-redirect", () => {
       expect(response.status).toBe(307);
 
       const location = response.headers.get("location");
-      expect(location).toBe(
-        `photosynq://callback?session_token=${encodeURIComponent(sessionToken)}`,
-      );
+      expect(location).toBe(`openjii://callback?session_token=${encodeURIComponent(sessionToken)}`);
     });
 
     it("should handle special characters in session token", () => {
@@ -94,9 +90,7 @@ describe("GET /api/auth/mobile-redirect", () => {
       expect(response).toBeInstanceOf(NextResponse);
 
       const location = response.headers.get("location");
-      expect(location).toBe(
-        `photosynq://callback?session_token=${encodeURIComponent(sessionToken)}`,
-      );
+      expect(location).toBe(`openjii://callback?session_token=${encodeURIComponent(sessionToken)}`);
     });
   });
 
