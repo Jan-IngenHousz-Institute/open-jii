@@ -1287,6 +1287,7 @@ module "route53" {
     "api"  = "api.${var.domain_name}"
     "docs" = "docs.${var.domain_name}"
     "web"  = var.domain_name
+    "www"  = "www.${var.domain_name}"
   }
 
   cloudfront_records = {
@@ -1304,6 +1305,10 @@ module "route53" {
     "api" = {
       domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
       hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
+    },
+    "www" = {
+      domain_name    = module.opennext.cloudfront_domain_name
+      hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
     }
   }
 

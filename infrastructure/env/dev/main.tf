@@ -1286,6 +1286,7 @@ module "route53" {
     "api"  = "api.${var.environment}.${var.domain_name}"  # For the backend API
     "docs" = "docs.${var.environment}.${var.domain_name}" # For the Docusaurus static site
     "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend
+    "www"  = "www.${var.environment}.${var.domain_name}"  # WWW for OpenNext for frontend
   }
 
   cloudfront_records = {
@@ -1303,7 +1304,12 @@ module "route53" {
     "api" = {
       domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
       hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
-    }
+    },
+    # WWW Frontend Record
+    "www" = {
+      domain_name    = module.opennext.cloudfront_domain_name
+      hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
+    },
   }
 
   tags = {
