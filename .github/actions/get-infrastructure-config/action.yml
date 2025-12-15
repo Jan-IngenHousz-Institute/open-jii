@@ -38,7 +38,9 @@ runs:
         echo "::group::Setting Environment Variables"
         jq -r '.Parameters[] | [.Name, .Value] | @tsv' ssm_params.json | while IFS=$'\t' read -r name value; do
           param_name=$(basename "$name")
-          env_name=$(echo "$param_name" | tr '[:lower:]' '[:upper:]' | tr '-.' '__')
+          # Uppercase and replace '-' and '.' with '_' in a POSIX-safe way
+          param_upper=$(echo "$param_name" | tr '[:lower:]' '[:upper:]')
+          env_name=${param_upper//[-.]/_}
           echo "✓ $env_name"
           echo "$env_name=$value" >> $GITHUB_ENV
         done
