@@ -25,4 +25,17 @@ export interface EmailPort {
     role: string,
     email: string,
   ): Promise<Result<void>>;
+
+  /**
+   * Sends a confirmation email when a user submits a project transfer request
+   *
+   * @param email - The email address to send the confirmation to
+   * @param projectIdOld - The PhotosynQ project ID
+   * @param projectUrlOld - The PhotosynQ project URL
+   */
+  sendTransferRequestConfirmation(
+    email: string,
+    projectIdOld: string,
+    projectUrlOld: string,
+  ): Promise<Result<void>>;
 }
