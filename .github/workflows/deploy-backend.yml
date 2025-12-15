@@ -107,10 +107,27 @@ jobs:
             --query taskDefinition > task-definition.json
 
           echo "ECS_TASK_DEFINITION=task-definition.json" >> "$GITHUB_ENV"
+
+      - name: Capture current service task definition
+        id: prev-task-def
+        run: |
+          set -euo pipefail
+          PREV=$(aws ecs describe-services \
+            --cluster "backend-cluster-${{ env.ENV }}" \
+            --services "backend-${{ env.ENV }}" \
+            --query "services[0].taskDefinition" \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -z "$PREV" || "$PREV" == "None" ]]; then
+            echo "::warning::Previous task definition not found; rollback will be skipped"
+          else
+            echo "PREV_TASK_DEFINITION_ARN=$PREV" >> "$GITHUB_ENV"
+            echo "prev_task_definition_arn=$PREV" >> "$GITHUB_OUTPUT"
+          fi
       
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
@@ -120,6 +137,15 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: backend-${{ env.ENV }}
+          cluster: backend-cluster-${{ env.ENV }}
+          wait-for-service-stability: true
+
+      - name: Roll back to previous task definition
+        if: failure() && env.PREV_TASK_DEFINITION_ARN != ''
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ env.PREV_TASK_DEFINITION_ARN }}
           service: backend-${{ env.ENV }}
           cluster: backend-cluster-${{ env.ENV }}
           wait-for-service-stability: true

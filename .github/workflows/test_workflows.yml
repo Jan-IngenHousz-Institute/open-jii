@@ -1,4 +1,4 @@
-name: Workflow for testing docs deployment workflow
+name: Workflow for testing backend deployment workflow
 
 on:
   push:
@@ -12,12 +12,9 @@ permissions:
   id-token: write
 
 jobs:
-  tofu-apply-pr:
-    name: OpenTofu Apply (dev)
-    uses: ./.github/workflows/deploy-docs.yml
+  test-backend-deployment:
+    name: Test Backend Deployment Workflow
+    uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: dev
     secrets: inherit
-
-
-    
