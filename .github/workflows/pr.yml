@@ -171,17 +171,17 @@ jobs:
               });
             }
 
-  deploy-infrastructure:
-    name: Deploy Infrastructure for PR(just tofu Plan)
-    permissions:
-      id-token: write
-      contents: read
-    concurrency:
-      group: opentofu-dev
-      cancel-in-progress: false
-    uses: ./.github/workflows/tofu.yml
-    with:
-      environment: pr # pr environment because won't ask for approval
-      apply: false
-      tofu_version: "1.9.0"
-    secrets: inherit
+  # deploy-infrastructure:
+  #   name: Deploy Infrastructure for PR(just tofu Plan)
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   concurrency:
+  #     group: opentofu-dev
+  #     cancel-in-progress: false
+  #   uses: ./.github/workflows/tofu.yml
+  #   with:
+  #     environment: pr # pr environment because won't ask for approval
+  #     apply: false
+  #     tofu_version: "1.9.0"
+  #   secrets: inherit
