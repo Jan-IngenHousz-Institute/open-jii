@@ -1,4 +1,4 @@
-name: Workflow for testing apps infrastructure changes
+name: Workflow for testing docs deployment workflow
 
 on:
   push:
@@ -14,10 +14,8 @@ permissions:
 jobs:
   tofu-apply-pr:
     name: OpenTofu Apply (dev)
-    uses: ./.github/workflows/tofu.yml
+    uses: ./.github/workflows/deploy-docs.yml
     with:
-      environment: pr         # IMPORTANT: composites map non-prod -> dev anyway
-      apply: true
-      tofu_version: "1.9.0"
+      environment: dev
     secrets: inherit
 
