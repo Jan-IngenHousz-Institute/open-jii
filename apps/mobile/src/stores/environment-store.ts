@@ -56,7 +56,7 @@ export function getEnvName(): string {
     throw new Error("Attempted to read environment before storage rehydration completed");
   }
 
-  return environment ?? "dev";
+  return environment ?? "prod";
 }
 
 export function getEnvVar<K extends keyof (typeof env)[keyof typeof env]>(
