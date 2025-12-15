@@ -1341,3 +1341,138 @@ module "location_service" {
     Component   = "location-service"
   }
 }
+
+# OpenNext Infrastructure Outputs
+module "ssm_opennext_outputs" {
+  source = "../../modules/ssm-parameter"
+
+  parameters = {
+    assets_bucket = {
+      name        = "/opennext/${var.environment}/assets-bucket"
+      value       = module.opennext.assets_bucket_name
+      description = "S3 bucket name for OpenNext static assets"
+      type        = "String"
+    }
+    cache_bucket = {
+      name        = "/opennext/${var.environment}/cache-bucket"
+      value       = module.opennext.cache_bucket_name
+      description = "S3 bucket name for OpenNext cache"
+      type        = "String"
+    }
+    # Frontend Lambdas Outputs
+    server_function = {
+      name        = "/opennext/${var.environment}/server-function"
+      value       = module.opennext.server_function_name
+      description = "Lambda function name for OpenNext server"
+      type        = "String"
+    }
+    image_function = {
+      name        = "/opennext/${var.environment}/image-function"
+      value       = module.opennext.image_function_name
+      description = "Lambda function name for OpenNext image optimization"
+      type        = "String"
+    }
+    revalidation_function = {
+      name        = "/opennext/${var.environment}/revalidation-function"
+      value       = module.opennext.revalidation_function_name
+      description = "Lambda function name for OpenNext revalidation"
+      type        = "String"
+    }
+    warmer_function = {
+      name        = "/opennext/${var.environment}/warmer-function"
+      value       = module.opennext.warmer_function_name
+      description = "Lambda function name for OpenNext warmer"
+      type        = "String"
+    }
+    cloudfront_distribution_id = {
+      name        = "/opennext/${var.environment}/cloudfront-distribution-id"
+      value       = module.opennext.cloudfront_distribution_id
+      description = "CloudFront distribution ID for OpenNext"
+      type        = "String"
+    }
+    # Backend ECS Outputs
+    backend_task_definition_family = {
+      name        = "/backend/${var.environment}/ecs/task-definition-family"
+      value       = module.backend_ecs.ecs_task_definition_family
+      description = "ECS task definition family for backend service"
+      type        = "String"
+      tier        = "Standard"
+    }
+    backend_task_definition_arn = {
+      name        = "/backend/${var.environment}/ecs/task-definition-arn"
+      value       = module.backend_ecs.ecs_task_definition_arn
+      description = "Full ARN (family + revision) of backend ECS task definition"
+      type        = "String"
+      tier        = "Standard"
+    }
+    backend_container_name = {
+      name        = "/backend/${var.environment}/ecs/container-name"
+      value       = module.backend_ecs.container_name
+      description = "Primary container name for backend task definition"
+      type        = "String"
+      tier        = "Standard"
+    }
+    dynamodb_table = {
+      name        = "/opennext/${var.environment}/dynamodb-table-name"
+      value       = module.opennext.dynamodb_table_name
+      description = "DynamoDB table name for OpenNext cache/revalidation"
+      type        = "String"
+    }
+    # Database Migration ECS Outputs
+    migration_runner_ecr_repository = {
+      name        = "/migration/${var.environment}/ecr-repository-name"
+      value       = module.migration_runner_ecr.repository_name
+      description = "ECR repository name for database migrations Docker images"
+      type        = "String"
+    }
+    migration_runner_ecs_cluster = {
+      name        = "/migration/${var.environment}/ecs-cluster-name"
+      value       = module.migration_runner_ecs.ecs_cluster_name
+      description = "ECS cluster name for running database migrations"
+      type        = "String"
+    }
+    migration_runner_task_definition = {
+      name        = "/migration/${var.environment}/task-definition-family"
+      value       = module.migration_runner_ecs.ecs_task_definition_family
+      description = "Task definition family for database migrations"
+      type        = "String"
+    }
+    migration_runner_container = {
+      name        = "/migration/${var.environment}/container-name"
+      value       = module.migration_runner_ecs.container_name
+      description = "Name of the primary container in the ECS task definition for migrations"
+      type        = "String"
+    }
+    migration_runner_subnets = {
+      name        = "/migration/${var.environment}/subnets"
+      value       = jsonencode(module.vpc.private_subnets)
+      description = "Subnet IDs for the database migration task"
+      type        = "String"
+    }
+    migration_runner_security_group = {
+      name        = "/migration/${var.environment}/security-group-id"
+      value       = module.vpc.migration_task_security_group_id
+      description = "Security group ID for the database migration task"
+      type        = "String"
+    }
+    # Docusaurus Site Outputs
+    docs_bucket = {
+      name        = "/docs/${var.environment}/docs-bucket"
+      value       = module.docusaurus_s3.bucket_name
+      description = "S3 bucket name for Docusaurus static assets"
+      type        = "String"
+    }
+    docs_cloudfront_distribution_id = {
+      name        = "/docs/${var.environment}/cloudfront-distribution-id"
+      value       = module.docs_cloudfront.distribution_id
+      description = "CloudFront distribution ID for documentation site"
+      type        = "String"
+    }
+  }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "ssm-parameters"
+  }
+}

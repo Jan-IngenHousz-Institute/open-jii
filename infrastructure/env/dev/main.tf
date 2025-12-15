@@ -1429,19 +1429,19 @@ module "ssm_opennext_outputs" {
       name        = "/migration/${var.environment}/container-name"
       value       = module.migration_runner_ecs.container_name
       description = "Name of the primary container in the ECS task definition for migrations"
-      type        = "SecureString"
+      type        = "String"
     }
     migration_runner_subnets = {
       name        = "/migration/${var.environment}/subnets"
       value       = jsonencode(module.vpc.private_subnets)
       description = "Subnet IDs for the database migration task"
-      type        = "SecureString"
+      type        = "String"
     }
     migration_runner_security_group = {
       name        = "/migration/${var.environment}/security-group-id"
       value       = module.vpc.migration_task_security_group_id
       description = "Security group ID for the database migration task"
-      type        = "SecureString"
+      type        = "String"
     }
     # Docusaurus Site Outputs
     docs_bucket = {

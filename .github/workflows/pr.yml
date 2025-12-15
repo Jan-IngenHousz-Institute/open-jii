@@ -9,10 +9,6 @@ on:
       - reopened
   workflow_dispatch:
 
-# Cancel in-progress runs on the same PR
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -185,7 +181,7 @@ jobs:
       cancel-in-progress: false
     uses: ./.github/workflows/tofu.yml
     with:
-      environment: pr
+      environment: pr # pr environment because won't ask for approval
       apply: false
       tofu_version: "1.9.0"
     secrets: inherit

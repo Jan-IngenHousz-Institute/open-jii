@@ -5,10 +5,10 @@ resource "aws_ssm_parameter" "parameter" {
   for_each = var.parameters
 
   name        = each.value.name
-  description = lookup(each.value, "description", "")
-  type        = lookup(each.value, "type", "String")
+  description = each.value.description
+  type        = each.value.type
   value       = each.value.value
-  tier        = lookup(each.value, "tier", "Standard")
+  tier        = each.value.tier
 
   tags = var.tags
 }

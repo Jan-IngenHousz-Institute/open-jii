@@ -10,7 +10,7 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
-        
+
   workflow_call:
     inputs:
       environment:
@@ -40,7 +40,7 @@ jobs:
 
       - name: Set build environment variables
         env:
-          WEB_BASE_ORIGIN: ${{ secrets.WEB_BASE_ORIGIN }}
+          WEB_BASE_ORIGIN: ${{ vars.WEB_BASE_ORIGIN }}
         run: |
           echo "Preparing build-time environment variables..."
           
@@ -241,8 +241,9 @@ jobs:
         uses: aws-actions/aws-lambda-deploy@v1
         with:
           function-name: ${{ env.SERVER_FUNCTION }}
-          zip-file: apps/web/.open-next/server-functions/default
+          code-artifacts-dir: apps/web/.open-next/server-functions/default
           publish: true
+          dry-run: true # Just for first test, will remove later
 
       - name: Check Image Optimization Function
         id: check-image
@@ -262,8 +263,9 @@ jobs:
         uses: aws-actions/aws-lambda-deploy@v1
         with:
           function-name: ${{ env.IMAGE_FUNCTION }}
-          zip-file: apps/web/.open-next/image-optimization-function
+          code-artifacts-dir: apps/web/.open-next/image-optimization-function
           publish: true
+          dry-run: true # Just for first test, will remove later
 
       - name: Check Revalidation Function
         id: check-revalidation
@@ -283,8 +285,9 @@ jobs:
         uses: aws-actions/aws-lambda-deploy@v1
         with:
           function-name: ${{ env.REVALIDATION_FUNCTION }}
-          zip-file: apps/web/.open-next/revalidation-function
+          code-artifacts-dir: apps/web/.open-next/revalidation-function
           publish: true
+          dry-run: true # Just for first test, will remove later
 
       - name: Check Warmer Function
         id: check-warmer
@@ -304,8 +307,9 @@ jobs:
         uses: aws-actions/aws-lambda-deploy@v1
         with:
           function-name: ${{ env.WARMER_FUNCTION }}
-          zip-file: apps/web/.open-next/warmer-function
+          code-artifacts-dir: apps/web/.open-next/warmer-function
           publish: true
+          dry-run: true # Just for first test, will remove later
 
       - name: Finalize Lambda Deployments and Summarize Results
         id: update-lambdas
@@ -323,20 +327,11 @@ jobs:
           fi
 
           echo "updated=${UPDATED}" >> $GITHUB_OUTPUT
-
-          # Clean up zip packages after deployment
-          if [[ -d "$LAMBDA_PKG_DIR" ]]; then
-            echo "Cleaning up temporary zip packages..."
-            rm -rf "$LAMBDA_PKG_DIR"
-          fi
-
           if [[ "$UPDATED" == "true" ]]; then
             echo "Lambda function updates completed successfully"
           else
             echo "::warning::No Lambda functions were updated"
           fi
-
-          echo "updated=${UPDATED}" >> "$GITHUB_OUTPUT"
 
       - name: Invalidate CloudFront Distribution
         if: steps.upload-assets.outputs.uploaded == 'true'
