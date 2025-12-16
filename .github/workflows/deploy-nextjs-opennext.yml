@@ -17,6 +17,11 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
+      dry-run:
+        description: "If true, perform a dry run without actual deployment"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   deploy-opennext:
@@ -243,7 +248,7 @@ jobs:
           function-name: ${{ env.SERVER_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/server-functions/default
           publish: true
-          dry-run: true # Just for first test, will remove later
+          dry-run: ${{ inputs.dry-run }}
 
       - name: Check Image Optimization Function
         id: check-image
@@ -265,7 +270,7 @@ jobs:
           function-name: ${{ env.IMAGE_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/image-optimization-function
           publish: true
-          dry-run: true # Just for first test, will remove later
+          dry-run: ${{ inputs.dry-run }}
 
       - name: Check Revalidation Function
         id: check-revalidation
@@ -287,7 +292,7 @@ jobs:
           function-name: ${{ env.REVALIDATION_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/revalidation-function
           publish: true
-          dry-run: true # Just for first test, will remove later
+          dry-run: ${{ inputs.dry-run }}
 
       - name: Check Warmer Function
         id: check-warmer
@@ -309,7 +314,7 @@ jobs:
           function-name: ${{ env.WARMER_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/warmer-function
           publish: true
-          dry-run: true # Just for first test, will remove later
+          dry-run: ${{ inputs.dry-run }}
 
       - name: Finalize Lambda Deployments and Summarize Results
         id: update-lambdas
@@ -334,7 +339,7 @@ jobs:
           fi
 
       - name: Invalidate CloudFront Distribution
-        if: steps.upload-assets.outputs.uploaded == 'true'
+        if: steps.upload-assets.outputs.uploaded == 'true' || inputs.dry-run == 'false'
         run: |
           CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
           if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then

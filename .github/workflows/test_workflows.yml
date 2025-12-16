@@ -1,4 +1,4 @@
-name: Workflow for testing backend deployment workflow
+name: Workflow for testing Next.js deployment workflow
 
 on:
   push:
@@ -12,9 +12,10 @@ permissions:
   id-token: write
 
 jobs:
-  test-backend-deployment:
+  test-workflows:
     name: Test Backend Deployment Workflow
-    uses: ./.github/workflows/deploy-backend.yml
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: dev
+      dry-run: true
     secrets: inherit
