@@ -1,7 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
-import Link from "next/link";
+import { AlertCircle } from "lucide-react";
 import { useTransferRequests } from "~/hooks/useTransferRequests/useTransferRequests";
 import { formatDate } from "~/util/date";
 
@@ -10,6 +9,7 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Badge,
   Card,
   CardContent,
   CardHeader,
@@ -18,37 +18,18 @@ import {
 } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
 
-const statusCardVariants = cva("border", {
+const statusBadgeVariants = cva("", {
   variants: {
     status: {
-      pending: "bg-highlight/20 border-highlight",
-      completed: "bg-secondary/10 border-secondary/30",
-      rejected: "bg-destructive/10 border-destructive/30",
+      pending: "bg-badge-provisioning",
+      completed: "bg-badge-active",
+      rejected: "bg-badge-provisioningFailed",
     },
   },
   defaultVariants: {
     status: "pending",
   },
 });
-
-const statusIconVariants = cva("flex items-center gap-2", {
-  variants: {
-    status: {
-      pending: "text-amber-600",
-      completed: "text-primary",
-      rejected: "text-destructive",
-    },
-  },
-  defaultVariants: {
-    status: "pending",
-  },
-});
-
-const statusConfig = {
-  pending: { icon: Clock, label: "Pending" },
-  completed: { icon: CheckCircle2, label: "Completed" },
-  rejected: { icon: AlertCircle, label: "Rejected" },
-};
 
 export default function TransferRequestHistoryPage() {
   const { t } = useTranslation();
@@ -95,33 +76,20 @@ export default function TransferRequestHistoryPage() {
 
       <div className="max-h-[320px] space-y-3 overflow-y-auto pr-2">
         {requests.map((request) => {
-          const { icon: Icon, label } = statusConfig[request.status];
-
           return (
-            <Card
-              key={request.requestId}
-              className={statusCardVariants({ status: request.status })}
-            >
-              <CardHeader className="pb-3">
+            <Card key={request.requestId} className="bg-surface-light">
+              <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <CardTitle className="text-base">{request.projectIdOld}</CardTitle>
-                    <Link
-                      href={request.projectUrlOld}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-primary text-sm underline transition-colors"
-                    >
-                      {request.projectUrlOld}
-                    </Link>
                   </div>
-                  <div className={statusIconVariants({ status: request.status })}>
-                    <Icon className="h-5 w-5" />
-                    <span className="text-sm font-medium">{label}</span>
-                  </div>
+                  <Badge className={statusBadgeVariants({ status: request.status })}>
+                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                  </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-1">
+                <p className="text-muted-foreground text-sm">{request.projectUrlOld}</p>
                 <p className="text-muted-foreground text-sm">
                   {t("transferRequest.requestedAt")} {formatDate(request.requestedAt)}
                 </p>

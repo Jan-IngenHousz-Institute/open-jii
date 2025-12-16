@@ -174,7 +174,7 @@
     "projectUrlLabel": "PhotosynQ Project URL",
     "projectUrlPlaceholder": "https://photosynq.com/projects/...",
     "projectUrlDescription": "The full URL to your project on PhotosynQ",
-    "consentLabel": "I confirm that I am the owner of this project or have permission to request this transfer",
+    "consentLabel": "I confirm that I am the owner of this project or have permission to request this transfer.",
     "submitButton": "Submit Transfer Request",
     "successTitle": "Transfer Request Submitted",
     "successMessage": "Thank you! We've received your transfer request. We'll contact you if we need more information and let you know when the project is available in openJII.",
@@ -182,7 +182,7 @@
     "errorTitle": "Submission Failed",
     "errorMessage": "Something went wrong while submitting your request. Please try again later.",
     "formTab": "Form",
-    "historyTab": "History",
+    "historyTab": "Previous Requests",
     "errorLoadingRequest": "Error loading transfer requests"
   },
   "newExperiment": {
@@ -312,6 +312,9 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to openJII",
+    "transferBannerTitle": "Welcome to openJII",
+    "transferBannerDescription": "Continue your research without interruption, transfer your data now.",
+    "transferBannerButton": "Request Project Transfer",
     "recentExperiments": "Recent Experiments",
     "recentArticles": "Recent blog posts",
     "yourExperiments": "Your recent experiments",

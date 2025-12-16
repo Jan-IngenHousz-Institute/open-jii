@@ -58,25 +58,24 @@ export function TransferRequestForm() {
 
   if (isSuccess) {
     return (
-      <Alert className="border-secondary/30 bg-secondary/10 rounded-xl">
-        <CheckCircle2 className="text-secondary h-4 w-4" />
+      <div className="space-y-6">
+        <Alert className="border-secondary/30 bg-secondary/10 rounded-xl">
+          <CheckCircle2 className="text-secondary h-4 w-4" />
 
-        <AlertTitle className="text-foreground">{t("transferRequest.successTitle")}</AlertTitle>
+          <AlertTitle className="text-foreground">{t("transferRequest.successTitle")}</AlertTitle>
 
-        <AlertDescription className="text-muted-foreground">
-          {t("transferRequest.successMessage")}
-        </AlertDescription>
-
-        <div className="col-span-full">
-          <Button
-            variant="outline"
-            className="hover:bg-surface-light mt-4 h-12 w-full rounded-xl"
-            onClick={() => setIsSuccess(false)}
-          >
-            {t("transferRequest.submitAnother")}
-          </Button>
-        </div>
-      </Alert>
+          <AlertDescription className="text-muted-foreground">
+            {t("transferRequest.successMessage")}
+          </AlertDescription>
+        </Alert>
+        <Button
+          variant="outline"
+          className="bg-surface hover:bg-surface-light h-12 w-full rounded-xl"
+          onClick={() => setIsSuccess(false)}
+        >
+          {t("transferRequest.submitAnother")}
+        </Button>
+      </div>
     );
   }
 
@@ -142,7 +141,7 @@ export function TransferRequestForm() {
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>
+                <FormLabel className="font-normal">
                   {t("transferRequest.consentLabel")} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormMessage />
@@ -154,7 +153,7 @@ export function TransferRequestForm() {
         <Button
           type="submit"
           disabled={isPending}
-          className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 w-full rounded-xl"
+          className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark disabled:hover:bg-primary disabled:active:bg-primary h-12 w-full rounded-xl"
         >
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {t("transferRequest.submitButton")}

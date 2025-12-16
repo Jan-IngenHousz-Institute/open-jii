@@ -187,19 +187,6 @@ describe("<TransferRequestHistoryPage />", () => {
       const rejectedLabel = screen.getByText("Rejected");
       expect(rejectedLabel).toBeInTheDocument();
     });
-
-    it("renders status icons for all requests", () => {
-      const requests = [
-        createMockRequest("req-1", "pending", "project-1"),
-        createMockRequest("req-2", "completed", "project-2"),
-        createMockRequest("req-3", "rejected", "project-3"),
-      ];
-      const { container } = renderHistoryPage({ requests });
-
-      // Check for SVG icons
-      const icons = container.querySelectorAll("svg");
-      expect(icons.length).toBeGreaterThan(0);
-    });
   });
 
   describe("Layout Structure", () => {
