@@ -27,4 +27,18 @@ export class EmailAdapter implements EmailPort {
       email,
     );
   }
+
+  async sendTransferRequestConfirmation(
+    email: string,
+    projectIdOld: string,
+    projectUrlOld: string,
+  ): Promise<Result<void>> {
+    this.logger.log(`Sending transfer request confirmation to ${email}`);
+
+    return this.notificationService.sendTransferRequestConfirmation(
+      email,
+      projectIdOld,
+      projectUrlOld,
+    );
+  }
 }
