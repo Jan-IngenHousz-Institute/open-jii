@@ -243,7 +243,7 @@ jobs:
       - name: Deploy Server Function
         id: deploy-server
         if: steps.check-server.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1
+        uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.SERVER_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/server-functions/default
@@ -265,7 +265,7 @@ jobs:
       - name: Deploy Image Optimization Function
         id: deploy-image
         if: steps.check-image.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1
+        uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.IMAGE_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/image-optimization-function
@@ -287,7 +287,7 @@ jobs:
       - name: Deploy Revalidation Function
         id: deploy-revalidation
         if: steps.check-revalidation.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1
+        uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.REVALIDATION_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/revalidation-function
@@ -309,7 +309,7 @@ jobs:
       - name: Deploy Warmer Function
         id: deploy-warmer
         if: steps.check-warmer.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1
+        uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.WARMER_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/warmer-function
