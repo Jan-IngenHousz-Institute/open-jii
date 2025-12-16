@@ -85,6 +85,7 @@ resource "aws_acm_certificate" "cloudfront_certs" {
 
   provider          = aws.us_east_1_for_cloudfront
   domain_name       = each.value # each.value is the FQDN from the map
+  subject_alternative_names = each.key ==  "web" ? [ "www.${local.base_domain}"] : null
   validation_method = "DNS"
 
   tags = merge(
@@ -116,6 +117,20 @@ resource "aws_route53_record" "cloudfront_cert_validation" {
   zone_id = local.zone_id # Corrected to use the simplified local.zone_id
 }
 
+resource "aws_route53_record" "cloudfront_cert_validation_san" {
+  for_each = {
+    for k, v in aws_acm_certificate.cloudfront_certs :
+    k => v if length(v.domain_validation_options) > 1
+  }
+
+  allow_overwrite = true
+  name    = tolist(each.value.domain_validation_options)[1].resource_record_name
+  records = [tolist(each.value.domain_validation_options)[1].resource_record_value]
+  ttl     = 60
+  type    = tolist(each.value.domain_validation_options)[1].resource_record_type
+  zone_id = local.zone_id
+}
+
 # Certificate validation for the CloudFront (us-east-1) certificates
 resource "aws_acm_certificate_validation" "cloudfront_certs_validation" {
   provider = aws.us_east_1_for_cloudfront
@@ -124,7 +139,10 @@ resource "aws_acm_certificate_validation" "cloudfront_certs_validation" {
 
   certificate_arn = each.value.arn
   # Construct the FQDN for the validation record based on the for_each key
-  validation_record_fqdns = [aws_route53_record.cloudfront_cert_validation[each.key].fqdn]
+  validation_record_fqdns = compact([
+    aws_route53_record.cloudfront_cert_validation[each.key].fqdn,
+    try(aws_route53_record.cloudfront_cert_validation_san[each.key].fqdn, null)
+  ])
 
   lifecycle {
     create_before_destroy = true
