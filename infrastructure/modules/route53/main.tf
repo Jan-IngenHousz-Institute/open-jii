@@ -150,3 +150,11 @@ resource "aws_route53_record" "cloudfront_record" {
     evaluate_target_health = false
   }
 }
+
+resource "aws_route53_record" "www_cname" {
+zone_id = local.zone_id
+name = "www.${local.base_domain}"
+type = "CNAME"
+ttl = 300
+records = [local.base_domain]
+}
