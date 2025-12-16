@@ -86,7 +86,7 @@ describe("<TransferRequestPage />", () => {
 
       const list = container.querySelector("ul");
       expect(list).toBeInTheDocument();
-      expect(list).toHaveClass("list-inside");
+      expect(list).toHaveClass("list-outside");
       expect(list).toHaveClass("list-disc");
     });
   });

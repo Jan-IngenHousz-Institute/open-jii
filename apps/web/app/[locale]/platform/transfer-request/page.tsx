@@ -22,7 +22,7 @@ export default async function TransferRequestPage({ params }: TransferRequestPag
     <div className="space-y-8">
       <div className="bg-surface-light rounded-xl border p-4">
         <h2 className="mb-2 font-medium">{t("transferRequest.importantNote")}</h2>
-        <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
+        <ul className="text-muted-foreground list-outside list-disc space-y-1 pl-3 text-sm">
           <li>{t("transferRequest.note1")}</li>
           <li>{t("transferRequest.note2")}</li>
           <li>{t("transferRequest.note3")}</li>
