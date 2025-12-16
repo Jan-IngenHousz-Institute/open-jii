@@ -22,6 +22,7 @@ WORKDIR /app
 COPY . .
 RUN turbo prune ${PROJECT} --docker
 RUN cp -r ./patches ./out/patches
+RUN cd out && pnpm install
 
 # Build the project
 FROM base AS builder
