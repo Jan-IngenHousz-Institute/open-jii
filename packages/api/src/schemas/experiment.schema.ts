@@ -219,6 +219,27 @@ export const zAnnotationRowsAffected = z.object({
   rowsAffected: z.number().int(),
 });
 
+// --- Project Transfer Request Schemas ---
+export const zTransferRequestStatus = z.enum(["pending", "completed", "rejected"]);
+
+export const zTransferRequest = z.object({
+  requestId: z.string().uuid(),
+  userId: z.string().uuid(),
+  userEmail: z.string().email(),
+  sourcePlatform: z.string(),
+  projectIdOld: z.string(),
+  projectUrlOld: z.string().url(),
+  status: zTransferRequestStatus,
+  requestedAt: z.string().datetime(),
+});
+
+export const zCreateTransferRequestBody = z.object({
+  projectIdOld: z.string().min(1, "Project ID is required").max(255).trim(),
+  projectUrlOld: z.string().url("Must be a valid URL"),
+});
+
+export const zTransferRequestList = z.array(zTransferRequest);
+
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zDataColumn),
@@ -945,3 +966,9 @@ export type AddAnnotationsBulkBody = z.infer<typeof zAddAnnotationsBulkBody>;
 export type UpdateAnnotationBody = z.infer<typeof zUpdateAnnotationBody>;
 export type DeleteAnnotationsBulkBody = z.infer<typeof zAnnotationDeleteBulkBody>;
 export type AnnotationRowsAffected = z.infer<typeof zAnnotationRowsAffected>;
+
+// Transfer request types
+export type TransferRequestStatus = z.infer<typeof zTransferRequestStatus>;
+export type TransferRequest = z.infer<typeof zTransferRequest>;
+export type CreateTransferRequestBody = z.infer<typeof zCreateTransferRequestBody>;
+export type TransferRequestList = z.infer<typeof zTransferRequestList>;

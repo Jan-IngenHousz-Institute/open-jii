@@ -126,3 +126,4 @@ echo "✓ Updated package.json version to $new_version"
 echo "✓ Updated app.json version to $new_version"
 echo "✓ Updated app.json versionCode to $new_version_code"
 
+

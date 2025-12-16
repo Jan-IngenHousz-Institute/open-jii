@@ -40,6 +40,9 @@ import {
   zAnnotationDeleteBulkPathParam,
   zAnnotationDeleteBulkBody,
   zAnnotationRowsAffected,
+  zCreateTransferRequestBody,
+  zTransferRequest,
+  zTransferRequestList,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -567,5 +570,30 @@ export const experimentContract = c.router({
       403: zErrorResponse,
     },
     summary: "Delete multiple annotations",
+  },
+
+  // Project transfer request endpoints
+  createTransferRequest: {
+    method: "POST",
+    path: "/api/v1/transfer-requests",
+    body: zCreateTransferRequestBody,
+    responses: {
+      201: zTransferRequest,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      500: zErrorResponse,
+    },
+    summary: "Create a project transfer request",
+  },
+
+  listTransferRequests: {
+    method: "GET",
+    path: "/api/v1/transfer-requests",
+    responses: {
+      200: zTransferRequestList,
+      401: zErrorResponse,
+      500: zErrorResponse,
+    },
+    summary: "List all transfer requests for the authenticated user",
   },
 });
