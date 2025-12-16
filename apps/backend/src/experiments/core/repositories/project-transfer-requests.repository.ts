@@ -165,8 +165,15 @@ export class ProjectTransferRequestsRepository {
   async listTransferRequests(userId?: string): Promise<Result<BaseTransferRequest[]>> {
     this.logger.log(`Listing transfer requests${userId ? ` for user ${userId}` : ""}`);
 
+    if (userId) {
+      const userIdValidation = this.validate.uuid(userId);
+      if (!userIdValidation.success) {
+        return failure(AppError.validationError("Invalid user ID"));
+      }
+    }
+
     // Build SELECT query
-    const whereClause = userId ? `WHERE user_id = '${userId}'` : "";
+    const whereClause = userId ? `WHERE user_id = ${this.formatSqlValue(userId)}` : "";
     const selectQuery = `
       SELECT 
         request_id,
@@ -231,7 +238,7 @@ export class ProjectTransferRequestsRepository {
         status,
         requested_at
       FROM openjii_project_transfer_requests
-      WHERE user_id = '${userId}' AND project_id_old = ${this.formatSqlValue(projectIdOld)}
+      WHERE user_id = ${this.formatSqlValue(userId)} AND project_id_old = ${this.formatSqlValue(projectIdOld)}      
       LIMIT 1
     `;
 
