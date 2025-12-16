@@ -37,7 +37,7 @@ COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/patches ./patches
 
 # First install the dependencies (as they change less often)
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --filter=${PROJECT} --frozen-lockfile
 
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
