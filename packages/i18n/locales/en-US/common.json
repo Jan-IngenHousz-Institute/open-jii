@@ -59,7 +59,9 @@
     "profile": "Profile",
     "logout": "Sign out",
     "home": "Home",
-    "openJII": "openJII"
+    "openJII": "openJII",
+    "support": "Support",
+    "faq": "FAQ"
   },
   "experiments": {
     "filterMy": "My Experiments",

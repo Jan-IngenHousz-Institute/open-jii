@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LifeBuoy, LogOut, MessageCircleQuestion } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import { env } from "~/env";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -88,7 +89,10 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
+            {/* ACCOUNT */}
             <DropdownMenuItem asChild>
               <Link
                 href={`/${locale}/platform/account/settings`}
@@ -102,6 +106,37 @@ export function NavUser({
                 {t("auth.account")}
               </Link>
             </DropdownMenuItem>
+
+            {/* SUPPORT */}
+            <DropdownMenuItem asChild>
+              <Link
+                href={env.NEXT_PUBLIC_DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full cursor-default items-center"
+              >
+                <Avatar className="bg-muted mr-2 h-4 w-4">
+                  <AvatarFallback className="rounded-lg">
+                    <LifeBuoy className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                {t("navigation.support")}
+              </Link>
+            </DropdownMenuItem>
+
+            {/* FAQ */}
+            <DropdownMenuItem asChild>
+              <Link href={`/${locale}/faq`} className="flex w-full cursor-default items-center">
+                <Avatar className="bg-muted mr-2 h-4 w-4">
+                  <AvatarFallback className="rounded-lg">
+                    <MessageCircleQuestion className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                {t("navigation.faq")}
+              </Link>
+            </DropdownMenuItem>
+
+            {/* SIGN OUT */}
             <DropdownMenuItem asChild>
               <Link
                 href={`/${locale}/platform/signout`}
