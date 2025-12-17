@@ -288,15 +288,58 @@ jobs:
 
       - name: Run migration task
         id: run-task
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
-          cluster: ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}
-          wait-for-service-stability: false
-          run-task: true
-          wait-for-task-stopped: true
-          wait-for-task-timeout: ${{ env.MIGRATION_TIMEOUT }}
-          run-task-network-configuration: ${{ env.NETWORK_CONFIG }}
+        env:
+          CLUSTER_NAME: ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}
+          TASK_DEF: ${{ steps.render-task-def.outputs.task-definition }}
+          SUBNETS: ${{ env.MIGRATION_RUNNER_SUBNETS }}
+          SECURITY_GROUP_ID: ${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          TIMEOUT: ${{ env.MIGRATION_TIMEOUT }}
+        run: |
+          echo "Running migration task with aws ecs run-task..."
+          if [[ -z "$SUBNETS" || -z "$SECURITY_GROUP_ID" ]]; then
+            echo "::error::Missing required networking configuration (subnets or security group)"
+            exit 1
+          fi
+
+          # Convert comma-separated subnets to JSON array
+          if [[ "$SUBNETS" =~ ^\[.*\]$ ]]; then
+            SUBNET_JSON="$SUBNETS"
+          else
+            SUBNET_JSON="[\"$(echo $SUBNETS | sed 's/,/\",\"/g')\"]"
+          fi
+
+          NETWORK_CONFIG="awsvpcConfiguration={subnets=$SUBNET_JSON,securityGroups=[\"$SECURITY_GROUP_ID\"],assignPublicIp=DISABLED}"
+
+          # Run the ECS task
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER_NAME" \
+            --task-definition "$TASK_DEF" \
+            --network-configuration "$NETWORK_CONFIG" \
+            --launch-type FARGATE \
+            --count 1 \
+            --region "$AWS_REGION" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          if [[ -z "$TASK_ARN" || "$TASK_ARN" == "None" ]]; then
+            echo "::error::Failed to start migration task"
+            exit 1
+          fi
+
+          echo "Started migration task: $TASK_ARN"
+          echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+
+          # Wait for the task to stop (with timeout)
+          echo "Waiting for migration task to complete (timeout: $TIMEOUT seconds)..."
+          timeout "$TIMEOUT" aws ecs wait tasks-stopped --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN" --region "$AWS_REGION"
+          STATUS=$?
+          if [[ $STATUS -ne 0 ]]; then
+            echo "::error::Migration task did not complete in time or failed."
+            exit 1
+          fi
+
+          echo "Migration task completed."
 
       - name: Migration Summary
         if: always()

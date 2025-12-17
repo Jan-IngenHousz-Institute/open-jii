@@ -1,4 +1,4 @@
-name: Workflow for testing Next.js deployment workflow
+name: Workflow for testing Database Migrations workflow
 
 on:
   push:
@@ -13,11 +13,9 @@ permissions:
 
 jobs:
   test-workflows:
-    name: Test Frontend Deployment Workflow
-    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    name: Test Database Migrations Workflow
+    uses: ./.github/workflows/database-migrations.yml
     with:
       environment: dev
-      dry-run: false
+      timeout_minutes: 10
     secrets: inherit
-
-    
