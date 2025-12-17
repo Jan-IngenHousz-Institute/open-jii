@@ -4,7 +4,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { env } from "~/env";
 
 import { SidebarProvider } from "@repo/ui/components";
 
@@ -13,6 +12,14 @@ import { NavUser } from "./nav-user";
 globalThis.React = React;
 
 /* -------------------- Mocks -------------------- */
+
+const mockEnv = vi.hoisted(() => ({
+  ENVIRONMENT_PREFIX: "dev",
+}));
+
+vi.mock("~/env", () => ({
+  env: mockEnv,
+}));
 
 Object.defineProperty(window, "matchMedia", {
   value: vi.fn().mockImplementation(() => {
@@ -81,6 +88,8 @@ function renderNav(
 describe("<NavUser />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset to dev environment for each test
+    mockEnv.ENVIRONMENT_PREFIX = "dev";
   });
 
   it("renders display name (from profile), email, avatar and basic functionality", () => {
@@ -146,7 +155,7 @@ describe("<NavUser />", () => {
   });
 
   it("uses prod docs URL in prod environment", async () => {
-    env.ENVIRONMENT_PREFIX = "prod";
+    mockEnv.ENVIRONMENT_PREFIX = "prod";
 
     const user = userEvent.setup();
     renderNav();
