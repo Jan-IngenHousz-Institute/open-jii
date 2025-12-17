@@ -2,7 +2,7 @@
 
 
 ### Admin
-An experiments'admin is capable of changing the settings of an experiment, including adding and removing other members.
+An experiments' admin is capable of changing the settings of an experiment, including adding and removing other members.
 
 ### Experiment
 Named container for one or more Flow- or protocol-driven Measurement sessions over time.  

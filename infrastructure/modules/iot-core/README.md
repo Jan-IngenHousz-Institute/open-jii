@@ -1,6 +1,6 @@
 # 📡 IoT Core Module
 
-This module provisions **AWS IoT Core** resources to allow MultispeQ devices to securely interface with the OpenJII Platform. In addition to storing data in **Timestream** for querying, the module also routes data to a **Kinesis Data Stream** for real‑time processing and integrates with **CloudWatch** for comprehensive logging and monitoring.
+This module provisions **AWS IoT Core** resources to allow MultispeQ devices to securely interface with the openJII Platform. In addition to storing data in **Timestream** for querying, the module also routes data to a **Kinesis Data Stream** for real‑time processing and integrates with **CloudWatch** for comprehensive logging and monitoring.
 
 ## 📖 Overview
 

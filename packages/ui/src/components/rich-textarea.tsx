@@ -9,11 +9,15 @@ export function RichTextarea({
   onChange,
   placeholder,
   isDisabled,
+  autoFocus,
+  onBlur,
 }: {
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
   isDisabled?: boolean;
+  autoFocus?: boolean;
+  onBlur?: (e: React.FocusEvent) => void;
 }) {
   const { quill, quillRef } = useQuill({
     theme: "snow",
@@ -60,13 +64,21 @@ export function RichTextarea({
     quill.enable(!isDisabled);
     quill.on("text-change", handleTextChange);
 
+    // Handle autofocus
+    if (autoFocus) {
+      quill.focus();
+    }
+
     return () => {
       quill.off("text-change", handleTextChange);
     };
-  }, [quill, onChange, value, isDisabled]);
+  }, [quill, onChange, value, isDisabled, autoFocus]);
 
   return (
-    <div className="border-input focus-visible:ring-ring flex w-full flex-col rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
+    <div
+      className="border-input focus-visible:ring-ring flex w-full flex-col rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+      onBlur={onBlur}
+    >
       <div
         ref={quillRef}
         className="max-h-[300px] min-h-[300px] w-full overflow-hidden"

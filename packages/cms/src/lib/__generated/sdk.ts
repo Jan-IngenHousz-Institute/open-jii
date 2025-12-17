@@ -319,6 +319,7 @@ export type ComponentAuthor = Entry &
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<ComponentAuthorLinkingCollections>;
     name?: Maybe<Scalars["String"]["output"]>;
+    profession?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
   };
 
@@ -342,6 +343,12 @@ export type ComponentAuthorLinkedFromArgs = {
 
 /** To have author-related properties [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor) */
 export type ComponentAuthorNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** To have author-related properties [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor) */
+export type ComponentAuthorProfessionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
@@ -373,6 +380,13 @@ export type ComponentAuthorFilter = {
   name_not?: InputMaybe<Scalars["String"]["input"]>;
   name_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   name_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  profession?: InputMaybe<Scalars["String"]["input"]>;
+  profession_contains?: InputMaybe<Scalars["String"]["input"]>;
+  profession_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  profession_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  profession_not?: InputMaybe<Scalars["String"]["input"]>;
+  profession_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  profession_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
 };
 
@@ -425,6 +439,8 @@ export enum ComponentAuthorOrder {
   InternalNameDesc = "internalName_DESC",
   NameAsc = "name_ASC",
   NameDesc = "name_DESC",
+  ProfessionAsc = "profession_ASC",
+  ProfessionDesc = "profession_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -4166,6 +4182,13 @@ export type CfComponentAuthorNestedFilter = {
   name_not?: InputMaybe<Scalars["String"]["input"]>;
   name_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   name_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  profession?: InputMaybe<Scalars["String"]["input"]>;
+  profession_contains?: InputMaybe<Scalars["String"]["input"]>;
+  profession_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  profession_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  profession_not?: InputMaybe<Scalars["String"]["input"]>;
+  profession_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  profession_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
 };
 
@@ -4368,6 +4391,7 @@ export type CfPageBlogPostNestedFilter = {
 export type AuthorFieldsFragment = {
   __typename: "ComponentAuthor";
   name?: string | null;
+  profession?: string | null;
   sys: { __typename?: "Sys"; id: string };
   avatar?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
 };
@@ -4987,6 +5011,7 @@ export const AuthorFieldsFragmentDoc: ReturnType<typeof gql> = gql`
       id
     }
     name
+    profession
     avatar {
       ...ImageFields
     }

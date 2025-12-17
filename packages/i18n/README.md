@@ -1,6 +1,6 @@
 # @repo/i18n
 
-A comprehensive internationalization (i18n) package for the OpenJII project, based on i18next and React i18next.
+A comprehensive internationalization (i18n) package for the openJII project, based on i18next and React i18next.
 
 ## Features
 

@@ -2,7 +2,7 @@
 User Metadata Enrichment
 
 Provides utilities for enriching Databricks DataFrames with user metadata
-from the OpenJII backend API.
+from the openJII backend API.
 """
 
 from typing import Dict, Any, List
@@ -13,7 +13,7 @@ from .backend_client import BackendClient
 
 def _fetch_user_metadata(user_ids: List[str], backend_client: BackendClient) -> Dict[str, Dict[str, Any]]:
     """
-    Fetch user metadata from OpenJII backend API for the given user IDs.
+    Fetch user metadata from openJII backend API for the given user IDs.
     
     Args:
         user_ids: List of user IDs to fetch metadata for

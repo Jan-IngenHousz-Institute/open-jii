@@ -1,7 +1,7 @@
 """
 Ambyte Data Processing Package
 
-This package provides Ambyte trace file processing capabilities for OpenJII.
+This package provides Ambyte trace file processing capabilities for openJII.
 It includes parsing and volume I/O utilities for Databricks Delta Live Tables pipeline.
 """
 
@@ -20,4 +20,4 @@ __all__ = [
 
 # Package metadata
 __version__ = "0.1.0"
-__author__ = "OpenJII Team"
+__author__ = "openJII Team"

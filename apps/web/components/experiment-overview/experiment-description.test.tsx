@@ -141,8 +141,8 @@ describe("ExperimentDescription", () => {
     }
 
     expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
-    expect(screen.getByText("Save")).toBeInTheDocument();
-    expect(screen.getByText("Cancel")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-check")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-x")).toBeInTheDocument();
   });
 
   it("does not enter edit mode when archived", async () => {
@@ -182,7 +182,7 @@ describe("ExperimentDescription", () => {
     await user.clear(textarea);
     await user.type(textarea, "Changed text");
 
-    const cancelButton = screen.getByText("Cancel");
+    const cancelButton = screen.getByTestId("icon-x");
     await user.click(cancelButton);
 
     expect(screen.queryByTestId("rich-textarea")).not.toBeInTheDocument();
@@ -202,7 +202,7 @@ describe("ExperimentDescription", () => {
     await user.clear(textarea);
     await user.type(textarea, "New desc");
 
-    const saveButton = screen.getByText("Save");
+    const saveButton = screen.getByTestId("icon-check");
     await user.click(saveButton);
 
     expect(mutateAsyncMock).toHaveBeenCalledWith(
@@ -227,7 +227,7 @@ describe("ExperimentDescription", () => {
       await user.click(descriptionContainer);
     }
 
-    const saveButton = screen.getByText("Save");
+    const saveButton = screen.getByTestId("icon-check");
     await user.click(saveButton);
 
     expect(mutateAsyncMock).not.toHaveBeenCalled();
