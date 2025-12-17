@@ -243,13 +243,22 @@ jobs:
       - name: Deploy Server Function
         id: deploy-server
         if: steps.check-server.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1.1.0
-        with:
-          function-name: ${{ env.SERVER_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/server-functions/default
-          runtime: nodejs22.x
-          publish: true
-          dry-run: ${{ inputs.dry-run }}
+        env:
+          ZIP_PATH: apps/web/.open-next/server-function.zip
+        run: |
+            echo "Zipping server function code..."
+            cd apps/web/.open-next/server-functions/default
+            zip -r "$ZIP_PATH" .
+            cd -
+            echo "Uploading server function code to Lambda..."
+            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
+              aws lambda update-function-code \
+                --function-name "${{ env.SERVER_FUNCTION }}" \
+                --zip-file fileb://$ZIP_PATH \
+                --publish
+            else
+              echo "[DRY RUN] Would update Lambda function: ${{ env.SERVER_FUNCTION }}"
+            fi
 
       - name: Check Image Optimization Function
         id: check-image
@@ -262,29 +271,26 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "No image optimization function found or IMAGE_FUNCTION not set"
           fi
-      - name: Debug - List Image Optimization Node Modules
-        run: |
-          echo "Listing contents of image optimization function node_modules:"
-          ls -la apps/web/.open-next/image-optimization-function/node_modules || echo "No node_modules directory found"
-
-          ls -la apps/web/.open-next/image-optimization-function/node_modules/.bin || echo "No .bin directory found"
-
-      # - name: Clean up broken .bin symlinks (Image Optimization)
-      #   run: |
-      #     if [ -d "apps/web/.open-next/image-optimization-function/node_modules/.bin" ]; then
-      #       find apps/web/.open-next/image-optimization-function/node_modules/.bin -xtype l -delete || true
-      #     fi
 
       - name: Deploy Image Optimization Function
         id: deploy-image
         if: steps.check-image.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1.1.0
-        with:
-          function-name: ${{ env.IMAGE_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/image-optimization-function
-          runtime: nodejs22.x
-          publish: true
-          dry-run: ${{ inputs.dry-run }}
+        env:
+          ZIP_PATH: apps/web/.open-next/image-optimization-function.zip
+        run: |
+            echo "Zipping image optimization function code..."
+            cd apps/web/.open-next/image-optimization-function
+            zip -r "$ZIP_PATH" .
+            cd -
+            echo "Uploading image optimization function code to Lambda..."
+            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
+              aws lambda update-function-code \
+                --function-name "${{ env.IMAGE_FUNCTION }}" \
+                --zip-file fileb://$ZIP_PATH \
+                --publish
+            else
+              echo "[DRY RUN] Would update Lambda function: ${{ env.IMAGE_FUNCTION }}"
+            fi
 
       - name: Check Revalidation Function
         id: check-revalidation
@@ -301,13 +307,22 @@ jobs:
       - name: Deploy Revalidation Function
         id: deploy-revalidation
         if: steps.check-revalidation.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1.1.0
-        with:
-          function-name: ${{ env.REVALIDATION_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/revalidation-function
-          runtime: nodejs22.x
-          publish: true
-          dry-run: ${{ inputs.dry-run }}
+        env:
+          ZIP_PATH: apps/web/.open-next/revalidation-function.zip
+        run: |
+            echo "Zipping revalidation function code..."
+            cd apps/web/.open-next/revalidation-function
+            zip -r "$ZIP_PATH" .
+            cd -
+            echo "Uploading revalidation function code to Lambda..."
+            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
+              aws lambda update-function-code \
+                --function-name "${{ env.REVALIDATION_FUNCTION }}" \
+                --zip-file fileb://$ZIP_PATH \
+                --publish
+            else
+              echo "[DRY RUN] Would update Lambda function: ${{ env.REVALIDATION_FUNCTION }}"
+            fi
 
       - name: Check Warmer Function
         id: check-warmer
@@ -324,13 +339,22 @@ jobs:
       - name: Deploy Warmer Function
         id: deploy-warmer
         if: steps.check-warmer.outputs.exists == 'true'
-        uses: aws-actions/aws-lambda-deploy@v1.1.0
-        with:
-          function-name: ${{ env.WARMER_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/warmer-function
-          runtime: nodejs22.x
-          publish: true
-          dry-run: ${{ inputs.dry-run }}
+        env:
+          ZIP_PATH: apps/web/.open-next/warmer-function.zip
+        run: |
+            echo "Zipping warmer function code..."
+            cd apps/web/.open-next/warmer-function
+            zip -r "$ZIP_PATH" .
+            cd -
+            echo "Uploading warmer function code to Lambda..."
+            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
+              aws lambda update-function-code \
+                --function-name "${{ env.WARMER_FUNCTION }}" \
+                --zip-file fileb://$ZIP_PATH \
+                --publish
+            else
+              echo "[DRY RUN] Would update Lambda function: ${{ env.WARMER_FUNCTION }}"
+            fi
 
       - name: Finalize Lambda Deployments and Summarize Results
         id: update-lambdas
