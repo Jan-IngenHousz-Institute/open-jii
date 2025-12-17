@@ -4949,6 +4949,8 @@ export type PagePoliciesQuery = {
 
 export type PageTermsAndConditionsFieldsFragment = {
   __typename: "PageTermsAndConditions";
+  pageTitle?: string | null;
+  pageDescription?: string | null;
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
@@ -5449,6 +5451,8 @@ export const PageTermsAndConditionsFieldsFragmentDoc: ReturnType<typeof gql> = g
       publishedAt
       environmentId
     }
+    pageTitle
+    pageDescription
     internalName
     title
     content {

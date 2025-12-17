@@ -2,12 +2,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { EnvVariablesMap } from "~/types/env-variables";
+import { loadEnvVariablesFromExpo } from "~/utils/load-env-variables-from-expo";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const env: EnvVariablesMap = require("~/env")?.env;
-if (!env) {
-  throw new Error("Missing env variables");
+function loadEnvVariables(): EnvVariablesMap {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require("~/env").env;
+  } catch {
+    return loadEnvVariablesFromExpo();
+  }
 }
+
+const env = loadEnvVariables();
 
 interface EnvironmentStoreState {
   environment?: string;
@@ -34,7 +40,7 @@ export const useEnvironmentStore = create<EnvironmentStoreState & EnvironmentSto
         return () => {
           const state = useEnvironmentStore.getState();
           if (!state.environment) {
-            useEnvironmentStore.setState({ environment: "dev" });
+            useEnvironmentStore.setState({ environment: "prod" });
           }
           useEnvironmentStore.setState({ isLoaded: true });
         };
@@ -44,8 +50,13 @@ export const useEnvironmentStore = create<EnvironmentStoreState & EnvironmentSto
 );
 
 export function getEnvName(): string {
-  const current = useEnvironmentStore.getState().environment;
-  return current ?? "dev";
+  const { environment, isLoaded } = useEnvironmentStore.getState();
+
+  if (!isLoaded) {
+    throw new Error("Attempted to read environment before storage rehydration completed");
+  }
+
+  return environment ?? "prod";
 }
 
 export function getEnvVar<K extends keyof (typeof env)[keyof typeof env]>(

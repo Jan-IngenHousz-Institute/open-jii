@@ -42,6 +42,10 @@ export default {
           DEFAULT: "#76b465", // Medium green
           foreground: "#ffffff",
         },
+        quaternary: {
+          DEFAULT: "#E2FCFC", // Light green
+          light: "#EDFFFF",
+        },
         accent: {
           DEFAULT: "#afd7f4", // Light blue
           light: "#d7ebfa", // Lighter blue (50%)
@@ -81,6 +85,7 @@ export default {
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
+          dark: "#011111",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -89,6 +94,10 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        checkbox: {
+          DEFAULT: "#09B732",
+          foreground: "#ffffff",
         },
       },
       borderRadius: {

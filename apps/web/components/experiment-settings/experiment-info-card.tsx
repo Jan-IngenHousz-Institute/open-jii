@@ -30,20 +30,18 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
   return (
     <>
       <div className="mt-8">
-        <p className="text-muted-foreground mb-2 text-sm">
-          {t(
-            isDeletionEnabled
-              ? "experimentSettings.dangerZoneNote_deleteAllowed"
-              : "experimentSettings.dangerZoneNote",
-          )}
-        </p>
+        {isAdmin && (
+          <p className="text-muted-foreground mb-2 text-sm">
+            {t(
+              isDeletionEnabled
+                ? "experimentSettings.dangerZoneNote_deleteAllowed"
+                : "experimentSettings.dangerZoneNote",
+            )}
+          </p>
+        )}
 
         <div className="flex flex-col gap-3 md:flex-row">
-          <ExperimentArchive
-            experimentId={experimentId}
-            isArchived={isArchived}
-            isAdmin={isAdmin}
-          />
+          {isAdmin && <ExperimentArchive experimentId={experimentId} isArchived={isArchived} />}
 
           <ExperimentDelete experimentId={experimentId} experimentName={experiment.name} />
         </div>
