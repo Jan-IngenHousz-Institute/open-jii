@@ -5,6 +5,7 @@ const envSchema = z.object({
   ENVIRONMENT_PREFIX: z.string().optional().default("dev"),
   NEXT_PUBLIC_BASE_URL: z.string().url().default("http://localhost:3000"),
   NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:3020"),
+  NEXT_PUBLIC_DOCS_URL: z.string().url().default("http://localhost:3010"),
   NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
   // PostHog configuration - Optional for development
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
@@ -26,6 +27,7 @@ const parseEnv = () => {
       ENVIRONMENT_PREFIX: process.env.ENVIRONMENT_PREFIX,
       NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
       NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+      NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
       NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
       NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
       VERCEL_AUTOMATION_BYPASS_SECRET: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
