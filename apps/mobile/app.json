@@ -1,7 +1,8 @@
 {
   "expo": {
     "scheme": [
-      "openjii"
+      "openjii",
+      "photosynq"
     ],
     "name": "openJII",
     "slug": "openjii",
@@ -20,7 +21,7 @@
       "bundleIdentifier": "com.openjii.app"
     },
     "android": {
-      "versionCode": 30,
+      "versionCode": 36,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#D3D3D3"
