@@ -22,14 +22,14 @@ export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string;
 
   return (
     <div className="bg-card text-card-foreground ring-border flex min-h-[600px] w-full flex-col rounded-2xl p-8 shadow-lg ring-1 md:p-14">
-      {/* Title */}
-      <h1 className="mb-4 text-left text-2xl font-bold">{t("auth.loginToAccount")}</h1>
-
       {/* Beta notice badge */}
       <div className="bg-badge-featured border-badge-featured/40 mb-6 rounded-md border px-3 py-2 text-xs sm:text-sm">
         openJII is still under development and currently supports only a small group of beta test
         users.
       </div>
+
+      {/* Title */}
+      <h1 className="mb-4 text-left text-2xl font-bold">{t("auth.loginToAccount")}</h1>
 
       {/* Email provider */}
       {emailProvider && <LoginProviderForm provider={emailProvider} callbackUrl={callbackUrl} />}

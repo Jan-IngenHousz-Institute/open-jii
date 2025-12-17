@@ -73,7 +73,7 @@ function UserMenu({
               </AvatarFallback>
             </Avatar>
           ) : (
-            <User className="h-4 w-4" />
+            <User className="group-hover:text-jii-medium-green h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_theme(colors.jii-medium-green)]" />
           )}
           <ChevronDown
             className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
