@@ -19,5 +19,3 @@ jobs:
       environment: dev
       dry-run: true
     secrets: inherit
-
-    
