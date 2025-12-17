@@ -13,11 +13,10 @@ permissions:
 
 jobs:
   test-workflows:
-    name: Test Backend Deployment Workflow
+    name: Test Frontend Deployment Workflow
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: dev
       dry-run: true
     secrets: inherit
-
     
