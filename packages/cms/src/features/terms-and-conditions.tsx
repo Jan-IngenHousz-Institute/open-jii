@@ -126,24 +126,20 @@ export const TermsAndConditionsPage: React.FC<TermsAndConditionsContentProps> = 
   });
 
   return (
-    <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="mx-auto max-w-4xl">
-          <h1
-            className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
-            {...inspectorProps({ fieldId: "title" })}
-          >
-            {currentTermsAndConditions.title}
-          </h1>
+    <div className="mx-auto max-w-4xl px-4 py-12">
+      <h1
+        className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
+        {...inspectorProps({ fieldId: "title" })}
+      >
+        {currentTermsAndConditions.title}
+      </h1>
 
-          {/* Content */}
-          {currentTermsAndConditions.content?.json ? (
-            <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
-              <CtfRichText json={currentTermsAndConditions.content.json as Document} />
-            </div>
-          ) : null}
+      {/* Content */}
+      {currentTermsAndConditions.content?.json ? (
+        <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
+          <CtfRichText json={currentTermsAndConditions.content.json as Document} />
         </div>
-      </div>
+      ) : null}
     </div>
   );
 };
