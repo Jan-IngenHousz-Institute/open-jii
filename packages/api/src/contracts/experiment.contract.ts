@@ -16,6 +16,7 @@ import {
   zExperimentMemberPathParam,
   zExperimentDataQuery,
   zExperimentDataResponse,
+  zExperimentTablesMetadataList,
   zExperimentProvisioningStatusWebhookPayload,
   zExperimentWebhookAuthHeader,
   zExperimentWebhookSuccessResponse,
@@ -208,6 +209,21 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment data",
     description: "Retrieves data tables from the experiment with pagination support",
+  },
+
+  getExperimentTables: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/tables",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentTablesMetadataList,
+      404: zErrorResponse,
+      403: zErrorResponse,
+      400: zErrorResponse,
+    },
+    summary: "Get experiment tables metadata",
+    description:
+      "Retrieves metadata for all tables in the experiment (names, display names, row counts) without data",
   },
 
   updateProvisioningStatus: {

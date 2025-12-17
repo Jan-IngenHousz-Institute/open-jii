@@ -284,145 +284,6 @@ describe("ExperimentDataController", () => {
       );
     });
 
-    it("should return tables list with sample data when no table name is specified", async () => {
-      // Create an experiment
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment for Tables",
-        userId: testUserId,
-      });
-
-      // Mock the DatabricksAdapter listTables method
-      const mockTablesResponse: ListTablesResponse = {
-        tables: [
-          {
-            name: "bronze_data",
-            catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
-            table_type: "MANAGED" as const,
-            created_at: Date.now(),
-            properties: { downstream: "false" },
-          },
-          {
-            name: "silver_data",
-            catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
-            table_type: "MANAGED" as const,
-            created_at: Date.now(),
-            properties: { downstream: "false" },
-          },
-        ],
-      };
-
-      // Sample data for each table
-      const mockBronzeTableData = {
-        columns: [
-          { name: "id", type_name: "string", type_text: "string" },
-          { name: "value", type_name: "number", type_text: "number" },
-        ],
-        rows: [
-          ["1", "100"],
-          ["2", "200"],
-        ],
-        totalRows: 2,
-        truncated: false,
-      };
-
-      const mockSilverTableData = {
-        columns: [
-          { name: "id", type_name: "string", type_text: "string" },
-          { name: "processed", type_name: "boolean", type_text: "boolean" },
-        ],
-        rows: [
-          ["1", "true"],
-          ["2", "false"],
-        ],
-        totalRows: 2,
-        truncated: false,
-      };
-
-      // Setup mocks
-      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
-
-      // Mock getTableMetadata to return column metadata
-      const mockMetadataResponse = new Map<string, string>([
-        ["id", "STRING"],
-        ["value", "NUMBER"],
-      ]);
-
-      vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
-        success(mockMetadataResponse),
-      );
-
-      vi.spyOn(databricksAdapter, "executeSqlQuery")
-        .mockResolvedValueOnce(success(mockBronzeTableData))
-        .mockResolvedValueOnce(success(mockSilverTableData));
-
-      // Get the path
-      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
-        id: experiment.id,
-      });
-
-      // Make the request without tableName parameter
-      const response: SuperTestResponse<ExperimentDataResponse> = await testApp
-        .get(path)
-        .withAuth(testUserId)
-        .expect(StatusCodes.OK);
-
-      // Verify the response structure - array with two elements
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body).toHaveLength(2);
-
-      // Check first table
-      expect(response.body[0]).toMatchObject({
-        name: mockTablesResponse.tables[0].name,
-        displayName:
-          mockTablesResponse.tables[0].properties?.display_name ??
-          mockTablesResponse.tables[0].name,
-        catalog_name: mockTablesResponse.tables[0].catalog_name,
-        schema_name: mockTablesResponse.tables[0].schema_name,
-        page: 1,
-        pageSize: 5,
-        totalPages: 1,
-      });
-
-      // Check second table
-      expect(response.body[1]).toMatchObject({
-        name: mockTablesResponse.tables[1].name,
-        displayName:
-          mockTablesResponse.tables[1].properties?.display_name ??
-          mockTablesResponse.tables[1].name,
-        catalog_name: mockTablesResponse.tables[1].catalog_name,
-        schema_name: mockTablesResponse.tables[1].schema_name,
-        page: 1,
-        pageSize: 5,
-        totalPages: 1,
-      });
-
-      // Check data exists for each table
-      expect(response.body[0].data).toBeDefined();
-      expect(response.body[1].data).toBeDefined();
-
-      // Verify the DatabricksAdapter was called correctly
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
-
-      // Verify SQL queries were executed for each table
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
-        1,
-        `exp_test_experiment_for_tables_${experiment.id}`,
-        "SELECT * FROM bronze_data LIMIT 5",
-      );
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
-        2,
-        `exp_test_experiment_for_tables_${experiment.id}`,
-        "SELECT * FROM silver_data LIMIT 5",
-      );
-    });
-
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
 
@@ -430,9 +291,17 @@ describe("ExperimentDataController", () => {
         id: nonExistentId,
       });
 
+      // Add query parameters
+      const queryParams = {
+        tableName: "test_table",
+        page: 1,
+        pageSize: 5,
+      };
+
       await testApp
         .get(path)
         .withAuth(testUserId)
+        .query(queryParams)
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
@@ -454,9 +323,16 @@ describe("ExperimentDataController", () => {
         id: experiment.id,
       });
 
+      const queryParams = {
+        tableName: "test_table",
+        page: 1,
+        pageSize: 5,
+      };
+
       await testApp
         .get(path)
         .withAuth(testUserId) // Use the first user who doesn't have access
+        .query(queryParams)
         .expect(StatusCodes.FORBIDDEN)
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("access");
@@ -501,12 +377,19 @@ describe("ExperimentDataController", () => {
         id: experiment.id,
       });
 
+      const queryParams = {
+        tableName: "test_table",
+        page: 1,
+        pageSize: 5,
+      };
+
       await testApp
         .get(path)
         .withAuth(testUserId)
+        .query(queryParams)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR)
         .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toContain("Failed to list tables");
+          expect(body.message).toContain("Error retrieving data from Databricks");
         });
     });
 
@@ -1349,6 +1232,142 @@ describe("ExperimentDataController", () => {
         .withAuth(testUserId)
         .query({ tableName: "bronze_data" })
         .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  describe("getExperimentTables", () => {
+    it("should return tables metadata successfully", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Tables",
+        userId: testUserId,
+      });
+
+      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experiment.id}`;
+
+      const mockTablesResponse: ListTablesResponse = {
+        tables: [
+          {
+            name: "measurements",
+            catalog_name: experiment.name,
+            schema_name: schemaName,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false", display_name: "Measurements" },
+          },
+          {
+            name: "device",
+            catalog_name: experiment.name,
+            schema_name: schemaName,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false", display_name: "Device Data" },
+          },
+        ],
+      };
+
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      vi.spyOn(databricksAdapter, "executeSqlQuery")
+        .mockResolvedValueOnce(
+          success({
+            columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+            rows: [["100"]],
+            totalRows: 1,
+            truncated: false,
+          }),
+        )
+        .mockResolvedValueOnce(
+          success({
+            columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+            rows: [["50"]],
+            totalRows: 1,
+            truncated: false,
+          }),
+        );
+
+      const path = testApp.resolvePath(contract.experiments.getExperimentTables.path, {
+        id: experiment.id,
+      });
+
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(2);
+      expect(response.body).toEqual([
+        {
+          name: "measurements",
+          displayName: "Measurements",
+          totalRows: 100,
+        },
+        {
+          name: "device",
+          displayName: "Device Data",
+          totalRows: 50,
+        },
+      ]);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+    });
+
+    it("should return 404 when experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+
+      const path = testApp.resolvePath(contract.experiments.getExperimentTables.path, {
+        id: nonExistentId,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("not found");
+        });
+    });
+
+    it("should return 403 when user doesn't have access to private experiment", async () => {
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Private Experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+
+      const path = testApp.resolvePath(contract.experiments.getExperimentTables.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("access");
+        });
+    });
+
+    it("should return empty array when no final tables exist", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Empty Experiment",
+        userId: testUserId,
+      });
+
+      const mockTablesResponse: ListTablesResponse = {
+        tables: [],
+      };
+
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      const path = testApp.resolvePath(contract.experiments.getExperimentTables.path, {
+        id: experiment.id,
+      });
+
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(0);
     });
   });
 });

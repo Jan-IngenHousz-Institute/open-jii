@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -26,7 +27,7 @@ vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
 
 // Mock hooks
 const mockUseExperimentVisualization = vi.fn();
-const mockUseExperimentSampleData = vi.fn();
+const mockUseExperimentTables = vi.fn();
 
 vi.mock("@/hooks/experiment/useExperimentVisualization/useExperimentVisualization", () => ({
   useExperimentVisualization: (vizId: string, expId: string) =>
@@ -37,10 +38,10 @@ vi.mock("@/hooks/experiment/useExperimentVisualization/useExperimentVisualizatio
     },
 }));
 
-vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
-  useExperimentSampleData: (experimentId: string, limit: number) =>
-    mockUseExperimentSampleData(experimentId, limit) as {
-      sampleTables: unknown[];
+vi.mock("@/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
+  useExperimentTables: (experimentId: string) =>
+    mockUseExperimentTables(experimentId) as {
+      tables: unknown[];
       isLoading: boolean;
     },
 }));
@@ -54,7 +55,7 @@ vi.mock("@/components/experiment-visualizations/edit-visualization-form", () => 
   default: ({
     experimentId,
     visualization,
-    sampleTables,
+    tables,
     onSuccess,
     isLoading,
     isPreviewOpen,
@@ -62,7 +63,7 @@ vi.mock("@/components/experiment-visualizations/edit-visualization-form", () => 
   }: {
     experimentId: string;
     visualization: { id: string; name: string };
-    sampleTables: unknown[];
+    tables: unknown[];
     onSuccess: (id: string) => void;
     isLoading: boolean;
     isPreviewOpen: boolean;
@@ -71,7 +72,7 @@ vi.mock("@/components/experiment-visualizations/edit-visualization-form", () => 
     <div data-testid="edit-visualization-form" data-loading={isLoading}>
       <div>Experiment: {experimentId}</div>
       <div>Visualization: {visualization.name}</div>
-      <div>Tables: {sampleTables.length}</div>
+      <div>Tables: {tables.length}</div>
       <div>Preview Open: {isPreviewOpen ? "Yes" : "No"}</div>
       <button onClick={() => onSuccess("viz-456")}>Save Changes</button>
       <button onClick={onPreviewClose}>Close Preview</button>
@@ -128,6 +129,17 @@ vi.mock("lucide-react", () => ({
 }));
 
 describe("EditVisualizationPage", () => {
+  let queryClient: QueryClient;
+
+  const renderWithQueryClient = (component: React.ReactElement) => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -151,12 +163,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Edit Visualization")).toBeInTheDocument();
       expect(screen.getByText("Loading Spinner")).toBeInTheDocument();
@@ -169,12 +181,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: true,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Loading Spinner")).toBeInTheDocument();
     });
@@ -186,12 +198,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: true,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Loading Spinner")).toBeInTheDocument();
     });
@@ -205,13 +217,13 @@ describe("EditVisualizationPage", () => {
         error: new Error("Failed to load"),
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
       // The component calls notFound which throws, so we expect it to have been called
-      expect(() => render(<EditVisualizationPage />)).toThrow();
+      expect(() => renderWithQueryClient(<EditVisualizationPage />)).toThrow();
       expect(mockNotFound).toHaveBeenCalled();
     });
 
@@ -222,12 +234,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      expect(() => render(<EditVisualizationPage />)).toThrow();
+      expect(() => renderWithQueryClient(<EditVisualizationPage />)).toThrow();
       expect(mockNotFound).toHaveBeenCalled();
     });
 
@@ -238,12 +250,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      expect(() => render(<EditVisualizationPage />)).toThrow();
+      expect(() => renderWithQueryClient(<EditVisualizationPage />)).toThrow();
       expect(mockNotFound).toHaveBeenCalled();
     });
   });
@@ -256,12 +268,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Edit Visualization")).toBeInTheDocument();
     });
@@ -273,12 +285,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Preview")).toBeInTheDocument();
       expect(screen.getByText("Eye Icon")).toBeInTheDocument();
@@ -291,12 +303,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [{ name: "table1" }],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [{ name: "table1" }],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Experiment: exp-123")).toBeInTheDocument();
       expect(screen.getByText("Visualization: Temperature Chart")).toBeInTheDocument();
@@ -311,12 +323,12 @@ describe("EditVisualizationPage", () => {
       });
 
       const mockTables = [{ name: "table1" }, { name: "table2" }, { name: "table3" }];
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: mockTables,
+      mockUseExperimentTables.mockReturnValue({
+        tables: mockTables,
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Tables: 3")).toBeInTheDocument();
     });
@@ -330,12 +342,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(screen.getByText("Preview Open: No")).toBeInTheDocument();
     });
@@ -349,12 +361,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       const previewButton = screen.getByText("Preview").closest("button");
       if (!previewButton) return;
@@ -375,12 +387,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       // Open preview
       const previewButton = screen.getByText("Preview").closest("button");
@@ -412,12 +424,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       const saveButton = screen.getByText("Save Changes");
       await user.click(saveButton);
@@ -438,12 +450,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       const saveButton = screen.getByText("Save Changes");
       await user.click(saveButton);
@@ -466,31 +478,31 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       expect(mockUseExperimentVisualization).toHaveBeenCalledWith("viz-456", "exp-123");
     });
 
-    it("should call useExperimentSampleData with correct parameters", () => {
+    it("should call useExperimentVisualizationTables with correct parameters", () => {
       mockUseExperimentVisualization.mockReturnValue({
         data: { body: { id: "viz-456", name: "Test Chart" } },
         isLoading: false,
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
-      expect(mockUseExperimentSampleData).toHaveBeenCalledWith("exp-123", 5);
+      expect(mockUseExperimentTables).toHaveBeenCalledWith("exp-123");
     });
   });
 
@@ -502,12 +514,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      render(<EditVisualizationPage />);
+      renderWithQueryClient(<EditVisualizationPage />);
 
       const previewButton = screen.getByText("Preview").closest("button");
       expect(previewButton?.getAttribute("data-variant")).toBe("outline");
@@ -534,12 +546,12 @@ describe("EditVisualizationPage", () => {
         error: null,
       });
 
-      mockUseExperimentSampleData.mockReturnValue({
-        sampleTables: [],
+      mockUseExperimentTables.mockReturnValue({
+        tables: [],
         isLoading: false,
       });
 
-      expect(() => render(<EditVisualizationPage />)).toThrow("Not Found");
+      expect(() => renderWithQueryClient(<EditVisualizationPage />)).toThrow("Not Found");
       expect(mockNotFound).toHaveBeenCalled();
     });
   });

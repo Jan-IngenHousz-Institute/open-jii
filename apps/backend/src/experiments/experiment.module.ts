@@ -21,6 +21,7 @@ import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-dat
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
+import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
 import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locations/geocode-location";
@@ -133,6 +134,7 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
 
     // Experiment data use cases
     GetExperimentDataUseCase,
+    GetExperimentTablesUseCase,
     UploadAmbyteDataUseCase,
     DownloadExperimentDataUseCase,
 

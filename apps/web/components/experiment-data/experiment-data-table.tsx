@@ -37,6 +37,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
   Table,
   TableBody,
 } from "@repo/ui/components";
@@ -89,21 +90,7 @@ export function ExperimentDataTable({
 
   const { t } = useTranslation();
 
-  // Show chart on hover (only if not pinned)
-  const showChartOnHover = useCallback((data: number[], columnName: string) => {
-    setChartDisplay((current) => {
-      if (current?.isPinned) return current;
-      return { data, columnName, isPinned: false };
-    });
-  }, []);
-
-  // Hide chart on leave (only if not pinned)
-  const hideChartOnLeave = useCallback(() => {
-    setChartDisplay((current) => {
-      if (current?.isPinned) return current;
-      return null;
-    });
-  }, []);
+  // Remove hover functionality - chart only shows on click
 
   // Toggle chart pinning on click
   const toggleChartPin = useCallback((data: number[], columnName: string) => {
@@ -150,8 +137,6 @@ export function ExperimentDataTable({
     undefined,
     undefined,
     formatValue,
-    showChartOnHover,
-    hideChartOnLeave,
     toggleChartPin,
     openAddAnnotationDialog,
     openDeleteAnnotationsDialog,
@@ -241,7 +226,7 @@ export function ExperimentDataTable({
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     enableRowSelection: true,
-    getRowId: (row) => String(row.id),
+    getRowId: (row, index) => `${pagination.pageIndex}-${index}`,
     onRowSelectionChange: setRowSelection,
     onPaginationChange,
     state: {
@@ -273,7 +258,21 @@ export function ExperimentDataTable({
   }, [table]);
 
   if (isLoading && !persistedMetaData) {
-    return <div>{t("experimentDataTable.loading")}</div>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-7 w-48" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full" />
+          {Array.from({ length: pageSize }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-64" />
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -375,7 +374,7 @@ export function ExperimentDataTable({
           onOpenChange={setDownloadModalOpen}
         />
         {chartDisplay && (
-          <div className="mt-6">
+          <div id="experiment-data-chart" className="mt-6">
             <ExperimentDataTableChart
               data={chartDisplay.data}
               columnName={chartDisplay.columnName}
