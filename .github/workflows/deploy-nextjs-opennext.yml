@@ -247,6 +247,7 @@ jobs:
         with:
           function-name: ${{ env.SERVER_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/server-functions/default
+          runtime: nodejs22.x
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
@@ -267,7 +268,7 @@ jobs:
           if [ -d "apps/web/.open-next/image-optimization-function/node_modules/.bin" ]; then
             find apps/web/.open-next/image-optimization-function/node_modules/.bin -xtype l -delete || true
           fi
-          
+
       - name: Deploy Image Optimization Function
         id: deploy-image
         if: steps.check-image.outputs.exists == 'true'
@@ -275,6 +276,7 @@ jobs:
         with:
           function-name: ${{ env.IMAGE_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/image-optimization-function
+          runtime: nodejs22.x
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
@@ -297,6 +299,7 @@ jobs:
         with:
           function-name: ${{ env.REVALIDATION_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/revalidation-function
+          runtime: nodejs22.x
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
@@ -319,6 +322,7 @@ jobs:
         with:
           function-name: ${{ env.WARMER_FUNCTION }}
           code-artifacts-dir: apps/web/.open-next/warmer-function
+          runtime: nodejs22.x
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
@@ -345,7 +349,7 @@ jobs:
           fi
 
       - name: Invalidate CloudFront Distribution
-        if: steps.upload-assets.outputs.uploaded == 'true' || inputs.dry-run == 'false'
+        if: steps.upload-assets.outputs.uploaded == 'true' && inputs.dry-run == 'false'
         run: |
           CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
           if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
