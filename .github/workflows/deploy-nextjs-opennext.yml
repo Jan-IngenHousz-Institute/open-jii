@@ -262,12 +262,18 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "No image optimization function found or IMAGE_FUNCTION not set"
           fi
-      
-      - name: Clean up broken .bin symlinks (Image Optimization)
+      - name: Debug - List Image Optimization Node Modules
         run: |
-          if [ -d "apps/web/.open-next/image-optimization-function/node_modules/.bin" ]; then
-            find apps/web/.open-next/image-optimization-function/node_modules/.bin -xtype l -delete || true
-          fi
+          echo "Listing contents of image optimization function node_modules:"
+          ls -la apps/web/.open-next/image-optimization-function/node_modules || echo "No node_modules directory found"
+
+          ls -la apps/web/.open-next/image-optimization-function/node_modules/.bin || echo "No .bin directory found"
+
+      # - name: Clean up broken .bin symlinks (Image Optimization)
+      #   run: |
+      #     if [ -d "apps/web/.open-next/image-optimization-function/node_modules/.bin" ]; then
+      #       find apps/web/.open-next/image-optimization-function/node_modules/.bin -xtype l -delete || true
+      #     fi
 
       - name: Deploy Image Optimization Function
         id: deploy-image
