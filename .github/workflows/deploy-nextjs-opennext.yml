@@ -261,14 +261,20 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "No image optimization function found or IMAGE_FUNCTION not set"
           fi
-
+      
+      - name: Clean up broken .bin symlinks (Image Optimization)
+        run: |
+          if [ -d "apps/web/.open-next/image-optimization-function/node_modules/.bin" ]; then
+            find apps/web/.open-next/image-optimization-function/node_modules/.bin -xtype l -delete || true
+          fi
+          
       - name: Deploy Image Optimization Function
         id: deploy-image
         if: steps.check-image.outputs.exists == 'true'
         uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.IMAGE_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/image-optimization-function/default
+          code-artifacts-dir: apps/web/.open-next/image-optimization-function
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
@@ -290,7 +296,7 @@ jobs:
         uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.REVALIDATION_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/revalidation-function/default
+          code-artifacts-dir: apps/web/.open-next/revalidation-function
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
