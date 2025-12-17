@@ -947,6 +947,7 @@ export type ComponentPartner = Entry &
     logo?: Maybe<Asset>;
     subtitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
+    url?: Maybe<Scalars["String"]["output"]>;
   };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
@@ -969,6 +970,12 @@ export type ComponentPartnerLogoArgs = {
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
 export type ComponentPartnerSubtitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
+export type ComponentPartnerUrlArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
@@ -1001,6 +1008,13 @@ export type ComponentPartnerFilter = {
   subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
+  url?: InputMaybe<Scalars["String"]["input"]>;
+  url_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  url_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  url_not?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
 export type ComponentPartnerLinkingCollections = {
@@ -1058,6 +1072,8 @@ export enum ComponentPartnerOrder {
   SysPublishedAtDesc = "sys_publishedAt_DESC",
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
 }
 
 /** To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage) */
@@ -3259,6 +3275,8 @@ export enum PageHomePartnersPartnersCollectionOrder {
   SysPublishedAtDesc = "sys_publishedAt_DESC",
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
 }
 
 /** To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding) */
@@ -3538,6 +3556,8 @@ export type PageTermsAndConditions = Entry &
     contentfulMetadata: ContentfulMetadata;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageTermsAndConditionsLinkingCollections>;
+    pageDescription?: Maybe<Scalars["String"]["output"]>;
+    pageTitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
   };
@@ -3557,6 +3577,18 @@ export type PageTermsAndConditionsInternalNameArgs = {
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
 export type PageTermsAndConditionsLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
+export type PageTermsAndConditionsPageDescriptionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
+export type PageTermsAndConditionsPageTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
@@ -3635,6 +3667,20 @@ export type PageTermsAndConditionsFilter = {
   internalName_not?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageDescription_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
   title?: InputMaybe<Scalars["String"]["input"]>;
   title_contains?: InputMaybe<Scalars["String"]["input"]>;
@@ -3661,6 +3707,10 @@ export type PageTermsAndConditionsLinkingCollectionsEntryCollectionArgs = {
 export enum PageTermsAndConditionsOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -4293,6 +4343,13 @@ export type CfComponentPartnerNestedFilter = {
   subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
+  url?: InputMaybe<Scalars["String"]["input"]>;
+  url_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  url_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  url_not?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
 export type CfComponentSeoNestedFilter = {
@@ -4829,6 +4886,8 @@ export type PagePoliciesQuery = {
 
 export type PageTermsAndConditionsFieldsFragment = {
   __typename: "PageTermsAndConditions";
+  pageTitle?: string | null;
+  pageDescription?: string | null;
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
@@ -5314,6 +5373,8 @@ export const PageTermsAndConditionsFieldsFragmentDoc: ReturnType<typeof gql> = g
       publishedAt
       environmentId
     }
+    pageTitle
+    pageDescription
     internalName
     title
     content {
