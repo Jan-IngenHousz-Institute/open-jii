@@ -47,10 +47,6 @@ export function NavUser({
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
       : "";
 
-  // Determine docs URL based on environment
-  const docsUrl =
-    env.ENVIRONMENT_PREFIX === "prod" ? "https://docs.openjii.org" : "https://docs.dev.openjii.org";
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -114,7 +110,7 @@ export function NavUser({
             {/* SUPPORT */}
             <DropdownMenuItem asChild>
               <Link
-                href={docsUrl}
+                href={env.NEXT_PUBLIC_DOCS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex w-full cursor-default items-center"

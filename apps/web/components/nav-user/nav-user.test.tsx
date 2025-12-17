@@ -4,6 +4,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { env } from "~/env";
 
 import { SidebarProvider } from "@repo/ui/components";
 
@@ -12,14 +13,6 @@ import { NavUser } from "./nav-user";
 globalThis.React = React;
 
 /* -------------------- Mocks -------------------- */
-
-const mockEnv = vi.hoisted(() => ({
-  ENVIRONMENT_PREFIX: "dev",
-}));
-
-vi.mock("~/env", () => ({
-  env: mockEnv,
-}));
 
 Object.defineProperty(window, "matchMedia", {
   value: vi.fn().mockImplementation(() => {
@@ -88,8 +81,6 @@ function renderNav(
 describe("<NavUser />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset to dev environment for each test
-    mockEnv.ENVIRONMENT_PREFIX = "dev";
   });
 
   it("renders display name (from profile), email, avatar and basic functionality", () => {
@@ -148,14 +139,14 @@ describe("<NavUser />", () => {
     expect(logoutItem).toHaveAttribute("href", "/en-US/platform/signout");
 
     const supportItem = screen.getByRole("menuitem", { name: "navigation.support" });
-    expect(supportItem).toHaveAttribute("href", "https://docs.dev.openjii.org");
+    expect(supportItem).toHaveAttribute("href", "http://localhost:3010");
 
     const faqItem = screen.getByRole("menuitem", { name: "navigation.faq" });
     expect(faqItem).toHaveAttribute("href", "/en-US/faq");
   });
 
-  it("uses prod docs URL in prod environment", async () => {
-    mockEnv.ENVIRONMENT_PREFIX = "prod";
+  it("uses correct docs URL from environment", async () => {
+    env.NEXT_PUBLIC_DOCS_URL = "https://docs.openjii.org";
 
     const user = userEvent.setup();
     renderNav();
