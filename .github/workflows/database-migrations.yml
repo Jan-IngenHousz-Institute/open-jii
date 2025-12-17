@@ -286,11 +286,27 @@ jobs:
           container-name: ${{ env.MIGRATION_RUNNER_CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.full_image_ref }}
 
+      - name: Register rendered task definition
+        id: register-task-def
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          echo "Registering rendered task definition..."
+          TASK_DEF_FILE="${{ steps.render-task-def.outputs.task-definition }}"
+          REGISTER_OUTPUT=$(aws ecs register-task-definition --cli-input-json file://$TASK_DEF_FILE --region "$AWS_REGION")
+          FAMILY_REVISION=$(echo "$REGISTER_OUTPUT" | jq -r '.taskDefinition.taskDefinitionArn')
+          if [[ -z "$FAMILY_REVISION" || "$FAMILY_REVISION" == "null" ]]; then
+            echo "::error::Failed to register task definition"
+            exit 1
+          fi
+          echo "Registered task definition: $FAMILY_REVISION"
+          echo "family_revision=$FAMILY_REVISION" >> $GITHUB_OUTPUT
+
       - name: Run migration task
         id: run-task
         env:
           CLUSTER_NAME: ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}
-          TASK_DEF: ${{ steps.render-task-def.outputs.task-definition }}
+          TASK_DEF: ${{ steps.register-task-def.outputs.family_revision }}
           SUBNETS: ${{ env.MIGRATION_RUNNER_SUBNETS }}
           SECURITY_GROUP_ID: ${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID }}
           AWS_REGION: ${{ env.AWS_REGION }}
