@@ -4,6 +4,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { env } from "~/env";
 
 import { SidebarProvider } from "@repo/ui/components";
 
@@ -138,9 +139,21 @@ describe("<NavUser />", () => {
     expect(logoutItem).toHaveAttribute("href", "/en-US/platform/signout");
 
     const supportItem = screen.getByRole("menuitem", { name: "navigation.support" });
-    expect(supportItem).toHaveAttribute("href", "https://docs.openjii.org");
+    expect(supportItem).toHaveAttribute("href", "https://docs.dev.openjii.org");
 
     const faqItem = screen.getByRole("menuitem", { name: "navigation.faq" });
     expect(faqItem).toHaveAttribute("href", "/en-US/faq");
+  });
+
+  it("uses prod docs URL in prod environment", async () => {
+    env.ENVIRONMENT_PREFIX = "prod";
+
+    const user = userEvent.setup();
+    renderNav();
+
+    await user.click(screen.getByRole("button"));
+
+    const supportItem = screen.getByRole("menuitem", { name: "navigation.support" });
+    expect(supportItem).toHaveAttribute("href", "https://docs.openjii.org");
   });
 });

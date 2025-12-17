@@ -3,6 +3,7 @@
 import { ChevronsUpDown, LifeBuoy, LogOut, MessageCircleQuestion } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import { env } from "~/env";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -45,6 +46,10 @@ export function NavUser({
     userProfileBody?.firstName && userProfileBody.lastName
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
       : "";
+
+  // Determine docs URL based on environment
+  const docsUrl =
+    env.ENVIRONMENT_PREFIX === "prod" ? "https://docs.openjii.org" : "https://docs.dev.openjii.org";
 
   return (
     <SidebarMenu>
@@ -109,7 +114,7 @@ export function NavUser({
             {/* SUPPORT */}
             <DropdownMenuItem asChild>
               <Link
-                href="https://docs.openjii.org"
+                href={docsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex w-full cursor-default items-center"
