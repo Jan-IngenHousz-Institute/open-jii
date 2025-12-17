@@ -268,7 +268,7 @@ jobs:
         uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.IMAGE_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/image-optimization-function
+          code-artifacts-dir: apps/web/.open-next/image-optimization-function/default
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
@@ -290,7 +290,7 @@ jobs:
         uses: aws-actions/aws-lambda-deploy@v1.1.0
         with:
           function-name: ${{ env.REVALIDATION_FUNCTION }}
-          code-artifacts-dir: apps/web/.open-next/revalidation-function
+          code-artifacts-dir: apps/web/.open-next/revalidation-function/default
           publish: true
           dry-run: ${{ inputs.dry-run }}
 
