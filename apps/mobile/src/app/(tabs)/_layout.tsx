@@ -73,6 +73,7 @@ export default function TabLayout() {
           options={{
             title: "Data",
             tabBarIcon: ({ color, size }) => <FlaskConical size={size} color={color} />,
+            href: null,
           }}
         />
         <Tabs.Screen
