@@ -134,26 +134,24 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
         className="shadow-primary/10 ring-jii-bright-green/20 absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-20">
-        <div className="mx-auto max-w-4xl">
-          <h1
-            className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
-            {...inspectorProps({ fieldId: "title" })}
-          >
-            {currentFaq.title}
-          </h1>
-          {currentFaq.intro && (
-            <p className="mt-6 text-base/7 text-gray-600" {...inspectorProps({ fieldId: "intro" })}>
-              {currentFaq.intro}
-            </p>
-          )}
-          <dl
-            className="mt-16 divide-y divide-gray-900/10"
-            {...inspectorProps({ fieldId: "questions" })}
-          >
-            {renderQuestionsList(questions)}
-          </dl>
-        </div>
+      <div className="mx-auto max-w-4xl px-4 py-20">
+        <h1
+          className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
+          {...inspectorProps({ fieldId: "title" })}
+        >
+          {currentFaq.title}
+        </h1>
+        {currentFaq.intro && (
+          <p className="mt-6 text-base/7 text-gray-600" {...inspectorProps({ fieldId: "intro" })}>
+            {currentFaq.intro}
+          </p>
+        )}
+        <dl
+          className="mt-16 divide-y divide-gray-900/10"
+          {...inspectorProps({ fieldId: "questions" })}
+        >
+          {renderQuestionsList(questions)}
+        </dl>
       </div>
     </div>
   );

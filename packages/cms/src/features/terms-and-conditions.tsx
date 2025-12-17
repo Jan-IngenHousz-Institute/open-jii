@@ -126,7 +126,7 @@ export const TermsAndConditionsPage: React.FC<TermsAndConditionsContentProps> = 
   });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
+    <div className="mx-auto max-w-4xl px-4 py-20">
       <h1
         className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
         {...inspectorProps({ fieldId: "title" })}

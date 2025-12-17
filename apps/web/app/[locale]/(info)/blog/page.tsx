@@ -80,21 +80,21 @@ export default async function Page({ params }: LandingPageProps) {
 
   return (
     <TranslationsProvider locale={locale} resources={resources}>
-      <div className="from-jii-bright-green/40 relative isolate min-h-screen overflow-hidden bg-gradient-to-br via-white to-white pb-6">
+      <div className="from-jii-bright-green/40 relative isolate min-h-screen overflow-hidden bg-gradient-to-br via-white to-white">
         {/* Background skew block */}
         <div
           aria-hidden="true"
           className="shadow-primary/10 ring-jii-bright-green/20 absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
         />
 
-        <div className="pt-20">
+        <div className="py-20">
           <Container>
             <Link href={`/${locale}/blog/${page.featuredBlogPost.slug}`}>
               <ArticleHero article={page.featuredBlogPost} isFeatured={true} />
             </Link>
           </Container>
 
-          <Container className="my-8">
+          <Container className="mt-8">
             <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
               {t("landingPage.latestArticles")}
             </h2>

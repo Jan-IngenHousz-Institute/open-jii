@@ -35,24 +35,20 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
   });
 
   return (
-    <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-20">
-        <div className="mx-auto max-w-4xl">
-          <h1
-            className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
-            {...inspectorProps({ fieldId: "title" })}
-          >
-            {currentPolicies.title}
-          </h1>
+    <div className="mx-auto max-w-4xl px-4 py-20">
+      <h1
+        className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
+        {...inspectorProps({ fieldId: "title" })}
+      >
+        {currentPolicies.title}
+      </h1>
 
-          {/* Content */}
-          {currentPolicies.content?.json ? (
-            <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
-              <CtfRichText json={currentPolicies.content.json as Document} />
-            </div>
-          ) : null}
+      {/* Content */}
+      {currentPolicies.content?.json ? (
+        <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
+          <CtfRichText json={currentPolicies.content.json as Document} />
         </div>
-      </div>
+      ) : null}
     </div>
   );
 };
