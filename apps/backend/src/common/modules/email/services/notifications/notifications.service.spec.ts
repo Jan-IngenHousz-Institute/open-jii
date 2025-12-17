@@ -2,6 +2,7 @@ import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 
 import { AddedUserNotification } from "@repo/transactional/emails/added-user-notification";
+import { TransferRequestConfirmation } from "@repo/transactional/emails/transfer-request-confirmation";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
@@ -18,6 +19,10 @@ vi.mock("nodemailer", () => ({
 
 vi.mock("@repo/transactional/emails/added-user-notification", () => ({
   AddedUserNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/emails/transfer-request-confirmation", () => ({
+  TransferRequestConfirmation: vi.fn(),
 }));
 
 // Test constants
@@ -37,6 +42,7 @@ describe("NotificationsService", () => {
   const mockRender = render as ReturnType<typeof vi.fn>;
   const mockCreateTransport = createTransport as ReturnType<typeof vi.fn>;
   const mockAddedUserNotification = AddedUserNotification as ReturnType<typeof vi.fn>;
+  const mockTransferRequestConfirmation = TransferRequestConfirmation as ReturnType<typeof vi.fn>;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -384,6 +390,318 @@ describe("NotificationsService", () => {
         MOCK_ACTOR,
         MOCK_ROLE,
         MOCK_EMAIL,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: String error message");
+    });
+  });
+
+  describe("sendTransferRequestConfirmation", () => {
+    const MOCK_EMAIL = "test@example.com";
+    const MOCK_PROJECT_ID_OLD = "project-123";
+    const MOCK_PROJECT_URL_OLD = "https://photosynq.org/projects/123";
+
+    it("should successfully send confirmation email", async () => {
+      // Arrange
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      // Verify transport creation
+      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
+
+      // Verify email component rendering
+      expect(mockTransferRequestConfirmation).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        projectIdOld: MOCK_PROJECT_ID_OLD,
+        projectUrlOld: MOCK_PROJECT_URL_OLD,
+        userEmail: MOCK_EMAIL,
+      });
+
+      // Verify render was called for both HTML and text versions
+      expect(mockRender).toHaveBeenCalledTimes(2);
+      expect(mockRender).toHaveBeenCalledWith("mocked-component", {});
+      expect(mockRender).toHaveBeenCalledWith("mocked-component", { plainText: true });
+
+      // Verify sendMail was called with correct parameters
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: {
+          name: "openJII",
+          address: "noreply@localhost",
+        },
+        subject: "Project Transfer Request Received - openJII",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("should handle email with rejected addresses", async () => {
+      // Arrange
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [MOCK_EMAIL],
+        pending: [],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+
+    it("should handle email with pending addresses", async () => {
+      // Arrange
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [],
+        pending: [MOCK_EMAIL],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+
+    it("should handle multiple failed addresses", async () => {
+      // Arrange
+      const rejectedEmail1 = "rejected1@example.com";
+      const rejectedEmail2 = "rejected2@example.com";
+      const pendingEmail = "pending@example.com";
+
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [rejectedEmail1, rejectedEmail2],
+        pending: [pendingEmail],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(
+        `Email (${rejectedEmail1}, ${rejectedEmail2}, ${pendingEmail}) could not be sent`,
+      );
+    });
+
+    it("should handle failed addresses with object format", async () => {
+      // Arrange
+      const failedAddressObject = { address: "failed@example.com" };
+
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [failedAddressObject],
+        pending: [],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Email (failed@example.com) could not be sent");
+    });
+
+    it("should handle nodemailer transport creation errors", async () => {
+      // Arrange
+      const transportError = new Error("Failed to create transport");
+      mockCreateTransport.mockImplementation(() => {
+        throw transportError;
+      });
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: Failed to create transport");
+    });
+
+    it("should handle email rendering errors", async () => {
+      // Arrange
+      const renderError = new Error("Failed to render email template");
+      mockRender.mockRejectedValue(renderError);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      const mockTransport = {
+        sendMail: vi.fn(),
+      };
+      mockCreateTransport.mockReturnValue(mockTransport);
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(
+        "Failed to send email: Failed to render email template",
+      );
+    });
+
+    it("should handle sendMail errors", async () => {
+      // Arrange
+      const sendMailError = new Error("SMTP connection failed");
+      const mockSendMail = vi.fn().mockImplementation(() => {
+        throw sendMailError;
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+    });
+
+    it("should handle missing rejected and pending properties gracefully", async () => {
+      // Arrange
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      // Should not throw error when rejected/pending are undefined
+      expect(mockSendMail).toHaveBeenCalled();
+    });
+
+    it("should handle non-Error exceptions", async () => {
+      // Arrange
+      const stringError = new Error("String error message");
+      mockCreateTransport.mockImplementation(() => {
+        throw stringError;
+      });
+      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+
+      // Act
+      const result = await service.sendTransferRequestConfirmation(
+        MOCK_EMAIL,
+        MOCK_PROJECT_ID_OLD,
+        MOCK_PROJECT_URL_OLD,
       );
 
       // Assert

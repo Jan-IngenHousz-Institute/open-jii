@@ -10,6 +10,10 @@
     "./emails/verification-request": {
       "types": "./dist/emails/verification-request.d.ts",
       "default": "./dist/emails/verification-request.js"
+    },
+    "./emails/transfer-request-confirmation": {
+      "types": "./dist/emails/transfer-request-confirmation.d.ts",
+      "default": "./dist/emails/transfer-request-confirmation.js"
     }
   },
   "scripts": {
