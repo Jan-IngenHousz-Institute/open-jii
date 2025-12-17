@@ -5,6 +5,8 @@ fragment PageTermsAndConditionsFields on PageTermsAndConditions {
     publishedAt
     environmentId
   }
+  pageTitle
+  pageDescription
   internalName
   title
   content {
