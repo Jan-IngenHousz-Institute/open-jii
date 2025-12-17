@@ -4,8 +4,9 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import TermsAndConditionsPageRoute, { generateMetadata } from "./page";
 
+const mockDraftMode = vi.fn(() => Promise.resolve({ isEnabled: false }));
 vi.mock("next/headers", () => ({
-  draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
+  draftMode: () => mockDraftMode(),
 }));
 
 const mockPageTermsAndConditions = vi.fn();
@@ -196,5 +197,31 @@ describe("Terms and Conditions Page - Component", () => {
     await TermsAndConditionsPageRoute({ params: Promise.resolve({ locale: "en-US" as const }) });
 
     expect(mockPageTermsAndConditions).toHaveBeenCalledWith({ locale: "en-US", preview: false });
+  });
+
+  it("renders Terms and Conditions page in preview mode", async () => {
+    const mockTermsAndConditionsData = {
+      pageTitle: "Terms and Conditions",
+      pageDescription: "Read our terms and conditions of service",
+    };
+
+    mockPageTermsAndConditions.mockResolvedValueOnce({
+      pageTermsAndConditionsCollection: {
+        items: [mockTermsAndConditionsData],
+      },
+    });
+
+    // Mock draftMode to return enabled for this test
+    mockDraftMode.mockResolvedValueOnce({ isEnabled: true });
+
+    render(
+      await TermsAndConditionsPageRoute({
+        params: Promise.resolve({ locale: "en-US" as const }),
+      }),
+    );
+
+    expect(screen.getByTestId("terms-and-conditions-content")).toHaveTextContent(
+      "Terms and Conditions Content - en-US - preview - with data",
+    );
   });
 });

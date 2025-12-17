@@ -117,7 +117,7 @@ export const TermsAndConditionsPage: React.FC<TermsAndConditionsContentProps> = 
   );
 
   // Use fallback to original data
-  const currentTermsAndConditions = liveTermsAndConditions || termsAndConditions;
+  const currentTermsAndConditions = liveTermsAndConditions ?? termsAndConditions;
 
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
