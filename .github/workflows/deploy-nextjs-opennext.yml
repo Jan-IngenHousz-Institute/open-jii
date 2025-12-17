@@ -53,12 +53,12 @@ jobs:
           
           # Public URLs by environment
           if [[ "${{ inputs.environment }}" == "prod" ]]; then
-            NEXT_PUBLIC_API_URL="https://${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_BASE_URL="https://api.${WEB_BASE_ORIGIN}"
+            NEXT_PUBLIC_API_URL="https://api.${WEB_BASE_ORIGIN}"
+            NEXT_PUBLIC_BASE_URL="https://${WEB_BASE_ORIGIN}"
             ENVIRONMENT_PREFIX="prod"
           else
-            NEXT_PUBLIC_API_URL="https://dev.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_BASE_URL="https://api.dev.${WEB_BASE_ORIGIN}"
+            NEXT_PUBLIC_API_URL="https://api.dev.${WEB_BASE_ORIGIN}"
+            NEXT_PUBLIC_BASE_URL="https://dev.${WEB_BASE_ORIGIN}"
             ENVIRONMENT_PREFIX="dev"
           fi
 
