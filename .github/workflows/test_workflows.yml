@@ -17,6 +17,5 @@ jobs:
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: dev
-      dry-run: true
+      dry-run: false
     secrets: inherit
-
