@@ -856,7 +856,6 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("triggerExperimentPipeline", () => {
-    const experimentName = "Test Experiment";
     const experimentId = "123-456-789";
     const pipelineId = "pipeline-abc123";
 

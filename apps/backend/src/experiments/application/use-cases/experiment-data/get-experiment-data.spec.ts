@@ -748,7 +748,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM public_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_public_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_public_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -1572,12 +1572,11 @@ describe("GetExperimentDataUseCase", () => {
       pageSize: 5,
     });
 
-    // Assert - should only return tables with downstream: false
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value).toHaveLength(1); // Only one table should be returned
-    expect(result.value[0].name).toBe("enriched_sample_data");
-    expect(result.value[0].displayName).toBe("enriched_sample_data");
+    // Assert - should return error since tableName is now required (deprecated behavior)
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("BAD_REQUEST");
+    expect(result.error.message).toContain("tableName parameter is required");
   });
 
   it("should return forbidden error when trying to access table with downstream: true", async () => {

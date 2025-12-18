@@ -51,7 +51,7 @@ describe("UpdateAnnotation", () => {
     });
 
     // Mock DatabricksAdapter methods
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       success({
         columns: [
           { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
@@ -152,7 +152,7 @@ describe("UpdateAnnotation", () => {
     });
 
     // Mock Databricks adapter error
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       failure({
         message: "Failed to update annotation: INTERNAL_ERROR",
         code: "DATABRICKS_ERROR",

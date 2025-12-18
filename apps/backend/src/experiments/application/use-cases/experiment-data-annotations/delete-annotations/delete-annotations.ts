@@ -57,10 +57,14 @@ export class DeleteAnnotationsUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
+        if (!experiment.schemaName) {
+          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          return failure(AppError.internal("Experiment schema not provisioned"));
+        }
+
         if ("annotationId" in request) {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotation(
-            experiment.name,
-            experimentId,
+            experiment.schemaName,
             request.annotationId,
           );
 
@@ -86,8 +90,7 @@ export class DeleteAnnotationsUseCase {
           return success(result.value);
         } else {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
-            experiment.name,
-            experimentId,
+            experiment.schemaName,
             request.tableName,
             request.rowIds,
             request.type,

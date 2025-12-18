@@ -49,8 +49,7 @@ describe("GetExperimentTablesUseCase", () => {
         userId: testUserId,
       });
 
-      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experiment.id}`;
+      const schemaName = experiment.schemaName ?? `exp_test_experiment_for_tables_${experiment.id}`;
 
       // Mock listTables response
       const mockTablesResponse: ListTablesResponse = {
@@ -127,7 +126,7 @@ describe("GetExperimentTablesUseCase", () => {
 
       // Verify Databricks adapter calls
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksPort.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      expect(databricksPort.listTables).toHaveBeenCalledWith(schemaName);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         schemaName,

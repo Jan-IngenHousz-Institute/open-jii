@@ -173,19 +173,6 @@ export interface DatabricksPort {
   getExperimentVolume(schemaName: string, volumeName: string): Promise<Result<VolumeResponse>>;
 
   /**
-   * Execute a SQL query in an experiment schema
-   *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
-   * @param sqlStatement - The SQL statement to execute
-   */
-  executeExperimentSqlQuery(
-    experimentName: string,
-    experimentId: string,
-    sqlStatement: string,
-  ): Promise<Result<SchemaData>>;
-
-  /**
    * Refresh all silver quality tables for an experiment with full refresh
    *
    * @param schemaName - Schema name of the experiment

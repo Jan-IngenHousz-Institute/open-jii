@@ -65,8 +65,13 @@ export class AddAnnotationsUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
+        if (!experiment.schemaName) {
+          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          return failure(AppError.internal("Experiment schema not provisioned"));
+        }
+
         const createResult = await this.experimentDataAnnotationsRepository.ensureTableExists(
-          experiment.name,
+          experiment.schemaName,
           experimentId,
         );
         if (createResult.isFailure()) {
@@ -108,8 +113,7 @@ export class AddAnnotationsUseCase {
         });
 
         const result = await this.experimentDataAnnotationsRepository.storeAnnotations(
-          experiment.name,
-          experimentId,
+          experiment.schemaName,
           newAnnotations,
         );
 

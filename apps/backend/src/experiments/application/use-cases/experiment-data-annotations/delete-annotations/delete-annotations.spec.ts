@@ -50,7 +50,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock DatabricksAdapter methods
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       success({
         columns: [
           { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
@@ -95,7 +95,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock DatabricksAdapter methods
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       success({
         columns: [
           { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
@@ -186,7 +186,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock DatabricksAdapter to fail
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       failure({
         message: "Databricks SQL query execution failed",
         code: "DATABRICKS_ERROR",

@@ -57,7 +57,7 @@ describe("AddAnnotations", () => {
       }),
     );
 
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
+    vi.spyOn(databricksAdapter, "executeSqlQuery")
       .mockResolvedValueOnce(
         success({
           columns: [],
@@ -228,7 +228,7 @@ describe("AddAnnotations", () => {
     );
 
     // Mock table creation to fail
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       failure({
         message: "Databricks SQL query execution failed",
         code: "DATABRICKS_ERROR",
@@ -280,7 +280,7 @@ describe("AddAnnotations", () => {
     );
 
     // Mock table creation and alter to succeed, then insert to fail
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
+    vi.spyOn(databricksAdapter, "executeSqlQuery")
       .mockResolvedValueOnce(
         success({
           columns: [],
@@ -347,7 +347,7 @@ describe("AddAnnotations", () => {
     );
 
     // Mock DatabricksAdapter methods
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
+    vi.spyOn(databricksAdapter, "executeSqlQuery")
       .mockResolvedValueOnce(
         success({
           columns: [],
@@ -420,7 +420,7 @@ describe("AddAnnotations", () => {
     );
 
     // Mock DatabricksAdapter methods
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery")
+    vi.spyOn(databricksAdapter, "executeSqlQuery")
       .mockResolvedValueOnce(
         success({
           columns: [],
@@ -512,7 +512,7 @@ describe("AddAnnotations", () => {
     );
 
     // Mock only the INSERT operation (no CREATE/ALTER since table exists)
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValueOnce(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       success({
         columns: [
           { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
@@ -549,8 +549,8 @@ describe("AddAnnotations", () => {
     assertSuccess(result);
     expect(result.value.rowsAffected).toBe(1);
 
-    // Verify that executeExperimentSqlQuery was called only once (for INSERT)
+    // Verify that executeSqlQuery was called only once (for INSERT)
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.executeExperimentSqlQuery).toHaveBeenCalledTimes(1);
+    expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(1);
   });
 });

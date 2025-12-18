@@ -115,19 +115,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Execute a SQL query in an experiment schema with table name convenience
-   */
-  async executeExperimentSqlQuery(
-    experimentName: string,
-    experimentId: string,
-    sqlStatement: string,
-  ): Promise<Result<SchemaData>> {
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
-    return this.executeSqlQuery(schemaName, sqlStatement);
-  }
-
-  /**
    * Download experiment data using EXTERNAL_LINKS disposition for large datasets
    */
   async downloadExperimentData(

@@ -58,6 +58,11 @@ export class UpdateAnnotationUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
+        if (!experiment.schemaName) {
+          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          return failure(AppError.internal("Experiment schema not provisioned"));
+        }
+
         const updateAnnotation: UpdateAnnotationDto = {};
         if ("text" in data.content) {
           updateAnnotation.contentText = data.content.text;
@@ -68,8 +73,7 @@ export class UpdateAnnotationUseCase {
         }
 
         const result = await this.experimentDataAnnotationsRepository.updateAnnotation(
-          experiment.name,
-          experimentId,
+          experiment.schemaName,
           annotationId,
           updateAnnotation,
         );

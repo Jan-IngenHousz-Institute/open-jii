@@ -76,12 +76,15 @@ export class GetExperimentTablesUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        // Form the schema name based on experiment ID and name
-        const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
-        const schemaName = `exp_${cleanName}_${experimentId}`;
+        if (!experiment.schemaName) {
+          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          return failure(AppError.internal("Experiment schema not provisioned"));
+        }
+
+        const schemaName = experiment.schemaName;
 
         // Get list of tables
-        const tablesResult = await this.databricksPort.listTables(experiment.name, experimentId);
+        const tablesResult = await this.databricksPort.listTables(schemaName);
 
         if (tablesResult.isFailure()) {
           return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));

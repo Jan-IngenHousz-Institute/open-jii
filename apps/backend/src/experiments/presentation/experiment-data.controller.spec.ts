@@ -1257,8 +1257,7 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experiment.id}`;
+      const schemaName = experiment.schemaName ?? `exp_test_experiment_for_tables_${experiment.id}`;
 
       const mockTablesResponse: ListTablesResponse = {
         tables: [
@@ -1323,7 +1322,7 @@ describe("ExperimentDataController", () => {
       ]);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(schemaName);
     });
 
     it("should return 404 when experiment does not exist", async () => {
