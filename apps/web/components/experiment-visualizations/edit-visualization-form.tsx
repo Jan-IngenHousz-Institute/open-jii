@@ -1,9 +1,9 @@
 "use client";
 
-import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
 import { Loader2 } from "lucide-react";
 
+import type { ExperimentTableMetadata } from "@repo/api";
 import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { WizardForm } from "@repo/ui/components";
@@ -21,7 +21,7 @@ import { DataSourceStep, dataSourceSchema } from "./wizard-steps/data-source-ste
 interface EditVisualizationFormProps {
   experimentId: string;
   visualization: ExperimentVisualization;
-  sampleTables: SampleTable[];
+  tables: ExperimentTableMetadata[];
   onSuccess: (visualizationId: string) => void;
   isLoading?: boolean;
   isPreviewOpen: boolean;
@@ -31,7 +31,7 @@ interface EditVisualizationFormProps {
 export default function EditVisualizationForm({
   experimentId,
   visualization,
-  sampleTables,
+  tables,
   onSuccess,
   isLoading: isLoadingTables = false,
   isPreviewOpen = false,
@@ -96,7 +96,7 @@ export default function EditVisualizationForm({
       component: (props: WizardStepProps<ChartFormValues>) => (
         <DataSourceStep
           {...props}
-          tables={sampleTables}
+          tables={tables}
           experimentId={experimentId}
           isPreviewOpen={isPreviewOpen}
           onPreviewClose={onPreviewClose}

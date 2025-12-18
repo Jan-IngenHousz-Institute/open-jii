@@ -21,6 +21,7 @@ import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-dat
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
+import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
 import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locations/geocode-location";
@@ -45,6 +46,8 @@ import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
 import { GetExperimentAccessUseCase } from "./application/use-cases/get-experiment-access/get-experiment-access";
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
+import { CreateTransferRequestUseCase } from "./application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
+import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
@@ -60,6 +63,7 @@ import { ExperimentProtocolRepository } from "./core/repositories/experiment-pro
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
+import { ProjectTransferRequestsRepository } from "./core/repositories/project-transfer-requests.repository";
 // Controllers
 import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
@@ -70,6 +74,7 @@ import { ExperimentProtocolsController } from "./presentation/experiment-protoco
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
+import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 
 @Module({
   imports: [DatabricksModule, AwsModule, EmailModule, UserModule, AnalyticsModule],
@@ -83,6 +88,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentWebhookController,
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
+    ProjectTransferRequestsController,
   ],
   providers: [
     // Port implementations
@@ -111,6 +117,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentVisualizationRepository,
     FlowRepository,
     LocationRepository,
+    ProjectTransferRequestsRepository,
 
     // Services
     EmbargoProcessorService,
@@ -127,6 +134,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 
     // Experiment data use cases
     GetExperimentDataUseCase,
+    GetExperimentTablesUseCase,
     UploadAmbyteDataUseCase,
     DownloadExperimentDataUseCase,
 
@@ -164,6 +172,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
     AddAnnotationsUseCase,
     UpdateAnnotationUseCase,
     DeleteAnnotationsUseCase,
+
+    // Project transfer request use cases
+    CreateTransferRequestUseCase,
+    ListTransferRequestsUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
 })

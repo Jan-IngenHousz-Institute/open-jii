@@ -59,7 +59,9 @@
     "profile": "Profile",
     "logout": "Sign out",
     "home": "Home",
-    "openJII": "openJII"
+    "openJII": "openJII",
+    "support": "Support",
+    "faq": "FAQ"
   },
   "experiments": {
     "filterMy": "My Experiments",
@@ -152,7 +154,38 @@
     "noMacrosFound": "No macros found",
     "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
     "noMacrosAvailable": "No macros available",
-    "createFirstMacro": "Create your first macro to get started"
+    "createFirstMacro": "Create your first macro to get started",
+    "requestTransfer": "Request Project Transfer"
+  },
+  "transferRequest": {
+    "title": "Request Project Transfer",
+    "introText": "We invite you to join openJII and continue your research without interruption. Using the form below, you can request the transfer of your data from the PhotosynQ platform. You remain in full control of what data is migrated and when. You may explore the platform first and request a data transfer later.",
+    "processText": "After submitting the form, our team will transfer your data and notify you once the process is complete. If you have multiple projects you want to transfer, you will have to make separate requests.",
+    "yourRequests": "Your Transfer Requests",
+    "noRequests": "No transfer requests yet",
+    "noRequestsDescription": "You haven't submitted any project transfer requests.",
+    "requestedAt": "Requested on",
+    "errorLoadingRequests": "Failed to load your transfer requests. Please try again later.",
+    "importantNote": "Important Information",
+    "note1": "Project transfers are not immediate and may require time to process.",
+    "note2": "We will contact you via your openJII account email if we need additional information.",
+    "note3": "You will receive an email notification once the transfer has been completed.",
+    "projectIdLabel": "PhotosynQ Project ID",
+    "projectIdPlaceholder": "Enter the Project ID from PhotosynQ",
+    "projectIdDescription": "You can find this in your PhotosynQ project page in the left bar under “Project ID”",
+    "projectUrlLabel": "PhotosynQ Project URL",
+    "projectUrlPlaceholder": "https://photosynq.org/projects/...",
+    "projectUrlDescription": "The full URL to your project on PhotosynQ",
+    "consentLabel": "I confirm that I am the owner of this project or have permission to request this transfer.",
+    "submitButton": "Submit Transfer Request",
+    "successTitle": "Transfer Request Submitted",
+    "successMessage": "Thank you! We've received your transfer request. We'll contact you if we need more information and let you know when the project is available in openJII.",
+    "submitAnother": "Submit Another Request",
+    "errorTitle": "Submission Failed",
+    "errorMessage": "Something went wrong while submitting your request. Please try again later.",
+    "formTab": "Form",
+    "historyTab": "Previous Requests",
+    "errorLoadingRequest": "Error loading transfer requests"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
@@ -281,6 +314,9 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to openJII",
+    "transferBannerTitle": "Welcome to openJII",
+    "transferBannerDescription": "Continue your research without interruption, transfer your data now.",
+    "transferBannerButton": "Request Project Transfer",
     "recentExperiments": "Recent Experiments",
     "recentArticles": "Recent blog posts",
     "yourExperiments": "Your recent experiments",

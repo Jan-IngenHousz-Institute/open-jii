@@ -1,8 +1,8 @@
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import XAxisConfiguration from "./x-axis-configuration";
@@ -24,7 +24,7 @@ beforeAll(() => {
 });
 
 // Mock table data
-const mockTable: SampleTable = {
+const mockTable: ExperimentTableWithColumns = {
   name: "test-table",
   tableMetadata: {
     columns: [],
@@ -47,7 +47,7 @@ function TestWrapper({
   xAxisDataSources,
 }: {
   defaultValues?: Partial<ChartFormValues>;
-  table?: SampleTable;
+  table?: ExperimentTableWithColumns;
   xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
 }) {
   const methods = useForm<ChartFormValues>({

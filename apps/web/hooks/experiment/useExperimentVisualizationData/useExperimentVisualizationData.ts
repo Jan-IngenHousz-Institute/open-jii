@@ -66,36 +66,3 @@ export const useExperimentVisualizationData = (
     error,
   };
 };
-
-/**
- * Hook to fetch available tables for an experiment
- * @param experimentId The ID of the experiment
- * @returns Query result containing available tables
- */
-export const useExperimentTables = (experimentId: string) => {
-  const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: {
-        pageSize: 1, // Just get table info, not much data
-      },
-    },
-    queryKey: ["experiment-tables", experimentId],
-    staleTime: STALE_TIME,
-  });
-
-  const tables =
-    data?.body.map((table) => ({
-      name: table.name,
-      catalog_name: table.catalog_name,
-      schema_name: table.schema_name,
-      totalRows: table.totalRows,
-      columns: table.data?.columns ?? [],
-    })) ?? [];
-
-  return {
-    tables,
-    isLoading,
-    error,
-  };
-};

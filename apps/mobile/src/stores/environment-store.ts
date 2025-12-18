@@ -40,7 +40,7 @@ export const useEnvironmentStore = create<EnvironmentStoreState & EnvironmentSto
         return () => {
           const state = useEnvironmentStore.getState();
           if (!state.environment) {
-            useEnvironmentStore.setState({ environment: "dev" });
+            useEnvironmentStore.setState({ environment: "prod" });
           }
           useEnvironmentStore.setState({ isLoaded: true });
         };
