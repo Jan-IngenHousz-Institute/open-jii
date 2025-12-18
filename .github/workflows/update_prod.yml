@@ -38,7 +38,7 @@ jobs:
 
   deploy-docs:
     needs: deploy-backend
-    name: Deploy Frontend Deployment Workflow
+    name: Deploy Docs Deployment Workflow
     uses: ./.github/workflows/deploy-docs.yml
     with:
       environment: prod
