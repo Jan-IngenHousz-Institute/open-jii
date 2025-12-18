@@ -33,3 +33,34 @@ variable "container_port" {
   type        = number
   default     = 3020
 }
+
+# Feature toggles
+variable "create_aurora_resources" {
+  description = "Whether to create Aurora DB security group and related resources"
+  type        = bool
+  default     = true
+}
+
+variable "create_alb_resources" {
+  description = "Whether to create ALB security group"
+  type        = bool
+  default     = true
+}
+
+variable "create_ecs_resources" {
+  description = "Whether to create ECS security group"
+  type        = bool
+  default     = true
+}
+
+variable "create_migration_resources" {
+  description = "Whether to create migration task security group"
+  type        = bool
+  default     = true
+}
+
+variable "create_lambda_resources" {
+  description = "Whether to create Lambda (OpenNext server) security group"
+  type        = bool
+  default     = true
+}
