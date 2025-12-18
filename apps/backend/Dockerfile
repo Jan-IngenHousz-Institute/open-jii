@@ -21,6 +21,7 @@ ARG PROJECT=backend
 WORKDIR /app
 COPY . .
 RUN turbo prune ${PROJECT} --docker
+RUN cp -r ./patches ./out/patches
 
 # Build the project
 FROM base AS builder
@@ -32,6 +33,8 @@ WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
+# Copy patches for pnpm patch support
+COPY --from=pruner /app/out/patches ./patches
 
 # First install the dependencies (as they change less often)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
