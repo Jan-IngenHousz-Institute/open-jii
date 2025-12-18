@@ -11,11 +11,6 @@ on:
         description: "Target environment (dev, staging, prod)"
         required: true
         type: string
-      apply:
-        description: "Whether to apply changes (true) or just plan (false)"
-        required: false
-        type: boolean
-        default: false
       tofu_version:
         description: "OpenTofu version to use"
         required: false
@@ -44,10 +39,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-infrastructure:
-    name: OpenTofu ${{ inputs.apply && 'Apply' || 'Plan' }}
+  plan:
+    name: OpenTofu Plan
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment }}-secrets
     permissions:
       id-token: write
       contents: read
@@ -94,6 +89,51 @@ jobs:
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
 
+  apply:
+    name: OpenTofu Apply
+    needs: plan
+    if: inputs.apply
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}  # This environment should have required reviewers for approval
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      environment: ${{ inputs.environment }}
+      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+      TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
+      TF_VAR_github_oauth_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+      TF_VAR_github_oauth_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+      TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
+      TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
+      TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+      TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
+      TF_VAR_contentful_space_id: ${{ secrets.CONTENTFUL_SPACE_ID }}
+      TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
+      TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
+      TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}
+      TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
+      TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: ${{ inputs.tofu_version }}
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+
       - name: OpenTofu Apply
-        if: inputs.apply
         uses: ./.github/actions/tofu/tofu-apply
