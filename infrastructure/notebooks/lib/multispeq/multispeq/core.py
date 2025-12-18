@@ -133,7 +133,7 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
     Process macro output to ensure compatibility with Spark DataFrame creation
     
     This function converts complex objects to JSON strings while preserving
-    primitive arrays and basic data types.
+    primitive arrays and basic data types. Also sanitizes column names for Delta compatibility.
     
     Args:
         output: Raw macro output dictionary
@@ -141,70 +141,93 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Processed output ready for Spark DataFrame creation
     """
+    import re
+    
     print(f"[MACRO] Processing macro output for Spark compatibility")
     print(f"[MACRO] Input output keys: {list(output.keys()) if output else 'None'}")
     
-    processed_output = output.copy()
+    def sanitize_column_name(name: str) -> str:
+        """Replace invalid characters in column names with underscores"""
+        # Replace spaces and invalid characters ( ,;{}()\n\t=) with underscores
+        sanitized = re.sub(r'[ ,;{}\(\)\n\t=]', '_', name)
+        # Remove any consecutive underscores
+        sanitized = re.sub(r'_+', '_', sanitized)
+        # Remove leading/trailing underscores
+        sanitized = sanitized.strip('_')
+        return sanitized
+    
+    processed_output = {}
     conversions_made = 0
     
-    for key, value in processed_output.items():
+    for key, value in output.items():
+        sanitized_key = sanitize_column_name(key)
         original_type = type(value).__name__
         
         if isinstance(value, dict):
             # Flatten dict: convert all keys and values to strings for MAP<STRING,STRING>
-            processed_output[key] = {str(k): str(v) for k, v in value.items()}
+            processed_output[sanitized_key] = {str(k): str(v) for k, v in value.items()}
             conversions_made += 1
-            print(f"[MACRO] Flattened dict '{key}' to MAP<STRING,STRING>")
+            print(f"[MACRO] Flattened dict '{key}' to MAP<STRING,STRING> (sanitized: '{sanitized_key}')")
         elif isinstance(value, str):
             try:
                 parsed = json.loads(value)
                 if isinstance(parsed, dict):
                     # Flatten dict: convert all values to strings
-                    processed_output[key] = {str(k): str(v) for k, v in parsed.items()}
+                    processed_output[sanitized_key] = {str(k): str(v) for k, v in parsed.items()}
                     conversions_made += 1
-                    print(f"[MACRO] Parsed and flattened JSON string '{key}' to MAP<STRING,STRING>")
+                    print(f"[MACRO] Parsed and flattened JSON string '{key}' to MAP<STRING,STRING> (sanitized: '{sanitized_key}')")
                 elif isinstance(parsed, list):
-                    processed_output[key] = parsed
+                    processed_output[sanitized_key] = parsed
                     conversions_made += 1
-                    print(f"[MACRO] Parsed JSON string '{key}' to list")
+                    print(f"[MACRO] Parsed JSON string '{key}' to list (sanitized: '{sanitized_key}')")
             except (json.JSONDecodeError, TypeError):
-                print(f"[MACRO] Kept string '{key}' as-is ({original_type})")
+                processed_output[sanitized_key] = value
+                print(f"[MACRO] Kept string '{key}' as-is ({original_type}) (sanitized: '{sanitized_key}')")
         elif isinstance(value, list):
             # Check if it's an array of primitives (strings, numbers)
             if len(value) > 0:
-                first_element = value[0]
-                if not isinstance(first_element, (str, int, float)):
+                # Find first non-None element to determine array type
+                first_non_none = next((elem for elem in value if elem is not None), None)
+                
+                if first_non_none is None:
+                    # All elements are None, treat as array of zeros
+                    processed_output[sanitized_key] = value
+                    print(f"[MACRO] Kept all-null array '{key}' as-is (sanitized: '{sanitized_key}')")
+                elif not isinstance(first_non_none, (str, int, float)):
                     # Convert complex arrays to JSON string
-                    processed_output[key] = json.dumps(value)
+                    processed_output[sanitized_key] = json.dumps(value)
                     conversions_made += 1
-                    print(f"[MACRO] Converted complex array '{key}' to JSON string")
+                    print(f"[MACRO] Converted complex array '{key}' to JSON string (sanitized: '{sanitized_key}')")
                 else:
                     # Check if this is a numeric array that needs type normalization
                     all_numeric = all(isinstance(elem, (int, float)) for elem in value if elem is not None)
                     if all_numeric:
                         # Convert all numeric arrays to float to prevent LongType/DoubleType conflicts
                         # This is essential because JavaScript TransformTrace functions can return mixed int/float arrays
-                        processed_output[key] = [float(elem) if elem is not None else None for elem in value]
+                        processed_output[sanitized_key] = [float(elem) if elem is not None else 0.0 for elem in value]
                         conversions_made += 1
-                        print(f"[MACRO] Normalized numeric array '{key}' to all floats ({original_type})")
+                        print(f"[MACRO] Normalized numeric array '{key}' to all floats ({original_type}) (sanitized: '{sanitized_key}')")
                     else:
-                        print(f"[MACRO] Kept primitive array '{key}' as-is ({original_type})")
+                        processed_output[sanitized_key] = value
+                        print(f"[MACRO] Kept primitive array '{key}' as-is ({original_type}) (sanitized: '{sanitized_key}')")
             else:
-                print(f"[MACRO] Kept empty array '{key}' as-is")
+                processed_output[sanitized_key] = value
+                print(f"[MACRO] Kept empty array '{key}' as-is (sanitized: '{sanitized_key}')")
             # else: keep as array for primitive types
         elif key != "processed_timestamp":
             # Convert individual numeric values to float to ensure consistency across rows
             if isinstance(value, int):
-                processed_output[key] = float(value)
+                processed_output[sanitized_key] = float(value)
                 conversions_made += 1
-                print(f"[MACRO] Converted integer '{key}' to float for consistency")
+                print(f"[MACRO] Converted integer '{key}' to float for consistency (sanitized: '{sanitized_key}')")
             elif not isinstance(value, (str, float, bool)):
                 # Convert other non-primitive types to string
-                processed_output[key] = str(value)
+                processed_output[sanitized_key] = str(value)
                 conversions_made += 1
-                print(f"[MACRO] Converted non-primitive '{key}' ({original_type}) to string")
+                print(f"[MACRO] Converted non-primitive '{key}' ({original_type}) to string (sanitized: '{sanitized_key}')")
             else:
-                print(f"[MACRO] Kept primitive '{key}' as-is ({original_type})")
+                processed_output[sanitized_key] = value
+                print(f"[MACRO] Kept primitive '{key}' as-is ({original_type}) (sanitized: '{sanitized_key}')")
     
     print(f"[MACRO] Macro output processing completed, {conversions_made} conversions made")
     return processed_output
@@ -232,6 +255,18 @@ def infer_macro_schema(macro_name: str, sample_data: dict, macros_path: str = "/
         
         # Process the output the same way it will be processed in the actual pipeline
         output = process_macro_output_for_spark(raw_output)
+        
+        # Sanitize column names for Delta table compatibility
+        def sanitize_column_name(name: str) -> str:
+            """Replace invalid characters in column names with underscores"""
+            import re
+            # Replace spaces and invalid characters ( ,;{}()\n\t=) with underscores
+            sanitized = re.sub(r'[ ,;{}\(\)\n\t=]', '_', name)
+            # Remove any consecutive underscores
+            sanitized = re.sub(r'_+', '_', sanitized)
+            # Remove leading/trailing underscores
+            sanitized = sanitized.strip('_')
+            return sanitized
             
         # Analyze the macro output structure and build StructType
         def infer_spark_field(key, value):
@@ -277,10 +312,11 @@ def infer_macro_schema(macro_name: str, sample_data: dict, macros_path: str = "/
             else:
                 return StructField(key, StringType(), True)  # Default fallback
         
-        # Build struct fields from macro output
+        # Build struct fields from macro output with sanitized column names
         struct_fields = []
         for key, value in output.items():
-            field = infer_spark_field(key, value)
+            sanitized_key = sanitize_column_name(key)
+            field = infer_spark_field(sanitized_key, value)
             struct_fields.append(field)
         
         return StructType(struct_fields)
