@@ -12,9 +12,17 @@ permissions:
   id-token: write
 
 jobs:
-  test-workflows:
-    name: Test Backend Deployment Workflow
+  deploy-backend:
+    name: Deploy Backend Deployment Workflow
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: dev
+    secrets: inherit
+
+  deploy-nextjs-opennext:
+    name: Deploy Next.js OpenNext Deployment Workflow
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    with:
+      environment: dev
+      dry-run: false
     secrets: inherit
