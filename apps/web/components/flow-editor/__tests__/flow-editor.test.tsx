@@ -189,7 +189,7 @@ vi.mock("../flow-mapper", () => {
 /** Robustly read an integer from a test id */
 const readCount = (testId: string): number => {
   const el = screen.getByTestId(testId);
-  const n = Number.parseInt(el.textContent ?? "0", 10);
+  const n = Number.parseInt(el.textContent, 10);
   return Number.isNaN(n) ? 0 : n;
 };
 

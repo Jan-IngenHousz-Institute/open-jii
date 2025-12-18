@@ -403,11 +403,11 @@ describe("<UnifiedNavbar />", () => {
 
     const mobileLinks = within(mobileDropdown).getAllByRole("link");
 
-    const aboutLink = mobileLinks.find((link) => link.textContent?.includes("About"));
+    const aboutLink = mobileLinks.find((link) => link.textContent.includes("About"));
     expect(aboutLink).toHaveAttribute("aria-current", "page");
     expect(aboutLink).toHaveClass("bg-accent");
 
-    const homeLink = mobileLinks.find((link) => link.textContent?.includes("Home"));
+    const homeLink = mobileLinks.find((link) => link.textContent.includes("Home"));
     expect(homeLink).not.toHaveAttribute("aria-current");
   });
 });

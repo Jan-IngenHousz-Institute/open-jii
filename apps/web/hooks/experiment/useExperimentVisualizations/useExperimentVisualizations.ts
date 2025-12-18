@@ -31,7 +31,7 @@ export const useExperimentVisualizations = ({
   });
 
   // Helper functions for pagination
-  const hasNextPage = data?.body && data.body.length === limit;
+  const hasNextPage = data?.body.length === limit;
   const hasPreviousPage = offset > 0;
 
   const nextPage = () => {
