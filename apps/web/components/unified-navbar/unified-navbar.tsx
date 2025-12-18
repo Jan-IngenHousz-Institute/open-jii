@@ -307,7 +307,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                       <Link
                         href={item.href}
                         className={`flex items-center space-x-3 ${
-                          item.isActive ? "bg-accent" : ""
+                          item.isActive ? "bg-surface-dark" : ""
                         }`}
                         aria-current={item.isActive ? "page" : undefined}
                       >
