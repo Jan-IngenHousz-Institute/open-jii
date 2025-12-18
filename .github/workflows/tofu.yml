@@ -122,6 +122,7 @@ jobs:
       TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+      TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
