@@ -93,85 +93,85 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Resolve task definition JSON from ARN
-        run: |
-          set -euo pipefail
-          if [[ -z "${TASK_DEFINITION_ARN:-}" ]]; then
-            echo "::error::TASK_DEFINITION_ARN is not set. Ensure SSM parameter /backend/${{ env.ENV }}/ecs/task-definition-arn is present and loaded by 'Get Infrastructure Configuration'."
-            exit 1
-          fi
+      # - name: Resolve task definition JSON from ARN
+      #   run: |
+      #     set -euo pipefail
+      #     if [[ -z "${TASK_DEFINITION_ARN:-}" ]]; then
+      #       echo "::error::TASK_DEFINITION_ARN is not set. Ensure SSM parameter /backend/${{ env.ENV }}/ecs/task-definition-arn is present and loaded by 'Get Infrastructure Configuration'."
+      #       exit 1
+      #     fi
 
-          echo "Fetching task definition JSON for ARN: ${TASK_DEFINITION_ARN}"
-          aws ecs describe-task-definition \
-            --task-definition "${TASK_DEFINITION_ARN}" \
-            --query taskDefinition > task-definition.json
+      #     echo "Fetching task definition JSON for ARN: ${TASK_DEFINITION_ARN}"
+      #     aws ecs describe-task-definition \
+      #       --task-definition "${TASK_DEFINITION_ARN}" \
+      #       --query taskDefinition > task-definition.json
 
-          echo "ECS_TASK_DEFINITION=task-definition.json" >> "$GITHUB_ENV"
+      #     echo "ECS_TASK_DEFINITION=task-definition.json" >> "$GITHUB_ENV"
 
-      - name: Capture current service task definition
-        id: prev-task-def
-        run: |
-          set -euo pipefail
-          PREV=$(aws ecs describe-services \
-            --cluster "backend-cluster-${{ env.ENV }}" \
-            --services "backend-${{ env.ENV }}" \
-            --query "services[0].taskDefinition" \
-            --output text 2>/dev/null || echo "")
+      # - name: Capture current service task definition
+      #   id: prev-task-def
+      #   run: |
+      #     set -euo pipefail
+      #     PREV=$(aws ecs describe-services \
+      #       --cluster "backend-cluster-${{ env.ENV }}" \
+      #       --services "backend-${{ env.ENV }}" \
+      #       --query "services[0].taskDefinition" \
+      #       --output text 2>/dev/null || echo "")
 
-          if [[ -z "$PREV" || "$PREV" == "None" ]]; then
-            echo "::warning::Previous task definition not found; rollback will be skipped"
-          else
-            echo "PREV_TASK_DEFINITION_ARN=$PREV" >> "$GITHUB_ENV"
-            echo "prev_task_definition_arn=$PREV" >> "$GITHUB_OUTPUT"
-          fi
+      #     if [[ -z "$PREV" || "$PREV" == "None" ]]; then
+      #       echo "::warning::Previous task definition not found; rollback will be skipped"
+      #     else
+      #       echo "PREV_TASK_DEFINITION_ARN=$PREV" >> "$GITHUB_ENV"
+      #       echo "prev_task_definition_arn=$PREV" >> "$GITHUB_OUTPUT"
+      #     fi
       
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+      # - name: Fill in the new image ID in the Amazon ECS task definition
+      #   id: task-def
+      #   uses: aws-actions/amazon-ecs-render-task-definition@v1
+      #   with:
+      #     task-definition: ${{ env.ECS_TASK_DEFINITION }}
+      #     container-name: ${{ env.CONTAINER_NAME }}
+      #     image: ${{ steps.build-image.outputs.image }}
 
-      - name: Deploy to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: backend-${{ env.ENV }}
-          cluster: backend-cluster-${{ env.ENV }}
-          wait-for-service-stability: true
+      # - name: Deploy to Amazon ECS
+      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      #   with:
+      #     task-definition: ${{ steps.task-def.outputs.task-definition }}
+      #     service: backend-${{ env.ENV }}
+      #     cluster: backend-cluster-${{ env.ENV }}
+      #     wait-for-service-stability: true
 
-      - name: Roll back to previous task definition
-        if: failure() && env.PREV_TASK_DEFINITION_ARN != ''
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ env.PREV_TASK_DEFINITION_ARN }}
-          service: backend-${{ env.ENV }}
-          cluster: backend-cluster-${{ env.ENV }}
-          wait-for-service-stability: true
+      # - name: Roll back to previous task definition
+      #   if: failure() && env.PREV_TASK_DEFINITION_ARN != ''
+      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      #   with:
+      #     task-definition: ${{ env.PREV_TASK_DEFINITION_ARN }}
+      #     service: backend-${{ env.ENV }}
+      #     cluster: backend-cluster-${{ env.ENV }}
+      #     wait-for-service-stability: true
 
-      - name: Clean up
-        if: always()
-        run: |
-          # Clean up temporary files
-          rm -f task-definition.json || true
+      # - name: Clean up
+      #   if: always()
+      #   run: |
+      #     # Clean up temporary files
+      #     rm -f task-definition.json || true
 
-      - name: Deployment Summary
-        run: |
-          echo "::group::=== Deployment Summary ==="
-          echo "Environment: ${{ env.ENV }}"
-          echo "Image tag: ${{ github.sha }}"
-          echo "AWS Region: ${{ secrets.AWS_REGION }}"
+      # - name: Deployment Summary
+      #   run: |
+      #     echo "::group::=== Deployment Summary ==="
+      #     echo "Environment: ${{ env.ENV }}"
+      #     echo "Image tag: ${{ github.sha }}"
+      #     echo "AWS Region: ${{ secrets.AWS_REGION }}"
 
-          echo "✅ Deployment completed successfully!"
-          echo "🌐 The backend service has been updated in the ${{ env.ENV }} environment"
-          echo "🕒 Deployment finished at $(date)"
+      #     echo "✅ Deployment completed successfully!"
+      #     echo "🌐 The backend service has been updated in the ${{ env.ENV }} environment"
+      #     echo "🕒 Deployment finished at $(date)"
 
-          # Get the service URL if available
-          SERVICE_URL=$(aws ecs describe-services --cluster "backend-cluster-${{ env.ENV }}" --services "backend-${{ env.ENV }}" \
-            --query "services[0].loadBalancers[0].targetGroupArn" --output text 2>/dev/null || echo "")
+      #     # Get the service URL if available
+      #     SERVICE_URL=$(aws ecs describe-services --cluster "backend-cluster-${{ env.ENV }}" --services "backend-${{ env.ENV }}" \
+      #       --query "services[0].loadBalancers[0].targetGroupArn" --output text 2>/dev/null || echo "")
             
-          if [[ ! -z "$SERVICE_URL" && "$SERVICE_URL" != "None" ]]; then
-            echo "Service target group: $SERVICE_URL"
-          fi
-          echo "::endgroup::"
+      #     if [[ ! -z "$SERVICE_URL" && "$SERVICE_URL" != "None" ]]; then
+      #       echo "Service target group: $SERVICE_URL"
+      #     fi
+      #     echo "::endgroup::"

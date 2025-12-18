@@ -1,4 +1,4 @@
-name: Workflow for testing Database Migrations workflow
+name: Workflow for testing Backend Deployment workflow
 
 on:
   push:
@@ -13,11 +13,10 @@ permissions:
 
 jobs:
   test-workflows:
-    name: Test Database Migrations Workflow
-    uses: ./.github/workflows/database-migrations.yml
+    name: Test Backend Deployment Workflow
+    uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: dev
-      timeout_minutes: 10
     secrets: inherit
 
     
