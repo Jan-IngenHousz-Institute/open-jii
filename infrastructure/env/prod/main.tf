@@ -323,9 +323,9 @@ module "pipeline_scheduler" {
   name        = "Pipeline-Scheduler-PROD"
   description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
 
-  # Schedule: Every 30 minutes (0, 30) between 9am and 9pm (UTC)
+  # Schedule: Every 15 minutes (0, 15, 30, 45) between 9am and 9pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,30 6-18 * * ?"
+  schedule = "0 0,15,30,45 6-18 * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
