@@ -3,7 +3,13 @@ import nock from "nock";
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
 import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
-import { assertFailure, assertSuccess, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
@@ -1706,9 +1712,7 @@ describe("GetExperimentDataUseCase", () => {
           truncated: false,
         }),
       )
-      .mockResolvedValueOnce(
-        failure(AppError.internal("Failed to get metadata")),
-      );
+      .mockResolvedValueOnce(failure(AppError.internal("Failed to get metadata")));
 
     // Mock getTableMetadata to fail (for ORDER BY clause)
     vi.spyOn(databricksPort, "getTableMetadata").mockResolvedValue(
@@ -1734,9 +1738,10 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    const ExperimentRepository = (await import("../../../core/repositories/experiment.repository")).ExperimentRepository;
+    const ExperimentRepository = (await import("../../../core/repositories/experiment.repository"))
+      .ExperimentRepository;
     const experimentRepository = testApp.module.get(ExperimentRepository);
-    
+
     vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
       success({
         experiment: { ...experiment, schemaName: null },

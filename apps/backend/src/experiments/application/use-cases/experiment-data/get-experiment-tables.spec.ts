@@ -601,9 +601,11 @@ describe("GetExperimentTablesUseCase", () => {
         userId: testUserId,
       });
 
-      const ExperimentRepository = (await import("../../../core/repositories/experiment.repository")).ExperimentRepository;
+      const ExperimentRepository = (
+        await import("../../../core/repositories/experiment.repository")
+      ).ExperimentRepository;
       const experimentRepository = testApp.module.get(ExperimentRepository);
-      
+
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: { ...experiment, schemaName: null },

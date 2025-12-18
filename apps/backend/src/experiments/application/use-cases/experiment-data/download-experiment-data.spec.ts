@@ -4,7 +4,13 @@ import { beforeEach, afterEach, beforeAll, afterAll, describe, it, expect, vi } 
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
 import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
-import { assertFailure, assertSuccess, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { DownloadExperimentDataUseCase } from "./download-experiment-data";
@@ -248,12 +254,10 @@ describe("DownloadExperimentDataUseCase", () => {
       });
 
     // Mock SQL query to fail
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
-      .reply(500, {
-        error_code: "INTERNAL_ERROR",
-        message: "Database connection failed",
-      });
+    nock(DATABRICKS_HOST).post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`).reply(500, {
+      error_code: "INTERNAL_ERROR",
+      message: "Database connection failed",
+    });
 
     // Act
     const result = await useCase.execute(experiment.id, testUserId, {
