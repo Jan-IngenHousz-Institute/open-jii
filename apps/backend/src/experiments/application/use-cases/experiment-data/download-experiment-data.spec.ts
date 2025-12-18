@@ -4,8 +4,9 @@ import { beforeEach, afterEach, beforeAll, afterAll, describe, it, expect, vi } 
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
 import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { DownloadExperimentDataUseCase } from "./download-experiment-data";
 
 const DATABRICKS_HOST = "https://test-databricks.example.com";
@@ -216,5 +217,122 @@ describe("DownloadExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.message).toBe("Access denied to this experiment");
+  });
+
+  it("should return error when downloadExperimentData fails", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test_Download_Failure",
+      userId: testUserId,
+    });
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_download_failure_${experiment.id}`,
+          },
+        ],
+      });
+
+    // Mock SQL query to fail
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+      .reply(500, {
+        error_code: "INTERNAL_ERROR",
+        message: "Database connection failed",
+      });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+    });
+
+    // Assert result is failure
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to execute download query");
+  });
+
+  it("should handle checkAccess failure", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Test_Experiment",
+      userId: testUserId,
+    });
+
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+      failure(AppError.internal("Database connection failed")),
+    );
+
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+    });
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toBe("Failed to verify experiment access");
+  });
+
+  it("should handle experiment without schemaName", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Test_Experiment",
+      userId: testUserId,
+    });
+
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+      success({
+        experiment: { ...experiment, schemaName: null },
+        hasAccess: true,
+      }),
+    );
+
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+    });
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toBe("Experiment schema not provisioned");
+  });
+
+  it("should handle unexpected errors in catch block", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test_Experiment_Error",
+      userId: testUserId,
+    });
+
+    // Mock the repository to throw an unexpected error
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+    vi.spyOn(experimentRepository, "checkAccess").mockRejectedValue(
+      new Error("Unexpected database error"),
+    );
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "some_table",
+    });
+
+    // Assert result is failure
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to prepare data download");
+    expect(result.error.message).toContain("Unexpected database error");
   });
 });

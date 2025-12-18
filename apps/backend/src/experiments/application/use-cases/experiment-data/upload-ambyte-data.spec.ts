@@ -11,6 +11,7 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UploadAmbyteDataUseCase } from "./upload-ambyte-data";
 
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -931,6 +932,155 @@ describe("UploadAmbyteDataUseCase", () => {
           expect.any(Buffer),
         );
       }
+    });
+  });
+
+  describe("execute - schemaName null handling", () => {
+    let successfulUploads: { fileName: string; filePath: string }[];
+    let errors: { fileName: string; error: string }[];
+    const sourceType = "ambyte";
+    const directoryName = "upload_20250910_143000";
+
+    beforeEach(() => {
+      successfulUploads = [];
+      errors = [];
+    });
+
+    const createMockFile = (filename: string, content = "test file content") => {
+      const stream = new Readable({
+        read() {
+          this.push(content);
+          this.push(null); // End the stream
+        },
+      });
+
+      return {
+        filename,
+        encoding: "utf8",
+        mimetype: "text/plain",
+        stream,
+      };
+    };
+
+    it("should handle checkAccess failure in preexecute", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const experimentRepository = testApp.module.get(ExperimentRepository);
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        failure(AppError.internal("Database connection failed")),
+      );
+
+      const result = await useCase.preexecute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Failed to verify experiment access");
+    });
+
+    it("should handle experiment without schemaName in preexecute", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const experimentRepository = testApp.module.get(ExperimentRepository);
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { ...experiment, schemaName: null },
+          hasAccess: true,
+        }),
+      );
+
+      const result = await useCase.preexecute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Experiment schema not provisioned");
+    });
+
+    it("should handle experiment without schemaName in execute", async () => {
+      // Create test experiment without schemaName by mocking repository
+      const experimentRepository = testApp.module.get(ExperimentRepository);
+      const mockExperiment = {
+        id: faker.string.uuid(),
+        name: "Test Experiment",
+        status: "active",
+        schemaName: null, // No schema name
+        userId: testUserId,
+      };
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: mockExperiment,
+          hasAccess: true,
+        }),
+      );
+
+      const fileName = "Ambyte_1/data.txt";
+      const file = createMockFile(fileName);
+
+      // Add spy to ensure upload is not called
+      const uploadSpy = vi.spyOn(databricksPort, "uploadExperimentData");
+
+      await useCase.execute(
+        file,
+        mockExperiment as any,
+        sourceType,
+        directoryName,
+        successfulUploads,
+        errors,
+      );
+
+      expect(successfulUploads).toHaveLength(0);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toEqual({
+        fileName,
+        error: "Experiment schema not provisioned",
+      });
+
+      expect(uploadSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("postexecute - schemaName null handling", () => {
+    const directoryName = "upload_20250910_143000";
+
+    it("should handle experiment without schemaName in postexecute", async () => {
+      // Create experiment without schemaName
+      const mockExperiment = {
+        id: faker.string.uuid(),
+        name: "Test Experiment",
+        status: "active",
+        schemaName: null, // No schema name
+        userId: testUserId,
+      };
+
+      const successfulUploads = [
+        { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
+      ];
+      const errors: { fileName: string; error: string }[] = [];
+
+      // Add spy to ensure job is not triggered
+      const jobSpy = vi.spyOn(databricksPort, "triggerAmbyteProcessingJob");
+
+      const result = await useCase.postexecute(
+        successfulUploads,
+        errors,
+        mockExperiment as any,
+        directoryName,
+      );
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("does not have a schema name");
+      expect(result.error.message).toContain("not be fully provisioned");
+
+      expect(jobSpy).not.toHaveBeenCalled();
     });
   });
 

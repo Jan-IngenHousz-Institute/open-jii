@@ -377,5 +377,246 @@ describe("GetExperimentTablesUseCase", () => {
       assertSuccess(result);
       expect(result.value).toHaveLength(0);
     });
+
+    it("should handle count query failure and log warning", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experiment.id}`;
+
+      const mockTablesResponse: ListTablesResponse = {
+        tables: [
+          {
+            name: "measurements",
+            catalog_name: experiment.name,
+            schema_name: schemaName,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false", display_name: "Measurements" },
+          },
+        ],
+      };
+
+      vi.spyOn(databricksPort, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      // Mock count query to fail
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(
+        failure(AppError.internal("SQL execution failed")),
+      );
+
+      const result = await useCase.execute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0]).toEqual({
+        name: "measurements",
+        displayName: "Measurements",
+        totalRows: 0, // Should default to 0 on failure
+        columns: undefined, // No columns provided in mock
+      });
+    });
+
+    it("should include column metadata when available", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experiment.id}`;
+
+      const mockTablesResponse: ListTablesResponse = {
+        tables: [
+          {
+            name: "measurements",
+            catalog_name: experiment.name,
+            schema_name: schemaName,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false", display_name: "Measurements" },
+            columns: [
+              {
+                name: "id",
+                type_text: "BIGINT",
+                type_name: "LONG",
+                position: 0,
+                nullable: false,
+                comment: "Primary key",
+                type_json: '{"name":"long","type":"long"}',
+                type_precision: 0,
+                type_scale: 0,
+                partition_index: null,
+              },
+              {
+                name: "value",
+                type_text: "DOUBLE",
+                type_name: "DOUBLE",
+                position: 1,
+                nullable: true,
+                comment: "Measurement value",
+                type_json: '{"name":"double","type":"double"}',
+                type_precision: 0,
+                type_scale: 0,
+                partition_index: null,
+              },
+            ],
+          },
+        ],
+      };
+
+      vi.spyOn(databricksPort, "listTables").mockResolvedValue(success(mockTablesResponse));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+          rows: [["100"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await useCase.execute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0]).toEqual({
+        name: "measurements",
+        displayName: "Measurements",
+        totalRows: 100,
+        columns: [
+          {
+            name: "id",
+            type_text: "BIGINT",
+            type_name: "LONG",
+            position: 0,
+            nullable: false,
+            comment: "Primary key",
+            type_json: '{"name":"long","type":"long"}',
+            type_precision: 0,
+            type_scale: 0,
+            partition_index: null,
+          },
+          {
+            name: "value",
+            type_text: "DOUBLE",
+            type_name: "DOUBLE",
+            position: 1,
+            nullable: true,
+            comment: "Measurement value",
+            type_json: '{"name":"double","type":"double"}',
+            type_precision: 0,
+            type_scale: 0,
+            partition_index: null,
+          },
+        ],
+      });
+    });
+
+    it("should reorder device table to be last", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experiment.id}`;
+
+      const mockTablesResponse: ListTablesResponse = {
+        tables: [
+          {
+            name: "device",
+            catalog_name: experiment.name,
+            schema_name: schemaName,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false", display_name: "Device Data" },
+          },
+          {
+            name: "measurements",
+            catalog_name: experiment.name,
+            schema_name: schemaName,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false", display_name: "Measurements" },
+          },
+          {
+            name: "events",
+            catalog_name: experiment.name,
+            schema_name: schemaName,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false", display_name: "Events" },
+          },
+        ],
+      };
+
+      vi.spyOn(databricksPort, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      // Mock count queries for all tables
+      vi.spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValueOnce(
+          success({
+            columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+            rows: [["50"]],
+            totalRows: 1,
+            truncated: false,
+          }),
+        ) // device count
+        .mockResolvedValueOnce(
+          success({
+            columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+            rows: [["100"]],
+            totalRows: 1,
+            truncated: false,
+          }),
+        ) // measurements count
+        .mockResolvedValueOnce(
+          success({
+            columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+            rows: [["75"]],
+            totalRows: 1,
+            truncated: false,
+          }),
+        ); // events count
+
+      const result = await useCase.execute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(3);
+
+      // Device should be last
+      expect(result.value[0]?.name).toBe("measurements");
+      expect(result.value[1]?.name).toBe("events");
+      expect(result.value[2]?.name).toBe("device");
+    });
+
+    it("should handle experiment without schemaName", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const ExperimentRepository = (await import("../../../core/repositories/experiment.repository")).ExperimentRepository;
+      const experimentRepository = testApp.module.get(ExperimentRepository);
+      
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { ...experiment, schemaName: null },
+          hasAccess: true,
+        }),
+      );
+
+      const result = await useCase.execute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Experiment schema not provisioned");
+    });
   });
 });

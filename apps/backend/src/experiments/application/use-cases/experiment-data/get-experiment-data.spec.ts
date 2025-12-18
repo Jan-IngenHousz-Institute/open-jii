@@ -3,8 +3,9 @@ import nock from "nock";
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
 import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
@@ -1626,5 +1627,130 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.error.code).toBe("FORBIDDEN");
     expect(result.error.message).toContain("not accessible");
     expect(result.error.message).toContain("Only final processed tables are available");
+  });
+
+  it("should handle getOrderByClause failure when fetching specific columns", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    const databricksPort = testApp.module.get(DATABRICKS_PORT);
+
+    // Mock table exists
+    vi.spyOn(databricksPort, "listTables").mockResolvedValue(
+      success({
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false" },
+          },
+        ],
+      }),
+    );
+
+    // Mock getTableMetadata to fail
+    vi.spyOn(databricksPort, "getTableMetadata").mockResolvedValue(
+      failure(AppError.internal("Failed to get metadata")),
+    );
+
+    // Act - request specific columns without orderBy (will trigger metadata fetch)
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+      columns: "col1,col2",
+    });
+
+    // Assert - should return error
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to get metadata");
+  });
+
+  it("should handle getOrderByClause failure when fetching paginated data", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    const databricksPort = testApp.module.get(DATABRICKS_PORT);
+
+    // Mock table exists
+    vi.spyOn(databricksPort, "listTables").mockResolvedValue(
+      success({
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false" },
+          },
+        ],
+      }),
+    );
+
+    // Mock count query success
+    vi.spyOn(databricksPort, "executeSqlQuery")
+      .mockResolvedValueOnce(
+        success({
+          columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+          rows: [["100"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      )
+      .mockResolvedValueOnce(
+        failure(AppError.internal("Failed to get metadata")),
+      );
+
+    // Mock getTableMetadata to fail (for ORDER BY clause)
+    vi.spyOn(databricksPort, "getTableMetadata").mockResolvedValue(
+      failure(AppError.internal("Failed to get metadata")),
+    );
+
+    // Act - request paginated data without orderBy (will trigger metadata fetch)
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert - should return error
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to get metadata");
+  });
+
+  it("should handle experiment without schemaName", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    const ExperimentRepository = (await import("../../../core/repositories/experiment.repository")).ExperimentRepository;
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+    
+    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+      success({
+        experiment: { ...experiment, schemaName: null },
+        hasAccess: true,
+      }),
+    );
+
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+    });
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toBe("Experiment schema not provisioned");
   });
 });
