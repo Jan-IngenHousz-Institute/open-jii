@@ -24,7 +24,7 @@ export function DeviceList({
 }: Props) {
   const { colors, classes } = useTheme();
 
-  const renderKey = useMemo(() => Date.now(), [connectingDeviceId]);
+  const renderKey = useMemo(() => Date.now(), []);
 
   return (
     <View className="mb-6">
