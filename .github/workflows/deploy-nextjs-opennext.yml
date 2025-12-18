@@ -374,7 +374,7 @@ jobs:
           fi
 
       - name: Invalidate CloudFront Distribution
-        if: steps.upload-assets.outputs.uploaded == 'true' && inputs.dry-run == 'false'
+        if: steps.upload-assets.outputs.uploaded == 'true'
         run: |
           CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
           if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
