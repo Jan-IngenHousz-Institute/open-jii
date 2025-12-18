@@ -2,7 +2,7 @@
 
 import NewVisualizationForm from "@/components/experiment-visualizations/new-visualization-form";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentSampleData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useLocale } from "@/hooks/useLocale";
 import { Eye } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
@@ -26,8 +26,8 @@ export default function NewVisualizationPage() {
     notFound();
   }
 
-  // Fetch sample data to get tables and columns
-  const { sampleTables, isLoading: isLoadingTables } = useExperimentSampleData(experimentId, 5);
+  // Fetch tables metadata
+  const { tables, isLoading: isLoadingTables } = useExperimentTables(experimentId);
 
   // Use the sample tables directly from the API
   // This simplifies our code and avoids unnecessary transformations
@@ -55,7 +55,7 @@ export default function NewVisualizationPage() {
 
       <NewVisualizationForm
         experimentId={experimentId}
-        sampleTables={sampleTables}
+        tables={tables ?? []}
         onSuccess={handleSuccess}
         isLoading={isLoadingTables}
         isPreviewOpen={isPreviewOpen}

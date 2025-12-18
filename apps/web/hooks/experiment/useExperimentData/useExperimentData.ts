@@ -4,7 +4,7 @@ import type React from "react";
 import { useMemo } from "react";
 import { tsr } from "~/lib/tsr";
 
-import type { DataColumn, ExperimentData, AnnotationType } from "@repo/api";
+import type { ExperimentData, AnnotationType } from "@repo/api";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
@@ -12,8 +12,6 @@ export type DataRenderFunction = (
   type: string,
   rowId: string,
   columnName?: string,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
   onChartClick?: (data: number[], columnName: string) => void,
   onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void,
   onDeleteAnnotations?: (rowIds: string[], type: AnnotationType) => void,
@@ -37,8 +35,6 @@ export function getColumnWidth(typeName: string): number | undefined {
 interface CreateTableColumnsParams {
   data: ExperimentData | undefined;
   formatFunction?: DataRenderFunction;
-  onChartHover?: (data: number[], columnName: string) => void;
-  onChartLeave?: () => void;
   onChartClick?: (data: number[], columnName: string) => void;
   onAddAnnotation?: (rowIds: string[]) => void;
   onDeleteAnnotations?: (rowIds: string[]) => void;
@@ -47,8 +43,6 @@ interface CreateTableColumnsParams {
 function createTableColumns({
   data,
   formatFunction,
-  onChartHover,
-  onChartLeave,
   onChartClick,
   onAddAnnotation,
   onDeleteAnnotations,
@@ -106,8 +100,6 @@ function createTableColumns({
         typeName,
         rowId ?? "",
         columnName,
-        onChartHover,
-        onChartLeave,
         onChartClick,
         onAddAnnotation,
         onDeleteAnnotations,
@@ -161,8 +153,6 @@ export const useExperimentData = (
   orderBy?: string,
   orderDirection?: "ASC" | "DESC",
   formatFunction?: DataRenderFunction,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
   onChartClick?: (data: number[], columnName: string) => void,
   onAddAnnotation?: (rowIds: string[]) => void,
   onDeleteAnnotations?: (rowIds: string[]) => void,
@@ -184,8 +174,6 @@ export const useExperimentData = (
           columns: createTableColumns({
             data: tableData.data,
             formatFunction,
-            onChartHover,
-            onChartLeave,
             onChartClick,
             onAddAnnotation,
             onDeleteAnnotations,
@@ -194,71 +182,9 @@ export const useExperimentData = (
           totalRows: tableData.totalRows,
         }
       : undefined;
-  }, [
-    tableData,
-    formatFunction,
-    onChartHover,
-    onChartLeave,
-    onChartClick,
-    onAddAnnotation,
-    onDeleteAnnotations,
-  ]);
+  }, [tableData, formatFunction, onChartClick, onAddAnnotation, onDeleteAnnotations]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
   const displayName = tableData?.displayName;
 
   return { tableMetadata, tableRows, displayName, isLoading, error };
-};
-
-export interface SampleTable {
-  name: string;
-  displayName: string;
-  tableMetadata: TableMetadata;
-  tableRows: DataRow[];
-  columns: DataColumn[]; // Add raw columns for easy access
-}
-
-/**
- * Hook to fetch experiment sample data by ID
- * @param experimentId The ID of the experiment to fetch
- * @param sampleSize Number of sample rows to fetch
- * @param formatFunction Function used to render the column value
- * @returns Query result containing the experiment sample data
- */
-export const useExperimentSampleData = (
-  experimentId: string,
-  sampleSize = 5,
-  formatFunction?: DataRenderFunction,
-) => {
-  const page = 1;
-  const pageSize = sampleSize;
-  const tableName = undefined;
-  const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: { tableName, page, pageSize },
-    },
-    queryKey: ["experiment", experimentId, page, pageSize, tableName],
-    staleTime: STALE_TIME,
-  });
-
-  const sampleTables = useMemo(() => {
-    const tables: SampleTable[] = [];
-    if (!data) return tables;
-    data.body.forEach((tableData) => {
-      tables.push({
-        name: tableData.name,
-        displayName: tableData.displayName,
-        tableMetadata: {
-          columns: createTableColumns({ data: tableData.data, formatFunction }),
-          totalPages: tableData.totalPages,
-          totalRows: tableData.totalRows,
-        } as TableMetadata,
-        tableRows: tableData.data?.rows ?? [],
-        columns: tableData.data?.columns ?? [],
-      });
-    });
-    return tables;
-  }, [data, formatFunction]);
-
-  return { sampleTables, isLoading, error };
 };
