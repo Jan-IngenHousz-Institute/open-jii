@@ -405,7 +405,7 @@ describe("<UnifiedNavbar />", () => {
 
     const aboutLink = mobileLinks.find((link) => link.textContent?.includes("About"));
     expect(aboutLink).toHaveAttribute("aria-current", "page");
-    expect(aboutLink).toHaveClass("bg-accent");
+    expect(aboutLink).toHaveClass("bg-surface-dark");
 
     const homeLink = mobileLinks.find((link) => link.textContent?.includes("Home"));
     expect(homeLink).not.toHaveAttribute("aria-current");
