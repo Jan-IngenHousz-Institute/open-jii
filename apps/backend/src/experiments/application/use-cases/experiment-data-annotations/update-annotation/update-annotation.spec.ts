@@ -1,4 +1,5 @@
 import type { UpdateAnnotationBody } from "@repo/api";
+import { experiments } from "@repo/database";
 
 import { DatabricksAdapter } from "../../../../../common/modules/databricks/databricks.adapter";
 import {
@@ -48,6 +49,7 @@ describe("UpdateAnnotation", () => {
       status: "active",
       visibility: "private",
       userId: testUserId,
+      pipelineId: "test-pipeline-update-123",
     });
 
     // Mock DatabricksAdapter methods
@@ -86,6 +88,53 @@ describe("UpdateAnnotation", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
+    expect(result.value).toStrictEqual({ rowsAffected: 1 });
+  });
+
+  it("should update a flag annotation with null text", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment Flag Null Text",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+      pipelineId: "test-pipeline-update-flag-null",
+    });
+
+    // Mock DatabricksAdapter methods
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
+      success({
+        columns: [
+          { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+          { name: "num_updated_rows", type_name: "LONG", type_text: "BIGINT" },
+        ],
+        rows: [["1", "1"]],
+        totalRows: 1,
+        truncated: false,
+      }),
+    );
+
+    // Mock the refresh silver data call
+    vi.spyOn(databricksAdapter, "refreshSilverData").mockResolvedValue(
+      success({ update_id: "mock-update-id" }),
+    );
+
+    const annotationId = "c926b964-a1fd-4fb9-9a41-c154d631a524";
+    const updateAnnotation: UpdateAnnotationBody = {
+      content: {
+        type: "flag",
+        flagType: "outlier",
+        text: undefined,
+      },
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, annotationId, updateAnnotation, testUserId);
+
+    // Assert result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
     expect(result.value).toStrictEqual({ rowsAffected: 1 });
   });
 
@@ -267,6 +316,134 @@ describe("UpdateAnnotation", () => {
     const result = await useCase.execute(experiment.id, annotationId, updateAnnotation, testUserId);
 
     // Assert - operation should still succeed despite refresh failure
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.rowsAffected).toBe(1);
+  });
+
+  it("should return error when experiment schema is not provisioned", async () => {
+    // Create an experiment without schemaName
+    const [experiment] = await testApp.database
+      .insert(experiments)
+      .values({
+        name: "Test Experiment No Schema",
+        description: "Test Description",
+        status: "provisioning",
+        visibility: "public", // Public so no membership required
+        createdBy: testUserId,
+        schemaName: null,
+        embargoUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+
+    const annotationId = "c926b964-a1fd-4fb9-9a41-c154d631a524";
+    const updateAnnotation: UpdateAnnotationBody = {
+      content: {
+        type: "comment",
+        text: "Updated comment text",
+      },
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, annotationId, updateAnnotation, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toContain("Experiment schema not provisioned");
+  });
+
+  it("should succeed even when pipelineId is null (no silver data refresh)", async () => {
+    // Create an experiment without pipelineId
+    const [experiment] = await testApp.database
+      .insert(experiments)
+      .values({
+        name: "Test Experiment No Pipeline Update",
+        description: "Test Description",
+        status: "active",
+        visibility: "public", // Public so no membership required
+        createdBy: testUserId,
+        schemaName: "exp_test_no_pipeline_update_mno456",
+        pipelineId: null,
+        embargoUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+
+    // Mock the repository method
+    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
+
+    // Spy on refreshSilverData to ensure it's NOT called
+    const refreshSpy = vi.spyOn(databricksAdapter, "refreshSilverData");
+
+    const annotationId = "c926b964-a1fd-4fb9-9a41-c154d631a524";
+    const updateAnnotation: UpdateAnnotationBody = {
+      content: {
+        type: "comment",
+        text: "Updated comment",
+      },
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, annotationId, updateAnnotation, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.rowsAffected).toBe(1);
+
+    // Verify refreshSilverData was NOT called since pipelineId is null
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(refreshSpy).not.toHaveBeenCalled();
+  });
+
+  it("should handle pipeline refresh failure gracefully (log warning but succeed)", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment Refresh Fail Update",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+      pipelineId: "test-pipeline-refresh-fail-update",
+    });
+
+    // Mock DatabricksAdapter
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
+      success({
+        columns: [
+          { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+          { name: "num_updated_rows", type_name: "LONG", type_text: "BIGINT" },
+        ],
+        rows: [["1", "1"]],
+        totalRows: 1,
+        truncated: false,
+      }),
+    );
+
+    // Mock refresh to fail
+    vi.spyOn(databricksAdapter, "refreshSilverData").mockResolvedValue(
+      failure({
+        message: "Pipeline refresh failed",
+        code: "DATABRICKS_ERROR",
+        statusCode: 500,
+        name: "DatabricksError",
+      }),
+    );
+
+    const annotationId = "c926b964-a1fd-4fb9-9a41-c154d631a524";
+    const updateAnnotation: UpdateAnnotationBody = {
+      content: {
+        type: "comment",
+        text: "Updated comment",
+      },
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, annotationId, updateAnnotation, testUserId);
+
+    // Assert - should still succeed even though refresh failed
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.rowsAffected).toBe(1);
