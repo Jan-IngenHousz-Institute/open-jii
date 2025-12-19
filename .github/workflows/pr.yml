@@ -172,7 +172,7 @@ jobs:
             }
 
   tofu:
-    name: OpenTofu
+    name: OpenTofu (Plan)
     needs: build_lint_test
     runs-on: ubuntu-latest
     strategy:
