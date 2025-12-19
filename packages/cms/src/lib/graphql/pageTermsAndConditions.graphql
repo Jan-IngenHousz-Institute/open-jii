@@ -11,6 +11,13 @@ fragment PageTermsAndConditionsFields on PageTermsAndConditions {
   title
   content {
     json
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
   }
 }
 

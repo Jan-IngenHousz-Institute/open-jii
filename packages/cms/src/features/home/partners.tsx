@@ -5,6 +5,7 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import Image from "next/image";
+import Link from "next/link";
 import React from "react";
 
 import type {
@@ -54,19 +55,29 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
 
             if (!partner.logo?.url) return null;
 
+            const content = (
+              <Image
+                src={partner.logo.url}
+                alt={partner.logo.title ?? "Partner logo"}
+                width={200}
+                height={40}
+                className="h-20 w-auto object-contain"
+                {...partnerInspectorProps({ fieldId: "logo" })}
+              />
+            );
+
             return (
               <div
                 key={partner.sys.id}
                 className="flex justify-center first:justify-start last:justify-end"
               >
-                <Image
-                  src={partner.logo.url}
-                  alt={partner.logo.title ?? "Partner logo"}
-                  width={200}
-                  height={40}
-                  className="h-20 w-auto object-contain"
-                  {...partnerInspectorProps({ fieldId: "logo" })}
-                />
+                {partner.url ? (
+                  <Link href={partner.url} target="_blank" rel="noopener noreferrer">
+                    {content}
+                  </Link>
+                ) : (
+                  content
+                )}
               </div>
             );
           })}

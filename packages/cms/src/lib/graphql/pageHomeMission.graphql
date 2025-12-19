@@ -9,10 +9,24 @@ fragment PageHomeMissionFields on PageHomeMission {
   title
   about {
     json
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
   }
   subtitle
   mission {
     json
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
   }
   image {
     url
