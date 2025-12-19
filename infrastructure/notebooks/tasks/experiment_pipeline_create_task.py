@@ -7,6 +7,7 @@ and triggers its initial execution with comprehensive error handling and monitor
 
 import logging
 import hashlib
+import time
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
@@ -323,6 +324,53 @@ class ExperimentPipelineManager:
             logger.error(f"Failed to retrieve pipeline status: {e}")
             raise
     
+    def wait_for_pipeline_completion(self, pipeline_id: str, update_id: str, timeout_minutes: int = 30) -> bool:
+        """
+        Wait for pipeline update to complete before proceeding.
+        This ensures the schema is created before adding it to Delta Share.
+        
+        Args:
+            pipeline_id: Target pipeline ID
+            update_id: Update ID to monitor
+            timeout_minutes: Maximum time to wait in minutes
+            
+        Returns:
+            True if completed successfully, False if failed or timeout
+        """
+        try:
+            logger.info(f"Waiting for pipeline {pipeline_id} update {update_id} to complete (timeout: {timeout_minutes}m)")
+            
+            start_time = time.time()
+            timeout_seconds = timeout_minutes * 60
+            poll_interval = 30  # Poll every 30 seconds
+            
+            while True:
+                elapsed = time.time() - start_time
+                if elapsed > timeout_seconds:
+                    logger.warning(f"Pipeline update timed out after {timeout_minutes} minutes")
+                    return False
+                
+                # Get update status
+                update = self.client.pipelines.get_update(pipeline_id=pipeline_id, update_id=update_id)
+                state = update.update.state.value if update.update.state else "UNKNOWN"
+                
+                logger.debug(f"Pipeline update state: {state} (elapsed: {int(elapsed)}s)")
+                
+                # Check terminal states
+                if state == "COMPLETED":
+                    logger.info(f"Pipeline update completed successfully after {int(elapsed)}s")
+                    return True
+                elif state in ["FAILED", "CANCELED"]:
+                    logger.error(f"Pipeline update {state.lower()} after {int(elapsed)}s")
+                    return False
+                
+                # Wait before next poll
+                time.sleep(poll_interval)
+                
+        except Exception as e:
+            logger.error(f"Error while waiting for pipeline completion: {e}")
+            return False
+    
     def add_schema_to_share(self, config: PipelineConfig) -> Tuple[bool, Optional[str]]:
         """
         Add experiment schema to Delta Share for external data sharing.
@@ -403,8 +451,20 @@ def create_or_update_experiment_pipeline(config: PipelineConfig) -> PipelineCrea
         logger.info("Using existing pipeline and triggering execution")
         update_id = manager.trigger_execution(existing_pipeline_id, config.experiment_id)
         
-        # Add schema to Delta Share
-        schema_added, share_error = manager.add_schema_to_share(config)
+        # Wait for pipeline to complete and create the schema
+        pipeline_completed = manager.wait_for_pipeline_completion(
+            existing_pipeline_id, 
+            update_id, 
+            timeout_minutes=30
+        )
+        
+        # Add schema to Delta Share only if pipeline completed successfully
+        if pipeline_completed:
+            schema_added, share_error = manager.add_schema_to_share(config)
+        else:
+            schema_added = False
+            share_error = "Pipeline did not complete successfully, schema may not exist yet"
+            logger.warning(share_error)
         
         return PipelineCreationResult(
             pipeline_id=existing_pipeline_id,
@@ -419,8 +479,20 @@ def create_or_update_experiment_pipeline(config: PipelineConfig) -> PipelineCrea
         pipeline_id = manager.create_pipeline(config)
         update_id = manager.trigger_execution(pipeline_id, config.experiment_id)
         
-        # Add schema to Delta Share
-        schema_added, share_error = manager.add_schema_to_share(config)
+        # Wait for pipeline to complete and create the schema
+        pipeline_completed = manager.wait_for_pipeline_completion(
+            pipeline_id, 
+            update_id, 
+            timeout_minutes=30
+        )
+        
+        # Add schema to Delta Share only if pipeline completed successfully
+        if pipeline_completed:
+            schema_added, share_error = manager.add_schema_to_share(config)
+        else:
+            schema_added = False
+            share_error = "Pipeline did not complete successfully, schema may not exist yet"
+            logger.warning(share_error)
         
         return PipelineCreationResult(
             pipeline_id=pipeline_id,
