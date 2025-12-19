@@ -96,7 +96,7 @@ jobs:
     steps:
       - name: Await Approval for Apply
         run: |
-          echo "Waiting for approval to apply changes in the ${{ inputs.environment }} environment."
+          echo "Approved deployment for ${{ inputs.environment }} environment."
   
   apply:
     name: OpenTofu Apply
