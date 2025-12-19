@@ -24,27 +24,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  detect-changes:
-    name: Detect Changed Packages
-    runs-on: ubuntu-latest
-    outputs:
-      affected_apps: ${{ steps.detect.outputs.affected_apps }}
-      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "22"
-
-      - name: Detect Affected Packages
-        id: detect
-        uses: ./.github/actions/detect-affected-packages
-
   deploy-infrastructure:
     name: Deploy Infrastructure
     if: inputs.deploy_infrastructure
@@ -56,8 +35,7 @@ jobs:
 
   database-migrations:
     name: Database Migrations
-    needs: [detect-changes, deploy-infrastructure]
-    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database')
+    needs: [deploy-infrastructure]
     uses: ./.github/workflows/database-migrations.yml
     with:
       environment: ${{ inputs.environment }}
@@ -65,8 +43,7 @@ jobs:
 
   deploy-backend:
     name: Deploy Backend
-    needs: [detect-changes, deploy-infrastructure, database-migrations]
-    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend')
+    needs: [deploy-infrastructure, database-migrations]
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: ${{ inputs.environment }}
@@ -74,8 +51,7 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend
-    needs: [detect-changes, deploy-infrastructure, deploy-backend]
-    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
+    needs: [deploy-infrastructure, deploy-backend]
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: ${{ inputs.environment }}
@@ -83,8 +59,7 @@ jobs:
 
   deploy-docs:
     name: Deploy Documentation
-    needs: [detect-changes, deploy-infrastructure]
-    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs')
+    needs: deploy-infrastructure
     uses: ./.github/workflows/deploy-docs.yml
     with:
       environment: ${{ inputs.environment }}
