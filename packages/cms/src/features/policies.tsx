@@ -8,6 +8,7 @@ import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { PagePoliciesFieldsFragment } from "../lib/__generated/sdk";
+import type { EmbeddedEntryType } from "./contentful/ctf-rich-text";
 import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface PoliciesContentProps {
@@ -46,7 +47,16 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
       {/* Content */}
       {currentPolicies.content?.json ? (
         <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
-          <CtfRichText json={currentPolicies.content.json as Document} />
+          <CtfRichText
+            json={currentPolicies.content.json as Document}
+            links={
+              currentPolicies.content.links as {
+                entries: {
+                  block: EmbeddedEntryType[];
+                };
+              }
+            }
+          />
         </div>
       ) : null}
     </div>

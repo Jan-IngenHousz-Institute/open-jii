@@ -4532,7 +4532,38 @@ export type PageAboutFieldsFragment = {
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  description?: { __typename?: "PageAboutDescription"; json: any } | null;
+  description?: {
+    __typename?: "PageAboutDescription";
+    json: any;
+    links: {
+      __typename?: "PageAboutDescriptionLinks";
+      entries: {
+        __typename?: "PageAboutDescriptionEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
   image?: {
     __typename?: "Asset";
     url?: string | null;
@@ -4931,7 +4962,38 @@ export type PagePoliciesFieldsFragment = {
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  content?: { __typename?: "PagePoliciesContent"; json: any } | null;
+  content?: {
+    __typename?: "PagePoliciesContent";
+    json: any;
+    links: {
+      __typename?: "PagePoliciesContentLinks";
+      entries: {
+        __typename?: "PagePoliciesContentEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
 };
 
 export type PagePoliciesQueryVariables = Exact<{
@@ -4954,7 +5016,38 @@ export type PageTermsAndConditionsFieldsFragment = {
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  content?: { __typename?: "PageTermsAndConditionsContent"; json: any } | null;
+  content?: {
+    __typename?: "PageTermsAndConditionsContent";
+    json: any;
+    links: {
+      __typename?: "PageTermsAndConditionsContentLinks";
+      entries: {
+        __typename?: "PageTermsAndConditionsContentEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
 };
 
 export type PageTermsAndConditionsQueryVariables = Exact<{
@@ -5071,6 +5164,34 @@ export const LandingMetadataFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     description
   }
 `;
+export const ImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment ImageFields on Asset {
+    __typename
+    sys {
+      id
+    }
+    title
+    description
+    width
+    height
+    url
+    contentType
+  }
+`;
+export const RichImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment RichImageFields on ComponentRichImage {
+    __typename
+    internalName
+    sys {
+      id
+    }
+    image {
+      ...ImageFields
+    }
+    caption
+    fullWidth
+  }
+`;
 export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
   fragment PageAboutFields on PageAbout {
     __typename
@@ -5085,6 +5206,13 @@ export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     title
     description {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
     image {
       url
@@ -5095,20 +5223,6 @@ export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
         environmentId
       }
     }
-  }
-`;
-export const ImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
-  fragment ImageFields on Asset {
-    __typename
-    sys {
-      id
-    }
-    title
-    description
-    width
-    height
-    url
-    contentType
   }
 `;
 export const SeoFieldsFragmentDoc: ReturnType<typeof gql> = gql`
@@ -5137,20 +5251,6 @@ export const AuthorFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     avatar {
       ...ImageFields
     }
-  }
-`;
-export const RichImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
-  fragment RichImageFields on ComponentRichImage {
-    __typename
-    internalName
-    sys {
-      id
-    }
-    image {
-      ...ImageFields
-    }
-    caption
-    fullWidth
   }
 `;
 export const ReferencePageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
@@ -5440,6 +5540,13 @@ export const PagePoliciesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     title
     content {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
   }
 `;
@@ -5457,6 +5564,13 @@ export const PageTermsAndConditionsFieldsFragmentDoc: ReturnType<typeof gql> = g
     title
     content {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
   }
 `;
@@ -5509,6 +5623,8 @@ export const PageAboutDocument: ReturnType<typeof gql> = gql`
     }
   }
   ${PageAboutFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageBlogPostDocument: ReturnType<typeof gql> = gql`
   query pageBlogPost($slug: String!, $locale: String, $preview: Boolean) {
@@ -5646,6 +5762,8 @@ export const PagePoliciesDocument: ReturnType<typeof gql> = gql`
     }
   }
   ${PagePoliciesFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageTermsAndConditionsDocument: ReturnType<typeof gql> = gql`
   query pageTermsAndConditions($locale: String, $preview: Boolean) {
@@ -5656,6 +5774,8 @@ export const PageTermsAndConditionsDocument: ReturnType<typeof gql> = gql`
     }
   }
   ${PageTermsAndConditionsFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const SitemapPagesDocument: ReturnType<typeof gql> = gql`
   query sitemapPages($locale: String!) {

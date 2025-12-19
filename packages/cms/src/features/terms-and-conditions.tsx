@@ -10,6 +10,7 @@ import React from "react";
 import { useTranslation } from "@repo/i18n";
 
 import type { PageTermsAndConditionsFieldsFragment } from "../lib/__generated/sdk";
+import type { EmbeddedEntryType } from "./contentful/ctf-rich-text";
 import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface TermsAndConditionsContentProps {
@@ -137,7 +138,16 @@ export const TermsAndConditionsPage: React.FC<TermsAndConditionsContentProps> = 
       {/* Content */}
       {currentTermsAndConditions.content?.json ? (
         <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
-          <CtfRichText json={currentTermsAndConditions.content.json as Document} />
+          <CtfRichText
+            json={currentTermsAndConditions.content.json as Document}
+            links={
+              currentTermsAndConditions.content.links as {
+                entries: {
+                  block: EmbeddedEntryType[];
+                };
+              }
+            }
+          />
         </div>
       ) : null}
     </div>

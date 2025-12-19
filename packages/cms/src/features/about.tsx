@@ -9,6 +9,7 @@ import Image from "next/image";
 import React from "react";
 
 import type { PageAboutFieldsFragment } from "../lib/__generated/sdk";
+import type { EmbeddedEntryType } from "./contentful/ctf-rich-text";
 import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface AboutContentProps {
@@ -54,7 +55,16 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
         <div className="mt-4 max-w-xl lg:mt-0 xl:col-end-1 xl:row-start-1">
           {currentAbout.description?.json && (
             <div className="text-base sm:text-lg" {...inspectorProps({ fieldId: "description" })}>
-              <CtfRichText json={currentAbout.description.json as Document} />
+              <CtfRichText
+                json={currentAbout.description.json as Document}
+                links={
+                  currentAbout.description.links as {
+                    entries: {
+                      block: EmbeddedEntryType[];
+                    };
+                  }
+                }
+              />
             </div>
           )}
         </div>
