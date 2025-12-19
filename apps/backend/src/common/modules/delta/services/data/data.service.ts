@@ -20,8 +20,8 @@ export class DeltaDataService {
   ) {}
 
   /**
-   * Process Delta files and metadata to create SchemaData compatible with existing SQL service
-   * Downloads and parses Parquet files using Apache Arrow
+   * Process Delta files and metadata to create SchemaData
+   * Downloads and parses Parquet files using hyparquet, preserving native data types
    */
   async processFiles(
     files: DeltaFile[],
@@ -50,7 +50,7 @@ export class DeltaDataService {
       }));
 
       // Download and parse all Parquet files
-      const allRows: (string | null)[][] = [];
+      const allRows: Record<string, unknown>[] = [];
       let totalRows = 0;
       let truncated = false;
 
@@ -95,9 +95,11 @@ export class DeltaDataService {
 
   /**
    * Download and parse a single Parquet file using hyparquet
-   * hyparquet is a zero-dependency, pure JavaScript Parquet reader with native TypeScript support
+   * Returns native Parquet data objects without type conversion
    */
-  private async downloadAndParseParquetFile(file: DeltaFile): Promise<Result<(string | null)[][]>> {
+  private async downloadAndParseParquetFile(
+    file: DeltaFile,
+  ): Promise<Result<Record<string, unknown>[]>> {
     try {
       this.logger.debug(`Downloading and parsing file: ${file.id} from ${file.url}`);
 
@@ -110,44 +112,18 @@ export class DeltaDataService {
       const arrayBuffer = response.data as ArrayBuffer;
 
       // Dynamic import for ES module
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { parquetReadObjects } = await import("hyparquet");
 
       // Parse Parquet file using hyparquet
-      // parquetReadObjects returns an array of objects: [{ col1: val1, col2: val2 }, ...]
+      // Returns native Parquet data objects with proper types preserved
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const objects = (await parquetReadObjects({
-        file: arrayBuffer, // hyparquet accepts ArrayBuffer directly
+        file: arrayBuffer,
       })) as Record<string, unknown>[];
 
-      // Convert objects to rows format: [[val1, val2], [val1, val2], ...]
-      const rows: (string | null)[][] = [];
-
-      for (const obj of objects) {
-        const row: (string | null)[] = [];
-
-        // Extract values in column order (Object.values maintains insertion order in modern JS)
-        for (const value of Object.values(obj)) {
-          // Convert value to string or null for compatibility with SchemaData
-          if (value === null || value === undefined) {
-            row.push(null);
-          } else if (typeof value === "string") {
-            row.push(value);
-          } else if (typeof value === "number" || typeof value === "boolean") {
-            row.push(String(value));
-          } else if (value instanceof Date) {
-            row.push(value.toISOString());
-          } else if (typeof value === "bigint") {
-            row.push(value.toString());
-          } else {
-            // For complex types, stringify
-            row.push(JSON.stringify(value));
-          }
-        }
-
-        rows.push(row);
-      }
-
-      this.logger.debug(`Successfully parsed file ${file.id}: ${rows.length} rows`);
-      return success(rows);
+      this.logger.debug(`Successfully parsed file ${file.id}: ${objects.length} rows`);
+      return success(objects);
     } catch (error) {
       this.logger.error(`Failed to download/parse file ${file.id}:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
