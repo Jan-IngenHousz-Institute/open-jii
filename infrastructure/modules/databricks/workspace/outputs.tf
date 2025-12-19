@@ -16,8 +16,8 @@ output "role_arn" {
   sensitive   = true
 }
 
-output "kinesis_credential_id" {
-  description = "ID of the Kinesis access credential created in the workspace module"
-  value       = databricks_credential.kinesis.id
-  sensitive   = true
-}
+# output "kinesis_credential_id" {
+#   description = "ID of the Kinesis access credential created in the workspace module"
+#   value       = databricks_credential.kinesis.id
+#   sensitive   = true
+# }

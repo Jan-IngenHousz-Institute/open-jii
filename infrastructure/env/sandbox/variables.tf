@@ -28,15 +28,10 @@ variable "databricks_client_secret" {
   sensitive   = true
 }
 
-# variable "databricks_host" {
-#   description = "Databricks workspace URL"
-#   type        = string
-#   sensitive   = true
-# }
-
-variable "kinesis_credential_id" {
-  description = "Databricks storage credential ID for Kinesis"
+variable "databricks_host" {
+  description = "Databricks workspace URL"
   type        = string
+  sensitive   = true
 }
 
 variable "centralized_metastore_bucket_name" {

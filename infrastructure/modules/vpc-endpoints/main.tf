@@ -3,6 +3,8 @@ locals {
 }
 
 resource "aws_vpc_endpoint" "s3" {
+  count = var.create_s3_endpoint ? 1 : 0
+
   vpc_id            = var.vpc_id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
@@ -11,6 +13,8 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_vpc_endpoint" "sts" {
+  count = var.create_sts_endpoint ? 1 : 0
+
   vpc_id              = var.vpc_id
   service_name        = "com.amazonaws.${var.aws_region}.sts"
   vpc_endpoint_type   = "Interface"
@@ -21,6 +25,8 @@ resource "aws_vpc_endpoint" "sts" {
 }
 
 resource "aws_vpc_endpoint" "kinesis_streams" {
+  count = var.create_kinesis_endpoint ? 1 : 0
+
   vpc_id              = var.vpc_id
   service_name        = "com.amazonaws.${var.aws_region}.kinesis-streams"
   vpc_endpoint_type   = "Interface"

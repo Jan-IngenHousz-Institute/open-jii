@@ -4,6 +4,11 @@ data "aws_ec2_managed_prefix_list" "cloudfront_global" {
   name = "com.amazonaws.global.cloudfront.origin-facing"
 }
 
+locals {
+  # Use specified nat_gateway_count or default to az_count
+  nat_gateway_count = var.nat_gateway_count != null ? var.nat_gateway_count : var.az_count
+}
+
 # ----
 # VPC
 # ----
@@ -292,12 +297,12 @@ resource "aws_route_table_association" "public_assoc" {
 # NAT Gateways 
 # -------------
 resource "aws_eip" "nat" {
-  count  = var.az_count
+  count  = local.nat_gateway_count
   domain = "vpc"
 }
 
 resource "aws_nat_gateway" "nat" {
-  count         = var.az_count
+  count         = local.nat_gateway_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
   tags          = { Name = "open-jii-nat-${count.index}-${var.environment}" }
@@ -316,7 +321,8 @@ resource "aws_route" "private_nat" {
   count                  = var.az_count
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.nat[count.index].id
+  # Use modulo to distribute subnets across available NAT gateways
+  nat_gateway_id         = aws_nat_gateway.nat[count.index % local.nat_gateway_count].id
 }
 
 resource "aws_route_table_association" "private_assoc" {

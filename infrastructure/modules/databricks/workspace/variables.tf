@@ -34,14 +34,15 @@ variable "sg_id" {
 }
 
 variable "kinesis_role_name" {
-  description = "Name of the IAM role for Kinesis access"
+  description = "Name of the IAM role for Kinesis access (optional - if null, Kinesis credential won't be created)"
   type        = string
-  default     = "unity-catalog-kinesis-role"
+  default     = null
 }
 
 variable "kinesis_role_arn" {
-  description = "ARN of the IAM role for Kinesis access"
+  description = "ARN of the IAM role for Kinesis access (optional - if null, Kinesis credential won't be created)"
   type        = string
+  default     = null
 }
 
 variable "principal_ids" {
