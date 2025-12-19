@@ -18,7 +18,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -q /Workspace/Repos/.../infrastructure/notebooks/lib/openjii/dist/openjii-0.1.0-py3-none-any.whl --force-reinstall
+# MAGIC %pip install -q /Workspace/Shared/wheels/openjii-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 
