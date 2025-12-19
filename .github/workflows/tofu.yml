@@ -90,6 +90,9 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     environment: approval-gate
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Await Approval for Apply
         run: |
