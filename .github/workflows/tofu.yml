@@ -23,11 +23,6 @@ on:
         description: "Target environment (dev, staging, prod)"
         required: true
         type: string
-      apply:
-        description: "Whether to apply changes (true) or just plan (false)"
-        required: false
-        type: boolean
-        default: false
       tofu_version:
         description: "OpenTofu version to use"
         required: false
@@ -89,11 +84,20 @@ jobs:
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
-
+  
+  approval_gate:
+    name: Approval Gate
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: approval-gate
+    steps:
+      - name: Await Approval for Apply
+        run: |
+          echo "Waiting for approval to apply changes in the ${{ inputs.environment }} environment."
+  
   apply:
     name: OpenTofu Apply
-    needs: plan
-    if: inputs.apply
+    needs: [plan, approval_gate]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}  # This environment should have required reviewers for approval
     permissions:
