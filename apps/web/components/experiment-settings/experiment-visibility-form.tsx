@@ -152,8 +152,8 @@ export function ExperimentVisibilityForm({
                     </Popover>
                   </FormControl>
                   {helperText && (
-                    <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
-                      <Info className="text-primary h-4 w-4" />
+                    <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-sm">
+                      <Info className="text-primary h-6 w-6" />
                       <div className="leading-tight">{helperText}</div>
                     </div>
                   )}

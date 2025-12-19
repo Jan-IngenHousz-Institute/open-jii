@@ -86,7 +86,10 @@ export function ExperimentMeasurements({
           href={`/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/data`}
           className="shrink-0"
         >
-          <Button variant="ghost" className="text-primary h-auto p-0 hover:bg-transparent">
+          <Button
+            variant="ghost"
+            className="text-primary hover:text-primary-light h-auto p-0 hover:bg-transparent"
+          >
             {t("measurements.seeAll")}
           </Button>
         </Link>
@@ -96,8 +99,8 @@ export function ExperimentMeasurements({
           <Table>
             <TableHeader className="bg-surface-light">
               <TableRow>
-                <TableHead className="px-6">{t("measurements.deviceId")}</TableHead>
-                <TableHead className="px-6 text-right">{t("measurements.lastProcessed")}</TableHead>
+                <TableHead className="px-4">{t("measurements.deviceId")}</TableHead>
+                <TableHead className="px-4 text-right">{t("measurements.lastProcessed")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -107,13 +110,13 @@ export function ExperimentMeasurements({
 
                 return (
                   <TableRow key={index}>
-                    <TableCell className="px-6 font-medium">
+                    <TableCell className="px-4 font-medium">
                       {deviceId != null &&
                       (typeof deviceId === "string" || typeof deviceId === "number")
                         ? String(deviceId)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground px-6 text-right">
+                    <TableCell className="text-muted-foreground px-4 text-right">
                       {timestamp != null && typeof timestamp === "string"
                         ? timestamp.substring(0, 10)
                         : "—"}

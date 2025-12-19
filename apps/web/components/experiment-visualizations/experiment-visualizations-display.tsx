@@ -138,11 +138,11 @@ export default function ExperimentVisualizationsDisplay({
         <CardContent className="space-y-6 pt-6">
           <div>
             <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
-              <SelectTrigger className="h-auto w-fit border-none p-0 text-xl font-semibold shadow-none hover:bg-transparent focus:ring-0">
+              <SelectTrigger className="h-auto w-fit border-none p-0 text-base font-semibold shadow-none hover:bg-transparent focus:ring-0">
                 {selectedVisualization ? (
-                  <span className="text-xl font-semibold">{selectedVisualization.name}</span>
+                  <span className="text-base font-semibold">{selectedVisualization.name}</span>
                 ) : (
-                  <span className="text-muted-foreground text-xl font-semibold">
+                  <span className="text-muted-foreground text-base font-semibold">
                     {t("selector.selectVisualization")}
                   </span>
                 )}

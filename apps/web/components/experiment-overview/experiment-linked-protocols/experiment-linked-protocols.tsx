@@ -173,14 +173,17 @@ export function ExperimentLinkedProtocols({
         <CardTitle>{t("protocols.linkedProtocols")}</CardTitle>
         {selectedProtocol && (
           <Link href={`/${locale}/platform/protocols/${selectedProtocol}`} className="shrink-0">
-            <Button variant="ghost" className="text-primary h-auto p-0 hover:bg-transparent">
+            <Button
+              variant="ghost"
+              className="text-primary hover:text-primary-light h-auto p-0 hover:bg-transparent"
+            >
               {t("protocols.goToProtocol")}
             </Button>
           </Link>
         )}
       </div>
       <Card className="overflow-hidden border-none shadow-none">
-        <CardContent className="bg-surface-light space-y-6 pt-6">
+        <CardContent className="bg-surface-light space-y-6 p-4">
           <div>
             <ProtocolSelector
               protocolIds={protocolIds}

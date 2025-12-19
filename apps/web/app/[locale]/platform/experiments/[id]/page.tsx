@@ -75,7 +75,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
       />
 
       {/* LEFT SIDE CONTENT (Second on mobile) */}
-      <div className="flex-1 space-y-8 md:order-1">
+      <div className="flex-1 space-y-10 md:order-1">
         <ExperimentDescription
           experimentId={id}
           description={experiment.description ?? ""}

@@ -33,7 +33,7 @@ export function ExperimentDescription({
 
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
 
-  const descriptionContainerVariants = cva("px-1 -ml-1 transition-all duration-300", {
+  const descriptionContainerVariants = cva("px-2 -ml-2 transition-all duration-300", {
     variants: {
       expanded: {
         true: "max-h-none",
@@ -127,6 +127,7 @@ export function ExperimentDescription({
               className="hover:bg-badge-featured"
             >
               <X className="h-4 w-4" />
+              <span>{t("common.cancel")}</span>
             </Button>
             <Button
               variant="outline"
@@ -136,6 +137,7 @@ export function ExperimentDescription({
               className="text-primary hover:bg-badge-featured"
             >
               <Check className="h-4 w-4" />
+              <span>{t("common.save")}</span>
             </Button>
           </div>
         </div>
@@ -155,7 +157,7 @@ export function ExperimentDescription({
 
             {/* Fade gradient ONLY if long and collapsed */}
             {!isDescriptionShort && !isDescriptionExpanded && (
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 -ml-1 h-16 bg-gradient-to-t from-white to-transparent" />
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 -ml-2 h-16 bg-gradient-to-t from-white to-transparent" />
             )}
           </div>
 

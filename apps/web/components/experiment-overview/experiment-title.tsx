@@ -134,7 +134,7 @@ export function ExperimentTitle({
         </div>
       ) : (
         <CardTitle
-          className={`text-2xl transition-all duration-300 ${hasAccess && !isArchived ? "hover:bg-muted -ml-1 cursor-pointer rounded-md px-1" : ""}`}
+          className={`text-2xl transition-all duration-300 ${hasAccess && !isArchived ? "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2" : ""}`}
           onClick={handleTitleClick}
         >
           {name}

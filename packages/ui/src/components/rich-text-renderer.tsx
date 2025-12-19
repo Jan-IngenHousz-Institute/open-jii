@@ -3,11 +3,14 @@
 import "quill/dist/quill.snow.css";
 import React from "react";
 
+import { cn } from "../lib/utils";
+
 interface RichTextRendererProps {
   content: string;
+  className?: string;
 }
 
-export function RichTextRenderer({ content }: RichTextRendererProps) {
+export function RichTextRenderer({ content, className }: RichTextRendererProps) {
   // Check for common HTML tags that Quill editor produces
   const htmlTags = [
     "<p>",
@@ -30,19 +33,21 @@ export function RichTextRenderer({ content }: RichTextRendererProps) {
   }
 
   if (!isRichText) {
-    return <p className="text-sm">{content}</p>;
+    return <p className={cn("text-sm", className)}>{content}</p>;
   }
 
   return (
     <>
-      <div className="ql-editor rich-text-renderer" dangerouslySetInnerHTML={{ __html: content }} />
+      <div
+        className={cn("ql-editor rich-text-renderer", className)}
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
       <style
         dangerouslySetInnerHTML={{
           __html: `
           .rich-text-renderer {
             padding: 8px 0;
             border: none;
-            font-size: inherit;
             line-height: 1.5;
             word-break: break-word;
             overflow-wrap: break-word;
