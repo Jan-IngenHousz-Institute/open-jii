@@ -47,7 +47,7 @@
     "expo-web-browser": "~15.0.9",
     "http-status-codes": "^2.3.0",
     "nestjs-pino": "^4.5.0",
-    "hyparquet": "^1.20.1",
+    "hyparquet": "^1.23.2",
     "nodemailer": "catalog:",
     "pino-http": "^11.0.0",
     "posthog-node": "catalog:",

@@ -56,7 +56,7 @@ export interface SchemaData {
     type_text: string;
     position: number;
   }[];
-  rows: (string | null)[][];
+  rows: (string | null)[][] | Record<string, unknown>[];
   totalRows: number;
   truncated: boolean;
 }
