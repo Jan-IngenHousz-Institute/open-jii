@@ -499,7 +499,7 @@ describe("GetExperimentTablesUseCase", () => {
             type_json: '{"name":"long","type":"long"}',
             type_precision: 0,
             type_scale: 0,
-            partition_index: null,
+            partition_index: undefined,
           },
           {
             name: "value",
@@ -511,7 +511,7 @@ describe("GetExperimentTablesUseCase", () => {
             type_json: '{"name":"double","type":"double"}',
             type_precision: 0,
             type_scale: 0,
-            partition_index: null,
+            partition_index: undefined,
           },
         ],
       });

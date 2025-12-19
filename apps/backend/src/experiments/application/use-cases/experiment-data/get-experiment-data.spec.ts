@@ -1552,9 +1552,99 @@ describe("GetExperimentDataUseCase", () => {
         ],
       });
 
-    // Only need to mock data for the downstream: false table
+    // Mock DESCRIBE query for table metadata
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [["id", "STRING", null]],
+      totalRows: 1,
+      truncated: false,
+    };
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE enriched_sample_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock COUNT query for row count
+    const mockCountData = {
+      columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+      rows: [["1"]],
+      totalRows: 1,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT COUNT(*) as count FROM enriched_sample_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-count-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockCountData.columns.length,
+            columns: mockCountData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockCountData.totalRows,
+          truncated: mockCountData.truncated,
+        },
+        result: {
+          data_array: mockCountData.rows,
+          chunk_index: 0,
+          row_count: mockCountData.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock data query for the table
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT * FROM enriched_sample_data LIMIT 5 OFFSET 0",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
       .reply(200, {
         statement_id: "mock-statement-id",
         status: { state: "SUCCEEDED" },
@@ -1581,11 +1671,11 @@ describe("GetExperimentDataUseCase", () => {
       pageSize: 5,
     });
 
-    // Assert - should return error since tableName is now required (deprecated behavior)
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain("tableName parameter is required");
+    // Assert - should successfully return data since enriched_sample_data has downstream: false
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0].name).toBe("enriched_sample_data");
   });
 
   it("should return forbidden error when trying to access table with downstream: true", async () => {
