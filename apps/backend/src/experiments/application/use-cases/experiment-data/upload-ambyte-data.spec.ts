@@ -9,6 +9,7 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { ExperimentDto } from "../../../core/models/experiment.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -992,6 +993,8 @@ describe("UploadAmbyteDataUseCase", () => {
         success({
           experiment: { ...experiment, schemaName: null },
           hasAccess: true,
+          isAdmin: false,
+          hasArchiveAccess: false,
         }),
       );
 
@@ -1004,20 +1007,19 @@ describe("UploadAmbyteDataUseCase", () => {
     });
 
     it("should handle experiment without schemaName in execute", async () => {
-      // Create test experiment without schemaName by mocking repository
-      const experimentRepository = testApp.module.get(ExperimentRepository);
-      const mockExperiment = {
-        id: faker.string.uuid(),
+      // Create a real experiment and mock it to have null schemaName
+      const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
-        status: "active",
-        schemaName: null, // No schema name
         userId: testUserId,
-      };
+      });
 
+      const experimentRepository = testApp.module.get(ExperimentRepository);
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: mockExperiment,
+          experiment: { ...experiment, schemaName: null },
           hasAccess: true,
+          isAdmin: false,
+          hasArchiveAccess: false,
         }),
       );
 
@@ -1029,7 +1031,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
       await useCase.execute(
         file,
-        mockExperiment as any,
+        { ...experiment, schemaName: null },
         sourceType,
         directoryName,
         successfulUploads,
@@ -1052,12 +1054,16 @@ describe("UploadAmbyteDataUseCase", () => {
 
     it("should handle experiment without schemaName in postexecute", async () => {
       // Create experiment without schemaName
-      const mockExperiment = {
-        id: faker.string.uuid(),
+      const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
-        status: "active",
-        schemaName: null, // No schema name
         userId: testUserId,
+        status: "active",
+      });
+
+      const experimentWithNullSchema: ExperimentDto = {
+        ...experiment,
+        schemaName: null,
+        pipelineId: null,
       };
 
       const successfulUploads = [
@@ -1071,7 +1077,7 @@ describe("UploadAmbyteDataUseCase", () => {
       const result = await useCase.postexecute(
         successfulUploads,
         errors,
-        mockExperiment as any,
+        experimentWithNullSchema,
         directoryName,
       );
 

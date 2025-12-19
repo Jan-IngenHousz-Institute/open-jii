@@ -11,6 +11,7 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { GetExperimentTablesUseCase } from "./get-experiment-tables";
 
 describe("GetExperimentTablesUseCase", () => {
@@ -449,7 +450,7 @@ describe("GetExperimentTablesUseCase", () => {
                 type_json: '{"name":"long","type":"long"}',
                 type_precision: 0,
                 type_scale: 0,
-                partition_index: null,
+                partition_index: undefined,
               },
               {
                 name: "value",
@@ -461,7 +462,7 @@ describe("GetExperimentTablesUseCase", () => {
                 type_json: '{"name":"double","type":"double"}',
                 type_precision: 0,
                 type_scale: 0,
-                partition_index: null,
+                partition_index: undefined,
               },
             ],
           },
@@ -601,15 +602,14 @@ describe("GetExperimentTablesUseCase", () => {
         userId: testUserId,
       });
 
-      const ExperimentRepository = (
-        await import("../../../core/repositories/experiment.repository")
-      ).ExperimentRepository;
       const experimentRepository = testApp.module.get(ExperimentRepository);
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: { ...experiment, schemaName: null },
           hasAccess: true,
+          isAdmin: false,
+          hasArchiveAccess: false,
         }),
       );
 

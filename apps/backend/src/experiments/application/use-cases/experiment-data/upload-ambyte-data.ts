@@ -325,8 +325,9 @@ export class UploadAmbyteDataUseCase {
     if (fileName.includes("/")) {
       const pattern = /Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
       const ambyteMatch = pattern.exec(fileName);
-      // This should always match because validateFileName ensures it
-      return ambyteMatch![0];
+      if (ambyteMatch) {
+        return ambyteMatch[0];
+      }
     }
 
     // No path in filename - construct one based on the pattern

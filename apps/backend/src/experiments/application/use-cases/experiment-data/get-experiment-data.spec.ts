@@ -1,5 +1,6 @@
 import nock from "nock";
 
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
 import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
@@ -11,7 +12,7 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
@@ -1575,6 +1576,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Act
     const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "enriched_sample_data",
       page: 1,
       pageSize: 5,
     });
@@ -1642,10 +1644,10 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    const databricksPort = testApp.module.get(DATABRICKS_PORT);
+    const databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Mock table exists
-    vi.spyOn(databricksPort, "listTables").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
       success({
         tables: [
           {
@@ -1661,7 +1663,7 @@ describe("GetExperimentDataUseCase", () => {
     );
 
     // Mock getTableMetadata to fail
-    vi.spyOn(databricksPort, "getTableMetadata").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
       failure(AppError.internal("Failed to get metadata")),
     );
 
@@ -1684,10 +1686,10 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    const databricksPort = testApp.module.get(DATABRICKS_PORT);
+    const databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Mock table exists
-    vi.spyOn(databricksPort, "listTables").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
       success({
         tables: [
           {
@@ -1703,7 +1705,7 @@ describe("GetExperimentDataUseCase", () => {
     );
 
     // Mock count query success
-    vi.spyOn(databricksPort, "executeSqlQuery")
+    vi.spyOn(databricksAdapter, "executeSqlQuery")
       .mockResolvedValueOnce(
         success({
           columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
@@ -1715,7 +1717,7 @@ describe("GetExperimentDataUseCase", () => {
       .mockResolvedValueOnce(failure(AppError.internal("Failed to get metadata")));
 
     // Mock getTableMetadata to fail (for ORDER BY clause)
-    vi.spyOn(databricksPort, "getTableMetadata").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
       failure(AppError.internal("Failed to get metadata")),
     );
 
@@ -1738,14 +1740,14 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    const ExperimentRepository = (await import("../../../core/repositories/experiment.repository"))
-      .ExperimentRepository;
     const experimentRepository = testApp.module.get(ExperimentRepository);
 
     vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
       success({
         experiment: { ...experiment, schemaName: null },
         hasAccess: true,
+        isAdmin: false,
+        hasArchiveAccess: false,
       }),
     );
 

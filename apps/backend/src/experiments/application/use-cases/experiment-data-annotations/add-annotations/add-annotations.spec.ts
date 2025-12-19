@@ -392,7 +392,10 @@ describe("AddAnnotations", () => {
       rowIds: ["row1"],
       annotation: {
         type: "comment",
-        content: {} as any,
+        content: {
+          type: "comment",
+          text: "",
+        },
       },
     };
 
@@ -463,8 +466,8 @@ describe("AddAnnotations", () => {
         type: "flag",
         content: {
           type: "flag",
-          flagType: "important",
-          text: null,
+          flagType: "outlier",
+          text: undefined,
         },
       },
     };
@@ -489,12 +492,10 @@ describe("AddAnnotations", () => {
     vi.spyOn(userRepository, "findUsersByIds").mockResolvedValue(
       success([
         {
-          id: emptyNameUserId,
-          email: "emptyname@example.com",
+          userId: emptyNameUserId,
           firstName: "   ",
           lastName: "   ",
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          image: null,
         },
       ]),
     );
@@ -582,7 +583,7 @@ describe("AddAnnotations", () => {
 
     // Mock the repository to return failure
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
-    vi.spyOn(repository, "ensureTableExists").mockResolvedValue(success({ tableCreated: false }));
+    vi.spyOn(repository, "ensureTableExists").mockResolvedValue(success(null));
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(
       failure({
         message: "Failed to store annotations in database",
@@ -893,10 +894,8 @@ describe("AddAnnotations", () => {
 
     // Mock the repository methods
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
-    vi.spyOn(repository, "ensureTableExists").mockResolvedValue(success({ tableCreated: true }));
-    vi.spyOn(repository, "storeAnnotations").mockResolvedValue(
-      success({ affectedRows: 1, insertedRows: 1 }),
-    );
+    vi.spyOn(repository, "ensureTableExists").mockResolvedValue(success(null));
+    vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
     // Spy on refreshSilverData to ensure it's NOT called
     const refreshSpy = vi.spyOn(databricksAdapter, "refreshSilverData");
@@ -919,10 +918,9 @@ describe("AddAnnotations", () => {
     // Assert
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.affectedRows).toBe(1);
+    expect(result.value.rowsAffected).toBe(1);
 
     // Verify refreshSilverData was NOT called since pipelineId is null
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(refreshSpy).not.toHaveBeenCalled();
   });
 
