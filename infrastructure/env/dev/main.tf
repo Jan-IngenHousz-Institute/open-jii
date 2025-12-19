@@ -425,7 +425,7 @@ module "centrum_backup_job" {
         "CATALOG_NAME"     = module.databricks_catalog.catalog_name
         "CENTRAL_SCHEMA"   = "centrum"
         "SOURCE_TABLE"     = "raw_data"
-        "BACKUP_LOCATION"  = "s3://${var.centralized_metastore_bucket_name}/external/${var.environment}/backups/centrum_raw_data"
+        "BACKUP_LOCATION"  = "s3://${var.centralized_metastore_bucket_name}/external/${var.environment}/openjii_data_backups/centrum_raw_data"
         "ENVIRONMENT"      = upper(var.environment)
       }
     }
