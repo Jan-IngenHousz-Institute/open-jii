@@ -12,34 +12,10 @@ permissions:
   id-token: write
 
 jobs:
-  migration:
-    name: Migration Deployment Workflow
-    uses: ./.github/workflows/database-migrations.yml
-    with:
-      environment: prod
-      timeout_minutes: 10
-    secrets: inherit
-    
   deploy-backend:
-    needs: migration
-    name: Deploy Backend Deployment Workflow
+    name: Test Backend Deployment Workflow
     uses: ./.github/workflows/deploy-backend.yml
     with:
-      environment: prod
+      environment: dev
     secrets: inherit
   
-  deploy-frontend:
-    needs: deploy-backend
-    name: Deploy Frontend Deployment Workflow
-    uses: ./.github/workflows/deploy-nextjs-opennext.yml
-    with:
-      environment: prod
-    secrets: inherit
-
-  deploy-docs:
-    needs: deploy-backend
-    name: Deploy Docs Deployment Workflow
-    uses: ./.github/workflows/deploy-docs.yml
-    with:
-      environment: prod
-    secrets: inherit
