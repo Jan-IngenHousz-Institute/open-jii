@@ -212,6 +212,16 @@ module "external_location" {
   comment                 = "External location for ${var.environment} environment data"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
 
+  grants = {
+    node_service_principal = {
+      principal = module.node_service_principal.service_principal_application_id
+      privileges = [
+        "READ_FILES",
+        "WRITE_FILES"
+      ]
+    }
+  }
+
   providers = {
     databricks.workspace = databricks.workspace
   }
