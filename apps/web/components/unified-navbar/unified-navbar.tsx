@@ -323,7 +323,6 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   <>
                     <DropdownMenuSeparator />
                     <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-                      {" "}
                       {session.user.image && (
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={session.user.image} alt={displayName} />
