@@ -77,18 +77,24 @@ export const TransferRequestConfirmation = ({
                 What happens next:
               </Text>
               <ul className="mb-6 pl-6 text-[16px] leading-relaxed text-gray-600">
-                <li className="mb-2">Our team will review your request</li>
+                <li className="mb-2">Our team will review your request.</li>
                 <li className="mb-2">
-                  We may contact you at <strong>{userEmail}</strong> if we need more information
+                  We will contact you at <strong>{userEmail}</strong> if we need more information.
                 </li>
-                <li className="mb-0">You will be notified when the transfer is complete</li>
+                <li className="mb-0">
+                  You will receive an email notification once the transfer has been completed.
+                </li>
               </ul>
 
               <Hr className="my-6 border-gray-200" />
 
               <Text className="mb-0 text-[14px] leading-relaxed text-gray-500">
-                <strong>Please note:</strong> Project transfers are not immediate and may take some
-                time to process. If you have any questions, please reply to this email.
+                <strong>Please note:</strong> Project transfers are not immediate and may require up
+                to 2 weeks to process. If you have any questions, please contact{" "}
+                <Link href="mailto:openjii@jii.org" className="text-[#005e5e] underline">
+                  openjii@jii.org
+                </Link>
+                .
               </Text>
             </Section>
 
