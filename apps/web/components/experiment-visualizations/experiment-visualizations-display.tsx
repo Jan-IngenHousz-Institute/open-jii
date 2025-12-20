@@ -106,11 +106,7 @@ export default function ExperimentVisualizationsDisplay({
               </svg>
             </div>
             {isArchived || !hasAccess ? (
-              <Button
-                variant="outline"
-                className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
-                disabled
-              >
+              <Button variant="muted" disabled>
                 {t("selector.createVisualization")}
               </Button>
             ) : (
@@ -118,9 +114,7 @@ export default function ExperimentVisualizationsDisplay({
                 href={`/en-US/platform/experiments/${experimentId}/analysis/visualizations`}
                 passHref
               >
-                <Button variant="outline" className="bg-surface hover:bg-surface-light">
-                  {t("selector.createVisualization")}
-                </Button>
+                <Button variant="muted">{t("selector.createVisualization")}</Button>
               </Link>
             )}
           </CardContent>

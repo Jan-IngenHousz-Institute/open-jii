@@ -95,11 +95,7 @@ export function ExperimentLinkedProtocols({
             </p>
 
             <Link href={`/${locale}/platform/experiments/${experimentId}/flow`}>
-              <Button
-                variant="outline"
-                className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
-                disabled={isArchived || !hasAccess}
-              >
+              <Button variant="muted" disabled={isArchived || !hasAccess}>
                 {t("protocols.createFlow")}
               </Button>
             </Link>
@@ -150,11 +146,7 @@ export function ExperimentLinkedProtocols({
               {t("protocols.noProtocolsLinked")}
             </p>
             <Link href={`/${locale}/platform/experiments/${experimentId}/flow`} passHref>
-              <Button
-                variant="outline"
-                className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
-                disabled={isArchived || !hasAccess}
-              >
+              <Button variant="muted" disabled={isArchived || !hasAccess}>
                 {t("protocols.goToFlow")}
               </Button>
             </Link>
@@ -173,10 +165,7 @@ export function ExperimentLinkedProtocols({
         <CardTitle>{t("protocols.linkedProtocols")}</CardTitle>
         {selectedProtocol && (
           <Link href={`/${locale}/platform/protocols/${selectedProtocol}`} className="shrink-0">
-            <Button
-              variant="ghost"
-              className="text-primary hover:text-primary-light h-auto p-0 hover:bg-transparent"
-            >
+            <Button variant="subtle" className="h-auto p-0">
               {t("protocols.goToProtocol")}
             </Button>
           </Link>

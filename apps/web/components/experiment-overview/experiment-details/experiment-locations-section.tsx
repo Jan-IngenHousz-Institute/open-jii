@@ -57,8 +57,8 @@ export function ExperimentLocationsSection({
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-medium">{t("details.location.locationsTitle")}</h4>
           <Button
-            variant="ghost"
-            className="text-primary hover:text-primary-light h-auto p-0 hover:bg-transparent"
+            variant="subtle"
+            className="h-auto p-0"
             onClick={() => setIsLocationDialogOpen(true)}
           >
             {hasAccess && !isArchived ? "Manage" : "View"}
