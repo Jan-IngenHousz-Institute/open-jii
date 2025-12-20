@@ -21,7 +21,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-medium">{t("experiments.archiveTitle")}</h1>
+        <h1 className="text-4xl font-bold text-gray-900">{t("experiments.archiveTitle")}</h1>
         <p>{t("experiments.archiveDescription")}</p>
       </div>
       <ListExperiments archived={true} />

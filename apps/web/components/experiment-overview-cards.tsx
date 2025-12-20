@@ -22,7 +22,11 @@ export function ExperimentOverviewCards({
   }
 
   if (experiments.length === 0) {
-    return <span>{t("experiments.noExperiments")}</span>;
+    return (
+      <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
+        {t("experiments.noExperiments")}
+      </div>
+    );
   }
 
   if (horizontal) {

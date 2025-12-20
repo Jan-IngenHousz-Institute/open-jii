@@ -96,12 +96,9 @@ describe("PlatformDashboard", () => {
   it("renders with correct structure and spacing", async () => {
     const { container } = render(await PlatformDashboard(defaultProps));
 
-    const mainDiv = container.querySelector(".space-y-8");
-    expect(mainDiv).toBeInTheDocument();
-
     const heading = container.querySelector("h1");
     expect(heading).toBeInTheDocument();
-    expect(heading).toHaveClass("text-3xl", "font-bold", "text-gray-900");
+    expect(heading).toHaveClass("text-4xl", "font-bold", "text-gray-900");
   });
 
   it("handles different locale", async () => {

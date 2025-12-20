@@ -1,4 +1,4 @@
-import { mainNavigation, createNavigation } from "@/components/navigation/navigation-config";
+import { mainNavigation } from "@/components/navigation/navigation-config";
 import * as React from "react";
 
 import initTranslations from "@repo/i18n/server";
@@ -30,7 +30,10 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.dashboard.url(locale),
         icon: mainNavigation.dashboard.icon,
         isActive: true,
-        items: [],
+        items: mainNavigation.dashboard.items.map((item) => ({
+          title: tCommon(item.titleKey, { ns: item.namespace }),
+          url: item.url(locale),
+        })),
       },
     ],
     navExperiments: [
@@ -39,34 +42,22 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.experiments.url(locale),
         icon: mainNavigation.experiments.icon,
         isActive: true,
-        items: [
-          {
-            title: tNavigation("sidebar.newExperiment"),
-            url: `/${locale}/platform/experiments/new`,
-          },
-          {
-            title: tNavigation("sidebar.overview"),
-            url: `/${locale}/platform/experiments`,
-          },
-        ],
+        items: mainNavigation.experiments.items.map((item) => ({
+          title: tNavigation(item.titleKey, { ns: item.namespace }),
+          url: item.url(locale),
+        })),
       },
     ],
-    navHardware: [
+    navProtocols: [
       {
         title: tNavigation(mainNavigation.protocols.titleKey),
         url: mainNavigation.protocols.url(locale),
         icon: mainNavigation.protocols.icon,
         isActive: true,
-        items: [
-          {
-            title: tNavigation("sidebar.newProtocol"),
-            url: `/${locale}/platform/protocols/new`,
-          },
-          {
-            title: tNavigation("sidebar.overview"),
-            url: `/${locale}/platform/protocols`,
-          },
-        ],
+        items: mainNavigation.protocols.items.map((item) => ({
+          title: tNavigation(item.titleKey, { ns: item.namespace }),
+          url: item.url(locale),
+        })),
       },
     ],
     navMacros: [
@@ -75,16 +66,10 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.macros.url(locale),
         icon: mainNavigation.macros.icon,
         isActive: true,
-        items: [
-          {
-            title: tNavigation("sidebar.newMacro"),
-            url: `/${locale}/platform/macros/new`,
-          },
-          {
-            title: tNavigation("sidebar.overview"),
-            url: `/${locale}/platform/macros`,
-          },
-        ],
+        items: mainNavigation.macros.items.map((item) => ({
+          title: tNavigation(item.titleKey, { ns: item.namespace }),
+          url: item.url(locale),
+        })),
       },
     ],
   };
@@ -93,12 +78,8 @@ export async function NavigationSidebarWrapper({
     openJII: tCommon("navigation.openJII"),
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
-    create: tCommon(createNavigation.buttonKey),
-    protocol: tCommon(createNavigation.items[0].titleKey),
-    experiment: tNavigation(createNavigation.items[1].titleKey),
-    macro: tNavigation(createNavigation.items[2].titleKey),
     experimentsTitle: tNavigation(mainNavigation.experiments.titleKey),
-    hardwareTitle: tNavigation("sidebar.hardware"),
+    protocolTitle: tNavigation(mainNavigation.protocols.titleKey),
     macrosTitle: tNavigation(mainNavigation.macros.titleKey),
   };
 

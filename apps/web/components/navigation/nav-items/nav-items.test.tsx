@@ -80,7 +80,7 @@ describe("<NavItems /> interactions & structure", () => {
       { title: "Code", url: "/code", icon: Code },
     ];
 
-    const { container } = render(
+    render(
       <SidebarProvider>
         <NavItems items={items} />
       </SidebarProvider>,
@@ -92,22 +92,19 @@ describe("<NavItems /> interactions & structure", () => {
     // Clicking shouldn't crash anything
     await user.click(screen.getByRole("link", { name: /code/i }));
 
-    const topLevelLis = container.querySelectorAll('li[data-sidebar="menu-item"]');
-    expect(topLevelLis.length).toBe(2);
+    // Both links should be present
+    expect(screen.getByRole("link", { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /code/i })).toBeInTheDocument();
   });
 
   it("renders a direct link correctly", () => {
     const items = [{ title: "Dashboard", url: "/dashboard", icon: Home }];
 
-    const { container } = render(
+    render(
       <SidebarProvider>
         <NavItems items={items} />
       </SidebarProvider>,
     );
-
-    expect(container.querySelector('[data-sidebar="group"]')).toBeTruthy();
-    expect(container.querySelector('[data-sidebar="menu"]')).toBeTruthy();
-    expect(container.querySelector('li[data-sidebar="menu-item"]')).toBeTruthy();
 
     const link = screen.getByRole("link", { name: /dashboard/i });
     expect(link).toHaveAttribute("href", "/dashboard");

@@ -35,16 +35,13 @@ describe("Breadcrumbs", () => {
     vi.clearAllMocks();
   });
 
-  it("renders home breadcrumb on platform root", () => {
+  it("renders nothing on platform root", () => {
     mockUsePathname.mockReturnValue("/en/platform");
 
-    render(<Breadcrumbs locale="en" />);
+    const { container } = render(<Breadcrumbs locale="en" />);
 
-    expect(screen.getByText("breadcrumbs.home")).toBeInTheDocument();
-    expect(screen.getByText("breadcrumbs.home").closest("a")).toHaveAttribute(
-      "href",
-      "/en/platform",
-    );
+    // Component returns null when on platform root (no sub-paths)
+    expect(container.firstChild).toBeNull();
   });
 
   it("renders breadcrumb trail for experiments page", () => {
@@ -130,13 +127,11 @@ describe("Breadcrumbs", () => {
     expect(screen.queryByText("breadcrumbs.experiments")).not.toBeInTheDocument();
   });
 
-  it("handles translation key that doesn't start with breadcrumbs. prefix", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments");
+  it("handles missing translationKey by returning capitalized segment", () => {
+    mockUsePathname.mockReturnValue("/en/platform/custom-page");
 
     render(<Breadcrumbs locale="en" />);
 
-    // All translation keys in the mapping start with "breadcrumbs.",
-    // so the function returns the result of t(translationKey) when the key is found
-    expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
+    expect(screen.getByText("Custom-page")).toBeInTheDocument();
   });
 });

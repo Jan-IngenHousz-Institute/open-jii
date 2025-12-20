@@ -1,33 +1,14 @@
 "use client";
 
-import {
-  Archive,
-  BookOpen,
-  CirclePlus,
-  Code,
-  FileSliders,
-  Home,
-  Microscope,
-  RadioReceiver,
-  Webcam,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@repo/ui/components";
+import { Sidebar, SidebarRail, SidebarTrigger, useSidebar } from "@repo/ui/components";
 
 import { NavItems } from "../nav-items/nav-items";
+import { iconMap } from "../navigation-config";
 
 interface NavigationItem {
   title: string;
@@ -43,7 +24,7 @@ interface NavigationItem {
 interface NavigationData {
   navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
-  navHardware: NavigationItem[];
+  navProtocols: NavigationItem[];
   navMacros: NavigationItem[];
 }
 
@@ -51,27 +32,10 @@ interface Translations {
   openJII: string;
   logoAlt: string;
   signIn: string;
-  create: string;
-  protocol: string;
-  experiment: string;
-  macro: string;
-
   experimentsTitle: string;
-  hardwareTitle: string;
+  protocolTitle: string;
   macrosTitle: string;
 }
-
-// Icon mapping for string-based icons
-const iconMap = {
-  Home,
-  BookOpen,
-  Microscope,
-  Archive,
-  Webcam,
-  FileSliders,
-  RadioReceiver,
-  Code,
-} as const;
 
 export function AppSidebar({
   locale,
@@ -83,18 +47,31 @@ export function AppSidebar({
   navigationData: NavigationData;
   translations: Translations;
 }) {
+  const { toggleSidebar, state } = useSidebar();
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleSearchClick = () => {
+    if (state === "collapsed") {
+      toggleSidebar();
+      // Focus the input after sidebar opens
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 200);
+    }
+  };
+
+  // Convert string-based icons to actual icon components
   const processedNavDashboard = navigationData.navDashboard.map((item) => ({
     ...item,
     icon: iconMap[item.icon as keyof typeof iconMap],
   }));
 
-  // Convert string-based icons to actual icon components
   const processedNavExperiments = navigationData.navExperiments.map((item) => ({
     ...item,
     icon: iconMap[item.icon as keyof typeof iconMap],
   }));
 
-  const processedNavHardware = navigationData.navHardware.map((item) => ({
+  const processedNavProtocols = navigationData.navProtocols.map((item) => ({
     ...item,
     icon: iconMap[item.icon as keyof typeof iconMap],
   }));
@@ -107,78 +84,51 @@ export function AppSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className="hidden group-data-[collapsible=icon]:w-[5rem] md:flex"
+      className="[&_[data-sidebar=sidebar]]:from-sidebar-gradient-from [&_[data-sidebar=sidebar]]:to-sidebar-gradient-to hidden md:flex [&_[data-sidebar=sidebar]]:bg-gradient-to-b"
       {...props}
     >
-      <SidebarHeader>
-        <Image
-          src="/logo-open-yellow.svg"
-          alt={translations.openJII}
-          width={48}
-          height={12}
-          className="mt-2 align-middle group-data-[state=collapsed]:hidden"
-        />
-        <Image src="/logo-jii-yellow.svg" alt={translations.logoAlt} width={50} height={50} />
-      </SidebarHeader>
-      <SidebarContent>
-        <NavItems items={processedNavDashboard} />
-        <NavItems items={processedNavExperiments} />
-        <NavItems items={processedNavHardware} />
-        <NavItems items={processedNavMacros} />
-      </SidebarContent>
-      <SidebarFooter className="px-8 pb-6 pt-2 group-data-[collapsible=icon]:px-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="group/btn text-primary hover:border-primary/30 relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md border bg-white px-2 text-sm font-medium transition-all duration-300 hover:scale-[1.03] hover:bg-gradient-to-r hover:from-white hover:to-gray-50/50 hover:shadow-md active:scale-[0.97] data-[state=open]:scale-[1.03] group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-2">
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full" />
-              <CirclePlus
-                className="text-primary relative -mt-px h-[15px] w-[15px] shrink-0 transition-all duration-300 group-hover/btn:rotate-180 group-hover/btn:scale-110"
-                strokeWidth={2}
-              />
-              <span className="relative -mt-px group-data-[collapsible=icon]:hidden">
-                {translations.create}
-              </span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="top"
-            align="center"
-            sideOffset={8}
-            className="animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 w-[var(--radix-dropdown-menu-trigger-width)] duration-200"
+      <div className="flex flex-col gap-8 pb-8 group-data-[collapsible=icon]:gap-8">
+        <div className="flex h-16 items-center justify-between px-4 group-data-[collapsible=icon]:h-16 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-3">
+          <Link href={`/${locale}/platform`} className="flex items-center gap-2">
+            <Image
+              src="/openJII_logo_RGB_horizontal yellow.png"
+              alt={translations.logoAlt}
+              width={160}
+              height={40}
+              className="h-auto w-full max-w-[140px] group-data-[collapsible=icon]:hidden"
+            />
+            <Image
+              src="/openJII-logo-vertical-yellow.png"
+              alt={translations.logoAlt}
+              width={42}
+              height={42}
+              className="hidden h-[36px] w-auto group-data-[collapsible=icon]:block"
+            />
+          </Link>
+          <SidebarTrigger className="bg-jii-dark-green hover:bg-sidebar-trigger-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white group-data-[state=collapsed]:hidden" />
+        </div>
+        <div className="relative h-12 px-4 group-data-[collapsible=icon]:px-0">
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search by keyword..."
+            className="placeholder:text-sidebar-search-placeholder h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20 focus:outline-none group-data-[collapsible=icon]:hidden"
+          />
+          <Search className="text-sidebar-search-icon absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 group-data-[collapsible=icon]:hidden" />
+          <button
+            onClick={handleSearchClick}
+            className="hidden h-12 w-12 items-center justify-center rounded-lg border border-white/10 text-white transition-colors hover:bg-white/10 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:flex"
           >
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/${locale}/platform/protocols/new`}
-                className="group/item cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 hover:pl-3"
-              >
-                <span className="transition-transform duration-200 group-hover/item:translate-x-1">
-                  {translations.protocol}
-                </span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/${locale}/platform/experiments/new`}
-                className="group/item cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 hover:pl-3"
-              >
-                <span className="transition-transform duration-200 group-hover/item:translate-x-1">
-                  {translations.experiment}
-                </span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/${locale}/platform/macros/new`}
-                className="group/item cursor-pointer text-sm transition-all duration-200 hover:bg-gray-100 hover:pl-3"
-              >
-                <span className="transition-transform duration-200 group-hover/item:translate-x-1">
-                  {translations.macro}
-                </span>
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarFooter>
+            <Search className="text-sidebar-search-icon h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-4 px-4 group-data-[collapsible=icon]:gap-4 group-data-[collapsible=icon]:px-0">
+          <NavItems items={processedNavDashboard} />
+          <NavItems items={processedNavExperiments} />
+          <NavItems items={processedNavProtocols} />
+          <NavItems items={processedNavMacros} />
+        </div>
+      </div>
       <SidebarRail />
     </Sidebar>
   );

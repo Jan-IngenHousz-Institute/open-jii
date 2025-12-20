@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import type { Session } from "@repo/auth/types";
 import {

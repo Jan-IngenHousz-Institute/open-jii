@@ -9,7 +9,7 @@ interface RichTextRendererProps {
   maxLines?: number;
 }
 
-export function RichTextRenderer({ content }: RichTextRendererProps) {
+export function RichTextRenderer({ content, truncate, maxLines }: RichTextRendererProps) {
   // Check for common HTML tags that Quill editor produces
   const htmlTags = [
     "<p>",

@@ -47,9 +47,9 @@ export default async function AppLayout({
   return (
     <SidebarProvider>
       <NavigationSidebarWrapper locale={locale} />
-      <NavigationTopbar locale={locale} user={session.user} />
       <SidebarInset>
-        <div className="flex flex-1 flex-col gap-4 p-6 pt-20">
+        <NavigationTopbar locale={locale} user={session.user} />
+        <div className="flex flex-1 flex-col gap-4 p-6 pt-4">
           <div className="mx-auto w-full max-w-7xl">
             <Breadcrumbs pageTitle={pageTitle} locale={locale} />
             {children}

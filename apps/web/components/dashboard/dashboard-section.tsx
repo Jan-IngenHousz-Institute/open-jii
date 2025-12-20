@@ -17,10 +17,10 @@ export function DashboardSection({
 }: DashboardSectionProps) {
   return (
     <div className="flex flex-col">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-bold text-gray-900">{title}</h2>
+      <div className="mb-4 flex items-end justify-between">
+        <h2 className="text-[1rem] font-bold leading-[1.3125rem] text-[#011111]">{title}</h2>
         <Link href={seeAllHref} locale={locale} className="hidden md:block">
-          <span className="text-primary hover:text-primary/80 text-sm font-semibold">
+          <span className="text-[1rem] font-semibold leading-[1.25rem] text-[#005E5E] hover:text-[#004a4a]">
             {seeAllLabel}
           </span>
         </Link>
