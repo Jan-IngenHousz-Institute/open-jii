@@ -82,8 +82,8 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
 
     // Tables
     [BLOCKS.TABLE]: (node: Node, children: React.ReactNode) => (
-      <div className="my-6 overflow-x-auto">
-        <table className="min-w-full border-collapse border border-gray-300">
+      <div className="-mx-4 my-6 min-w-full overflow-x-auto sm:-mx-0">
+        <table className="w-full table-fixed border-collapse border border-gray-300">
           <tbody>{children}</tbody>
         </table>
       </div>

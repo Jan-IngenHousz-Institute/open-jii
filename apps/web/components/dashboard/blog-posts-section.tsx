@@ -17,7 +17,7 @@ export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
   const { t } = await initTranslations({ locale });
   try {
     const blogPostsData = await gqlClient.pageBlogPostCollection({
-      limit: 2,
+      limit: 3,
       locale,
       order: PageBlogPostOrder.PublishedDateDesc,
       preview,
@@ -36,12 +36,7 @@ export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
     }
 
     return (
-      <ArticleTileGrid
-        className="grid-cols-1 md:grid-cols-2 lg:grid-cols-2"
-        articles={posts}
-        locale={locale}
-        horizontal
-      />
+      <ArticleTileGrid className="md:grid-cols-2 lg:grid-cols-3" articles={posts} locale={locale} />
     );
   } catch {
     return (

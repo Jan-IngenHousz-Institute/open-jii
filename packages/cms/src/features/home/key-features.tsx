@@ -47,19 +47,18 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
         });
 
         return (
-          <div key={feature.sys.id} className="flex items-start space-x-2">
+          <div key={feature.sys.id} className="flex items-start space-x-4">
             {/* Icon */}
             <div
-              className="-mt-2.5 flex h-12 w-12 shrink-0 items-center justify-center"
+              className="flex h-20 w-20 shrink-0 items-center justify-center"
               {...featureInspectorProps({ fieldId: "icon" })}
             >
               {feature.icon?.url && (
                 <Image
                   src={feature.icon.url}
                   alt={feature.icon.title ?? "Feature icon"}
-                  width={80}
-                  height={80}
-                  className="h-10 w-10"
+                  width={96}
+                  height={96}
                 />
               )}
             </div>

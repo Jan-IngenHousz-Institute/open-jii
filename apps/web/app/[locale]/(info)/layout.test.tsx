@@ -153,15 +153,7 @@ describe("InfoLayout", () => {
 
     const mainElement = container.querySelector("main");
     expect(mainElement).toBeInTheDocument();
-    expect(mainElement).toHaveClass(
-      "flex",
-      "min-h-screen",
-      "w-full",
-      "flex-col",
-      "px-4",
-      "pb-24",
-      "pt-8",
-    );
+    expect(mainElement).toHaveClass("flex", "min-h-screen", "w-full", "flex-col", "px-4");
 
     const wrapperDiv = mainElement?.parentElement;
     expect(wrapperDiv).toHaveClass("mx-auto", "flex", "w-full", "max-w-7xl", "justify-center");

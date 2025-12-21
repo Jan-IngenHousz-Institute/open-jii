@@ -36,6 +36,7 @@ fragment PartnerFields on ComponentPartner {
     }
   }
   subtitle
+  url
 }
 
 fragment ImageFields on Asset {
