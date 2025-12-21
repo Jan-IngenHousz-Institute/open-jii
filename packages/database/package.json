@@ -17,7 +17,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --build --verbose",
+    "build": "tsc --project tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc --watch & pnpm db:studio",
     "lint": "eslint",
@@ -25,7 +25,7 @@
     "env:test": "dotenv -e .env.test --",
     "db:seed": "pnpm env:default tsx scripts/seed.ts",
     "db:reset": "pnpm env:default tsx scripts/reset.ts",
-    "db:set-local-constants": "pnpm env:default tsx scripts/set-local-constants.ts",
+    "db:shim-experiment-metadata": "pnpm env:default tsx scripts/shim-experiment-metadata.ts",
     "db:migrate": "pnpm env:default drizzle-kit migrate",
     "db:studio": "pnpm env:default drizzle-kit studio",
     "db:push": "pnpm env:default drizzle-kit push",

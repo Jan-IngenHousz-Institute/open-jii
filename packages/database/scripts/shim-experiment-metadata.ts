@@ -4,9 +4,21 @@ import { sql } from "drizzle-orm";
 import { db } from "../src/database";
 import { experiments } from "../src/schema";
 
+/**
+ * Shims experiment metadata for local development.
+ *
+ * In production, `schema_name` and `pipeline_id` are populated via webhooks.
+ * Without these properties, experiments have no connection to their store/ETL
+ * (e.g. in Databricks).
+ *
+ * This script installs a trigger to automatically populate these fields
+ * on INSERT if they are missing, allowing local development without
+ * the full webhook infrastructure.
+ */
+
 // Local development constants for experiments
-const LOCAL_DEV_SCHEMA_NAME = "exp_local_dev_001";
-const LOCAL_DEV_PIPELINE_ID = "local-dev-pipeline-12345";
+const LOCAL_DEV_SCHEMA_NAME = "exp_info_office_greenhouse_d89a6dce-540c-4ac2-8b8c-516afc2bd525";
+const LOCAL_DEV_PIPELINE_ID = "603922a5-62e5-4d40-88c6-bbc284b13baa";
 
 export default async function setLocalConstants() {
   console.log("Setting up local development constants for experiments...");
@@ -90,4 +102,9 @@ export default async function setLocalConstants() {
 }
 
 // Auto-run when executed directly
-setLocalConstants().catch(console.error);
+setLocalConstants()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
