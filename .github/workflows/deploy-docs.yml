@@ -43,27 +43,32 @@ jobs:
                 fi
 
             - name: Checkout Repository
+              if: ${{ inputs.should_deploy == 'true' }}
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
 
             - name: Setup Node.js and pnpm
+              if: ${{ inputs.should_deploy == 'true' }}
               uses: ./.github/actions/setup-nodejs-pnpm
               with:
                   node-version: "22"
                   hoisted: "false"
 
             - name: Install Dependencies
+              if: ${{ inputs.should_deploy == 'true' }}
               run: |
                   echo "Installing dependencies..."
                   pnpm install --frozen-lockfile
 
             - name: Build Documentation Site
+              if: ${{ inputs.should_deploy == 'true' }}
               run: |
                   echo "Building Docusaurus documentation site..."
                   pnpm run build --filter=docs
 
             - name: Check Build Output
+              if: ${{ inputs.should_deploy == 'true' }}
               run: |
                   echo "Verifying documentation build output..."
                   if [[ ! -d "apps/docs/build" ]]; then
@@ -87,6 +92,7 @@ jobs:
                   echo "Build size: $BUILD_SIZE"
 
             - name: Configure AWS Credentials via OIDC
+              if: ${{ inputs.should_deploy == 'true' }}
               uses: aws-actions/configure-aws-credentials@v4
               with:
                   role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -96,12 +102,14 @@ jobs:
                   output-credentials: true
 
             - name: Get Infrastructure Configuration
+              if: ${{ inputs.should_deploy == 'true' }}
               uses: ./.github/actions/get-infrastructure-config
               with:
                   environment: ${{ inputs.environment }}
                   prefix: "/docs"
 
             - name: Verify Infrastructure Configuration
+              if: ${{ inputs.should_deploy == 'true' }}
               run: |
                   echo "Verifying infrastructure configuration..."
                   echo "S3 Bucket: ${{ env.DOCS_BUCKET }}"
@@ -122,6 +130,7 @@ jobs:
                   fi
 
             - name: Upload Documentation to S3
+              if: ${{ inputs.should_deploy == 'true' }}
               id: upload-docs
               run: |
                   DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
@@ -198,7 +207,7 @@ jobs:
 
             - name: Get Documentation URLs
               id: get-urls
-              if: always()
+              if: inputs.should_deploy == 'true'
               run: |
                   DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
                   CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
@@ -247,7 +256,7 @@ jobs:
                   fi
 
             - name: Deployment Summary
-              if: always()
+              if: inputs.should_deploy == 'true'
               run: |
                   echo ""
                   echo "=== Documentation Deployment Summary ==="
