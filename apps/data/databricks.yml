@@ -1,0 +1,53 @@
+bundle:
+  name: open-jii-notebooks
+
+# Workspace configuration
+workspace:
+  # Root path where bundle artifacts will be deployed
+  root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+  # File path for deployed notebooks
+  file_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}/notebooks
+  # Artifact path for wheels
+  artifact_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}/artifacts
+
+# Include paths for notebooks
+include:
+  - pipelines/**
+  - tasks/**
+
+# Artifacts configuration - Python wheels for custom libraries
+artifacts:
+  ambyte_wheel:
+    type: whl
+    path: ./src/lib/ambyte
+    build: python -m build
+
+  enrich_wheel:
+    type: whl
+    path: ./src/lib/enrich
+    build: python -m build
+
+  multispeq_wheel:
+    type: whl
+    path: ./src/lib/multispeq
+    build: python -m build
+
+# Sync configuration for notebooks
+sync:
+  # Patterns to exclude
+  exclude:
+    - "*.pyc"
+    - "__pycache__"
+    - "*.egg-info"
+    - ".DS_Store"
+    - "lib/**" # Libraries are deployed as wheels
+
+# Deployment targets
+targets:
+  # Development environment
+  dev:
+    mode: development
+
+  # Production environment
+  prod:
+    mode: production

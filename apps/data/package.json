@@ -1,0 +1,16 @@
+{
+  "name": "data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Databricks notebooks and Python packages for OpenJII",
+  "scripts": {
+    "build": "pnpm run build:multispeq && pnpm run build:ambyte && pnpm run build:enrich",
+    "build:multispeq": "cd src/lib/multispeq && python3 -m build",
+    "build:ambyte": "cd src/lib/ambyte && python3 -m build",
+    "build:enrich": "cd src/lib/enrich && python3 -m build",
+    "clean": "git clean -xdf .cache .turbo && pnpm run clean:multispeq && pnpm run clean:ambyte && pnpm run clean:enrich",
+    "clean:multispeq": "cd src/lib/multispeq && rm -rf dist/ build/ *.egg-info/",
+    "clean:ambyte": "cd src/lib/ambyte && rm -rf dist/ build/ *.egg-info/",
+    "clean:enrich": "cd src/lib/enrich && rm -rf dist/ build/ *.egg-info/"
+  }
+}
