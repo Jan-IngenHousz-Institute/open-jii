@@ -35,7 +35,7 @@ jobs:
       environment: ${{ inputs.environment }}
       tofu_version: "1.9.0"
     secrets: inherit
-  
+
   detect-changes:
     name: Detect Changed Packages
     runs-on: ubuntu-latest
@@ -56,52 +56,73 @@ jobs:
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
-        
+
   database-migrations:
     name: Database Migrations
     needs: [deploy-infrastructure, detect-changes]
+    if: >-
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database')
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/database-migrations.yml
     with:
       environment: ${{ inputs.environment }}
-      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database') }}
       timeout_minutes: 10
     secrets: inherit
 
   deploy-backend:
     name: Deploy Backend
     needs: [deploy-infrastructure, database-migrations, detect-changes]
+    if: >-
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains('success,skipped', needs.database-migrations.result) &&
+      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend')
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: ${{ inputs.environment }}
-      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend') }}
     secrets: inherit
 
   deploy-frontend:
     name: Deploy Frontend
-    needs: [deploy-infrastructure, deploy-backend, detect-changes]
+    needs:
+      [
+        deploy-infrastructure,
+        deploy-backend,
+        detect-changes,
+        database-migrations,
+      ]
+    if: >-
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains('success,skipped', needs.database-migrations.result) &&
+      contains('success,skipped', needs.deploy-backend.result) &&
+      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: ${{ inputs.environment }}
-      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web') }}
     secrets: inherit
 
   deploy-docs:
     name: Deploy Documentation
     needs: [deploy-infrastructure, detect-changes]
+    if: >-
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs')
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-docs.yml
     with:
       environment: ${{ inputs.environment }}
-      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs') }}
     secrets: inherit
