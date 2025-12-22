@@ -63,7 +63,7 @@ jobs:
     if: >-
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database')
+      contains(fromJSON(needs.detect-changes.outputs.affected_apps), '@repo/database')
     permissions:
       id-token: write
       contents: read
