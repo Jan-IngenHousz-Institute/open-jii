@@ -35,47 +35,73 @@ jobs:
       environment: ${{ inputs.environment }}
       tofu_version: "1.9.0"
     secrets: inherit
+  
+  detect-changes:
+    name: Detect Changed Packages
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.detect.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+        
   database-migrations:
     name: Database Migrations
-    needs: [deploy-infrastructure]
+    needs: [deploy-infrastructure, detect-changes]
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/database-migrations.yml
     with:
       environment: ${{ inputs.environment }}
+      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database') }}
+      timeout_minutes: 10
     secrets: inherit
 
   deploy-backend:
     name: Deploy Backend
-    needs: [deploy-infrastructure, database-migrations]
+    needs: [deploy-infrastructure, database-migrations, detect-changes]
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: ${{ inputs.environment }}
+      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend') }}
     secrets: inherit
 
   deploy-frontend:
     name: Deploy Frontend
-    needs: [deploy-infrastructure, deploy-backend]
+    needs: [deploy-infrastructure, deploy-backend, detect-changes]
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: ${{ inputs.environment }}
+      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web') }}
     secrets: inherit
 
   deploy-docs:
     name: Deploy Documentation
-    needs: deploy-infrastructure
+    needs: [deploy-infrastructure, detect-changes]
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-docs.yml
     with:
       environment: ${{ inputs.environment }}
+      should_deploy: ${{ contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs') }}
     secrets: inherit
