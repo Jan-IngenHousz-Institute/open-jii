@@ -83,4 +83,22 @@ describe("Button", () => {
     expect(button.className).toContain("h-9");
     expect(button.className).toContain("w-9");
   });
+
+  it("shows loading spinner when isLoading is true", () => {
+    const { container } = render(<Button isLoading>Click me</Button>);
+    const spinner = container.querySelector(".animate-spin");
+    expect(spinner).toBeTruthy();
+    const button = screen.getByRole("button") as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it("does not show loading spinner when asChild is true", () => {
+    const { container } = render(
+      <Button asChild isLoading>
+        <span>Click me</span>
+      </Button>,
+    );
+    const spinner = container.querySelector(".animate-spin");
+    expect(spinner).toBeNull();
+  });
 });
