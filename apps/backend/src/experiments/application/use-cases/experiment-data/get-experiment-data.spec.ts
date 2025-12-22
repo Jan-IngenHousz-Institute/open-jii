@@ -1,10 +1,18 @@
 import nock from "nock";
 
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
 import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
@@ -104,7 +112,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "sensor_data",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_${cleanName}_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
             properties: {
               display_name: "Sensor Measurements",
               downstream: "false",
@@ -131,7 +139,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "DESCRIBE sensor_data",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${cleanName}_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -164,7 +172,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT `timestamp`, `temperature` FROM sensor_data ORDER BY timestamp DESC",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${cleanName}_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -214,7 +222,7 @@ describe("GetExperimentDataUseCase", () => {
       name: "sensor_data",
       displayName: "Sensor Measurements", // Should use display_name from properties
       catalog_name: experiment.name,
-      schema_name: `exp_${cleanName}_${experiment.id}`,
+      schema_name: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
       data: expectedColumnData,
       page: 1,
       pageSize: 3, // Should equal totalRows for full data
@@ -281,7 +289,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
             properties: {
               display_name: "Test Table Data",
               downstream: "false",
@@ -308,7 +316,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "DESCRIBE test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -341,7 +349,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -375,7 +383,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -421,7 +429,7 @@ describe("GetExperimentDataUseCase", () => {
       name: "test_table",
       displayName: "Test Table Data", // Should use display_name from properties
       catalog_name: experiment.name,
-      schema_name: `exp_test_experiment_${experiment.id}`,
+      schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
       data: expectedTableData,
       page: 1,
       pageSize: 20,
@@ -493,7 +501,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "sensor_data",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_${cleanName}_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
             properties: {
               downstream: "false",
             },
@@ -506,7 +514,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM sensor_data",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${cleanName}_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -539,7 +547,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM sensor_data ORDER BY `timestamp` DESC LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${cleanName}_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -587,7 +595,7 @@ describe("GetExperimentDataUseCase", () => {
       name: "sensor_data",
       displayName: "sensor_data",
       catalog_name: experiment.name,
-      schema_name: `exp_${cleanName}_${experiment.id}`,
+      schema_name: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
       data: expectedTableData,
       page: 1,
       pageSize: 20,
@@ -661,7 +669,7 @@ describe("GetExperimentDataUseCase", () => {
         {
           name: "public_table",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_public_experiment_${experiment.id}`,
+          schema_name: experiment.schemaName ?? `exp_public_experiment_${experiment.id}`,
           properties: {
             downstream: "false",
           },
@@ -715,7 +723,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "DESCRIBE public_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_public_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_public_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -748,7 +756,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM public_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_public_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_public_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -778,7 +786,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM public_table ORDER BY timestamp DESC LIMIT 5 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_public_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_public_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -859,7 +867,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
             properties: {
               downstream: "false",
             },
@@ -872,7 +880,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -918,7 +926,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "DESCRIBE test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -952,7 +960,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -997,7 +1005,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
             properties: {
               downstream: "false",
             },
@@ -1010,7 +1018,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -1082,7 +1090,7 @@ describe("GetExperimentDataUseCase", () => {
         {
           name: "existing_table",
           catalog_name: MOCK_CATALOG_NAME,
-          schema_name: `exp_test_experiment_${experiment.id}`,
+          schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
           properties: {
             downstream: "false",
           },
@@ -1148,7 +1156,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "sensor_data",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_${cleanName}_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
             properties: {
               downstream: "false",
             },
@@ -1174,7 +1182,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "DESCRIBE sensor_data",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${cleanName}_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -1207,7 +1215,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT `timestamp`, `temperature` FROM sensor_data ORDER BY timestamp DESC",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${cleanName}_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -1333,7 +1341,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "enriched_sample",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
             properties: {
               downstream: "false",
             },
@@ -1360,7 +1368,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "DESCRIBE enriched_sample",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -1393,7 +1401,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM enriched_sample",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -1423,7 +1431,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM enriched_sample LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -1473,7 +1481,7 @@ describe("GetExperimentDataUseCase", () => {
       name: "enriched_sample",
       displayName: "enriched_sample",
       catalog_name: experiment.name,
-      schema_name: `exp_test_experiment_${experiment.id}`,
+      schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
       page: 1,
       pageSize: 20,
       totalRows: 2,
@@ -1484,6 +1492,190 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value[0].data?.columns).toHaveLength(2); // measurement + user columns
     expect(result.value[0].data?.columns.some((col) => col.name === "user")).toBe(true);
     expect(result.value[0].data?.columns.some((col) => col.name === "measurement")).toBe(true);
+  });
+
+  it("should filter out tables with downstream: true (intermediate processing tables) or named 'annotations'", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call with mixed downstream properties
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "raw_sample_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "true", // Should be filtered out
+            },
+          },
+          {
+            name: "annotations", // Should be filtered out
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "false",
+            },
+          },
+          {
+            name: "enriched_sample_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "false", // Should be included
+            },
+          },
+          {
+            name: "macro_processing_temp",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+            properties: {
+              downstream: "true", // Should be filtered out
+            },
+          },
+        ],
+      });
+
+    // Mock DESCRIBE query for table metadata
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [["id", "STRING", null]],
+      totalRows: 1,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE enriched_sample_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock COUNT query for row count
+    const mockCountData = {
+      columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+      rows: [["1"]],
+      totalRows: 1,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT COUNT(*) as count FROM enriched_sample_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-count-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockCountData.columns.length,
+            columns: mockCountData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockCountData.totalRows,
+          truncated: mockCountData.truncated,
+        },
+        result: {
+          data_array: mockCountData.rows,
+          chunk_index: 0,
+          row_count: mockCountData.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock data query for the table
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT * FROM enriched_sample_data LIMIT 5 OFFSET 0",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-statement-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: 1,
+            columns: [{ name: "id", type_name: "STRING", type_text: "STRING", position: 0 }],
+          },
+          total_row_count: 1,
+          truncated: false,
+        },
+        result: {
+          data_array: [["test-id"]],
+          chunk_index: 0,
+          row_count: 1,
+          row_offset: 0,
+        },
+      });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "enriched_sample_data",
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert - should successfully return data since enriched_sample_data has downstream: false
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0].name).toBe("enriched_sample_data");
   });
 
   it("should return forbidden error when trying to access table with downstream: true", async () => {
@@ -1512,7 +1704,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "raw_sample_data",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_test_experiment_${experiment.id}`,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
             properties: {
               downstream: "true", // Intermediate processing table
             },
@@ -1533,5 +1725,129 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.error.code).toBe("FORBIDDEN");
     expect(result.error.message).toContain("not accessible");
     expect(result.error.message).toContain("Only final processed tables are available");
+  });
+
+  it("should handle getOrderByClause failure when fetching specific columns", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    const databricksAdapter = testApp.module.get(DatabricksAdapter);
+
+    // Mock table exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
+      success({
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false" },
+          },
+        ],
+      }),
+    );
+
+    // Mock getTableMetadata to fail
+    vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
+      failure(AppError.internal("Failed to get metadata")),
+    );
+
+    // Act - request specific columns without orderBy (will trigger metadata fetch)
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+      columns: "col1,col2",
+    });
+
+    // Assert - should return error
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to get metadata");
+  });
+
+  it("should handle getOrderByClause failure when fetching paginated data", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    const databricksAdapter = testApp.module.get(DatabricksAdapter);
+
+    // Mock table exists
+    vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
+      success({
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+            properties: { downstream: "false" },
+          },
+        ],
+      }),
+    );
+
+    // Mock count query success
+    vi.spyOn(databricksAdapter, "executeSqlQuery")
+      .mockResolvedValueOnce(
+        success({
+          columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+          rows: [["100"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      )
+      .mockResolvedValueOnce(failure(AppError.internal("Failed to get metadata")));
+
+    // Mock getTableMetadata to fail (for ORDER BY clause)
+    vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
+      failure(AppError.internal("Failed to get metadata")),
+    );
+
+    // Act - request paginated data without orderBy (will trigger metadata fetch)
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert - should return error
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to get metadata");
+  });
+
+  it("should handle experiment without schemaName", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+
+    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+      success({
+        experiment: { ...experiment, schemaName: null },
+        hasAccess: true,
+        isAdmin: false,
+        hasArchiveAccess: false,
+      }),
+    );
+
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "test_table",
+    });
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toBe("Experiment schema not provisioned");
   });
 });

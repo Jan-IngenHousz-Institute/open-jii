@@ -873,6 +873,8 @@ export const zExperimentProvisioningStatusWebhookPayload = z.object({
   jobRunId: z.string(),
   taskRunId: z.string(),
   timestamp: z.string(),
+  pipelineId: z.string().optional(),
+  schemaName: z.string().optional(),
 });
 
 export const zExperimentWebhookSuccessResponse = z.object({

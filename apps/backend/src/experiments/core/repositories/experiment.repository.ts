@@ -65,6 +65,8 @@ export class ExperimentRepository {
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
+      pipelineId: experiments.pipelineId,
+      schemaName: experiments.schemaName,
     };
 
     return tryCatch(async () => {
@@ -206,6 +208,8 @@ export class ExperimentRepository {
         createdAt: experiments.createdAt,
         createdBy: experiments.createdBy,
         updatedAt: experiments.updatedAt,
+        schemaName: experiments.schemaName,
+        pipelineId: experiments.pipelineId,
         ownerFirstName: getAnonymizedFirstName(),
         ownerLastName: getAnonymizedLastName(),
       };
