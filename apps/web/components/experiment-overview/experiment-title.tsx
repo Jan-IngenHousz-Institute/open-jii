@@ -8,6 +8,7 @@ import { parseApiError } from "~/util/apiError";
 import { useTranslation } from "@repo/i18n";
 import { Badge, Button, CardTitle, Input } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
+import { cva } from "@repo/ui/lib/utils";
 
 interface ExperimentTitleProps {
   experimentId: string;
@@ -32,6 +33,18 @@ export function ExperimentTitle({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
+
+  const titleVariants = cva("text-2xl transition-all duration-300", {
+    variants: {
+      editable: {
+        true: "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      editable: false,
+    },
+  });
 
   const handleTitleClick = () => {
     if (hasAccess && !isArchived) {
@@ -131,7 +144,9 @@ export function ExperimentTitle({
         </div>
       ) : (
         <CardTitle
-          className={`text-2xl transition-all duration-300 ${hasAccess && !isArchived ? "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2" : ""}`}
+          className={titleVariants({
+            editable: hasAccess && !isArchived,
+          })}
           onClick={handleTitleClick}
         >
           {name}
