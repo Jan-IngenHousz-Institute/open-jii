@@ -17,11 +17,6 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
-      dry-run:
-        description: "If true, perform a dry run without actual deployment"
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -278,14 +273,10 @@ jobs:
             zip -r ../../server-function.zip .
             cd -
             echo "Uploading server function code to Lambda..."
-            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
-              aws lambda update-function-code \
-                --function-name "${{ env.SERVER_FUNCTION }}" \
-                --zip-file fileb://apps/web/.open-next/server-function.zip \
-                --publish
-            else
-              echo "[DRY RUN] Would update Lambda function: ${{ env.SERVER_FUNCTION }}"
-            fi
+            aws lambda update-function-code \
+              --function-name "${{ env.SERVER_FUNCTION }}" \
+              --zip-file fileb://apps/web/.open-next/server-function.zip \
+              --publish
 
       - name: Check Image Optimization Function
         id: check-image
@@ -308,14 +299,10 @@ jobs:
             zip -r ../image-optimization-function.zip .
             cd -
             echo "Uploading image optimization function code to Lambda..."
-            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
-              aws lambda update-function-code \
-                --function-name "${{ env.IMAGE_FUNCTION }}" \
-                --zip-file fileb://apps/web/.open-next/image-optimization-function.zip \
-                --publish
-            else
-              echo "[DRY RUN] Would update Lambda function: ${{ env.IMAGE_FUNCTION }}"
-            fi
+            aws lambda update-function-code \
+              --function-name "${{ env.IMAGE_FUNCTION }}" \
+              --zip-file fileb://apps/web/.open-next/image-optimization-function.zip \
+              --publish
 
       - name: Check Revalidation Function
         id: check-revalidation
@@ -338,14 +325,10 @@ jobs:
             zip -r ../revalidation-function.zip .
             cd -
             echo "Uploading revalidation function code to Lambda..."
-            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
-              aws lambda update-function-code \
-                --function-name "${{ env.REVALIDATION_FUNCTION }}" \
-                  --zip-file fileb://apps/web/.open-next/revalidation-function.zip \
-                --publish
-            else
-              echo "[DRY RUN] Would update Lambda function: ${{ env.REVALIDATION_FUNCTION }}"
-            fi
+            aws lambda update-function-code \
+              --function-name "${{ env.REVALIDATION_FUNCTION }}" \
+              --zip-file fileb://apps/web/.open-next/revalidation-function.zip \
+              --publish
 
       - name: Check Warmer Function
         id: check-warmer
@@ -365,17 +348,13 @@ jobs:
         run: |
             echo "Zipping warmer function code..."
             cd apps/web/.open-next/warmer-function
-              zip -r ../warmer-function.zip .
+            zip -r ../warmer-function.zip .
             cd -
             echo "Uploading warmer function code to Lambda..."
-            if [[ "${{ inputs.dry-run }}" == "false" ]]; then
-              aws lambda update-function-code \
-                --function-name "${{ env.WARMER_FUNCTION }}" \
-                  --zip-file fileb://apps/web/.open-next/warmer-function.zip \
-                --publish
-            else
-              echo "[DRY RUN] Would update Lambda function: ${{ env.WARMER_FUNCTION }}"
-            fi
+            aws lambda update-function-code \
+              --function-name "${{ env.WARMER_FUNCTION }}" \
+              --zip-file fileb://apps/web/.open-next/warmer-function.zip \
+              --publish
 
       - name: Finalize Lambda Deployments and Summarize Results
         id: update-lambdas
