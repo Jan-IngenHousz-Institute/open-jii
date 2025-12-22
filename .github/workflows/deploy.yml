@@ -27,6 +27,9 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
     if: inputs.deploy_infrastructure
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/tofu.yml
     with:
       environment: ${{ inputs.environment }}
@@ -36,6 +39,9 @@ jobs:
   database-migrations:
     name: Database Migrations
     needs: [deploy-infrastructure]
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/database-migrations.yml
     with:
       environment: ${{ inputs.environment }}
@@ -44,6 +50,9 @@ jobs:
   deploy-backend:
     name: Deploy Backend
     needs: [deploy-infrastructure, database-migrations]
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: ${{ inputs.environment }}
@@ -52,6 +61,9 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     needs: [deploy-infrastructure, deploy-backend]
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: ${{ inputs.environment }}
@@ -60,6 +72,9 @@ jobs:
   deploy-docs:
     name: Deploy Documentation
     needs: deploy-infrastructure
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/deploy-docs.yml
     with:
       environment: ${{ inputs.environment }}
