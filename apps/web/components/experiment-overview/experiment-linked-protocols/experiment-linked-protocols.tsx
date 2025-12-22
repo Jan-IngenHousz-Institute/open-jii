@@ -165,7 +165,7 @@ export function ExperimentLinkedProtocols({
         <CardTitle>{t("protocols.linkedProtocols")}</CardTitle>
         {selectedProtocol && (
           <Link href={`/${locale}/platform/protocols/${selectedProtocol}`} className="shrink-0">
-            <Button variant="subtle" className="h-auto p-0">
+            <Button variant="buttonLink" className="h-auto p-0">
               {t("protocols.goToProtocol")}
             </Button>
           </Link>

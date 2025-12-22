@@ -112,21 +112,18 @@ export function ExperimentTitle({
             onBlur={handleTitleBlur}
           />
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleTitleCancel}
             disabled={isUpdating}
             data-role="edit-action"
-            className="hover:bg-badge-featured"
             aria-label="Cancel"
           >
             <X className="h-6 w-6" />
           </Button>
           <Button
-            variant="outline"
             onClick={handleTitleSave}
             disabled={isUpdating}
             data-role="edit-action"
-            className="text-primary hover:bg-badge-featured"
             aria-label="Save"
           >
             <Check className="h-6 w-6" />

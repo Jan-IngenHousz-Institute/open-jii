@@ -120,22 +120,15 @@ export function ExperimentDescription({
           />
           <div className="flex justify-end gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleDescriptionCancel}
               disabled={isUpdating}
               data-role="edit-action"
-              className="hover:bg-badge-featured"
             >
               <X className="h-4 w-4" />
               <span>{t("common.cancel")}</span>
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleDescriptionSave}
-              disabled={isUpdating}
-              data-role="edit-action"
-              className="text-primary hover:bg-badge-featured"
-            >
+            <Button onClick={handleDescriptionSave} disabled={isUpdating} data-role="edit-action">
               <Check className="h-4 w-4" />
               <span>{t("common.save")}</span>
             </Button>

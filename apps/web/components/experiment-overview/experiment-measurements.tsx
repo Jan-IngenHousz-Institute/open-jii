@@ -86,7 +86,7 @@ export function ExperimentMeasurements({
           href={`/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/data`}
           className="shrink-0"
         >
-          <Button variant="subtle" className="h-auto p-0">
+          <Button variant="buttonLink" className="h-auto p-0">
             {t("measurements.seeAll")}
           </Button>
         </Link>

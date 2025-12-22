@@ -45,6 +45,7 @@ export default {
         quaternary: {
           DEFAULT: "#E2FCFC", // Light green
           light: "#EDFFFF",
+          dark: "#DAF9F9",
         },
         accent: {
           DEFAULT: "#afd7f4", // Light blue
