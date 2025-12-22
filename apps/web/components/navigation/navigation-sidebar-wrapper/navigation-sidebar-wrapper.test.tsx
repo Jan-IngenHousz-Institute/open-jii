@@ -159,7 +159,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
-    const navigationData = JSON.parse(navigationDataElement.textContent ?? "{}") as {
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
       navDashboard: {
         title: string;
         url: string;
@@ -209,7 +209,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
-    const navigationData = JSON.parse(navigationDataElement.textContent ?? "{}") as {
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
       navProtocols: {
         title: string;
         url: string;
@@ -239,7 +239,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
-    const navigationData = JSON.parse(navigationDataElement.textContent ?? "{}") as {
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
       navMacros: {
         title: string;
         url: string;
@@ -269,10 +269,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const translationsElement = screen.getByTestId("sidebar-translations");
-    const translations = JSON.parse(translationsElement.textContent ?? "{}") as Record<
-      string,
-      string
-    >;
+    const translations = JSON.parse(translationsElement.textContent) as Record<string, string>;
 
     expect(translations).toMatchObject({
       openJII: "navigation.openJII",
@@ -289,7 +286,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
-    const navigationData = JSON.parse(navigationDataElement.textContent ?? "{}") as {
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
       navDashboard: { url: string }[];
       navExperiments: { url: string; items: { url: string }[] }[];
     };
@@ -314,7 +311,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
-    const navigationData = JSON.parse(navigationDataElement.textContent ?? "{}") as {
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
       navDashboard: {
         items: { title: string; url: string }[];
       }[];
@@ -330,7 +327,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
-    const navigationData = JSON.parse(navigationDataElement.textContent ?? "{}") as {
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
       navDashboard: {
         items: { title: string; url: string }[];
       }[];
@@ -349,7 +346,7 @@ describe("NavigationSidebarWrapper", () => {
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
-    const navigationData = JSON.parse(navigationDataElement.textContent ?? "{}") as {
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
       navExperiments: {
         items: { title: string; url: string }[];
       }[];
