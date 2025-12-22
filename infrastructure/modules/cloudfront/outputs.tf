@@ -17,3 +17,8 @@ output "custom_domain" {
   description = "The custom domain for the CloudFront distribution (if configured)"
   value       = local.has_custom_domain ? var.custom_domain : ""
 }
+
+output "distribution_id" {
+  description = "ID of the CloudFront distribution"
+  value       = aws_cloudfront_distribution.cdn.id
+}

@@ -33,10 +33,10 @@ const mockTable: ExperimentTableWithColumns = {
   },
   tableRows: [],
   columns: [
-    { name: "time", type_name: "timestamp", type_text: "timestamp" },
-    { name: "temperature", type_name: "double", type_text: "double" },
-    { name: "humidity", type_name: "double", type_text: "double" },
-    { name: "pressure", type_name: "integer", type_text: "integer" },
+    { name: "time", type_name: "timestamp", type_text: "timestamp", position: 1 },
+    { name: "temperature", type_name: "double", type_text: "double", position: 2 },
+    { name: "humidity", type_name: "double", type_text: "double", position: 3 },
+    { name: "pressure", type_name: "integer", type_text: "integer", position: 4 },
   ],
 };
 
@@ -246,11 +246,7 @@ describe("XAxisConfiguration", () => {
       const triggers = screen.getAllByRole("combobox");
       const typeSelect = triggers.find((trigger) => {
         const text = trigger.textContent;
-        return (
-          (text?.includes("linear") ?? false) ||
-          (text?.includes("log") ?? false) ||
-          (text?.includes("date") ?? false)
-        );
+        return ["linear", "log", "date"].includes(text);
       });
 
       if (typeSelect) {
@@ -270,7 +266,7 @@ describe("XAxisConfiguration", () => {
       render(<TestWrapper />);
 
       const triggers = screen.getAllByRole("combobox");
-      const typeSelect = triggers.find((trigger) => trigger.textContent?.includes("linear"));
+      const typeSelect = triggers.find((trigger) => trigger.textContent.includes("linear"));
 
       if (typeSelect) {
         await user.click(typeSelect);
@@ -287,7 +283,7 @@ describe("XAxisConfiguration", () => {
       render(<TestWrapper />);
 
       const triggers = screen.getAllByRole("combobox");
-      const typeSelect = triggers.find((trigger) => trigger.textContent?.includes("linear"));
+      const typeSelect = triggers.find((trigger) => trigger.textContent.includes("linear"));
 
       if (typeSelect) {
         await user.click(typeSelect);

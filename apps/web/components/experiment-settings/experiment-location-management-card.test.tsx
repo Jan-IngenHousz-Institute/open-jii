@@ -272,7 +272,7 @@ describe("ExperimentLocationManagement", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
       const mapLocations = JSON.parse(
-        screen.getByTestId("map-locations").textContent ?? "[]",
+        screen.getByTestId("map-locations").textContent,
       ) as LocationPoint[];
 
       expect(mapLocations).toHaveLength(2);
@@ -293,7 +293,7 @@ describe("ExperimentLocationManagement", () => {
     it("should calculate center based on available locations", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      const center = JSON.parse(screen.getByTestId("map-center").textContent ?? "[]") as number[];
+      const center = JSON.parse(screen.getByTestId("map-center").textContent) as number[];
       const expectedLat = (40.7829 + 40.758) / 2;
       const expectedLng = (-73.9654 + -73.9855) / 2;
 
@@ -309,7 +309,7 @@ describe("ExperimentLocationManagement", () => {
 
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      const center = JSON.parse(screen.getByTestId("map-center").textContent ?? "[]") as number[];
+      const center = JSON.parse(screen.getByTestId("map-center").textContent) as number[];
       expect(center).toEqual([52.52, 13.405]); // Berlin coordinates
     });
 

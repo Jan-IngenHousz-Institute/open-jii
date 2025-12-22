@@ -68,7 +68,7 @@ export class RemoveExperimentMemberUseCase {
 
           // Allow non-admins to remove themselves only
           const isRemovingSelf = memberId === currentUserId;
-          if (!isRemovingSelf && (!currentUserMember || currentUserMember.role !== "admin")) {
+          if (!isRemovingSelf && currentUserMember?.role !== "admin") {
             this.logger.warn(
               `User ${currentUserId} attempted to remove member from experiment ${experimentId} without admin privileges`,
             );
@@ -90,7 +90,7 @@ export class RemoveExperimentMemberUseCase {
           const memberToRemove = members.find(
             (member: ExperimentMemberDto) => member.user.id === memberId,
           );
-          if (memberToRemove && memberToRemove.role === "admin") {
+          if (memberToRemove?.role === "admin") {
             // Count how many admins we have
             const adminCount = members.filter(
               (member: ExperimentMemberDto) => member.role === "admin",

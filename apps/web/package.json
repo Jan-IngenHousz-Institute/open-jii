@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
-    "@monaco-editor/react": "^4.7.0",
+    "@monaco-editor/react": "4.8.0-rc.3",
     "@repo/analytics": "workspace:*",
     "@repo/api": "workspace:*",
     "@repo/auth": "workspace:*",
@@ -60,6 +60,7 @@
     "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
     "jsdom": "catalog:testing",
+    "monaco-editor": "0.52.0",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:testing"
