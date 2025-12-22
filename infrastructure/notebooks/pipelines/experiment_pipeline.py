@@ -382,7 +382,7 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
         "downstream": "true"
     }}
 )
-def {macro_table_name}_table():
+def macro_{macro_table_name}():
     base_df = (
         spark.readStream.table(f"{{CATALOG_NAME}}.{{CENTRAL_SCHEMA}}.{{CENTRAL_SILVER_TABLE}}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)
@@ -492,7 +492,7 @@ def {macro_table_name}_table():
         "downstream": "false"
     }}
 )
-def enriched_{macro_table_name}_table():
+def enriched_macro_{macro_table_name}_table():
     """
     Create an enriched macro table by combining macro output with user metadata and annotations.
     This creates a silver layer table with denormalized user information and annotation data.

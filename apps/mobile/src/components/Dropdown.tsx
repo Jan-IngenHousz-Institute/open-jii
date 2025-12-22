@@ -45,7 +45,9 @@ export function Dropdown({
     const query = searchQuery.toLowerCase();
     return options.filter(
       (opt) =>
-        opt.label.toLowerCase().includes(query) || opt.description?.toLowerCase().includes(query),
+        opt.label.toLowerCase().includes(query) ??
+        opt.description?.toLowerCase().includes(query) ??
+        false,
     );
   }, [options, searchQuery]);
 

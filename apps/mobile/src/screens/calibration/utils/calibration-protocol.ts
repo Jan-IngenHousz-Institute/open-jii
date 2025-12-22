@@ -125,7 +125,7 @@ export const simulateDataProcessing = async (
   measurements: MeasurementData[],
 ): Promise<ProcessedCalibrationOutput> => {
   // Simulate processing time
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  await new Promise<void>((resolve) => setTimeout(() => resolve(), 3000));
 
   // Simulate processed output
   return {

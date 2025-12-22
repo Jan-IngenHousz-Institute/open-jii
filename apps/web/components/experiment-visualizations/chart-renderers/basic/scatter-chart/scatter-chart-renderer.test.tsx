@@ -99,7 +99,7 @@ describe("ScatterChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].x).toEqual([1, 2, 3]);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -219,7 +219,7 @@ describe("ScatterChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       expect(parsed).toHaveLength(2);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].name).toBe("Series 1");
@@ -272,7 +272,7 @@ describe("ScatterChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].marker.color).toEqual(["A", "B"]);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -319,7 +319,7 @@ describe("ScatterChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].marker.colorbar).toBeUndefined();
     });
@@ -359,7 +359,7 @@ describe("ScatterChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].x).toEqual(["true", "null"]);
     });
@@ -377,7 +377,7 @@ describe("ScatterChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].name).toBe("Y");
     });
@@ -406,7 +406,7 @@ describe("ScatterChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].name).toBe("");
     });

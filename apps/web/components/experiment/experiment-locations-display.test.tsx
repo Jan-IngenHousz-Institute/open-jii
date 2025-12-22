@@ -216,9 +216,7 @@ describe("ExperimentLocationsDisplay", () => {
       render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={false} />);
 
       // Verify map locations
-      const mapLocations = JSON.parse(
-        screen.getByTestId("map-locations").textContent ?? "[]",
-      ) as unknown[];
+      const mapLocations = JSON.parse(screen.getByTestId("map-locations").textContent) as unknown[];
       expect(mapLocations).toHaveLength(3);
       expect(mapLocations[0]).toEqual({
         id: "loc-1",
@@ -228,7 +226,7 @@ describe("ExperimentLocationsDisplay", () => {
       });
 
       // Verify center calculation (average of all locations)
-      const center = JSON.parse(screen.getByTestId("map-center").textContent ?? "[]") as number[];
+      const center = JSON.parse(screen.getByTestId("map-center").textContent) as number[];
       const expectedCenterLat = (40.7829 + 40.758 + 40.7061) / 3;
       const expectedCenterLng = (-73.9654 + -73.9855 + -73.9969) / 3;
       expect(center[0]).toBeCloseTo(expectedCenterLat, 4);
@@ -331,9 +329,7 @@ describe("ExperimentLocationsDisplay", () => {
 
       render(<ExperimentLocationsDisplay locations={[apiLocation]} isLoading={false} />);
 
-      const mapLocations = JSON.parse(
-        screen.getByTestId("map-locations").textContent ?? "[]",
-      ) as unknown[];
+      const mapLocations = JSON.parse(screen.getByTestId("map-locations").textContent) as unknown[];
       expect(mapLocations[0]).toEqual({
         id: "test-id",
         name: "Test Location",
