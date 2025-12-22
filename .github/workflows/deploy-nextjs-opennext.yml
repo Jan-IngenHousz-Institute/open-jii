@@ -10,6 +10,10 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
+      should_deploy:
+        description: "Should run frontend deployment? (true/false)"
+        required: true
+        type: boolean
 
   workflow_call:
     inputs:
@@ -17,42 +21,30 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
+      should_deploy:
+        description: "Should run frontend deployment? (true/false)"
+        required: true
+        type: boolean
 
 permissions:
   contents: read
 
-jobs:
-  detect-changes:
-    name: Detect Changed Packages
-    runs-on: ubuntu-latest
-    outputs:
-      affected_apps: ${{ steps.detect.outputs.affected_apps }}
-      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "22"
-
-      - name: Detect Affected Packages
-        id: detect
-        uses: ./.github/actions/detect-affected-packages
-  
+jobs:  
   deploy-opennext:
     name: Build & Deploy Next.js with OpenNext
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
     environment: ${{ inputs.environment }}
     permissions:
       id-token: write
       contents: read
     steps:
+      - name: Check if Docs should run
+        id: check-should-deploy
+        run: |
+          if [ "${{ inputs.should_deploy }}" != "true" ]; then
+            echo "Skipping Frontend deployment as it's not in affected apps."
+            exit 0
+          fi
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
