@@ -1,54 +1,54 @@
 name: Deploy Databricks Bundle
 
 on:
-    workflow_call:
-        inputs:
-            environment:
-                description: "Environment to deploy to"
-                required: true
-                type: string
+  workflow_call:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        type: string
 
 jobs:
-    deploy:
-        name: Deploy to ${{ inputs.environment }}
-        runs-on: ubuntu-latest
-        environment: ${{ inputs.environment }}
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.10"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-            - name: Install Python build tool
-              run: pip install --upgrade pip build
+      - name: Install Python build tool
+        run: pip install --upgrade pip build
 
-            - name: Setup Databricks CLI
-              uses: databricks/setup-cli@main
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@main
 
-            - name: Validate bundle
-              working-directory: apps/notebooks
-              run: databricks bundle validate -t ${{ inputs.environment }}
-              env:
-                  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-                  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      - name: Validate bundle
+        working-directory: apps/data
+        run: databricks bundle validate -t ${{ inputs.environment }}
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
-            - name: Deploy bundle
-              working-directory: apps/notebooks
-              run: |
-                  echo "Deploying bundle to ${{ inputs.environment }} environment..."
-                  databricks bundle deploy -t ${{ inputs.environment }}
-              env:
-                  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-                  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      - name: Deploy bundle
+        working-directory: apps/data
+        run: |
+          echo "Deploying bundle to ${{ inputs.environment }} environment..."
+          databricks bundle deploy -t ${{ inputs.environment }}
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
-            - name: Deployment summary
-              run: |
-                  echo "Deployment to ${{ inputs.environment }} completed successfully"
-                  echo "Bundle: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/"
-                  echo "Notebooks: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/notebooks/"
-                  echo "Artifacts: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/artifacts/"
-                  echo "Workspace: ${{ secrets.DATABRICKS_HOST }}"
+      - name: Deployment summary
+        run: |
+          echo "Deployment to ${{ inputs.environment }} completed successfully"
+          echo "Bundle: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/"
+          echo "Notebooks: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/notebooks/"
+          echo "Artifacts: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/artifacts/"
+          echo "Workspace: ${{ secrets.DATABRICKS_HOST }}"
