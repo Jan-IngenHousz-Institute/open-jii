@@ -15,11 +15,7 @@ on:
         required: false
         type: number
         default: 10
-      should_deploy:
-        description: "Should run database migration? (true/false)"
-        required: true
-        type: boolean
-        
+
   workflow_call:
     inputs:
       environment:
@@ -31,10 +27,6 @@ on:
         required: false
         type: number
         default: 10
-      should_deploy:
-        description: "Should run database migration? (true/false)"
-        required: true
-        type: boolean
 
 concurrency:
   group: migrations-${{ github.workflow }}-${{ inputs.environment }}-${{ github.ref }}
@@ -51,41 +43,28 @@ jobs:
     timeout-minutes: 30 # Overall job timeout
 
     steps:
-      - name: Check if migration should run
-        id: check-should-deploy
-        run: |
-          if [ "${{ inputs.should_deploy }}" != "true" ]; then
-            echo "Skipping database migration as it's not in affected apps."
-            exit 0
-          fi
-
       - name: Set timeout seconds
-        if: inputs.should_deploy == 'true'
         id: set-timeout
         run: |
           echo "seconds=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_OUTPUT
           echo "MIGRATION_TIMEOUT=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_ENV
           echo "Setting migration timeout to $((${{ inputs.timeout_minutes }} * 60)) seconds"
       - name: Checkout code
-        if: inputs.should_deploy == 'true'
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        if: inputs.should_deploy == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Get Infrastructure Configuration
-        if: inputs.should_deploy == 'true'
         uses: ./.github/actions/get-infrastructure-config
         with:
           environment: ${{ inputs.environment }}
           prefix: "/migration"
 
       - name: Normalize migration env vars
-        if: inputs.should_deploy == 'true'
         run: |
           echo "Normalizing SSM env vars to MIGRATION_RUNNER_* aliases"
 
@@ -101,18 +80,15 @@ jobs:
           [[ -n "${ECR_REPOSITORY_NAME:-}" ]] && echo "ECR_REPOSITORY=$ECR_REPOSITORY_NAME" >> $GITHUB_ENV
 
       - name: Set derived environment variables
-        if: inputs.should_deploy == 'true'
         run: |
           # Set log group name based on environment
           echo "LOG_GROUP_NAME=/aws/ecs/db-migration-runner-${{ inputs.environment }}" >> $GITHUB_ENV
 
       - name: Login to Amazon ECR
-        if: inputs.should_deploy == 'true'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set environment variables
-        if: inputs.should_deploy == 'true'
         run: |
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=migrations-$(echo ${{ github.sha }} | cut -c1-7)-$(date +%s)" >> $GITHUB_ENV
@@ -127,7 +103,6 @@ jobs:
           fi
 
       - name: Build, tag, and push image to Amazon ECR
-        if: inputs.should_deploy == 'true'
         id: build-image
         env:
           ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
@@ -180,7 +155,6 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Check for already running migration task
-        if: inputs.should_deploy == 'true'
         id: check-running
         run: |
           CLUSTER_NAME="${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}"
@@ -222,7 +196,6 @@ jobs:
           echo "Previous migration task completed, can proceed with new migration."
 
       - name: Fetch current task definition
-        if: inputs.should_deploy == 'true'
         id: fetch-task-def
         run: |
           TASK_FAMILY="${{ env.MIGRATION_RUNNER_TASK_DEFINITION_FAMILY }}"
@@ -306,7 +279,6 @@ jobs:
           fi
 
       - name: Fill in the new image ID in the Amazon ECS task definition
-        if: inputs.should_deploy == 'true'
         id: render-task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
@@ -315,7 +287,6 @@ jobs:
           image: ${{ steps.build-image.outputs.full_image_ref }}
 
       - name: Register rendered task definition
-        if: inputs.should_deploy == 'true'
         id: register-task-def
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
@@ -332,7 +303,6 @@ jobs:
           echo "family_revision=$FAMILY_REVISION" >> $GITHUB_OUTPUT
 
       - name: Run migration task
-        if: inputs.should_deploy == 'true'
         id: run-task
         env:
           CLUSTER_NAME: ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}
@@ -388,7 +358,6 @@ jobs:
           echo "Migration task completed."
 
       - name: Migration Summary
-        if: inputs.should_deploy == 'true'
         env:
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
           RUN_TASK_OUTCOME: ${{ steps.run-task.outcome }}
