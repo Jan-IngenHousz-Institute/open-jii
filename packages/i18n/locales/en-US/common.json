@@ -167,7 +167,7 @@
     "requestedAt": "Requested on",
     "errorLoadingRequests": "Failed to load your transfer requests. Please try again later.",
     "importantNote": "Important Information",
-    "note1": "Project transfers are not immediate and may take up to two weeks.",
+    "note1": "Project transfers are not immediate and may require up to 2 weeks to process.",
     "note2": "We will contact you via your openJII account email if we need additional information.",
     "note3": "You will receive an email notification once the transfer has been completed.",
     "projectIdLabel": "PhotosynQ Project ID",
