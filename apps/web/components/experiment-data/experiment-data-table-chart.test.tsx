@@ -144,7 +144,7 @@ describe("ExperimentDataTableChart", () => {
     render(<ExperimentDataTableChart data={mockData} columnName={mockColumnName} visible={true} />);
 
     const lineChart = screen.getByTestId("line-chart");
-    const chartData = JSON.parse(lineChart.textContent ?? "[]") as ChartData[];
+    const chartData = JSON.parse(lineChart.textContent) as ChartData[];
 
     expect(chartData).toHaveLength(1);
     const firstChart = chartData[0];
@@ -172,7 +172,7 @@ describe("ExperimentDataTableChart", () => {
     render(<ExperimentDataTableChart data={mockData} columnName="" visible={true} />);
 
     const lineChart = screen.getByTestId("line-chart");
-    const chartData = JSON.parse(lineChart.textContent ?? "[]") as ChartData[];
+    const chartData = JSON.parse(lineChart.textContent) as ChartData[];
     const config = JSON.parse(lineChart.getAttribute("data-config") ?? "{}") as ChartConfig;
 
     const firstChart = chartData[0];

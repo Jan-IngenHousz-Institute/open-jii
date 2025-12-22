@@ -58,7 +58,7 @@ export const simulateDataProcessing = async (
   _protocol: CalibrationProtocol,
 ): Promise<ProcessedCalibrationOutput> => {
   // Simulate processing time
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  await new Promise<void>((resolve) => setTimeout(() => resolve(), 3000));
 
   // Extract user inputs
   const userInputs = measurements

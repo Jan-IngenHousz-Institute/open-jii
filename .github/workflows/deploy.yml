@@ -1,0 +1,66 @@
+# Deployment Workflow
+# Main orchestrator for infrastructure and application deployments
+
+name: Deployment Workflow
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment (dev, staging, prod)"
+        required: true
+        type: string
+      deploy_infrastructure:
+        description: "Whether to deploy infrastructure"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    if: inputs.deploy_infrastructure
+    uses: ./.github/workflows/tofu.yml
+    with:
+      environment: ${{ inputs.environment }}
+      tofu_version: "1.9.0"
+    secrets: inherit
+
+  database-migrations:
+    name: Database Migrations
+    needs: [deploy-infrastructure]
+    uses: ./.github/workflows/database-migrations.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-backend:
+    name: Deploy Backend
+    needs: [deploy-infrastructure, database-migrations]
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [deploy-infrastructure, deploy-backend]
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-docs:
+    name: Deploy Documentation
+    needs: deploy-infrastructure
+    uses: ./.github/workflows/deploy-docs.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
