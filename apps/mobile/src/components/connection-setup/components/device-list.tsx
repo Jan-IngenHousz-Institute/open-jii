@@ -24,6 +24,7 @@ export function DeviceList({
 }: Props) {
   const { colors, classes } = useTheme();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const renderKey = useMemo(() => Date.now(), [connectingDeviceId]);
 
   return (

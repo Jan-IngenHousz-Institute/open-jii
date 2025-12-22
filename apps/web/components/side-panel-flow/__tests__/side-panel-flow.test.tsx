@@ -326,7 +326,7 @@ describe("<ExperimentSidePanel />", () => {
       nodeTitle: "Default Title",
     });
 
-    const specStr = screen.getByTestId("qp-spec").textContent ?? "";
+    const specStr = screen.getByTestId("qp-spec").textContent;
     const parsed = JSON.parse(specStr) as QuestionSpec;
     expect(parsed.answerType).toBe("TEXT");
     expect(parsed.required).toBe(false);

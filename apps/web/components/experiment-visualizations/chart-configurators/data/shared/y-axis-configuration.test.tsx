@@ -813,7 +813,7 @@ describe("YAxisConfiguration", () => {
       );
 
       const selects = screen.getAllByRole("combobox");
-      const typeSelect = selects.find((select) => select.textContent?.includes("linear"));
+      const typeSelect = selects.find((select) => select.textContent.includes("linear"));
 
       if (typeSelect) {
         await user.click(typeSelect);

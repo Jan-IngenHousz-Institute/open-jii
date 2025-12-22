@@ -340,7 +340,7 @@ describe("LineChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].x).toEqual(["[object Object]", "array"]);
     });
@@ -362,7 +362,7 @@ describe("LineChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].y).toEqual(["[object Object]", "", "true"]);
     });
@@ -384,7 +384,7 @@ describe("LineChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].y).toEqual(["10", "20.5", "30"]);
     });
@@ -421,7 +421,7 @@ describe("LineChartRenderer", () => {
 
       const chartData = screen.getByTestId("chart-data");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      const parsed = JSON.parse(chartData.textContent);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed[0].color).toBe("#ff0000");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
