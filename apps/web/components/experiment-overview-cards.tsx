@@ -32,7 +32,7 @@ export function ExperimentOverviewCards({
   if (horizontal) {
     // Horizontal layout for dashboard
     return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-x-12 lg:gap-y-12">
         {experiments.map((experiment) => {
           const experimentPath = archived
             ? `/platform/experiments-archive/${experiment.id}`

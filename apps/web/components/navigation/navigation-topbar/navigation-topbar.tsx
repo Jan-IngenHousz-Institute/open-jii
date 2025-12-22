@@ -64,11 +64,11 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
 
           <Link href={`/${locale}/platform`} className="md:hidden">
             <Image
-              src="/openJII-logo-vertical-yellow.svg"
+              src="/logo-jii-yellow.svg"
               alt="JII Logo"
               width={40}
               height={40}
-              className="h-10 w-auto"
+              className="h-8 w-auto"
             />
           </Link>
 
