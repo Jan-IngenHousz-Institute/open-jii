@@ -352,11 +352,13 @@ describe("<UnifiedNavbar />", () => {
   it("sets up intersection observer when isHomePage is true", () => {
     const observeMock = vi.fn();
     const unobserveMock = vi.fn();
-    const mockIntersectionObserver = vi.fn(() => ({
-      observe: observeMock,
-      unobserve: unobserveMock,
-      disconnect: vi.fn(),
-    }));
+    const mockIntersectionObserver = vi.fn(function () {
+      return {
+        observe: observeMock,
+        unobserve: unobserveMock,
+        disconnect: vi.fn(),
+      };
+    });
 
     vi.stubGlobal("IntersectionObserver", mockIntersectionObserver);
 
