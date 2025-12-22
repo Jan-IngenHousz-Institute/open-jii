@@ -59,7 +59,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
     // Simulate device processing time
     setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
     setIsProcessing(false);
 
     console.log("Gain calibration completed");
@@ -80,7 +80,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
     // Simulate device processing time
     setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 1500));
     setIsProcessing(false);
 
     // Store measurement data
@@ -128,7 +128,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
       // Simulate sending configuration commands to device
       console.log("Sending device configuration commands:", output.toDevice);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
 
       setCurrentStep("complete");
       toast.success("Calibration completed successfully!");

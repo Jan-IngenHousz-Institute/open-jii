@@ -1,5 +1,5 @@
-name: "OpenTofu Init and Validate"
-description: "Initializes OpenTofu and validates the configuration"
+name: "OpenTofu Apply"
+description: "Runs OpenTofu apply"
 runs:
   using: "composite"
   steps:
@@ -11,13 +11,7 @@ runs:
         else
           echo "RESOLVED_ENV=dev" >> "$GITHUB_ENV"
         fi
-    
-    - name: OpenTofu Init
+    - name: OpenTofu Apply
       shell: bash
       working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
-      run: tofu init
-
-    - name: OpenTofu Validate
-      shell: bash
-      working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
-      run: tofu validate
+      run: tofu apply -auto-approve
