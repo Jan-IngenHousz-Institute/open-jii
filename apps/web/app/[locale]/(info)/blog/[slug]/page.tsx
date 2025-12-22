@@ -77,7 +77,7 @@ export default async function Page({ params }: BlogPageProps) {
   }
 
   return (
-    <div className="py-12">
+    <div className="py-20">
       <Container>
         <ArticleHero article={blogPost} isFeatured={isFeatured} isReversedLayout={true} />
       </Container>

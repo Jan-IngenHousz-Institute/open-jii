@@ -8,6 +8,7 @@ import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { PagePoliciesFieldsFragment } from "../lib/__generated/sdk";
+import type { EmbeddedEntryType } from "./contentful/ctf-rich-text";
 import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface PoliciesContentProps {
@@ -35,24 +36,29 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
   });
 
   return (
-    <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="mx-auto max-w-4xl">
-          <h1
-            className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
-            {...inspectorProps({ fieldId: "title" })}
-          >
-            {currentPolicies.title}
-          </h1>
+    <div className="mx-auto max-w-4xl px-4 py-20">
+      <h1
+        className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto"
+        {...inspectorProps({ fieldId: "title" })}
+      >
+        {currentPolicies.title}
+      </h1>
 
-          {/* Content */}
-          {currentPolicies.content?.json ? (
-            <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
-              <CtfRichText json={currentPolicies.content.json as Document} />
-            </div>
-          ) : null}
+      {/* Content */}
+      {currentPolicies.content?.json ? (
+        <div className="mt-16" {...inspectorProps({ fieldId: "content" })}>
+          <CtfRichText
+            json={currentPolicies.content.json as Document}
+            links={
+              currentPolicies.content.links as {
+                entries: {
+                  block: EmbeddedEntryType[];
+                };
+              }
+            }
+          />
         </div>
-      </div>
+      ) : null}
     </div>
   );
 };

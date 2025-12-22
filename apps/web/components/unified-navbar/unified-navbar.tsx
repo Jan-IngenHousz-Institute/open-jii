@@ -73,7 +73,7 @@ function UserMenu({
               </AvatarFallback>
             </Avatar>
           ) : (
-            <User className="h-4 w-4" />
+            <User className="group-hover:text-jii-medium-green h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_theme(colors.jii-medium-green)]" />
           )}
           <ChevronDown
             className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
@@ -81,22 +81,21 @@ function UserMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem disabled>
-          <div className="flex w-full items-center gap-3">
-            {session.user.image && (
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={session.user.image} alt={displayName} />
-                <AvatarFallback>
-                  <User className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium">{displayName}</span>
-              <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
-            </div>
+        <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
+          {session.user.image && (
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={session.user.image} alt={displayName} />
+              <AvatarFallback>
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+          )}
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-medium">{displayName}</span>
+            <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
           </div>
-        </DropdownMenuItem>
+        </div>
         <DropdownMenuSeparator />
         {/* Account link */}
         <DropdownMenuItem asChild>
@@ -308,7 +307,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                       <Link
                         href={item.href}
                         className={`flex items-center space-x-3 ${
-                          item.isActive ? "bg-accent" : ""
+                          item.isActive ? "bg-surface-dark" : ""
                         }`}
                         aria-current={item.isActive ? "page" : undefined}
                       >
@@ -323,24 +322,22 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                 {session?.user && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem disabled>
-                      <div className="flex w-full items-center gap-3">
-                        {session.user.image && (
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={session.user.image} alt={displayName} />
-                            <AvatarFallback>
-                              <User className="h-3 w-3" />
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate text-sm font-medium">{displayName}</span>
-                          <span className="text-muted-foreground truncate text-xs">
-                            {session.user.email}
-                          </span>
-                        </div>
+                    <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
+                      {session.user.image && (
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={session.user.image} alt={displayName} />
+                          <AvatarFallback>
+                            <User className="h-3 w-3" />
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-sm font-medium">{displayName}</span>
+                        <span className="text-muted-foreground truncate text-xs">
+                          {session.user.email}
+                        </span>
                       </div>
-                    </DropdownMenuItem>
+                    </div>
                     {/* Account link for mobile */}
                     <DropdownMenuItem asChild>
                       <Link
