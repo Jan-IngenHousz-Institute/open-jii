@@ -1,3 +1,5 @@
+import { experiments } from "@repo/database";
+
 import { DatabricksAdapter } from "../../../../../common/modules/databricks/databricks.adapter";
 import {
   assertFailure,
@@ -47,10 +49,11 @@ describe("DeleteAnnotations", () => {
       status: "active",
       visibility: "private",
       userId: testUserId,
+      pipelineId: "test-pipeline-123",
     });
 
     // Mock DatabricksAdapter methods
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       success({
         columns: [
           { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
@@ -87,15 +90,16 @@ describe("DeleteAnnotations", () => {
   it("should delete multiple annotations", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
+      name: "Test Experiment for Bulk Delete",
       description: "Test Description",
       status: "active",
       visibility: "private",
       userId: testUserId,
+      pipelineId: "test-pipeline-456",
     });
 
     // Mock DatabricksAdapter methods
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       success({
         columns: [
           { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
@@ -186,7 +190,7 @@ describe("DeleteAnnotations", () => {
     });
 
     // Mock DatabricksAdapter to fail
-    vi.spyOn(databricksAdapter, "executeExperimentSqlQuery").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
       failure({
         message: "Databricks SQL query execution failed",
         code: "DATABRICKS_ERROR",
@@ -244,6 +248,44 @@ describe("DeleteAnnotations", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.rowsAffected).toBe(1);
+  });
+
+  it("should handle repository deleteAnnotationsBulk failure", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment Bulk Delete Fail",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+      pipelineId: "test-pipeline-bulk-delete-fail",
+    });
+
+    // Mock the repository to return failure
+    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    vi.spyOn(repository, "deleteAnnotationsBulk").mockResolvedValue(
+      failure({
+        message: "Failed to delete annotations from database",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        name: "DatabaseError",
+      }),
+    );
+
+    const request: DeleteAnnotationsRequest = {
+      tableName: "test_table",
+      rowIds: ["row1", "row2"],
+      type: "comment",
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, request, testUserId);
+
+    // Assert - should fail with internal error
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toContain("Failed to delete annotations");
   });
 
   it("should continue operation when silver data refresh fails for bulk annotation deletion", async () => {
@@ -304,5 +346,216 @@ describe("DeleteAnnotations", () => {
     assertFailure(result);
     expect(result.error.code).toBe("BAD_REQUEST");
     expect(result.error.message).toContain("User ID is required");
+  });
+
+  it("should return error when experiment schema is not provisioned", async () => {
+    // Create an experiment without schemaName by directly inserting into database
+    const [experiment] = await testApp.database
+      .insert(experiments)
+      .values({
+        name: "Test Experiment No Schema",
+        description: "Test Description",
+        status: "provisioning",
+        visibility: "public", // Public so no membership required
+        createdBy: testUserId,
+        schemaName: null, // No schema provisioned
+        embargoUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+
+    const request: DeleteAnnotationsRequest = {
+      annotationId: "c926b964-a1fd-4fb9-9a41-c154d631a524",
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, request, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toContain("Experiment schema not provisioned");
+  });
+
+  it("should succeed even when pipelineId is null (no silver data refresh)", async () => {
+    // Create an experiment without pipelineId
+    const [experiment] = await testApp.database
+      .insert(experiments)
+      .values({
+        name: "Test Experiment No Pipeline",
+        description: "Test Description",
+        status: "active",
+        visibility: "public", // Public so no membership required
+        createdBy: testUserId,
+        schemaName: "exp_test_no_pipeline_abc123",
+        pipelineId: null, // No pipeline
+        embargoUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+
+    // Mock the repository method
+    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    vi.spyOn(repository, "deleteAnnotation").mockResolvedValue(
+      success({ affectedRows: 1, deletedRows: 1 }),
+    );
+
+    // Spy on refreshSilverData to ensure it's NOT called
+    const refreshSpy = vi.spyOn(databricksAdapter, "refreshSilverData");
+
+    const request: DeleteAnnotationsRequest = {
+      annotationId: "c926b964-a1fd-4fb9-9a41-c154d631a524",
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, request, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.affectedRows).toBeGreaterThan(0);
+
+    // Verify refreshSilverData was NOT called since pipelineId is null
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(refreshSpy).not.toHaveBeenCalled();
+  });
+
+  it("should succeed with bulk delete even when pipelineId is null (no silver data refresh)", async () => {
+    // Create an experiment without pipelineId
+    const [experiment] = await testApp.database
+      .insert(experiments)
+      .values({
+        name: "Test Experiment No Pipeline Bulk",
+        description: "Test Description",
+        status: "active",
+        visibility: "public", // Public so no membership required
+        createdBy: testUserId,
+        schemaName: "exp_test_no_pipeline_bulk_def456",
+        pipelineId: null, // No pipeline
+        embargoUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+
+    // Mock the repository method
+    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
+    vi.spyOn(repository, "deleteAnnotationsBulk").mockResolvedValue(
+      success({ affectedRows: 2, deletedRows: 2 }),
+    );
+
+    // Spy on refreshSilverData to ensure it's NOT called
+    const refreshSpy = vi.spyOn(databricksAdapter, "refreshSilverData");
+
+    const request: DeleteAnnotationsRequest = {
+      tableName: "measurements",
+      rowIds: ["row1", "row2"],
+      type: "row",
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, request, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.affectedRows).toBe(2);
+
+    // Verify refreshSilverData was NOT called since pipelineId is null
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(refreshSpy).not.toHaveBeenCalled();
+  });
+
+  it("should handle pipeline refresh failure gracefully on single delete (log warning but succeed)", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment Refresh Fail Single",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+      pipelineId: "test-pipeline-refresh-fail-single",
+    });
+
+    // Mock DatabricksAdapter
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
+      success({
+        columns: [
+          { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+          { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+        ],
+        rows: [["1", "1"]],
+        totalRows: 1,
+        truncated: false,
+      }),
+    );
+
+    // Mock refresh to fail
+    vi.spyOn(databricksAdapter, "refreshSilverData").mockResolvedValue(
+      failure({
+        message: "Pipeline refresh failed",
+        code: "DATABRICKS_ERROR",
+        statusCode: 500,
+        name: "DatabricksError",
+      }),
+    );
+
+    const request: DeleteAnnotationsRequest = {
+      annotationId: "c926b964-a1fd-4fb9-9a41-c154d631a524",
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, request, testUserId);
+
+    // Assert - should still succeed even though refresh failed
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.rowsAffected).toBe(1);
+  });
+
+  it("should handle pipeline refresh failure gracefully on bulk delete (log warning but succeed)", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment Refresh Fail Bulk",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+      pipelineId: "test-pipeline-refresh-fail-bulk",
+    });
+
+    // Mock DatabricksAdapter
+    vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
+      success({
+        columns: [
+          { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
+          { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+        ],
+        rows: [["3", "3"]],
+        totalRows: 1,
+        truncated: false,
+      }),
+    );
+
+    // Mock refresh to fail
+    vi.spyOn(databricksAdapter, "refreshSilverData").mockResolvedValue(
+      failure({
+        message: "Pipeline refresh failed",
+        code: "DATABRICKS_ERROR",
+        statusCode: 500,
+        name: "DatabricksError",
+      }),
+    );
+
+    const request: DeleteAnnotationsRequest = {
+      tableName: "test_table",
+      rowIds: ["row1", "row2", "row3"],
+      type: "comment",
+    };
+
+    // Act
+    const result = await useCase.execute(experiment.id, request, testUserId);
+
+    // Assert - should still succeed even though refresh failed
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.rowsAffected).toBe(3);
   });
 });

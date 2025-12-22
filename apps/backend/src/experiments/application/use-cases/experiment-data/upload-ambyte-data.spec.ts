@@ -9,8 +9,10 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { ExperimentDto } from "../../../core/models/experiment.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UploadAmbyteDataUseCase } from "./upload-ambyte-data";
 
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -19,6 +21,7 @@ describe("UploadAmbyteDataUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: UploadAmbyteDataUseCase;
   let databricksPort: DatabricksPort;
+  let testUserId: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -26,6 +29,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(UploadAmbyteDataUseCase);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
 
@@ -42,18 +46,22 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("preexecute", () => {
-    const experimentId = faker.string.uuid();
-    const experimentName = "Test Experiment";
-
     it("should return success when volume already exists", async () => {
+      // Create test experiment with schemaName
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       // Mock volume exists
       const mockVolumeResponse = {
         name: "data-uploads",
         volume_id: faker.string.uuid(),
         catalog_name: "main",
-        schema_name: `exp_test_experiment_${experimentId}`,
+        schema_name: experiment.schemaName ?? "exp_test_experiment",
         volume_type: "MANAGED" as const,
-        full_name: `main.exp_test_experiment_${experimentId}.data-uploads`,
+        full_name: `main.${experiment.schemaName ?? "exp_test_experiment"}.data-uploads`,
         created_at: Date.now(),
         created_by: faker.string.uuid(),
         updated_at: Date.now(),
@@ -66,28 +74,32 @@ describe("UploadAmbyteDataUseCase", () => {
         success(mockVolumeResponse),
       );
 
-      const result = await useCase.preexecute(experimentId, experimentName);
+      const result = await useCase.preexecute(experiment.id, testUserId);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
 
-      expect(result.value).toMatchObject({
-        volumeName: "data-uploads",
-        volumeExists: true,
-        volumeCreated: false,
-      });
-
+      expect(result.value.experiment.id).toBe(experiment.id);
+      expect(result.value.volumeName).toBe("data-uploads");
+      expect(result.value.volumeExists).toBe(true);
+      expect(result.value.volumeCreated).toBe(false);
       // Verify directoryName has the correct format: upload_YYYYMMDD_HHMMSS
       expect(result.value.directoryName).toMatch(/^upload_\d{8}_\d{6}$/);
 
       expect(databricksPort.getExperimentVolume).toHaveBeenCalledWith(
-        experimentName,
-        experimentId,
+        experiment.schemaName,
         "data-uploads",
       );
     });
 
     it("should create volume when it doesn't exist", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       // Mock volume doesn't exist
       vi.spyOn(databricksPort, "getExperimentVolume").mockResolvedValue(
         failure(AppError.notFound("Volume not found")),
@@ -98,9 +110,9 @@ describe("UploadAmbyteDataUseCase", () => {
         name: "data-uploads",
         volume_id: faker.string.uuid(),
         catalog_name: "main",
-        schema_name: `exp_test_experiment_${experimentId}`,
+        schema_name: experiment.schemaName ?? "exp_test_experiment",
         volume_type: "MANAGED" as const,
-        full_name: `main.exp_test_experiment_${experimentId}.data-uploads`,
+        full_name: `main.${experiment.schemaName ?? "exp_test_experiment"}.data-uploads`,
         created_at: Date.now(),
         created_by: faker.string.uuid(),
         updated_at: Date.now(),
@@ -113,26 +125,31 @@ describe("UploadAmbyteDataUseCase", () => {
         success(mockVolumeResponse),
       );
 
-      const result = await useCase.preexecute(experimentId, experimentName);
+      const result = await useCase.preexecute(experiment.id, testUserId);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
 
-      expect(result.value).toMatchObject({
-        volumeName: "data-uploads",
-        volumeExists: false,
-        volumeCreated: true,
-      });
+      expect(result.value.experiment.id).toBe(experiment.id);
+      expect(result.value.volumeName).toBe("data-uploads");
+      expect(result.value.volumeExists).toBe(false);
+      expect(result.value.volumeCreated).toBe(true);
 
       expect(databricksPort.createExperimentVolume).toHaveBeenCalledWith(
-        experimentName,
-        experimentId,
+        experiment.schemaName,
         "data-uploads",
-        `Ambyte data uploads volume for experiment ${experimentName}`,
+        `Ambyte data uploads volume for experiment ${experiment.id}`,
       );
     });
 
     it("should return failure when volume creation fails", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       // Mock volume doesn't exist
       vi.spyOn(databricksPort, "getExperimentVolume").mockResolvedValue(
         failure(AppError.notFound("Volume not found")),
@@ -142,7 +159,7 @@ describe("UploadAmbyteDataUseCase", () => {
       const createError = AppError.internal("Failed to create volume");
       vi.spyOn(databricksPort, "createExperimentVolume").mockResolvedValue(failure(createError));
 
-      const result = await useCase.preexecute(experimentId, experimentName);
+      const result = await useCase.preexecute(experiment.id, testUserId);
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
@@ -151,14 +168,21 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("execute", () => {
-    const experimentId = faker.string.uuid();
-    const experimentName = "Test Experiment";
+    let experiment: Awaited<ReturnType<typeof testApp.createExperiment>>["experiment"];
     const sourceType = "ambyte";
     const directoryName = "upload_20250910_143000";
     let successfulUploads: { fileName: string; filePath: string }[];
     let errors: { fileName: string; error: string }[];
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      // Create test experiment
+      const result = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+      experiment = result.experiment;
+
       successfulUploads = [];
       errors = [];
     });
@@ -184,22 +208,14 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(fileName);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/${fileName}`,
+        filePath: `/Volumes/main/${experiment.schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
         success(mockUploadResponse),
       );
 
-      await useCase.execute(
-        file,
-        experimentId,
-        experimentName,
-        sourceType,
-        directoryName,
-        successfulUploads,
-        errors,
-      );
+      await useCase.execute(file, experiment, sourceType, directoryName, successfulUploads, errors);
 
       expect(successfulUploads).toHaveLength(1);
       expect(successfulUploads[0]).toEqual({
@@ -209,8 +225,7 @@ describe("UploadAmbyteDataUseCase", () => {
       expect(errors).toHaveLength(0);
 
       expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-        experimentId,
-        experimentName,
+        experiment.schemaName ?? "exp_test_experiment",
         sourceType,
         directoryName,
         fileName,
@@ -223,22 +238,14 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(fileName);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/${fileName}`,
+        filePath: `/Volumes/main/${experiment.schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
         success(mockUploadResponse),
       );
 
-      await useCase.execute(
-        file,
-        experimentId,
-        experimentName,
-        sourceType,
-        directoryName,
-        successfulUploads,
-        errors,
-      );
+      await useCase.execute(file, experiment, sourceType, directoryName, successfulUploads, errors);
 
       expect(successfulUploads).toHaveLength(1);
       expect(successfulUploads[0]).toEqual({
@@ -254,22 +261,14 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(originalFileName);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/${expectedTrimmedName}`,
+        filePath: `/Volumes/main/${experiment.schemaName}/data-uploads/${sourceType}/${directoryName}/${expectedTrimmedName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
         success(mockUploadResponse),
       );
 
-      await useCase.execute(
-        file,
-        experimentId,
-        experimentName,
-        sourceType,
-        directoryName,
-        successfulUploads,
-        errors,
-      );
+      await useCase.execute(file, experiment, sourceType, directoryName, successfulUploads, errors);
 
       expect(successfulUploads).toHaveLength(1);
       expect(successfulUploads[0]).toEqual({
@@ -279,8 +278,7 @@ describe("UploadAmbyteDataUseCase", () => {
       expect(errors).toHaveLength(0);
 
       expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-        experimentId,
-        experimentName,
+        experiment.schemaName ?? "exp_test_experiment",
         sourceType,
         directoryName,
         expectedTrimmedName,
@@ -312,7 +310,7 @@ describe("UploadAmbyteDataUseCase", () => {
         const file = createMockFile(testCase.fileName);
 
         const mockUploadResponse = {
-          filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/${testCase.expectedPath}`,
+          filePath: `/Volumes/main/${experiment.schemaName}/data-uploads/${sourceType}/${directoryName}/${testCase.expectedPath}`,
         };
 
         vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
@@ -321,8 +319,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          experimentId,
-          experimentName,
+          experiment,
           sourceType,
           directoryName,
           successfulUploads,
@@ -337,8 +334,7 @@ describe("UploadAmbyteDataUseCase", () => {
         expect(errors).toHaveLength(0);
 
         expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-          experimentId,
-          experimentName,
+          experiment.schemaName ?? "exp_test_experiment",
           sourceType,
           directoryName,
           testCase.expectedPath,
@@ -359,7 +355,7 @@ describe("UploadAmbyteDataUseCase", () => {
         const file = createMockFile(fileName);
 
         const mockUploadResponse = {
-          filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/unknown_ambyte/${fileName}`,
+          filePath: `/Volumes/main/${experiment.schemaName}/data-uploads/${sourceType}/${directoryName}/unknown_ambyte/${fileName}`,
         };
 
         vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
@@ -368,8 +364,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          experimentId,
-          experimentName,
+          experiment,
           sourceType,
           directoryName,
           successfulUploads,
@@ -409,8 +404,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          experimentId,
-          experimentName,
+          experiment,
           sourceType,
           directoryName,
           successfulUploads,
@@ -437,8 +431,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
       await useCase.execute(
         file,
-        experimentId,
-        experimentName,
+        experiment,
         undefined, // sourceType is undefined
         directoryName,
         successfulUploads,
@@ -462,15 +455,7 @@ describe("UploadAmbyteDataUseCase", () => {
       const uploadError = AppError.internal("Upload failed");
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(failure(uploadError));
 
-      await useCase.execute(
-        file,
-        experimentId,
-        experimentName,
-        sourceType,
-        directoryName,
-        successfulUploads,
-        errors,
-      );
+      await useCase.execute(file, experiment, sourceType, directoryName, successfulUploads, errors);
 
       expect(successfulUploads).toHaveLength(0);
       expect(errors).toHaveLength(1);
@@ -486,29 +471,21 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(fileName, largeContent);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/${fileName}`,
+        filePath: `/Volumes/main/${experiment.schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
         success(mockUploadResponse),
       );
 
-      await useCase.execute(
-        file,
-        experimentId,
-        experimentName,
-        sourceType,
-        directoryName,
-        successfulUploads,
-        errors,
-      );
+      await useCase.execute(file, experiment, sourceType, directoryName, successfulUploads, errors);
 
       expect(successfulUploads).toHaveLength(1);
       expect(errors).toHaveLength(0);
 
       // Verify the buffer size matches expected content
       const uploadCall = vi.mocked(databricksPort.uploadExperimentData).mock.calls[0];
-      const buffer = uploadCall[5];
+      const buffer = uploadCall[4];
       expect(buffer.length).toBe(largeContent.length);
     });
   });
@@ -517,22 +494,18 @@ describe("UploadAmbyteDataUseCase", () => {
     const directoryName = "upload_20250910_143000";
 
     it("should return success with successful uploads and trigger ambyte processing job", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const successfulUploads = [
         { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
         { fileName: "Ambyte_2/data2.txt", filePath: "/path/to/data2.txt" },
       ];
       const errors: { fileName: string; error: string }[] = [];
-      const experiment = {
-        id: faker.string.uuid(),
-        name: "Test Experiment",
-        description: "Test experiment description",
-        status: "active" as const,
-        visibility: "private" as const,
-        embargoUntil: new Date(),
-        createdBy: faker.string.uuid(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
 
       const mockJobResponse = {
         run_id: faker.number.int(),
@@ -558,8 +531,7 @@ describe("UploadAmbyteDataUseCase", () => {
       });
 
       expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
+        experiment.schemaName ?? "exp_test_experiment",
         {
           EXPERIMENT_ID: experiment.id,
           EXPERIMENT_NAME: experiment.name,
@@ -570,21 +542,17 @@ describe("UploadAmbyteDataUseCase", () => {
     });
 
     it("should return success even when ambyte processing job trigger fails", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const successfulUploads = [
         { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
       ];
       const errors: { fileName: string; error: string }[] = [];
-      const experiment = {
-        id: faker.string.uuid(),
-        name: "Test Experiment",
-        description: "Test experiment description",
-        status: "active" as const,
-        visibility: "private" as const,
-        embargoUntil: new Date(),
-        createdBy: faker.string.uuid(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
 
       vi.spyOn(databricksPort, "triggerAmbyteProcessingJob").mockResolvedValue(
         failure(AppError.internal("Job trigger failed")),
@@ -606,22 +574,18 @@ describe("UploadAmbyteDataUseCase", () => {
     });
 
     it("should return failure when no files were uploaded successfully", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const successfulUploads: { fileName: string; filePath: string }[] = [];
       const errors = [
         { fileName: "invalid.txt", error: "Invalid file format" },
         { fileName: "Ambyte_1/failed.txt", error: "Upload failed" },
       ];
-      const experiment = {
-        id: faker.string.uuid(),
-        name: "Test Experiment",
-        description: "Test experiment description",
-        status: "active" as const,
-        visibility: "private" as const,
-        embargoUntil: new Date(),
-        createdBy: faker.string.uuid(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
 
       // Add spy to ensure it's not called
       const pipelineSpy = vi.spyOn(databricksPort, "triggerAmbyteProcessingJob");
@@ -644,21 +608,17 @@ describe("UploadAmbyteDataUseCase", () => {
     });
 
     it("should return success with mixed results (some successful, some failed)", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const successfulUploads = [
         { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
       ];
       const errors = [{ fileName: "invalid.txt", error: "Invalid file format" }];
-      const experiment = {
-        id: faker.string.uuid(),
-        name: "Test Experiment",
-        description: "Test experiment description",
-        status: "active" as const,
-        visibility: "private" as const,
-        embargoUntil: new Date(),
-        createdBy: faker.string.uuid(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
 
       const mockJobResponse = {
         run_id: faker.number.int(),
@@ -684,8 +644,7 @@ describe("UploadAmbyteDataUseCase", () => {
       });
 
       expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
+        experiment.schemaName ?? "exp_test_experiment",
         {
           EXPERIMENT_ID: experiment.id,
           EXPERIMENT_NAME: experiment.name,
@@ -714,6 +673,13 @@ describe("UploadAmbyteDataUseCase", () => {
     };
 
     it("should validate correct Ambyte file names with full paths", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const validFileNames = [
         "Ambyte_1/data.txt",
         "Ambyte_2/1/data.txt",
@@ -735,8 +701,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          faker.string.uuid(),
-          "Test Experiment",
+          experiment,
           "ambyte",
           "upload_20250910_143000",
           successfulUploads,
@@ -749,6 +714,13 @@ describe("UploadAmbyteDataUseCase", () => {
     });
 
     it("should validate plain .txt files", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const validFileNames = [
         "simple.txt",
         "20250614-000059_.txt",
@@ -769,8 +741,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          faker.string.uuid(),
-          "Test Experiment",
+          experiment,
           "ambyte",
           "upload_20250910_143000",
           successfulUploads,
@@ -798,6 +769,13 @@ describe("UploadAmbyteDataUseCase", () => {
         "file.xlsx", // Not a .txt file
       ];
 
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       for (const fileName of invalidFileNames) {
         const file = createMockFileForTest(fileName);
 
@@ -806,8 +784,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          faker.string.uuid(),
-          "Test Experiment",
+          experiment,
           "ambyte",
           "upload_20250910_143000",
           successfulUploads,
@@ -839,6 +816,13 @@ describe("UploadAmbyteDataUseCase", () => {
     };
 
     it("should trim parent directories correctly for files with Ambyte paths", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const testCases = [
         {
           input: "some/parent/dir/Ambyte_1/data.txt",
@@ -866,8 +850,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          faker.string.uuid(),
-          "Test Experiment",
+          experiment,
           "ambyte",
           "upload_20250910_143000",
           successfulUploads,
@@ -879,8 +862,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         // Verify the databricks call used the trimmed name
         expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-          expect.any(String),
-          expect.any(String),
+          experiment.schemaName ?? "exp_test_experiment",
           expect.any(String),
           expect.any(String),
           testCase.expected,
@@ -890,6 +872,13 @@ describe("UploadAmbyteDataUseCase", () => {
     });
 
     it("should construct paths for plain .txt files", async () => {
+      // Create test experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
       const testCases = [
         {
           input: "20250614-000059_.txt",
@@ -925,8 +914,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         await useCase.execute(
           file,
-          faker.string.uuid(),
-          "Test Experiment",
+          experiment,
           "ambyte",
           "upload_20250910_143000",
           successfulUploads,
@@ -938,14 +926,167 @@ describe("UploadAmbyteDataUseCase", () => {
 
         // Verify the databricks call used the constructed path
         expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-          expect.any(String),
-          expect.any(String),
+          experiment.schemaName ?? "exp_test_experiment",
           expect.any(String),
           expect.any(String),
           testCase.expected,
           expect.any(Buffer),
         );
       }
+    });
+  });
+
+  describe("execute - schemaName null handling", () => {
+    let successfulUploads: { fileName: string; filePath: string }[];
+    let errors: { fileName: string; error: string }[];
+    const sourceType = "ambyte";
+    const directoryName = "upload_20250910_143000";
+
+    beforeEach(() => {
+      successfulUploads = [];
+      errors = [];
+    });
+
+    const createMockFile = (filename: string, content = "test file content") => {
+      const stream = new Readable({
+        read() {
+          this.push(content);
+          this.push(null); // End the stream
+        },
+      });
+
+      return {
+        filename,
+        encoding: "utf8",
+        mimetype: "text/plain",
+        stream,
+      };
+    };
+
+    it("should handle checkAccess failure in preexecute", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const experimentRepository = testApp.module.get(ExperimentRepository);
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        failure(AppError.internal("Database connection failed")),
+      );
+
+      const result = await useCase.preexecute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Failed to verify experiment access");
+    });
+
+    it("should handle experiment without schemaName in preexecute", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const experimentRepository = testApp.module.get(ExperimentRepository);
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { ...experiment, schemaName: null },
+          hasAccess: true,
+          isAdmin: false,
+          hasArchiveAccess: false,
+        }),
+      );
+
+      const result = await useCase.preexecute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Experiment schema not provisioned");
+    });
+
+    it("should handle experiment without schemaName in execute", async () => {
+      // Create a real experiment and mock it to have null schemaName
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const experimentRepository = testApp.module.get(ExperimentRepository);
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { ...experiment, schemaName: null },
+          hasAccess: true,
+          isAdmin: false,
+          hasArchiveAccess: false,
+        }),
+      );
+
+      const fileName = "Ambyte_1/data.txt";
+      const file = createMockFile(fileName);
+
+      // Add spy to ensure upload is not called
+      const uploadSpy = vi.spyOn(databricksPort, "uploadExperimentData");
+
+      await useCase.execute(
+        file,
+        { ...experiment, schemaName: null },
+        sourceType,
+        directoryName,
+        successfulUploads,
+        errors,
+      );
+
+      expect(successfulUploads).toHaveLength(0);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toEqual({
+        fileName,
+        error: "Experiment schema not provisioned",
+      });
+
+      expect(uploadSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("postexecute - schemaName null handling", () => {
+    const directoryName = "upload_20250910_143000";
+
+    it("should handle experiment without schemaName in postexecute", async () => {
+      // Create experiment without schemaName
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
+      const experimentWithNullSchema: ExperimentDto = {
+        ...experiment,
+        schemaName: null,
+        pipelineId: null,
+      };
+
+      const successfulUploads = [
+        { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
+      ];
+      const errors: { fileName: string; error: string }[] = [];
+
+      // Add spy to ensure job is not triggered
+      const jobSpy = vi.spyOn(databricksPort, "triggerAmbyteProcessingJob");
+
+      const result = await useCase.postexecute(
+        successfulUploads,
+        errors,
+        experimentWithNullSchema,
+        directoryName,
+      );
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("does not have a schema name");
+      expect(result.error.message).toContain("not be fully provisioned");
+
+      expect(jobSpy).not.toHaveBeenCalled();
     });
   });
 
