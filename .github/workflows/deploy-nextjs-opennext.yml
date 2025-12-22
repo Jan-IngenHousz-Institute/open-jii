@@ -46,17 +46,20 @@ jobs:
             exit 0
           fi
       - name: Checkout Repository
+        if: ${{ inputs.should_deploy == 'true' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js and pnpm
+        if: ${{ inputs.should_deploy == 'true' }}
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
           hoisted: "true"
 
       - name: Set build environment variables
+        if: ${{ inputs.should_deploy == 'true' }}
         env:
           WEB_BASE_ORIGIN: ${{ vars.WEB_BASE_ORIGIN }}
         run: |
@@ -84,6 +87,7 @@ jobs:
           echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
 
       - name: Build Next.js Application
+        if: ${{ inputs.should_deploy == 'true' }}
         env:
           NODE_ENV: ${{ env.NODE_ENV }}
           ENVIRONMENT_PREFIX: ${{ env.ENVIRONMENT_PREFIX }}
@@ -94,11 +98,13 @@ jobs:
           pnpm run build --filter=web
 
       - name: Run OpenNext Build
+        if: ${{ inputs.should_deploy == 'true' }}
         run: |
           echo "Running OpenNext build..."
           cd apps/web && nice -n 10 pnpm run build:opennext
 
       - name: Check OpenNext Build Output
+        if: ${{ inputs.should_deploy == 'true' }}
         run: |
           echo "Verifying OpenNext build output..."
           if [[ ! -d "apps/web/.open-next" ]]; then
@@ -164,6 +170,7 @@ jobs:
           fi
 
       - name: Configure AWS Credentials via OIDC
+        if: ${{ inputs.should_deploy == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -173,12 +180,14 @@ jobs:
           output-credentials: true
 
       - name: Get Infrastructure Configuration
+        if: ${{ inputs.should_deploy == 'true' }}
         uses: ./.github/actions/get-infrastructure-config
         with:
           environment: ${{ inputs.environment }}
           prefix: "/opennext"
 
       - name: Upload Static Assets and Cache to S3
+        if: ${{ inputs.should_deploy == 'true' }}
         id: upload-assets
         run: |
           UPLOADED=false
@@ -245,6 +254,7 @@ jobs:
           echo "uploaded=${UPLOADED}" >> "$GITHUB_OUTPUT"
 
       - name: Check Server Function
+        if: ${{ inputs.should_deploy == 'true' }}
         id: check-server
         run: |
           SERVER_FUNCTION="${{ env.SERVER_FUNCTION }}"
@@ -271,6 +281,7 @@ jobs:
               --publish
 
       - name: Check Image Optimization Function
+        if: ${{ inputs.should_deploy == 'true' }}
         id: check-image
         run: |
           IMAGE_FUNCTION="${{ env.IMAGE_FUNCTION }}"
@@ -297,6 +308,7 @@ jobs:
               --publish
 
       - name: Check Revalidation Function
+        if: ${{ inputs.should_deploy == 'true' }}
         id: check-revalidation
         run: |
           REVALIDATION_FUNCTION="${{ env.REVALIDATION_FUNCTION }}"
@@ -323,6 +335,7 @@ jobs:
               --publish
 
       - name: Check Warmer Function
+        if: ${{ inputs.should_deploy == 'true' }}
         id: check-warmer
         run: |
           WARMER_FUNCTION="${{ env.WARMER_FUNCTION }}"
@@ -349,6 +362,7 @@ jobs:
               --publish
 
       - name: Finalize Lambda Deployments and Summarize Results
+        if: ${{ inputs.should_deploy == 'true' }}
         id: update-lambdas
         run: |
           UPDATED=false
@@ -400,6 +414,7 @@ jobs:
           fi
 
       - name: Deployment Summary
+        if: ${{ inputs.should_deploy == 'true' }}
         run: |
           echo ""
           echo "=== OpenNext Deployment Summary ==="

@@ -23,7 +23,7 @@ export default async function ProtocolPage({ params }: ProtocolPageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-medium">{t("protocols.title")}</h1>
+        <h1 className="text-4xl font-bold text-gray-900">{t("protocols.title")}</h1>
         <p>{t("protocols.listDescription")}</p>
       </div>
       <Link href={`/platform/protocols/new`} locale={locale}>

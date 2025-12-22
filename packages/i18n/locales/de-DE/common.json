@@ -1,9 +1,13 @@
 {
   "common": {
+    "logo": "Jan IngenHousz Institut",
     "protocolLabel": "Protokoll",
     "by": "von",
     "homepage": "Startseite",
     "language": "Sprache",
+    "search": "Suchen",
+    "notifications": "Benachrichtigungen",
+    "menu": "Menü",
     "currentValue": "Aktueller Wert:",
     "languageDrawer": "Sprachschublade umschalten",
     "regionalSettings": "Regionale Einstellungen",
@@ -46,7 +50,8 @@
     "bytes": "B",
     "kilobytes": "KB",
     "megabytes": "MB",
-    "comingSoon": "Demnächst"
+    "comingSoon": "Demnächst",
+    "greeting": "Hallo, {{name}}"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -359,6 +364,8 @@
     "home": "Startseite",
     "platform": "Plattform",
     "experiments": "Experimente",
+    "protocols": "Protokolle",
+    "macros": "Makros",
     "new": "Neu",
     "edit": "Bearbeiten",
     "view": "Ansehen",
