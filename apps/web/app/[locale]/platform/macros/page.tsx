@@ -24,7 +24,7 @@ export default async function MacroPage({ params }: MacroPageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-medium">{t("macros.title")}</h1>
+        <h1 className="text-4xl font-bold text-gray-900">{t("macros.title")}</h1>
         <p>{t("macros.listDescription")}</p>
       </div>
       <Link href={`/platform/macros/new`} locale={locale}>
