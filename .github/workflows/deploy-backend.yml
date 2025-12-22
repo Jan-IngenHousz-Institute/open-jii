@@ -49,15 +49,18 @@ jobs:
           fi
 
       - name: Checkout Code
+        if: inputs.should_deploy == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js and pnpm
+        if: inputs.should_deploy == 'true'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
           hoisted: "false"
 
       - name: Check Docker
+        if: inputs.should_deploy == 'true'
         run: |
           echo "🔍 Checking Docker..."
 
@@ -71,31 +74,37 @@ jobs:
           echo "📦 Using image tag: ${{ github.sha }}"
 
       - name: Install Dependencies
+        if: inputs.should_deploy == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Configure AWS credentials
+        if: inputs.should_deploy == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
       
       - name: Get Infrastructure Configuration
+        if: inputs.should_deploy == 'true'
         uses: ./.github/actions/get-infrastructure-config
         with:
           environment: ${{ inputs.environment }}
           prefix: "/backend"
 
       - name: Login to Amazon ECR
+        if: inputs.should_deploy == 'true'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set environment variables
+        if: inputs.should_deploy == 'true'
         run: |
           # Set registry and image tag
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
       
       - name: Build, tag, and push image to Amazon ECR
+        if: inputs.should_deploy == 'true'
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -110,6 +119,7 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Resolve task definition JSON from ARN
+        if: inputs.should_deploy == 'true'
         run: |
           set -euo pipefail
           if [[ -z "${TASK_DEFINITION_ARN:-}" ]]; then
@@ -125,6 +135,7 @@ jobs:
           echo "ECS_TASK_DEFINITION=task-definition.json" >> "$GITHUB_ENV"
 
       - name: Capture current service task definition
+        if: inputs.should_deploy == 'true'
         id: prev-task-def
         run: |
           set -euo pipefail
@@ -142,6 +153,7 @@ jobs:
           fi
       
       - name: Fill in the new image ID in the Amazon ECS task definition
+        if: inputs.should_deploy == 'true'
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
@@ -150,6 +162,7 @@ jobs:
           image: ${{ steps.build-image.outputs.image }}
 
       - name: Deploy to Amazon ECS
+        if: inputs.should_deploy == 'true'
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
@@ -167,12 +180,13 @@ jobs:
           wait-for-service-stability: true
 
       - name: Clean up
-        if: always()
+        if: inputs.should_deploy == 'true'
         run: |
           # Clean up temporary files
           rm -f task-definition.json || true
 
       - name: Deployment Summary
+        if: inputs.should_deploy == 'true'
         run: |
           echo "::group::=== Deployment Summary ==="
           echo "Environment: ${{ env.ENV }}"
