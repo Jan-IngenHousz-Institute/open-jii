@@ -20,6 +20,9 @@ const commonPlugins = [
   swc.vite(),
 ];
 
+// Tests that need to be run in isolation
+const isolatedTests = ["src/**/notifications.service.spec.ts"];
+
 export default mergeConfig(
   baseConfig,
   defineConfig({
@@ -31,7 +34,7 @@ export default mergeConfig(
             //name: "Non-isolated",
             isolate: false,
             include: ["src/**/*.spec.ts", "src/**/*.test.ts"],
-            exclude: ["src/**/notifications.service.spec.ts"],
+            exclude: isolatedTests,
           },
           plugins: commonPlugins,
         },
@@ -40,7 +43,7 @@ export default mergeConfig(
             ...commonTestConfig,
             //name: "Isolated",
             isolate: true,
-            include: ["src/**/notifications.service.spec.ts"],
+            include: isolatedTests,
           },
           plugins: commonPlugins,
         },
