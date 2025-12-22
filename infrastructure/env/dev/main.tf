@@ -212,6 +212,16 @@ module "external_location" {
   comment                 = "External location for ${var.environment} environment data"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
 
+  grants = {
+    node_service_principal = {
+      principal = module.node_service_principal.service_principal_application_id
+      privileges = [
+        "READ_FILES",
+        "WRITE_FILES"
+      ]
+    }
+  }
+
   providers = {
     databricks.workspace = databricks.workspace
   }
@@ -370,6 +380,73 @@ module "pipeline_scheduler" {
       module.slack_notification_destination.notification_destination_id
     ]
     on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
+}
+
+module "centrum_backup_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Centrum-Backup-Job-DEV"
+  description = "Backs up raw_data from centrum schema every 8 hours to dedicated backup location"
+
+  # Schedule: Every 8 hours at 00:00, 08:00, and 16:00 UTC
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0 0,8,16 * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 120000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "backup_centrum_raw_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/centrum_backup_task"
+
+      parameters = {
+        "CATALOG_NAME"     = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA"   = "centrum"
+        "SOURCE_TABLE"     = "raw_data"
+        "BACKUP_LOCATION"  = "s3://${var.centralized_metastore_bucket_name}/external/${var.environment}/openjii_data_backups/centrum_raw_data"
+        "ENVIRONMENT"      = upper(var.environment)
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+    on_start = [
       module.slack_notification_destination.notification_destination_id
     ]
   }
