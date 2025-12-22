@@ -1,3 +1,4 @@
+import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import type { Metadata } from "next";
@@ -17,13 +18,24 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({
     locale,
-    namespaces: ["common"],
+    namespaces: ["common", "dashboard"],
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Dashboard Banner */}
+      <div className="mt-6">
+        <DashboardBanner
+          title={t("dashboard.transferBannerTitle")}
+          description={t("dashboard.transferBannerDescription")}
+          buttonLabel={t("dashboard.transferBannerButton")}
+          buttonHref={`/${locale}/platform/transfer-request`}
+          locale={locale}
+        />
+      </div>
+
       {/* Dashboard Header */}
-      <h1 className="text-3xl font-bold text-gray-900">{t("dashboard.title")}</h1>
+      <h1 className="text-4xl font-bold text-gray-900">{t("dashboard.title")}</h1>
 
       {/* First Row - User's Experiments */}
       <DashboardSection

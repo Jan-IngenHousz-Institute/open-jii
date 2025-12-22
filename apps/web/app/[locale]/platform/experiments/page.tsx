@@ -25,7 +25,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         {/* Left: title, description and archive link */}
         <div>
-          <h1 className="text-lg font-medium">{t("experiments.title")}</h1>
+          <h1 className="text-4xl font-bold text-gray-900">{t("experiments.title")}</h1>
           <p>{t("experiments.listDescription")}</p>
 
           <Link href={`/${locale}/platform/experiments-archive`}>

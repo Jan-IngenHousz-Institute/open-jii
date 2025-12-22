@@ -35,7 +35,7 @@ function getTitle(title: string, overrideTitle?: string, t?: (key: string) => st
 
   const translationKey = BREADCRUMB_TRANSLATIONS[title];
   if (translationKey && t) {
-    return translationKey.startsWith("breadcrumbs.") ? t(translationKey) : translationKey;
+    return t(translationKey);
   }
 
   // Fallback to capitalize first letter
@@ -50,6 +50,11 @@ export function Breadcrumbs({ pageTitle, locale }: BreadcrumbsProps) {
   // Remove the first item which is the locale (e.g., 'en-US', 'de-DE')
   // and the second item 'platform' since we show that as "Home"
   const pathNamesWithoutLocale = pathNames.slice(2);
+
+  // Don't render breadcrumbs if there are no additional items beyond Home
+  if (pathNamesWithoutLocale.length === 0) {
+    return null;
+  }
 
   return (
     <Breadcrumb>
