@@ -18,3 +18,19 @@ resource "databricks_external_location" "this" {
   isolation_mode  = var.isolation_mode
   comment         = var.comment != "" ? var.comment : "Managed by Terraform - ${var.environment} external location"
 }
+
+# Create grants for the external location
+resource "databricks_grants" "this" {
+  for_each = var.grants
+  provider = databricks.workspace
+
+  external_location = databricks_external_location.this.id
+
+  dynamic "grant" {
+    for_each = each.value.privileges
+    content {
+      principal  = each.value.principal
+      privileges = [grant.value]
+    }
+  }
+}

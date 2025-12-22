@@ -35,3 +35,12 @@ variable "isolation_mode" {
   type        = string
   default     = "ISOLATION_MODE_ISOLATED"
 }
+
+variable "grants" {
+  description = "Map of grants to create on the external location. Each grant should specify a principal (application ID) and a list of privileges."
+  type = map(object({
+    principal  = string
+    privileges = list(string)
+  }))
+  default = {}
+}
