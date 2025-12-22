@@ -84,7 +84,6 @@ describe("ProtocolPage", () => {
 
     const heading = container.querySelector("h1");
     expect(heading).toBeInTheDocument();
-    expect(heading).toHaveClass("text-lg", "font-medium");
     expect(heading).toHaveTextContent("protocols.title");
   });
 

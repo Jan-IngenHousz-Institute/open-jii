@@ -41,7 +41,7 @@ export const ArticleTile = ({
   if (horizontal) {
     return (
       <Link href={`/${locale}/blog/${slug}`} className={cn("flex flex-col", className)}>
-        <article className="relative isolate flex h-[190px] flex-col overflow-hidden rounded-2xl bg-gray-900">
+        <article className="relative isolate flex h-full min-h-[180px] flex-col overflow-hidden rounded-2xl bg-gray-900">
           {/* IMAGE */}
           {featuredImage && (
             <div {...inspectorProps({ fieldId: "featuredImage" })}>
