@@ -18,7 +18,6 @@ import { TestHarness } from "../../test/test-harness";
 describe("ExperimentDataController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
-  let deltaAdapter: DeltaAdapter;
   let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
@@ -29,8 +28,7 @@ describe("ExperimentDataController", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
 
-    // Get the adapter instances
-    deltaAdapter = testApp.module.get(DeltaAdapter);
+    // Get the DatabricksAdapter instance
     databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Reset any mocks before each test
@@ -53,7 +51,14 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      // Mock data that DeltaPort will return
+      // Mock the DatabricksAdapter methods
+      const mockCountData = {
+        columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+        rows: [["100"]],
+        totalRows: 1,
+        truncated: false,
+      };
+
       const mockTableData = {
         columns: [
           { name: "column1", type_name: "string", type_text: "string" },
@@ -145,7 +150,7 @@ describe("ExperimentDataController", () => {
         totalRows: 100,
       });
 
-      // Verify the DeltaPort was called correctly
+      // Verify the DatabricksAdapter was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.schemaName);
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -268,15 +273,15 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.schemaName);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(deltaAdapter.getTableData).toHaveBeenCalledTimes(2);
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(deltaAdapter.getTableData).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
         experiment.schemaName,
         "SELECT COUNT(*) as count FROM sensor_data",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(deltaAdapter.getTableData).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
         experiment.schemaName,
         "SELECT * FROM sensor_data ORDER BY `timestamp` DESC LIMIT 10 OFFSET 0",
@@ -367,9 +372,9 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      // Mock the DeltaPort to return an error
-      vi.spyOn(deltaAdapter, "listTables").mockResolvedValue(
-        failure(AppError.internal("Error retrieving data from Delta Sharing")),
+      // Mock the DatabricksAdapter to return an error
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
+        failure(AppError.internal("Error retrieving data from Databricks")),
       );
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
@@ -415,11 +420,11 @@ describe("ExperimentDataController", () => {
         ],
       };
 
-      vi.spyOn(deltaAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
-      // Mock the DeltaPort to fail on row count
-      vi.spyOn(deltaAdapter, "getTableRowCount").mockResolvedValue(
-        failure(AppError.internal("Failed to get row count from Delta Sharing")),
+      // Mock the DatabricksAdapter to fail on SQL execution
+      vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
+        failure(AppError.internal("SQL execution failed: table not found")),
       );
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
@@ -447,7 +452,14 @@ describe("ExperimentDataController", () => {
       const page = 2;
       const pageSize = 10;
 
-      // Mock the DeltaPort methods
+      // Mock the DatabricksAdapter methods
+      const mockCountData = {
+        columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+        rows: [["42"]],
+        totalRows: 1,
+        truncated: false,
+      };
+
       const mockTableData = {
         columns: [
           { name: "column1", type_name: "string", type_text: "string" },
@@ -519,7 +531,7 @@ describe("ExperimentDataController", () => {
       expect(response.body[0].totalPages).toBe(5); // Math.ceil(42 / 10)
       expect(response.body[0].totalRows).toBe(42);
 
-      // Verify the DeltaPort was called with correct pagination
+      // Verify the DatabricksAdapter was called with correct pagination
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
@@ -551,7 +563,7 @@ describe("ExperimentDataController", () => {
         ],
       };
 
-      vi.spyOn(deltaAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
         id: experiment.id,
