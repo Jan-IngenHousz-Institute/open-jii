@@ -15,7 +15,7 @@ module "iam_oidc" {
   branch     = "main"
   aws_region = var.aws_region
 
-  environment = var.environment
+  environment        = var.environment
   github_environment = var.environment
 }
 
@@ -434,11 +434,11 @@ module "centrum_backup_job" {
       notebook_path = "/Workspace/Shared/notebooks/tasks/centrum_backup_task"
 
       parameters = {
-        "CATALOG_NAME"     = module.databricks_catalog.catalog_name
-        "CENTRAL_SCHEMA"   = "centrum"
-        "SOURCE_TABLE"     = "raw_data"
-        "BACKUP_LOCATION"  = "s3://${var.centralized_metastore_bucket_name}/external/${var.environment}/openjii_data_backups/centrum_raw_data"
-        "ENVIRONMENT"      = upper(var.environment)
+        "CATALOG_NAME"    = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA"  = "centrum"
+        "SOURCE_TABLE"    = "raw_data"
+        "BACKUP_LOCATION" = "s3://${var.centralized_metastore_bucket_name}/external/${var.environment}/openjii_data_backups/centrum_raw_data"
+        "ENVIRONMENT"     = upper(var.environment)
       }
     }
   ]
