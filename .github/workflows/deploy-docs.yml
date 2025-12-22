@@ -22,6 +22,8 @@ jobs:
   detect-changes:
     name: Detect Changed Packages
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       affected_apps: ${{ steps.detect.outputs.affected_apps }}
       has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}

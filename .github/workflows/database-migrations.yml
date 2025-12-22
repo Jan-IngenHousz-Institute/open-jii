@@ -36,6 +36,8 @@ jobs:
   detect-changes:
     name: Detect Changed Packages
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       affected_apps: ${{ steps.detect.outputs.affected_apps }}
       has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
@@ -396,10 +398,4 @@ jobs:
             echo "✅ Migration completed successfully!"
           else
             echo "Status: FAILED"
-            echo "To debug this issue:"
-            echo "1. Check the CloudWatch logs in AWS Console:"
-            echo "   Log Group: /aws/ecs/db-migration-runner-${{ inputs.environment }}"
-            echo "2. Try running the migration locally with:"
-            echo "   ./database-migrations.sh --dry-run ${{ inputs.environment }}"
-            echo "   ./database-migrations.sh ${{ inputs.environment }} ${{ inputs.timeout_minutes }}"
           fi
