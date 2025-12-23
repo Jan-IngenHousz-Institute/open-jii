@@ -613,11 +613,11 @@ describe("ExperimentDataTable", () => {
           tableName: "test_table",
           page: 1,
           pageSize: 20,
-          orderBy: undefined,
-          orderDirection: undefined,
+          orderBy: "timestamp",
+          orderDirection: "DESC",
         },
       },
-      queryKey: ["experiment", "experiment-123", 1, 20, "test_table", undefined, undefined],
+      queryKey: ["experiment", "experiment-123", 1, 20, "test_table", "timestamp", "DESC"],
       staleTime: 120000,
     });
   });

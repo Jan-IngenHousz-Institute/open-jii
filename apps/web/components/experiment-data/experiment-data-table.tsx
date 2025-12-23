@@ -63,6 +63,8 @@ export function ExperimentDataTable({
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string | undefined>("timestamp");
+  const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
   // Annotation dialog states
   const [addAnnotationDialogOpen, setAddAnnotationDialogOpen] = useState(false);
@@ -128,14 +130,29 @@ export function ExperimentDataTable({
     [],
   );
 
+  // Toggle sorting for a column
+  const handleSort = useCallback(
+    (columnName: string) => {
+      if (sortColumn === columnName) {
+        // Toggle direction if same column
+        setSortDirection((prev) => (prev === "ASC" ? "DESC" : "ASC"));
+      } else {
+        // New column, default to ASC
+        setSortColumn(columnName);
+        setSortDirection("ASC");
+      }
+    },
+    [sortColumn],
+  );
+
   // Use traditional pagination with improved column persistence
   const { tableMetadata, tableRows, displayName, isLoading, error } = useExperimentData(
     experimentId,
     pagination.pageIndex + 1,
     pagination.pageSize,
     tableName,
-    undefined,
-    undefined,
+    sortColumn,
+    sortDirection,
     formatValue,
     toggleChartPin,
     openAddAnnotationDialog,
@@ -300,7 +317,12 @@ export function ExperimentDataTable({
         />
         <div className="text-muted-foreground relative -mt-px overflow-visible rounded-b-lg border">
           <Table>
-            <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
+            <ExperimentTableHeader
+              headerGroups={table.getHeaderGroups()}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            />
             <TableBody>
               {isLoading && persistedMetaData && (
                 <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />

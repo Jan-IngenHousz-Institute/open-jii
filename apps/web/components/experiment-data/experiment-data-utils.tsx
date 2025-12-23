@@ -1,5 +1,6 @@
 import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
 import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/experiment-data-table-annotations-cell";
 import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperimentData";
@@ -7,6 +8,7 @@ import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperiment
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
+import { cn } from "@repo/ui/lib/utils";
 
 import { ExperimentDataTableArrayCell } from "./experiment-data-table-array-cell";
 import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
@@ -15,6 +17,35 @@ import { ExperimentDataTableUserCell } from "./experiment-data-table-user-cell";
 
 const ANNOTATIONS_STRUCT_STRING =
   "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>";
+
+function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): string {
+  return cn(
+    isNumericColumn ? "text-right" : "text-left",
+    isSortable && "hover:bg-muted/50 cursor-pointer select-none",
+  );
+}
+
+function isNumericType(type?: string): boolean {
+  return type === "DOUBLE" || type === "INT" || type === "LONG" || type === "BIGINT";
+}
+
+function getSortIcon(
+  isSortable: boolean,
+  isCurrentlySorted: boolean,
+  sortDirection?: "ASC" | "DESC",
+): React.ReactNode {
+  if (!isSortable) return null;
+
+  if (isCurrentlySorted) {
+    return sortDirection === "ASC" ? (
+      <ArrowUp className="ml-1 inline h-3 w-3" />
+    ) : (
+      <ArrowDown className="ml-1 inline h-3 w-3" />
+    );
+  }
+
+  return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-30" />;
+}
 
 export function formatValue(
   value: unknown,
@@ -96,30 +127,44 @@ export function formatValue(
   }
 }
 
-export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGroup<DataRow>[] }) {
+export function ExperimentTableHeader({
+  headerGroups,
+  sortColumn,
+  sortDirection,
+  onSort,
+}: {
+  headerGroups: HeaderGroup<DataRow>[];
+  sortColumn?: string;
+  sortDirection?: "ASC" | "DESC";
+  onSort?: (columnName: string) => void;
+}) {
   return headerGroups.map((headerGroup) => (
     <TableHeader key={headerGroup.id}>
       <TableRow className="h-2">
         {headerGroup.headers.map((header, headerIndex) => {
           const columnDef = header.column.columnDef;
           const meta = columnDef.meta as { type?: string } | undefined;
-          const isNumericColumn =
-            meta?.type === "DOUBLE" ||
-            meta?.type === "INT" ||
-            meta?.type === "LONG" ||
-            meta?.type === "BIGINT";
+          const columnName = header.column.id;
+
+          const isNumericColumn = isNumericType(meta?.type);
+          const isSortable = columnName !== "select" && !!onSort;
+          const isCurrentlySorted = sortColumn === columnName;
 
           return (
             <TableHead
               key={`${headerGroup.id}-${header.id}-${headerIndex}`}
-              className={isNumericColumn ? "text-right" : "text-left"}
+              className={getTableHeadClassName(isNumericColumn, isSortable)}
               style={{
                 minWidth: header.column.columnDef.size,
               }}
+              onClick={() => isSortable && onSort(columnName)}
             >
-              {header.isPlaceholder
-                ? null
-                : flexRender(header.column.columnDef.header, header.getContext())}
+              {header.isPlaceholder ? null : (
+                <div className="flex items-center justify-between">
+                  <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                  {getSortIcon(isSortable, isCurrentlySorted, sortDirection)}
+                </div>
+              )}
             </TableHead>
           );
         })}
