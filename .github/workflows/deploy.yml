@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: true
+      deploy_all:
+        description: "Whether to deploy all applications regardless of changes"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ inputs.environment }}
@@ -63,7 +68,7 @@ jobs:
     if: >-
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database')
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), '@repo/database'))
     permissions:
       id-token: write
       contents: read
@@ -80,7 +85,7 @@ jobs:
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.database-migrations.result) &&
-      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend')
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend'))
     permissions:
       id-token: write
       contents: read
@@ -103,7 +108,7 @@ jobs:
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.database-migrations.result) &&
       contains('success,skipped', needs.deploy-backend.result) &&
-      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web'))
     permissions:
       id-token: write
       contents: read
@@ -118,7 +123,7 @@ jobs:
     if: >-
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs')
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs'))
     permissions:
       id-token: write
       contents: read

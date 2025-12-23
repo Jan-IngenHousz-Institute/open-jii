@@ -223,6 +223,7 @@ jobs:
 
       - name: OpenTofu Format Check
         uses: ./.github/actions/tofu/tofu-fmt-check
+        continue-on-error: false
 
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate

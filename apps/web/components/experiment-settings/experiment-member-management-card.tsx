@@ -160,10 +160,9 @@ export function ExperimentMemberManagement({
           />
           <Button
             onClick={handleAddMember}
-            variant="outline"
+            variant="muted"
             disabled={!selectedUser || isAddingMember || currentUserRole !== "admin" || isArchived}
             size="default"
-            className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
           >
             {t("common.add")}
           </Button>

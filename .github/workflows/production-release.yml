@@ -10,6 +10,11 @@ on:
                 type: choice
                 options:
                     - prod
+            deploy_all:
+                description: "Deploy all applications regardless of changes"
+                required: false
+                type: boolean
+                default: false
 
 concurrency:
     group: production-deploy-${{ inputs.environment }}
@@ -27,4 +32,5 @@ jobs:
         with:
             environment: ${{ inputs.environment }}
             deploy_infrastructure: true
+            deploy_all: ${{ inputs.deploy_all }}
         secrets: inherit
