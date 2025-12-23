@@ -322,7 +322,7 @@ resource "aws_route" "private_nat" {
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
   # Use modulo to distribute subnets across available NAT gateways
-  nat_gateway_id         = aws_nat_gateway.nat[count.index % local.nat_gateway_count].id
+  nat_gateway_id = aws_nat_gateway.nat[count.index % local.nat_gateway_count].id
 }
 
 resource "aws_route_table_association" "private_assoc" {
