@@ -79,10 +79,9 @@ jobs:
 
   deploy-backend:
     name: Deploy Backend
-    needs: [deploy-infrastructure, database-migrations, detect-changes]
+    needs: [deploy-infrastructure, detect-changes]
     if: >-
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains('success,skipped', needs.database-migrations.result) &&
       (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend'))
     permissions:
       id-token: write
