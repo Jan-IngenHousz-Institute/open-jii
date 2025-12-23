@@ -126,7 +126,7 @@ export function NewExperimentVisibilityCard({ form }: NewExperimentVisibilityCar
                           <Button
                             variant="outline"
                             className={cn(
-                              "justify-start text-left font-normal",
+                              "hover:bg-surface justify-start text-left font-normal",
                               !selectedDate && "text-muted-foreground",
                             )}
                           >

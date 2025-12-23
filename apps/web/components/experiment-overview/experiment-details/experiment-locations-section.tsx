@@ -53,12 +53,12 @@ export function ExperimentLocationsSection({
 
   return (
     <>
-      <div>
+      <div className="space-y-1">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-medium">{t("details.location.locationsTitle")}</h4>
           <Button
-            variant="ghost"
-            className="text-primary h-auto p-0 hover:bg-transparent"
+            variant="buttonLink"
+            className="h-auto p-0"
             onClick={() => setIsLocationDialogOpen(true)}
           >
             {hasAccess && !isArchived ? "Manage" : "View"}
@@ -68,7 +68,7 @@ export function ExperimentLocationsSection({
           {locations.length > 0 ? (
             <>
               {locations.slice(0, LOCATIONS_DISPLAYED).map((location) => (
-                <p key={location.id} className="truncate">
+                <p key={location.id} className="truncate text-sm">
                   {location.name}
                 </p>
               ))}
@@ -87,7 +87,7 @@ export function ExperimentLocationsSection({
           )}
         </div>
         {locations.length > 0 && (
-          <div className="relative mt-3 h-[140px] w-full overflow-hidden rounded-md">
+          <div className="relative h-[140px] w-full overflow-hidden rounded-md">
             <div
               className="absolute inset-0 z-10 cursor-pointer"
               onClick={() => setIsLocationDialogOpen(true)}

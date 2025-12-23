@@ -3,13 +3,21 @@
 import "quill/dist/quill.snow.css";
 import React from "react";
 
+import { cn } from "../lib/utils";
+
 interface RichTextRendererProps {
   content: string;
+  className?: string;
   truncate?: boolean;
   maxLines?: number;
 }
 
-export function RichTextRenderer({ content, truncate, maxLines }: RichTextRendererProps) {
+export function RichTextRenderer({
+  content,
+  className,
+  truncate,
+  maxLines,
+}: RichTextRendererProps) {
   // Check for common HTML tags that Quill editor produces
   const htmlTags = [
     "<p>",
@@ -32,7 +40,7 @@ export function RichTextRenderer({ content, truncate, maxLines }: RichTextRender
   }
 
   if (!isRichText) {
-    return <p className="text-sm">{content}</p>;
+    return <p className={cn("text-sm", className)}>{content}</p>;
   }
 
   const lineClampStyle = truncate ? { WebkitLineClamp: maxLines } : {};
@@ -40,7 +48,10 @@ export function RichTextRenderer({ content, truncate, maxLines }: RichTextRender
   return (
     <>
       <div
-        className={`ql-editor rich-text-renderer ${truncate ? "rich-text-renderer-truncate" : ""}`}
+        className={cn(
+          `ql-editor rich-text-renderer ${truncate ? "rich-text-renderer-truncate" : ""}`,
+          className,
+        )}
         style={lineClampStyle}
         dangerouslySetInnerHTML={{ __html: content }}
       />
@@ -50,7 +61,6 @@ export function RichTextRenderer({ content, truncate, maxLines }: RichTextRender
           .rich-text-renderer {
             padding: 8px 0;
             border: none;
-            font-size: inherit;
             line-height: 1.5;
             word-break: break-word;
             overflow-wrap: break-word;

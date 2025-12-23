@@ -149,13 +149,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
             selectedRole={selectedRole}
             onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
           />
-          <Button
-            onClick={handleAddMember}
-            variant="outline"
-            disabled={!selectedUser}
-            size="default"
-            className="bg-surface hover:bg-surface-light disabled:hover:bg-surface"
-          >
+          <Button onClick={handleAddMember} variant="muted" disabled={!selectedUser} size="default">
             {t("common.add")}
           </Button>
         </div>
