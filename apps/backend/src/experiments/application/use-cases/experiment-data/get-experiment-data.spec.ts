@@ -1,16 +1,9 @@
 import nock from "nock";
 
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
 import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
 import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
-import {
-  assertFailure,
-  assertSuccess,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
@@ -121,56 +114,11 @@ describe("GetExperimentDataUseCase", () => {
         ],
       });
 
-    // Mock SQL query for describing columns
-    const mockMetadata = {
-      columns: [
-        { name: "col_name", type_name: "STRING", type_text: "STRING" },
-        { name: "data_type", type_name: "STRING", type_text: "STRING" },
-        { name: "comment", type_name: "STRING", type_text: "STRING" },
-      ],
-      rows: [
-        ["timestamp", "TIMESTAMP", null],
-        ["temperature", "DOUBLE", null],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "DESCRIBE sensor_data",
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-meta-data-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockMetadata.columns.length,
-            columns: mockMetadata.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockMetadata.totalRows,
-          truncated: mockMetadata.truncated,
-        },
-        result: {
-          data_array: mockMetadata.rows,
-          chunk_index: 0,
-          row_count: mockMetadata.rows.length,
-          row_offset: 0,
-        },
-      });
-
     // Mock SQL query for specific columns (no pagination - full data)
+    // No ORDER BY clause since orderBy is not specified
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "SELECT `timestamp`, `temperature` FROM sensor_data ORDER BY timestamp DESC",
+        statement: "SELECT `timestamp`, `temperature` FROM sensor_data",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
@@ -781,10 +729,10 @@ describe("GetExperimentDataUseCase", () => {
         },
       });
 
-    // Mock SQL query for sample data ("public_table") with ORDER BY and pagination
+    // Mock SQL query for sample data ("public_table") without ORDER BY (not specified)
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "SELECT * FROM public_table ORDER BY timestamp DESC LIMIT 5 OFFSET 0",
+        statement: "SELECT * FROM public_table LIMIT 5 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: experiment.schemaName ?? `exp_public_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
@@ -1164,56 +1112,10 @@ describe("GetExperimentDataUseCase", () => {
         ],
       });
 
-    // Mock SQL query for describing columns
-    const mockMetadata = {
-      columns: [
-        { name: "col_name", type_name: "STRING", type_text: "STRING" },
-        { name: "data_type", type_name: "STRING", type_text: "STRING" },
-        { name: "comment", type_name: "STRING", type_text: "STRING" },
-      ],
-      rows: [
-        ["timestamp", "TIMESTAMP", null],
-        ["temperature", "DOUBLE", null],
-      ],
-      totalRows: 2,
-      truncated: false,
-    };
+    // Mock SQL query for specific columns - failure (no ORDER BY since not specified)
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "DESCRIBE sensor_data",
-        warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
-        catalog: MOCK_CATALOG_NAME,
-        wait_timeout: MOCK_WAIT_TIMEOUT,
-        disposition: MOCK_DISPOSITION,
-        format: MOCK_FORMAT,
-      })
-      .reply(200, {
-        statement_id: "mock-meta-data-id",
-        status: { state: "SUCCEEDED" },
-        manifest: {
-          schema: {
-            column_count: mockMetadata.columns.length,
-            columns: mockMetadata.columns.map((col, i) => ({
-              ...col,
-              position: i,
-            })),
-          },
-          total_row_count: mockMetadata.totalRows,
-          truncated: mockMetadata.truncated,
-        },
-        result: {
-          data_array: mockMetadata.rows,
-          chunk_index: 0,
-          row_count: mockMetadata.rows.length,
-          row_offset: 0,
-        },
-      });
-
-    // Mock SQL query for specific columns - failure
-    nock(DATABRICKS_HOST)
-      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "SELECT `timestamp`, `temperature` FROM sensor_data ORDER BY timestamp DESC",
+        statement: "SELECT `timestamp`, `temperature` FROM sensor_data",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: experiment.schemaName ?? `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
@@ -1725,103 +1627,6 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.error.code).toBe("FORBIDDEN");
     expect(result.error.message).toContain("not accessible");
     expect(result.error.message).toContain("Only final processed tables are available");
-  });
-
-  it("should handle getOrderByClause failure when fetching specific columns", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      userId: testUserId,
-    });
-
-    const databricksAdapter = testApp.module.get(DatabricksAdapter);
-
-    // Mock table exists
-    vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
-      success({
-        tables: [
-          {
-            name: "test_table",
-            catalog_name: MOCK_CATALOG_NAME,
-            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
-            table_type: "MANAGED" as const,
-            created_at: Date.now(),
-            properties: { downstream: "false" },
-          },
-        ],
-      }),
-    );
-
-    // Mock getTableMetadata to fail
-    vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
-      failure(AppError.internal("Failed to get metadata")),
-    );
-
-    // Act - request specific columns without orderBy (will trigger metadata fetch)
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "test_table",
-      columns: "col1,col2",
-    });
-
-    // Assert - should return error
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.message).toContain("Failed to get metadata");
-  });
-
-  it("should handle getOrderByClause failure when fetching paginated data", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      userId: testUserId,
-    });
-
-    const databricksAdapter = testApp.module.get(DatabricksAdapter);
-
-    // Mock table exists
-    vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
-      success({
-        tables: [
-          {
-            name: "test_table",
-            catalog_name: MOCK_CATALOG_NAME,
-            schema_name: experiment.schemaName ?? `exp_test_experiment_${experiment.id}`,
-            table_type: "MANAGED" as const,
-            created_at: Date.now(),
-            properties: { downstream: "false" },
-          },
-        ],
-      }),
-    );
-
-    // Mock count query success
-    vi.spyOn(databricksAdapter, "executeSqlQuery")
-      .mockResolvedValueOnce(
-        success({
-          columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
-          rows: [["100"]],
-          totalRows: 1,
-          truncated: false,
-        }),
-      )
-      .mockResolvedValueOnce(failure(AppError.internal("Failed to get metadata")));
-
-    // Mock getTableMetadata to fail (for ORDER BY clause)
-    vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
-      failure(AppError.internal("Failed to get metadata")),
-    );
-
-    // Act - request paginated data without orderBy (will trigger metadata fetch)
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "test_table",
-      page: 1,
-      pageSize: 5,
-    });
-
-    // Assert - should return error
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.message).toContain("Failed to get metadata");
   });
 
   it("should handle experiment without schemaName", async () => {

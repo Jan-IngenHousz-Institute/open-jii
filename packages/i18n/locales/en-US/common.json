@@ -486,7 +486,6 @@
     }
   },
   "experimentDataTable": {
-    "loading": "Data loading... Please wait. It can take several minutes.",
     "noData": "No data returned",
     "noResults": "No results",
     "error": "Error loading data",
