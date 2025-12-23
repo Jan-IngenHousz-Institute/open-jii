@@ -92,6 +92,9 @@ jobs:
       infra_ok: ${{ contains('success,skipped', needs.deploy-infrastructure.result) }}
       migrations_ok: ${{ contains('success,skipped', needs.database-migrations.result) }}
       affected_apps: ${{ needs.detect-changes.outputs.affected_apps }}
+    steps:
+      - name: Gate
+        run: echo "Deployment gate evaluated"
 
   deploy-backend:
     name: Deploy Backend
@@ -117,6 +120,9 @@ jobs:
     if: always()
     outputs:
       backend_ok: ${{ contains('success,skipped', needs.deploy-backend.result) }}
+    steps:
+      - name: Normalize backend result
+        run: echo "Backend result normalized"
 
   deploy-frontend:
     name: Deploy Frontend
