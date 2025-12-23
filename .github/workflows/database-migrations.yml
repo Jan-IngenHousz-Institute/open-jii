@@ -58,318 +58,318 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Get Infrastructure Configuration
-        uses: ./.github/actions/get-infrastructure-config
-        with:
-          environment: ${{ inputs.environment }}
-          prefix: "/migration"
+      # - name: Get Infrastructure Configuration
+      #   uses: ./.github/actions/get-infrastructure-config
+      #   with:
+      #     environment: ${{ inputs.environment }}
+      #     prefix: "/migration"
 
-      - name: Normalize migration env vars
-        run: |
-          echo "Normalizing SSM env vars to MIGRATION_RUNNER_* aliases"
+      # - name: Normalize migration env vars
+      #   run: |
+      #     echo "Normalizing SSM env vars to MIGRATION_RUNNER_* aliases"
 
-          # Map SSM-derived basenames to expected MIGRATION_RUNNER_* variables
-          [[ -n "${ECS_CLUSTER_NAME:-}" ]] && echo "MIGRATION_RUNNER_ECS_CLUSTER_NAME=$ECS_CLUSTER_NAME" >> $GITHUB_ENV
-          [[ -n "${TASK_DEFINITION_FAMILY:-}" ]] && echo "MIGRATION_RUNNER_TASK_DEFINITION_FAMILY=$TASK_DEFINITION_FAMILY" >> $GITHUB_ENV
-          [[ -n "${CONTAINER_NAME:-}" ]] && echo "MIGRATION_RUNNER_CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
-          [[ -n "${SUBNETS:-}" ]] && echo "MIGRATION_RUNNER_SUBNETS=$SUBNETS" >> $GITHUB_ENV
-          [[ -n "${SECURITY_GROUP_ID:-}" ]] && echo "MIGRATION_RUNNER_SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
-          [[ -n "${ECR_REPOSITORY_NAME:-}" ]] && echo "MIGRATION_RUNNER_ECR_REPOSITORY_NAME=$ECR_REPOSITORY_NAME" >> $GITHUB_ENV
+      #     # Map SSM-derived basenames to expected MIGRATION_RUNNER_* variables
+      #     [[ -n "${ECS_CLUSTER_NAME:-}" ]] && echo "MIGRATION_RUNNER_ECS_CLUSTER_NAME=$ECS_CLUSTER_NAME" >> $GITHUB_ENV
+      #     [[ -n "${TASK_DEFINITION_FAMILY:-}" ]] && echo "MIGRATION_RUNNER_TASK_DEFINITION_FAMILY=$TASK_DEFINITION_FAMILY" >> $GITHUB_ENV
+      #     [[ -n "${CONTAINER_NAME:-}" ]] && echo "MIGRATION_RUNNER_CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
+      #     [[ -n "${SUBNETS:-}" ]] && echo "MIGRATION_RUNNER_SUBNETS=$SUBNETS" >> $GITHUB_ENV
+      #     [[ -n "${SECURITY_GROUP_ID:-}" ]] && echo "MIGRATION_RUNNER_SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
+      #     [[ -n "${ECR_REPOSITORY_NAME:-}" ]] && echo "MIGRATION_RUNNER_ECR_REPOSITORY_NAME=$ECR_REPOSITORY_NAME" >> $GITHUB_ENV
 
-          # Convenience alias
-          [[ -n "${ECR_REPOSITORY_NAME:-}" ]] && echo "ECR_REPOSITORY=$ECR_REPOSITORY_NAME" >> $GITHUB_ENV
+      #     # Convenience alias
+      #     [[ -n "${ECR_REPOSITORY_NAME:-}" ]] && echo "ECR_REPOSITORY=$ECR_REPOSITORY_NAME" >> $GITHUB_ENV
 
-      - name: Set derived environment variables
-        run: |
-          # Set log group name based on environment
-          echo "LOG_GROUP_NAME=/aws/ecs/db-migration-runner-${{ inputs.environment }}" >> $GITHUB_ENV
+      # - name: Set derived environment variables
+      #   run: |
+      #     # Set log group name based on environment
+      #     echo "LOG_GROUP_NAME=/aws/ecs/db-migration-runner-${{ inputs.environment }}" >> $GITHUB_ENV
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      # - name: Login to Amazon ECR
+      #   id: login-ecr
+      #   uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Set environment variables
-        run: |
-          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=migrations-$(echo ${{ github.sha }} | cut -c1-7)-$(date +%s)" >> $GITHUB_ENV
+      # - name: Set environment variables
+      #   run: |
+      #     echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+      #     echo "IMAGE_TAG=migrations-$(echo ${{ github.sha }} | cut -c1-7)-$(date +%s)" >> $GITHUB_ENV
 
-          # Get and validate AWS region
-          AWS_REGION="${{ secrets.AWS_REGION }}"
-          if [[ -z "$AWS_REGION" ]]; then
-            echo "::warning::AWS_REGION not set in secrets, using default: eu-central-1"
-            echo "AWS_REGION=eu-central-1" >> $GITHUB_ENV
-          else
-            echo "AWS_REGION=$AWS_REGION" >> $GITHUB_ENV
-          fi
+      #     # Get and validate AWS region
+      #     AWS_REGION="${{ secrets.AWS_REGION }}"
+      #     if [[ -z "$AWS_REGION" ]]; then
+      #       echo "::warning::AWS_REGION not set in secrets, using default: eu-central-1"
+      #       echo "AWS_REGION=eu-central-1" >> $GITHUB_ENV
+      #     else
+      #       echo "AWS_REGION=$AWS_REGION" >> $GITHUB_ENV
+      #     fi
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
-          ECR_REPOSITORY: ${{ env.MIGRATION_RUNNER_ECR_REPOSITORY_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-        run: |
-          echo "Building Docker image for database migrations"
+      # - name: Build, tag, and push image to Amazon ECR
+      #   id: build-image
+      #   env:
+      #     ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+      #     ECR_REPOSITORY: ${{ env.MIGRATION_RUNNER_ECR_REPOSITORY_NAME }}
+      #     IMAGE_TAG: ${{ env.IMAGE_TAG }}
+      #   run: |
+      #     echo "Building Docker image for database migrations"
 
-          # Check if Dockerfile exists
-          DATABASE_DIR="packages/database"
-          if [[ ! -f "${DATABASE_DIR}/Dockerfile" ]]; then
-            echo "::error::Dockerfile not found at ${DATABASE_DIR}/Dockerfile"
-            exit 1
-          fi
+      #     # Check if Dockerfile exists
+      #     DATABASE_DIR="packages/database"
+      #     if [[ ! -f "${DATABASE_DIR}/Dockerfile" ]]; then
+      #       echo "::error::Dockerfile not found at ${DATABASE_DIR}/Dockerfile"
+      #       exit 1
+      #     fi
 
-          # Build image for linux/amd64 platform for AWS ECS compatibility
-          echo "Building Docker image for linux/amd64 platform (AWS ECS compatible)"
-          docker build \
-            --platform linux/amd64 \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            -f ${DATABASE_DIR}/Dockerfile . > /dev/null
+      #     # Build image for linux/amd64 platform for AWS ECS compatibility
+      #     echo "Building Docker image for linux/amd64 platform (AWS ECS compatible)"
+      #     docker build \
+      #       --platform linux/amd64 \
+      #       -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+      #       -f ${DATABASE_DIR}/Dockerfile . > /dev/null
 
-          if [ $? -ne 0 ]; then
-            echo "::error::Docker build failed"
-            exit 1
-          fi
+      #     if [ $? -ne 0 ]; then
+      #       echo "::error::Docker build failed"
+      #       exit 1
+      #     fi
 
-          # Define the full image reference for consistency
-          FULL_IMAGE_REF="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      #     # Define the full image reference for consistency
+      #     FULL_IMAGE_REF="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-          echo "Pushing image to ECR repository"
-          docker push $FULL_IMAGE_REF > /dev/null
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to push image to ECR"
-            exit 1
-          fi
+      #     echo "Pushing image to ECR repository"
+      #     docker push $FULL_IMAGE_REF > /dev/null
+      #     if [ $? -ne 0 ]; then
+      #       echo "::error::Failed to push image to ECR"
+      #       exit 1
+      #     fi
 
-          # Add latest tag using AWS ECR put-image command (no need to push again)
-          if ! aws ecr put-image --repository-name ${ECR_REPOSITORY} --image-tag latest \
-            --image-manifest "$(aws ecr batch-get-image --repository-name ${ECR_REPOSITORY} \
-            --image-ids imageTag=${IMAGE_TAG} --query 'images[].imageManifest' --output text)" \
-            --region ${AWS_REGION} &>/dev/null; then
-            echo "::warning::Failed to tag image as latest, but the version-specific tag was pushed successfully"
-          fi
+      #     # Add latest tag using AWS ECR put-image command (no need to push again)
+      #     if ! aws ecr put-image --repository-name ${ECR_REPOSITORY} --image-tag latest \
+      #       --image-manifest "$(aws ecr batch-get-image --repository-name ${ECR_REPOSITORY} \
+      #       --image-ids imageTag=${IMAGE_TAG} --query 'images[].imageManifest' --output text)" \
+      #       --region ${AWS_REGION} &>/dev/null; then
+      #       echo "::warning::Failed to tag image as latest, but the version-specific tag was pushed successfully"
+      #     fi
 
-          # Store the full image reference for later use
-          echo "full_image_ref=$FULL_IMAGE_REF" >> $GITHUB_OUTPUT
+      #     # Store the full image reference for later use
+      #     echo "full_image_ref=$FULL_IMAGE_REF" >> $GITHUB_OUTPUT
 
-          echo "✅ Successfully built and pushed Docker image"
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      #     echo "✅ Successfully built and pushed Docker image"
+      #     echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Check for already running migration task
-        id: check-running
-        run: |
-          CLUSTER_NAME="${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}"
-          TASK_FAMILY="${{ env.MIGRATION_RUNNER_TASK_DEFINITION_FAMILY }}"
+      # - name: Check for already running migration task
+      #   id: check-running
+      #   run: |
+      #     CLUSTER_NAME="${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}"
+      #     TASK_FAMILY="${{ env.MIGRATION_RUNNER_TASK_DEFINITION_FAMILY }}"
 
-          echo "Checking for already running migration tasks..."
+      #     echo "Checking for already running migration tasks..."
 
-          # Check for running tasks with the same family
-          RUNNING_TASKS=$(aws ecs list-tasks \
-            --cluster ${CLUSTER_NAME} \
-            --family ${TASK_FAMILY} \
-            --desired-status RUNNING \
-            --query 'taskArns[*]' \
-            --output text)
+      #     # Check for running tasks with the same family
+      #     RUNNING_TASKS=$(aws ecs list-tasks \
+      #       --cluster ${CLUSTER_NAME} \
+      #       --family ${TASK_FAMILY} \
+      #       --desired-status RUNNING \
+      #       --query 'taskArns[*]' \
+      #       --output text)
 
-          if [ -n "$RUNNING_TASKS" ]; then
-            echo "already_running=true" >> $GITHUB_OUTPUT
-            echo "running_tasks=$RUNNING_TASKS" >> $GITHUB_OUTPUT
-            echo "::warning::Found already running migration tasks: $RUNNING_TASKS"
-          else
-            echo "No running migration tasks found. Proceeding with new migration."
-            echo "already_running=false" >> $GITHUB_OUTPUT
-          fi
+      #     if [ -n "$RUNNING_TASKS" ]; then
+      #       echo "already_running=true" >> $GITHUB_OUTPUT
+      #       echo "running_tasks=$RUNNING_TASKS" >> $GITHUB_OUTPUT
+      #       echo "::warning::Found already running migration tasks: $RUNNING_TASKS"
+      #     else
+      #       echo "No running migration tasks found. Proceeding with new migration."
+      #       echo "already_running=false" >> $GITHUB_OUTPUT
+      #     fi
 
-      - name: Wait for already running task to complete
-        if: steps.check-running.outputs.already_running == 'true'
-        run: |
-          CLUSTER_NAME="${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}"
-          RUNNING_TASKS="${{ steps.check-running.outputs.running_tasks }}"
+      # - name: Wait for already running task to complete
+      #   if: steps.check-running.outputs.already_running == 'true'
+      #   run: |
+      #     CLUSTER_NAME="${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}"
+      #     RUNNING_TASKS="${{ steps.check-running.outputs.running_tasks }}"
 
-          echo "Waiting for running migration task to complete..."
+      #     echo "Waiting for running migration task to complete..."
 
-          # Wait for up to 15 minutes for the running task to complete
-          timeout 900 aws ecs wait tasks-stopped --cluster ${CLUSTER_NAME} --tasks ${RUNNING_TASKS} || {
-            echo "::error::Timeout reached waiting for existing migration to complete"
-            exit 1
-          }
+      #     # Wait for up to 15 minutes for the running task to complete
+      #     timeout 900 aws ecs wait tasks-stopped --cluster ${CLUSTER_NAME} --tasks ${RUNNING_TASKS} || {
+      #       echo "::error::Timeout reached waiting for existing migration to complete"
+      #       exit 1
+      #     }
 
-          echo "Previous migration task completed, can proceed with new migration."
+      #     echo "Previous migration task completed, can proceed with new migration."
 
-      - name: Fetch current task definition
-        id: fetch-task-def
-        run: |
-          TASK_FAMILY="${{ env.MIGRATION_RUNNER_TASK_DEFINITION_FAMILY }}"
-          echo "Fetching current task definition for ${TASK_FAMILY}"
+      # - name: Fetch current task definition
+      #   id: fetch-task-def
+      #   run: |
+      #     TASK_FAMILY="${{ env.MIGRATION_RUNNER_TASK_DEFINITION_FAMILY }}"
+      #     echo "Fetching current task definition for ${TASK_FAMILY}"
 
-          # Fetch the current task definition
-          aws ecs describe-task-definition \
-            --task-definition ${TASK_FAMILY} \
-            --query 'taskDefinition' \
-            --output json > task-definition.json
+      #     # Fetch the current task definition
+      #     aws ecs describe-task-definition \
+      #       --task-definition ${TASK_FAMILY} \
+      #       --query 'taskDefinition' \
+      #       --output json > task-definition.json
             
-          if [ ! -s task-definition.json ]; then
-            echo "::error::Failed to fetch task definition"
-            exit 1
-          fi
+      #     if [ ! -s task-definition.json ]; then
+      #       echo "::error::Failed to fetch task definition"
+      #       exit 1
+      #     fi
 
-          echo "✓ Successfully fetched task definition"
+      #     echo "✓ Successfully fetched task definition"
 
-          # Determine network configuration for the task
-          NETWORK_MODE=$(jq -r '.networkMode' task-definition.json)
-          echo "Task network mode: $NETWORK_MODE"
+      #     # Determine network configuration for the task
+      #     NETWORK_MODE=$(jq -r '.networkMode' task-definition.json)
+      #     echo "Task network mode: $NETWORK_MODE"
 
-          # Create network configuration for task based on network mode
-          if [[ "$NETWORK_MODE" == "awsvpc" ]]; then
-            # For awsvpc mode, prepare network configuration from available sources
+      #     # Create network configuration for task based on network mode
+      #     if [[ "$NETWORK_MODE" == "awsvpc" ]]; then
+      #       # For awsvpc mode, prepare network configuration from available sources
             
-            if [[ -n "${{ env.MIGRATION_RUNNER_SUBNETS || '' }}" && -n "${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID || '' }}" ]]; then
-              # Parse subnet list
-              SUBNET_LIST=$(echo "${{ env.MIGRATION_RUNNER_SUBNETS }}" | jq -r 'if type == "array" then join(",") else . end' 2>/dev/null || echo "${{ env.MIGRATION_RUNNER_SUBNETS }}")
+      #       if [[ -n "${{ env.MIGRATION_RUNNER_SUBNETS || '' }}" && -n "${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID || '' }}" ]]; then
+      #         # Parse subnet list
+      #         SUBNET_LIST=$(echo "${{ env.MIGRATION_RUNNER_SUBNETS }}" | jq -r 'if type == "array" then join(",") else . end' 2>/dev/null || echo "${{ env.MIGRATION_RUNNER_SUBNETS }}")
               
-              # Format for JSON if needed
-              if [[ -n "$SUBNET_LIST" ]]; then
-                if [[ "$SUBNET_LIST" =~ ^\[.*\]$ ]]; then
-                  SUBNET_JSON="$SUBNET_LIST"
-                else
-                  # Convert comma list to JSON array format
-                  SUBNET_JSON="[\"$(echo $SUBNET_LIST | sed 's/,/","/g')\"]"
-                fi
+      #         # Format for JSON if needed
+      #         if [[ -n "$SUBNET_LIST" ]]; then
+      #           if [[ "$SUBNET_LIST" =~ ^\[.*\]$ ]]; then
+      #             SUBNET_JSON="$SUBNET_LIST"
+      #           else
+      #             # Convert comma list to JSON array format
+      #             SUBNET_JSON="[\"$(echo $SUBNET_LIST | sed 's/,/","/g')\"]"
+      #           fi
                 
-                # Create awsvpc network config
-                echo "Creating network config from infrastructure outputs"
-                echo "NETWORK_CONFIG={\"awsvpcConfiguration\":{\"subnets\":$SUBNET_JSON,\"securityGroups\":[\"${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID }}\"],\"assignPublicIp\":\"DISABLED\"}}" >> $GITHUB_ENV
-              else
-                echo "::error::Subnets are empty, can't create network config"
-                exit 1
-              fi
-            else
-              # Try to get network config from service if available
-              echo "No subnet/security group from outputs, trying service config"
-              SERVICE_ARN=$(aws ecs list-services --cluster ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }} --family ${{ env.MIGRATION_RUNNER_TASK_DEFINITION_FAMILY }} --query 'serviceArns[0]' --output text 2>/dev/null || echo "")
+      #           # Create awsvpc network config
+      #           echo "Creating network config from infrastructure outputs"
+      #           echo "NETWORK_CONFIG={\"awsvpcConfiguration\":{\"subnets\":$SUBNET_JSON,\"securityGroups\":[\"${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID }}\"],\"assignPublicIp\":\"DISABLED\"}}" >> $GITHUB_ENV
+      #         else
+      #           echo "::error::Subnets are empty, can't create network config"
+      #           exit 1
+      #         fi
+      #       else
+      #         # Try to get network config from service if available
+      #         echo "No subnet/security group from outputs, trying service config"
+      #         SERVICE_ARN=$(aws ecs list-services --cluster ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }} --family ${{ env.MIGRATION_RUNNER_TASK_DEFINITION_FAMILY }} --query 'serviceArns[0]' --output text 2>/dev/null || echo "")
               
-              if [[ -n "$SERVICE_ARN" && "$SERVICE_ARN" != "None" ]]; then
-                NETWORK_CONFIG=$(aws ecs describe-services --cluster ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }} --services "$SERVICE_ARN" --query 'services[0].networkConfiguration' --output json)
+      #         if [[ -n "$SERVICE_ARN" && "$SERVICE_ARN" != "None" ]]; then
+      #           NETWORK_CONFIG=$(aws ecs describe-services --cluster ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }} --services "$SERVICE_ARN" --query 'services[0].networkConfiguration' --output json)
                 
-                if [[ -z "$NETWORK_CONFIG" || "$NETWORK_CONFIG" == "null" || "$NETWORK_CONFIG" == "{}" ]]; then
-                  echo "::error::Failed to get network config from service"
-                  exit 1
-                fi
+      #           if [[ -z "$NETWORK_CONFIG" || "$NETWORK_CONFIG" == "null" || "$NETWORK_CONFIG" == "{}" ]]; then
+      #             echo "::error::Failed to get network config from service"
+      #             exit 1
+      #           fi
                 
-                # Set the network config env var
-                echo "NETWORK_CONFIG=$NETWORK_CONFIG" >> $GITHUB_ENV
-              else
-                echo "::error::No network configuration available for awsvpc task"
-                echo "::error::Please define subnets and security group in infrastructure"
-                exit 1
-              fi
-            fi
-          else
-            # For bridge/host network modes, empty config is fine
-            echo "Task doesn't use awsvpc networking mode"
-            echo "NETWORK_CONFIG={}" >> $GITHUB_ENV
-          fi
+      #           # Set the network config env var
+      #           echo "NETWORK_CONFIG=$NETWORK_CONFIG" >> $GITHUB_ENV
+      #         else
+      #           echo "::error::No network configuration available for awsvpc task"
+      #           echo "::error::Please define subnets and security group in infrastructure"
+      #           exit 1
+      #         fi
+      #       fi
+      #     else
+      #       # For bridge/host network modes, empty config is fine
+      #       echo "Task doesn't use awsvpc networking mode"
+      #       echo "NETWORK_CONFIG={}" >> $GITHUB_ENV
+      #     fi
 
-          # Check if ECR repository exists before proceeding
-          AWS_REGION="${{ secrets.AWS_REGION }}"
-          ECR_REPO="${{ env.MIGRATION_RUNNER_ECR_REPOSITORY_NAME }}"
+      #     # Check if ECR repository exists before proceeding
+      #     AWS_REGION="${{ secrets.AWS_REGION }}"
+      #     ECR_REPO="${{ env.MIGRATION_RUNNER_ECR_REPOSITORY_NAME }}"
 
-          if ! aws ecr describe-repositories --repository-names "${ECR_REPO}" --region ${AWS_REGION} &> /dev/null; then
-            echo "::error::ECR repository ${ECR_REPO} does not exist."
-            exit 1
-          fi
+      #     if ! aws ecr describe-repositories --repository-names "${ECR_REPO}" --region ${AWS_REGION} &> /dev/null; then
+      #       echo "::error::ECR repository ${ECR_REPO} does not exist."
+      #       exit 1
+      #     fi
 
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: render-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: ${{ env.MIGRATION_RUNNER_CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.full_image_ref }}
+      # - name: Fill in the new image ID in the Amazon ECS task definition
+      #   id: render-task-def
+      #   uses: aws-actions/amazon-ecs-render-task-definition@v1
+      #   with:
+      #     task-definition: task-definition.json
+      #     container-name: ${{ env.MIGRATION_RUNNER_CONTAINER_NAME }}
+      #     image: ${{ steps.build-image.outputs.full_image_ref }}
 
-      - name: Register rendered task definition
-        id: register-task-def
-        env:
-          AWS_REGION: ${{ env.AWS_REGION }}
-        run: |
-          echo "Registering rendered task definition..."
-          TASK_DEF_FILE="${{ steps.render-task-def.outputs.task-definition }}"
-          REGISTER_OUTPUT=$(aws ecs register-task-definition --cli-input-json file://$TASK_DEF_FILE --region "$AWS_REGION")
-          FAMILY_REVISION=$(echo "$REGISTER_OUTPUT" | jq -r '.taskDefinition.taskDefinitionArn')
-          if [[ -z "$FAMILY_REVISION" || "$FAMILY_REVISION" == "null" ]]; then
-            echo "::error::Failed to register task definition"
-            exit 1
-          fi
-          echo "Registered task definition: $FAMILY_REVISION"
-          echo "family_revision=$FAMILY_REVISION" >> $GITHUB_OUTPUT
+      # - name: Register rendered task definition
+      #   id: register-task-def
+      #   env:
+      #     AWS_REGION: ${{ env.AWS_REGION }}
+      #   run: |
+      #     echo "Registering rendered task definition..."
+      #     TASK_DEF_FILE="${{ steps.render-task-def.outputs.task-definition }}"
+      #     REGISTER_OUTPUT=$(aws ecs register-task-definition --cli-input-json file://$TASK_DEF_FILE --region "$AWS_REGION")
+      #     FAMILY_REVISION=$(echo "$REGISTER_OUTPUT" | jq -r '.taskDefinition.taskDefinitionArn')
+      #     if [[ -z "$FAMILY_REVISION" || "$FAMILY_REVISION" == "null" ]]; then
+      #       echo "::error::Failed to register task definition"
+      #       exit 1
+      #     fi
+      #     echo "Registered task definition: $FAMILY_REVISION"
+      #     echo "family_revision=$FAMILY_REVISION" >> $GITHUB_OUTPUT
 
-      - name: Run migration task
-        id: run-task
-        env:
-          CLUSTER_NAME: ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}
-          TASK_DEF: ${{ steps.register-task-def.outputs.family_revision }}
-          SUBNETS: ${{ env.MIGRATION_RUNNER_SUBNETS }}
-          SECURITY_GROUP_ID: ${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID }}
-          AWS_REGION: ${{ env.AWS_REGION }}
-          TIMEOUT: ${{ env.MIGRATION_TIMEOUT }}
-        run: |
-          echo "Running migration task with aws ecs run-task..."
-          if [[ -z "$SUBNETS" || -z "$SECURITY_GROUP_ID" ]]; then
-            echo "::error::Missing required networking configuration (subnets or security group)"
-            exit 1
-          fi
+      # - name: Run migration task
+      #   id: run-task
+      #   env:
+      #     CLUSTER_NAME: ${{ env.MIGRATION_RUNNER_ECS_CLUSTER_NAME }}
+      #     TASK_DEF: ${{ steps.register-task-def.outputs.family_revision }}
+      #     SUBNETS: ${{ env.MIGRATION_RUNNER_SUBNETS }}
+      #     SECURITY_GROUP_ID: ${{ env.MIGRATION_RUNNER_SECURITY_GROUP_ID }}
+      #     AWS_REGION: ${{ env.AWS_REGION }}
+      #     TIMEOUT: ${{ env.MIGRATION_TIMEOUT }}
+      #   run: |
+      #     echo "Running migration task with aws ecs run-task..."
+      #     if [[ -z "$SUBNETS" || -z "$SECURITY_GROUP_ID" ]]; then
+      #       echo "::error::Missing required networking configuration (subnets or security group)"
+      #       exit 1
+      #     fi
 
-          # Convert comma-separated subnets to JSON array
-          if [[ "$SUBNETS" =~ ^\[.*\]$ ]]; then
-            SUBNET_JSON="$SUBNETS"
-          else
-            SUBNET_JSON="[\"$(echo $SUBNETS | sed 's/,/\",\"/g')\"]"
-          fi
+      #     # Convert comma-separated subnets to JSON array
+      #     if [[ "$SUBNETS" =~ ^\[.*\]$ ]]; then
+      #       SUBNET_JSON="$SUBNETS"
+      #     else
+      #       SUBNET_JSON="[\"$(echo $SUBNETS | sed 's/,/\",\"/g')\"]"
+      #     fi
 
-          NETWORK_CONFIG="awsvpcConfiguration={subnets=$SUBNET_JSON,securityGroups=[\"$SECURITY_GROUP_ID\"],assignPublicIp=DISABLED}"
+      #     NETWORK_CONFIG="awsvpcConfiguration={subnets=$SUBNET_JSON,securityGroups=[\"$SECURITY_GROUP_ID\"],assignPublicIp=DISABLED}"
 
-          # Run the ECS task
-          TASK_ARN=$(aws ecs run-task \
-            --cluster "$CLUSTER_NAME" \
-            --task-definition "$TASK_DEF" \
-            --network-configuration "$NETWORK_CONFIG" \
-            --launch-type FARGATE \
-            --count 1 \
-            --region "$AWS_REGION" \
-            --query 'tasks[0].taskArn' \
-            --output text)
+      #     # Run the ECS task
+      #     TASK_ARN=$(aws ecs run-task \
+      #       --cluster "$CLUSTER_NAME" \
+      #       --task-definition "$TASK_DEF" \
+      #       --network-configuration "$NETWORK_CONFIG" \
+      #       --launch-type FARGATE \
+      #       --count 1 \
+      #       --region "$AWS_REGION" \
+      #       --query 'tasks[0].taskArn' \
+      #       --output text)
 
-          if [[ -z "$TASK_ARN" || "$TASK_ARN" == "None" ]]; then
-            echo "::error::Failed to start migration task"
-            exit 1
-          fi
+      #     if [[ -z "$TASK_ARN" || "$TASK_ARN" == "None" ]]; then
+      #       echo "::error::Failed to start migration task"
+      #       exit 1
+      #     fi
 
-          echo "Started migration task: $TASK_ARN"
-          echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+      #     echo "Started migration task: $TASK_ARN"
+      #     echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
 
-          # Wait for the task to stop (with timeout)
-          echo "Waiting for migration task to complete (timeout: $TIMEOUT seconds)..."
-          timeout "$TIMEOUT" aws ecs wait tasks-stopped --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN" --region "$AWS_REGION"
-          STATUS=$?
-          if [[ $STATUS -ne 0 ]]; then
-            echo "::error::Migration task did not complete in time or failed."
-            exit 1
-          fi
+      #     # Wait for the task to stop (with timeout)
+      #     echo "Waiting for migration task to complete (timeout: $TIMEOUT seconds)..."
+      #     timeout "$TIMEOUT" aws ecs wait tasks-stopped --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN" --region "$AWS_REGION"
+      #     STATUS=$?
+      #     if [[ $STATUS -ne 0 ]]; then
+      #       echo "::error::Migration task did not complete in time or failed."
+      #       exit 1
+      #     fi
 
-          echo "Migration task completed."
+      #     echo "Migration task completed."
 
-      - name: Migration Summary
-        env:
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          RUN_TASK_OUTCOME: ${{ steps.run-task.outcome }}
-        run: |
-          echo "=== Database Migration Summary ==="
-          echo "Environment: ${{ inputs.environment }}"
-          echo "Image tag: $IMAGE_TAG"
-          echo "Task action outcome: $RUN_TASK_OUTCOME"
+      # - name: Migration Summary
+      #   env:
+      #     IMAGE_TAG: ${{ env.IMAGE_TAG }}
+      #     RUN_TASK_OUTCOME: ${{ steps.run-task.outcome }}
+      #   run: |
+      #     echo "=== Database Migration Summary ==="
+      #     echo "Environment: ${{ inputs.environment }}"
+      #     echo "Image tag: $IMAGE_TAG"
+      #     echo "Task action outcome: $RUN_TASK_OUTCOME"
 
-          if [[ "$RUN_TASK_OUTCOME" == "success" ]]; then
-            echo "Status: SUCCESS"
-            echo "✅ Migration completed successfully!"
-          else
-            echo "Status: FAILED"
-          fi
+      #     if [[ "$RUN_TASK_OUTCOME" == "success" ]]; then
+      #       echo "Status: SUCCESS"
+      #       echo "✅ Migration completed successfully!"
+      #     else
+      #       echo "Status: FAILED"
+      #     fi

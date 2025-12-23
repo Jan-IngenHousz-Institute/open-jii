@@ -41,376 +41,376 @@ jobs:
           node-version: "22"
           hoisted: "true"
 
-      - name: Set build environment variables
-        env:
-          WEB_BASE_ORIGIN: ${{ vars.WEB_BASE_ORIGIN }}
-        run: |
-          echo "Preparing build-time environment variables..."
+      # - name: Set build environment variables
+      #   env:
+      #     WEB_BASE_ORIGIN: ${{ vars.WEB_BASE_ORIGIN }}
+      #   run: |
+      #     echo "Preparing build-time environment variables..."
 
-          NODE_ENV="production"
+      #     NODE_ENV="production"
 
-          # Public URLs by environment
-          if [[ "${{ inputs.environment }}" == "prod" ]]; then
-            NEXT_PUBLIC_API_URL="https://api.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_DOCS_URL="https://docs.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_BASE_URL="https://${WEB_BASE_ORIGIN}"
-            ENVIRONMENT_PREFIX="prod"
-          else
-            NEXT_PUBLIC_API_URL="https://api.dev.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_DOCS_URL="https://docs.dev.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_BASE_URL="https://dev.${WEB_BASE_ORIGIN}"
-            ENVIRONMENT_PREFIX="dev"
-          fi
+      #     # Public URLs by environment
+      #     if [[ "${{ inputs.environment }}" == "prod" ]]; then
+      #       NEXT_PUBLIC_API_URL="https://api.${WEB_BASE_ORIGIN}"
+      #       NEXT_PUBLIC_DOCS_URL="https://docs.${WEB_BASE_ORIGIN}"
+      #       NEXT_PUBLIC_BASE_URL="https://${WEB_BASE_ORIGIN}"
+      #       ENVIRONMENT_PREFIX="prod"
+      #     else
+      #       NEXT_PUBLIC_API_URL="https://api.dev.${WEB_BASE_ORIGIN}"
+      #       NEXT_PUBLIC_DOCS_URL="https://docs.dev.${WEB_BASE_ORIGIN}"
+      #       NEXT_PUBLIC_BASE_URL="https://dev.${WEB_BASE_ORIGIN}"
+      #       ENVIRONMENT_PREFIX="dev"
+      #     fi
 
-          echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_DOCS_URL=${NEXT_PUBLIC_DOCS_URL}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> $GITHUB_ENV
-          echo "ENVIRONMENT_PREFIX=${ENVIRONMENT_PREFIX}" >> $GITHUB_ENV
-          echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
+      #     echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> $GITHUB_ENV
+      #     echo "NEXT_PUBLIC_DOCS_URL=${NEXT_PUBLIC_DOCS_URL}" >> $GITHUB_ENV
+      #     echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> $GITHUB_ENV
+      #     echo "ENVIRONMENT_PREFIX=${ENVIRONMENT_PREFIX}" >> $GITHUB_ENV
+      #     echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
 
-      - name: Build Next.js Application
-        env:
-          NODE_ENV: ${{ env.NODE_ENV }}
-          ENVIRONMENT_PREFIX: ${{ env.ENVIRONMENT_PREFIX }}
-          NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BASE_URL: ${{ env.NEXT_PUBLIC_BASE_URL }}
-        run: |
-          echo "Building Next.js application..."
-          pnpm run build --filter=web
+      # - name: Build Next.js Application
+      #   env:
+      #     NODE_ENV: ${{ env.NODE_ENV }}
+      #     ENVIRONMENT_PREFIX: ${{ env.ENVIRONMENT_PREFIX }}
+      #     NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
+      #     NEXT_PUBLIC_BASE_URL: ${{ env.NEXT_PUBLIC_BASE_URL }}
+      #   run: |
+      #     echo "Building Next.js application..."
+      #     pnpm run build --filter=web
 
-      - name: Run OpenNext Build
-        run: |
-          echo "Running OpenNext build..."
-          cd apps/web && nice -n 10 pnpm run build:opennext
+      # - name: Run OpenNext Build
+      #   run: |
+      #     echo "Running OpenNext build..."
+      #     cd apps/web && nice -n 10 pnpm run build:opennext
 
-      - name: Check OpenNext Build Output
-        run: |
-          echo "Verifying OpenNext build output..."
-          if [[ ! -d "apps/web/.open-next" ]]; then
-            echo "::error::OpenNext build directory not found: apps/web/.open-next"
-            exit 1
-          fi
-          echo "OpenNext build directory found"
+      # - name: Check OpenNext Build Output
+      #   run: |
+      #     echo "Verifying OpenNext build output..."
+      #     if [[ ! -d "apps/web/.open-next" ]]; then
+      #       echo "::error::OpenNext build directory not found: apps/web/.open-next"
+      #       exit 1
+      #     fi
+      #     echo "OpenNext build directory found"
 
-          # Check for server functions
-          if [[ -d "apps/web/.open-next/server-functions" ]]; then
-            echo "Server function found"
-          else
-            echo "No server functions found"
-          fi
+      #     # Check for server functions
+      #     if [[ -d "apps/web/.open-next/server-functions" ]]; then
+      #       echo "Server function found"
+      #     else
+      #       echo "No server functions found"
+      #     fi
 
-          # Check for image optimization function
-          if [[ -d "apps/web/.open-next/image-optimization-function" ]]; then
-            echo "Image optimization function found"
-          else
-            echo "No image optimization function found"
-          fi
+      #     # Check for image optimization function
+      #     if [[ -d "apps/web/.open-next/image-optimization-function" ]]; then
+      #       echo "Image optimization function found"
+      #     else
+      #       echo "No image optimization function found"
+      #     fi
 
-          # Check for revalidation function
-          if [[ -d "apps/web/.open-next/revalidation-function" ]]; then
-            echo "Revalidation function found"
-          else
-            echo "No revalidation function found"
-          fi
+      #     # Check for revalidation function
+      #     if [[ -d "apps/web/.open-next/revalidation-function" ]]; then
+      #       echo "Revalidation function found"
+      #     else
+      #       echo "No revalidation function found"
+      #     fi
 
-          # Check for warmer function
-          if [[ -d "apps/web/.open-next/warmer-function" ]]; then
-            echo "Warmer function found"
-          else
-            echo "No warmer function found"
-          fi
+      #     # Check for warmer function
+      #     if [[ -d "apps/web/.open-next/warmer-function" ]]; then
+      #       echo "Warmer function found"
+      #     else
+      #       echo "No warmer function found"
+      #     fi
 
-          # Check for dynamodb provider
-          if [[ -d "apps/web/.open-next/dynamodb-provider" ]]; then
-            echo "DynamoDB provider found"
-          else
-            echo "No DynamoDB provider found"
-          fi
+      #     # Check for dynamodb provider
+      #     if [[ -d "apps/web/.open-next/dynamodb-provider" ]]; then
+      #       echo "DynamoDB provider found"
+      #     else
+      #       echo "No DynamoDB provider found"
+      #     fi
 
-          # Check for assets
-          if [[ -d "apps/web/.open-next/assets" ]]; then
-            echo "Assets directory found"
-          else
-            echo "No assets directory found"
-          fi
+      #     # Check for assets
+      #     if [[ -d "apps/web/.open-next/assets" ]]; then
+      #       echo "Assets directory found"
+      #     else
+      #       echo "No assets directory found"
+      #     fi
 
-          # Check for cache
-          if [[ -d "apps/web/.open-next/cache" ]]; then
-            echo "Cache directory found"
-          else
-            echo "No cache directory found"
-          fi
+      #     # Check for cache
+      #     if [[ -d "apps/web/.open-next/cache" ]]; then
+      #       echo "Cache directory found"
+      #     else
+      #       echo "No cache directory found"
+      #     fi
 
-          # Check for OpenNext output JSON
-          if [[ -f "apps/web/.open-next/open-next.output.json" ]]; then
-            echo "OpenNext output JSON found"
-          else
-            echo "No OpenNext output JSON found"
-          fi
+      #     # Check for OpenNext output JSON
+      #     if [[ -f "apps/web/.open-next/open-next.output.json" ]]; then
+      #       echo "OpenNext output JSON found"
+      #     else
+      #       echo "No OpenNext output JSON found"
+      #     fi
 
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          mask-aws-account-id: true
-          role-duration-seconds: 3600 # 1 hour
-          output-credentials: true
+      # - name: Configure AWS Credentials via OIDC
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+      #     mask-aws-account-id: true
+      #     role-duration-seconds: 3600 # 1 hour
+      #     output-credentials: true
 
-      - name: Get Infrastructure Configuration
-        uses: ./.github/actions/get-infrastructure-config
-        with:
-          environment: ${{ inputs.environment }}
-          prefix: "/opennext"
+      # - name: Get Infrastructure Configuration
+      #   uses: ./.github/actions/get-infrastructure-config
+      #   with:
+      #     environment: ${{ inputs.environment }}
+      #     prefix: "/opennext"
 
-      - name: Upload Static Assets and Cache to S3
-        id: upload-assets
-        run: |
-          UPLOADED=false
-          ASSETS_BUCKET="${{ env.ASSETS_BUCKET }}"
-          CACHE_BUCKET="${{ env.CACHE_BUCKET }}"
+      # - name: Upload Static Assets and Cache to S3
+      #   id: upload-assets
+      #   run: |
+      #     UPLOADED=false
+      #     ASSETS_BUCKET="${{ env.ASSETS_BUCKET }}"
+      #     CACHE_BUCKET="${{ env.CACHE_BUCKET }}"
 
-          # Upload assets to S3
-          if [[ -d "apps/web/.open-next/assets" ]]; then
-            echo "Uploading static assets to S3..."
+      #     # Upload assets to S3
+      #     if [[ -d "apps/web/.open-next/assets" ]]; then
+      #       echo "Uploading static assets to S3..."
             
-            # Upload assets with appropriate cache headers
-            aws s3 sync apps/web/.open-next/assets/ "s3://${ASSETS_BUCKET}/" \
-              --delete \
-              --exact-timestamps \
-              --cache-control "public, max-age=31536000, immutable" \
-              --metadata-directive REPLACE \
-              --quiet
+      #       # Upload assets with appropriate cache headers
+      #       aws s3 sync apps/web/.open-next/assets/ "s3://${ASSETS_BUCKET}/" \
+      #         --delete \
+      #         --exact-timestamps \
+      #         --cache-control "public, max-age=31536000, immutable" \
+      #         --metadata-directive REPLACE \
+      #         --quiet
             
-            # Upload Next.js static files with specific cache headers
-            if [[ -d "apps/web/.open-next/assets/_next/static" ]]; then
-              echo "Uploading Next.js static files with immutable cache headers..."
-              aws s3 sync apps/web/.open-next/assets/_next/static/ "s3://${ASSETS_BUCKET}/_next/static/" \
-                --cache-control "public, max-age=31536000, immutable" \
-                --metadata-directive REPLACE \
-                --quiet
-            fi
+      #       # Upload Next.js static files with specific cache headers
+      #       if [[ -d "apps/web/.open-next/assets/_next/static" ]]; then
+      #         echo "Uploading Next.js static files with immutable cache headers..."
+      #         aws s3 sync apps/web/.open-next/assets/_next/static/ "s3://${ASSETS_BUCKET}/_next/static/" \
+      #           --cache-control "public, max-age=31536000, immutable" \
+      #           --metadata-directive REPLACE \
+      #           --quiet
+      #       fi
             
-            # Upload other static files with shorter cache
-            echo "Uploading other static files with shorter cache duration..."
-            aws s3 sync apps/web/.open-next/assets/ "s3://${ASSETS_BUCKET}/" \
-              --exclude "_next/static/*" \
-              --cache-control "public, max-age=3600" \
-              --metadata-directive REPLACE \
-              --quiet
+      #       # Upload other static files with shorter cache
+      #       echo "Uploading other static files with shorter cache duration..."
+      #       aws s3 sync apps/web/.open-next/assets/ "s3://${ASSETS_BUCKET}/" \
+      #         --exclude "_next/static/*" \
+      #         --cache-control "public, max-age=3600" \
+      #         --metadata-directive REPLACE \
+      #         --quiet
             
-            UPLOADED=true
-            echo "Static assets uploaded successfully"
-          else
-            echo "No assets directory found in OpenNext build"
-          fi
+      #       UPLOADED=true
+      #       echo "Static assets uploaded successfully"
+      #     else
+      #       echo "No assets directory found in OpenNext build"
+      #     fi
 
-          # Upload cache to S3
-          if [[ -d "apps/web/.open-next/cache" && -n "${CACHE_BUCKET}" ]]; then
-            echo "Uploading cache to S3..."
+      #     # Upload cache to S3
+      #     if [[ -d "apps/web/.open-next/cache" && -n "${CACHE_BUCKET}" ]]; then
+      #       echo "Uploading cache to S3..."
             
-            # Upload cache with appropriate headers
-            aws s3 sync apps/web/.open-next/cache/ "s3://${CACHE_BUCKET}/" \
-              --delete \
-              --exact-timestamps \
-              --quiet
+      #       # Upload cache with appropriate headers
+      #       aws s3 sync apps/web/.open-next/cache/ "s3://${CACHE_BUCKET}/" \
+      #         --delete \
+      #         --exact-timestamps \
+      #         --quiet
             
-            UPLOADED=true
-            echo "Cache uploaded successfully"
-          else
-            echo "No cache directory found in OpenNext build or no cache bucket configured"
-          fi
+      #       UPLOADED=true
+      #       echo "Cache uploaded successfully"
+      #     else
+      #       echo "No cache directory found in OpenNext build or no cache bucket configured"
+      #     fi
 
-          if [[ "$UPLOADED" == "true" ]]; then
-            echo "Asset upload completed successfully"
-          else
-            echo "No assets were uploaded"
-          fi
+      #     if [[ "$UPLOADED" == "true" ]]; then
+      #       echo "Asset upload completed successfully"
+      #     else
+      #       echo "No assets were uploaded"
+      #     fi
 
-          echo "uploaded=${UPLOADED}" >> "$GITHUB_OUTPUT"
+      #     echo "uploaded=${UPLOADED}" >> "$GITHUB_OUTPUT"
 
-      - name: Check Server Function
-        id: check-server
-        run: |
-          SERVER_FUNCTION="${{ env.SERVER_FUNCTION }}"
-          if [[ -d "apps/web/.open-next/server-functions/default" && -n "${SERVER_FUNCTION}" ]]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Server function found at apps/web/.open-next/server-functions/default"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No server function found or SERVER_FUNCTION not set"
-          fi
+      # - name: Check Server Function
+      #   id: check-server
+      #   run: |
+      #     SERVER_FUNCTION="${{ env.SERVER_FUNCTION }}"
+      #     if [[ -d "apps/web/.open-next/server-functions/default" && -n "${SERVER_FUNCTION}" ]]; then
+      #       echo "exists=true" >> $GITHUB_OUTPUT
+      #       echo "Server function found at apps/web/.open-next/server-functions/default"
+      #     else
+      #       echo "exists=false" >> $GITHUB_OUTPUT
+      #       echo "No server function found or SERVER_FUNCTION not set"
+      #     fi
 
-      - name: Deploy Server Function
-        id: deploy-server
-        if: steps.check-server.outputs.exists == 'true'
-        run: |
-          echo "Zipping server function code..."
-          cd apps/web/.open-next/server-functions/default
-          zip -r ../../server-function.zip .
-          cd -
-          echo "Uploading server function code to Lambda..."
-          aws lambda update-function-code \
-            --function-name "${{ env.SERVER_FUNCTION }}" \
-            --zip-file fileb://apps/web/.open-next/server-function.zip \
-            --publish
+      # - name: Deploy Server Function
+      #   id: deploy-server
+      #   if: steps.check-server.outputs.exists == 'true'
+      #   run: |
+      #     echo "Zipping server function code..."
+      #     cd apps/web/.open-next/server-functions/default
+      #     zip -r ../../server-function.zip .
+      #     cd -
+      #     echo "Uploading server function code to Lambda..."
+      #     aws lambda update-function-code \
+      #       --function-name "${{ env.SERVER_FUNCTION }}" \
+      #       --zip-file fileb://apps/web/.open-next/server-function.zip \
+      #       --publish
 
-      - name: Check Image Optimization Function
-        id: check-image
-        run: |
-          IMAGE_FUNCTION="${{ env.IMAGE_FUNCTION }}"
-          if [[ -d "apps/web/.open-next/image-optimization-function" && -n "${IMAGE_FUNCTION}" ]]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Image optimization function found at apps/web/.open-next/image-optimization-function"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No image optimization function found or IMAGE_FUNCTION not set"
-          fi
+      # - name: Check Image Optimization Function
+      #   id: check-image
+      #   run: |
+      #     IMAGE_FUNCTION="${{ env.IMAGE_FUNCTION }}"
+      #     if [[ -d "apps/web/.open-next/image-optimization-function" && -n "${IMAGE_FUNCTION}" ]]; then
+      #       echo "exists=true" >> $GITHUB_OUTPUT
+      #       echo "Image optimization function found at apps/web/.open-next/image-optimization-function"
+      #     else
+      #       echo "exists=false" >> $GITHUB_OUTPUT
+      #       echo "No image optimization function found or IMAGE_FUNCTION not set"
+      #     fi
 
-      - name: Deploy Image Optimization Function
-        id: deploy-image
-        if: steps.check-image.outputs.exists == 'true'
-        run: |
-          echo "Zipping image optimization function code..."
-          cd apps/web/.open-next/image-optimization-function
-          zip -r ../image-optimization-function.zip .
-          cd -
-          echo "Uploading image optimization function code to Lambda..."
-          aws lambda update-function-code \
-            --function-name "${{ env.IMAGE_FUNCTION }}" \
-            --zip-file fileb://apps/web/.open-next/image-optimization-function.zip \
-            --publish
+      # - name: Deploy Image Optimization Function
+      #   id: deploy-image
+      #   if: steps.check-image.outputs.exists == 'true'
+      #   run: |
+      #     echo "Zipping image optimization function code..."
+      #     cd apps/web/.open-next/image-optimization-function
+      #     zip -r ../image-optimization-function.zip .
+      #     cd -
+      #     echo "Uploading image optimization function code to Lambda..."
+      #     aws lambda update-function-code \
+      #       --function-name "${{ env.IMAGE_FUNCTION }}" \
+      #       --zip-file fileb://apps/web/.open-next/image-optimization-function.zip \
+      #       --publish
 
-      - name: Check Revalidation Function
-        id: check-revalidation
-        run: |
-          REVALIDATION_FUNCTION="${{ env.REVALIDATION_FUNCTION }}"
-          if [[ -d "apps/web/.open-next/revalidation-function" && -n "${REVALIDATION_FUNCTION}" ]]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Revalidation function found at apps/web/.open-next/revalidation-function"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No revalidation function found or REVALIDATION_FUNCTION not set"
-          fi
+      # - name: Check Revalidation Function
+      #   id: check-revalidation
+      #   run: |
+      #     REVALIDATION_FUNCTION="${{ env.REVALIDATION_FUNCTION }}"
+      #     if [[ -d "apps/web/.open-next/revalidation-function" && -n "${REVALIDATION_FUNCTION}" ]]; then
+      #       echo "exists=true" >> $GITHUB_OUTPUT
+      #       echo "Revalidation function found at apps/web/.open-next/revalidation-function"
+      #     else
+      #       echo "exists=false" >> $GITHUB_OUTPUT
+      #       echo "No revalidation function found or REVALIDATION_FUNCTION not set"
+      #     fi
 
-      - name: Deploy Revalidation Function
-        id: deploy-revalidation
-        if: steps.check-revalidation.outputs.exists == 'true'
-        run: |
-          echo "Zipping revalidation function code..."
-          cd apps/web/.open-next/revalidation-function
-          zip -r ../revalidation-function.zip .
-          cd -
-          echo "Uploading revalidation function code to Lambda..."
-          aws lambda update-function-code \
-            --function-name "${{ env.REVALIDATION_FUNCTION }}" \
-            --zip-file fileb://apps/web/.open-next/revalidation-function.zip \
-            --publish
+      # - name: Deploy Revalidation Function
+      #   id: deploy-revalidation
+      #   if: steps.check-revalidation.outputs.exists == 'true'
+      #   run: |
+      #     echo "Zipping revalidation function code..."
+      #     cd apps/web/.open-next/revalidation-function
+      #     zip -r ../revalidation-function.zip .
+      #     cd -
+      #     echo "Uploading revalidation function code to Lambda..."
+      #     aws lambda update-function-code \
+      #       --function-name "${{ env.REVALIDATION_FUNCTION }}" \
+      #       --zip-file fileb://apps/web/.open-next/revalidation-function.zip \
+      #       --publish
 
-      - name: Check Warmer Function
-        id: check-warmer
-        run: |
-          WARMER_FUNCTION="${{ env.WARMER_FUNCTION }}"
-          if [[ -d "apps/web/.open-next/warmer-function" && -n "${WARMER_FUNCTION}" ]]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Warmer function found at apps/web/.open-next/warmer-function"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No warmer function found or WARMER_FUNCTION not set"
-          fi
+      # - name: Check Warmer Function
+      #   id: check-warmer
+      #   run: |
+      #     WARMER_FUNCTION="${{ env.WARMER_FUNCTION }}"
+      #     if [[ -d "apps/web/.open-next/warmer-function" && -n "${WARMER_FUNCTION}" ]]; then
+      #       echo "exists=true" >> $GITHUB_OUTPUT
+      #       echo "Warmer function found at apps/web/.open-next/warmer-function"
+      #     else
+      #       echo "exists=false" >> $GITHUB_OUTPUT
+      #       echo "No warmer function found or WARMER_FUNCTION not set"
+      #     fi
 
-      - name: Deploy Warmer Function
-        id: deploy-warmer
-        if: steps.check-warmer.outputs.exists == 'true'
-        run: |
-          echo "Zipping warmer function code..."
-          cd apps/web/.open-next/warmer-function
-          zip -r ../warmer-function.zip .
-          cd -
-          echo "Uploading warmer function code to Lambda..."
-          aws lambda update-function-code \
-            --function-name "${{ env.WARMER_FUNCTION }}" \
-            --zip-file fileb://apps/web/.open-next/warmer-function.zip \
-            --publish
+      # - name: Deploy Warmer Function
+      #   id: deploy-warmer
+      #   if: steps.check-warmer.outputs.exists == 'true'
+      #   run: |
+      #     echo "Zipping warmer function code..."
+      #     cd apps/web/.open-next/warmer-function
+      #     zip -r ../warmer-function.zip .
+      #     cd -
+      #     echo "Uploading warmer function code to Lambda..."
+      #     aws lambda update-function-code \
+      #       --function-name "${{ env.WARMER_FUNCTION }}" \
+      #       --zip-file fileb://apps/web/.open-next/warmer-function.zip \
+      #       --publish
 
-      - name: Finalize Lambda Deployments and Summarize Results
-        id: update-lambdas
-        run: |
-          UPDATED=false
+      # - name: Finalize Lambda Deployments and Summarize Results
+      #   id: update-lambdas
+      #   run: |
+      #     UPDATED=false
 
-          if [[ "${{ steps.deploy-server.outcome }}" == "success" || \
-                "${{ steps.deploy-image.outcome }}" == "success" || \
-                "${{ steps.deploy-revalidation.outcome }}" == "success" || \
-                "${{ steps.deploy-warmer.outcome }}" == "success" ]]; then
-            UPDATED=true
-            echo "At least one Lambda function was updated successfully"
-          else
-            echo "No Lambda functions were updated"
-          fi
+      #     if [[ "${{ steps.deploy-server.outcome }}" == "success" || \
+      #           "${{ steps.deploy-image.outcome }}" == "success" || \
+      #           "${{ steps.deploy-revalidation.outcome }}" == "success" || \
+      #           "${{ steps.deploy-warmer.outcome }}" == "success" ]]; then
+      #       UPDATED=true
+      #       echo "At least one Lambda function was updated successfully"
+      #     else
+      #       echo "No Lambda functions were updated"
+      #     fi
 
-          echo "updated=${UPDATED}" >> $GITHUB_OUTPUT
-          if [[ "$UPDATED" == "true" ]]; then
-            echo "Lambda function updates completed successfully"
-          else
-            echo "::warning::No Lambda functions were updated"
-          fi
+      #     echo "updated=${UPDATED}" >> $GITHUB_OUTPUT
+      #     if [[ "$UPDATED" == "true" ]]; then
+      #       echo "Lambda function updates completed successfully"
+      #     else
+      #       echo "::warning::No Lambda functions were updated"
+      #     fi
 
-      - name: Invalidate CloudFront Distribution
-        if: steps.upload-assets.outputs.uploaded == 'true'
-        run: |
-          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
-          if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
-            echo "Creating CloudFront invalidation for distribution: ${CLOUDFRONT_DISTRIBUTION_ID}"
-            INVALIDATION_ID=$(aws cloudfront create-invalidation \
-              --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
-              --paths "/*" \
-              --query 'Invalidation.Id' \
-              --output text 2>/dev/null)
+      # - name: Invalidate CloudFront Distribution
+      #   if: steps.upload-assets.outputs.uploaded == 'true'
+      #   run: |
+      #     CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+      #     if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
+      #       echo "Creating CloudFront invalidation for distribution: ${CLOUDFRONT_DISTRIBUTION_ID}"
+      #       INVALIDATION_ID=$(aws cloudfront create-invalidation \
+      #         --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+      #         --paths "/*" \
+      #         --query 'Invalidation.Id' \
+      #         --output text 2>/dev/null)
             
-            if [[ -n "${INVALIDATION_ID}" ]]; then
-              echo "CloudFront invalidation created with ID: ${INVALIDATION_ID}"
-              echo "Waiting for invalidation to complete (this may take several minutes)..."
+      #       if [[ -n "${INVALIDATION_ID}" ]]; then
+      #         echo "CloudFront invalidation created with ID: ${INVALIDATION_ID}"
+      #         echo "Waiting for invalidation to complete (this may take several minutes)..."
               
-              # Wait for invalidation to complete (improves reliability for immediate testing)
-              aws cloudfront wait invalidation-completed \
-                --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
-                --id "${INVALIDATION_ID}" 2>/dev/null
+      #         # Wait for invalidation to complete (improves reliability for immediate testing)
+      #         aws cloudfront wait invalidation-completed \
+      #           --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+      #           --id "${INVALIDATION_ID}" 2>/dev/null
               
-              echo "✅ CloudFront invalidation completed successfully"
-            else
-              echo "::warning::Failed to create CloudFront invalidation"
-            fi
-          else
-            echo "::warning::Skipping CloudFront invalidation (no distribution ID provided)"
-          fi
+      #         echo "✅ CloudFront invalidation completed successfully"
+      #       else
+      #         echo "::warning::Failed to create CloudFront invalidation"
+      #       fi
+      #     else
+      #       echo "::warning::Skipping CloudFront invalidation (no distribution ID provided)"
+      #     fi
 
-      - name: Deployment Summary
-        run: |
-          echo ""
-          echo "=== OpenNext Deployment Summary ==="
-          echo "Environment: ${{ inputs.environment }}"
-          echo "Assets Uploaded: ${{ steps.upload-assets.outputs.uploaded }}"
-          echo "Lambda Functions Updated: ${{ steps.update-lambdas.outputs.updated }}"
+      # - name: Deployment Summary
+      #   run: |
+      #     echo ""
+      #     echo "=== OpenNext Deployment Summary ==="
+      #     echo "Environment: ${{ inputs.environment }}"
+      #     echo "Assets Uploaded: ${{ steps.upload-assets.outputs.uploaded }}"
+      #     echo "Lambda Functions Updated: ${{ steps.update-lambdas.outputs.updated }}"
 
-          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
-          if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
-            echo "CloudFront Distribution: ${CLOUDFRONT_DISTRIBUTION_ID}"
+      #     CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+      #     if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
+      #       echo "CloudFront Distribution: ${CLOUDFRONT_DISTRIBUTION_ID}"
             
-            # Get CloudFront domain name
-            DOMAIN_NAME=$(aws cloudfront get-distribution \
-              --id "${CLOUDFRONT_DISTRIBUTION_ID}" \
-              --query 'Distribution.DomainName' \
-              --output text 2>/dev/null || echo "")
+      #       # Get CloudFront domain name
+      #       DOMAIN_NAME=$(aws cloudfront get-distribution \
+      #         --id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+      #         --query 'Distribution.DomainName' \
+      #         --output text 2>/dev/null || echo "")
             
-            if [[ -n "${DOMAIN_NAME}" ]]; then
-              echo "Application URL: https://${DOMAIN_NAME}"
-            fi
-          fi
+      #       if [[ -n "${DOMAIN_NAME}" ]]; then
+      #         echo "Application URL: https://${DOMAIN_NAME}"
+      #       fi
+      #     fi
 
-          # Check overall deployment success
-          if [[ "${{ steps.upload-assets.outputs.uploaded }}" == "true" || "${{ steps.update-lambdas.outputs.updated }}" == "true" ]]; then
-            echo "✅ Deployment completed successfully!"
-          else
-            echo "⚠️ Deployment completed but no changes were applied. Please check logs for details."
-          fi
-          echo ""
+      #     # Check overall deployment success
+      #     if [[ "${{ steps.upload-assets.outputs.uploaded }}" == "true" || "${{ steps.update-lambdas.outputs.updated }}" == "true" ]]; then
+      #       echo "✅ Deployment completed successfully!"
+      #     else
+      #       echo "⚠️ Deployment completed but no changes were applied. Please check logs for details."
+      #     fi
+      #     echo ""

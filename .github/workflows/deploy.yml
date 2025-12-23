@@ -66,7 +66,6 @@ jobs:
     name: Database Migrations
     needs: [deploy-infrastructure, detect-changes]
     if: >-
-      needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), '@repo/database'))
     permissions:
@@ -82,7 +81,6 @@ jobs:
     name: Deploy Backend
     needs: [deploy-infrastructure, database-migrations, detect-changes]
     if: >-
-      needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.database-migrations.result) &&
       (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend'))
@@ -104,7 +102,6 @@ jobs:
         database-migrations,
       ]
     if: >-
-      needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.database-migrations.result) &&
       contains('success,skipped', needs.deploy-backend.result) &&
@@ -121,7 +118,6 @@ jobs:
     name: Deploy Documentation
     needs: [deploy-infrastructure, detect-changes]
     if: >-
-      needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs'))
     permissions:
