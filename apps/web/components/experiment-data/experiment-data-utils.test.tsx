@@ -363,7 +363,7 @@ describe("experiment-data-utils", () => {
   });
 
   describe("LoadingRows", () => {
-    it("should render loading message and skeleton rows", () => {
+    it("should render skeleton rows without loading message", () => {
       render(
         <table>
           <tbody>
@@ -372,11 +372,12 @@ describe("experiment-data-utils", () => {
         </table>,
       );
 
-      expect(screen.getByText("Loading...")).toBeInTheDocument();
+      // Should not display loading text anymore
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
 
-      // Should render 2 skeleton rows (rowCount - 1, since first row shows loading message)
+      // Should render 3 skeleton rows with 2 columns each
       const skeletons = screen.getAllByTestId("skeleton");
-      expect(skeletons).toHaveLength(4); // 2 rows × 2 columns
+      expect(skeletons).toHaveLength(6); // 3 rows × 2 columns
     });
 
     it("should render correct number of skeleton cells", () => {
@@ -388,9 +389,9 @@ describe("experiment-data-utils", () => {
         </table>,
       );
 
-      // Should render 1 skeleton row (rowCount - 1) with 3 columns
+      // Should render 2 skeleton rows with 3 columns
       const skeletons = screen.getAllByTestId("skeleton");
-      expect(skeletons).toHaveLength(3); // 1 row × 3 columns
+      expect(skeletons).toHaveLength(6); // 2 rows × 3 columns
     });
   });
 

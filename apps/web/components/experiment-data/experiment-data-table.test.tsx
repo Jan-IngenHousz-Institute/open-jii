@@ -413,7 +413,12 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -431,7 +436,12 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -447,7 +457,12 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -463,11 +478,16 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table Display Name"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("test_table")).toBeInTheDocument();
+    expect(screen.getByText("Test Table Display Name")).toBeInTheDocument();
     expect(screen.getByText("experimentDataTable.totalRows: 100")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
@@ -483,7 +503,12 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -514,7 +539,12 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -553,7 +583,12 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -576,7 +611,12 @@ describe("ExperimentDataTable", () => {
 
     // First render with data
     const { rerender } = render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -585,7 +625,12 @@ describe("ExperimentDataTable", () => {
     // Then simulate loading state (e.g., when changing pages)
     isLoading = true;
     rerender(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={10}
+      />,
     );
 
     // Should show loading rows but maintain table structure
@@ -602,7 +647,12 @@ describe("ExperimentDataTable", () => {
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
     render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={20} />,
+      <ExperimentDataTable
+        experimentId="experiment-123"
+        tableName="test_table"
+        displayName="Test Table"
+        pageSize={20}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -657,7 +707,12 @@ describe("ExperimentDataTable", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       render(
-        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        <ExperimentDataTable
+          experimentId="experiment-123"
+          tableName="test_table"
+          displayName="Test Table"
+          pageSize={10}
+        />,
         { wrapper: createWrapper() },
       );
 
@@ -676,7 +731,12 @@ describe("ExperimentDataTable", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { rerender } = render(
-        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        <ExperimentDataTable
+          experimentId="experiment-123"
+          tableName="test_table"
+          displayName="Test Table"
+          pageSize={10}
+        />,
         { wrapper: createWrapper() },
       );
 
@@ -689,7 +749,12 @@ describe("ExperimentDataTable", () => {
 
       // Re-render to ensure state management is working
       rerender(
-        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        <ExperimentDataTable
+          experimentId="experiment-123"
+          tableName="test_table"
+          displayName="Test Table"
+          pageSize={10}
+        />,
       );
 
       expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
@@ -726,7 +791,12 @@ describe("ExperimentDataTable", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       render(
-        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        <ExperimentDataTable
+          experimentId="experiment-123"
+          tableName="test_table"
+          displayName="Test Table"
+          pageSize={10}
+        />,
         { wrapper: createWrapper() },
       );
 
@@ -744,7 +814,12 @@ describe("ExperimentDataTable", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       render(
-        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        <ExperimentDataTable
+          experimentId="experiment-123"
+          tableName="test_table"
+          displayName="Test Table"
+          pageSize={10}
+        />,
         { wrapper: createWrapper() },
       );
 

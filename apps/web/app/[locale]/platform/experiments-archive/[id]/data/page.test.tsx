@@ -44,15 +44,20 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ExperimentDataTable: ({
     experimentId,
     tableName,
+    displayName,
   }: {
     experimentId: string;
     tableName: string;
+    displayName?: string;
   }) => (
     <div
       data-testid="experiment-data-table"
       data-experiment-id={experimentId}
       data-table-name={tableName}
-    />
+      data-display-name={displayName}
+    >
+      Table: {displayName ?? tableName}
+    </div>
   ),
 }));
 

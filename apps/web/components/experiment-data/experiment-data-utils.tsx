@@ -29,6 +29,47 @@ function isNumericType(type?: string): boolean {
   return type === "DOUBLE" || type === "INT" || type === "LONG" || type === "BIGINT";
 }
 
+function isSortableColumnType(type?: string): boolean {
+  if (!type) return false;
+
+  // Primitive types that can be sorted
+  if (
+    type === "STRING" ||
+    type === "TIMESTAMP" ||
+    type === "DOUBLE" ||
+    type === "INT" ||
+    type === "LONG" ||
+    type === "BIGINT" ||
+    type === "BOOLEAN" ||
+    type === "DATE" ||
+    type === "USER"
+  ) {
+    return true;
+  }
+
+  // Complex types that cannot be sorted
+  if (
+    type.startsWith("MAP") ||
+    type.startsWith("ARRAY") ||
+    type.startsWith("STRUCT") ||
+    type === "ARRAY" ||
+    type === "MAP"
+  ) {
+    return false;
+  }
+
+  // Default to sortable for unknown types
+  return true;
+}
+
+function getSortColumnName(columnName: string, columnType?: string): string {
+  // For USER columns, sort by user_name instead of the column name
+  if (columnType === "USER") {
+    return "user_name";
+  }
+  return columnName;
+}
+
 function getSortIcon(
   isSortable: boolean,
   isCurrentlySorted: boolean,
@@ -38,13 +79,13 @@ function getSortIcon(
 
   if (isCurrentlySorted) {
     return sortDirection === "ASC" ? (
-      <ArrowUp className="ml-1 inline h-3 w-3" />
+      <ArrowUp className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
     ) : (
-      <ArrowDown className="ml-1 inline h-3 w-3" />
+      <ArrowDown className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
     );
   }
 
-  return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-30" />;
+  return <ArrowUpDown className="ml-2 inline h-4 w-4 opacity-50" />;
 }
 
 export function formatValue(
@@ -136,7 +177,7 @@ export function ExperimentTableHeader({
   headerGroups: HeaderGroup<DataRow>[];
   sortColumn?: string;
   sortDirection?: "ASC" | "DESC";
-  onSort?: (columnName: string) => void;
+  onSort?: (columnName: string, columnType?: string) => void;
 }) {
   return headerGroups.map((headerGroup) => (
     <TableHeader key={headerGroup.id}>
@@ -147,8 +188,11 @@ export function ExperimentTableHeader({
           const columnName = header.column.id;
 
           const isNumericColumn = isNumericType(meta?.type);
-          const isSortable = columnName !== "select" && !!onSort;
-          const isCurrentlySorted = sortColumn === columnName;
+          const canSort = isSortableColumnType(meta?.type);
+          const isSortable = columnName !== "select" && !!onSort && canSort;
+          const columnType = meta?.type;
+          const actualSortColumn = getSortColumnName(columnName, columnType);
+          const isCurrentlySorted = sortColumn === actualSortColumn;
 
           return (
             <TableHead
@@ -157,7 +201,7 @@ export function ExperimentTableHeader({
               style={{
                 minWidth: header.column.columnDef.size,
               }}
-              onClick={() => isSortable && onSort(columnName)}
+              onClick={() => isSortable && onSort(columnName, columnType)}
             >
               {header.isPlaceholder ? null : (
                 <div className="flex items-center justify-between">
@@ -206,15 +250,9 @@ export function ExperimentDataRows({
 }
 
 export function LoadingRows({ rowCount, columnCount }: { rowCount: number; columnCount: number }) {
-  const { t } = useTranslation();
   return (
     <>
-      <TableRow>
-        <TableCell colSpan={columnCount} className="h-4">
-          {t("experimentDataTable.loading")}
-        </TableCell>
-      </TableRow>
-      {Array.from({ length: rowCount - 1 }).map((_, index) => (
+      {Array.from({ length: rowCount }).map((_, index) => (
         <TableRow key={`skeleton-${index}`}>
           {Array.from({ length: columnCount }).map((_, colIndex) => (
             <TableCell key={colIndex}>

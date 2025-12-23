@@ -46,6 +46,15 @@ import { cn } from "@repo/ui/lib/utils";
 import { DataDownloadModal } from "./data-download-modal/data-download-modal";
 import { ExperimentDataTableChart } from "./experiment-data-table-chart";
 
+// Helper function to map column names for sorting
+function getSortColumnName(columnName: string, columnType?: string): string {
+  // For USER columns, sort by user_name instead of the column name
+  if (columnType === "USER") {
+    return "user_name";
+  }
+  return columnName;
+}
+
 const bulkSelectionFormSchema = z.object({
   selectedRowIds: z.array(z.string()),
 });
@@ -54,10 +63,12 @@ export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 export function ExperimentDataTable({
   experimentId,
   tableName,
+  displayName,
   pageSize = 10,
 }: {
   experimentId: string;
   tableName: string;
+  displayName?: string;
   pageSize: number;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
@@ -132,13 +143,14 @@ export function ExperimentDataTable({
 
   // Toggle sorting for a column
   const handleSort = useCallback(
-    (columnName: string) => {
-      if (sortColumn === columnName) {
+    (columnName: string, columnType?: string) => {
+      const actualSortColumn = getSortColumnName(columnName, columnType);
+      if (sortColumn === actualSortColumn) {
         // Toggle direction if same column
         setSortDirection((prev) => (prev === "ASC" ? "DESC" : "ASC"));
       } else {
         // New column, default to ASC
-        setSortColumn(columnName);
+        setSortColumn(actualSortColumn);
         setSortDirection("ASC");
       }
     },
@@ -146,7 +158,7 @@ export function ExperimentDataTable({
   );
 
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, displayName, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
     experimentId,
     pagination.pageIndex + 1,
     pagination.pageSize,
@@ -307,7 +319,7 @@ export function ExperimentDataTable({
   return (
     <Form {...selectionForm}>
       <form>
-        <h5 className="mb-3 text-base font-medium">{displayName ?? tableName}</h5>
+        <h5 className="mb-3 text-base font-medium">{displayName}</h5>
         <BulkActionsBar
           rowIds={selectedRowIds}
           tableRows={tableRows}
