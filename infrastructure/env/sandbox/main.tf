@@ -85,7 +85,7 @@ module "storage_credential" {
   depends_on = [module.databricks_workspace]
 }
 
-# # Create external location for this environment
+# Create external location for this environment
 module "external_location" {
   source = "../../modules/databricks/external-location"
 

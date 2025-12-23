@@ -48,7 +48,7 @@ data "databricks_aws_unity_catalog_assume_role_policy" "this" {
   external_id    = databricks_storage_credential.this.aws_iam_role[0].external_id
 }
 
-# # Create Unity Catalog IAM policy locally in this environment
+# Create Unity Catalog IAM policy locally in this environment
 data "databricks_aws_unity_catalog_policy" "this" {
   aws_account_id = data.aws_caller_identity.current.account_id
   bucket_name    = var.bucket_name
