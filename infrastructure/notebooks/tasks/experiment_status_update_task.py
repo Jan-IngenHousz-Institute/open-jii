@@ -57,6 +57,7 @@ logger = logging.getLogger("experiment_status_updater")
 
 # DBTITLE 1,Parameter Extraction
 
+
 # Mapping from Databricks result_state to ProvisioningStatus
 DATABRICKS_RESULT_STATE_TO_PROVISIONING_STATUS = {
     "success": ProvisioningStatus.SUCCESS,
@@ -133,35 +134,21 @@ def extract_parameters(dbutils) -> Dict[str, Any]:
     if not key_scope:
         raise ValueError("API key scope not provided. Please provide it as a widget parameter 'key_scope'.")
 
-    # Get task_key for the pipeline creation task
-    pipeline_task_key = dbutils.widgets.get("pipeline_task_key")
-    if not pipeline_task_key:
-        raise ValueError(
-            "Pipeline task key not provided. Please provide it as a widget parameter 'pipeline_task_key'. "
-            "This should be the task key of the pipeline creation task (e.g., 'create_experiment_pipeline')."
-        )
-
     # Get pipeline_id and schema_name from task values (only available on SUCCESS)
     pipeline_id = None
     schema_name = None
     try:
-        # Retrieve task values from the previous pipeline creation task
-        pipeline_id = dbutils.jobs.taskValues.get(
-            taskKey=pipeline_task_key,
-            key="pipeline_id",
-            debugValue=""  # Default value for testing
-        )
-        schema_name = dbutils.jobs.taskValues.get(
-            taskKey=pipeline_task_key,
-            key="schema_name",
-            debugValue=""  # Default value for testing
-        )
-        if pipeline_id:
-            logger.info(f"Retrieved task values: pipeline_id={pipeline_id}, schema_name={schema_name}")
+        pipeline_id = dbutils.widgets.get("pipeline_id")
+        schema_name = dbutils.widgets.get("schema_name")
+        
+        if pipeline_id and schema_name:
+            logger.info(f"Retrieved widget values: pipeline_id={pipeline_id}, schema_name={schema_name}")
         else:
-            logger.warning("No pipeline_id found in task values (may be expected if creation task failed)")
+            logger.warning("pipeline_id and/or schema_name widgets are empty or not set.")
     except Exception as e:
-        logger.warning(f"Could not retrieve task values (may be expected if creation task failed): {e}")
+        logger.warning(f"Could not retrieve pipeline_id and schema_name widgets: {e}")
+        pipeline_id = None
+        schema_name = None
 
     return {
         "webhook_url": webhook_url,
