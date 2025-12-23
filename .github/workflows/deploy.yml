@@ -98,12 +98,12 @@ jobs:
 
   deploy-backend:
     name: Deploy Backend
-    needs: [deployment-gate]
+    needs: [deployment-gate, detect-changes]
     if: >-
       needs.deployment-gate.outputs.infra_ok == 'true' &&
       (
         inputs.deploy_all ||
-        contains(fromJSON(needs.deployment-gate.outputs.affected_apps), 'backend')
+        contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend')
       )
     permissions:
       id-token: write
@@ -129,13 +129,14 @@ jobs:
     needs:
       - deployment-gate
       - backend-barrier
+      - detect-changes
     if: >-
       needs.deployment-gate.outputs.infra_ok == 'true' &&
       needs.deployment-gate.outputs.migrations_ok == 'true' &&
       needs.backend-barrier.outputs.backend_ok == 'true' &&
       (
         inputs.deploy_all ||
-        contains(fromJSON(needs.deployment-gate.outputs.affected_apps), 'web')
+        contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
       )
     permissions:
       id-token: write
