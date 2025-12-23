@@ -128,7 +128,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </NavTabsList>
         {tables.map((table) => (
           <NavTabsContent key={table.name} value={table.name} className="mt-6">
-            <ExperimentDataTable experimentId={id} tableName={table.name} pageSize={10} />
+            <ExperimentDataTable
+              experimentId={id}
+              tableName={table.name}
+              displayName={table.displayName}
+              pageSize={10}
+            />
           </NavTabsContent>
         ))}
       </NavTabs>

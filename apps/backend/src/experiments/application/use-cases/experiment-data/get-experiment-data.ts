@@ -136,7 +136,7 @@ export class GetExperimentDataUseCase {
     );
   }
 
-  private async getOrderByClause(
+  private getOrderByClause(
     schemaName: string,
     tableName: string,
     orderBy?: string,
@@ -146,16 +146,6 @@ export class GetExperimentDataUseCase {
       // Add ORDER BY clause if specified
       return success(` ORDER BY \`${orderBy.trim()}\` ${orderDirection ?? "ASC"}`);
     } else {
-      // Check if a 'timestamp' column exists for default ordering
-      const metadataResult = await this.databricksPort.getTableMetadata(schemaName, tableName);
-      if (metadataResult.isFailure()) {
-        return failure(
-          AppError.internal(`Failed to get metadata: ${metadataResult.error.message}`),
-        );
-      }
-      if (metadataResult.value.has("timestamp")) {
-        return success(" ORDER BY timestamp DESC");
-      }
       return success("");
     }
   }
@@ -188,7 +178,7 @@ export class GetExperimentDataUseCase {
     let sqlQuery = `SELECT ${columnList} FROM ${tableName}`;
 
     // Add ORDER BY clause
-    const orderByClauseResult = await this.getOrderByClause(
+    const orderByClauseResult = this.getOrderByClause(
       schemaName,
       tableName,
       orderBy,
@@ -265,7 +255,7 @@ export class GetExperimentDataUseCase {
     let sqlQuery = `SELECT * FROM ${tableName}`;
 
     // Add ORDER BY clause
-    const orderByClauseResult = await this.getOrderByClause(
+    const orderByClauseResult = this.getOrderByClause(
       schemaName,
       tableName,
       orderBy,

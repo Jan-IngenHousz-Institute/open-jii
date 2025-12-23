@@ -385,7 +385,6 @@
     }
   },
   "experimentDataTable": {
-    "loading": "Daten werden geladen... Bitte warten. Dies kann mehrere Minuten dauern.",
     "noData": "Keine Daten zurückgegeben",
     "noResults": "Keine Ergebnisse",
     "error": "Fehler beim Laden der Daten",

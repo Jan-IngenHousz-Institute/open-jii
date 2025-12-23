@@ -24,11 +24,11 @@ export function getColumnWidth(typeName: string): number | undefined {
   // Set medium width for user columns that contain avatar + name
   if (typeName === "USER") return 180;
   // Set medium width for array of struct columns that contain collapsible content
-  if (typeName.startsWith("ARRAY<STRUCT<")) return 200;
+  if (typeName.startsWith("ARRAY<STRUCT<")) return 180;
   // Set smaller width for array columns that contain charts
   if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 120;
   // Set medium width for map columns that contain collapsible content
-  if (typeName === "MAP" || typeName.startsWith("MAP<")) return 200;
+  if (typeName === "MAP" || typeName.startsWith("MAP<")) return 180;
   return undefined;
 }
 
