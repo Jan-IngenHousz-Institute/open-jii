@@ -91,7 +91,9 @@ describe("ExperimentDataController", () => {
           {
             name: "test_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            schema_name:
+              experiment.schemaName ??
+              `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
             properties: { downstream: "false" },
@@ -140,7 +142,7 @@ describe("ExperimentDataController", () => {
       expect(response.body[0]).toMatchObject({
         name: "test_table",
         catalog_name: experiment.name,
-        schema_name: `exp_test_experiment_for_data_${experiment.id}`,
+        schema_name: experiment.schemaName,
         data: resultTableData,
         page: 1,
         pageSize: 5,
@@ -150,19 +152,19 @@ describe("ExperimentDataController", () => {
 
       // Verify the DatabricksAdapter was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.schemaName);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
-        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        experiment.schemaName,
         "SELECT COUNT(*) as count FROM test_table",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        experiment.schemaName,
         "SELECT * FROM test_table LIMIT 5 OFFSET 0",
       );
     });
@@ -216,7 +218,9 @@ describe("ExperimentDataController", () => {
           {
             name: "sensor_data",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            schema_name:
+              experiment.schemaName ??
+              `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
             properties: { downstream: "false" },
@@ -257,7 +261,7 @@ describe("ExperimentDataController", () => {
       expect(response.body[0]).toMatchObject({
         name: "sensor_data",
         catalog_name: experiment.name,
-        schema_name: `exp_test_experiment_for_ordering_${experiment.id}`,
+        schema_name: experiment.schemaName,
         data: resultTableData,
         page: 1,
         pageSize: 10,
@@ -267,19 +271,19 @@ describe("ExperimentDataController", () => {
 
       // Verify the DatabricksAdapter was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.schemaName);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
-        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        experiment.schemaName,
         "SELECT COUNT(*) as count FROM sensor_data",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        experiment.schemaName,
         "SELECT * FROM sensor_data ORDER BY `timestamp` DESC LIMIT 10 OFFSET 0",
       );
     });
@@ -406,7 +410,9 @@ describe("ExperimentDataController", () => {
           {
             name: "nonexistent_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            schema_name:
+              experiment.schemaName ??
+              `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
             properties: { downstream: "false" },
@@ -473,7 +479,9 @@ describe("ExperimentDataController", () => {
           {
             name: "test_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            schema_name:
+              experiment.schemaName ??
+              `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
             properties: { downstream: "false" },
@@ -527,7 +535,7 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_test_experiment_for_pagination_${experiment.id}`,
+        experiment.schemaName,
         "SELECT * FROM test_table LIMIT 10 OFFSET 10", // page 2 with pageSize 10
       );
     });
@@ -545,7 +553,9 @@ describe("ExperimentDataController", () => {
           {
             name: "existing_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            schema_name:
+              experiment.schemaName ??
+              `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
             properties: { downstream: "false" },
@@ -628,7 +638,9 @@ describe("ExperimentDataController", () => {
         name: "data-uploads",
         volume_id: faker.string.uuid(),
         catalog_name: "main",
-        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        schema_name:
+          experiment.schemaName ??
+          `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
         volume_type: "MANAGED" as const,
         full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
         created_at: Date.now(),
@@ -708,8 +720,7 @@ describe("ExperimentDataController", () => {
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
+        experiment.schemaName,
         "ambyte",
         expect.stringMatching(getExpectedDirectoryNamePattern()),
         trimmedFileName,
@@ -729,7 +740,9 @@ describe("ExperimentDataController", () => {
         name: "data-uploads",
         volume_id: faker.string.uuid(),
         catalog_name: "main",
-        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        schema_name:
+          experiment.schemaName ??
+          `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
         volume_type: "MANAGED" as const,
         full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
         created_at: Date.now(),
@@ -893,7 +906,9 @@ describe("ExperimentDataController", () => {
         name: "data-uploads",
         volume_id: faker.string.uuid(),
         catalog_name: "main",
-        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        schema_name:
+          experiment.schemaName ??
+          `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
         volume_type: "MANAGED" as const,
         full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
         created_at: Date.now(),
@@ -976,8 +991,7 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.uploadExperimentData).toHaveBeenNthCalledWith(
         1,
-        experiment.id,
-        experiment.name,
+        experiment.schemaName,
         "ambyte",
         expect.stringMatching(getExpectedDirectoryNamePattern()), // directoryName follows upload_YYYYMMDD_HHMMSS pattern
         trimmedFileNames[0],
@@ -986,8 +1000,7 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.uploadExperimentData).toHaveBeenNthCalledWith(
         2,
-        experiment.id,
-        experiment.name,
+        experiment.schemaName,
         "ambyte",
         expect.stringMatching(getExpectedDirectoryNamePattern()), // directoryName follows upload_YYYYMMDD_HHMMSS pattern
         trimmedFileNames[1],
@@ -1037,7 +1050,9 @@ describe("ExperimentDataController", () => {
           {
             name: "bronze_data",
             catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            schema_name:
+              experiment.schemaName ??
+              `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
             properties: { downstream: "false" },
@@ -1083,10 +1098,10 @@ describe("ExperimentDataController", () => {
 
       // Verify the DatabricksAdapter was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.schemaName);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.downloadExperimentData).toHaveBeenCalledWith(
-        `exp_test_download_experiment_${experiment.id}`,
+        experiment.schemaName,
         "SELECT * FROM bronze_data",
       );
     });
@@ -1242,8 +1257,7 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experiment.id}`;
+      const schemaName = experiment.schemaName ?? `exp_test_experiment_for_tables_${experiment.id}`;
 
       const mockTablesResponse: ListTablesResponse = {
         tables: [
@@ -1308,7 +1322,7 @@ describe("ExperimentDataController", () => {
       ]);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(schemaName);
     });
 
     it("should return 404 when experiment does not exist", async () => {

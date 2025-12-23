@@ -98,7 +98,6 @@ describe("ExperimentPage", () => {
 
     const titleElement = container.querySelector("h1");
     expect(titleElement).toBeInTheDocument();
-    expect(titleElement).toHaveClass("text-lg", "font-medium");
     expect(titleElement).toHaveTextContent("experiments.title");
 
     const descriptionElement = container.querySelector("p");

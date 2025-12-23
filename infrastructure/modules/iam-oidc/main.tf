@@ -341,7 +341,7 @@ locals {
   # Split policies into 10 groups (AWS limit is 10 inline policies per role)
   num_policy_parts    = 10
   statements_per_part = ceil(length(local.all_policy_statements) / local.num_policy_parts)
-  
+
   # Create a map of policy parts for for_each
   policy_parts = {
     for i in range(local.num_policy_parts) : tostring(i + 1) => slice(

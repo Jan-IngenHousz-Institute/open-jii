@@ -105,50 +105,22 @@ export class ExperimentDataController {
 
       this.logger.log(`Starting data upload for experiment ${experimentId} by user ${user.id}`);
 
-      const experimentAccessResult = await this.getExperimentAccessUseCase.execute(
-        experimentId,
-        user.id,
-      );
-
-      if (experimentAccessResult.isFailure()) {
-        return handleFailure(experimentAccessResult, this.logger);
-      }
-
-      const { experiment } = experimentAccessResult.value;
-
-      // Check if experiment is archived - no one can upload data to archived experiments
-      if (experiment.status === "archived") {
-        this.logger.warn(
-          `User ${user.id} attempted to upload data to archived experiment ${experimentId}`,
-        );
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: { message: "Cannot upload data to archived experiments" },
-        };
-      }
-
-      // Prepare the upload environment by ensuring the required volume exists
-      this.logger.log(
-        `Preparing upload environment for experiment ${experiment.name} (${experimentId})`,
-      );
-      const prepResult = await this.uploadAmbyteDataUseCase.preexecute(
-        experimentId,
-        experiment.name,
-      );
+      // Prepare the upload environment - use case handles access control and experiment lookup
+      const prepResult = await this.uploadAmbyteDataUseCase.preexecute(experimentId, user.id);
 
       if (prepResult.isFailure()) {
         this.logger.error(`Failed to prepare upload environment: ${prepResult.error.message}`);
         return handleFailure(prepResult, this.logger);
       }
 
-      this.logger.log(
-        `Upload environment prepared successfully. Volume: ${prepResult.value.volumeName}, ` +
-          `Created: ${prepResult.value.volumeCreated}, Existed: ${prepResult.value.volumeExists}, ` +
-          `Directory: ${prepResult.value.directoryName}`,
-      );
+      const { experiment, volumeName, volumeCreated, volumeExists, directoryName } =
+        prepResult.value;
 
-      // Extract the directory name for use in file uploads
-      const { directoryName } = prepResult.value;
+      this.logger.log(
+        `Upload environment prepared successfully for experiment ${experiment.name} (${experimentId}). ` +
+          `Volume: ${volumeName}, Created: ${volumeCreated}, Existed: ${volumeExists}, ` +
+          `Directory: ${directoryName}`,
+      );
 
       // Initialize arrays to collect results
       const successfulUploads: { fileName: string; fileId: string; filePath: string }[] = [];
@@ -213,8 +185,7 @@ export class ExperimentDataController {
                     mimetype: mimeType,
                     stream: fileStream,
                   },
-                  experimentId,
-                  experiment.name,
+                  experiment,
                   sourceType,
                   directoryName,
                   successfulUploads,

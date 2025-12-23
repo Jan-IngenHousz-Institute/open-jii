@@ -43,8 +43,7 @@ export interface DatabricksPort {
    * Trigger the ambyte processing Databricks job with the specified parameters
    */
   triggerAmbyteProcessingJob(
-    experimentId: string,
-    experimentName: string,
+    schemaName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>>;
 
@@ -72,41 +71,33 @@ export interface DatabricksPort {
   /**
    * List tables in the schema for a specific experiment
    */
-  listTables(experimentName: string, experimentId: string): Promise<Result<ListTablesResponse>>;
+  listTables(schemaName: string): Promise<Result<ListTablesResponse>>;
 
   /**
    * Validate that data sources (table and columns) exist in the experiment
    *
    * @param dataConfig - Configuration containing table name and column names to validate
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
    * @returns Result indicating whether the data sources are valid
    */
   validateDataSources(
     dataConfig: ExperimentVisualizationDto["dataConfig"],
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
   ): Promise<Result<boolean>>;
 
   /**
    * Returns table metadata for a specific table in an experiment
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
    * @param tableName - Name of the table
    */
-  getTableMetadata(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-  ): Promise<Result<Map<string, string>>>;
+  getTableMetadata(schemaName: string, tableName: string): Promise<Result<Map<string, string>>>;
 
   /**
    * Upload data to Databricks for a specific experiment.
    * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
    *
-   * @param experimentId - ID of the experiment
-   * @param experimentName - Name of the experiment for schema construction
+   * @param schemaName - Schema name of the experiment
    * @param sourceType - Type of data source (e.g., 'ambyte')
    * @param directoryName - Unique directory name for this upload session
    * @param fileName - Name of the file
@@ -114,8 +105,7 @@ export interface DatabricksPort {
    * @returns Result containing the upload response
    */
   uploadExperimentData(
-    experimentId: string,
-    experimentName: string,
+    schemaName: string,
     sourceType: string,
     directoryName: string,
     fileName: string,
@@ -123,15 +113,15 @@ export interface DatabricksPort {
   ): Promise<Result<UploadFileResponse>>;
 
   /**
-   * Trigger an experiment pipeline by name
-   * Looks up a pipeline by name and starts an update
+   * Trigger an experiment pipeline by ID
+   * Starts a pipeline update using the stored pipeline ID
    *
-   * @param experimentName - Name of the experiment
+   * @param pipelineId - The Databricks pipeline ID
    * @param experimentId - ID of the experiment for logging purposes
    * @param options - Optional parameters for the pipeline update
    */
   triggerExperimentPipeline(
-    experimentName: string,
+    pipelineId: string,
     experimentId: string,
     options?: {
       fullRefresh?: boolean;
@@ -143,12 +133,12 @@ export interface DatabricksPort {
   /**
    * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
+   * @param pipelineId - The Databricks pipeline ID
    */
   triggerExperimentPipelineSilverRefresh(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
+    pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
 
   /**
@@ -162,15 +152,13 @@ export interface DatabricksPort {
   /**
    * Create a new managed volume under an experiment schema
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
    * @param volumeName - Name of the volume to create
    * @param comment - Optional comment for the volume
    * @returns Result containing the created volume information
    */
   createExperimentVolume(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
     volumeName: string,
     comment?: string,
   ): Promise<Result<VolumeResponse>>;
@@ -178,38 +166,20 @@ export interface DatabricksPort {
   /**
    * Get a volume from an experiment schema
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
    * @param volumeName - Name of the volume to retrieve
    * @returns Result containing the volume information
    */
-  getExperimentVolume(
-    experimentName: string,
-    experimentId: string,
-    volumeName: string,
-  ): Promise<Result<VolumeResponse>>;
-
-  /**
-   * Execute a SQL query in an experiment schema
-   *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
-   * @param sqlStatement - The SQL statement to execute
-   */
-  executeExperimentSqlQuery(
-    experimentName: string,
-    experimentId: string,
-    sqlStatement: string,
-  ): Promise<Result<SchemaData>>;
+  getExperimentVolume(schemaName: string, volumeName: string): Promise<Result<VolumeResponse>>;
 
   /**
    * Refresh all silver quality tables for an experiment with full refresh
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
+   * @param pipelineId - The Databricks pipeline ID
    */
   refreshSilverData(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
+    pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
 }

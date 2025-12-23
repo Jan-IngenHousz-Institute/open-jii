@@ -63,6 +63,13 @@ export default {
           DEFAULT: "hsl(var(--sidebar-background))",
           background: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
+          "gradient-from": "#002F2F",
+          "gradient-to": "#005E5E",
+          "search-icon": "#638A8A",
+          "search-placeholder": "#729999",
+          "active-bg": "#1A4444",
+          "trigger-hover": "#007070",
+          "mobile-bg": "#002F2F",
         },
         badge: {
           DEFAULT: "#FBF8C1",

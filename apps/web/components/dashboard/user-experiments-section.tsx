@@ -19,7 +19,7 @@ export function UserExperimentsSection() {
   return (
     <div className="space-y-4">
       {data?.body ? (
-        <ExperimentOverviewCards experiments={limitedExperiments} />
+        <ExperimentOverviewCards experiments={limitedExperiments} horizontal />
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (

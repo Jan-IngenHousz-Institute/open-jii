@@ -10,298 +10,273 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
-      should_deploy:
-        description: "Should run docs deployment? (true/false)"
-        required: true
-        type: boolean
   workflow_call:
     inputs:
-        environment:
-            description: "The deployment environment (dev, staging, prod)"
-            required: true
-            type: string
-        should_deploy:
-          description: "Should run docs deployment? (true/false)"
-          required: true
-          type: boolean
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
 jobs:
   deploy-docs:
-        name: Build & Deploy Documentation
-        runs-on: ubuntu-latest
-        environment: ${{ inputs.environment }}
-        permissions:
-            id-token: write
-            contents: read
+    name: Build & Deploy Documentation
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
 
-        steps:
-            - name: Check if Docs should run
-              id: check-should-deploy
-              run: |
-                if [ "${{ inputs.should_deploy }}" != "true" ]; then
-                  echo "Skipping Docs deployment as it's not in affected apps."
-                  exit 0
-                fi
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Checkout Repository
-              if: ${{ inputs.should_deploy == 'true' }}
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+          hoisted: "false"
 
-            - name: Setup Node.js and pnpm
-              if: ${{ inputs.should_deploy == 'true' }}
-              uses: ./.github/actions/setup-nodejs-pnpm
-              with:
-                  node-version: "22"
-                  hoisted: "false"
+      - name: Install Dependencies
+        run: |
+          echo "Installing dependencies..."
+          pnpm install --frozen-lockfile
 
-            - name: Install Dependencies
-              if: ${{ inputs.should_deploy == 'true' }}
-              run: |
-                  echo "Installing dependencies..."
-                  pnpm install --frozen-lockfile
+      - name: Build Documentation Site
+        run: |
+          echo "Building Docusaurus documentation site..."
+          pnpm run build --filter=docs
 
-            - name: Build Documentation Site
-              if: ${{ inputs.should_deploy == 'true' }}
-              run: |
-                  echo "Building Docusaurus documentation site..."
-                  pnpm run build --filter=docs
+      - name: Check Build Output
+        run: |
+          echo "Verifying documentation build output..."
+          if [[ ! -d "apps/docs/build" ]]; then
+            echo "::error::Documentation build directory not found: apps/docs/build"
+            exit 1
+          fi
 
-            - name: Check Build Output
-              if: ${{ inputs.should_deploy == 'true' }}
-              run: |
-                  echo "Verifying documentation build output..."
-                  if [[ ! -d "apps/docs/build" ]]; then
-                    echo "::error::Documentation build directory not found: apps/docs/build"
-                    exit 1
-                  fi
+          echo "Documentation build directory found"
+          echo "Build contents:"
+          ls -la apps/docs/build/
 
-                  echo "Documentation build directory found"
-                  echo "Build contents:"
-                  ls -la apps/docs/build/
+          # Check for essential files
+          if [[ ! -f "apps/docs/build/index.html" ]]; then
+            echo "::warning::No index.html found in build output"
+          else
+            echo "✓ index.html found"
+          fi
 
-                  # Check for essential files
-                  if [[ ! -f "apps/docs/build/index.html" ]]; then
-                    echo "::warning::No index.html found in build output"
-                  else
-                    echo "✓ index.html found"
-                  fi
+          # Check build size
+          BUILD_SIZE=$(du -sh apps/docs/build | cut -f1)
+          echo "Build size: $BUILD_SIZE"
 
-                  # Check build size
-                  BUILD_SIZE=$(du -sh apps/docs/build | cut -f1)
-                  echo "Build size: $BUILD_SIZE"
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          mask-aws-account-id: true
+          role-duration-seconds: 3600 # 1 hour
+          output-credentials: true
 
-            - name: Configure AWS Credentials via OIDC
-              if: ${{ inputs.should_deploy == 'true' }}
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-                  aws-region: ${{ secrets.AWS_REGION }}
-                  mask-aws-account-id: true
-                  role-duration-seconds: 3600 # 1 hour
-                  output-credentials: true
+      - name: Get Infrastructure Configuration
+        uses: ./.github/actions/get-infrastructure-config
+        with:
+          environment: ${{ inputs.environment }}
+          prefix: "/docs"
 
-            - name: Get Infrastructure Configuration
-              if: ${{ inputs.should_deploy == 'true' }}
-              uses: ./.github/actions/get-infrastructure-config
-              with:
-                  environment: ${{ inputs.environment }}
-                  prefix: "/docs"
+      - name: Verify Infrastructure Configuration
+        run: |
+          echo "Verifying infrastructure configuration..."
+          echo "S3 Bucket: ${{ env.DOCS_BUCKET }}"
+          echo "CloudFront Distribution ID: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
 
-            - name: Verify Infrastructure Configuration
-              if: ${{ inputs.should_deploy == 'true' }}
-              run: |
-                  echo "Verifying infrastructure configuration..."
-                  echo "S3 Bucket: ${{ env.DOCS_BUCKET }}"
-                  echo "CloudFront Distribution ID: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+          # Verify S3 bucket access
+          if [[ -n "${{ env.DOCS_BUCKET }}" ]]; then
+            if aws s3api get-bucket-location --bucket "${{ env.DOCS_BUCKET }}" >/dev/null 2>&1; then
+              echo "✓ S3 bucket access verified: ${{ env.DOCS_BUCKET }}"
+            else
+              echo "::error::S3 bucket '${{ env.DOCS_BUCKET }}' not found or not accessible"
+              echo "Please ensure the infrastructure has been deployed and the bucket exists"
+              exit 1
+            fi
+          else
+            echo "::error::DOCS_BUCKET environment variable not set from infrastructure config"
+            exit 1
+          fi
 
-                  # Verify S3 bucket access
-                  if [[ -n "${{ env.DOCS_BUCKET }}" ]]; then
-                    if aws s3api get-bucket-location --bucket "${{ env.DOCS_BUCKET }}" >/dev/null 2>&1; then
-                      echo "✓ S3 bucket access verified: ${{ env.DOCS_BUCKET }}"
-                    else
-                      echo "::error::S3 bucket '${{ env.DOCS_BUCKET }}' not found or not accessible"
-                      echo "Please ensure the infrastructure has been deployed and the bucket exists"
-                      exit 1
-                    fi
-                  else
-                    echo "::error::DOCS_BUCKET environment variable not set from infrastructure config"
-                    exit 1
-                  fi
+      - name: Upload Documentation to S3
+        id: upload-docs
+        run: |
+          DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
+          BUILD_DIR="apps/docs/build"
 
-            - name: Upload Documentation to S3
-              if: ${{ inputs.should_deploy == 'true' }}
-              id: upload-docs
-              run: |
-                  DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
-                  BUILD_DIR="apps/docs/build"
+          echo "Uploading documentation site to S3 bucket: $DOCS_BUCKET"
 
-                  echo "Uploading documentation site to S3 bucket: $DOCS_BUCKET"
+          cd "$BUILD_DIR"
 
-                  cd "$BUILD_DIR"
+          # Upload static assets with long cache duration
+          echo "Uploading static assets with long cache..."
+          aws s3 sync . "s3://${DOCS_BUCKET}/" \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "*.xml" \
+            --exclude "*.txt" \
+            --quiet
 
-                  # Upload static assets with long cache duration
-                  echo "Uploading static assets with long cache..."
-                  aws s3 sync . "s3://${DOCS_BUCKET}/" \
-                    --delete \
-                    --cache-control "public, max-age=31536000" \
-                    --exclude "*.html" \
-                    --exclude "*.xml" \
-                    --exclude "*.txt" \
-                    --quiet
+          # Upload HTML files with shorter cache duration
+          echo "Uploading HTML files with shorter cache..."
+          aws s3 sync . "s3://${DOCS_BUCKET}/" \
+            --cache-control "public, max-age=3600" \
+            --include "*.html" \
+            --quiet
 
-                  # Upload HTML files with shorter cache duration
-                  echo "Uploading HTML files with shorter cache..."
-                  aws s3 sync . "s3://${DOCS_BUCKET}/" \
-                    --cache-control "public, max-age=3600" \
-                    --include "*.html" \
-                    --quiet
+          # Upload XML and TXT files (sitemaps, robots.txt) with medium cache
+          echo "Uploading XML and TXT files with medium cache..."
+          aws s3 sync . "s3://${DOCS_BUCKET}/" \
+            --cache-control "public, max-age=86400" \
+            --include "*.xml" \
+            --include "*.txt" \
+            --quiet
 
-                  # Upload XML and TXT files (sitemaps, robots.txt) with medium cache
-                  echo "Uploading XML and TXT files with medium cache..."
-                  aws s3 sync . "s3://${DOCS_BUCKET}/" \
-                    --cache-control "public, max-age=86400" \
-                    --include "*.xml" \
-                    --include "*.txt" \
-                    --quiet
+          # Upload index.html files with no cache for proper routing
+          echo "Uploading index files with no cache for proper routing..."
+          find . -name "index.html" -type f | while read -r file; do
+            # Remove leading ./ from file path
+            s3_key="${file#./}"
+            aws s3 cp "$file" "s3://${DOCS_BUCKET}/${s3_key}" \
+              --cache-control "public, max-age=0, must-revalidate" \
+              --quiet
+          done
 
-                  # Upload index.html files with no cache for proper routing
-                  echo "Uploading index files with no cache for proper routing..."
-                  find . -name "index.html" -type f | while read -r file; do
-                    # Remove leading ./ from file path
-                    s3_key="${file#./}"
-                    aws s3 cp "$file" "s3://${DOCS_BUCKET}/${s3_key}" \
-                      --cache-control "public, max-age=0, must-revalidate" \
-                      --quiet
-                  done
+          echo "✓ Documentation uploaded successfully to S3"
+          echo "uploaded=true" >> $GITHUB_OUTPUT
 
-                  echo "✓ Documentation uploaded successfully to S3"
-                  echo "uploaded=true" >> $GITHUB_OUTPUT
+      - name: Invalidate CloudFront Distribution
+        if: steps.upload-docs.outputs.uploaded == 'true' && env.CLOUDFRONT_DISTRIBUTION_ID != ''
+        run: |
+          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
 
-            - name: Invalidate CloudFront Distribution
-              if: steps.upload-docs.outputs.uploaded == 'true' && env.CLOUDFRONT_DISTRIBUTION_ID != ''
-              run: |
-                  CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+          echo "Creating CloudFront invalidation for distribution: $CLOUDFRONT_DISTRIBUTION_ID"
 
-                  echo "Creating CloudFront invalidation for distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/*" \
+            --query "Invalidation.Id" \
+            --output text 2>/dev/null)
 
-                  INVALIDATION_ID=$(aws cloudfront create-invalidation \
-                    --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
-                    --paths "/*" \
-                    --query "Invalidation.Id" \
-                    --output text 2>/dev/null)
+          if [[ -n "$INVALIDATION_ID" ]]; then
+            echo "CloudFront invalidation created with ID: $INVALIDATION_ID"
+            echo "Waiting for invalidation to complete..."
+            
+            # Wait for invalidation to complete (improves reliability for immediate testing)
+            aws cloudfront wait invalidation-completed \
+              --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+              --id "$INVALIDATION_ID" 2>/dev/null
+            
+            echo "✅ CloudFront invalidation completed successfully"
+          else
+            echo "::warning::Failed to create CloudFront invalidation"
+          fi
 
-                  if [[ -n "$INVALIDATION_ID" ]]; then
-                    echo "CloudFront invalidation created with ID: $INVALIDATION_ID"
-                    echo "Waiting for invalidation to complete..."
-                    
-                    # Wait for invalidation to complete (improves reliability for immediate testing)
-                    aws cloudfront wait invalidation-completed \
-                      --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
-                      --id "$INVALIDATION_ID" 2>/dev/null
-                    
-                    echo "✅ CloudFront invalidation completed successfully"
-                  else
-                    echo "::warning::Failed to create CloudFront invalidation"
-                  fi
+      - name: Get Documentation URLs
+        id: get-urls
+        if: inputs.should_deploy == 'true'
+        run: |
+          DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
+          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
 
-            - name: Get Documentation URLs
-              id: get-urls
-              if: inputs.should_deploy == 'true'
-              run: |
-                  DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
-                  CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+          # S3 website endpoint (if static website hosting is enabled)
+          AWS_REGION="${{ secrets.AWS_REGION }}"
+          if [[ "$AWS_REGION" == "us-east-1" ]]; then
+            S3_URL="https://${DOCS_BUCKET}.s3-website.amazonaws.com"
+          else
+            S3_URL="https://${DOCS_BUCKET}.s3-website.${AWS_REGION}.amazonaws.com"
+          fi
 
-                  # S3 website endpoint (if static website hosting is enabled)
-                  AWS_REGION="${{ secrets.AWS_REGION }}"
-                  if [[ "$AWS_REGION" == "us-east-1" ]]; then
-                    S3_URL="https://${DOCS_BUCKET}.s3-website.amazonaws.com"
-                  else
-                    S3_URL="https://${DOCS_BUCKET}.s3-website.${AWS_REGION}.amazonaws.com"
-                  fi
+          echo "s3_url=$S3_URL" >> $GITHUB_OUTPUT
 
-                  echo "s3_url=$S3_URL" >> $GITHUB_OUTPUT
+          # CloudFront URL
+          if [[ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]]; then
+            CLOUDFRONT_DOMAIN=$(aws cloudfront get-distribution \
+              --id "$CLOUDFRONT_DISTRIBUTION_ID" \
+              --query "Distribution.DomainName" \
+              --output text 2>/dev/null || echo "")
+            
+            if [[ -n "$CLOUDFRONT_DOMAIN" ]]; then
+              echo "cloudfront_url=https://$CLOUDFRONT_DOMAIN" >> $GITHUB_OUTPUT
+            fi
+          fi
 
-                  # CloudFront URL
-                  if [[ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]]; then
-                    CLOUDFRONT_DOMAIN=$(aws cloudfront get-distribution \
-                      --id "$CLOUDFRONT_DISTRIBUTION_ID" \
-                      --query "Distribution.DomainName" \
-                      --output text 2>/dev/null || echo "")
-                    
-                    if [[ -n "$CLOUDFRONT_DOMAIN" ]]; then
-                      echo "cloudfront_url=https://$CLOUDFRONT_DOMAIN" >> $GITHUB_OUTPUT
-                    fi
-                  fi
+          # Try to get custom domain from Route53 records
+          CUSTOM_DOMAIN=""
 
-                  # Try to get custom domain from Route53 records
-                  CUSTOM_DOMAIN=""
+          # Get hosted zone ID for the environment domain
+          HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
+            --query "HostedZones[?Name=='${{ inputs.environment }}.openjii.org.'].Id" \
+            --output text 2>/dev/null | cut -d'/' -f3 || echo "")
 
-                  # Get hosted zone ID for the environment domain
-                  HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
-                    --query "HostedZones[?Name=='${{ inputs.environment }}.openjii.org.'].Id" \
-                    --output text 2>/dev/null | cut -d'/' -f3 || echo "")
+          if [[ -n "$HOSTED_ZONE_ID" ]]; then
+            CUSTOM_DOMAIN=$(aws route53 list-resource-record-sets \
+              --hosted-zone-id "$HOSTED_ZONE_ID" \
+              --query "ResourceRecordSets[?Name=='docs.${{ inputs.environment }}.openjii.org.'].Name" \
+              --output text 2>/dev/null || echo "")
+            
+            if [[ -n "$CUSTOM_DOMAIN" ]]; then
+              # Remove trailing dot from domain name
+              CUSTOM_DOMAIN="${CUSTOM_DOMAIN%.}"
+              echo "custom_url=https://$CUSTOM_DOMAIN" >> $GITHUB_OUTPUT
+            fi
+          fi
 
-                  if [[ -n "$HOSTED_ZONE_ID" ]]; then
-                    CUSTOM_DOMAIN=$(aws route53 list-resource-record-sets \
-                      --hosted-zone-id "$HOSTED_ZONE_ID" \
-                      --query "ResourceRecordSets[?Name=='docs.${{ inputs.environment }}.openjii.org.'].Name" \
-                      --output text 2>/dev/null || echo "")
-                    
-                    if [[ -n "$CUSTOM_DOMAIN" ]]; then
-                      # Remove trailing dot from domain name
-                      CUSTOM_DOMAIN="${CUSTOM_DOMAIN%.}"
-                      echo "custom_url=https://$CUSTOM_DOMAIN" >> $GITHUB_OUTPUT
-                    fi
-                  fi
+      - name: Deployment Summary
+        if: inputs.should_deploy == 'true'
+        run: |
+          echo ""
+          echo "=== Documentation Deployment Summary ==="
+          echo "Environment: ${{ inputs.environment }}"
+          echo "S3 Bucket: ${{ env.DOCS_BUCKET }}"
+          echo "Documentation Uploaded: ${{ steps.upload-docs.outputs.uploaded || 'false' }}"
 
-            - name: Deployment Summary
-              if: inputs.should_deploy == 'true'
-              run: |
-                  echo ""
-                  echo "=== Documentation Deployment Summary ==="
-                  echo "Environment: ${{ inputs.environment }}"
-                  echo "S3 Bucket: ${{ env.DOCS_BUCKET }}"
-                  echo "Documentation Uploaded: ${{ steps.upload-docs.outputs.uploaded || 'false' }}"
+          CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+          if [[ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]]; then
+            echo "CloudFront Distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+          else
+            echo "CloudFront Distribution: Not found"
+          fi
 
-                  CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
-                  if [[ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]]; then
-                    echo "CloudFront Distribution: $CLOUDFRONT_DISTRIBUTION_ID"
-                  else
-                    echo "CloudFront Distribution: Not found"
-                  fi
+          echo ""
+          echo "=== Documentation URLs ==="
 
-                  echo ""
-                  echo "=== Documentation URLs ==="
+          # S3 URL
+          S3_URL="${{ steps.get-urls.outputs.s3_url }}"
+          if [[ -n "$S3_URL" ]]; then
+            echo "S3 Website: $S3_URL"
+          fi
 
-                  # S3 URL
-                  S3_URL="${{ steps.get-urls.outputs.s3_url }}"
-                  if [[ -n "$S3_URL" ]]; then
-                    echo "S3 Website: $S3_URL"
-                  fi
+          # CloudFront URL
+          CLOUDFRONT_URL="${{ steps.get-urls.outputs.cloudfront_url }}"
+          if [[ -n "$CLOUDFRONT_URL" ]]; then
+            echo "CloudFront URL: $CLOUDFRONT_URL"
+          fi
 
-                  # CloudFront URL
-                  CLOUDFRONT_URL="${{ steps.get-urls.outputs.cloudfront_url }}"
-                  if [[ -n "$CLOUDFRONT_URL" ]]; then
-                    echo "CloudFront URL: $CLOUDFRONT_URL"
-                  fi
+          # Custom domain URL
+          CUSTOM_URL="${{ steps.get-urls.outputs.custom_url }}"
+          if [[ -n "$CUSTOM_URL" ]]; then
+            echo "Custom Domain: $CUSTOM_URL"
+          fi
 
-                  # Custom domain URL
-                  CUSTOM_URL="${{ steps.get-urls.outputs.custom_url }}"
-                  if [[ -n "$CUSTOM_URL" ]]; then
-                    echo "Custom Domain: $CUSTOM_URL"
-                  fi
-
-                  # Check overall deployment success
-                  if [[ "${{ steps.upload-docs.outputs.uploaded }}" == "true" ]]; then
-                    echo ""
-                    echo "✅ Documentation deployment completed successfully!"
-                    echo "📚 The documentation site has been updated in the ${{ inputs.environment }} environment"
-                    echo "🕒 Deployment finished at $(date)"
-                  else
-                    echo ""
-                    echo "❌ Documentation deployment failed"
-                    echo "Please check the logs above for details"
-                    exit 1
-                  fi
-                  echo ""
+          # Check overall deployment success
+          if [[ "${{ steps.upload-docs.outputs.uploaded }}" == "true" ]]; then
+            echo ""
+            echo "✅ Documentation deployment completed successfully!"
+            echo "📚 The documentation site has been updated in the ${{ inputs.environment }} environment"
+            echo "🕒 Deployment finished at $(date)"
+          else
+            echo ""
+            echo "❌ Documentation deployment failed"
+            echo "Please check the logs above for details"
+            exit 1
+          fi
+          echo ""

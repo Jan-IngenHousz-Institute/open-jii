@@ -115,8 +115,7 @@ describe("DatabricksAdapter", () => {
 
   describe("triggerAmbyteProcessingJob", () => {
     it("should successfully trigger ambyte processing job", async () => {
-      const experimentId = "exp-123";
-      const experimentName = "Test Experiment";
+      const schemaName = "exp_test_experiment_exp-123";
       const mockParams = {
         EXPERIMENT_ID: "exp-123",
         YEAR_PREFIX: "2025",
@@ -134,23 +133,18 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock job run-now request - expect the constructed schema in the params
+      // Mock job run-now request - expect the schema in the params
       nock(databricksHost)
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
           (body: { job_parameters?: Record<string, string> }) => {
-            const expectedSchema = "exp_test_experiment_exp-123";
-            return body.job_parameters?.EXPERIMENT_SCHEMA === expectedSchema;
+            return body.job_parameters?.EXPERIMENT_SCHEMA === schemaName;
           },
         )
         .reply(200, mockResponse);
 
       // Execute trigger ambyte processing job
-      const result = await databricksAdapter.triggerAmbyteProcessingJob(
-        experimentId,
-        experimentName,
-        mockParams,
-      );
+      const result = await databricksAdapter.triggerAmbyteProcessingJob(schemaName, mockParams);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -402,9 +396,7 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("listTables", () => {
-    const experimentName = "test_experiment";
-    const experimentId = "123";
-    const schemaName = `exp_${experimentName}_${experimentId}`;
+    const schemaName = "exp_test_experiment_123";
 
     it("should successfully list tables", async () => {
       const mockTablesResponse = {
@@ -443,7 +435,7 @@ describe("DatabricksAdapter", () => {
         .reply(200, mockTablesResponse);
 
       // Execute list tables
-      const result = await databricksAdapter.listTables(experimentName, experimentId);
+      const result = await databricksAdapter.listTables(schemaName);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -453,9 +445,7 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("validateDataSources", () => {
-    const experimentName = "test_experiment";
-    const experimentId = "123";
-    const schemaName = `exp_${experimentName}_${experimentId}`;
+    const schemaName = "exp_test_experiment_123";
 
     it("should validate data sources successfully when table and columns exist", async () => {
       // Mock token request
@@ -520,11 +510,7 @@ describe("DatabricksAdapter", () => {
       };
 
       // Execute the method
-      const result = await databricksAdapter.validateDataSources(
-        dataConfig,
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -555,11 +541,7 @@ describe("DatabricksAdapter", () => {
       };
 
       // Execute the method
-      const result = await databricksAdapter.validateDataSources(
-        dataConfig,
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -631,11 +613,7 @@ describe("DatabricksAdapter", () => {
       };
 
       // Execute the method
-      const result = await databricksAdapter.validateDataSources(
-        dataConfig,
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -667,11 +645,7 @@ describe("DatabricksAdapter", () => {
       };
 
       // Execute the method
-      const result = await databricksAdapter.validateDataSources(
-        dataConfig,
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -718,11 +692,7 @@ describe("DatabricksAdapter", () => {
       };
 
       // Execute the method
-      const result = await databricksAdapter.validateDataSources(
-        dataConfig,
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -791,12 +761,7 @@ describe("DatabricksAdapter", () => {
       };
 
       // Execute the method
-      const result = await databricksAdapter.validateDataSources(
-        dataConfig,
-        experimentName,
-        experimentId,
-      );
-
+      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -807,8 +772,7 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("uploadExperimentData", () => {
-    const experimentId = "123-456-789";
-    const experimentName = "Test Experiment";
+    const schemaName = "exp_test_experiment_123";
     const sourceType = "ambyte";
     const directoryName = "upload_20250910_143022_123-456-789";
     const fileName = "data.csv";
@@ -820,9 +784,7 @@ describe("DatabricksAdapter", () => {
       const configService = testApp.module.get(DatabricksConfigService);
       vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
 
-      // Calculate expected schema name and file path based on adapter implementation
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
+      // Calculate expected file path
       const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
@@ -840,8 +802,7 @@ describe("DatabricksAdapter", () => {
 
       // Execute upload file
       const result = await databricksAdapter.uploadExperimentData(
-        experimentId,
-        experimentName,
+        schemaName,
         sourceType,
         directoryName,
         fileName,
@@ -857,16 +818,13 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should handle spaces and special characters in experiment name", async () => {
-      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
-
       // Get the actual config service for mocking
       const configService = testApp.module.get(DatabricksConfigService);
       vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
 
-      // Calculate expected schema name and file path based on adapter implementation
-      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
-      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
+      // Use consistent schema name
+      const testSchemaName = "exp_test_experiment_with_spaces_123";
+      const expectedFilePath = `/Volumes/${catalogName}/${testSchemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -883,8 +841,7 @@ describe("DatabricksAdapter", () => {
 
       // Execute upload file
       const result = await databricksAdapter.uploadExperimentData(
-        experimentId,
-        specialExperimentName,
+        testSchemaName,
         sourceType,
         directoryName,
         fileName,
@@ -899,13 +856,10 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("triggerExperimentPipeline", () => {
-    const experimentName = "Test Experiment";
     const experimentId = "123-456-789";
+    const pipelineId = "pipeline-abc123";
 
-    it("should correctly format pipeline name, get pipeline ID, and trigger update", async () => {
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
-      const pipelineId = "pipeline-abc123";
+    it("should trigger pipeline update with pipeline ID", async () => {
       const updateId = "update-xyz789";
 
       // Mock token request
@@ -915,29 +869,6 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
-
       // Mock start pipeline update API call
       nock(databricksHost)
         .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
@@ -946,10 +877,7 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute trigger experiment pipeline
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -959,7 +887,7 @@ describe("DatabricksAdapter", () => {
       });
     });
 
-    it("should handle failure when pipeline is not found", async () => {
+    it("should handle failure when pipeline update fails", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -967,87 +895,24 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock list pipelines with empty results
+      // Mock pipeline update failure
       nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [],
+        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
+        .reply(404, {
+          error_code: "RESOURCE_DOES_NOT_EXIST",
+          message: "Pipeline not found",
         });
 
       // Execute trigger experiment pipeline
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain("not found");
-    });
-
-    it("should handle spaces and uppercase characters in experiment name", async () => {
-      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
-      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
-      const pipelineId = "pipeline-abc123";
-      const updateId = "update-xyz789";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
-
-      // Mock start pipeline update API call
-      nock(databricksHost)
-        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
-        .reply(200, {
-          update_id: updateId,
-        });
-
-      // Execute trigger experiment pipeline
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        specialExperimentName,
-        experimentId,
-      );
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        update_id: updateId,
-      });
+      expect(result.error.message).toContain("Pipeline");
     });
 
     it("should trigger pipeline with full refresh option", async () => {
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
       const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
 
@@ -1057,29 +922,6 @@ describe("DatabricksAdapter", () => {
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
-
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
 
       // Mock start pipeline update API call with full refresh
       nock(databricksHost)
@@ -1094,11 +936,9 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute trigger experiment pipeline with full refresh
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-        { fullRefresh: true },
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
+        fullRefresh: true,
+      });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1109,8 +949,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should trigger pipeline with full refresh selection", async () => {
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
       const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const tablesToRefresh = ["table1", "table2"];
@@ -1121,29 +959,6 @@ describe("DatabricksAdapter", () => {
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
-
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
 
       // Mock start pipeline update API call with full refresh selection
       nock(databricksHost)
@@ -1163,11 +978,9 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute trigger experiment pipeline with full refresh selection
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-        { fullRefreshSelection: tablesToRefresh },
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
+        fullRefreshSelection: tablesToRefresh,
+      });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1178,8 +991,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should trigger pipeline with refresh selection", async () => {
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
       const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const tablesToRefresh = ["table3"];
@@ -1190,29 +1001,6 @@ describe("DatabricksAdapter", () => {
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
-
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
 
       // Mock start pipeline update API call with refresh selection
       nock(databricksHost)
@@ -1231,11 +1019,9 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute trigger experiment pipeline with refresh selection
-      const result = await databricksAdapter.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-        { refreshSelection: tablesToRefresh },
-      );
+      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
+        refreshSelection: tablesToRefresh,
+      });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1247,14 +1033,10 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("refreshSilverData", () => {
-    const experimentName = "Test Experiment";
-    const experimentId = "123-456-789";
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
-    const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+    const schemaName = "exp_test_experiment_123-456-789";
+    const pipelineId = "pipeline-abc123";
 
     it("should refresh silver tables successfully", async () => {
-      const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const silverTable1 = "silver_table_1";
       const silverTable2 = "silver_table_2";
@@ -1293,29 +1075,6 @@ describe("DatabricksAdapter", () => {
           ],
         });
 
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
-
       // Mock start pipeline update API call with full refresh selection
       nock(databricksHost)
         .post(
@@ -1335,7 +1094,7 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1369,7 +1128,7 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is failure (no silver tables found)
       expect(result.isFailure()).toBe(true);
@@ -1392,7 +1151,7 @@ describe("DatabricksAdapter", () => {
       });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);
@@ -1425,40 +1184,29 @@ describe("DatabricksAdapter", () => {
           ],
         });
 
-      // Mock token request for pipeline operations
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list pipelines with empty results (pipeline not found)
+      // Mock pipeline update failure
       nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [],
+        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
+        .reply(404, {
+          error_code: "RESOURCE_DOES_NOT_EXIST",
+          message: "Pipeline not found",
         });
 
       // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(experimentName, experimentId);
+      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain("not found");
+      expect(result.error.message).toContain("Pipeline");
     });
   });
 
   describe("triggerExperimentPipelineSilverRefresh", () => {
-    const experimentName = "Test Experiment";
-    const experimentId = "123-456-789";
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
-    const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+    const schemaName = "exp_test_experiment_123-456-789";
+    const pipelineId = "pipeline-abc123";
 
     it("should successfully trigger silver refresh", async () => {
-      const pipelineId = "pipeline-abc123";
       const updateId = "update-xyz789";
       const silverTable1 = "silver_table_1";
 
@@ -1484,29 +1232,6 @@ describe("DatabricksAdapter", () => {
           ],
         });
 
-      // Mock list pipelines to find pipeline by name
-      nock(databricksHost)
-        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          statuses: [
-            {
-              pipeline_id: pipelineId,
-              name: pipelineName,
-              state: "ACTIVE",
-            },
-          ],
-        });
-
-      // Mock get pipeline details
-      nock(databricksHost)
-        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
-        .reply(200, {
-          pipeline_id: pipelineId,
-          name: pipelineName,
-          state: "ACTIVE",
-        });
-
       // Mock start pipeline update API call
       nock(databricksHost)
         .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
@@ -1516,8 +1241,8 @@ describe("DatabricksAdapter", () => {
 
       // Execute trigger experiment pipeline silver refresh
       const result = await databricksAdapter.triggerExperimentPipelineSilverRefresh(
-        experimentName,
-        experimentId,
+        schemaName,
+        pipelineId,
       );
 
       // Assert result is success
@@ -1623,8 +1348,7 @@ describe("DatabricksAdapter", () => {
 
       // Execute create experiment volume
       const result = await databricksAdapter.createExperimentVolume(
-        experimentName,
-        experimentId,
+        schemaName,
         volumeName,
         comment,
       );
@@ -1672,11 +1396,7 @@ describe("DatabricksAdapter", () => {
         .reply(200, mockVolumeResponse);
 
       // Execute create experiment volume without comment
-      const result = await databricksAdapter.createExperimentVolume(
-        experimentName,
-        experimentId,
-        volumeName,
-      );
+      const result = await databricksAdapter.createExperimentVolume(schemaName, volumeName);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1725,8 +1445,7 @@ describe("DatabricksAdapter", () => {
 
       // Execute create experiment volume with special characters
       const result = await databricksAdapter.createExperimentVolume(
-        specialExperimentName,
-        experimentId,
+        schemaName,
         volumeName,
         comment,
       );
@@ -1784,11 +1503,7 @@ describe("DatabricksAdapter", () => {
         .reply(200, mockVolumeResponse);
 
       // Execute get experiment volume
-      const result = await databricksAdapter.getExperimentVolume(
-        experimentName,
-        experimentId,
-        volumeName,
-      );
+      const result = await databricksAdapter.getExperimentVolume(schemaName, volumeName);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1824,11 +1539,7 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute get experiment volume
-      const result = await databricksAdapter.getExperimentVolume(
-        experimentName,
-        experimentId,
-        volumeName,
-      );
+      const result = await databricksAdapter.getExperimentVolume(schemaName, volumeName);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);
@@ -1878,11 +1589,7 @@ describe("DatabricksAdapter", () => {
         .reply(200, mockVolumeResponse);
 
       // Execute get experiment volume with special characters
-      const result = await databricksAdapter.getExperimentVolume(
-        specialExperimentName,
-        experimentId,
-        volumeName,
-      );
+      const result = await databricksAdapter.getExperimentVolume(schemaName, volumeName);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -1892,9 +1599,7 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("getTableMetadata", () => {
-    const experimentName = "test_experiment";
-    const experimentId = "123";
-    const schemaName = `exp_${experimentName}_${experimentId}`;
+    const schemaName = "exp_test_experiment_123";
     const tableName = "sensor_data";
 
     it("should return metadata successfully", async () => {
@@ -1958,11 +1663,7 @@ describe("DatabricksAdapter", () => {
       ]);
 
       // Execute the method
-      const result = await databricksAdapter.getTableMetadata(
-        experimentName,
-        experimentId,
-        tableName,
-      );
+      const result = await databricksAdapter.getTableMetadata(schemaName, tableName);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -2000,11 +1701,7 @@ describe("DatabricksAdapter", () => {
       });
 
       // Execute the method
-      const result = await databricksAdapter.getTableMetadata(
-        experimentName,
-        experimentId,
-        tableName,
-      );
+      const result = await databricksAdapter.getTableMetadata(schemaName, tableName);
 
       // Assert
       expect(result.isSuccess()).toBe(false);

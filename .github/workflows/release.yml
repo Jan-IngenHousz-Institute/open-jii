@@ -5,6 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      deploy_all:
+        description: "Force release all applications regardless of changes"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -22,16 +28,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history needed for semantic versioning
-          
+          fetch-depth: 0 # Full history needed for semantic versioning
+
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-          
+
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
+
+      - name: Override Affected Packages
+        if: inputs.deploy_all == true
+        run: |
+          echo "Force releasing all applications..."
+          ALL_APPS='["backend","web","mobile","docs","@repo/database","@repo/api","@repo/auth"]'
+          echo "affected_apps=$ALL_APPS" >> $GITHUB_OUTPUT
+          echo "has_affected_apps=true" >> $GITHUB_OUTPUT
 
   build:
     name: Build Affected Apps
@@ -41,12 +55,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-          
+
       - name: Build Packages
         uses: ./.github/actions/build-packages
         with:
@@ -65,12 +79,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-          
+
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-      
+
       - name: Filter Apps for Release
         id: filter_apps
         run: |
@@ -82,7 +96,7 @@ jobs:
           }
           echo "release_apps=$RELEASE_APPS" >> $GITHUB_OUTPUT
           echo "Filtered apps for release: $RELEASE_APPS"
-      
+
       - name: Check if Apps Remain After Filtering
         id: check_apps
         run: |
@@ -92,7 +106,7 @@ jobs:
           if [ "$APP_COUNT" -eq 0 ]; then
             echo "⚠️ No apps to release after filtering @repo/* packages"
           fi
-          
+
       - name: Create Semantic Releases
         id: semantic_release
         if: steps.check_apps.outputs.app_count > 0
@@ -100,8 +114,8 @@ jobs:
         with:
           affected_apps: ${{ steps.filter_apps.outputs.release_apps }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          dry_run: 'false'
-      
+          dry_run: "false"
+
       - name: Release Summary
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
