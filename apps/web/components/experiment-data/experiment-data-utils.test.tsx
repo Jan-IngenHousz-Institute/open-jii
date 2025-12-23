@@ -1270,7 +1270,7 @@ describe("experiment-data-utils", () => {
       expect(regularHeader).toHaveClass("cursor-pointer");
 
       // Click to trigger sort
-      fireEvent.click(regularHeader!);
+      fireEvent.click(regularHeader as HTMLElement);
 
       // Should be called with the actual column name and type
       expect(mockOnSort).toHaveBeenCalledWith("regularColumn", "STRING");

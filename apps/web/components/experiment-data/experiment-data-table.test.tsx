@@ -711,7 +711,9 @@ describe("ExperimentDataTable", () => {
       // Initial query should use DESC direction
       expect(mockUseQuery).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           queryData: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             query: expect.objectContaining({
               orderBy: "timestamp",
               orderDirection: "DESC",
@@ -1174,7 +1176,9 @@ describe("ExperimentDataTable", () => {
       // Initial query should be called with default sort (timestamp DESC)
       expect(mockUseQuery).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           queryData: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             query: expect.objectContaining({
               orderBy: "timestamp",
               orderDirection: "DESC",
