@@ -18,7 +18,7 @@ locals {
 
   # Domain configuration
   domain_name = var.subdomain != "" && var.domain_name != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name
-  aliases     = local.domain_name != "" ? [local.domain_name] : []
+  aliases = local.domain_name != "" ? [local.domain_name, "www.${local.domain_name}"] : []
 
   # Common tags
   common_tags = merge(var.tags, {
