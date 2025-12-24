@@ -9,10 +9,6 @@ on:
       - reopened
   workflow_dispatch:
 
-# Cancel in-progress runs on the same PR
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -176,18 +172,21 @@ jobs:
             }
 
   tofu:
-    name: OpenTofu
+    name: OpenTofu (Plan)
     needs: build_lint_test
     runs-on: ubuntu-latest
-    environment: pr
+    strategy:
+      matrix:
+        environment: [dev, prod]
+    environment: ${{ matrix.environment }}
     concurrency:
-      group: opentofu-dev
+      group: opentofu-${{ matrix.environment }}
       cancel-in-progress: false
     permissions:
       id-token: write
       contents: read
     env:
-      environment: "dev"
+      environment: ${{ matrix.environment }}
       TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
       TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
       TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
@@ -209,6 +208,7 @@ jobs:
       TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+      TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
 
     steps:
       - name: Checkout Repository
@@ -223,6 +223,7 @@ jobs:
 
       - name: OpenTofu Format Check
         uses: ./.github/actions/tofu/tofu-fmt-check
+        continue-on-error: false
 
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate

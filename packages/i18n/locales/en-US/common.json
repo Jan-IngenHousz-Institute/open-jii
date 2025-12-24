@@ -1,5 +1,6 @@
 {
   "common": {
+    "logo": "Jan IngenHousz Institute",
     "protocolLabel": "Protocol",
     "by": "by",
     "homepage": "Homepage",
@@ -24,6 +25,9 @@
     "close": "Close",
     "yes": "Yes",
     "no": "No",
+    "search": "Search",
+    "notifications": "Notifications",
+    "menu": "Menu",
     "noVariant": "no variant",
     "destructive": "destructive",
     "ghost": "ghost",
@@ -48,7 +52,8 @@
     "kilobytes": "KB",
     "megabytes": "MB",
     "comingSoon": "Coming Soon",
-    "ok": "OK"
+    "ok": "OK",
+    "greeting": "Hi, {{name}}"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -59,7 +64,9 @@
     "profile": "Profile",
     "logout": "Sign out",
     "home": "Home",
-    "openJII": "openJII"
+    "openJII": "openJII",
+    "support": "Support",
+    "faq": "FAQ"
   },
   "experiments": {
     "filterMy": "My Experiments",
@@ -81,7 +88,8 @@
     "createdAt": "Created At",
     "updatedAt": "Updated At",
     "loadingExperiments": "Loading experiments...",
-    "noExperiments": "No experiments found",
+    "noExperiments": "No experiments yet",
+    "noExperimentsDescription": "Get started by creating your first experiment to collect and analyze data.",
     "viewDetails": "View Details",
     "experimentCreated": "Experiment created successfully",
     "experimentUpdated": "Experiment updated successfully",
@@ -165,12 +173,12 @@
     "requestedAt": "Requested on",
     "errorLoadingRequests": "Failed to load your transfer requests. Please try again later.",
     "importantNote": "Important Information",
-    "note1": "Project transfers are not immediate and may require time to process.",
+    "note1": "Project transfers are not immediate and may require up to 2 weeks to process.",
     "note2": "We will contact you via your openJII account email if we need additional information.",
     "note3": "You will receive an email notification once the transfer has been completed.",
     "projectIdLabel": "PhotosynQ Project ID",
     "projectIdPlaceholder": "Enter the Project ID from PhotosynQ",
-    "projectIdDescription": "You can find this in your PhotosynQ project page in the left bar under “Project ID”",
+    "projectIdDescription": "You can find this in your PhotosynQ project page in the left bar under \"Project ID\"",
     "projectUrlLabel": "PhotosynQ Project URL",
     "projectUrlPlaceholder": "https://photosynq.org/projects/...",
     "projectUrlDescription": "The full URL to your project on PhotosynQ",
@@ -455,6 +463,8 @@
     "home": "Home",
     "platform": "Platform",
     "experiments": "Experiments",
+    "protocols": "Protocols",
+    "macros": "Macros",
     "new": "New",
     "edit": "Edit",
     "view": "View",
@@ -476,7 +486,6 @@
     }
   },
   "experimentDataTable": {
-    "loading": "Data loading... Please wait. It can take several minutes.",
     "noData": "No data returned",
     "noResults": "No results",
     "error": "Error loading data",

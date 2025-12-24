@@ -34,29 +34,29 @@ output "default_sg_id" {
 }
 
 output "db_subnet_group_name" {
-  value = aws_db_subnet_group.aurora_subnet_group.name
+  value = var.create_aurora_resources ? aws_db_subnet_group.aurora_subnet_group[0].name : null
 }
 
 output "aurora_security_group_id" {
-  value = aws_security_group.aurora_sg.id
+  value = var.create_aurora_resources ? aws_security_group.aurora_sg[0].id : null
 }
 
 output "migration_task_security_group_id" {
   description = "ID of the security group for migration tasks"
-  value       = aws_security_group.migration_task_sg.id
+  value       = var.create_migration_resources ? aws_security_group.migration_task_sg[0].id : null
 }
 
 output "server_lambda_security_group_id" {
   description = "ID of the security group for the server Lambda function to access Aurora (if enabled)"
-  value       = aws_security_group.server_lambda_aurora.id
+  value       = var.create_lambda_resources ? aws_security_group.server_lambda_aurora[0].id : null
 }
 
 output "alb_security_group_id" {
   description = "ID of the Application Load Balancer security group"
-  value       = aws_security_group.alb_sg.id
+  value       = var.create_alb_resources ? aws_security_group.alb_sg[0].id : null
 }
 
 output "ecs_security_group_id" {
   description = "ID of the ECS task security group"
-  value       = aws_security_group.ecs_sg.id
+  value       = var.create_ecs_resources ? aws_security_group.ecs_sg[0].id : null
 }

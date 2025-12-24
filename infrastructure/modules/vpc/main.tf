@@ -4,6 +4,11 @@ data "aws_ec2_managed_prefix_list" "cloudfront_global" {
   name = "com.amazonaws.global.cloudfront.origin-facing"
 }
 
+locals {
+  # Use specified nat_gateway_count or default to az_count
+  nat_gateway_count = var.nat_gateway_count != null ? var.nat_gateway_count : var.az_count
+}
+
 # ----
 # VPC
 # ----
@@ -49,6 +54,8 @@ resource "aws_security_group" "default" {
 # Aurora DB Security Group
 # -------------------------
 resource "aws_security_group" "aurora_sg" {
+  count = var.create_aurora_resources ? 1 : 0
+
   name        = "open-jii-aurora-sg-${var.environment}"
   description = "Security group for Aurora DB"
   vpc_id      = aws_vpc.this.id
@@ -63,6 +70,8 @@ resource "aws_security_group" "aurora_sg" {
 # ALB Security Group
 # -----------------------
 resource "aws_security_group" "alb_sg" {
+  count = var.create_alb_resources ? 1 : 0
+
   name        = "${var.environment}-alb-sg"
   description = "Security group for Application Load Balancer (CloudFront HTTPS access only)"
   vpc_id      = aws_vpc.this.id
@@ -95,6 +104,8 @@ resource "aws_security_group" "alb_sg" {
 # ECS Security Group
 # -----------------------
 resource "aws_security_group" "ecs_sg" {
+  count = var.create_ecs_resources ? 1 : 0
+
   name        = "${var.environment}-ecs-sg"
   description = "Security group for ECS tasks"
   vpc_id      = aws_vpc.this.id
@@ -105,7 +116,7 @@ resource "aws_security_group" "ecs_sg" {
     from_port       = var.container_port
     to_port         = var.container_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
+    security_groups = var.create_alb_resources ? [aws_security_group.alb_sg[0].id] : []
   }
 
   # ECS tasks need outbound access for:
@@ -128,6 +139,8 @@ resource "aws_security_group" "ecs_sg" {
 # Migration Task Security Group
 # --------------------------
 resource "aws_security_group" "migration_task_sg" {
+  count = var.create_migration_resources ? 1 : 0
+
   name        = "${var.environment}-migration-task-sg"
   description = "Security group for database migration ECS tasks"
   vpc_id      = aws_vpc.this.id
@@ -148,12 +161,14 @@ resource "aws_security_group" "migration_task_sg" {
 
 # Allow migration tasks to access Aurora database
 resource "aws_security_group_rule" "aurora_migration_ingress" {
+  count = var.create_aurora_resources && var.create_migration_resources ? 1 : 0
+
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.migration_task_sg.id
-  security_group_id        = aws_security_group.aurora_sg.id
+  source_security_group_id = aws_security_group.migration_task_sg[0].id
+  security_group_id        = aws_security_group.aurora_sg[0].id
   description              = "Allow access from migration ECS tasks"
 }
 
@@ -161,6 +176,8 @@ resource "aws_security_group_rule" "aurora_migration_ingress" {
 # Server Lambda Aurora Access Security Group
 # -------------------------
 resource "aws_security_group" "server_lambda_aurora" {
+  count = var.create_lambda_resources ? 1 : 0
+
   name        = "${var.environment}-opennext-server-sg"
   description = "Security group allowing OpenNext server Lambda to access Aurora database"
   vpc_id      = aws_vpc.this.id
@@ -183,23 +200,27 @@ resource "aws_security_group" "server_lambda_aurora" {
 # Security group rule to allow ECS tasks to access Aurora database
 # ----------------------
 resource "aws_security_group_rule" "ecs_to_aurora" {
+  count = var.create_aurora_resources && var.create_ecs_resources ? 1 : 0
+
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.ecs_sg.id
-  security_group_id        = aws_security_group.aurora_sg.id
+  source_security_group_id = aws_security_group.ecs_sg[0].id
+  security_group_id        = aws_security_group.aurora_sg[0].id
   description              = "Allow access from backend ECS tasks to Aurora database"
 }
 
 # Security group rule to allow server Lambda to access Aurora database
 resource "aws_security_group_rule" "server_lambda_to_aurora" {
+  count = var.create_aurora_resources && var.create_lambda_resources ? 1 : 0
+
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.server_lambda_aurora.id
-  security_group_id        = aws_security_group.aurora_sg.id
+  source_security_group_id = aws_security_group.server_lambda_aurora[0].id
+  security_group_id        = aws_security_group.aurora_sg[0].id
   description              = "Allow access from OpenNext server Lambda to Aurora database"
 }
 
@@ -230,6 +251,8 @@ resource "aws_subnet" "private" {
 # Aurora DB Subnet Group
 # ----------------------
 resource "aws_db_subnet_group" "aurora_subnet_group" {
+  count = var.create_aurora_resources ? 1 : 0
+
   name       = "${var.environment}-aurora-subnet-group"
   subnet_ids = aws_subnet.private[*].id
 
@@ -274,12 +297,12 @@ resource "aws_route_table_association" "public_assoc" {
 # NAT Gateways 
 # -------------
 resource "aws_eip" "nat" {
-  count  = var.az_count
+  count  = local.nat_gateway_count
   domain = "vpc"
 }
 
 resource "aws_nat_gateway" "nat" {
-  count         = var.az_count
+  count         = local.nat_gateway_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
   tags          = { Name = "open-jii-nat-${count.index}-${var.environment}" }
@@ -298,7 +321,8 @@ resource "aws_route" "private_nat" {
   count                  = var.az_count
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.nat[count.index].id
+  # Use modulo to distribute subnets across available NAT gateways
+  nat_gateway_id = aws_nat_gateway.nat[count.index % local.nat_gateway_count].id
 }
 
 resource "aws_route_table_association" "private_assoc" {

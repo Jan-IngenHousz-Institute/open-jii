@@ -6,6 +6,7 @@ import { streamToBuffer } from "../../../../common/utils/stream-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 export interface UploadAmbyteFilesResponse {
   uploadId?: string;
@@ -20,30 +21,57 @@ export class UploadAmbyteDataUseCase {
   static readonly MAX_FILE_COUNT = 1000;
   static readonly UPLOADS_VOLUME_NAME = "data-uploads";
 
-  constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+  ) {}
 
   /**
    * Prepares the environment for file uploads by ensuring the required volume exists
    * This method should be called before starting the file upload process
    *
    * @param experimentId - ID of the experiment
-   * @param experimentName - Name of the experiment
+   * @param userId - ID of the user making the request
    * @returns Result indicating success or failure of the preparation
    */
   async preexecute(
     experimentId: string,
-    experimentName: string,
+    userId: string,
   ): Promise<
     Result<{
+      experiment: ExperimentDto;
       volumeName: string;
       volumeExists: boolean;
       volumeCreated: boolean;
       directoryName: string;
     }>
   > {
-    this.logger.log(
-      `Preparing upload environment for experiment ${experimentName} (${experimentId})`,
-    );
+    this.logger.log(`Preparing upload environment for experiment ${experimentId}`);
+
+    // Check access and get experiment
+    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+
+    if (accessResult.isFailure()) {
+      return failure(AppError.internal("Failed to verify experiment access"));
+    }
+
+    const { experiment, hasAccess } = accessResult.value;
+
+    if (!experiment) {
+      return failure(AppError.notFound("Experiment not found"));
+    }
+
+    if (!hasAccess) {
+      return failure(AppError.forbidden("Access denied to this experiment"));
+    }
+
+    if (experiment.status === "archived") {
+      return failure(AppError.forbidden("Cannot upload data to archived experiments"));
+    }
+
+    if (!experiment.schemaName) {
+      return failure(AppError.internal("Experiment schema not provisioned"));
+    }
 
     // Generate unique directory name
     // Format: upload_YYYYMMDD_HHMMSS
@@ -58,15 +86,15 @@ export class UploadAmbyteDataUseCase {
 
     // Check if volume already exists
     const getVolumeResult = await this.databricksPort.getExperimentVolume(
-      experimentName,
-      experimentId,
+      experiment.schemaName,
       volumeName,
     );
 
     // If volume exists, return success
     if (getVolumeResult.isSuccess()) {
-      this.logger.log(`Volume "${volumeName}" already exists for experiment ${experimentName}`);
+      this.logger.log(`Volume "${volumeName}" already exists for schema ${experiment.schemaName}`);
       return success({
+        experiment,
         volumeName,
         volumeExists: true,
         volumeCreated: false,
@@ -76,21 +104,21 @@ export class UploadAmbyteDataUseCase {
 
     // Volume doesn't exist, create it
     this.logger.log(
-      `Volume "${volumeName}" doesn't exist for experiment ${experimentName}, creating it now`,
+      `Volume "${volumeName}" doesn't exist for schema ${experiment.schemaName}, creating it now`,
     );
 
     const createVolumeResult = await this.databricksPort.createExperimentVolume(
-      experimentName,
-      experimentId,
+      experiment.schemaName,
       volumeName,
-      `Ambyte data uploads volume for experiment ${experimentName}`,
+      `Ambyte data uploads volume for experiment ${experimentId}`,
     );
 
     if (createVolumeResult.isSuccess()) {
       this.logger.log(
-        `Successfully created volume "${volumeName}" for experiment ${experimentName}`,
+        `Successfully created volume "${volumeName}" for schema ${experiment.schemaName}`,
       );
       return success({
+        experiment,
         volumeName,
         volumeExists: false,
         volumeCreated: true,
@@ -98,7 +126,7 @@ export class UploadAmbyteDataUseCase {
       });
     } else {
       this.logger.error(
-        `Failed to create volume "${volumeName}" for experiment ${experimentName}: ${createVolumeResult.error.message}`,
+        `Failed to create volume "${volumeName}" for schema ${experiment.schemaName}: ${createVolumeResult.error.message}`,
       );
       return failure(createVolumeResult.error);
     }
@@ -109,8 +137,7 @@ export class UploadAmbyteDataUseCase {
    */
   async execute(
     file: { filename: string; encoding: string; mimetype: string; stream: NodeJS.ReadableStream },
-    experimentId: string,
-    experimentName: string,
+    experiment: ExperimentDto,
     sourceType: string | undefined,
     directoryName: string,
     successfulUploads: { fileName: string; filePath: string }[],
@@ -149,6 +176,16 @@ export class UploadAmbyteDataUseCase {
       return;
     }
 
+    if (!experiment.schemaName) {
+      this.logger.error(`Experiment ${experiment.id} has no schema name`);
+      errors.push({
+        fileName: file.filename,
+        error: "Experiment schema not provisioned",
+      });
+      file.stream.resume();
+      return;
+    }
+
     // Convert stream to buffer and upload the file to Databricks
     const buffer = await streamToBuffer(file.stream, {
       maxSize: UploadAmbyteDataUseCase.MAX_FILE_SIZE,
@@ -162,8 +199,7 @@ export class UploadAmbyteDataUseCase {
 
     this.logger.log(`Uploading file to Databricks: ${trimmedFileName}`);
     const uploadResult = await this.databricksPort.uploadExperimentData(
-      experimentId,
-      experimentName,
+      experiment.schemaName,
       sourceType,
       directoryName,
       trimmedFileName,
@@ -177,7 +213,7 @@ export class UploadAmbyteDataUseCase {
       });
 
       this.logger.log(
-        `Successfully uploaded Ambyte data file "${trimmedFileName}" to experiment ${experimentName} (${experimentId})`,
+        `Successfully uploaded Ambyte data file "${trimmedFileName}" to experiment ${experiment.id}`,
       );
     } else {
       errors.push({
@@ -217,20 +253,22 @@ export class UploadAmbyteDataUseCase {
     }
 
     // Trigger ambyte processing job after successful file upload
-    this.logger.log(
-      `Triggering ambyte processing job for experiment ${experiment.name} (${experiment.id})`,
-    );
+    this.logger.log(`Triggering ambyte processing job for experiment ${experiment.id}`);
 
-    const jobResult = await this.databricksPort.triggerAmbyteProcessingJob(
-      experiment.id,
-      experiment.name,
-      {
-        EXPERIMENT_ID: experiment.id,
-        EXPERIMENT_NAME: experiment.name,
-        YEAR_PREFIX: "2025",
-        UPLOAD_DIRECTORY: directoryName,
-      },
-    );
+    if (!experiment.schemaName) {
+      return failure(
+        AppError.internal(
+          `Experiment ${experiment.id} does not have a schema name. The experiment may not be fully provisioned.`,
+        ),
+      );
+    }
+
+    const jobResult = await this.databricksPort.triggerAmbyteProcessingJob(experiment.schemaName, {
+      EXPERIMENT_ID: experiment.id,
+      EXPERIMENT_NAME: experiment.name,
+      YEAR_PREFIX: "2025",
+      UPLOAD_DIRECTORY: directoryName,
+    });
 
     if (jobResult.isSuccess()) {
       this.logger.log(
@@ -287,7 +325,9 @@ export class UploadAmbyteDataUseCase {
     if (fileName.includes("/")) {
       const pattern = /Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
       const ambyteMatch = pattern.exec(fileName);
-      return ambyteMatch ? ambyteMatch[0] : fileName;
+      if (ambyteMatch) {
+        return ambyteMatch[0];
+      }
     }
 
     // No path in filename - construct one based on the pattern

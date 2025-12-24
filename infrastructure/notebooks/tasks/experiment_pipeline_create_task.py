@@ -6,6 +6,7 @@ and triggers its initial execution with comprehensive error handling and monitor
 """
 
 import logging
+import hashlib
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
@@ -36,18 +37,44 @@ class PipelineConfig:
     experiment_pipeline_path: str
     slack_channel: str
     environment: str = "DEV"
+    experiment_number: Optional[int] = None  # Sequential experiment number
+    
+    def _generate_hash(self) -> str:
+        """Generate a consistent 12-character hash from experiment_id."""
+        # Use SHA256 and take first 12 characters for consistency
+        hash_obj = hashlib.sha256(self.experiment_id.encode('utf-8'))
+        return hash_obj.hexdigest()[:12]
     
     @property
     def experiment_schema(self) -> str:
-        """Derived schema name for the experiment."""
-        clean_name = self.experiment_name.lower().strip().replace(' ', '_')
-        return f"exp_{clean_name}_{self.experiment_id}"
+        """
+        Derived schema name for the experiment.
+        Format: exp_{padded_number}_{12char_hash}
+        Example: exp_00001_a1b2c3d4e5f6
+        """
+        hash_suffix = self._generate_hash()
+        if self.experiment_number is not None:
+            # Use provided experiment number, padded to 5 digits
+            padded_num = str(self.experiment_number).zfill(5)
+            return f"exp_{padded_num}_{hash_suffix}"
+        else:
+            # Fallback: use full hash (backwards compatibility)
+            return f"exp_{hash_suffix}"
     
     @property
     def pipeline_name(self) -> str:
-        """Standardized pipeline name."""
-        clean_name = self.experiment_name.lower().strip().replace(' ', '_')
-        return f"exp-{clean_name}-DLT-Pipeline-{self.environment.upper()}"
+        """
+        Standardized pipeline name.
+        Format: Experiment-DLT-{ENV}-{padded_number}-{12char_hash}
+        Example: Experiment-DLT-DEV-00001-a1b2c3d4e5f6
+        """
+        hash_suffix = self._generate_hash()
+        if self.experiment_number is not None:
+            padded_num = str(self.experiment_number).zfill(5)
+            return f"Experiment-DLT-{self.environment.upper()}-{padded_num}-{hash_suffix}"
+        else:
+            # Fallback for experiments without numbers
+            return f"Experiment-DLT-{self.environment.upper()}-{hash_suffix}"
     
     def validate(self) -> None:
         """Validate required configuration parameters."""
@@ -74,22 +101,68 @@ class PipelineCreationResult:
 
 # COMMAND ----------
 
+# DBTITLE 1,Helper Functions
+def get_next_experiment_number(catalog_name: str) -> int:
+    """
+    Determine the next experiment number by counting existing exp_ schemas.
+    
+    Args:
+        catalog_name: Name of the catalog to check
+        
+    Returns:
+        Next sequential experiment number (1-based)
+    """
+    try:
+        # Query to count existing experiment schemas
+        # Schemas follow the pattern: exp_NNNNN_* or exp_*
+        schemas_df = spark.sql(f"SHOW SCHEMAS IN {catalog_name}")
+        
+        # Count schemas that start with 'exp_'
+        exp_schemas = [
+            row.databaseName for row in schemas_df.collect() 
+            if row.databaseName.startswith('exp_')
+        ]
+        
+        # The next number is the count + 1
+        next_number = len(exp_schemas) + 1
+        
+        logger.info(f"Found {len(exp_schemas)} existing experiment schemas")
+        logger.info(f"Next experiment number: {next_number}")
+        
+        return next_number
+        
+    except Exception as e:
+        logger.error(f"Failed to determine experiment number: {e}")
+        logger.warning("Falling back to None (will use hash-only format)")
+        return None
+
+# COMMAND ----------
+
 # DBTITLE 1,Parameter Extraction and Validation
 def extract_parameters() -> PipelineConfig:
     """Extract and validate parameters from Databricks widgets."""
     try:
+        catalog_name = dbutils.widgets.get("catalog_name")
+        
+        # Auto-determine experiment number by counting existing schemas
+        experiment_number = get_next_experiment_number(catalog_name)
+        
         config = PipelineConfig(
             experiment_id=dbutils.widgets.get("experiment_id"),
             experiment_name=dbutils.widgets.get("experiment_name"),
-            catalog_name=dbutils.widgets.get("catalog_name"),
+            catalog_name=catalog_name,
             central_schema=dbutils.widgets.get("central_schema"),
             experiment_pipeline_path=dbutils.widgets.get("experiment_pipeline_path"),
             slack_channel=dbutils.widgets.get("slack_channel"),
-            environment=dbutils.widgets.get("environment") if dbutils.widgets.get("environment") else "DEV"
+            environment=dbutils.widgets.get("environment") if dbutils.widgets.get("environment") else "DEV",
+            experiment_number=experiment_number
         )
         
         config.validate()
         logger.info(f"Configuration validated for experiment: {config.experiment_id}")
+        logger.info(f"Experiment number: {experiment_number}")
+        logger.info(f"Schema name: {config.experiment_schema}")
+        logger.info(f"Pipeline name: {config.pipeline_name}")
         return config
         
     except Exception as e:
@@ -318,6 +391,14 @@ def main() -> None:
             print(f"Latest Update State: {status['latest_update']['state']}")
             
         logger.info("Pipeline operation completed successfully")
+        
+        # Set task values for downstream tasks to access
+        dbutils.jobs.taskValues.set(key="pipeline_id", value=result.pipeline_id)
+        dbutils.jobs.taskValues.set(key="schema_name", value=result.config.experiment_schema)
+        dbutils.jobs.taskValues.set(key="pipeline_name", value=result.config.pipeline_name)
+        dbutils.jobs.taskValues.set(key="was_existing", value=str(result.was_existing))
+        
+        logger.info(f"Task values set: pipeline_id={result.pipeline_id}, schema_name={result.config.experiment_schema}")
         
     except Exception as e:
         logger.error(f"Pipeline operation failed: {e}")

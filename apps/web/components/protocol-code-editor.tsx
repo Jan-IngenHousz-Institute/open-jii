@@ -194,7 +194,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     setEditorCode(newValue);
   };
 
-  const handleEditorMount: OnMount = (editor, monaco) => {
+  const handleEditorMount = (editor: IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
   };

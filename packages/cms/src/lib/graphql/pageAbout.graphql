@@ -11,6 +11,13 @@ fragment PageAboutFields on PageAbout {
   title
   description {
     json
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
   }
   image {
     url

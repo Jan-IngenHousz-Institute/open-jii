@@ -19,10 +19,7 @@ export class DatabricksTablesService {
     private readonly configService: DatabricksConfigService,
   ) {}
 
-  async listTables(
-    experimentName: string,
-    experimentId: string,
-  ): Promise<Result<ListTablesResponse>> {
+  async listTables(schemaName: string): Promise<Result<ListTablesResponse>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.authService.getAccessToken();
@@ -32,8 +29,6 @@ export class DatabricksTablesService {
 
         const token = tokenResult.value;
         const host = this.configService.getHost();
-        const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-        const schemaName = `exp_${cleanName}_${experimentId}`;
         const apiUrl = `${host}${DatabricksTablesService.TABLES_ENDPOINT}`;
 
         this.logger.debug(`Listing tables for schema ${schemaName}`);
@@ -45,6 +40,7 @@ export class DatabricksTablesService {
           params: {
             catalog_name: this.configService.getCatalogName(),
             schema_name: schemaName,
+            omit_columns: false, // Include column information in the response
           },
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
         });
@@ -58,6 +54,7 @@ export class DatabricksTablesService {
             table_type: table.table_type,
             comment: table.comment,
             created_at: table.created_at,
+            columns: table.columns,
             properties: table.properties,
           })),
         };

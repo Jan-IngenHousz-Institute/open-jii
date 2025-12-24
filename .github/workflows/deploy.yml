@@ -1,0 +1,137 @@
+# Deployment Workflow
+# Main orchestrator for infrastructure and application deployments
+
+name: Deployment Workflow
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment (dev, staging, prod)"
+        required: true
+        type: string
+      deploy_infrastructure:
+        description: "Whether to deploy infrastructure"
+        required: false
+        type: boolean
+        default: true
+      deploy_all:
+        description: "Whether to deploy all applications regardless of changes"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    if: inputs.deploy_infrastructure
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/tofu.yml
+    with:
+      environment: ${{ inputs.environment }}
+      tofu_version: "1.9.0"
+    secrets: inherit
+
+  detect-changes:
+    name: Detect Changed Packages
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.detect.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+
+  database-migrations:
+    name: Database Migrations
+    needs: [deploy-infrastructure, detect-changes]
+    if: >-
+      always() &&
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), '@repo/database'))
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/database-migrations.yml
+    with:
+      environment: ${{ inputs.environment }}
+      timeout_minutes: 10
+    secrets: inherit
+
+  deploy-backend:
+    name: Deploy Backend
+    needs: [deploy-infrastructure, database-migrations, detect-changes]
+    if: >-
+      always() &&
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains('success,skipped', needs.database-migrations.result) &&
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend'))
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-frontend:
+    name: Deploy Frontend
+    needs:
+      [
+        deploy-infrastructure,
+        deploy-backend,
+        detect-changes,
+        database-migrations,
+      ]
+    if: >-
+      always() &&
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains('success,skipped', needs.database-migrations.result) &&
+      contains('success,skipped', needs.deploy-backend.result) &&
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web'))
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-docs:
+    name: Deploy Documentation
+    needs: [deploy-infrastructure, detect-changes]
+    if: >-
+      always() &&
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs'))
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-docs.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit

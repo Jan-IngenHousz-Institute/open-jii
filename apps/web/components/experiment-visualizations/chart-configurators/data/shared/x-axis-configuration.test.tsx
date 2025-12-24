@@ -1,8 +1,8 @@
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import XAxisConfiguration from "./x-axis-configuration";
@@ -24,7 +24,7 @@ beforeAll(() => {
 });
 
 // Mock table data
-const mockTable: SampleTable = {
+const mockTable: ExperimentTableWithColumns = {
   name: "test-table",
   tableMetadata: {
     columns: [],
@@ -33,10 +33,10 @@ const mockTable: SampleTable = {
   },
   tableRows: [],
   columns: [
-    { name: "time", type_name: "timestamp", type_text: "timestamp" },
-    { name: "temperature", type_name: "double", type_text: "double" },
-    { name: "humidity", type_name: "double", type_text: "double" },
-    { name: "pressure", type_name: "integer", type_text: "integer" },
+    { name: "time", type_name: "timestamp", type_text: "timestamp", position: 1 },
+    { name: "temperature", type_name: "double", type_text: "double", position: 2 },
+    { name: "humidity", type_name: "double", type_text: "double", position: 3 },
+    { name: "pressure", type_name: "integer", type_text: "integer", position: 4 },
   ],
 };
 
@@ -47,7 +47,7 @@ function TestWrapper({
   xAxisDataSources,
 }: {
   defaultValues?: Partial<ChartFormValues>;
-  table?: SampleTable;
+  table?: ExperimentTableWithColumns;
   xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
 }) {
   const methods = useForm<ChartFormValues>({
@@ -246,11 +246,7 @@ describe("XAxisConfiguration", () => {
       const triggers = screen.getAllByRole("combobox");
       const typeSelect = triggers.find((trigger) => {
         const text = trigger.textContent;
-        return (
-          (text?.includes("linear") ?? false) ||
-          (text?.includes("log") ?? false) ||
-          (text?.includes("date") ?? false)
-        );
+        return ["linear", "log", "date"].includes(text);
       });
 
       if (typeSelect) {
@@ -270,7 +266,7 @@ describe("XAxisConfiguration", () => {
       render(<TestWrapper />);
 
       const triggers = screen.getAllByRole("combobox");
-      const typeSelect = triggers.find((trigger) => trigger.textContent?.includes("linear"));
+      const typeSelect = triggers.find((trigger) => trigger.textContent.includes("linear"));
 
       if (typeSelect) {
         await user.click(typeSelect);
@@ -287,7 +283,7 @@ describe("XAxisConfiguration", () => {
       render(<TestWrapper />);
 
       const triggers = screen.getAllByRole("combobox");
-      const typeSelect = triggers.find((trigger) => trigger.textContent?.includes("linear"));
+      const typeSelect = triggers.find((trigger) => trigger.textContent.includes("linear"));
 
       if (typeSelect) {
         await user.click(typeSelect);

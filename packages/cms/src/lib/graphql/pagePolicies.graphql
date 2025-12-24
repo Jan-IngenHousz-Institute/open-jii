@@ -11,6 +11,13 @@ fragment PagePoliciesFields on PagePolicies {
   title
   content {
     json
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
   }
 }
 

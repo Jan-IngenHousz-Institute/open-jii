@@ -62,6 +62,8 @@ resource "databricks_mws_workspaces" "this" {
 }
 
 resource "databricks_credential" "kinesis" {
+  count = var.kinesis_role_arn != null && var.kinesis_role_name != null ? 1 : 0
+
   name     = "${var.kinesis_role_name}-${var.environment}"
   provider = databricks.workspace
   aws_iam_role {

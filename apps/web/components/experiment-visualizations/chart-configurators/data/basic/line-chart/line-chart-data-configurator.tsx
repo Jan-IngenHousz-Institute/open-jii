@@ -1,8 +1,8 @@
 "use client";
 
+import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
-import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import XAxisConfiguration from "../../shared/x-axis-configuration";
@@ -10,7 +10,7 @@ import YAxisConfiguration from "../../shared/y-axis-configuration";
 
 interface LineChartDataConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
-  table: SampleTable;
+  table: ExperimentTableWithColumns;
 }
 
 export default function LineChartDataConfigurator({ form, table }: LineChartDataConfiguratorProps) {

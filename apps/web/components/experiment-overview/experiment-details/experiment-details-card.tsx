@@ -71,9 +71,9 @@ export function ExperimentDetailsCard({
         {/* Collapsible Content on Mobile, Always Visible on Desktop */}
         <div className={`md:block ${isSidebarCollapsed ? "hidden" : "block"}`}>
           <CardContent className="space-y-4">
-            <div>
+            <div className="space-y-1">
               <h4 className="text-sm font-medium">{t("experimentId")}</h4>
-              <p className="text-muted-foreground">{experiment.id}</p>
+              <p className="text-muted-foreground text-sm">{experiment.id}</p>
             </div>
 
             <ExperimentLocationsSection
@@ -83,19 +83,19 @@ export function ExperimentDetailsCard({
               isArchived={isArchived}
             />
 
-            <div>
+            <div className="space-y-1">
               <h4 className="text-sm font-medium">{t("updated")}</h4>
-              <p className="text-muted-foreground">{formatDate(experiment.updatedAt)}</p>
+              <p className="text-muted-foreground text-sm">{formatDate(experiment.updatedAt)}</p>
             </div>
 
-            <div>
+            <div className="space-y-1">
               <h4 className="text-sm font-medium">{t("created")}</h4>
-              <p className="text-muted-foreground">{formatDate(experiment.createdAt)}</p>
+              <p className="text-muted-foreground text-sm">{formatDate(experiment.createdAt)}</p>
             </div>
 
-            <div>
+            <div className="space-y-1">
               <h4 className="text-sm font-medium">{t("createdBy")}</h4>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {experiment.ownerFirstName} {experiment.ownerLastName}
               </p>
             </div>

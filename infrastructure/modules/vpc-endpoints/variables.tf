@@ -32,3 +32,22 @@ variable "security_group_ids" {
   description = "List of security group IDs to attach to interface endpoints (e.g., the default VPC SG)"
   type        = list(string)
 }
+
+# Feature toggles for VPC endpoints
+variable "create_s3_endpoint" {
+  description = "Whether to create S3 VPC endpoint (Gateway type)"
+  type        = bool
+  default     = true
+}
+
+variable "create_sts_endpoint" {
+  description = "Whether to create STS VPC endpoint (Interface type)"
+  type        = bool
+  default     = true
+}
+
+variable "create_kinesis_endpoint" {
+  description = "Whether to create Kinesis Streams VPC endpoint (Interface type)"
+  type        = bool
+  default     = true
+}

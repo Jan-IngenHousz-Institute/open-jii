@@ -2,17 +2,13 @@
 # This module creates an SSM parameter that can be read by any principal with appropriate IAM permissions
 
 resource "aws_ssm_parameter" "parameter" {
-  name        = var.parameter_name
-  description = var.description
-  type        = var.parameter_type
-  value       = var.parameter_value
-  tier        = var.tier
+  for_each = var.parameters
 
-  tags = merge(
-    {
-      Name      = var.parameter_name
-      ManagedBy = "Terraform"
-    },
-    var.tags
-  )
+  name        = each.value.name
+  description = each.value.description
+  type        = each.value.type
+  value       = each.value.value
+  tier        = each.value.tier
+
+  tags = var.tags
 }

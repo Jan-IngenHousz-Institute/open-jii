@@ -63,18 +63,15 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Trigger the ambyte processing Databricks job with the specified parameters
    */
   async triggerAmbyteProcessingJob(
-    experimentId: string,
-    experimentName: string,
+    schemaName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>> {
-    // Construct experiment schema like other methods in this adapter
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const experimentSchema = `exp_${cleanName}_${experimentId}`;
+    this.logger.log(`Triggering ambyte processing job for schema ${schemaName}`);
 
     // Add experiment schema to params
     const jobParams = {
       ...params,
-      EXPERIMENT_SCHEMA: experimentSchema,
+      EXPERIMENT_SCHEMA: schemaName,
     };
 
     const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
@@ -118,19 +115,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Execute a SQL query in an experiment schema with table name convenience
-   */
-  async executeExperimentSqlQuery(
-    experimentName: string,
-    experimentId: string,
-    sqlStatement: string,
-  ): Promise<Result<SchemaData>> {
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
-    return this.executeSqlQuery(schemaName, sqlStatement);
-  }
-
-  /**
    * Download experiment data using EXTERNAL_LINKS disposition for large datasets
    */
   async downloadExperimentData(
@@ -149,11 +133,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * List tables in the schema for a specific experiment
    */
-  async listTables(
-    experimentName: string,
-    experimentId: string,
-  ): Promise<Result<ListTablesResponse>> {
-    return this.tablesService.listTables(experimentName, experimentId);
+  async listTables(schemaName: string): Promise<Result<ListTablesResponse>> {
+    return this.tablesService.listTables(schemaName);
   }
 
   /**
@@ -161,13 +142,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    */
   async validateDataSources(
     dataConfig: ExperimentVisualizationDto["dataConfig"],
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
   ): Promise<Result<boolean>> {
-    this.logger.log(`Validating data sources for experiment ${experimentName} (${experimentId})`);
+    this.logger.log(`Validating data sources for schema ${schemaName}`);
 
     // Check if table exists in Databricks
-    const tablesResult = await this.listTables(experimentName, experimentId);
+    const tablesResult = await this.listTables(schemaName);
 
     if (tablesResult.isFailure()) {
       this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
@@ -179,17 +159,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     );
 
     if (!tableExists) {
-      this.logger.warn(
-        `Table '${dataConfig.tableName}' does not exist in experiment ${experimentName}`,
-      );
+      this.logger.warn(`Table '${dataConfig.tableName}' does not exist in schema ${schemaName}`);
       return failure(
         AppError.badRequest(`Table '${dataConfig.tableName}' does not exist in this experiment`),
       );
     }
 
     // Check if columns exist in the table by querying the table schema
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
     const schemaQuery = `DESCRIBE ${dataConfig.tableName}`;
 
     this.logger.debug(`Executing schema query: ${schemaQuery} in schema: ${schemaName}`);
@@ -236,8 +212,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Upload a file to Databricks for a specific experiment.
    * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
    *
-   * @param experimentId - ID of the experiment
-   * @param experimentName - Name of the experiment for schema construction
+   * @param schemaName - Schema name of the experiment
    * @param sourceType - Type of data source (e.g., 'ambyte')
    * @param directoryName - Unique directory name for this upload session
    * @param fileName - Name of the file
@@ -245,16 +220,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * @returns Result containing the upload response
    */
   async uploadExperimentData(
-    experimentId: string,
-    experimentName: string,
+    schemaName: string,
     sourceType: string,
     directoryName: string,
     fileName: string,
     fileBuffer: Buffer,
   ): Promise<Result<UploadFileResponse>> {
-    // Construct schema name following the pattern in experiment_pipeline_create_task.py
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
     const catalogName = this.configService.getCatalogName();
 
     // Construct the full path
@@ -264,38 +235,26 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Trigger an experiment pipeline by name
-   * Looks up a pipeline by name and starts an update
+   * Trigger an experiment pipeline by ID
+   * Starts a pipeline update using the stored pipeline ID
    *
-   * @param experimentName - Name of the experiment
-   * @param _experimentId - ID of the experiment for logging purposes
+   * @param pipelineId - The Databricks pipeline ID
+   * @param experimentId - ID of the experiment for logging purposes
    * @param options - Optional parameters for the pipeline update
    * @returns Result containing the pipeline update response or an error
    */
   async triggerExperimentPipeline(
-    experimentName: string,
-    _experimentId: string,
+    pipelineId: string,
+    experimentId: string,
     options?: {
       fullRefresh?: boolean;
       fullRefreshSelection?: string[];
       refreshSelection?: string[];
     },
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    // Construct the pipeline name as per the Python notebook format
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+    this.logger.log(`Triggering pipeline ${pipelineId} for experiment ${experimentId}`);
 
-    // Get the pipeline ID by name
-    const pipelineResult = await this.pipelinesService.getPipelineByName({ pipelineName });
-
-    if (pipelineResult.isFailure()) {
-      return pipelineResult;
-    }
-
-    const pipeline = pipelineResult.value;
-    const pipelineId = pipeline.pipeline_id;
-
-    // Start the pipeline update with optional parameters
+    // Start the pipeline update using the stored pipeline ID
     return this.pipelinesService.startPipelineUpdate({
       pipelineId,
       cause: "API_CALL",
@@ -308,33 +267,33 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
+   * @param pipelineId - The Databricks pipeline ID
    * @returns Result containing the pipeline update response or an error
    */
   async triggerExperimentPipelineSilverRefresh(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
+    pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    return this.refreshSilverData(experimentName, experimentId);
+    return this.refreshSilverData(schemaName, pipelineId);
   }
 
   /**
    * Refresh all silver quality tables for an experiment with full refresh
    * This is a convenience method that wraps triggerExperimentPipelineSilverRefresh
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
+   * @param pipelineId - The Databricks pipeline ID
    * @returns Result containing the pipeline update response or an error
    */
   async refreshSilverData(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
+    pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log(`Refreshing silver data for experiment ${experimentName} (${experimentId})`);
+    this.logger.log(`Refreshing silver data for schema ${schemaName} using pipeline ${pipelineId}`);
 
     // First, get the list of tables in the experiment
-    const tablesResult = await this.listTables(experimentName, experimentId);
+    const tablesResult = await this.listTables(schemaName);
 
     if (tablesResult.isFailure()) {
       this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
@@ -347,10 +306,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       .map((table) => table.name);
 
     if (silverTables.length === 0) {
-      this.logger.warn(`No silver quality tables found for experiment ${experimentName}`);
-      return failure(
-        AppError.notFound(`No silver quality tables found for experiment ${experimentName}`),
-      );
+      this.logger.warn(`No silver quality tables found for schema ${schemaName}`);
+      return failure(AppError.notFound(`No silver quality tables found for schema ${schemaName}`));
     }
 
     this.logger.log(
@@ -358,7 +315,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     );
 
     // Trigger the pipeline with full refresh for silver tables
-    return this.triggerExperimentPipeline(experimentName, experimentId, {
+    // Use schemaName for experimentId logging since we only have schemaName available
+    return this.triggerExperimentPipeline(pipelineId, schemaName, {
       fullRefreshSelection: silverTables,
     });
   }
@@ -376,25 +334,18 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * Create a new managed volume under an experiment schema
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
    * @param volumeName - Name of the volume to create
    * @param comment - Optional comment for the volume
    * @returns Result containing the created volume information
    */
   async createExperimentVolume(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
     volumeName: string,
     comment?: string,
   ): Promise<Result<VolumeResponse>> {
-    this.logger.log(
-      `Creating managed volume '${volumeName}' for experiment ${experimentName} (${experimentId})`,
-    );
+    this.logger.log(`Creating managed volume '${volumeName}' for schema ${schemaName}`);
 
-    // Construct schema name following the pattern in experiment_pipeline_create_task.py
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
     const catalogName = this.configService.getCatalogName();
 
     // Create volume parameters
@@ -416,23 +367,16 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * Get a volume from an experiment schema
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
    * @param volumeName - Name of the volume to retrieve
    * @returns Result containing the volume information
    */
   async getExperimentVolume(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
     volumeName: string,
   ): Promise<Result<VolumeResponse>> {
-    this.logger.log(
-      `Getting volume '${volumeName}' for experiment ${experimentName} (${experimentId})`,
-    );
+    this.logger.log(`Getting volume '${volumeName}' for schema ${schemaName}`);
 
-    // Construct schema name following the pattern in experiment_pipeline_create_task.py
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
     const catalogName = this.configService.getCatalogName();
 
     // Construct the full volume name
@@ -444,21 +388,15 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * Returns table metadata for a specific table in an experiment
    *
-   * @param experimentName - Name of the experiment
-   * @param experimentId - ID of the experiment
+   * @param schemaName - Schema name of the experiment
    * @param tableName - Name of the table
    */
   async getTableMetadata(
-    experimentName: string,
-    experimentId: string,
+    schemaName: string,
     tableName: string,
   ): Promise<Result<Map<string, string>>> {
-    this.logger.log(
-      `Checking metadata for experiment ${experimentName} (${experimentId}) table ${tableName}`,
-    );
+    this.logger.log(`Checking metadata for schema ${schemaName} table ${tableName}`);
 
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
     const schemaQuery = `DESCRIBE ${tableName}`;
 
     this.logger.debug(`Executing schema query: ${schemaQuery} in schema: ${schemaName}`);

@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { notFound } from "next/navigation";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
+import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import ExperimentDataPage from "./page";
 
@@ -33,28 +34,55 @@ vi.mock("~/hooks/useLocale", () => ({
   useLocale: () => "en-US",
 }));
 
-// Mock ExperimentDataSampleTables component
-vi.mock("~/components/experiment-data/experiment-data-sample-tables", () => ({
-  ExperimentDataSampleTables: ({
+// Mock useExperimentTables hook
+vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
+  useExperimentTables: vi.fn(),
+}));
+
+// Mock ExperimentDataTable component
+vi.mock("~/components/experiment-data/experiment-data-table", () => ({
+  ExperimentDataTable: ({
     experimentId,
-    sampleSize,
-    locale,
-    archived,
+    tableName,
+    displayName,
   }: {
     experimentId: string;
-    sampleSize: number;
-    locale: string;
-    archived: boolean;
+    tableName: string;
+    displayName?: string;
   }) => (
     <div
-      data-testid="experiment-data-sample-tables"
+      data-testid="experiment-data-table"
       data-experiment-id={experimentId}
-      data-sample-size={sampleSize}
-      data-locale={locale}
-      data-archived={archived}
-    />
+      data-table-name={tableName}
+      data-display-name={displayName}
+    >
+      Table: {displayName ?? tableName}
+    </div>
   ),
 }));
+
+// Mock UI components
+vi.mock("@repo/ui/components", async () => {
+  const actual = await vi.importActual("@repo/ui/components");
+  return {
+    ...actual,
+    NavTabs: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="nav-tabs">{children}</div>
+    ),
+    NavTabsList: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="nav-tabs-list">{children}</div>
+    ),
+    NavTabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => (
+      <button data-testid={`nav-tab-trigger-${value}`}>{children}</button>
+    ),
+    NavTabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => (
+      <div data-testid={`nav-tab-content-${value}`}>{children}</div>
+    ),
+    Skeleton: ({ className }: { className?: string }) => (
+      <div data-testid="skeleton" className={className} />
+    ),
+  };
+});
 
 // Mock DataUploadModal component
 vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () => ({
@@ -81,10 +109,19 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(),
 }));
 
+const mockTablesData = [
+  { name: "measurements", displayName: "Measurements", totalRows: 100 },
+  { name: "device", displayName: "Device", totalRows: 1 },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(useExperimentTables).mockReturnValue({
+    tables: mockTablesData,
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useExperimentTables>);
 });
-
 describe("<ExperimentDataPage />", () => {
   it("shows loading when experiment is loading", () => {
     vi.mocked(useExperiment).mockReturnValue({
@@ -99,10 +136,34 @@ describe("<ExperimentDataPage />", () => {
       />,
     );
 
-    expect(screen.getByText("loading")).toBeInTheDocument();
+    const skeletons = screen.getAllByTestId("skeleton");
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it("renders ErrorDisplay when there is an error loading", () => {
+  it("shows loading when tables are loading", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    vi.mocked(useExperimentTables).mockReturnValue({
+      tables: [],
+      isLoading: true,
+      error: null,
+    } as unknown as ReturnType<typeof useExperimentTables>);
+
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    const skeletons = screen.getAllByTestId("skeleton");
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
+
+  it("renders ErrorDisplay when there is an error loading experiment", () => {
     vi.mocked(useExperiment).mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -117,6 +178,29 @@ describe("<ExperimentDataPage />", () => {
 
     expect(screen.getByText("failedToLoad")).toBeInTheDocument();
     expect(screen.getByText("fail")).toBeInTheDocument();
+  });
+
+  it("renders ErrorDisplay when there is an error loading tables", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    vi.mocked(useExperimentTables).mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: new Error("tables fail"),
+    } as unknown as ReturnType<typeof useExperimentTables>);
+
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    expect(screen.getByText("failedToLoad")).toBeInTheDocument();
+    expect(screen.getByText("tables fail")).toBeInTheDocument();
   });
 
   it("shows notFound text when experiment data is missing", () => {
@@ -156,7 +240,7 @@ describe("<ExperimentDataPage />", () => {
     ).toThrow("notFound");
   });
 
-  it("renders data page with upload button and sample tables when experiment is archived", () => {
+  it("renders data page with upload button and tabs when experiment is archived", () => {
     vi.mocked(useExperiment).mockReturnValue({
       data: { body: { status: "archived" } },
       isLoading: false,
@@ -178,13 +262,76 @@ describe("<ExperimentDataPage />", () => {
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toBeDisabled();
 
-    // Check sample tables component is rendered with correct props
-    const sampleTables = screen.getByTestId("experiment-data-sample-tables");
-    expect(sampleTables).toBeInTheDocument();
-    expect(sampleTables).toHaveAttribute("data-experiment-id", "test-experiment-id");
-    expect(sampleTables).toHaveAttribute("data-sample-size", "5");
-    expect(sampleTables).toHaveAttribute("data-locale", "en-US");
-    expect(sampleTables).toHaveAttribute("data-archived", "true");
+    // Check tabs are rendered
+    expect(screen.getByTestId("nav-tabs")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-tabs-list")).toBeInTheDocument();
+  });
+
+  it("renders tab triggers with table names and row counts", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    expect(screen.getByTestId("nav-tab-trigger-measurements")).toBeInTheDocument();
+    expect(screen.getByText("Measurements (100)")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-tab-trigger-device")).toBeInTheDocument();
+    expect(screen.getByText("Device (1)")).toBeInTheDocument();
+  });
+
+  it("renders tab content with ExperimentDataTable for each table", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    const tabContent1 = screen.getByTestId("nav-tab-content-measurements");
+    expect(tabContent1).toBeInTheDocument();
+    const dataTable1 = tabContent1.querySelector('[data-testid="experiment-data-table"]');
+    expect(dataTable1).toHaveAttribute("data-experiment-id", "test-experiment-id");
+    expect(dataTable1).toHaveAttribute("data-table-name", "measurements");
+
+    const tabContent2 = screen.getByTestId("nav-tab-content-device");
+    expect(tabContent2).toBeInTheDocument();
+    const dataTable2 = tabContent2.querySelector('[data-testid="experiment-data-table"]');
+    expect(dataTable2).toHaveAttribute("data-experiment-id", "test-experiment-id");
+    expect(dataTable2).toHaveAttribute("data-table-name", "device");
+  });
+
+  it("shows no data message when tables array is empty", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    vi.mocked(useExperimentTables).mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperimentTables>);
+
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
   });
 
   it("opens and closes the upload modal when button is clicked", () => {

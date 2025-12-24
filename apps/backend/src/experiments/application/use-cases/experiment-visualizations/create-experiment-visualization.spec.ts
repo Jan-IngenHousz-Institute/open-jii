@@ -119,6 +119,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: true,
           hasArchiveAccess: true,
@@ -170,8 +171,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
       expect(checkAccessSpy).toHaveBeenCalledWith(experiment.id, testUserId);
       expect(validateDataSourcesSpy).toHaveBeenCalledWith(
         mockRequest.dataConfig,
-        "Test Experiment",
-        experiment.id,
+        expect.stringContaining("exp_test_experiment_"),
       );
       expect(createVisualizationSpy).toHaveBeenCalledWith(experiment.id, mockRequest, testUserId);
     });
@@ -238,6 +238,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: faker.string.uuid(), // Different user
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: false,
           hasArchiveAccess: false,
@@ -308,6 +309,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: true,
           hasArchiveAccess: true,
@@ -333,6 +335,80 @@ describe("CreateExperimentVisualizationUseCase", () => {
       expect(result.error.message).toBe("Table test_table does not exist");
     });
 
+    it("should fail when experiment has no schema name", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      // Arrange
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: {
+            id: experiment.id,
+            name: "Test Experiment",
+            description: "Test Description",
+            status: "active",
+            visibility: "private",
+            embargoUntil: new Date(),
+            createdBy: testUserId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            schemaName: null,
+          },
+          hasAccess: true,
+          hasArchiveAccess: true,
+          isAdmin: true,
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Experiment schema not provisioned");
+    });
+
+    it("should fail when experiment has no schema name", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      // Arrange
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: {
+            id: experiment.id,
+            name: "Test Experiment",
+            description: "Test Description",
+            status: "active",
+            visibility: "private",
+            embargoUntil: new Date(),
+            createdBy: testUserId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            schemaName: null,
+          },
+          hasAccess: true,
+          hasArchiveAccess: true,
+          isAdmin: true,
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Experiment schema not provisioned");
+    });
+
     it("should fail when repository create operation fails", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
@@ -352,6 +428,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
           },
           hasAccess: true,
           hasArchiveAccess: true,

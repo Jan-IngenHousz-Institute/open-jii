@@ -8,13 +8,16 @@ module "terraform_state_lock" {
   table_name = "terraform-state-lock"
 }
 
-# module "iam_oidc" {
-#   source     = "../../modules/iam-oidc"
-#   role_name  = "GithubActionsDeployAccess"
-#   repository = "Jan-IngenHousz-Institute/open-jii"
-#   branch     = "main"
-#   aws_region = var.aws_region
-# }
+module "iam_oidc" {
+  source     = "../../modules/iam-oidc"
+  role_name  = "GithubActionsDeployAccess"
+  repository = "Jan-IngenHousz-Institute/open-jii"
+  branch     = "main"
+  aws_region = var.aws_region
+
+  environment        = var.environment
+  github_environment = var.environment
+}
 
 module "cloudwatch" {
   source                 = "../../modules/cloudwatch"
@@ -212,6 +215,16 @@ module "external_location" {
   comment                 = "External location for ${var.environment} environment data"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
 
+  grants = {
+    node_service_principal = {
+      principal = module.node_service_principal.service_principal_application_id
+      privileges = [
+        "READ_FILES",
+        "WRITE_FILES"
+      ]
+    }
+  }
+
   providers = {
     databricks.workspace = databricks.workspace
   }
@@ -320,9 +333,9 @@ module "pipeline_scheduler" {
   name        = "Pipeline-Scheduler-PROD"
   description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
 
-  # Schedule: Every 30 minutes (0, 30) between 9am and 9pm (UTC)
+  # Schedule: Every 15 minutes (0, 15, 30, 45) between 9am and 9pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,30 6-18 * * ?"
+  schedule = "0 0,15,30,45 6-18 * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
@@ -368,6 +381,70 @@ module "pipeline_scheduler" {
     on_start = [
       module.slack_notification_destination.notification_destination_id
     ]
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
+}
+
+module "centrum_backup_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Centrum-Backup-Job-PROD"
+  description = "Backs up raw_data from centrum schema every 8 hours to dedicated backup location"
+
+  # Schedule: Every 8 hours at 00:00, 08:00, and 16:00 UTC
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0 0,8,16 * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 120000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "backup_centrum_raw_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/centrum_backup_task"
+
+      parameters = {
+        "CATALOG_NAME"    = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA"  = "centrum"
+        "SOURCE_TABLE"    = "raw_data"
+        "BACKUP_LOCATION" = "s3://${var.centralized_metastore_bucket_name}/external/${var.environment}/openjii_data_backups/centrum_raw_data"
+        "ENVIRONMENT"     = upper(var.environment)
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
     on_failure = [
       module.slack_notification_destination.notification_destination_id
     ]
@@ -1339,5 +1416,140 @@ module "location_service" {
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "location-service"
+  }
+}
+
+# OpenNext Infrastructure Outputs
+module "ssm_opennext_outputs" {
+  source = "../../modules/ssm-parameter"
+
+  parameters = {
+    assets_bucket = {
+      name        = "/opennext/${var.environment}/assets-bucket"
+      value       = module.opennext.assets_bucket_name
+      description = "S3 bucket name for OpenNext static assets"
+      type        = "String"
+    }
+    cache_bucket = {
+      name        = "/opennext/${var.environment}/cache-bucket"
+      value       = module.opennext.cache_bucket_name
+      description = "S3 bucket name for OpenNext cache"
+      type        = "String"
+    }
+    # Frontend Lambdas Outputs
+    server_function = {
+      name        = "/opennext/${var.environment}/server-function"
+      value       = module.opennext.server_function_name
+      description = "Lambda function name for OpenNext server"
+      type        = "String"
+    }
+    image_function = {
+      name        = "/opennext/${var.environment}/image-function"
+      value       = module.opennext.image_function_name
+      description = "Lambda function name for OpenNext image optimization"
+      type        = "String"
+    }
+    revalidation_function = {
+      name        = "/opennext/${var.environment}/revalidation-function"
+      value       = module.opennext.revalidation_function_name
+      description = "Lambda function name for OpenNext revalidation"
+      type        = "String"
+    }
+    warmer_function = {
+      name        = "/opennext/${var.environment}/warmer-function"
+      value       = module.opennext.warmer_function_name
+      description = "Lambda function name for OpenNext warmer"
+      type        = "String"
+    }
+    cloudfront_distribution_id = {
+      name        = "/opennext/${var.environment}/cloudfront-distribution-id"
+      value       = module.opennext.cloudfront_distribution_id
+      description = "CloudFront distribution ID for OpenNext"
+      type        = "String"
+    }
+    # Backend ECS Outputs
+    backend_task_definition_family = {
+      name        = "/backend/${var.environment}/ecs/task-definition-family"
+      value       = module.backend_ecs.ecs_task_definition_family
+      description = "ECS task definition family for backend service"
+      type        = "String"
+      tier        = "Standard"
+    }
+    backend_task_definition_arn = {
+      name        = "/backend/${var.environment}/ecs/task-definition-arn"
+      value       = module.backend_ecs.ecs_task_definition_arn
+      description = "Full ARN (family + revision) of backend ECS task definition"
+      type        = "String"
+      tier        = "Standard"
+    }
+    backend_container_name = {
+      name        = "/backend/${var.environment}/ecs/container-name"
+      value       = module.backend_ecs.container_name
+      description = "Primary container name for backend task definition"
+      type        = "String"
+      tier        = "Standard"
+    }
+    dynamodb_table = {
+      name        = "/opennext/${var.environment}/dynamodb-table-name"
+      value       = module.opennext.dynamodb_table_name
+      description = "DynamoDB table name for OpenNext cache/revalidation"
+      type        = "String"
+    }
+    # Database Migration ECS Outputs
+    migration_runner_ecr_repository = {
+      name        = "/migration/${var.environment}/ecr-repository-name"
+      value       = module.migration_runner_ecr.repository_name
+      description = "ECR repository name for database migrations Docker images"
+      type        = "String"
+    }
+    migration_runner_ecs_cluster = {
+      name        = "/migration/${var.environment}/ecs-cluster-name"
+      value       = module.migration_runner_ecs.ecs_cluster_name
+      description = "ECS cluster name for running database migrations"
+      type        = "String"
+    }
+    migration_runner_task_definition = {
+      name        = "/migration/${var.environment}/task-definition-family"
+      value       = module.migration_runner_ecs.ecs_task_definition_family
+      description = "Task definition family for database migrations"
+      type        = "String"
+    }
+    migration_runner_container = {
+      name        = "/migration/${var.environment}/container-name"
+      value       = module.migration_runner_ecs.container_name
+      description = "Name of the primary container in the ECS task definition for migrations"
+      type        = "String"
+    }
+    migration_runner_subnets = {
+      name        = "/migration/${var.environment}/subnets"
+      value       = jsonencode(module.vpc.private_subnets)
+      description = "Subnet IDs for the database migration task"
+      type        = "String"
+    }
+    migration_runner_security_group = {
+      name        = "/migration/${var.environment}/security-group-id"
+      value       = module.vpc.migration_task_security_group_id
+      description = "Security group ID for the database migration task"
+      type        = "String"
+    }
+    # Docusaurus Site Outputs
+    docs_bucket = {
+      name        = "/docs/${var.environment}/docs-bucket"
+      value       = module.docusaurus_s3.bucket_name
+      description = "S3 bucket name for Docusaurus static assets"
+      type        = "String"
+    }
+    docs_cloudfront_distribution_id = {
+      name        = "/docs/${var.environment}/cloudfront-distribution-id"
+      value       = module.docs_cloudfront.distribution_id
+      description = "CloudFront distribution ID for documentation site"
+      type        = "String"
+    }
+  }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "ssm-parameters"
   }
 }

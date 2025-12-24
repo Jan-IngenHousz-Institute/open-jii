@@ -2,7 +2,7 @@
 
 import EditVisualizationForm from "@/components/experiment-visualizations/edit-visualization-form";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentSampleData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { useLocale } from "@/hooks/useLocale";
 import { Eye, Loader2 } from "lucide-react";
@@ -39,8 +39,8 @@ export default function EditVisualizationPage() {
 
   const visualization = visualizationResponse?.body;
 
-  // Fetch sample data to get tables and columns
-  const { sampleTables, isLoading: isLoadingTables } = useExperimentSampleData(experimentId, 5);
+  // Fetch tables metadata
+  const { tables, isLoading: isLoadingTables } = useExperimentTables(experimentId);
 
   const handleSuccess = (_visualizationId: string) => {
     router.push(
@@ -90,7 +90,7 @@ export default function EditVisualizationPage() {
       <EditVisualizationForm
         experimentId={experimentId}
         visualization={visualization}
-        sampleTables={sampleTables}
+        tables={tables ?? []}
         onSuccess={handleSuccess}
         isLoading={isLoadingTables}
         isPreviewOpen={isPreviewOpen}

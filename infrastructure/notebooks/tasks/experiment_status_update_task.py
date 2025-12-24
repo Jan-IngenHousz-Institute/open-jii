@@ -57,6 +57,7 @@ logger = logging.getLogger("experiment_status_updater")
 
 # DBTITLE 1,Parameter Extraction
 
+
 # Mapping from Databricks result_state to ProvisioningStatus
 DATABRICKS_RESULT_STATE_TO_PROVISIONING_STATUS = {
     "success": ProvisioningStatus.SUCCESS,
@@ -133,13 +134,31 @@ def extract_parameters(dbutils) -> Dict[str, Any]:
     if not key_scope:
         raise ValueError("API key scope not provided. Please provide it as a widget parameter 'key_scope'.")
 
+    # Get pipeline_id and schema_name from task values (only available on SUCCESS)
+    pipeline_id = None
+    schema_name = None
+    try:
+        pipeline_id = dbutils.widgets.get("pipeline_id")
+        schema_name = dbutils.widgets.get("schema_name")
+        
+        if pipeline_id and schema_name:
+            logger.info(f"Retrieved widget values: pipeline_id={pipeline_id}, schema_name={schema_name}")
+        else:
+            logger.warning("pipeline_id and/or schema_name widgets are empty or not set.")
+    except Exception as e:
+        logger.warning(f"Could not retrieve pipeline_id and schema_name widgets: {e}")
+        pipeline_id = None
+        schema_name = None
+
     return {
         "webhook_url": webhook_url,
         "experiment_id": experiment_id,
         "job_run_id": job_run_id,
         "task_run_id": task_run_id,
         "status": normalized_status,
-        "key_scope": key_scope
+        "key_scope": key_scope,
+        "pipeline_id": pipeline_id if pipeline_id else None,
+        "schema_name": schema_name if schema_name else None
     }
 
 # COMMAND ----------
@@ -248,7 +267,7 @@ class WebhookClient:
 
 # DBTITLE 1,Status Update Function
 
-def create_status_payload(status: str, job_run_id: str, task_run_id: str) -> Dict[str, Any]:
+def create_status_payload(status: str, job_run_id: str, task_run_id: str, pipeline_id: Optional[str] = None, schema_name: Optional[str] = None) -> Dict[str, Any]:
     """
     Create payload for status update webhook.
     
@@ -256,18 +275,28 @@ def create_status_payload(status: str, job_run_id: str, task_run_id: str) -> Dic
         status: Provisioning status
         job_run_id: Job run ID
         task_run_id: Task run ID
+        pipeline_id: Optional pipeline ID from creation task
+        schema_name: Optional schema name from creation task
         
     Returns:
         Webhook payload
     """
     timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-    return {
+    payload = {
         "status": status,
         "timestamp": timestamp,
         "jobRunId": str(job_run_id),
         "taskRunId": str(task_run_id)
     }
+    
+    # Include pipeline_id and schema_name if provided
+    if pipeline_id:
+        payload["pipelineId"] = pipeline_id
+    if schema_name:
+        payload["schemaName"] = schema_name
+    
+    return payload
 
 # COMMAND ----------
 
@@ -292,7 +321,9 @@ def main() -> None:
         payload = create_status_payload(
             status=params["status"],
             job_run_id=params["job_run_id"],
-            task_run_id=params["task_run_id"]
+            task_run_id=params["task_run_id"],
+            pipeline_id=params.get("pipeline_id"),
+            schema_name=params.get("schema_name")
         )
         
         # Send update
