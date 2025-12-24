@@ -4,6 +4,7 @@
   "private": true,
   "description": "Databricks notebooks and Python packages for OpenJII",
   "scripts": {
+    "install": "command -v python3 >/dev/null 2>&1 && python3 -m pip install -r requirements.txt || echo 'Python3 not found, skipping Python package installation'",
     "build": "pnpm run build:multispeq && pnpm run build:ambyte && pnpm run build:enrich",
     "build:multispeq": "cd src/lib/multispeq && python3 -m build",
     "build:ambyte": "cd src/lib/ambyte && python3 -m build",
