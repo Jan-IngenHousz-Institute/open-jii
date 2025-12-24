@@ -3,10 +3,10 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
-%pip install mini-racer==0.12.4
-%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
+%pip install -q mini-racer==0.12.4
+%pip install -q /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
 # %pip install /Workspace/Shared/wheels/rpy2-3.6.4-py3-none-any.whl # Disabled R support for now, doesn't really work on serverless compute, maybe on custom clusters
-%pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
+%pip install -q /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 

@@ -415,7 +415,7 @@ describe("DeleteAnnotations", () => {
     expect(result.value.affectedRows).toBeGreaterThan(0);
 
     // Verify refreshSilverData was NOT called since pipelineId is null
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(refreshSpy).not.toHaveBeenCalled();
   });
 
@@ -459,7 +459,7 @@ describe("DeleteAnnotations", () => {
     expect(result.value.affectedRows).toBe(2);
 
     // Verify refreshSilverData was NOT called since pipelineId is null
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(refreshSpy).not.toHaveBeenCalled();
   });
 

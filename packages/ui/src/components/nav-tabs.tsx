@@ -15,7 +15,7 @@ const NavTabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn("bg-surface -ml-1 inline-flex gap-1 rounded-xl p-1", className)}
+    className={cn("bg-surface inline-flex gap-1 rounded-md p-1", className)}
     {...props}
   />
 ));
@@ -30,10 +30,13 @@ const NavTabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // pill-style buttons
-      "relative flex select-none items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+      "relative flex select-none items-center gap-2 rounded-sm px-4 py-2 text-sm font-medium transition-colors",
 
-      // active
-      "data-[state=active]:bg-jii-dark-green data-[state=active]:text-white",
+      // active — gradient top to bottom
+      "data-[state=active]:bg-gradient-to-b",
+      "data-[state=active]:from-sidebar-background",
+      "data-[state=active]:to-jii-dark-green",
+      "data-[state=active]:text-white",
 
       // inactive
       "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground",

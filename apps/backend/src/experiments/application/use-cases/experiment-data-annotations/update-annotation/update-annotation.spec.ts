@@ -394,7 +394,7 @@ describe("UpdateAnnotation", () => {
     expect(result.value.rowsAffected).toBe(1);
 
     // Verify refreshSilverData was NOT called since pipelineId is null
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(refreshSpy).not.toHaveBeenCalled();
   });
 
