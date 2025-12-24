@@ -7,10 +7,12 @@
     "build:multispeq": "cd multispeq && python3 -m build",
     "build:ambyte": "cd ambyte && python3 -m build",
     "build:enrich": "cd enrich && python3 -m build",
-    "clean": "npm run clean:multispeq && npm run clean:ambyte && npm run clean:enrich",
+    "build:openjii": "if [ -z \"$OPENJII_CATALOG\" ]; then echo 'Error: OPENJII_CATALOG environment variable is required'; exit 1; fi && cd openjii && python3 -m build",
+    "clean": "npm run clean:multispeq && npm run clean:ambyte && npm run clean:enrich && npm run clean:openjii",
     "clean:multispeq": "cd multispeq && rm -rf dist/ build/ *.egg-info/",
     "clean:ambyte": "cd ambyte && rm -rf dist/ build/ *.egg-info/",
-    "clean:enrich": "cd enrich && rm -rf dist/ build/ *.egg-info/"
+    "clean:enrich": "cd enrich && rm -rf dist/ build/ *.egg-info/",
+    "clean:openjii": "cd openjii && rm -rf dist/ build/ *.egg-info/"
   },
   "devDependencies": {},
   "private": true
