@@ -123,6 +123,13 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
             </p>
             <span className="hidden text-white sm:inline">•</span>
             <Link
+              href={buildHref("/cookie-settings")}
+              className="hover:text-jii-bright-green text-sm text-white transition-colors"
+            >
+              Cookie Settings
+            </Link>
+            <span className="hidden text-white sm:inline">•</span>
+            <Link
               href="https://github.com/Jan-IngenHousz-Institute/open-jii"
               target="_blank"
               rel="noopener noreferrer"

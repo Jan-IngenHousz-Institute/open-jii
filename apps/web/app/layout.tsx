@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { CookieBanner } from "../components/cookie-banner";
 import { PostHogProvider } from "../providers/PostHogProvider";
 import "./globals.css";
 
@@ -30,7 +31,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html>
       <body className="h-full">
-        <PostHogProvider>{children}</PostHogProvider>
+        <PostHogProvider>
+          {children}
+          <CookieBanner />
+        </PostHogProvider>
       </body>
     </html>
   );
