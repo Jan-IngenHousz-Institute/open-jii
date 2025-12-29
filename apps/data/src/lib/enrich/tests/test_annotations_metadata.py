@@ -13,7 +13,7 @@ class TestAnnotationsMetadata:
     def test_add_annotation_column_with_error(self):
         """Test annotation column when table doesn't exist"""
         from enrich.annotations_metadata import add_annotation_column, annotation_schema
-        from conftest import MockSparkDataFrame
+        from pyspark.sql import DataFrame as MockSparkDataFrame
         
         # Create a simple DataFrame using our mock
         df = MockSparkDataFrame([(1, "test"), (2, "test2")], ["id", "name"])
@@ -54,7 +54,7 @@ class TestAnnotationsMetadata:
     def test_add_annotation_column_basic(self):
         """Test basic annotation column addition without existing annotations column"""
         from enrich.annotations_metadata import add_annotation_column
-        from conftest import MockSparkDataFrame
+        from pyspark.sql import DataFrame as MockSparkDataFrame
         
         # Create a simple DataFrame
         df = MockSparkDataFrame([(1, "test")], ["id", "name"])
@@ -80,7 +80,7 @@ class TestAnnotationsMetadata:
     def test_add_annotation_column_with_existing_annotations(self):
         """Test merging with existing annotations column"""
         from enrich.annotations_metadata import add_annotation_column
-        from conftest import MockSparkDataFrame
+        from pyspark.sql import DataFrame as MockSparkDataFrame
         
         # Create DataFrame with existing annotations column
         df = MockSparkDataFrame([(1, 'test', [])], ['id', 'name', 'annotations'])
@@ -103,7 +103,7 @@ class TestAnnotationsMetadata:
     def test_add_annotation_column_successful_join(self):
         """Test successful annotation join"""
         from enrich.annotations_metadata import add_annotation_column
-        from conftest import MockSparkDataFrame
+        from pyspark.sql import DataFrame as MockSparkDataFrame
         
         df = MockSparkDataFrame([(1, 'test')], ['id', 'name'])
         
@@ -132,7 +132,14 @@ class TestAnnotationsMetadata:
     def test_add_annotation_column_builds_content_struct(self):
         """Test that annotation content struct is built correctly"""
         from enrich.annotations_metadata import add_annotation_column
-        from conftest import MockSparkDataFrame, MockColumn
+        from pyspark.sql import DataFrame as MockSparkDataFrame
+        
+        # Simple mock column for testing
+        class MockColumn:
+            def __init__(self, name):
+                self._name = name
+            def alias(self, alias_name):
+                return MockColumn(alias_name)
         
         df = MockSparkDataFrame([(1, 'test')], ['id', 'name'])
         
@@ -163,7 +170,7 @@ class TestAnnotationsMetadata:
     def test_add_annotation_column_filters_by_table_name(self):
         """Test that annotations are filtered by table_name"""
         from enrich.annotations_metadata import add_annotation_column
-        from conftest import MockSparkDataFrame
+        from pyspark.sql import DataFrame as MockSparkDataFrame
         
         df = MockSparkDataFrame([(1, 'test')], ['id', 'name'])
         
@@ -196,7 +203,7 @@ class TestAnnotationsMetadata:
     def test_add_annotation_column_collects_and_groups(self):
         """Test that annotations are collected and grouped by row_id"""
         from enrich.annotations_metadata import add_annotation_column
-        from conftest import MockSparkDataFrame
+        from pyspark.sql import DataFrame as MockSparkDataFrame
         
         df = MockSparkDataFrame([(1, 'row1'), (2, 'row2')], ['id', 'name'])
         
