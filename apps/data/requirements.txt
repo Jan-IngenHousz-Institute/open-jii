@@ -1,3 +1,0 @@
-# Build tools
-build>=1.0.0
-wheel>=0.42.0

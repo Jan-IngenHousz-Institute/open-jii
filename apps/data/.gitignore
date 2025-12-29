@@ -1,0 +1,22 @@
+# Poetry
+poetry.lock
+.venv/
+dist/
+*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+coverage.json
+coverage/
+
+# Build artifacts
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
