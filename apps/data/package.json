@@ -4,14 +4,20 @@
   "private": true,
   "description": "Databricks notebooks and Python packages for OpenJII",
   "scripts": {
-    "install": "command -v python3 >/dev/null 2>&1 && python3 -m pip install -r requirements.txt || echo 'Python3 not found, skipping Python package installation'",
-    "build": "pnpm run build:multispeq && pnpm run build:ambyte && pnpm run build:enrich",
+    "check-python": "command -v python3 >/dev/null 2>&1 || (echo 'Python3 not found, skipping Python operations' && exit 1)",
+    "check-poetry": "python3 -m poetry --version >/dev/null 2>&1 || (echo 'Poetry not found, installing...' && pip3 install poetry)",
+    "install": "pnpm run check-python && pnpm run check-poetry && python3 -m poetry install",
+    "build": "pnpm run check-python && pnpm run build:multispeq && pnpm run build:ambyte && pnpm run build:enrich && pnpm run build:openjii",
     "build:multispeq": "cd src/lib/multispeq && python3 -m build",
     "build:ambyte": "cd src/lib/ambyte && python3 -m build",
     "build:enrich": "cd src/lib/enrich && python3 -m build",
-    "clean": "git clean -xdf .cache .turbo && pnpm run clean:multispeq && pnpm run clean:ambyte && pnpm run clean:enrich",
-    "clean:multispeq": "cd src/lib/multispeq && rm -rf dist/ build/ *.egg-info/",
-    "clean:ambyte": "cd src/lib/ambyte && rm -rf dist/ build/ *.egg-info/",
-    "clean:enrich": "cd src/lib/enrich && rm -rf dist/ build/ *.egg-info/"
+    "build:openjii": "cd src/lib/openjii && python3 -m build",
+    "test": "pnpm run check-python && python3 -m poetry run pytest --cov=src/lib --cov-report=json --cov-report=lcov --cov-report=term",
+    "test:watch": "pnpm run check-python && python3 -m poetry run pytest --cov=src/lib -f",
+    "clean": "git clean -xdf .cache .turbo .pytest_cache coverage/ dist/ *.egg-info/ && pnpm run clean:multispeq && pnpm run clean:ambyte && pnpm run clean:enrich && pnpm run clean:openjii",
+    "clean:multispeq": "cd src/lib/multispeq && git clean -xdf dist/ build/ *.egg-info/",
+    "clean:ambyte": "cd src/lib/ambyte && git clean -xdf dist/ build/ *.egg-info/",
+    "clean:enrich": "cd src/lib/enrich && git clean -xdf dist/ build/ *.egg-info/",
+    "clean:openjii": "cd src/lib/openjii && git clean -xdf dist/ build/ *.egg-info/"
   }
 }
