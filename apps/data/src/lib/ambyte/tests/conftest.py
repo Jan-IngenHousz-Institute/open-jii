@@ -1,147 +1,11 @@
 """
-Pytest configuration and fixtures for data package tests
+Pytest configuration for ambyte tests
 
-Mock py_mini_racer and rpy2 since they require system dependencies (V8, R)
-that may not be available in all test environments.
+Mock PySpark and DBUtils for Databricks-specific functionality
 """
 import sys
-import os
 from unittest.mock import MagicMock, Mock
-import json
 import pytest
-
-# Add src/lib to Python path so tests can import packages
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src', 'lib'))
-
-
-# ============================================================================
-# PYTEST FIXTURES
-# ============================================================================
-@pytest.fixture(scope="session")
-def spark():
-    """Create a mocked SparkSession for testing"""
-    return MockSparkSession()
-
-
-# ============================================================================
-# PY_MINI_RACER MOCK - JavaScript executor
-# ============================================================================
-class MockMiniRacer:
-    """Mock for py_mini_racer.MiniRacer JavaScript engine"""
-    def __init__(self):
-        self._context = {}
-    
-    def eval(self, code: str):
-        """Mock eval - return JSON strings for realistic behavior"""
-        # Check if this is trying to execute a JavaScript macro
-        if 'function executeMacro()' in code or 'JSON.stringify' in code:
-            # Return a JSON string like real V8 would
-            return json.dumps({'output': [2, 4, 6], 'time': 100})
-        
-        # For simple expressions, return the code itself
-        if 'return' in code and '{' not in code:
-            return code.strip()
-        
-        # Default: return a simple JSON string
-        return json.dumps({'result': 'ok'})
-    
-    def call(self, func_name: str, *args):
-        """Mock function call"""
-        return json.dumps({'output': list(args), 'function': func_name})
-
-
-mock_py_mini_racer = MagicMock()
-mock_py_mini_racer.MiniRacer = MockMiniRacer
-
-
-# ============================================================================
-# RPY2 MOCK - R executor
-# ============================================================================
-class MockR:
-    """Mock for R code execution"""
-    def __call__(self, code: str):
-        """Mock R code execution - returns JSON string"""
-        # Return different things based on what's being accessed
-        if 'output' in code and '=' not in code:
-            # Accessing output variable
-            return json.dumps([1, 2, 3])
-        return None
-
-
-class MockListVector:
-    """Mock for rpy2.robjects.ListVector"""
-    def __init__(self, data):
-        self.data = data
-
-
-class MockGlobalEnv(dict):
-    """Mock for R global environment"""
-    pass
-
-
-class MockConversion:
-    """Mock for rpy2 conversion module"""
-    @staticmethod
-    def localconverter(converter):
-        """Mock localconverter context manager"""
-        class MockContext:
-            def __enter__(self):
-                return self
-            def __exit__(self, *args):
-                pass
-        return MockContext()
-    
-    @staticmethod
-    def rpy2py(obj):
-        """Mock rpy2py conversion"""
-        if isinstance(obj, str):
-            try:
-                return json.loads(obj)
-            except:
-                return {'value': obj}
-        return obj
-
-
-class MockConverter:
-    """Mock converter object"""
-    def __add__(self, other):
-        return self
-
-
-class MockRobjects:
-    """Mock for rpy2.robjects"""
-    r = MockR()
-    ListVector = MockListVector
-    globalenv = MockGlobalEnv()
-    conversion = MockConversion()
-    default_converter = MockConverter()
-    
-    class pandas2ri:
-        """Mock pandas2ri converter"""
-        converter = MockConverter()
-        
-        @staticmethod
-        def activate():
-            pass
-
-
-class MockRCallbacks:
-    """Mock for rpy2.rinterface_lib.callbacks"""
-    class logging:
-        ERROR = 40
-    
-    class logger:
-        @staticmethod
-        def setLevel(level):
-            pass
-
-
-mock_rpy2 = MagicMock()
-mock_rpy2.robjects = MockRobjects()
-mock_rpy2_robjects = mock_rpy2.robjects
-mock_rpy2_callbacks = Mock()
-mock_rpy2_callbacks.logger = MockRCallbacks.logger
-mock_rpy2_callbacks.logging = MockRCallbacks.logging
 
 
 # ============================================================================
@@ -267,6 +131,58 @@ class MockSparkSession:
         pass
 
 
+class MockDBUtils:
+    """Mock for Databricks DBUtils"""
+    def __init__(self, spark=None):
+        self.widgets = MockWidgets()
+        self.fs = MockFileSystem()
+        self.notebook = MockNotebook()
+
+
+class MockWidgets:
+    """Mock for DBUtils widgets"""
+    def __init__(self):
+        self._widgets = {}
+    
+    def get(self, key, default=None):
+        """Get widget value"""
+        return self._widgets.get(key, default)
+    
+    def text(self, name, defaultValue, label=None):
+        """Create text widget"""
+        self._widgets[name] = defaultValue
+
+
+class MockFileSystem:
+    """Mock for DBUtils fs"""
+    def ls(self, path):
+        """List files in path"""
+        return []
+    
+    def mkdirs(self, path):
+        """Create directory"""
+        return True
+    
+    def rm(self, path, recurse=False):
+        """Remove file or directory"""
+        return True
+    
+    def cp(self, src, dest, recurse=False):
+        """Copy file or directory"""
+        return True
+
+
+class MockNotebook:
+    """Mock for DBUtils notebook"""
+    def run(self, path, timeout_seconds=60, arguments=None):
+        """Run another notebook"""
+        return ""
+    
+    def exit(self, value):
+        """Exit notebook with value"""
+        raise SystemExit(value)
+
+
 class MockDataFrameReader:
     """Mock for DataFrameReader"""
     def table(self, tableName):
@@ -390,7 +306,18 @@ class MockTypes:
             self.valueContainsNull = valueContainsNull
 
 
-# Create mock modules
+# ============================================================================
+# PYTEST FIXTURES
+# ============================================================================
+@pytest.fixture(scope="session")
+def spark():
+    """Create a mocked SparkSession for testing"""
+    return MockSparkSession()
+
+
+# ============================================================================
+# Install mocks into sys.modules
+# ============================================================================
 mock_pyspark_sql = MagicMock()
 mock_pyspark_sql.SparkSession = MockSparkSession
 mock_pyspark_sql.DataFrame = MockSparkDataFrame
@@ -402,19 +329,13 @@ mock_pyspark_sql.types = MockTypes()
 for type_name in ['StringType', 'StructType', 'StructField', 'ArrayType', 'TimestampType', 'IntegerType', 'DoubleType', 'BooleanType', 'MapType']:
     setattr(mock_pyspark_sql.types, type_name, getattr(MockTypes, type_name))
 
-
-# ============================================================================
-# Install mocks into sys.modules
-# ============================================================================
-sys.modules['py_mini_racer'] = mock_py_mini_racer
-sys.modules['rpy2'] = mock_rpy2
-sys.modules['rpy2.robjects'] = mock_rpy2_robjects
-sys.modules['rpy2.rinterface_lib'] = MagicMock()
-sys.modules['rpy2.rinterface_lib.callbacks'] = mock_rpy2_callbacks
-
 # Install PySpark mocks
 sys.modules['pyspark'] = MagicMock()
 sys.modules['pyspark.sql'] = mock_pyspark_sql
 sys.modules['pyspark.sql.functions'] = mock_pyspark_sql.functions
 sys.modules['pyspark.sql.types'] = mock_pyspark_sql.types
 
+# Install DBUtils mock
+mock_pyspark_dbutils = MagicMock()
+mock_pyspark_dbutils.DBUtils = MockDBUtils
+sys.modules['pyspark.dbutils'] = mock_pyspark_dbutils
