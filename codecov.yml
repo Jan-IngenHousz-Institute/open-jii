@@ -69,6 +69,19 @@ flag_management:
           target: 75% # 75% branch coverage for new API code
           threshold: 5%
           informational: false
+    - name: data
+      paths:
+        - apps/data/**
+      carryforward: true
+      statuses:
+        - type: project
+          target: 60% # 60% lines coverage for data package (Python)
+          threshold: 5%
+          informational: true # Informational for now
+        - type: patch
+          target: 60% # 60% branch coverage for new data code
+          threshold: 5%
+          informational: true
 
 # Coverage status configuration (works with flag management)
 coverage:
@@ -93,6 +106,10 @@ coverage:
         flags:
           - api
         informational: false # Now blocking with 75% target
+      data:
+        flags:
+          - data
+        informational: true # Informational for Python package
 
 # Comment configuration for PR
 comment:

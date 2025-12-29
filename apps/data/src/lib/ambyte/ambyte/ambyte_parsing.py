@@ -10,10 +10,16 @@ import datetime
 import os
 from typing import List, Tuple, Optional
 from pyspark.sql import SparkSession
-from pyspark.dbutils import DBUtils
 
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
+# DBUtils is only available in Databricks runtime
+try:
+    from pyspark.dbutils import DBUtils
+    spark = SparkSession.builder.getOrCreate()
+    dbutils = DBUtils(spark)
+except (ImportError, ModuleNotFoundError):
+    # Not in Databricks - dbutils won't be available for tests
+    spark = None
+    dbutils = None
 
 def protocol_array_calc(arr: np.ndarray, actual_size=-1):
     if arr.size == 3:
