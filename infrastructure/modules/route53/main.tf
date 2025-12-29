@@ -119,8 +119,8 @@ resource "aws_route53_record" "cloudfront_cert_validation" {
 
 resource "aws_route53_record" "cloudfront_cert_validation_san" {
   for_each = {
-    for k, v in aws_acm_certificate.cloudfront_certs :
-    k => v if length(v.domain_validation_options) > 1
+    for k, v in aws_acm_certificate.cloudfront_certs : k => v
+    if length(v.subject_alternative_names) > 1
   }
 
   allow_overwrite = true
