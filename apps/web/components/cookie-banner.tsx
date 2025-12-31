@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useState } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import {
   Button,
   Dialog,
@@ -23,6 +24,7 @@ export function CookieBanner() {
   const [consentGiven, setConsentGiven] = useState<ConsentStatus | null>(null);
   const [showManage, setShowManage] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setConsentGiven(getConsentStatus());
@@ -61,27 +63,24 @@ export function CookieBanner() {
 
   return (
     <>
-      <div className="bg-card border-border fixed inset-x-0 bottom-0 z-50 border-t shadow-[0_-8px_24px_rgba(0,0,0,0.15)]">
+      <div className="bg-card border-border fixed inset-x-0 bottom-0 z-50 border-t shadow-[0_-8px_24px_rgba(0,0,0,0.1)]">
         <div className="mx-auto max-w-7xl p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-muted-foreground text-sm sm:pr-6">
-              This website uses cookies to supplement a balanced diet and provide a much deserved
-              reward to the senses after consuming bland but nutritious meals. Accepting our cookies
-              is optional but recommended, as they are delicious. See our{" "}
+              {t("cookieBanner.intro")}
               <Link href="/cookie-policy" className="text-primary hover:underline" prefetch={false}>
-                cookie policy
+                {t("cookieBanner.cookiePolicy")}
               </Link>
-              .
             </p>
 
             <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-              <Button variant="outline" onClick={() => setShowManage(true)}>
-                Manage preferences
+              <Button variant="secondary" onClick={() => setShowManage(true)}>
+                {t("cookieBanner.managePreferences")}
               </Button>
-              <Button variant="outline" onClick={handleDeclineCookies}>
-                Reject all
+              <Button variant="secondary" onClick={handleDeclineCookies}>
+                {t("cookieBanner.rejectAll")}
               </Button>
-              <Button onClick={handleAcceptCookies}>Accept all</Button>
+              <Button onClick={handleAcceptCookies}>{t("cookieBanner.acceptAll")}</Button>
             </div>
           </div>
         </div>
@@ -90,30 +89,28 @@ export function CookieBanner() {
       <Dialog open={showManage} onOpenChange={setShowManage}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Manage Cookie Preferences</DialogTitle>
-            <DialogDescription>
-              Choose which cookies you want to allow. Essential cookies are always enabled.
-            </DialogDescription>
+            <DialogTitle>{t("cookieBanner.dialogTitle")}</DialogTitle>
+            <DialogDescription>{t("cookieBanner.dialogDescription")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="border-border flex items-center justify-between rounded-md border p-4">
               <div className="flex-1">
-                <h4 className="text-foreground font-medium">Essential Cookies</h4>
+                <h4 className="text-foreground font-medium">{t("cookieBanner.essentialTitle")}</h4>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  Required for authentication, security, and basic functionality. These cannot be
-                  disabled.
+                  {t("cookieBanner.essentialDescription")}
                 </p>
               </div>
-              <div className="text-muted-foreground ml-4 text-sm font-medium">Always Active</div>
+              <div className="text-muted-foreground ml-4 text-sm font-medium">
+                {t("cookieBanner.essentialAlways")}
+              </div>
             </div>
 
             <div className="border-border flex items-center justify-between rounded-md border p-4">
               <div className="flex-1">
-                <h4 className="text-foreground font-medium">Analytics Cookies</h4>
+                <h4 className="text-foreground font-medium">{t("cookieBanner.analyticsTitle")}</h4>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  Help us understand how you use our platform to improve your experience. Powered by
-                  PostHog.
+                  {t("cookieBanner.analyticsDescription")}
                 </p>
               </div>
               <Switch checked={analyticsEnabled} onCheckedChange={setAnalyticsEnabled} />
@@ -121,7 +118,7 @@ export function CookieBanner() {
           </div>
 
           <DialogFooter>
-            <Button onClick={handleSavePreferences}>Save & Close</Button>
+            <Button onClick={handleSavePreferences}>{t("cookieBanner.saveClose")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

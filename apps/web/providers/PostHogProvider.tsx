@@ -41,11 +41,6 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
       persistence: consentStatus === "accepted" ? "localStorage+cookie" : "memory", // Use memory-only persistence until consent
       opt_out_capturing_by_default: consentStatus !== "accepted", // Don't capture events until consent
     });
-
-    // If user previously accepted, opt them in
-    if (consentStatus === "accepted") {
-      posthog.opt_in_capturing();
-    }
   }, []);
 
   return <PostHogProviderBase client={posthog}>{children}</PostHogProviderBase>;

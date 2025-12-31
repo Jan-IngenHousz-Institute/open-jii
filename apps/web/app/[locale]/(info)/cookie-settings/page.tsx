@@ -3,6 +3,7 @@
 import { usePostHog } from "posthog-js/react";
 import { useState } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import {
   Button,
   Card,
@@ -22,6 +23,7 @@ import { getConsentStatus, setConsentStatus } from "../../../../lib/cookie-conse
  */
 export default function CookieSettingsPage() {
   const posthog = usePostHog();
+  const { t } = useTranslation();
   const [consentGiven, setConsentGiven] = useState<ConsentStatus>(getConsentStatus);
 
   const isAccepted = consentGiven === "accepted";
@@ -32,12 +34,12 @@ export default function CookieSettingsPage() {
       posthog.reset();
       setConsentStatus("rejected");
       setConsentGiven("rejected");
-      toast({ description: "Analytics cookies have been disabled." });
+      toast({ description: t("cookieSettings.analyticsDisabledToast") });
     } else {
       posthog.opt_in_capturing();
       setConsentStatus("accepted");
       setConsentGiven("accepted");
-      toast({ description: "Analytics cookies have been enabled." });
+      toast({ description: t("cookieSettings.analyticsEnabledToast") });
     }
   };
 
@@ -51,31 +53,29 @@ export default function CookieSettingsPage() {
 
       <div className="mx-auto w-full max-w-4xl px-4 py-20">
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl lg:col-span-2 xl:col-auto">
-          Cookie Settings
+          {t("cookieSettings.title")}
         </h1>
 
-        <p className="text-muted-foreground mt-4">
-          Manage your cookie preferences and understand how we use cookies on our platform.
-        </p>
+        <p className="text-muted-foreground mt-4">{t("cookieSettings.intro")}</p>
 
         <div className="mt-16 space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Essential Cookies</CardTitle>
-              <CardDescription>
-                These cookies are necessary for the website to function and cannot be disabled.
-              </CardDescription>
+              <CardTitle>{t("cookieSettings.essentialTitle")}</CardTitle>
+              <CardDescription>{t("cookieSettings.essentialDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <p className="text-sm">
-                  <strong>Purpose:</strong> Authentication, security, session management
+                  <strong>{t("cookieSettings.essentialPurpose")}</strong>{" "}
+                  {t("cookieSettings.essentialPurposeText")}
                 </p>
                 <p className="text-sm">
-                  <strong>Examples:</strong> Login sessions, CSRF protection, secure connections
+                  <strong>{t("cookieSettings.essentialExamples")}</strong>{" "}
+                  {t("cookieSettings.essentialExamplesText")}
                 </p>
                 <div className="bg-muted mt-4 rounded-md p-3">
-                  <p className="text-sm font-medium">Status: Always Active</p>
+                  <p className="text-sm font-medium">{t("cookieSettings.essentialStatus")}</p>
                 </div>
               </div>
             </CardContent>
@@ -83,29 +83,29 @@ export default function CookieSettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Analytics Cookies</CardTitle>
-              <CardDescription>
-                These cookies help us understand how visitors interact with our website.
-              </CardDescription>
+              <CardTitle>{t("cookieSettings.analyticsTitle")}</CardTitle>
+              <CardDescription>{t("cookieSettings.analyticsDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <p className="text-sm">
-                    <strong>Purpose:</strong> Product analytics, usage tracking, feature improvement
+                    <strong>{t("cookieSettings.analyticsPurposeLabel")}</strong>{" "}
+                    {t("cookieSettings.analyticsPurposeText")}
                   </p>
                   <p className="text-sm">
-                    <strong>Provider:</strong> PostHog (privacy-friendly analytics)
+                    <strong>{t("cookieSettings.analyticsProviderLabel")}</strong>{" "}
+                    {t("cookieSettings.analyticsProviderText")}
                   </p>
                   <p className="text-sm">
-                    <strong>Data collected:</strong> Page views, button clicks, feature usage
-                    patterns
+                    <strong>{t("cookieSettings.analyticsDataLabel")}</strong>{" "}
+                    {t("cookieSettings.analyticsDataText")}
                   </p>
                 </div>
 
                 <div className="bg-muted rounded-md p-3">
                   <p className="text-sm font-medium">
-                    Current Status:{" "}
+                    {t("cookieSettings.currentStatus")}{" "}
                     <span
                       className={
                         consentGiven === "accepted"
@@ -116,17 +116,19 @@ export default function CookieSettingsPage() {
                       }
                     >
                       {consentGiven === "accepted"
-                        ? "Enabled"
+                        ? t("cookieSettings.statusEnabled")
                         : consentGiven === "rejected"
-                          ? "Disabled"
-                          : "Not Set"}
+                          ? t("cookieSettings.statusDisabled")
+                          : t("cookieSettings.statusNotSet")}
                     </span>
                   </p>
                 </div>
 
                 <div className="flex gap-2">
                   <Button onClick={handleToggleAnalytics}>
-                    {isAccepted ? "Disable Analytics" : "Enable Analytics"}
+                    {isAccepted
+                      ? t("cookieSettings.disableAnalytics")
+                      : t("cookieSettings.enableAnalytics")}
                   </Button>
                 </div>
               </div>
