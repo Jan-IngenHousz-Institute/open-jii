@@ -174,3 +174,9 @@ variable "posthog_host" {
   type        = string
   default     = "https://eu.i.posthog.com"
 }
+
+# variable "grafana_auth_service_token" {
+#   description = "Grafana AMG service account token for API access"
+#   type        = string
+#   sensitive   = true
+# }
