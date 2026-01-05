@@ -1,6 +1,5 @@
 locals {
   workspace_name = "${var.environment}-${var.workspace_name}"
-
 }
 
 
@@ -30,7 +29,7 @@ resource "aws_grafana_workspace" "this" {
 }
 
 resource "aws_iam_role" "assume" {
-  name = "grafana-assume"
+  name = "${local.workspace_name}-grafana-assume"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

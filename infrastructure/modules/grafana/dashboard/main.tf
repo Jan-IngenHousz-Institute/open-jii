@@ -59,8 +59,8 @@ resource "grafana_dashboard" "dashboard" {
             region     = var.aws_region,
             statistic  = "Sum",
             dimensions = {
-              LoadBalancer = var.load_balancer_arn
-              TargetGroup  = var.target_group_arn
+              LoadBalancer = regexreplace(var.load_balancer_arn, ".*loadbalancer/", "app/") == var.load_balancer_arn ? var.load_balancer_arn : regexreplace(var.load_balancer_arn, ".*loadbalancer/", "")
+              TargetGroup  = regexreplace(var.target_group_arn, ".*targetgroup/", "")
             }
           }
         ]
@@ -127,7 +127,7 @@ resource "grafana_rule_group" "alb_5xx" {
 
   rule {
     name      = "High ALB Target 5xx (sum > 5 in 5m)"
-    condition = "A"
+    condition = "A > 5"
 
     data {
       ref_id         = "A"
@@ -138,8 +138,8 @@ resource "grafana_rule_group" "alb_5xx" {
         region     = var.aws_region,
         statistic  = "Sum",
         dimensions = {
-          LoadBalancer = var.load_balancer_arn
-          TargetGroup  = var.target_group_arn
+          LoadBalancer = regexreplace(var.load_balancer_arn, ".*loadbalancer/", "app/") == var.load_balancer_arn ? var.load_balancer_arn : regexreplace(var.load_balancer_arn, ".*loadbalancer/", "")
+          TargetGroup  = regexreplace(var.target_group_arn, ".*targetgroup/", "")
         },
         # Reduce over last 5 minutes
         period     = "60",
@@ -155,7 +155,7 @@ resource "grafana_rule_group" "alb_5xx" {
 
     no_data_state  = "NoData"
     exec_err_state = "Error"
-    annotations    = { runbook = "https://your.runbook.link" }
+    annotations    = {}
     labels         = { severity = "high", service = "backend" }
 
     for = "2m"
@@ -175,7 +175,7 @@ resource "grafana_rule_group" "cloudfront_site_down" {
 
   rule {
     name      = "High CloudFront Error Rate"
-    condition = "A"
+    condition = "A > 0.05"
 
     data {
       ref_id         = "A"
@@ -202,7 +202,7 @@ resource "grafana_rule_group" "cloudfront_site_down" {
     for            = "2m"
     no_data_state  = "Alerting"
     exec_err_state = "Error"
-    annotations    = { runbook = "https://your.runbook.link" }
+    annotations    = {}
     labels         = { severity = "critical", service = "frontend" }
 
     notification_settings {
@@ -220,7 +220,7 @@ resource "grafana_rule_group" "lambda_errors" {
 
   rule {
     name      = "High Lambda Error Count"
-    condition = "A"
+    condition = "A > 0"
 
     data {
       ref_id         = "A"
@@ -247,7 +247,7 @@ resource "grafana_rule_group" "lambda_errors" {
     for            = "2m"
     no_data_state  = "Alerting"
     exec_err_state = "Error"
-    annotations    = { runbook = "https://your.runbook.link" }
+    annotations    = {}
     labels         = { severity = "critical", service = "lambda-backend" }
 
     notification_settings {
