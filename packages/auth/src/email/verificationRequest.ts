@@ -27,22 +27,16 @@ export async function sendVerificationRequest(params: {
 
   const { host } = new URL(url);
   const transport = createTransport(provider.server);
-  const qrCodeDataUrl = await QRCode.toDataURL(url, {
+  const qrCodeBuffer = await QRCode.toBuffer(url, {
     width: 200,
     margin: 1,
     errorCorrectionLevel: "M",
   });
 
-  const emailHtml = await render(
-    VerificationRequest({ url, host, senderName: "openJII", qrCodeDataUrl }),
-    {},
-  );
-  const emailText = await render(
-    VerificationRequest({ url, host, senderName: "openJII", qrCodeDataUrl }),
-    {
-      plainText: true,
-    },
-  );
+  const emailHtml = await render(VerificationRequest({ url, host, senderName: "openJII" }), {});
+  const emailText = await render(VerificationRequest({ url, host, senderName: "openJII" }), {
+    plainText: true,
+  });
 
   const result = await transport.sendMail({
     to: identifier,
@@ -53,9 +47,15 @@ export async function sendVerificationRequest(params: {
     subject: `Sign in to the openJII Platform`,
     html: emailHtml,
     text: emailText,
+    attachments: [
+      {
+        filename: "qrcode.png",
+        content: qrCodeBuffer,
+        cid: "qrcode",
+      },
+    ],
   });
 
-  // Cast result to extended type to handle optional rejected/pending properties
   const extendedResult = result as ExtendedSentMessageInfo;
   const rejected: string[] = extendedResult.rejected ?? [];
   const pending: string[] = extendedResult.pending ?? [];
