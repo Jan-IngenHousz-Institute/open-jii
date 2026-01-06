@@ -350,7 +350,8 @@ locals {
         "grafana:ListWorkspaceServiceAccounts",
         "grafana:CreateWorkspaceServiceAccountToken",
         "grafana:DeleteWorkspaceServiceAccountToken",
-        "grafana:ListWorkspaceServiceAccountTokens"
+        "grafana:ListWorkspaceServiceAccountTokens",
+        "grafana:DescribeWorkspaceConfiguration"
       ]
       resource = "*"
     }
