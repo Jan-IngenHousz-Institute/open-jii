@@ -99,7 +99,21 @@ vi.mock("@repo/ui/components", () => {
     );
   };
 
-  return { Tabs, TabsList, TabsTrigger };
+  const Alert = ({ children, className }: React.PropsWithChildren<{ className?: string }>) => (
+    <div data-testid="alert" className={className}>
+      {children}
+    </div>
+  );
+
+  const AlertTitle = ({ children }: React.PropsWithChildren) => (
+    <div data-testid="alert-title">{children}</div>
+  );
+
+  const AlertDescription = ({ children }: React.PropsWithChildren) => (
+    <div data-testid="alert-description">{children}</div>
+  );
+
+  return { Tabs, TabsList, TabsTrigger, Alert, AlertTitle, AlertDescription };
 });
 
 // -------------------
@@ -285,6 +299,126 @@ describe("<MacroLayout />", () => {
 
       const tabs = screen.getByTestId("tabs");
       expect(tabs).toHaveAttribute("data-value", expected);
+    });
+  });
+
+  describe("Loading State", () => {
+    it("renders loading state when isLoading is true", () => {
+      mockUsePathname.mockReturnValue("/en-US/platform/macros/test-macro-id");
+      mockUseParams.mockReturnValue({ id: "test-macro-id" });
+      mockUseLocale.mockReturnValue("en-US");
+      mockUseMacro.mockReturnValue({ isLoading: true, error: null, data: null });
+
+      render(
+        <MacroLayout>
+          <div>Child Content</div>
+        </MacroLayout>,
+      );
+
+      expect(screen.getByText("common.loading")).toBeInTheDocument();
+      expect(screen.queryByTestId("tabs")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Error Handling", () => {
+    it("calls notFound for 404 errors", () => {
+      mockUsePathname.mockReturnValue("/en-US/platform/macros/non-existent");
+      mockUseParams.mockReturnValue({ id: "non-existent" });
+      mockUseLocale.mockReturnValue("en-US");
+      mockUseMacro.mockReturnValue({
+        isLoading: false,
+        error: { status: 404, message: "Not Found" },
+        data: null,
+      });
+
+      render(
+        <MacroLayout>
+          <div>Child Content</div>
+        </MacroLayout>,
+      );
+
+      expect(mockNotFound).toHaveBeenCalled();
+    });
+
+    it("calls notFound for 400 errors (invalid UUID)", () => {
+      mockUsePathname.mockReturnValue("/en-US/platform/macros/invalid-uuid");
+      mockUseParams.mockReturnValue({ id: "invalid-uuid" });
+      mockUseLocale.mockReturnValue("en-US");
+      mockUseMacro.mockReturnValue({
+        isLoading: false,
+        error: { status: 400, message: "Bad Request" },
+        data: null,
+      });
+
+      render(
+        <MacroLayout>
+          <div>Child Content</div>
+        </MacroLayout>,
+      );
+
+      expect(mockNotFound).toHaveBeenCalled();
+    });
+
+    it("renders error display for 500 server errors", () => {
+      mockUsePathname.mockReturnValue("/en-US/platform/macros/test-macro-id");
+      mockUseParams.mockReturnValue({ id: "test-macro-id" });
+      mockUseLocale.mockReturnValue("en-US");
+      mockUseMacro.mockReturnValue({
+        isLoading: false,
+        error: { status: 500, message: "Internal Server Error" },
+        data: null,
+      });
+
+      render(
+        <MacroLayout>
+          <div>Child Content</div>
+        </MacroLayout>,
+      );
+
+      expect(screen.getByText("errors.error")).toBeInTheDocument();
+      expect(screen.getByText("errors.resourceNotFoundMessage")).toBeInTheDocument();
+      expect(mockNotFound).not.toHaveBeenCalled();
+    });
+
+    it("renders error display for 403 forbidden errors", () => {
+      mockUsePathname.mockReturnValue("/en-US/platform/macros/test-macro-id");
+      mockUseParams.mockReturnValue({ id: "test-macro-id" });
+      mockUseLocale.mockReturnValue("en-US");
+      mockUseMacro.mockReturnValue({
+        isLoading: false,
+        error: { status: 403, message: "Forbidden" },
+        data: null,
+      });
+
+      render(
+        <MacroLayout>
+          <div>Child Content</div>
+        </MacroLayout>,
+      );
+
+      expect(screen.getByText("errors.error")).toBeInTheDocument();
+      expect(mockNotFound).not.toHaveBeenCalled();
+    });
+
+    it("renders error display for errors without status", () => {
+      mockUsePathname.mockReturnValue("/en-US/platform/macros/test-macro-id");
+      mockUseParams.mockReturnValue({ id: "test-macro-id" });
+      mockUseLocale.mockReturnValue("en-US");
+      mockUseMacro.mockReturnValue({
+        isLoading: false,
+        error: new Error("Network error"),
+        data: null,
+      });
+
+      render(
+        <MacroLayout>
+          <div>Child Content</div>
+        </MacroLayout>,
+      );
+
+      expect(screen.getByText("errors.error")).toBeInTheDocument();
+      expect(mockNotFound).not.toHaveBeenCalled();
     });
   });
 });

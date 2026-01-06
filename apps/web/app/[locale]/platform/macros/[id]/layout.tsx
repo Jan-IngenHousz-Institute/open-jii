@@ -67,7 +67,7 @@ export default function MacroLayout({ children }: MacroLayoutProps) {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">{t("macros.macro")}</h3>
-        <p className="text-muted-foreground text-sm">{t("macros.manageMacroDescription")}</p>{" "}
+        <p className="text-muted-foreground text-sm">{t("macros.manageMacroDescription")}</p>
       </div>
 
       <Tabs value={activeTab} className="w-full">
