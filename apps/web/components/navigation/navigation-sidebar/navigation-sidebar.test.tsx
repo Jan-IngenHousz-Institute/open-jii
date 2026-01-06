@@ -171,63 +171,64 @@ describe("AppSidebar", () => {
     expect(screen.getByText("Macros")).toBeInTheDocument();
   });
 
-  it("renders search button that tests click handler logic", () => {
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
+  // Search functionality has been temporarily disabled
+  // it("renders search button that tests click handler logic", () => {
+  //   render(
+  //     <SidebarProvider>
+  //       <AppSidebar
+  //         locale="en"
+  //         navigationData={mockNavigationData}
+  //         translations={mockTranslations}
+  //       />
+  //     </SidebarProvider>,
+  //   );
 
-    // Find the search input (lines 54-61 test the click handler on the button)
-    // The search functionality is rendered with an input
-    const searchInput = screen.getByPlaceholderText("Search by keyword...");
-    expect(searchInput).toBeInTheDocument();
-  });
+  //   // Find the search input (lines 54-61 test the click handler on the button)
+  //   // The search functionality is rendered with an input
+  //   const searchInput = screen.getByPlaceholderText("Search by keyword...");
+  //   expect(searchInput).toBeInTheDocument();
+  // });
 
-  it("renders search icon button for collapsed state", () => {
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
+  // it("renders search icon button for collapsed state", () => {
+  //   render(
+  //     <SidebarProvider>
+  //       <AppSidebar
+  //         locale="en"
+  //         navigationData={mockNavigationData}
+  //         translations={mockTranslations}
+  //       />
+  //     </SidebarProvider>,
+  //   );
 
-    // Lines 54-61: handleSearchClick checks if state === 'collapsed'
-    // In expanded state (default), the function exists but doesn't toggle
-    // This test covers both branches of the if condition
-    const searchInput = screen.getByPlaceholderText("Search by keyword...");
-    expect(searchInput).toBeInTheDocument();
+  //   // Lines 54-61: handleSearchClick checks if state === 'collapsed'
+  //   // In expanded state (default), the function exists but doesn't toggle
+  //   // This test covers both branches of the if condition
+  //   const searchInput = screen.getByPlaceholderText("Search by keyword...");
+  //   expect(searchInput).toBeInTheDocument();
 
-    // The input ref and setTimeout logic is tested by the component rendering
-    expect(searchInput).toHaveAttribute("type", "text");
-  });
+  //   // The input ref and setTimeout logic is tested by the component rendering
+  //   expect(searchInput).toHaveAttribute("type", "text");
+  // });
 
-  it("search input ref is attached correctly", () => {
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
+  // it("search input ref is attached correctly", () => {
+  //   render(
+  //     <SidebarProvider>
+  //       <AppSidebar
+  //         locale="en"
+  //         navigationData={mockNavigationData}
+  //         translations={mockTranslations}
+  //       />
+  //     </SidebarProvider>,
+  //   );
 
-    // Lines 54-61: The handleSearchClick function with if (state === "collapsed")
-    // This ensures the searchInputRef.current?.focus() line is covered
-    const searchInput = screen.getByPlaceholderText("Search by keyword...");
-    expect(searchInput).toBeInTheDocument();
+  //   // Lines 54-61: The handleSearchClick function with if (state === "collapsed")
+  //   // This ensures the searchInputRef.current?.focus() line is covered
+  //   const searchInput = screen.getByPlaceholderText("Search by keyword...");
+  //   expect(searchInput).toBeInTheDocument();
 
-    // Focus the input to ensure the ref is working
-    searchInput.focus();
-    expect(searchInput).toHaveFocus();
+  //   // Focus the input to ensure the ref is working
+  //   searchInput.focus();
+  //   expect(searchInput).toHaveFocus();
   });
 
   it("calls toggleSidebar and focuses search input when search is clicked in collapsed state", async () => {
