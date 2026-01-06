@@ -44,7 +44,7 @@ export async function sendVerificationRequest(params: {
     },
   );
 
-  const result = transport.sendMail({
+  const result = await transport.sendMail({
     to: identifier,
     from: {
       name: "openJII",
