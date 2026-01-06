@@ -326,6 +326,34 @@ locals {
       ]
       resource = "*"
     }
+
+    grafana = {
+      actions = [
+        "grafana:CreateWorkspace",
+        "grafana:DeleteWorkspace",
+        "grafana:DescribeWorkspace",
+        "grafana:ListWorkspaces",
+        "grafana:UpdateWorkspace",
+        "grafana:UpdateWorkspaceAuthentication",
+        "grafana:UpdateWorkspaceConfiguration",
+        "grafana:AssociateLicense",
+        "grafana:DisassociateLicense",
+        "grafana:ListPermissions",
+        "grafana:UpdatePermissions",
+        "grafana:CreateWorkspaceApiKey",
+        "grafana:DeleteWorkspaceApiKey",
+        "grafana:DescribeWorkspaceApiKey",
+        "grafana:ListWorkspaceApiKeys",
+        "grafana:CreateWorkspaceServiceAccount",
+        "grafana:DeleteWorkspaceServiceAccount",
+        "grafana:DescribeWorkspaceServiceAccount",
+        "grafana:ListWorkspaceServiceAccounts",
+        "grafana:CreateWorkspaceServiceAccountToken",
+        "grafana:DeleteWorkspaceServiceAccountToken",
+        "grafana:ListWorkspaceServiceAccountTokens"
+      ]
+      resource = "*"
+    }
   }
 
   # Combine all service permissions into comprehensive policy statements
