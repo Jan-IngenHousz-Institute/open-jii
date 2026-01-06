@@ -13,7 +13,6 @@ export const useExperimentAccess = (experimentId: string) => {
       // Don't retry on 4xx client errors - these are not transient
       if (
         typeof error === "object" &&
-        error !== null &&
         "status" in error &&
         typeof error.status === "number" &&
         error.status >= 400 &&
