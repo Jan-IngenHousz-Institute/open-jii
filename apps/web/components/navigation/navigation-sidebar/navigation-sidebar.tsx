@@ -107,7 +107,7 @@ export function AppSidebar({
           </Link>
           <SidebarTrigger className="bg-jii-dark-green hover:bg-sidebar-trigger-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white group-data-[state=collapsed]:hidden" />
         </div>
-        <div className="relative h-12 px-4 group-data-[collapsible=icon]:px-0">
+        {/* <div className="relative h-12 px-4 group-data-[collapsible=icon]:px-0">
           <input
             ref={searchInputRef}
             type="text"
@@ -121,7 +121,7 @@ export function AppSidebar({
           >
             <Search className="text-sidebar-search-icon h-4 w-4" />
           </button>
-        </div>
+        </div> */}
         <div className="flex flex-col gap-4 px-4 group-data-[collapsible=icon]:gap-4 group-data-[collapsible=icon]:px-0">
           <NavItems items={processedNavDashboard} />
           <NavItems items={processedNavExperiments} />
