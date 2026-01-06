@@ -28,9 +28,11 @@ vi.mock("@/hooks/useLocale", () => ({
 // Mock Next.js navigation hooks
 const mockUsePathname = vi.fn();
 const mockUseParams = vi.fn();
+const mockNotFound = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => mockUsePathname(),
   useParams: () => mockUseParams(),
+  notFound: () => mockNotFound(),
 }));
 
 // Mock Next.js Link component

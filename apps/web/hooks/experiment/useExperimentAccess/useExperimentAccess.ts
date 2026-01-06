@@ -11,12 +11,14 @@ export const useExperimentAccess = (experimentId: string) => {
     queryKey: ["experimentAccess", experimentId],
     retry: (failureCount, error) => {
       // Don't retry on 4xx client errors - these are not transient
+      const err = error as unknown;
       if (
-        typeof error === "object" &&
-        "status" in error &&
-        typeof error.status === "number" &&
-        error.status >= 400 &&
-        error.status < 500
+        err &&
+        typeof err === "object" &&
+        "status" in err &&
+        typeof err.status === "number" &&
+        err.status >= 400 &&
+        err.status < 500
       ) {
         return false;
       }

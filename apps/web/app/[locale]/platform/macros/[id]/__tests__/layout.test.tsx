@@ -15,14 +15,21 @@ globalThis.React = React;
 const mockUsePathname = vi.fn();
 const mockUseParams = vi.fn();
 const mockUseLocale = vi.fn();
+const mockNotFound = vi.fn();
+const mockUseMacro = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mockUsePathname(),
   useParams: () => mockUseParams(),
+  notFound: () => mockNotFound(),
 }));
 
 vi.mock("@/hooks/useLocale", () => ({
   useLocale: () => mockUseLocale(),
+}));
+
+vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
+  useMacro: () => mockUseMacro(),
 }));
 
 vi.mock("@repo/i18n", () => ({
@@ -112,6 +119,7 @@ function renderLayout({
   mockUsePathname.mockReturnValue(pathname);
   mockUseParams.mockReturnValue({ id: macroId });
   mockUseLocale.mockReturnValue(locale);
+  mockUseMacro.mockReturnValue({ isLoading: false, error: null, data: null });
 
   return render(<MacroLayout>{children}</MacroLayout>);
 }
