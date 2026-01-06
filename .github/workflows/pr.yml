@@ -178,6 +178,7 @@ jobs:
     strategy:
       matrix:
         environment: [dev, prod]
+      fail-fast: false
     environment: ${{ matrix.environment }}
     concurrency:
       group: opentofu-${{ matrix.environment }}
