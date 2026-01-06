@@ -1,0 +1,50 @@
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
+
+variable "project" {
+  type    = string
+  default = "open-jii"
+}
+
+variable "environment" {
+  description = "The deployment environment (e.g., dev, staging, prod)"
+  type        = string
+}
+
+variable "server_function_name" {
+  description = "The name of the server function to monitor"
+  type        = string
+}
+
+variable "load_balancer_arn" {
+  description = "The ARN of the load balancer to monitor"
+  type        = string
+}
+
+variable "target_group_arn" {
+  description = "The ARN of the target group to monitor"
+  type        = string
+}
+
+variable "ecs_cluster_name" {
+  description = "The name of the ECS cluster to monitor"
+  type        = string
+}
+
+variable "ecs_service_name" {
+  description = "The name of the ECS service to monitor"
+  type        = string
+}
+
+variable "cloudfront_distribution_id" {
+  description = "The ID of the CloudFront distribution to monitor"
+  type        = string
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook url"
+  type        = string
+}
+
