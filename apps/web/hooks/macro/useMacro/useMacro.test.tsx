@@ -188,5 +188,4 @@ describe("useMacro", () => {
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
   });
-
 });
