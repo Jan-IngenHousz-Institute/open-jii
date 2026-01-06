@@ -165,33 +165,48 @@ describe("useExperimentAccess", () => {
       });
     });
 
-    it("should NOT retry on 403 Forbidden errors", () => {
+    it("should NOT retry on 4xx client errors", () => {
+      const error400 = { status: 400, message: "Bad Request" };
+      const error401 = { status: 401, message: "Unauthorized" };
       const error403 = { status: 403, message: "Forbidden" };
+      const error404 = { status: 404, message: "Not Found" };
+      const error422 = { status: 422, message: "Unprocessable Entity" };
 
+      // 400 Bad Request - should not retry
+      expect(retryFunction(0, error400)).toBe(false);
+      expect(retryFunction(1, error400)).toBe(false);
+
+      // 401 Unauthorized - should not retry
+      expect(retryFunction(0, error401)).toBe(false);
+
+      // 403 Forbidden - should not retry
       expect(retryFunction(0, error403)).toBe(false);
       expect(retryFunction(1, error403)).toBe(false);
       expect(retryFunction(2, error403)).toBe(false);
+
+      // 404 Not Found - should not retry
+      expect(retryFunction(0, error404)).toBe(false);
+      expect(retryFunction(1, error404)).toBe(false);
+
+      // 422 Unprocessable Entity - should not retry
+      expect(retryFunction(0, error422)).toBe(false);
     });
 
-    it("should retry on network errors (up to 3 times)", () => {
-      const networkError = { status: 500, message: "Internal Server Error" };
+    it("should retry on 5xx server errors (up to 3 times)", () => {
+      const error500 = { status: 500, message: "Internal Server Error" };
+      const error502 = { status: 502, message: "Bad Gateway" };
+      const error503 = { status: 503, message: "Service Unavailable" };
 
-      expect(retryFunction(0, networkError)).toBe(true);
-      expect(retryFunction(1, networkError)).toBe(true);
-      expect(retryFunction(2, networkError)).toBe(true);
-      expect(retryFunction(3, networkError)).toBe(false);
+      expect(retryFunction(0, error500)).toBe(true);
+      expect(retryFunction(1, error500)).toBe(true);
+      expect(retryFunction(2, error500)).toBe(true);
+      expect(retryFunction(3, error500)).toBe(false);
+
+      expect(retryFunction(0, error502)).toBe(true);
+      expect(retryFunction(0, error503)).toBe(true);
     });
 
-    it("should retry on 404 errors (up to 3 times)", () => {
-      const error404 = { status: 404, message: "Not Found" };
-
-      expect(retryFunction(0, error404)).toBe(true);
-      expect(retryFunction(1, error404)).toBe(true);
-      expect(retryFunction(2, error404)).toBe(true);
-      expect(retryFunction(3, error404)).toBe(false);
-    });
-
-    it("should retry on timeout/network errors", () => {
+    it("should retry on timeout/network errors (up to 3 times)", () => {
       const timeoutError = new Error("Network timeout");
 
       expect(retryFunction(0, timeoutError)).toBe(true);
@@ -201,24 +216,23 @@ describe("useExperimentAccess", () => {
     });
 
     it("should handle edge cases in error object structure", () => {
-      // Error without status property
+      // Error without status property - retry (unknown error type)
       const errorWithoutStatus = { message: "Some error" };
       expect(retryFunction(0, errorWithoutStatus)).toBe(true);
 
-      // String error
+      // String error - retry (unknown error type)
       expect(retryFunction(0, "String error")).toBe(true);
 
-      // Error object with status but not 403
-      const error500 = { status: 500 };
-      expect(retryFunction(0, error500)).toBe(true);
-
-      // Error object with non-numeric status
+      // Error object with non-numeric status - retry (can't determine if 4xx)
       const errorWithBadStatus = { status: "bad" };
       expect(retryFunction(0, errorWithBadStatus)).toBe(true);
 
-      // Empty error object
+      // Empty error object - retry (unknown error type)
       const emptyError = {};
       expect(retryFunction(0, emptyError)).toBe(true);
+
+      // Null error - retry (unknown error type)
+      expect(retryFunction(0, null)).toBe(true);
     });
   });
 

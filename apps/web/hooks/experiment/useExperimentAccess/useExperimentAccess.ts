@@ -10,8 +10,15 @@ export const useExperimentAccess = (experimentId: string) => {
     queryData: { params: { id: experimentId } },
     queryKey: ["experimentAccess", experimentId],
     retry: (failureCount, error) => {
-      // Don't retry on 403 Forbidden - user definitely doesn't have access
-      if (typeof error === "object" && "status" in error && error.status === 403) {
+      // Don't retry on 4xx client errors - these are not transient
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        typeof error.status === "number" &&
+        error.status >= 400 &&
+        error.status < 500
+      ) {
         return false;
       }
       // Use default retry logic for other errors (up to 3 times)

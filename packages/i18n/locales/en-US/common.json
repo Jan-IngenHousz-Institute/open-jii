@@ -197,7 +197,7 @@
     "description": "Set up a new experiment (project).",
     "name": "Name",
     "description_field": "Description",
-    "descriptionPlaceholder": "Short summary of the experiment’s purpose. To add instructions, finish creating the experiment and use the Instruction Node in the flow section",
+    "descriptionPlaceholder": "Short summary of the experiment's purpose. To add instructions, finish creating the experiment and use the Instruction Node in the flow section",
     "visibility": "Visibility",
     "visibilityPlaceholder": "Select an experiment visibility",
     "cancel": "Cancel",
@@ -446,7 +446,10 @@
     "brandTagline": "Jan IngenHousz Institute - Improving photosynthesis for a sustainable future",
     "termsUnavailable": "Unable to load terms and conditions at this time.",
     "termsContentUnavailable": "Terms and conditions content is not available.",
-    "error": "Error"
+    "error": "Error",
+    "resourceNotFoundMessage": "The resource you're looking for could not be found.",
+    "backToDashboard": "Back to Dashboard",
+    "viewExperiments": "View Experiments"
   },
   "footer": {
     "aboutUs": "About Us",

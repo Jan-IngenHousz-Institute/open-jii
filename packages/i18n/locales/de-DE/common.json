@@ -346,7 +346,10 @@
     "goBack": "Zurück",
     "brandTagline": "Jan IngenHousz Institut - Photosynthese für eine nachhaltige Zukunft verbessern",
     "termsUnavailable": "Die Allgemeinen Geschäftsbedingungen können derzeit nicht geladen werden.",
-    "termsContentUnavailable": "Der Inhalt der Allgemeinen Geschäftsbedingungen ist nicht verfügbar."
+    "termsContentUnavailable": "Der Inhalt der Allgemeinen Geschäftsbedingungen ist nicht verfügbar.",
+    "resourceNotFoundMessage": "Die gesuchte Ressource konnte nicht gefunden werden.",
+    "backToDashboard": "Zurück zum Dashboard",
+    "viewExperiments": "Experimente anzeigen"
   },
   "footer": {
     "aboutUs": "Über uns",

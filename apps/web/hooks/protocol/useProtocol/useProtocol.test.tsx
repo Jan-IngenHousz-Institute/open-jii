@@ -4,13 +4,13 @@ import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { tsr } from "../../../lib/tsr";
-import { useMacro } from "./useMacro";
+import { useProtocol } from "./useProtocol";
 
 // Mock the tsr client
 vi.mock("../../../lib/tsr", () => ({
   tsr: {
-    macros: {
-      getMacro: {
+    protocols: {
+      getProtocol: {
         useQuery: vi.fn(),
       },
     },
@@ -19,7 +19,7 @@ vi.mock("../../../lib/tsr", () => ({
 
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
 
-describe("useMacro", () => {
+describe("useProtocol", () => {
   let queryClient: QueryClient;
 
   const createWrapper = () => {
@@ -40,153 +40,96 @@ describe("useMacro", () => {
     vi.clearAllMocks();
   });
 
-  it("should call tsr.macros.getMacro.useQuery with correct parameters", () => {
-    // Arrange
-    const mockId = "test-macro-id";
+  it("should call useQuery with correct parameters", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: { id: mockId, name: "Test Macro" } },
-      isLoading: false,
+      data: undefined,
       error: null,
+      isLoading: true,
     });
-    mockTsr.macros.getMacro.useQuery = mockUseQuery;
+    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
+      typeof mockTsr.protocols.getProtocol.useQuery
+    >;
 
-    // Act
-    renderHook(() => useMacro(mockId), {
+    renderHook(() => useProtocol("protocol-123"), {
       wrapper: createWrapper(),
     });
 
-    // Assert
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockId } },
-      queryKey: ["macro", mockId],
+      queryData: { params: { id: "protocol-123" } },
+      queryKey: ["protocol", "protocol-123"],
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
   });
 
-  it("should return data when query is successful", () => {
-    // Arrange
-    const mockId = "test-macro-id";
-    const mockMacro = {
-      id: mockId,
-      name: "Test Macro",
-      description: "A test macro",
-      language: "python" as const,
-      code: "test.py",
-      createdBy: "user-123",
-      createdByName: "Test User",
-      createdAt: "2023-01-01T00:00:00Z",
-      updatedAt: "2023-01-01T00:00:00Z",
+  it("should return successful protocol data", () => {
+    const mockData = {
+      status: 200,
+      body: {
+        id: "protocol-123",
+        name: "Test Protocol",
+        description: "A test protocol",
+      },
     };
 
     const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: mockMacro },
-      isLoading: false,
+      data: mockData,
       error: null,
+      isLoading: false,
     });
-    mockTsr.macros.getMacro.useQuery = mockUseQuery;
+    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
+      typeof mockTsr.protocols.getProtocol.useQuery
+    >;
 
-    // Act
-    const { result } = renderHook(() => useMacro(mockId), {
+    const { result } = renderHook(() => useProtocol("protocol-123"), {
       wrapper: createWrapper(),
     });
 
-    // Assert
-    expect(result.current.data).toEqual(mockMacro);
+    expect(result.current.data).toEqual(mockData);
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBe(null);
+    expect(result.current.error).toBeNull();
   });
 
-  it("should return loading state", () => {
-    // Arrange
-    const mockId = "test-macro-id";
+  it("should handle 404 error for non-existent protocol", () => {
+    const mockError = {
+      status: 404,
+      message: "Protocol not found",
+    };
+
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
-      isLoading: true,
-      error: null,
-    });
-    mockTsr.macros.getMacro.useQuery = mockUseQuery;
-
-    // Act
-    const { result } = renderHook(() => useMacro(mockId), {
-      wrapper: createWrapper(),
-    });
-
-    // Assert
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.error).toBe(null);
-  });
-
-  it("should return error state when query fails", () => {
-    // Arrange
-    const mockId = "test-macro-id";
-    const mockError = new Error("Failed to fetch macro");
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      isLoading: false,
       error: mockError,
+      isLoading: false,
     });
-    mockTsr.macros.getMacro.useQuery = mockUseQuery;
+    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
+      typeof mockTsr.protocols.getProtocol.useQuery
+    >;
 
-    // Act
-    const { result } = renderHook(() => useMacro(mockId), {
+    const { result } = renderHook(() => useProtocol("non-existent"), {
       wrapper: createWrapper(),
     });
 
-    // Assert
     expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toEqual(mockError);
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBe(mockError);
   });
 
-  it("should handle undefined data body gracefully", () => {
-    // Arrange
-    const mockId = "test-macro-id";
+  it("should handle loading state", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
-      isLoading: false,
       error: null,
+      isLoading: true,
     });
-    mockTsr.macros.getMacro.useQuery = mockUseQuery;
+    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
+      typeof mockTsr.protocols.getProtocol.useQuery
+    >;
 
-    // Act
-    const { result } = renderHook(() => useMacro(mockId), {
+    const { result } = renderHook(() => useProtocol("protocol-123"), {
       wrapper: createWrapper(),
     });
 
-    // Assert
+    expect(result.current.isLoading).toBe(true);
     expect(result.current.data).toBeUndefined();
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBe(null);
-  });
-
-  it("should use different query keys for different macro IDs", () => {
-    // Arrange
-    const mockId1 = "macro-1";
-    const mockId2 = "macro-2";
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.macros.getMacro.useQuery = mockUseQuery;
-
-    // Act
-    const wrapper = createWrapper();
-    renderHook(() => useMacro(mockId1), { wrapper });
-    renderHook(() => useMacro(mockId2), { wrapper });
-
-    // Assert
-    expect(mockUseQuery).toHaveBeenNthCalledWith(1, {
-      queryData: { params: { id: mockId1 } },
-      queryKey: ["macro", mockId1],
-      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
-    });
-    expect(mockUseQuery).toHaveBeenNthCalledWith(2, {
-      queryData: { params: { id: mockId2 } },
-      queryKey: ["macro", mockId2],
-      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
-    });
+    expect(result.current.error).toBeNull();
   });
 
   describe("retry logic", () => {
@@ -205,9 +148,9 @@ describe("useMacro", () => {
             };
           },
         );
-      mockTsr.macros.getMacro.useQuery = mockUseQuery as unknown;
+      mockTsr.protocols.getProtocol.useQuery = mockUseQuery as unknown;
 
-      renderHook(() => useMacro("macro-123"), {
+      renderHook(() => useProtocol("protocol-123"), {
         wrapper: createWrapper(),
       });
     });
@@ -216,15 +159,20 @@ describe("useMacro", () => {
       const error400 = { status: 400, message: "Bad Request" };
       const error403 = { status: 403, message: "Forbidden" };
       const error404 = { status: 404, message: "Not Found" };
+      const error422 = { status: 422, message: "Unprocessable Entity" };
 
       // 400 Bad Request - should not retry
       expect(retryFunction(0, error400)).toBe(false);
+      expect(retryFunction(1, error400)).toBe(false);
 
       // 403 Forbidden - should not retry
       expect(retryFunction(0, error403)).toBe(false);
 
       // 404 Not Found - should not retry
       expect(retryFunction(0, error404)).toBe(false);
+
+      // 422 Unprocessable Entity - should not retry
+      expect(retryFunction(0, error422)).toBe(false);
     });
 
     it("should retry on 5xx server errors (up to 3 times)", () => {
@@ -253,9 +201,41 @@ describe("useMacro", () => {
       // String error - retry (unknown error type)
       expect(retryFunction(0, "String error")).toBe(true);
 
+      // Error object with non-numeric status - retry (can't determine if 4xx)
+      const errorWithBadStatus = { status: "bad" };
+      expect(retryFunction(0, errorWithBadStatus)).toBe(true);
+
       // Empty error object - retry (unknown error type)
       const emptyError = {};
       expect(retryFunction(0, emptyError)).toBe(true);
     });
+  });
+
+  it("should use different query keys for different protocol IDs", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: false,
+    });
+    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
+      typeof mockTsr.protocols.getProtocol.useQuery
+    >;
+
+    const wrapper = createWrapper();
+
+    renderHook(() => useProtocol("protocol-1"), { wrapper });
+    renderHook(() => useProtocol("protocol-2"), { wrapper });
+
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ["protocol", "protocol-1"],
+      }),
+    );
+
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ["protocol", "protocol-2"],
+      }),
+    );
   });
 });
