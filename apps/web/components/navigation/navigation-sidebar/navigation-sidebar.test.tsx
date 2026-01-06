@@ -1,6 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -171,107 +170,108 @@ describe("AppSidebar", () => {
     expect(screen.getByText("Macros")).toBeInTheDocument();
   });
 
-  it("renders search button that tests click handler logic", () => {
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
+  // Search functionality has been temporarily disabled
+  // it("renders search button that tests click handler logic", () => {
+  //   render(
+  //     <SidebarProvider>
+  //       <AppSidebar
+  //         locale="en"
+  //         navigationData={mockNavigationData}
+  //         translations={mockTranslations}
+  //       />
+  //     </SidebarProvider>,
+  //   );
 
-    // Find the search input (lines 54-61 test the click handler on the button)
-    // The search functionality is rendered with an input
-    const searchInput = screen.getByPlaceholderText("Search by keyword...");
-    expect(searchInput).toBeInTheDocument();
-  });
+  //   // Find the search input (lines 54-61 test the click handler on the button)
+  //   // The search functionality is rendered with an input
+  //   const searchInput = screen.getByPlaceholderText("Search by keyword...");
+  //   expect(searchInput).toBeInTheDocument();
+  // });
 
-  it("renders search icon button for collapsed state", () => {
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
+  // it("renders search icon button for collapsed state", () => {
+  //   render(
+  //     <SidebarProvider>
+  //       <AppSidebar
+  //         locale="en"
+  //         navigationData={mockNavigationData}
+  //         translations={mockTranslations}
+  //       />
+  //     </SidebarProvider>,
+  //   );
 
-    // Lines 54-61: handleSearchClick checks if state === 'collapsed'
-    // In expanded state (default), the function exists but doesn't toggle
-    // This test covers both branches of the if condition
-    const searchInput = screen.getByPlaceholderText("Search by keyword...");
-    expect(searchInput).toBeInTheDocument();
+  //   // Lines 54-61: handleSearchClick checks if state === 'collapsed'
+  //   // In expanded state (default), the function exists but doesn't toggle
+  //   // This test covers both branches of the if condition
+  //   const searchInput = screen.getByPlaceholderText("Search by keyword...");
+  //   expect(searchInput).toBeInTheDocument();
 
-    // The input ref and setTimeout logic is tested by the component rendering
-    expect(searchInput).toHaveAttribute("type", "text");
-  });
+  //   // The input ref and setTimeout logic is tested by the component rendering
+  //   expect(searchInput).toHaveAttribute("type", "text");
+  // });
 
-  it("search input ref is attached correctly", () => {
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
+  // it("search input ref is attached correctly", () => {
+  //   render(
+  //     <SidebarProvider>
+  //       <AppSidebar
+  //         locale="en"
+  //         navigationData={mockNavigationData}
+  //         translations={mockTranslations}
+  //       />
+  //     </SidebarProvider>,
+  //   );
 
-    // Lines 54-61: The handleSearchClick function with if (state === "collapsed")
-    // This ensures the searchInputRef.current?.focus() line is covered
-    const searchInput = screen.getByPlaceholderText("Search by keyword...");
-    expect(searchInput).toBeInTheDocument();
+  //   // Lines 54-61: The handleSearchClick function with if (state === "collapsed")
+  //   // This ensures the searchInputRef.current?.focus() line is covered
+  //   const searchInput = screen.getByPlaceholderText("Search by keyword...");
+  //   expect(searchInput).toBeInTheDocument();
 
-    // Focus the input to ensure the ref is working
-    searchInput.focus();
-    expect(searchInput).toHaveFocus();
-  });
+  //   // Focus the input to ensure the ref is working
+  //   searchInput.focus();
+  //   expect(searchInput).toHaveFocus();
+  // });
 
-  it("calls toggleSidebar and focuses search input when search is clicked in collapsed state", async () => {
-    const mockToggleSidebar = vi.fn();
-    mockUseSidebar.mockReturnValue({
-      state: "collapsed",
-      toggleSidebar: mockToggleSidebar,
-      open: false,
-      setOpen: vi.fn(),
-      openMobile: false,
-      setOpenMobile: vi.fn(),
-      isMobile: false,
-    });
+  // it("calls toggleSidebar and focuses search input when search is clicked in collapsed state", async () => {
+  //   const mockToggleSidebar = vi.fn();
+  //   mockUseSidebar.mockReturnValue({
+  //     state: "collapsed",
+  //     toggleSidebar: mockToggleSidebar,
+  //     open: false,
+  //     setOpen: vi.fn(),
+  //     openMobile: false,
+  //     setOpenMobile: vi.fn(),
+  //     isMobile: false,
+  //   });
 
-    render(
-      <SidebarProvider>
-        <AppSidebar
-          locale="en"
-          navigationData={mockNavigationData}
-          translations={mockTranslations}
-        />
-      </SidebarProvider>,
-    );
+  //   render(
+  //     <SidebarProvider>
+  //       <AppSidebar
+  //         locale="en"
+  //         navigationData={mockNavigationData}
+  //         translations={mockTranslations}
+  //       />
+  //     </SidebarProvider>,
+  //   );
 
-    // In collapsed state, the search icon button should be visible
-    // Find the button that triggers handleSearchClick
-    const buttons = screen.getAllByRole("button");
-    // The search button is the one with the search icon (hidden class will be removed in collapsed state)
-    const searchButton = buttons.find((button) =>
-      button.className.includes("group-data-[collapsible=icon]:flex"),
-    );
+  //   // In collapsed state, the search icon button should be visible
+  //   // Find the button that triggers handleSearchClick
+  //   const buttons = screen.getAllByRole("button");
+  //   // The search button is the one with the search icon (hidden class will be removed in collapsed state)
+  //   const searchButton = buttons.find((button) =>
+  //     button.className.includes("group-data-[collapsible=icon]:flex"),
+  //   );
 
-    if (searchButton) {
-      await userEvent.click(searchButton);
-      expect(mockToggleSidebar).toHaveBeenCalled();
+  //   if (searchButton) {
+  //     await userEvent.click(searchButton);
+  //     expect(mockToggleSidebar).toHaveBeenCalled();
 
-      // Wait for the setTimeout to execute (200ms delay in the code)
-      await waitFor(
-        () => {
-          const searchInput = screen.getByPlaceholderText("Search by keyword...");
-          expect(document.activeElement).toBe(searchInput);
-        },
-        { timeout: 500 },
-      );
-    }
-  });
+  //     // Wait for the setTimeout to execute (200ms delay in the code)
+  //     await waitFor(
+  //       () => {
+  //         const searchInput = screen.getByPlaceholderText("Search by keyword...");
+  //         expect(document.activeElement).toBe(searchInput);
+  //       },
+  //       { timeout: 500 },
+  //     );
+  //   }
+  // });
 });
