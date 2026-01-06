@@ -39,8 +39,8 @@ provider "databricks" {
   auth_type     = "oauth-m2m"
 }
 
-# provider "grafana" {
-#   alias = "amg"
-#   url   = module.managed_grafana_workspace.amg_url
-#   auth  = var.grafana_auth_service_token
-# }
+provider "grafana" {
+  alias = "amg"
+  url   = module.managed_grafana_workspace.amg_url
+  auth  = var.grafana_auth_service_token
+}
