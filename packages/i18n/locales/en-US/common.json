@@ -702,8 +702,7 @@
     "analyticsTitle": "Analytics Cookies",
     "analyticsDescription": "Help us understand how you use our platform to improve your experience. Powered by PostHog.",
     "saveClose": "Save & Close"
-  }
-  ,
+  },
   "cookieSettings": {
     "title": "Cookie Settings",
     "intro": "Manage your cookie preferences and understand how we use cookies on our platform.",
