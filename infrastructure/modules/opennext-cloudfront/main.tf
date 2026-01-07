@@ -101,17 +101,36 @@ resource "aws_cloudfront_function" "forward_host_header" {
   code    = <<-EOT
 function handler(event) {
   var request = event.request;
-  var headers = request.headers;
-  
-  // Forward the host header as x-forwarded-host
+  var headers = request.headers || {};
+  var host = (headers.host && headers.host.value) ? headers.host.value : '';
+
+  // 1) Canonicalize host: redirect any "www." to non-www (preserve path & query)
+  if (host && host.startsWith('www.')) {
+    var targetHost = host.slice(4); // remove "www."
+    var uri = request.uri || '/';
+    var qs = request.querystring && request.querystring.length > 0 ? ('?' + request.querystring) : '';
+
+    return {
+      statusCode: 301,
+      statusDescription: 'Moved Permanently',
+      headers: {
+        location:       { value: 'https://' + targetHost + uri + qs },
+        'cache-control':{ value: 'public, max-age=300' }
+      }
+    };
+  }
+
+  // 2) Forward the host header as x-forwarded-host (required by OpenNext)
   if (headers.host) {
     headers['x-forwarded-host'] = headers.host;
   }
-  
+
+  // Continue to origin
   return request;
 }
 EOT
 }
+
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "distribution" {

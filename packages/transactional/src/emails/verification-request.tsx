@@ -17,15 +17,9 @@ interface VerificationRequestProps {
   url: string;
   host: string;
   senderName: string;
-  qrCodeDataUrl: string;
 }
 
-export const VerificationRequest = ({
-  url,
-  host,
-  senderName,
-  qrCodeDataUrl,
-}: VerificationRequestProps) => {
+export const VerificationRequest = ({ url, host, senderName }: VerificationRequestProps) => {
   return (
     <Html>
       <Tailwind>
@@ -62,7 +56,7 @@ export const VerificationRequest = ({
               </Text>
               <Section className="mb-6 text-center">
                 <Img
-                  src={qrCodeDataUrl}
+                  src="cid:qrcode"
                   alt="QR Code"
                   width="200"
                   height="200"

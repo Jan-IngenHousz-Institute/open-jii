@@ -1,11 +1,10 @@
 "use client";
 
-import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
-import { Sidebar, SidebarRail, SidebarTrigger, useSidebar } from "@repo/ui/components";
+import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components";
 
 import { NavItems } from "../nav-items/nav-items";
 import { iconMap } from "../navigation-config";
@@ -47,18 +46,18 @@ export function AppSidebar({
   navigationData: NavigationData;
   translations: Translations;
 }) {
-  const { toggleSidebar, state } = useSidebar();
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  // const { toggleSidebar, state } = useSidebar();
+  // const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleSearchClick = () => {
-    if (state === "collapsed") {
-      toggleSidebar();
-      // Focus the input after sidebar opens
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 200);
-    }
-  };
+  // const handleSearchClick = () => {
+  //   if (state === "collapsed") {
+  //     toggleSidebar();
+  //     // Focus the input after sidebar opens
+  //     setTimeout(() => {
+  //       searchInputRef.current?.focus();
+  //     }, 200);
+  //   }
+  // };
 
   // Convert string-based icons to actual icon components
   const processedNavDashboard = navigationData.navDashboard.map((item) => ({
@@ -107,7 +106,7 @@ export function AppSidebar({
           </Link>
           <SidebarTrigger className="bg-jii-dark-green hover:bg-sidebar-trigger-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white group-data-[state=collapsed]:hidden" />
         </div>
-        <div className="relative h-12 px-4 group-data-[collapsible=icon]:px-0">
+        {/* <div className="relative h-12 px-4 group-data-[collapsible=icon]:px-0">
           <input
             ref={searchInputRef}
             type="text"
@@ -121,7 +120,7 @@ export function AppSidebar({
           >
             <Search className="text-sidebar-search-icon h-4 w-4" />
           </button>
-        </div>
+        </div> */}
         <div className="flex flex-col gap-4 px-4 group-data-[collapsible=icon]:gap-4 group-data-[collapsible=icon]:px-0">
           <NavItems items={processedNavDashboard} />
           <NavItems items={processedNavExperiments} />
