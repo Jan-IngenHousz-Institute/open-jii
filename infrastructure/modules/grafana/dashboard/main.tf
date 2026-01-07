@@ -8,6 +8,24 @@ terraform {
   }
 }
 
+locals {
+  dashboard_json_file = file("${path.module}/dashboard.json.tftpl")
+
+  dashboard_vars = {
+    datasource_uid             = grafana_data_source.cloudwatch_source.uid
+    project                    = var.project
+    environment                = var.environment
+    aws_region                 = var.aws_region
+    cloudfront_distribution_id = var.cloudfront_distribution_id
+    load_balancer_dimension    = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
+    target_group_dimension     = element(split(":", var.target_group_arn), length(split(":", var.target_group_arn)) - 1)
+    ecs_cluster_name           = var.ecs_cluster_name
+    ecs_service_name           = var.ecs_service_name
+    server_function_name       = var.server_function_name
+    db_cluster_identifier      = var.db_cluster_identifier
+  }
+}
+
 # Create a CloudWatch data source in AMG
 resource "grafana_data_source" "cloudwatch_source" {
   provider   = grafana.amg
@@ -32,165 +50,7 @@ resource "grafana_dashboard" "dashboard" {
   folder    = grafana_folder.folder.id
   overwrite = true
 
-  # Note: This is a trimmed JSON. You can add more panels and customize queries.
-  # Panels use CloudWatch metrics with the CloudWatch data source.
-  config_json = jsonencode({
-    title = "${var.project} - SRE Overview"
-    uid   = "${var.environment}-sre-overview"
-    time  = { from = "now-6h", to = "now" }
-    panels = [
-      # Lambda Errors
-      {
-        id         = 1
-        type       = "timeseries"
-        title      = "Lambda (sum)"
-        gridPos    = { h = 8, w = 12, x = 0, y = 0 }
-        datasource = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-        targets = [
-          {
-            refId            = "A"
-            region           = var.aws_region
-            queryMode        = "Metrics"
-            namespace        = "AWS/Lambda"
-            metricName       = "Errors"
-            dimensions       = { "FunctionName" = var.server_function_name }
-            statistic        = "Sum"
-            period           = "300"
-            metricQueryType  = 0
-            metricEditorMode = 0
-            matchExact       = true
-            queryType        = "timeSeriesQuery"
-            datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-          },
-          {
-            refId            = "B"
-            region           = var.aws_region
-            queryMode        = "Metrics"
-            namespace        = "AWS/Lambda"
-            metricName       = "Invocations"
-            dimensions       = { "FunctionName" = var.server_function_name }
-            statistic        = "Sum"
-            period           = "300"
-            metricQueryType  = 0
-            metricEditorMode = 0
-            matchExact       = true
-            queryType        = "timeSeriesQuery"
-            datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-          },
-          {
-            refId            = "C"
-            region           = var.aws_region
-            queryMode        = "Metrics"
-            namespace        = "AWS/Lambda"
-            metricName       = "Throttles"
-            dimensions       = { "FunctionName" = var.server_function_name }
-            statistic        = "Sum"
-            period           = "300"
-            metricQueryType  = 0
-            metricEditorMode = 0
-            matchExact       = true
-            queryType        = "timeSeriesQuery"
-            datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-          }
-        ]
-      },
-      # ALB Requests
-      {
-        id         = 2
-        type       = "timeseries"
-        title      = "ALB Requests"
-        gridPos    = { h = 8, w = 12, x = 12, y = 0 }
-        datasource = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-        targets = [
-          {
-            refId      = "A"
-            region     = var.aws_region
-            queryMode  = "Metrics"
-            namespace  = "AWS/ApplicationELB"
-            metricName = "RequestCount"
-            dimensions = {
-              "LoadBalancer" = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
-              "TargetGroup"  = join("/", slice(split("/", var.target_group_arn), 1, length(split("/", var.target_group_arn))))
-            }
-            statistic        = "Sum"
-            period           = "300"
-            metricQueryType  = 0
-            metricEditorMode = 0
-            matchExact       = true
-            queryType        = "timeSeriesQuery"
-            datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-          }
-        ]
-      },
-      # ECS Resource Utilization
-      {
-        id         = 3
-        type       = "timeseries"
-        title      = "ECS Service Resources (%)"
-        gridPos    = { h = 8, w = 12, x = 0, y = 8 }
-        datasource = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-        targets = [
-          {
-            refId            = "A"
-            region           = var.aws_region
-            queryMode        = "Metrics"
-            namespace        = "AWS/ECS"
-            metricName       = "CPUUtilization"
-            dimensions       = { "ClusterName" = var.ecs_cluster_name, "ServiceName" = var.ecs_service_name }
-            statistic        = "Average"
-            period           = ""
-            metricQueryType  = 0
-            metricEditorMode = 0
-            matchExact       = true
-            datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-          },
-          {
-            refId            = "B"
-            region           = var.aws_region
-            queryMode        = "Metrics"
-            namespace        = "AWS/ECS"
-            metricName       = "MemoryUtilization"
-            dimensions       = { "ClusterName" = var.ecs_cluster_name, "ServiceName" = var.ecs_service_name }
-            statistic        = "Average"
-            period           = ""
-            metricQueryType  = 0
-            metricEditorMode = 0
-            matchExact       = true
-            datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-          }
-        ]
-      },
-      # CloudFront Requests
-      {
-        id         = 4
-        type       = "timeseries"
-        title      = "CloudFront Requests"
-        gridPos    = { h = 8, w = 12, x = 12, y = 8 }
-        datasource = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-        targets = [
-          {
-            refId            = "A"
-            region           = "us-east-1"
-            queryMode        = "Metrics"
-            namespace        = "AWS/CloudFront"
-            metricName       = "Requests"
-            dimensions       = { "DistributionId" = var.cloudfront_distribution_id }
-            statistic        = "Sum"
-            period           = "300"
-            metricQueryType  = 0
-            metricEditorMode = 0
-            matchExact       = true
-            queryType        = "timeSeriesQuery"
-            datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_source.uid }
-          }
-        ]
-      }
-    ]
-    schemaVersion = 36
-    version       = 1
-    tags          = ["aws", "monitoring"]
-    editable      = true
-  })
+  config_json = templatefile("${path.module}/dashboard.json.tftpl", local.dashboard_vars)
 }
 
 ### Alerting rules 

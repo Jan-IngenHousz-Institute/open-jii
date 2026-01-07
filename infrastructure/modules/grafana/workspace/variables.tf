@@ -14,4 +14,3 @@ variable "project" {
   type        = string
   default     = "open-jii"
 }
-

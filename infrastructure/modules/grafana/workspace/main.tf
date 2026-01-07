@@ -49,3 +49,16 @@ resource "aws_iam_role_policy_attachment" "grafana_cloudwatch" {
   role       = aws_iam_role.assume.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
 }
+
+resource "aws_grafana_workspace_service_account" "admin" {
+  name         = "${local.workspace_name}-admin"
+  grafana_role = "ADMIN"
+  workspace_id = aws_grafana_workspace.this.id
+}
+
+resource "aws_grafana_workspace_service_account_token" "admin_token" {
+  name               = "${local.workspace_name}-admin-token"
+  service_account_id = aws_grafana_workspace_service_account.admin.service_account_id
+  seconds_to_live    = 2592000 # 30 days
+  workspace_id       = aws_grafana_workspace.this.id
+}

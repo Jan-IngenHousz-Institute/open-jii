@@ -48,3 +48,7 @@ variable "slack_webhook_url" {
   type        = string
 }
 
+variable "db_cluster_identifier" {
+  description = "The identifier of the Aurora DB cluster to monitor"
+  type        = string
+}
