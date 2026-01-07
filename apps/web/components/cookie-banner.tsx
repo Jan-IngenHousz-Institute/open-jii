@@ -64,24 +64,22 @@ export function CookieBanner() {
   return (
     <>
       <div className="bg-card border-border fixed inset-x-0 bottom-0 z-50 border-t shadow-[0_-8px_24px_rgba(0,0,0,0.1)]">
-        <div className="mx-auto max-w-7xl p-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-muted-foreground text-sm sm:pr-6">
-              {t("cookieBanner.intro")}
-              <Link href="/cookie-policy" className="text-primary hover:underline" prefetch={false}>
-                {t("cookieBanner.cookiePolicy")}
-              </Link>
-            </p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-muted-foreground text-sm sm:pr-6">
+            {t("cookieBanner.intro")}
+            <Link href="/cookie-policy" className="text-primary hover:underline" prefetch={false}>
+              {t("cookieBanner.cookiePolicy")}
+            </Link>
+          </p>
 
-            <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-              <Button variant="secondary" onClick={() => setShowManage(true)}>
-                {t("cookieBanner.managePreferences")}
-              </Button>
-              <Button variant="secondary" onClick={handleDeclineCookies}>
-                {t("cookieBanner.rejectAll")}
-              </Button>
-              <Button onClick={handleAcceptCookies}>{t("cookieBanner.acceptAll")}</Button>
-            </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <Button variant="secondary" onClick={() => setShowManage(true)}>
+              {t("cookieBanner.managePreferences")}
+            </Button>
+            <Button variant="secondary" onClick={handleDeclineCookies}>
+              {t("cookieBanner.rejectAll")}
+            </Button>
+            <Button onClick={handleAcceptCookies}>{t("cookieBanner.acceptAll")}</Button>
           </div>
         </div>
       </div>
