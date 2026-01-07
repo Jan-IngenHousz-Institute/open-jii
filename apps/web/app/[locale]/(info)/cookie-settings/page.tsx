@@ -13,9 +13,23 @@ import {
   CardTitle,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
+import { cva } from "@repo/ui/lib/utils";
 
 import type { ConsentStatus } from "../../../../lib/cookie-consent";
 import { getConsentStatus, setConsentStatus } from "../../../../lib/cookie-consent";
+
+const statusVariants = cva("", {
+  variants: {
+    status: {
+      accepted: "text-primary",
+      rejected: "text-destructive",
+      pending: "text-yellow-600",
+    },
+  },
+  defaultVariants: {
+    status: "pending",
+  },
+});
 
 /**
  * Cookie settings page component
@@ -106,15 +120,7 @@ export default function CookieSettingsPage() {
                 <div className="bg-muted rounded-md p-3">
                   <p className="text-sm font-medium">
                     {t("cookieSettings.currentStatus")}{" "}
-                    <span
-                      className={
-                        consentGiven === "accepted"
-                          ? "text-green-600"
-                          : consentGiven === "rejected"
-                            ? "text-red-600"
-                            : "text-yellow-600"
-                      }
-                    >
+                    <span className={statusVariants({ status: consentGiven })}>
                       {consentGiven === "accepted"
                         ? t("cookieSettings.statusEnabled")
                         : consentGiven === "rejected"
