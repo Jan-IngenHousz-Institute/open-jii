@@ -72,6 +72,24 @@ vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<strin
   };
 });
 
+function mockOverflow({
+  scrollHeight,
+  clientHeight,
+}: {
+  scrollHeight: number;
+  clientHeight: number;
+}) {
+  Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+    configurable: true,
+    value: scrollHeight,
+  });
+
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    value: clientHeight,
+  });
+}
+
 describe("ProtocolCard", () => {
   const mockProtocol: Protocol = {
     id: "proto-1",
@@ -119,19 +137,19 @@ describe("ProtocolCard", () => {
     expect(screen.queryByTestId("rich-text-renderer")).not.toBeInTheDocument();
   });
 
-  it("shows fade gradient for long descriptions", () => {
-    const longDescription = "a".repeat(500);
-    const protocolWithLongDesc = { ...mockProtocol, description: longDescription };
-    render(<ProtocolCard protocol={protocolWithLongDesc} isLoading={false} error={null} />);
+  it("shows fade gradient when description visually overflows", () => {
+    mockOverflow({ scrollHeight: 500, clientHeight: 100 });
+
+    render(<ProtocolCard protocol={mockProtocol} isLoading={false} error={null} />);
 
     const fadeElement = document.querySelector(".bg-gradient-to-t");
     expect(fadeElement).toBeInTheDocument();
   });
 
-  it("does not show fade gradient for short descriptions", () => {
-    const shortDescription = "Short description";
-    const protocolWithShortDesc = { ...mockProtocol, description: shortDescription };
-    render(<ProtocolCard protocol={protocolWithShortDesc} isLoading={false} error={null} />);
+  it("does not show fade gradient when description does not overflow", () => {
+    mockOverflow({ scrollHeight: 100, clientHeight: 500 });
+
+    render(<ProtocolCard protocol={mockProtocol} isLoading={false} error={null} />);
 
     const fadeElement = document.querySelector(".bg-gradient-to-t");
     expect(fadeElement).not.toBeInTheDocument();
