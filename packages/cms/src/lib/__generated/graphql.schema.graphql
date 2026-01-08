@@ -1,10 +1,5 @@
 directive @contentSourceMaps on QUERY
 
-"""
-Indicates exactly one field must be supplied and this field must not be `null`.
-"""
-directive @oneOf on INPUT_OBJECT
-
 directive @timeline(where: TimelineFilterInput!) on QUERY
 
 """Represents a binary file in a space. An asset can be any file type."""
@@ -1619,6 +1614,129 @@ enum PageBlogPostRelatedBlogPostsCollectionOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy)
+"""
+type PageCookiePolicy implements Entry & _Node {
+  _id: ID!
+  content(locale: String, useFallbackLocale: Boolean): PageCookiePolicyContent
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String, useFallbackLocale: Boolean): String
+  linkedFrom(allowedLocales: [String]): PageCookiePolicyLinkingCollections
+  pageDescription(locale: String, useFallbackLocale: Boolean): String
+  pageTitle(locale: String, useFallbackLocale: Boolean): String
+  sys: Sys!
+  title(locale: String, useFallbackLocale: Boolean): String
+}
+
+type PageCookiePolicyCollection {
+  items: [PageCookiePolicy]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type PageCookiePolicyContent {
+  json: JSON!
+  links: PageCookiePolicyContentLinks!
+}
+
+type PageCookiePolicyContentAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type PageCookiePolicyContentEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type PageCookiePolicyContentLinks {
+  assets: PageCookiePolicyContentAssets!
+  entries: PageCookiePolicyContentEntries!
+  resources: PageCookiePolicyContentResources!
+}
+
+type PageCookiePolicyContentResources {
+  block: [PageCookiePolicyContentResourcesBlock!]!
+  hyperlink: [PageCookiePolicyContentResourcesHyperlink!]!
+  inline: [PageCookiePolicyContentResourcesInline!]!
+}
+
+type PageCookiePolicyContentResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageCookiePolicyContentResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageCookiePolicyContentResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+input PageCookiePolicyFilter {
+  AND: [PageCookiePolicyFilter]
+  OR: [PageCookiePolicyFilter]
+  content_contains: String
+  content_exists: Boolean
+  content_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  pageDescription: String
+  pageDescription_contains: String
+  pageDescription_exists: Boolean
+  pageDescription_in: [String]
+  pageDescription_not: String
+  pageDescription_not_contains: String
+  pageDescription_not_in: [String]
+  pageTitle: String
+  pageTitle_contains: String
+  pageTitle_exists: Boolean
+  pageTitle_in: [String]
+  pageTitle_not: String
+  pageTitle_not_contains: String
+  pageTitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageCookiePolicyLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): EntryCollection
+}
+
+enum PageCookiePolicyOrder {
+  internalName_ASC
+  internalName_DESC
+  pageDescription_ASC
+  pageDescription_DESC
+  pageTitle_ASC
+  pageTitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
 [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq)
 """
 type PageFaq implements Entry & _Node {
@@ -2531,6 +2649,8 @@ type Query {
   pageAboutCollection(limit: Int = 100, locale: String, order: [PageAboutOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: PageAboutFilter): PageAboutCollection
   pageBlogPost(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): PageBlogPost
   pageBlogPostCollection(limit: Int = 100, locale: String, order: [PageBlogPostOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: PageBlogPostFilter): PageBlogPostCollection
+  pageCookiePolicy(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): PageCookiePolicy
+  pageCookiePolicyCollection(limit: Int = 100, locale: String, order: [PageCookiePolicyOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: PageCookiePolicyFilter): PageCookiePolicyCollection
   pageFaq(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): PageFaq
   pageFaqCollection(limit: Int = 100, locale: String, order: [PageFaqOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: PageFaqFilter): PageFaqCollection
   pageHomeFeatures(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): PageHomeFeatures
