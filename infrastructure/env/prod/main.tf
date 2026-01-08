@@ -518,6 +518,8 @@ module "experiment_provisioning_job" {
         "job_run_id"          = "{{job.run_id}}"
         "task_run_id"         = "{{task.run_id}}"
         "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
+        "pipeline_id"         = "{{tasks.experiment_pipeline_create.values.pipeline_id}}"
+        "schema_name"         = "{{tasks.experiment_pipeline_create.values.schema_name}}"
         "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
         "key_scope"           = module.experiment_secret_scope.scope_name
       }
