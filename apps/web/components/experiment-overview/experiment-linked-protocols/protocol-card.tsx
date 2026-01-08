@@ -40,18 +40,18 @@ export function ProtocolCard({
       {/* Metadata */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div>
-          <p className="text-muted-dark text-sm font-semibold">{t("protocols.sensorFamily")}</p>
+          <p className="text-muted-dark text-sm font-medium">{t("protocols.sensorFamily")}</p>
           <p className="text-muted-foreground text-sm capitalize">{protocol.family}</p>
         </div>
 
         <div>
-          <p className="text-muted-dark text-sm font-semibold">{t("updated")}</p>
+          <p className="text-muted-dark text-sm font-medium">{t("updated")}</p>
           <p className="text-muted-foreground text-sm">{formatDate(protocol.updatedAt)}</p>
         </div>
 
         {protocol.createdByName && (
           <div>
-            <p className="text-muted-dark text-sm font-semibold">{t("createdBy")}</p>
+            <p className="text-muted-dark text-sm font-medium">{t("createdBy")}</p>
             <p className="text-muted-foreground text-sm">{protocol.createdByName}</p>
           </div>
         )}
@@ -60,7 +60,7 @@ export function ProtocolCard({
       {/* Description */}
       {protocol.description && protocol.description !== "<p><br></p>" && (
         <div className="space-y-0">
-          <p className="text-muted-dark text-sm font-semibold">{t("form.description")}</p>
+          <p className="text-muted-dark text-sm font-medium">{t("form.description")}</p>
 
           <div className="relative">
             <div className="max-h-32 overflow-hidden">
