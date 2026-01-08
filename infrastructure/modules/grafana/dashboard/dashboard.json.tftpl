@@ -1144,55 +1144,490 @@
       ]
     },
     {
-      "id": 506,
-      "type": "timeseries",
-      "title": "Deadlocks & Failed SQL Connections",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 57 },
+      "id": 600,
+      "type": "row",
+      "title": "📊 DORA Metrics",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 65 },
+      "collapsed": false
+    },
+    {
+      "id": 601,
+      "type": "stat",
+      "title": "Deployment Frequency (24h)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 66 },
       "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "description": "Total number of deployments across all services in the last 24 hours",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"]
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "axisPlacement": "auto", "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "red" },
+              { "value": 1, "color": "yellow" },
+              { "value": 5, "color": "green" }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "id": "",
+        "refId": "A",
+        "region": "${aws_region}",
+        "queryMode": "Metrics",
+        "namespace": "DORA/Metrics",
+        "metricName": "DeploymentFrequency",
+        "expression": "",
+        "dimensions": {
+          "Environment": "${environment}"
+        },
+        "statistic": "Sum",
+        "period": "86400",
+        "metricQueryType": 0,
+        "metricEditorMode": 0,
+        "sqlExpression": "",
+        "matchExact": false,
+        "label": ""
+      }]
+    },
+    {
+      "id": 602,
+      "type": "stat",
+      "title": "Average Lead Time (24h)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 66 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "description": "Average time from commit to production deployment",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["mean"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 3600000, "color": "yellow" },
+              { "value": 86400000, "color": "red" }
+            ]
+          },
+          "decimals": 0
+        }
+      },
+      "targets": [{
+        "id": "",
+        "refId": "A",
+        "region": "${aws_region}",
+        "queryMode": "Metrics",
+        "namespace": "DORA/Metrics",
+        "metricName": "LeadTime",
+        "expression": "",
+        "dimensions": {
+          "Environment": "${environment}"
+        },
+        "statistic": "Average",
+        "period": "86400",
+        "metricQueryType": 0,
+        "metricEditorMode": 0,
+        "sqlExpression": "",
+        "matchExact": false,
+        "label": ""
+      }]
+    },
+    {
+      "id": 603,
+      "type": "stat",
+      "title": "Change Failure Rate (24h)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 66 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "description": "Percentage of deployments that failed",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 15, "color": "yellow" },
+              { "value": 30, "color": "red" }
+            ]
+          },
+          "decimals": 1
+        }
+      },
+      "targets": [
+        {
+          "id": "",
+          "refId": "Failed",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentFailed",
+          "expression": "",
+          "dimensions": {
+            "Environment": "${environment}"
+          },
+          "statistic": "Sum",
+          "period": "86400",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": ""
+        },
+        {
+          "id": "",
+          "refId": "Success",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentSuccess",
+          "expression": "",
+          "dimensions": {
+            "Environment": "${environment}"
+          },
+          "statistic": "Sum",
+          "period": "86400",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": ""
+        },
+        {
+          "id": "",
+          "refId": "CFR",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "",
+          "metricName": "",
+          "expression": "(Failed / (Success + Failed)) * 100",
+          "dimensions": {},
+          "statistic": "",
+          "period": "",
+          "metricQueryType": 1,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Failure Rate %"
+        }
+      ]
+    },
+    {
+      "id": 604,
+      "type": "stat",
+      "title": "Deployment Success Rate (24h)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 66 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "description": "Percentage of successful deployments",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "red" },
+              { "value": 70, "color": "yellow" },
+              { "value": 85, "color": "green" }
+            ]
+          },
+          "decimals": 1
+        }
+      },
+      "targets": [
+        {
+          "id": "",
+          "refId": "Failed",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentFailed",
+          "expression": "",
+          "dimensions": {
+            "Environment": "${environment}"
+          },
+          "statistic": "Sum",
+          "period": "86400",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": ""
+        },
+        {
+          "id": "",
+          "refId": "Success",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentSuccess",
+          "expression": "",
+          "dimensions": {
+            "Environment": "${environment}"
+          },
+          "statistic": "Sum",
+          "period": "86400",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": ""
+        },
+        {
+          "id": "",
+          "refId": "SR",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "",
+          "metricName": "",
+          "expression": "(Success / (Success + Failed)) * 100",
+          "dimensions": {},
+          "statistic": "",
+          "period": "",
+          "metricQueryType": 1,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Success Rate %"
+        }
+      ]
+    },
+    {
+      "id": 605,
+      "type": "timeseries",
+      "title": "Deployment Frequency by Service (7d)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 70 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "description": "Number of deployments per service over time",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "pointSize": 8,
+            "showPoints": "always"
+          },
           "color": { "mode": "palette-classic" }
         }
       },
       "targets": [
         {
           "id": "",
-          "refId": "A",
+          "refId": "Backend",
           "region": "${aws_region}",
-          "logGroups": [],
           "queryMode": "Metrics",
-          "namespace": "AWS/RDS",
-          "metricName": "Deadlocks",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentFrequency",
           "expression": "",
-          "dimensions": { "DBClusterIdentifier": "${db_cluster_identifier}" },
+          "dimensions": {
+            "Service": "backend",
+            "Environment": "${environment}"
+          },
           "statistic": "Sum",
-          "period": "300",
+          "period": "3600",
           "metricQueryType": 0,
           "metricEditorMode": 0,
           "sqlExpression": "",
-          "matchExact": true,
-          "label": "",
-          "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" }
+          "matchExact": false,
+          "label": "Backend"
         },
         {
           "id": "",
-          "refId": "B",
+          "refId": "Web",
           "region": "${aws_region}",
-          "logGroups": [],
           "queryMode": "Metrics",
-          "namespace": "AWS/RDS",
-          "metricName": "FailedSQLServerAgentJobsCount",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentFrequency",
           "expression": "",
-          "dimensions": { "DBClusterIdentifier": "${db_cluster_identifier}" },
+          "dimensions": {
+            "Service": "web",
+            "Environment": "${environment}"
+          },
           "statistic": "Sum",
-          "period": "300",
+          "period": "3600",
           "metricQueryType": 0,
           "metricEditorMode": 0,
           "sqlExpression": "",
-          "matchExact": true,
-          "label": ""
+          "matchExact": false,
+          "label": "Web"
+        },
+        {
+          "id": "",
+          "refId": "Docs",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentFrequency",
+          "expression": "",
+          "dimensions": {
+            "Service": "docs",
+            "Environment": "${environment}"
+          },
+          "statistic": "Sum",
+          "period": "3600",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Docs"
+        },
+        {
+          "id": "",
+          "refId": "Database",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "DeploymentFrequency",
+          "expression": "",
+          "dimensions": {
+            "Service": "database",
+            "Environment": "${environment}"
+          },
+          "statistic": "Sum",
+          "period": "3600",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Database"
+        }
+      ]
+    },
+    {
+      "id": 606,
+      "type": "timeseries",
+      "title": "Lead Time Trend by Service (7d)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 70 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "description": "Average lead time from commit to deployment",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "id": "",
+          "refId": "Backend",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "LeadTime",
+          "expression": "",
+          "dimensions": {
+            "Service": "backend",
+            "Environment": "${environment}"
+          },
+          "statistic": "Average",
+          "period": "3600",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Backend"
+        },
+        {
+          "id": "",
+          "refId": "Web",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "LeadTime",
+          "expression": "",
+          "dimensions": {
+            "Service": "web",
+            "Environment": "${environment}"
+          },
+          "statistic": "Average",
+          "period": "3600",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Web"
+        },
+        {
+          "id": "",
+          "refId": "Docs",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "LeadTime",
+          "expression": "",
+          "dimensions": {
+            "Service": "docs",
+            "Environment": "${environment}"
+          },
+          "statistic": "Average",
+          "period": "3600",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Docs"
+        },
+        {
+          "id": "",
+          "refId": "Database",
+          "region": "${aws_region}",
+          "queryMode": "Metrics",
+          "namespace": "DORA/Metrics",
+          "metricName": "LeadTime",
+          "expression": "",
+          "dimensions": {
+            "Service": "database",
+            "Environment": "${environment}"
+          },
+          "statistic": "Average",
+          "period": "3600",
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "sqlExpression": "",
+          "matchExact": false,
+          "label": "Database"
         }
       ]
     }

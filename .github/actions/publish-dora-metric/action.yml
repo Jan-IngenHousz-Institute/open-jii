@@ -1,0 +1,71 @@
+name: 'Publish DORA Metric'
+description: 'Publishes DORA metrics to CloudWatch for tracking deployment performance'
+
+inputs:
+  metric-name:
+    description: 'The DORA metric name (DeploymentFrequency, LeadTime, DeploymentSuccess, DeploymentFailed)'
+    required: true
+  value:
+    description: 'The metric value (use 1 for counts, milliseconds for durations)'
+    required: true
+    default: '1'
+  unit:
+    description: 'CloudWatch metric unit (Count, Milliseconds, Seconds, None)'
+    required: false
+    default: 'Count'
+  service:
+    description: 'Service name (backend, web, mobile, etc.)'
+    required: true
+  environment:
+    description: 'Environment (dev, staging, prod)'
+    required: true
+  aws-region:
+    description: 'AWS region for CloudWatch'
+    required: false
+    default: 'eu-central-1'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish DORA Metric to CloudWatch
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        METRIC_NAME="${{ inputs.metric-name }}"
+        METRIC_VALUE="${{ inputs.value }}"
+        UNIT="${{ inputs.unit }}"
+        SERVICE="${{ inputs.service }}"
+        ENVIRONMENT="${{ inputs.environment }}"
+        AWS_REGION="${{ inputs.aws-region }}"
+        NAMESPACE="DORA/Metrics"
+        TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        
+        echo "📊 Publishing DORA metric:"
+        echo "  Metric: $METRIC_NAME"
+        echo "  Value: $METRIC_VALUE $UNIT"
+        echo "  Service: $SERVICE"
+        echo "  Environment: $ENVIRONMENT"
+        
+        # Publish metric to CloudWatch using JSON format
+        aws cloudwatch put-metric-data \
+          --region "$AWS_REGION" \
+          --namespace "$NAMESPACE" \
+          --metric-data '[
+            {
+              "MetricName": "'"$METRIC_NAME"'",
+              "Value": '"$METRIC_VALUE"',
+              "Unit": "'"$UNIT"'",
+              "Timestamp": "'"$TIMESTAMP"'",
+              "Dimensions": [
+                {"Name": "Service", "Value": "'"$SERVICE"'"},
+                {"Name": "Environment", "Value": "'"$ENVIRONMENT"'"}
+              ]
+            }
+          ]' \
+          2>&1 || {
+            echo "::warning::Failed to publish DORA metric to CloudWatch. This is non-blocking."
+            exit 0
+          }
+        
+        echo "✅ DORA metric published successfully"

@@ -42,5 +42,5 @@ provider "databricks" {
 provider "grafana" {
   alias = "amg"
   url   = module.managed_grafana_workspace.amg_url
-  auth  = module.managed_grafana_workspace.service_account_token
+  auth  = var.grafana_auth_service_token
 }
