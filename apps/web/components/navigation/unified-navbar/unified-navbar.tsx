@@ -204,6 +204,8 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
   );
 
   const isGreenMode =
+    pathname.startsWith(`/${locale}/cookie-settings`) ||
+    pathname.startsWith(`/${locale}/cookie-policy`) ||
     pathname.startsWith(`/${locale}/terms-and-conditions`) ||
     pathname.startsWith(`/${locale}/about`) ||
     pathname.startsWith(`/${locale}/blog`) ||

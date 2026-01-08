@@ -331,9 +331,9 @@ module "pipeline_scheduler" {
   source = "../../modules/databricks/job"
 
   name        = "Pipeline-Scheduler-PROD"
-  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
+  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 6am and 6pm"
 
-  # Schedule: Every 15 minutes (0, 15, 30, 45) between 9am and 9pm (UTC)
+  # Schedule: Every 15 minutes (0, 15, 30, 45) between 6am and 6pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
   schedule = "0 0,15,30,45 6-18 * * ?"
 
@@ -369,7 +369,7 @@ module "pipeline_scheduler" {
       parameters = {
         "catalog_name"            = module.databricks_catalog.catalog_name,
         "central_schema"          = "centrum",
-        "experiment_status_table" = "experiment_status"
+        "experiment_status_table" = "experiment_status",
         "environment"             = upper(var.environment)
       }
 
@@ -448,6 +448,9 @@ module "centrum_backup_job" {
     on_failure = [
       module.slack_notification_destination.notification_destination_id
     ]
+    on_start = [
+      module.slack_notification_destination.notification_destination_id
+    ]
   }
 
   permissions = [
@@ -518,6 +521,8 @@ module "experiment_provisioning_job" {
         "job_run_id"          = "{{job.run_id}}"
         "task_run_id"         = "{{task.run_id}}"
         "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
+        "pipeline_id"         = "{{tasks.experiment_pipeline_create.values.pipeline_id}}"
+        "schema_name"         = "{{tasks.experiment_pipeline_create.values.schema_name}}"
         "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
         "key_scope"           = module.experiment_secret_scope.scope_name
       }
@@ -612,7 +617,7 @@ module "enriched_tables_refresh_job" {
 module "ambyte_processing_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Ambyte-Processing-Job-PRPD"
+  name        = "Ambyte-Processing-Job-PROD"
   description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
 
   max_concurrent_runs           = 1 # Limit concurrent runs when queueing is enabled
@@ -645,10 +650,12 @@ module "ambyte_processing_job" {
 
       parameters = {
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
+        EXPERIMENT_NAME   = "{{EXPERIMENT_NAME}}"
         EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
         UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
         YEAR_PREFIX       = "{{YEAR_PREFIX}}"
         CATALOG_NAME      = module.databricks_catalog.catalog_name
+        ENVIRONMENT       = upper(var.environment)
       }
     }
   ]

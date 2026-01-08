@@ -1,0 +1,30 @@
+fragment PageCookiePolicyFields on PageCookiePolicy {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  pageTitle
+  pageDescription
+  internalName
+  title
+  content {
+    json
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
+  }
+}
+
+query pageCookiePolicy($locale: String, $preview: Boolean) {
+  pageCookiePolicyCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageCookiePolicyFields
+    }
+  }
+}
