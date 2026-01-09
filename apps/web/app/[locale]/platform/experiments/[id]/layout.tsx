@@ -4,7 +4,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import { notFound, usePathname, useParams } from "next/navigation";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
 import { useTranslation } from "@repo/i18n";
@@ -38,10 +38,17 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
   // Show error if access is denied or other error
   if (error) {
-    // Check if it's a 403 Forbidden error
-    const is403Error = typeof error === "object" && "status" in error && error.status === 403;
+    // Extract status from API error response
+    const errorObj = error as { status?: number };
+    const errorStatus = errorObj.status;
 
-    if (is403Error) {
+    // Handle 404 Not Found or 400 Bad Request (e.g., invalid UUID) - show not found page
+    if (errorStatus === 404 || errorStatus === 400) {
+      notFound();
+    }
+
+    // Handle 403 Forbidden
+    if (errorStatus === 403) {
       return (
         <div className="space-y-6">
           <div>
@@ -53,7 +60,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       );
     }
 
-    // Show generic error for other types (404, etc.)
+    // Show generic error for other types (5xx, etc.)
     return (
       <div className="space-y-6">
         <div>
