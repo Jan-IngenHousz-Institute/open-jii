@@ -1563,6 +1563,7 @@ module "grafana_dashboard" {
   load_balancer_arn          = module.backend_alb.alb_arn
   ecs_cluster_name           = module.backend_ecs.ecs_cluster_name
   slack_webhook_url          = var.slack_webhook_url
+  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
 
   providers = {
     grafana.amg = grafana.amg

@@ -1,0 +1,134 @@
+# Grafana Service Account Token Rotation Workflow - Dev Environment
+# Runs every ~15 days to rotate Grafana AMG service account token for dev environment
+
+name: Rotate Grafana Token (Dev)
+
+on:
+  schedule:
+    # Run on the 1st and 15th of every month at 00:00 UTC (every ~15 days)
+    - cron: '0 0 1,15 * *'
+  workflow_dispatch:  # Allow manual trigger
+  
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  rotate-token:
+    name: Rotate Grafana Token - Dev
+    runs-on: ubuntu-latest
+    environment: dev
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create New Token
+        id: create-token
+        run: |
+          WORKSPACE_ID="${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}"
+          SERVICE_ACCOUNT_ID="${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}"
+          
+          echo "✅ Using workspace ID: $WORKSPACE_ID"
+          echo "✅ Using service account ID: $SERVICE_ACCOUNT_ID"
+          
+          # Create new token (30 days = 2592000 seconds)
+          TOKEN_OUTPUT=$(aws grafana create-workspace-service-account-token \
+            --name "github-actions-$(date +%Y%m%d-%H%M%S)" \
+            --workspace-id "$WORKSPACE_ID" \
+            --service-account-id "$SERVICE_ACCOUNT_ID" \
+            --seconds-to-live 2592000 \
+            --region ${{ secrets.AWS_REGION }})
+          
+          # Extract token details
+          TOKEN_ID=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.id')
+          TOKEN_VALUE=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.key')
+          TOKEN_NAME=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.name')
+          CREATED_AT=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.createdAt')
+          EXPIRES_AT=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.expiresAt')
+          
+          echo "token_id=$TOKEN_ID" >> $GITHUB_OUTPUT
+          echo "token_name=$TOKEN_NAME" >> $GITHUB_OUTPUT
+          echo "created_at=$CREATED_AT" >> $GITHUB_OUTPUT
+          echo "expires_at=$EXPIRES_AT" >> $GITHUB_OUTPUT
+          
+          # Store token value securely for next step
+          echo "TOKEN_VALUE=$TOKEN_VALUE" >> $GITHUB_ENV
+          
+          echo "✅ Created new token: $TOKEN_NAME"
+          echo "   Token ID: $TOKEN_ID"
+          echo "   Created: $CREATED_AT"
+          echo "   Expires: $EXPIRES_AT"
+
+      - name: Update GitHub Secret
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Update GitHub environment secret for dev
+          echo "$TOKEN_VALUE" | gh secret set "GRAFANA_SERVICE_TOKEN" \
+            --repo ${{ github.repository }} \
+            --env dev
+          
+          echo "✅ Updated GitHub Secret: GRAFANA_SERVICE_TOKEN in environment: dev"
+          echo "   Token will be available as: secrets.GRAFANA_SERVICE_TOKEN"
+
+      - name: List and Revoke Old Tokens
+        run: |
+          WORKSPACE_ID="${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}"
+          SERVICE_ACCOUNT_ID="${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}"
+          NEW_TOKEN_ID="${{ steps.create-token.outputs.token_id }}"
+          
+          # List all tokens for this service account
+          TOKENS=$(aws grafana list-workspace-service-account-tokens \
+            --workspace-id "$WORKSPACE_ID" \
+            --service-account-id "$SERVICE_ACCOUNT_ID" \
+            --region ${{ secrets.AWS_REGION }})
+          
+          # Extract token IDs (excluding the new token)
+          OLD_TOKEN_IDS=$(echo "$TOKENS" | jq -r \
+            --arg new_id "$NEW_TOKEN_ID" \
+            '.serviceAccountTokens[] | select(.id != $new_id) | .id')
+          
+          if [ -z "$OLD_TOKEN_IDS" ]; then
+            echo "ℹ️  No old tokens to revoke"
+          else
+            echo "🗑️  Revoking old tokens..."
+            for TOKEN_ID in $OLD_TOKEN_IDS; do
+              aws grafana delete-workspace-service-account-token \
+                --workspace-id "$WORKSPACE_ID" \
+                --service-account-id "$SERVICE_ACCOUNT_ID" \
+                --token-id "$TOKEN_ID" \
+                --region ${{ secrets.AWS_REGION }}
+              echo "   ✅ Revoked token: $TOKEN_ID"
+            done
+          fi
+
+      - name: Verify Token Rotation
+        run: |
+          echo "✅ Token rotation completed successfully!"
+          echo ""
+          echo "📋 Rotation Summary:"
+          echo "   Environment: dev"
+          echo "   Token Name: ${{ steps.create-token.outputs.token_name }}"
+          echo "   Token ID: ${{ steps.create-token.outputs.token_id }}"
+          echo "   Created: ${{ steps.create-token.outputs.created_at }}"
+          echo "   Expires: ${{ steps.create-token.outputs.expires_at }}"
+          echo "   GitHub Secret: GRAFANA_SERVICE_TOKEN (environment: dev)"
+          echo ""
+          echo "✨ Next rotation scheduled: ~15 days (1st or 15th of month)"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Grafana token rotation failed for environment: dev"
+          echo ""
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "Please investigate the logs above and rotate the token manually if needed."
+          
+          exit 1

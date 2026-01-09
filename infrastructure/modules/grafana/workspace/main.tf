@@ -15,11 +15,14 @@ resource "aws_grafana_workspace" "this" {
 
   data_sources = ["CLOUDWATCH"]
 
-  # Example: Enable/disable some workspace options via configuration (JSON string)
-  # See registry docs for details.
-  # configuration = jsonencode({
-  #   unifiedAlerting = { enabled = true }
-  # })
+  configuration = jsonencode({
+    unifiedAlerting = {
+      enabled = true
+    },
+    "plugins" = {
+      "pluginAdminEnabled" = false
+    }
+  })
 
   tags = {
     Project     = "Open-JII"

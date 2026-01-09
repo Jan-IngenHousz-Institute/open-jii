@@ -31,6 +31,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Capture Deployment Start Time
+        id: deployment-start
+        run: |
+          DEPLOY_START=$(date +%s)
+          echo "DEPLOY_START_TIME=$DEPLOY_START" >> $GITHUB_ENV
+          echo "deploy_start_time=$DEPLOY_START" >> $GITHUB_OUTPUT
+          
+          # Get commit timestamp for lead time calculation
+          COMMIT_TIME=$(git show -s --format=%ct ${{ github.sha }})
+          echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
+          echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
+          
+          echo "📊 DORA Metrics Collection Started"
+          echo "  Commit SHA: ${{ github.sha }}"
+          echo "  Commit Time: $(date -d @$COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "  Deploy Start: $(date -d @$DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC')"
+
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
@@ -180,6 +197,68 @@ jobs:
             echo "::warning::Failed to create CloudFront invalidation"
           fi
 
+      - name: Calculate DORA Metrics
+        id: dora-metrics
+        if: success()
+        run: |
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START_TIME))
+          LEAD_TIME=$((DEPLOY_END - COMMIT_TIME))
+          
+          # Convert to milliseconds for CloudWatch
+          LEAD_TIME_MS=$((LEAD_TIME * 1000))
+          
+          echo "lead_time_ms=$LEAD_TIME_MS" >> $GITHUB_OUTPUT
+          echo "deployment_duration=$DEPLOY_DURATION" >> $GITHUB_OUTPUT
+          
+          echo "📊 DORA Metrics Calculated:"
+          echo "  Lead Time: ${LEAD_TIME}s (${LEAD_TIME_MS}ms)"
+          echo "  Deployment Duration: ${DEPLOY_DURATION}s"
+
+      - name: Publish DORA - Deployment Frequency
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentFrequency'
+          value: '1'
+          unit: 'Count'
+          service: 'docs'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Lead Time
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'LeadTime'
+          value: ${{ steps.dora-metrics.outputs.lead_time_ms }}
+          unit: 'Milliseconds'
+          service: 'docs'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Success
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentSuccess'
+          value: '1'
+          unit: 'Count'
+          service: 'docs'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Failed
+        if: failure()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentFailed'
+          value: '1'
+          unit: 'Count'
+          service: 'docs'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Get Documentation URLs
         id: get-urls
         if: inputs.should_deploy == 'true'
@@ -231,7 +310,7 @@ jobs:
           fi
 
       - name: Deployment Summary
-        if: inputs.should_deploy == 'true'
+        if: always()
         run: |
           echo ""
           echo "=== Documentation Deployment Summary ==="

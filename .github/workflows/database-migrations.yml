@@ -49,8 +49,28 @@ jobs:
           echo "seconds=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_OUTPUT
           echo "MIGRATION_TIMEOUT=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_ENV
           echo "Setting migration timeout to $((${{ inputs.timeout_minutes }} * 60)) seconds"
+          
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Capture Migration Start Time
+        id: migration-start
+        run: |
+          MIGRATION_START=$(date +%s)
+          echo "MIGRATION_START_TIME=$MIGRATION_START" >> $GITHUB_ENV
+          echo "migration_start_time=$MIGRATION_START" >> $GITHUB_OUTPUT
+          
+          # Get commit timestamp for lead time calculation
+          COMMIT_TIME=$(git show -s --format=%ct ${{ github.sha }})
+          echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
+          echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
+          
+          echo "📊 DORA Metrics Collection Started"
+          echo "  Commit SHA: ${{ github.sha }}"
+          echo "  Commit Time: $(date -d @$COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "  Migration Start: $(date -d @$MIGRATION_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $MIGRATION_START -u '+%Y-%m-%d %H:%M:%S UTC')"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -357,7 +377,70 @@ jobs:
 
           echo "Migration task completed."
 
+      - name: Calculate DORA Metrics
+        id: dora-metrics
+        if: success()
+        run: |
+          MIGRATION_END=$(date +%s)
+          MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START_TIME))
+          LEAD_TIME=$((MIGRATION_END - COMMIT_TIME))
+          
+          # Convert to milliseconds for CloudWatch
+          LEAD_TIME_MS=$((LEAD_TIME * 1000))
+          
+          echo "lead_time_ms=$LEAD_TIME_MS" >> $GITHUB_OUTPUT
+          echo "migration_duration=$MIGRATION_DURATION" >> $GITHUB_OUTPUT
+          
+          echo "📊 DORA Metrics Calculated:"
+          echo "  Lead Time: ${LEAD_TIME}s (${LEAD_TIME_MS}ms)"
+          echo "  Migration Duration: ${MIGRATION_DURATION}s"
+
+      - name: Publish DORA - Deployment Frequency
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentFrequency'
+          value: '1'
+          unit: 'Count'
+          service: 'database'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Lead Time
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'LeadTime'
+          value: ${{ steps.dora-metrics.outputs.lead_time_ms }}
+          unit: 'Milliseconds'
+          service: 'database'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Success
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentSuccess'
+          value: '1'
+          unit: 'Count'
+          service: 'database'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Failed
+        if: failure()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentFailed'
+          value: '1'
+          unit: 'Count'
+          service: 'database'
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Migration Summary
+        if: always()
         env:
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
           RUN_TASK_OUTCOME: ${{ steps.run-task.outcome }}
