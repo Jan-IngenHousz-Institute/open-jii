@@ -218,7 +218,13 @@
     "learnAboutUs": "Meer over ons",
     "needHelp": "Hulp nodig? Probeer terug te gaan naar de vorige pagina of neem contact op met de support.",
     "goBack": "Terug",
-    "brandTagline": "Jan IngenHousz Instituut - Fotosynthese verbeteren voor een duurzame toekomst"
+    "brandTagline": "Jan IngenHousz Instituut - Fotosynthese verbeteren voor een duurzame toekomst",
+    "notFound": "Niet gevonden",
+    "accessDenied": "Toegang geweigerd",
+    "error": "Fout",
+    "resourceNotFoundMessage": "De bron die je zoekt kon niet worden gevonden.",
+    "backToDashboard": "Terug naar Dashboard",
+    "viewExperiments": "Experimenten bekijken"
   },
   "footer": {
     "aboutUs": "Over ons",

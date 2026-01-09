@@ -59,6 +59,7 @@ describe("useMacro", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: { params: { id: mockId } },
       queryKey: ["macro", mockId],
+      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
   });
 
@@ -179,10 +180,12 @@ describe("useMacro", () => {
     expect(mockUseQuery).toHaveBeenNthCalledWith(1, {
       queryData: { params: { id: mockId1 } },
       queryKey: ["macro", mockId1],
+      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
     expect(mockUseQuery).toHaveBeenNthCalledWith(2, {
       queryData: { params: { id: mockId2 } },
       queryKey: ["macro", mockId2],
+      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
   });
 });
