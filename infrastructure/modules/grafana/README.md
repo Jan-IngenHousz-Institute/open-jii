@@ -37,6 +37,44 @@ Dashboard Visualization
 - **Change Failure Rate**: Percentage of deployments that fail
 - **Deployment Success Rate**: Percentage of successful deployments
 
+### Alert Rules
+
+Automated alerts notify your team when issues are detected:
+
+#### Backend API Alerts
+- **High Backend Error Rate**: Fires when 5XX error rate exceeds 5% for 5 minutes
+- **Backend High CPU Usage**: Fires when ECS CPU usage exceeds 80% for 5 minutes
+- **Backend Service Unhealthy**: Fires when unhealthy targets detected for 2 minutes
+
+#### CloudFront Alerts
+- **High CloudFront Error Rate**: Fires when 4XX + 5XX error rate exceeds 5% for 5 minutes
+
+#### Lambda Alerts
+- **Lambda High Error Rate**: Fires when Lambda errors exceed 5 in 5 minutes
+- **Lambda Throttling**: Fires when Lambda throttling detected for 5 minutes
+
+**Note**: Lambda alerts use CloudWatch `FILL(m1, 0)` to handle missing data (sparse metrics).
+
+#### Database Alerts
+- **Database High CPU**: Fires when RDS CPU usage exceeds 80% for 5 minutes
+- **Database High Connections**: Fires when connection count exceeds 80 for 5 minutes
+
+#### Notification Configuration
+
+Alerts are routed to Slack via webhook with severity-based policies:
+
+| Severity | Repeat Interval | Examples |
+|----------|----------------|----------|
+| Critical | Every 30 minutes | Unhealthy targets, Lambda throttling |
+| Warning | Every 12 hours | High CPU, error rates |
+| DORA | Every 24 hours | DORA metric alerts |
+
+**Alert States**:
+- **Normal**: All conditions OK
+- **Pending**: Condition met, waiting for `for` duration
+- **Firing**: Alert active, notification sent
+- **NoData**: No data available (alert stays OK)
+
 ### Services Tracked
 
 - `backend` - NestJS API (ECS)
@@ -131,6 +169,37 @@ Add the token to GitHub Secrets as `GRAFANA_SERVICE_TOKEN` in the dev environmen
 2. Sign in using AWS SSO (configured in your AWS account)
 
 3. Navigate to Dashboards → Browse → "Open-JII Monitoring Dashboard"
+
+### Configure Alerts
+
+Alert notifications require a Slack webhook:
+
+1. **Create Slack Webhook**:
+   - Go to your Slack workspace → Apps → Incoming Webhooks
+   - Create new webhook for your alerts channel
+   - Copy the webhook URL
+
+2. **Add to Terraform Variables**:
+   ```hcl
+   # infrastructure/env/dev/terraform.tfvars
+   slack_webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+   ```
+
+3. **Apply Configuration**:
+   ```bash
+   cd infrastructure/env/dev
+   tofu apply -target=module.grafana_dashboard
+   ```
+
+4. **Test Alerts**:
+   - Go to Grafana → Alerting → Alert rules
+   - Select any alert → "Evaluate" button
+   - Check Slack for test notification
+
+**Alert Testing in Dev**:
+- Temporarily lower thresholds (e.g., CPU > 40% instead of 80%)
+- Use short evaluation periods (1m instead of 5m)
+- Revert to production values after testing
 
 ## DORA Metrics Collection
 
