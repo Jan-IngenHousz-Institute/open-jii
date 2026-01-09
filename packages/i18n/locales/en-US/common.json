@@ -445,7 +445,8 @@
     "goBack": "Go Back",
     "brandTagline": "Jan IngenHousz Institute - Improving photosynthesis for a sustainable future",
     "termsUnavailable": "Unable to load terms and conditions at this time.",
-    "termsContentUnavailable": "Terms and conditions content is not available."
+    "termsContentUnavailable": "Terms and conditions content is not available.",
+    "error": "Error"
   },
   "footer": {
     "aboutUs": "About Us",

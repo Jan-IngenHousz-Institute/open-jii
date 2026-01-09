@@ -38,9 +38,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
         {/* Right: actions (create, transfer) */}
         <div className="flex gap-4">
           <Link href={`/${locale}/platform/transfer-request`}>
-            <Button className="bg-quaternary text-primary hover:bg-quaternary-light">
-              {t("transferRequest.title")}
-            </Button>
+            <Button variant="secondary">{t("transferRequest.title")}</Button>
           </Link>
           <Link href={`/platform/experiments/new`} locale={locale}>
             <Button>{t("experiments.create")}</Button>
