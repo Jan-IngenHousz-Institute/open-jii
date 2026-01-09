@@ -64,283 +64,608 @@ resource "grafana_contact_point" "slack" {
   }
 
   lifecycle {
-    ignore_changes = [slack] # if you store the webhook securely outside TF
+    ignore_changes = [slack]
   }
 }
 
-resource "grafana_folder" "alerts" {
-  provider = grafana.amg
-  title    = "${var.environment} Alerting"
-}
 
-# Rule group with one example rule: ALB Target 5xx > 5 in last 5m
-resource "grafana_rule_group" "alb_5xx" {
+
+# ============================================================================
+# ALERT RULES - Standard monitoring
+# ============================================================================
+
+# Backend API Alerts
+resource "grafana_rule_group" "backend_alerts" {
   provider         = grafana.amg
-  folder_uid       = grafana_folder.alerts.uid
-  name             = "ALB errors"
+  name             = "Backend API Alerts"
+  folder_uid       = grafana_folder.folder.uid
   interval_seconds = 60
 
   rule {
-    name           = "High ALB Target 5xx (sum > 5 in 5m)"
-    condition      = "B"
-    no_data_state  = "NoData"
-    exec_err_state = "Alerting"
-    for            = "2m"
-
-    annotations = {
-      summary = "High number of 5xx errors from ALB"
-    }
-    labels = {
-      severity = "high"
-      service  = "backend"
-    }
+    name      = "Backend High CPU Usage"
+    condition = "C"
 
     data {
       ref_id         = "A"
       query_type     = ""
       datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/ECS"
+        metricName = "CPUUtilization"
+        statistic  = "Average"
+        dimensions = {
+          ClusterName = var.ecs_cluster_name
+          ServiceName = var.ecs_service_name
+        }
+      })
+
       relative_time_range {
-        from = 300 # 5 minutes
+        from = 300
         to   = 0
       }
-      model = jsonencode({
-        namespace  = "AWS/ApplicationELB"
-        metricName = "HTTPCode_Target_5XX_Count"
-        region     = var.aws_region
-        statistic  = "Sum"
-        dimensions = {
-          LoadBalancer = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
-          TargetGroup  = join("/", slice(split("/", var.target_group_arn), 1, length(split("/", var.target_group_arn))))
-        }
-        period        = "60"
-        refId         = "A"
-        hide          = false
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
     }
 
     data {
       ref_id         = "B"
       query_type     = ""
-      datasource_uid = "-100"
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
       relative_time_range {
         from = 0
         to   = 0
       }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
       model = jsonencode({
-        conditions = [{
-          evaluator = {
-            params = [5]
-            type   = "gt"
-          }
-          operator = {
-            type = "and"
-          }
-          query = {
-            params = ["A"]
-          }
-          reducer = {
-            params = []
-            type   = "last"
-          }
-          type = "query"
-        }]
-        datasource = {
-          name = "Expression"
-          type = "__expr__"
-          uid  = "-100"
-        }
-        hide          = false
-        intervalMs    = 1000
-        maxDataPoints = 43200
-        refId         = "B"
-        type          = "classic_conditions"
+        expression = "$B > 80"
+        type       = "math"
+        refId      = "C"
       })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
     }
 
-    notification_settings {
-      contact_point = grafana_contact_point.slack.name
-    }
-  }
-}
-
-resource "grafana_rule_group" "cloudfront_site_down" {
-  provider         = grafana.amg
-  folder_uid       = grafana_folder.alerts.uid
-  name             = "CloudFront Site Down"
-  interval_seconds = 60
-
-  rule {
-    name           = "High CloudFront Error Rate"
-    condition      = "B"
-    no_data_state  = "Alerting"
-    exec_err_state = "Alerting"
-    for            = "2m"
+    no_data_state  = "NoData"
+    exec_err_state = "OK"
+    for            = "5m"
 
     annotations = {
-      summary = "CloudFront error rate is above 5%"
+      description = "Backend ECS service CPU usage is above 80%"
+      summary     = "High CPU usage on backend service"
     }
     labels = {
-      severity = "critical"
-      service  = "frontend"
+      severity = "warning"
+      service  = "backend"
     }
+  }
+
+  rule {
+    name      = "Backend Service Unhealthy"
+    condition = "C"
 
     data {
       ref_id         = "A"
       query_type     = ""
       datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/ApplicationELB"
+        metricName = "UnHealthyHostCount"
+        statistic  = "Maximum"
+        dimensions = {
+          TargetGroup  = local.dashboard_vars.target_group_dimension
+          LoadBalancer = local.dashboard_vars.load_balancer_dimension
+        }
+      })
+
       relative_time_range {
-        from = 300 # 5 minutes
+        from = 300
         to   = 0
       }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
       model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "2m"
+
+    annotations = {
+      description = "Unhealthy targets detected in backend service"
+      summary     = "Backend service has unhealthy targets"
+    }
+    labels = {
+      severity = "critical"
+      service  = "backend"
+    }
+  }
+}
+
+# CloudFront Alerts
+resource "grafana_rule_group" "cloudfront_errors" {
+  provider         = grafana.amg
+  name             = "CloudFront Errors"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  rule {
+    name      = "High CloudFront Error Rate"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = "us-east-1"
         namespace  = "AWS/CloudFront"
-        metricName = "TotalErrorRate"
-        region     = "Global"
+        metricName = "5xxErrorRate"
         statistic  = "Average"
         dimensions = {
           DistributionId = var.cloudfront_distribution_id
         }
-        period        = "60"
-        refId         = "A"
-        hide          = false
-        intervalMs    = 1000
-        maxDataPoints = 43200
       })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
     }
 
     data {
       ref_id         = "B"
       query_type     = ""
-      datasource_uid = "-100"
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "B"
+        region     = "us-east-1"
+        namespace  = "AWS/CloudFront"
+        metricName = "4xxErrorRate"
+        statistic  = "Average"
+        dimensions = {
+          DistributionId = var.cloudfront_distribution_id
+        }
+      })
+
       relative_time_range {
-        from = 0
+        from = 300
         to   = 0
       }
-      model = jsonencode({
-        conditions = [{
-          evaluator = {
-            params = [0.05]
-            type   = "gt"
-          }
-          operator = {
-            type = "and"
-          }
-          query = {
-            params = ["A"]
-          }
-          reducer = {
-            params = []
-            type   = "last"
-          }
-          type = "query"
-        }]
-        datasource = {
-          name = "Expression"
-          type = "__expr__"
-          uid  = "-100"
-        }
-        hide          = false
-        intervalMs    = 1000
-        maxDataPoints = 43200
-        refId         = "B"
-        type          = "classic_conditions"
-      })
     }
 
-    notification_settings {
-      contact_point = grafana_contact_point.slack.name
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "-100"
+
+      model = jsonencode({
+        conditions = [
+          {
+            evaluator = {
+              params = [5]
+              type   = "gt"
+            }
+            operator = {
+              type = "or"
+            }
+            query = {
+              params = ["C"]
+            }
+            type = "query"
+          }
+        ]
+        expression = "$A + $B"
+        type       = "math"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    no_data_state  = "NoData"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "CloudFront error rate is above 5%"
+      summary     = "High error rate on CloudFront distribution"
+    }
+    labels = {
+      severity = "warning"
+      service  = "frontend"
     }
   }
 }
 
-resource "grafana_rule_group" "lambda_errors" {
+# Lambda Alerts (using CloudWatch fill for missing data)
+resource "grafana_rule_group" "lambda_health" {
   provider         = grafana.amg
-  folder_uid       = grafana_folder.alerts.uid
-  name             = "Lambda Errors"
+  name             = "Lambda Health"
+  folder_uid       = grafana_folder.folder.uid
   interval_seconds = 60
 
   rule {
-    name           = "High Lambda Error Count"
-    condition      = "B"
-    no_data_state  = "Alerting"
-    exec_err_state = "Alerting"
-    for            = "2m"
-
-    annotations = {
-      summary = "Lambda function is experiencing errors"
-    }
-    labels = {
-      severity = "critical"
-      service  = "lambda-backend"
-    }
+    name      = "Lambda High Error Rate"
+    condition = "C"
 
     data {
       ref_id         = "A"
       query_type     = ""
       datasource_uid = grafana_data_source.cloudwatch_source.uid
-      relative_time_range {
-        from = 300 # 5 minutes
-        to   = 0
-      }
+
       model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
         namespace  = "AWS/Lambda"
         metricName = "Errors"
-        region     = var.aws_region
         statistic  = "Sum"
         dimensions = {
           FunctionName = var.server_function_name
         }
-        period        = "60"
-        refId         = "A"
-        hide          = false
-        intervalMs    = 1000
-        maxDataPoints = 43200
+        expression = "FILL(m1, 0)"
+        id         = "m1"
       })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
     }
 
     data {
       ref_id         = "B"
       query_type     = ""
-      datasource_uid = "-100"
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
       relative_time_range {
         from = 0
         to   = 0
       }
-      model = jsonencode({
-        conditions = [{
-          evaluator = {
-            params = [0]
-            type   = "gt"
-          }
-          operator = {
-            type = "and"
-          }
-          query = {
-            params = ["A"]
-          }
-          reducer = {
-            params = []
-            type   = "last"
-          }
-          type = "query"
-        }]
-        datasource = {
-          name = "Expression"
-          type = "__expr__"
-          uid  = "-100"
-        }
-        hide          = false
-        intervalMs    = 1000
-        maxDataPoints = 43200
-        refId         = "B"
-        type          = "classic_conditions"
-      })
     }
 
-    notification_settings {
-      contact_point = grafana_contact_point.slack.name
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 5"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
     }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "Lambda function has more than 5 errors in the last 5 minutes"
+      summary     = "High error rate on Lambda function"
+    }
+    labels = {
+      severity = "warning"
+      service  = "lambda"
+    }
+  }
+
+  rule {
+    name      = "Lambda Throttling"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Throttles"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.server_function_name
+        }
+        expression = "FILL(m1, 0)"
+        id         = "m1"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "Lambda function is being throttled"
+      summary     = "Lambda throttling detected"
+    }
+    labels = {
+      severity = "critical"
+      service  = "lambda"
+    }
+  }
+}
+
+# Database Alerts
+resource "grafana_rule_group" "database_health" {
+  provider         = grafana.amg
+  name             = "Database Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  rule {
+    name      = "Database High CPU"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/RDS"
+        metricName = "CPUUtilization"
+        statistic  = "Average"
+        dimensions = {
+          DBClusterIdentifier = var.db_cluster_identifier
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 80"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "NoData"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "Database CPU usage is above 80% "
+      summary     = "High CPU usage on database cluster"
+    }
+    labels = {
+      severity = "warning"
+      service  = "database"
+    }
+  }
+
+  rule {
+    name      = "Database High Connections"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/RDS"
+        metricName = "DatabaseConnections"
+        statistic  = "Average"
+        dimensions = {
+          DBClusterIdentifier = var.db_cluster_identifier
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 80"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "NoData"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "Database has high number of active connections (threshold: 80)"
+      summary     = "High number of database connections"
+    }
+    labels = {
+      severity = "warning"
+      service  = "database"
+    }
+  }
+}
+
+# Notification policy
+resource "grafana_notification_policy" "policy" {
+  provider = grafana.amg
+
+  group_by        = ["alertname", "service"]
+  contact_point   = grafana_contact_point.slack.name
+  group_wait      = "30s"
+  group_interval  = "5m"
+  repeat_interval = "12h"
+
+  policy {
+    matcher {
+      label = "severity"
+      match = "="
+      value = "critical"
+    }
+    group_by        = ["alertname"]
+    contact_point   = grafana_contact_point.slack.name
+    repeat_interval = "30m"
+  }
+
+  policy {
+    matcher {
+      label = "category"
+      match = "="
+      value = "dora"
+    }
+    group_by        = ["alertname"]
+    contact_point   = grafana_contact_point.slack.name
+    repeat_interval = "24h"
   }
 }
