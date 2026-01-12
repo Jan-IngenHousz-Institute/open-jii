@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@repo/ui/components";
 
-import { handleLogout } from "../app/actions/auth";
+import { useSignOut } from "../hooks/useAuth";
 
 interface SignOutDialogProps {
   translations: {
@@ -25,9 +25,15 @@ interface SignOutDialogProps {
 
 export function SignOutDialog({ translations }: SignOutDialogProps) {
   const router = useRouter();
+  const signOut = useSignOut();
 
   const handleCancel = () => {
     router.back();
+  };
+
+  const onConfirm = async () => {
+    await signOut.mutateAsync();
+    router.push("/");
   };
 
   return (
@@ -45,14 +51,12 @@ export function SignOutDialog({ translations }: SignOutDialogProps) {
           <DialogDescription>{translations.description}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:justify-end">
-          <Button onClick={handleCancel} variant="ghost">
+          <Button onClick={handleCancel} variant="ghost" disabled={signOut.isPending}>
             {translations.cancel}
           </Button>
-          <form action={() => handleLogout()} className="inline-flex">
-            <Button type="submit" variant="default">
-              {translations.confirm}
-            </Button>
-          </form>
+          <Button onClick={onConfirm} variant="default" disabled={signOut.isPending}>
+            {translations.confirm}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

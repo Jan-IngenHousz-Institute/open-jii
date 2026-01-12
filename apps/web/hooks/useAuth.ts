@@ -32,7 +32,10 @@ export function useSignInEmail() {
   return useMutation({
     mutationFn: async (email: string) => {
       // Send verification email with OTP
-      const response = await authClient.sendVerificationEmail({ email });
+      const response = await authClient.emailOtp.sendVerificationOtp({
+        email,
+        type: "sign-in",
+      });
       if (response.error) {
         throw new Error(response.error.message ?? "Failed to send verification email");
       }
@@ -42,16 +45,19 @@ export function useSignInEmail() {
 }
 
 /**
- * Hook to verify email OTP
+ * Hook to verify email OTP and sign in
  */
 export function useVerifyEmail() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ code }: { email: string; code: string }) => {
-      const response = await authClient.verifyEmail({ query: { token: code } });
-      if (!response.data) {
-        throw new Error(response.error?.message ?? "Invalid code");
+    mutationFn: async ({ email, code }: { email: string; code: string }) => {
+      const response = await authClient.signIn.emailOtp({
+        email,
+        otp: code,
+      });
+      if (response.error) {
+        throw new Error(response.error.message ?? "Invalid code");
       }
       return response.data;
     },
@@ -100,4 +106,29 @@ export function useIsAuthenticated() {
     isAuthenticated: !!session?.user,
     isLoading,
   };
+}
+
+/**
+ * Hook to update user
+ */
+export function useUpdateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      name?: string;
+      image?: string;
+      registered?: boolean;
+    }) => {
+      // @ts-expect-error - registered is a custom field
+      const response = await authClient.updateUser(data);
+      if (response.error) {
+        throw new Error(response.error.message ?? "Failed to update user");
+      }
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+    },
+  });
 }

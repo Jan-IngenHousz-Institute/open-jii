@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { handleRegister } from "~/app/actions/auth";
+import { useUpdateUser } from "~/hooks/useAuth";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
 import { useTranslation } from "@repo/i18n";
@@ -39,6 +39,7 @@ export function RegistrationForm({
   const { t } = useTranslation();
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
+  const updateUser = useUpdateUser();
   const registrationSchema = z
     .object({
       firstName: z.string().min(2, t("registration.firstNameError")),
@@ -70,7 +71,7 @@ export function RegistrationForm({
 
   const { mutateAsync: createUserProfile } = useCreateUserProfile({
     onSuccess: async () => {
-      await handleRegister();
+      await updateUser.mutateAsync({ registered: true });
       toast({ description: t("registration.successMessage") });
       router.push(callbackUrl ?? "/");
     },

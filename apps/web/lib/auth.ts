@@ -1,9 +1,7 @@
-import { cookies } from "next/headers";
-import { env } from "~/env";
+import { headers } from "next/headers";
 
+import { authClient } from "@repo/auth/client";
 import type { Session } from "@repo/auth/types";
-
-const BACKEND_URL = env.NEXT_PUBLIC_API_URL;
 
 /**
  * Get the current session from Better Auth backend
@@ -11,25 +9,16 @@ const BACKEND_URL = env.NEXT_PUBLIC_API_URL;
  */
 export async function auth(): Promise<Session | null> {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get("better-auth.session-token")?.value;
-
-    if (!sessionToken) {
-      return null;
-    }
-
-    const response = await fetch(`${BACKEND_URL}/auth/session`, {
-      headers: {
-        Cookie: `better-auth.session-token=${sessionToken}`,
+    const headersList = await headers();
+    
+    // Use the authClient to fetch the session, passing the headers to forward cookies
+    const { data } = await authClient.getSession({
+      fetchOptions: {
+        headers: headersList,
       },
-      cache: "no-store",
     });
 
-    if (!response.ok) {
-      return null;
-    }
-
-    return (await response.json()) as Session;
+    return data;
   } catch (error) {
     console.error("Session fetch error:", error);
     return null;
