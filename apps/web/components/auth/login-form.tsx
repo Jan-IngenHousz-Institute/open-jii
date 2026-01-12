@@ -32,7 +32,7 @@ export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string;
       <h1 className="mb-4 text-left text-2xl font-bold">{t("auth.loginToAccount")}</h1>
 
       {/* Email provider */}
-      {emailProvider && <LoginProviderForm provider={emailProvider} callbackUrl={callbackUrl} />}
+      {emailProvider && <LoginProviderForm provider={emailProvider} callbackUrl={callbackUrl} locale={locale} />}
 
       {/* Divider */}
       {oauthProviders.length > 0 && (
@@ -88,6 +88,7 @@ const providerGridVariants = cva("mb-6 grid w-full grid-cols-1 gap-3", {
 function ProviderGrid({
   providers,
   callbackUrl,
+  locale,
 }: {
   providers: { id: string; name: string }[];
   callbackUrl: string | undefined;
@@ -104,6 +105,7 @@ function ProviderGrid({
           provider={provider}
           callbackUrl={callbackUrl}
           layoutCount={count}
+          locale={locale}
         />
       ))}
     </div>

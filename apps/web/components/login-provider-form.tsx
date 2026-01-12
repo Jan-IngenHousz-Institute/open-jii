@@ -20,32 +20,38 @@ import {
   Input,
 } from "@repo/ui/components";
 
-import { signInWithEmail } from "../app/actions/auth";
+import { authClient } from "@repo/auth/client";
+import { useSignInEmail, useVerifyEmail } from "../hooks/useAuth";
 
 export function LoginProviderForm({
   provider,
   callbackUrl,
   layoutCount,
+  locale,
 }: {
   provider: { id: string; name: string };
   callbackUrl: string | undefined;
   layoutCount?: number;
+  locale: string;
 }) {
   const isEmailProvider = provider.id === "email";
 
   if (isEmailProvider) {
-    return <EmailLoginForm callbackUrl={callbackUrl} />;
+    return <EmailLoginForm callbackUrl={callbackUrl} locale={locale} />;
   }
 
   return <OAuthLoginForm provider={provider} callbackUrl={callbackUrl} layoutCount={layoutCount} />;
 }
 
-function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
+function EmailLoginForm({ callbackUrl, locale }: { callbackUrl: string | undefined; locale: string }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [isPending, setIsPending] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [email, setEmail] = useState("");
+
+  const signInEmailMutation = useSignInEmail();
+  const verifyEmailMutation = useVerifyEmail();
+  const isPending = signInEmailMutation.isPending || verifyEmailMutation.isPending;
 
   const emailSchema = z.object({
     email: z.string().min(1, t("auth.emailRequired")).email(t("auth.emailInvalid")),
@@ -74,31 +80,30 @@ function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
 
   async function onEmailSubmit(data: EmailFormData) {
     if (isPending) return;
-    setIsPending(true);
     try {
-      await signInWithEmail(data.email);
+      await signInEmailMutation.mutateAsync(data.email);
       setEmail(data.email);
       setShowOTPInput(true);
     } catch (error) {
       console.error("Email send error:", error);
-    } finally {
-      setIsPending(false);
     }
   }
 
   async function onOTPSubmit(data: OTPFormData) {
     if (isPending) return;
-    setIsPending(true);
     try {
-      const { verifyEmailCode } = await import("../app/actions/auth");
-      await verifyEmailCode(email, data.code);
-      // Redirect to callback or platform
-      router.push(callbackUrl ?? "/platform");
+      const result = await verifyEmailMutation.mutateAsync({ email, code: data.code });
+      
+      const isRegistered = result?.user?.registered;
+      
+      if (!isRegistered) {
+         router.push(`/${locale}/register`);
+      } else {
+         router.push(callbackUrl ?? "/platform");
+      }
     } catch (error) {
       console.error("OTP verification error:", error);
       otpForm.setError("code", { message: "Invalid code" });
-    } finally {
-      setIsPending(false);
     }
   }
 
@@ -145,7 +150,7 @@ function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
             <Button
               type="submit"
               variant="default"
-              className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 flex-1 rounded-xl"
+              className="h-12 flex-1 rounded-xl bg-[#005e5e] text-white hover:bg-[#004747]"
               disabled={isPending}
             >
               {isPending ? (
@@ -218,12 +223,15 @@ function OAuthLoginForm({
   const { t } = useTranslation();
   const [isPending, setIsPending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsPending(true);
     const redirectUrl = callbackUrl ?? "/platform";
-    const authUrl = `${env.NEXT_PUBLIC_API_URL}/auth/${provider.id}?callbackUrl=${encodeURIComponent(redirectUrl)}`;
-    window.location.href = authUrl;
+    
+    await authClient.signIn.social({
+      provider: provider.id as any, 
+      callbackURL: redirectUrl,
+    });
   };
 
   const providerName = provider.id.charAt(0).toUpperCase() + provider.id.slice(1);

@@ -1,4 +1,4 @@
-import { inferAdditionalFields } from "better-auth/client/plugins";
+import { inferAdditionalFields, emailOTPClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 import type { auth } from "./server";
@@ -6,8 +6,11 @@ import type { auth } from "./server";
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
 
 export const authClient = createAuthClient({
-  baseURL: BACKEND_URL,
-  plugins: [inferAdditionalFields<typeof auth>()],
+  baseURL: `${BACKEND_URL}/api/v1/auth`,
+  plugins: [
+    inferAdditionalFields<typeof auth>(),
+    emailOTPClient(),
+  ],
 });
 
 // Export useSession hook from Better Auth React

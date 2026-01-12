@@ -79,10 +79,13 @@ export const authContract = c.router({
   // Email OTP sign-in (sends OTP to email)
   signInEmail: {
     method: "POST",
-    path: "/api/v1/auth/signin/email",
-    body: zSignInEmailBody,
+    path: "/api/v1/auth/email-otp/send-email-otp",
+    body: z.object({
+      email: z.string().email(),
+      type: z.enum(["sign-in", "email-verification"]).optional().default("sign-in"),
+    }),
     responses: {
-      200: zSignInEmailResponse,
+      200: zSignInEmailResponse.extend({ message: z.string().optional() }),
       400: zErrorResponse,
     },
     summary: "Send sign-in OTP to email",
@@ -92,8 +95,11 @@ export const authContract = c.router({
   // Verify email OTP and sign in
   verifyEmail: {
     method: "POST",
-    path: "/api/v1/auth/verify/email",
-    body: zVerifyEmailBody,
+    path: "/api/v1/auth/sign-in/email-otp",
+    body: z.object({
+      email: z.string().email(),
+      otp: z.string(),
+    }),
     responses: {
       200: zVerifyEmailResponse,
       400: zErrorResponse,
@@ -141,7 +147,7 @@ export const authContract = c.router({
     description: "Updates the current authenticated user's information",
   },
 
-  // OAuth callback (handled by Better Auth, but exposed for documentation)
+  // OAuth callback
   oauthCallback: {
     method: "GET",
     path: "/api/v1/auth/callback/:provider",
