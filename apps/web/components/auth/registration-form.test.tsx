@@ -86,6 +86,7 @@ describe("RegistrationForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUpdateUserMutate.mockResolvedValue({});
   });
 
   it("renders the registration form with title and description", () => {

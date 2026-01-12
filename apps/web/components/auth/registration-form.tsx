@@ -71,7 +71,11 @@ export function RegistrationForm({
 
   const { mutateAsync: createUserProfile } = useCreateUserProfile({
     onSuccess: async () => {
-      await updateUser.mutateAsync({ registered: true });
+      const res = await updateUser.mutateAsync({ registered: true });
+      if (res.error) {
+        toast({ description: t("registration.errorMessage") || "Registration failed" }); // Fallback
+        return;
+      }
       toast({ description: t("registration.successMessage") });
       router.push(callbackUrl ?? "/platform");
     },
