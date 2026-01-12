@@ -32,6 +32,14 @@ vi.mock("@repo/ui/hooks", () => ({
   toast: (arg: { description: string; variant?: string }) => toastSpy(arg),
 }));
 
+// useSignOut replacement for handleLogout
+const mockSignOutMutateAsync = vi.fn();
+vi.mock("~/hooks/useAuth", () => ({
+  useSignOut: () => ({
+    mutateAsync: mockSignOutMutateAsync,
+  }),
+}));
+
 vi.mock("~/app/actions/auth", () => ({
   handleLogout: (arg: { redirectTo: string }) => handleLogoutSpy(arg),
 }));
@@ -298,7 +306,7 @@ describe("<DangerZoneCard />", () => {
       });
 
       await waitFor(() => {
-        expect(handleLogoutSpy).toHaveBeenCalledWith({ redirectTo: "/" });
+        expect(mockSignOutMutateAsync).toHaveBeenCalled();
       });
     });
 
@@ -452,7 +460,7 @@ describe("<DangerZoneCard />", () => {
       });
 
       await waitFor(() => {
-        expect(handleLogoutSpy).toHaveBeenCalledWith({ redirectTo: "/" });
+        expect(mockSignOutMutateAsync).toHaveBeenCalled();
       });
     });
 

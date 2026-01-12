@@ -94,7 +94,7 @@ describe("UserRegistrationPage", () => {
       // Expected to throw NEXT_REDIRECT
     }
 
-    expect(mockRedirect).toHaveBeenCalledWith("/api/auth/signin");
+    expect(mockRedirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
   });
 
   it("redirects to platform if user already registered", async () => {
