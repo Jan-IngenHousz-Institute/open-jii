@@ -65,7 +65,7 @@ jobs:
 
       - name: Update GitHub Secret
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_PAT }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           # Update GitHub environment secret for dev
           echo "$TOKEN_VALUE" | gh secret set "GRAFANA_SERVICE_TOKEN" \
