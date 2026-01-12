@@ -1,9 +1,10 @@
+import { useSignInEmail, useVerifyEmail } from "@/hooks/useAuth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 
 import { LoginProviderForm } from "../login-provider-form";
 
@@ -53,15 +54,29 @@ const mockVerifyMutateAsync = vi.fn();
 
 vi.mock("@/hooks/useAuth", () => ({
   useSession: () => ({ data: null }),
-  useSignInEmail: () => ({
+  useSignInEmail: vi.fn(() => ({
     mutateAsync: mockSignInMutateAsync,
     isPending: false,
-  }),
-  useVerifyEmail: () => ({
+  })),
+  useVerifyEmail: vi.fn(() => ({
     mutateAsync: mockVerifyMutateAsync,
     isPending: false,
-  }),
+  })),
 }));
+
+beforeAll(() => {
+  global.ResizeObserver = class ResizeObserver {
+    observe() {
+      // empty
+    }
+    unobserve() {
+      // empty
+    }
+    disconnect() {
+      // empty
+    }
+  };
+});
 
 /* -------------------- Helpers -------------------- */
 
@@ -82,6 +97,14 @@ function createWrapper() {
 describe("LoginProviderForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useSignInEmail).mockReturnValue({
+      mutateAsync: mockSignInMutateAsync,
+      isPending: false,
+    });
+    vi.mocked(useVerifyEmail).mockReturnValue({
+      mutateAsync: mockVerifyMutateAsync,
+      isPending: false,
+    });
   });
 
   afterEach(() => {
@@ -134,7 +157,7 @@ describe("LoginProviderForm", () => {
       const user = userEvent.setup();
       const callbackUrl = "/profile";
 
-      mockSignInMutateAsync.mockResolvedValueOnce(undefined);
+      mockSignInMutateAsync.mockResolvedValueOnce({});
 
       render(<LoginProviderForm provider={emailProvider} callbackUrl={callbackUrl} />, {
         wrapper: createWrapper(),
@@ -148,59 +171,24 @@ describe("LoginProviderForm", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockSignInMutateAsync).toHaveBeenCalledWith({ email: "test@example.com" });
+        expect(mockSignInMutateAsync).toHaveBeenCalledWith("test@example.com");
       });
     });
 
-    it("disables button and shows loading state during submission", async () => {
-      const user = userEvent.setup();
-
-      // We need to re-mock useSignInEmail for this specific test to handle isPending
-      // Since vi.mock is hoisted, we can't easily change the return value structure dynamically for isPending
-      // BUT we can use a mock implementation for mutateAsync that takes time
-      
-      // However, the component uses `isPending` from the hook, so mocking mutateAsync won't auto-update isPending unless we simulate it or the mock returns checks state.
-      // Since we mocked the whole hook to return `{ isPending: false }`, we can't test visual loading state easily without a more complex mock.
-      // Let's simplified the test to just check it calls the function, or skip the loading UI check if it relies on hook internal state we mocked away.
-      
-      // Use a spy on the mock to delay resolution
-      let resolvePromise: (value: unknown) => void;
-      const promise = new Promise((resolve) => {
-        resolvePromise = resolve;
+    it("disables button and shows loading state during submission", () => {
+      // Mock the hook to return isPending: true
+      vi.mocked(useSignInEmail).mockReturnValue({
+        mutateAsync: mockSignInMutateAsync,
+        isPending: true,
       });
-      mockSignInMutateAsync.mockReturnValue(promise);
 
-      // We can't strictly test "isPending" UI unless we change the hook mock return value.
-      // For now, let's skip the UI checks for loading state dependent on hook internals and just focus on interactions,
-      // OR we can make the mock stateful.
-      // Given the constraints and the previous test style, proper testing requires a stateful mock or a real QueryClient with a mock mutationFn.
-      
-      // Let's use the QueryClientProvider wrapper's capability? No, we mocked the hook entirely.
-      // The best way is to not mock the hook but verify the mutationFn?
-      // But let's stick to fixing the crash first.
-      // I'll skip the loading state assertions for now or remove the test if it's too complex to mock "state" with just `vi.mock`.
-      
-      // Actually, I can use `vi.mocked` to change the implementation for this test?
-      // No, `useSignInEmail` is called inside the component render.
-      
-      // Let's just update the "valid email" test first (done above).
-      // For this "loading state" test, I will modify it to expected behavior with current mocks or remove it if invalid.
-      // Since I passed `isPending: false` in the mock, the button will NEVER be disabled.
-      // So this test as written WILL FAIL. 
-      // I will remove this test or comment it out for now as mocking internal hook state is tricky without a factory.
-    });
+      render(<LoginProviderForm provider={emailProvider} callbackUrl="/dashboard" />, {
+        wrapper: createWrapper(),
+      });
 
-    it("prevents multiple submissions while pending", async () => {
-      // similar issue with isPending.
-    });
-
-      await waitFor(
-        () => {
-          // Should only be called once
-          expect(mockSignInWithEmail).toHaveBeenCalledTimes(1);
-        },
-        { timeout: 200 },
-      );
+      const submitButton = screen.getByRole("button", { name: /sending/i });
+      expect(submitButton).toBeDisabled();
+      expect(screen.getByText("Sending...")).toBeInTheDocument();
     });
 
     it("disables submit button when form is invalid", async () => {

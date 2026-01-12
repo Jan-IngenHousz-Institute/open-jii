@@ -24,9 +24,11 @@ function createWrapper() {
 // ---- Mocks ----
 
 const mockBack = vi.fn();
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     back: mockBack,
+    push: mockPush,
   }),
 }));
 
@@ -133,13 +135,13 @@ describe("<SignOutDialog />", () => {
   });
 
   it("calls handleLogout when confirm button is clicked", () => {
-    render(<useSignOut when confirm button is clicked", () => {
     render(<SignOutDialog translations={mockTranslations} />, { wrapper: createWrapper() });
 
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
     fireEvent.click(confirmButton);
 
-    expect(mockSignOutMutateAsync).toHaveBeenCalledTimes(1
+    expect(mockSignOutMutateAsync).toHaveBeenCalledTimes(1);
+  });
 
   it("renders with custom translations", () => {
     const customTranslations = {

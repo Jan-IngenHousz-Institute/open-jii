@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -18,6 +18,9 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
 } from "@repo/ui/components";
 
 import { useSignInEmail, useVerifyEmail } from "../hooks/useAuth";
@@ -27,16 +30,20 @@ export function LoginProviderForm({
   callbackUrl,
   layoutCount,
   locale,
+  onShowOTPChange,
 }: {
   provider: { id: string; name: string };
   callbackUrl: string | undefined;
   layoutCount?: number;
   locale: string;
+  onShowOTPChange?: (showOTP: boolean) => void;
 }) {
   const isEmailProvider = provider.id === "email";
 
   if (isEmailProvider) {
-    return <EmailLoginForm callbackUrl={callbackUrl} locale={locale} />;
+    return (
+      <EmailLoginForm callbackUrl={callbackUrl} locale={locale} onShowOTPChange={onShowOTPChange} />
+    );
   }
 
   return <OAuthLoginForm provider={provider} callbackUrl={callbackUrl} layoutCount={layoutCount} />;
@@ -45,14 +52,24 @@ export function LoginProviderForm({
 function EmailLoginForm({
   callbackUrl,
   locale,
+  onShowOTPChange,
 }: {
   callbackUrl: string | undefined;
   locale: string;
+  onShowOTPChange?: (showOTP: boolean) => void;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [email, setEmail] = useState("");
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const signInEmailMutation = useSignInEmail();
   const verifyEmailMutation = useVerifyEmail();
@@ -86,9 +103,15 @@ function EmailLoginForm({
   async function onEmailSubmit(data: EmailFormData) {
     if (isPending) return;
     try {
-      await signInEmailMutation.mutateAsync(data.email);
+      const res = await signInEmailMutation.mutateAsync(data.email);
+      if (res.error) {
+        console.error("Email send error:", res.error);
+        return;
+      }
       setEmail(data.email);
       setShowOTPInput(true);
+      onShowOTPChange?.(true);
+      setCountdown(30);
     } catch (error) {
       console.error("Email send error:", error);
     }
@@ -99,8 +122,13 @@ function EmailLoginForm({
     try {
       const result = await verifyEmailMutation.mutateAsync({ email, code: data.code });
 
+      if (result.error) {
+        otpForm.setError("code", { message: result.error.message ?? "Invalid code" });
+        return;
+      }
+
       // Cast to specific type to avoid ESLint unsafe assignment error
-      const user = result.user as { registered?: boolean } | undefined;
+      const user = result.data.user as { registered?: boolean } | undefined;
       const isRegistered = user?.registered;
 
       if (!isRegistered) {
@@ -118,57 +146,70 @@ function EmailLoginForm({
     return (
       <Form {...otpForm}>
         <form onSubmit={otpForm.handleSubmit(onOTPSubmit)} className="space-y-4">
-          <p className="muted-foreground mb-4 text-sm">
-            {t("auth.otpSentTo", {
-              email: email.length > 30 ? `${email.slice(0, 30)}...` : email,
-            })}
-          </p>
+          <h2 className="text-xl font-bold">
+            {t("auth.checkEmail", "Check your email for a sign-in code")}
+          </h2>
+          <div className="muted-foreground mb-4 text-sm">
+            Please enter the 6-digit code we sent to <br />
+            <button
+              type="button"
+              className="inline-flex items-center font-medium text-[#005e5e] hover:underline"
+              onClick={() => {
+                setShowOTPInput(false);
+                onShowOTPChange?.(false);
+              }}
+            >
+              {email} <Pencil className="ml-1 h-3 w-3" />
+            </button>
+          </div>
           <FormField
             control={otpForm.control}
             name="code"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel>{t("auth.verificationCode")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="text"
-                    placeholder="000000"
-                    disabled={isPending}
-                    className="h-12 rounded-xl"
+                  <InputOTP
                     maxLength={6}
+                    containerClassName="gap-2"
+                    onComplete={() => otpForm.handleSubmit(onOTPSubmit)()}
                     {...field}
-                  />
+                  >
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <InputOTPGroup key={index}>
+                        <InputOTPSlot
+                          index={index}
+                          className={`h-12 w-12 rounded-md border text-lg ${
+                            fieldState.invalid ? "border-destructive" : ""
+                          }`}
+                        />
+                      </InputOTPGroup>
+                    ))}
+                  </InputOTP>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <div className="flex gap-2">
-            <Button
+          <div className="pt-2">
+            <button
               type="button"
-              variant="outline"
-              className="h-12 flex-1 rounded-xl"
-              onClick={() => setShowOTPInput(false)}
-              disabled={isPending}
+              className="text-sm font-medium text-[#005e5e] hover:underline disabled:opacity-50"
+              onClick={async () => {
+                if (isPending || countdown > 0) return;
+                try {
+                  await signInEmailMutation.mutateAsync(email);
+                  setCountdown(30);
+                } catch (error) {
+                  console.error("Resend error:", error);
+                }
+              }}
+              disabled={countdown > 0 || isPending}
             >
-              {t("auth.back")}
-            </Button>
-            <Button
-              type="submit"
-              variant="default"
-              className="h-12 flex-1 rounded-xl bg-[#005e5e] text-white hover:bg-[#004747]"
-              disabled={isPending}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("auth.verifying")}
-                </>
-              ) : (
-                t("auth.verify")
-              )}
-            </Button>
+              {countdown > 0
+                ? `${t("auth.resendCode", "Re-send code")} (${countdown}s)`
+                : t("auth.resendCode", "Re-send code")}
+            </button>
           </div>
         </form>
       </Form>

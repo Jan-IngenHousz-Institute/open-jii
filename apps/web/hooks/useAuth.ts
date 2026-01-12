@@ -36,10 +36,7 @@ export function useSignInEmail() {
         email,
         type: "sign-in",
       });
-      if (response.error) {
-        throw new Error(response.error.message ?? "Failed to send verification email");
-      }
-      return response.data;
+      return response;
     },
   });
 }
@@ -56,14 +53,13 @@ export function useVerifyEmail() {
         email,
         otp: code,
       });
-      if (response.error) {
-        throw new Error(response.error.message ?? "Invalid code");
-      }
-      return response.data;
+      return response;
     },
-    onSuccess: (data) => {
-      // Update session cache
-      queryClient.setQueryData(["auth", "session"], data);
+    onSuccess: (response) => {
+      if (response.data) {
+        // Update session cache
+        queryClient.setQueryData(["auth", "session"], response.data);
+      }
     },
   });
 }
@@ -117,13 +113,12 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: async (data: { name?: string; image?: string; registered?: boolean }) => {
       const response = await authClient.updateUser(data);
-      if (response.error) {
-        throw new Error(response.error.message ?? "Failed to update user");
-      }
-      return response.data;
+      return response;
     },
-    onSuccess: async (_data) => {
-      await queryClient.invalidateQueries({ queryKey: ["auth"] });
+    onSuccess: async (response) => {
+      if (response.data) {
+        await queryClient.invalidateQueries({ queryKey: ["auth"] });
+      }
     },
   });
 }
