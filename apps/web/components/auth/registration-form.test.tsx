@@ -186,11 +186,11 @@ describe("RegistrationForm", () => {
     // The test below expects "/" which contradicts the code I read.
     // BUT the old test said: `expect(pushMock).toHaveBeenCalledWith("/");`
     // If I pass termsData but no callbackUrl...
-    
+
     // I will pass empty string or undefined and expect /platform or whatever the code does.
     // My previous read said `router.push(callbackUrl ?? "/platform")`
     // So expectation should be `/platform`.
-    
+
     // Let's stick to what the code says.
 
     render(<RegistrationForm termsData={termsData} />, { wrapper: createWrapper() });
@@ -242,7 +242,9 @@ describe("RegistrationForm", () => {
 
   it("renders custom terms data when provided", async () => {
     const customTermsData = { title: "Custom Terms", content: "Custom content" };
-    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />, {
+      wrapper: createWrapper(),
+    });
 
     fireEvent.click(screen.getByText("auth.terms")); // open dialog
 
