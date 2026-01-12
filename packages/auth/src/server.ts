@@ -79,7 +79,7 @@ export const auth = betterAuth({
     useSecureCookies,
     ...(cookieDomain ? { cookieDomain } : {}),
     database: {
-        generateId: false, // Let Postgres generate UUIDs via defaultRandom()
+      generateId: false, // Let Postgres generate UUIDs via defaultRandom()
     },
   },
   emailAndPassword: {

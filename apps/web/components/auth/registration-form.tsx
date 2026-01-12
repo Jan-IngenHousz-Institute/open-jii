@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { useUpdateUser } from "~/hooks/useAuth";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
+import { useUpdateUser } from "~/hooks/useAuth";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -73,7 +73,7 @@ export function RegistrationForm({
     onSuccess: async () => {
       await updateUser.mutateAsync({ registered: true });
       toast({ description: t("registration.successMessage") });
-      router.push(callbackUrl ?? "/");
+      router.push(callbackUrl ?? "/platform");
     },
   });
 

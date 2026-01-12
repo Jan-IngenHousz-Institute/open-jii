@@ -19,7 +19,7 @@ export default async function UserRegistrationPage(props: {
   const { callbackUrl } = await props.searchParams;
 
   if (!session?.user) {
-    redirect(`/api/auth/signin`);
+    redirect(`/${locale}/login?callbackUrl=/${locale}/register`);
   }
 
   if (session.user.registered) {
