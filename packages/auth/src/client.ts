@@ -1,2 +1,16 @@
-export { SessionProvider } from "next-auth/react";
-export { useSession } from "next-auth/react";
+import { inferAdditionalFields } from "better-auth/client/plugins";
+import { createAuthClient } from "better-auth/react";
+
+import type { auth } from "./server";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
+
+export const authClient = createAuthClient({
+  baseURL: BACKEND_URL,
+  plugins: [inferAdditionalFields<typeof auth>()],
+});
+
+// Export useSession hook from Better Auth React
+export const { useSession } = authClient;
+
+export type AuthClient = typeof authClient;

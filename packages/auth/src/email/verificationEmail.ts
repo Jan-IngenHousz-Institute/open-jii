@@ -1,4 +1,3 @@
-import type { NodemailerConfig } from "@auth/core/providers/nodemailer";
 import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 import type { SentMessageInfo } from "nodemailer";
@@ -11,38 +10,37 @@ interface ExtendedSentMessageInfo extends SentMessageInfo {
   pending?: string[];
 }
 
-export async function sendVerificationRequest(params: {
-  identifier: string;
+interface SendVerificationEmailParams {
+  to: string;
   url: string;
-  expires: Date;
-  provider: NodemailerConfig;
   token: string;
-  request: Request;
-}) {
-  const { identifier, url, provider } = params;
+  emailServer: string;
+  emailFrom: string;
+}
 
-  if (provider.from === undefined) {
-    throw new Error("Email provider 'from' address is not configured");
-  }
+export async function sendVerificationEmail(params: SendVerificationEmailParams) {
+  const { to, url, emailServer, emailFrom } = params;
 
   const { host } = new URL(url);
-  const transport = createTransport(provider.server);
+  const transport = createTransport(emailServer);
+
   const qrCodeBuffer = await QRCode.toBuffer(url, {
     width: 200,
     margin: 1,
     errorCorrectionLevel: "M",
   });
 
+  // Render email using React Email component
   const emailHtml = await render(VerificationRequest({ url, host, senderName: "openJII" }), {});
   const emailText = await render(VerificationRequest({ url, host, senderName: "openJII" }), {
     plainText: true,
   });
 
   const result = await transport.sendMail({
-    to: identifier,
+    to,
     from: {
       name: "openJII",
-      address: provider.from,
+      address: emailFrom,
     },
     subject: `Sign in to the openJII Platform`,
     html: emailHtml,

@@ -36,10 +36,24 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-// Mock signInAction
-const mockSignInAction = vi.fn();
+// Mock useRouter
+const { mockPush } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
+// Mock signInWithEmail
+const mockSignInWithEmail = vi.fn();
+const mockVerifyEmailCode = vi.fn();
+
 vi.mock("../../app/actions/auth", () => ({
-  signInAction: vi.fn((...args: unknown[]) => mockSignInAction(...args) as Promise<void>),
+  signInWithEmail: vi.fn((...args: unknown[]) => mockSignInWithEmail(...args) as Promise<void>),
+  verifyEmailCode: vi.fn((...args: unknown[]) => mockVerifyEmailCode(...args) as Promise<void>),
 }));
 
 /* -------------------- Helpers -------------------- */
@@ -77,29 +91,10 @@ describe("LoginProviderForm", () => {
       const button = screen.getByRole("button", { name: /sign in with github/i });
       expect(button).toBeInTheDocument();
     });
-
-    it("calls signInAction with correct provider on OAuth button click", async () => {
-      const user = userEvent.setup();
-      const provider = { id: "google", name: "Google" };
-      const callbackUrl = "/experiments";
-
-      mockSignInAction.mockResolvedValueOnce(undefined);
-
-      render(<LoginProviderForm provider={provider} callbackUrl={callbackUrl} />, {
-        wrapper: createWrapper(),
-      });
-
-      const button = screen.getByRole("button", { name: /sign in with google/i });
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(mockSignInAction).toHaveBeenCalledWith("google", callbackUrl);
-      });
-    });
   });
 
-  describe("Email Provider (nodemailer)", () => {
-    const emailProvider = { id: "nodemailer", name: "Email" };
+  describe("Email Provider (email)", () => {
+    const emailProvider = { id: "email", name: "Email" };
 
     it("renders email form with input and submit button", () => {
       render(<LoginProviderForm provider={emailProvider} callbackUrl="/dashboard" />, {
@@ -132,7 +127,7 @@ describe("LoginProviderForm", () => {
       const user = userEvent.setup();
       const callbackUrl = "/profile";
 
-      mockSignInAction.mockResolvedValueOnce(undefined);
+      mockSignInWithEmail.mockResolvedValueOnce(undefined);
 
       render(<LoginProviderForm provider={emailProvider} callbackUrl={callbackUrl} />, {
         wrapper: createWrapper(),
@@ -146,11 +141,7 @@ describe("LoginProviderForm", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockSignInAction).toHaveBeenCalledWith(
-          "nodemailer",
-          callbackUrl,
-          "test@example.com",
-        );
+        expect(mockSignInWithEmail).toHaveBeenCalledWith("test@example.com");
       });
     });
 
@@ -158,7 +149,9 @@ describe("LoginProviderForm", () => {
       const user = userEvent.setup();
 
       // Mock a delayed response
-      mockSignInAction.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      mockSignInWithEmail.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100)),
+      );
 
       render(<LoginProviderForm provider={emailProvider} callbackUrl="/dashboard" />, {
         wrapper: createWrapper(),
@@ -188,7 +181,9 @@ describe("LoginProviderForm", () => {
     it("prevents multiple submissions while pending", async () => {
       const user = userEvent.setup();
 
-      mockSignInAction.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      mockSignInWithEmail.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100)),
+      );
 
       render(<LoginProviderForm provider={emailProvider} callbackUrl="/dashboard" />, {
         wrapper: createWrapper(),
@@ -207,7 +202,7 @@ describe("LoginProviderForm", () => {
       await waitFor(
         () => {
           // Should only be called once
-          expect(mockSignInAction).toHaveBeenCalledTimes(1);
+          expect(mockSignInWithEmail).toHaveBeenCalledTimes(1);
         },
         { timeout: 200 },
       );

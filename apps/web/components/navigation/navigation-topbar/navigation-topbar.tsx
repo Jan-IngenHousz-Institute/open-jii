@@ -92,7 +92,7 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
             <NavUser
               user={{
                 id: user.id,
-                email: user.email ?? "",
+                email: user.email,
                 avatar: user.image ?? "",
               }}
               locale={locale}

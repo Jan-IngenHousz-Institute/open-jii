@@ -1,45 +1,114 @@
 "use server";
 
-import { signIn, signOut, auth, unstableUpdate } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { env } from "~/env";
 
-import { AuthError } from "@repo/auth/next";
+const BACKEND_URL = env.NEXT_PUBLIC_API_URL;
 
-const SIGNIN_ERROR_URL = "/error";
+export async function handleLogout({ redirectTo = "/" } = {}) {
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get("better-auth.session-token")?.value;
 
-export async function handleLogin() {
-  await signIn();
-}
+    if (sessionToken) {
+      // Call backend to invalidate session
+      await fetch(`${BACKEND_URL}/auth/signout`, {
+        method: "POST",
+        headers: {
+          Cookie: `better-auth.session-token=${sessionToken}`,
+        },
+      });
 
-export async function handleLogout({ redirectTo = "/", redirect = true } = {}) {
-  await signOut({ redirectTo, redirect });
+      // Clear the session cookie
+      cookieStore.delete("better-auth.session-token");
+    }
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+
+  redirect(redirectTo);
 }
 
 export async function handleRegister() {
-  const session = await auth();
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get("better-auth.session-token")?.value;
 
-  if (session?.user) {
-    await unstableUpdate({ ...session, user: { ...session.user, registered: true } });
+    if (sessionToken) {
+      // Update user as registered
+      await fetch(`${BACKEND_URL}/auth/user`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `better-auth.session-token=${sessionToken}`,
+        },
+        body: JSON.stringify({ registered: true }),
+      });
+    }
+  } catch (error) {
+    console.error("Register error:", error);
+    throw error;
   }
 }
 
-export async function signInAction(
-  providerId: string,
-  callbackUrl: string | undefined,
-  email?: string,
-) {
+export async function signInWithEmail(email: string) {
   try {
-    if (providerId === "nodemailer" && !email) {
-      throw new Error("Email is required");
-    }
-    await signIn(providerId, {
-      redirectTo: callbackUrl,
-      ...(providerId === "nodemailer" && email ? { email } : {}),
+    const response = await fetch(`${BACKEND_URL}/auth/signin/email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
     });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
+
+    if (!response.ok) {
+      const error = (await response.json()) as { message?: string };
+      throw new Error(error.message ?? "Failed to send email");
     }
-    throw error;
+
+    return (await response.json()) as { success: boolean; message: string };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to sign in";
+    console.error("Sign in error:", errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+export async function verifyEmailCode(email: string, code: string) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/auth/verify/email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, code }),
+    });
+
+    if (!response.ok) {
+      const error = (await response.json()) as { message?: string };
+      throw new Error(error.message ?? "Invalid code");
+    }
+
+    const data = (await response.json()) as {
+      user: { id: string; email: string; name: string; registered: boolean };
+      session: { token: string; expiresAt: string };
+    };
+
+    // Set the session cookie
+    const cookieStore = await cookies();
+    const secure = env.NODE_ENV === "production";
+    cookieStore.set("better-auth.session-token", data.session.token, {
+      httpOnly: true,
+      secure,
+      sameSite: "lax",
+      maxAge: new Date(data.session.expiresAt).getTime() - Date.now(),
+    });
+
+    return data;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to verify code";
+    console.error("Verify error:", errorMessage);
+    throw new Error(errorMessage);
   }
 }

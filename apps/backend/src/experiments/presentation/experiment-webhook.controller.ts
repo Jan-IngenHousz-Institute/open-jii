@@ -1,4 +1,5 @@
 import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
@@ -9,6 +10,7 @@ import { handleFailure } from "../../common/utils/fp-utils";
 import { UpdateProvisioningStatusUseCase } from "../application/use-cases/update-provisioning-status/update-provisioning-status";
 
 @Controller()
+@AllowAnonymous()
 @UseGuards(HmacGuard)
 export class ExperimentWebhookController {
   private readonly logger = new Logger(ExperimentWebhookController.name);

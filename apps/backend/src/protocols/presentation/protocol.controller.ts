@@ -1,13 +1,12 @@
-import { Controller, Inject, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Inject, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract, validateProtocolJson } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
@@ -106,7 +105,6 @@ async function validateProtocolCode(
 }
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ProtocolController {
   private readonly logger = new Logger(ProtocolController.name);
 
@@ -165,7 +163,7 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.createProtocol)
-  createProtocol(@CurrentUser() user: User) {
+  createProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.createProtocol, async ({ body }) => {
       const validationResult = await validateProtocolCode(
         body.code,
@@ -184,7 +182,7 @@ export class ProtocolController {
         family: body.family,
       };
 
-      const result = await this.createProtocolUseCase.execute(createDto, user.id);
+      const result = await this.createProtocolUseCase.execute(createDto, session.user.id);
 
       if (result.isSuccess()) {
         const protocol = {
@@ -192,7 +190,7 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        this.logger.log(`Protocol created: ${protocol.id} by user ${user.id}`);
+        this.logger.log(`Protocol created: ${protocol.id} by user ${session.user.id}`);
         return {
           status: StatusCodes.CREATED,
           body: formatDates(protocol),
@@ -204,7 +202,7 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.updateProtocol)
-  updateProtocol(@CurrentUser() user: User) {
+  updateProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.updateProtocol, async ({ params, body }) => {
       // First check if protocol exists and user is the creator
       const protocolResult = await this.getProtocolUseCase.execute(params.id);
@@ -213,9 +211,9 @@ export class ProtocolController {
         return handleFailure(protocolResult, this.logger);
       }
 
-      if (protocolResult.value.createdBy !== user.id) {
+      if (protocolResult.value.createdBy !== session.user.id) {
         this.logger.warn(
-          `User ${user.id} attempted to update protocol ${params.id} without permission`,
+          `User ${session.user.id} attempted to update protocol ${params.id} without permission`,
         );
         return {
           status: StatusCodes.FORBIDDEN,
@@ -250,7 +248,7 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        this.logger.log(`Protocol updated: ${protocol.id} by user ${user.id}`);
+        this.logger.log(`Protocol updated: ${protocol.id} by user ${session.user.id}`);
         return {
           status: StatusCodes.OK,
           body: formatDates(protocol),
@@ -262,11 +260,11 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.deleteProtocol)
-  deleteProtocol(@CurrentUser() user: User) {
+  deleteProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.deleteProtocol, async ({ params }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_DELETION,
-        user.email ?? user.id,
+        session.user.email || session.user.id,
       );
 
       if (!isDeletionEnabled) {
@@ -283,9 +281,9 @@ export class ProtocolController {
         return handleFailure(protocolResult, this.logger);
       }
 
-      if (protocolResult.value.createdBy !== user.id) {
+      if (protocolResult.value.createdBy !== session.user.id) {
         this.logger.warn(
-          `User ${user.id} attempted to delete protocol ${params.id} without permission`,
+          `User ${session.user.id} attempted to delete protocol ${params.id} without permission`,
         );
         return {
           status: StatusCodes.FORBIDDEN,
@@ -296,7 +294,7 @@ export class ProtocolController {
       const result = await this.deleteProtocolUseCase.execute(params.id);
 
       if (result.isSuccess()) {
-        this.logger.log(`Protocol deleted: ${params.id} by user ${user.id}`);
+        this.logger.log(`Protocol deleted: ${params.id} by user ${session.user.id}`);
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,

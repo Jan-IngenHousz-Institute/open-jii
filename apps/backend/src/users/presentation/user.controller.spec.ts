@@ -398,8 +398,9 @@ describe("UserController", () => {
 
       expect(response.body).toMatchObject({
         id: userToDeleteId,
-        email: null,
       });
+      expect(response.body.email).not.toBe("delete-me@example.com"); // Anonymized
+      expect(response.body.email).toMatch(/^deleted-/); // Starts with deleted- prefix
       expect(response.body.name).toBe("Deleted User");
     });
 

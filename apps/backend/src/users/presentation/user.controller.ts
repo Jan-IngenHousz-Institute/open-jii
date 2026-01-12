@@ -1,12 +1,11 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
@@ -16,7 +15,6 @@ import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class UserController {
   private readonly logger = new Logger(UserController.name);
 
@@ -46,7 +44,7 @@ export class UserController {
   }
 
   @TsRestHandler(contract.users.searchUsers)
-  searchUsers(@CurrentUser() user: User) {
+  searchUsers(@Session() session: UserSession) {
     return tsRestHandler(contract.users.searchUsers, async ({ query }) => {
       const result = await this.searchUsersUseCase.execute({
         query: query.query,
@@ -60,7 +58,9 @@ export class UserController {
         // Format dates to strings for the API contract
         const formattedUsers = formatDatesList(users);
 
-        this.logger.log(`Searched users for user ${user.id} with query: ${JSON.stringify(query)}`);
+        this.logger.log(
+          `Searched users for user ${session.user.id} with query: ${JSON.stringify(query)}`,
+        );
         return {
           status: StatusCodes.OK,
           body: formattedUsers,
@@ -94,11 +94,11 @@ export class UserController {
   }
 
   @TsRestHandler(contract.users.createUserProfile)
-  createUserProfile(@CurrentUser() user: User) {
+  createUserProfile(@Session() session: UserSession) {
     return tsRestHandler(contract.users.createUserProfile, async ({ body }) => {
-      const result = await this.createUserProfileUseCase.execute(body, user.id);
+      const result = await this.createUserProfileUseCase.execute(body, session.user.id);
       if (result.isSuccess()) {
-        this.logger.log(`Created user profile for ${user.id}`);
+        this.logger.log(`Created user profile for ${session.user.id}`);
         return {
           status: StatusCodes.CREATED,
           body: {},

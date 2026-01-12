@@ -4,7 +4,7 @@ export const zUser = z.object({
   id: z.string().uuid(),
   name: z.string().nullable(),
   email: z.string().email().nullable(),
-  emailVerified: z.string().datetime().nullable(),
+  emailVerified: z.boolean(),
   image: z.string().nullable(),
   createdAt: z.string().datetime(),
   registered: z.boolean(),

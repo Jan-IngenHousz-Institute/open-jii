@@ -16,8 +16,8 @@ import { TermsAndConditionsDialog } from "./terms-and-conditions-dialog";
 
 export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string; locale: string }) {
   const { t } = await initTranslations({ locale, namespaces: ["common"] });
-  const emailProvider = providerMap.find((p) => p.id === "nodemailer");
-  const oauthProviders = providerMap.filter((p) => p.id !== "nodemailer");
+  const emailProvider = providerMap.find((p) => p.id === "email");
+  const oauthProviders = providerMap.filter((p) => p.id !== "email");
   const termsData = await TermsAndConditionsDialog({ locale });
 
   return (

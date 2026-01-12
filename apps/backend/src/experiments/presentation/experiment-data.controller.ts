@@ -1,4 +1,6 @@
-import { Controller, Logger, Req, UseGuards } from "@nestjs/common";
+import { Controller, Logger, Req } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import busboy from "busboy";
 import type { Request } from "express";
@@ -6,8 +8,6 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
@@ -17,7 +17,6 @@ import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-dat
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentDataController {
   private readonly logger = new Logger(ExperimentDataController.name);
 
@@ -30,15 +29,15 @@ export class ExperimentDataController {
   ) {}
 
   @TsRestHandler(contract.experiments.getExperimentTables)
-  getExperimentTables(@CurrentUser() user: { id: string }) {
+  getExperimentTables(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperimentTables, async ({ params }) => {
       const { id: experimentId } = params;
 
       this.logger.log(
-        `Processing tables metadata request for experiment ${experimentId} by user ${user.id}`,
+        `Processing tables metadata request for experiment ${experimentId} by user ${session.user.id}`,
       );
 
-      const result = await this.getExperimentTablesUseCase.execute(experimentId, user.id);
+      const result = await this.getExperimentTablesUseCase.execute(experimentId, session.user.id);
 
       if (result.isSuccess()) {
         const data = result.value;
@@ -56,16 +55,16 @@ export class ExperimentDataController {
   }
 
   @TsRestHandler(contract.experiments.getExperimentData)
-  getExperimentData(@CurrentUser() user: { id: string }) {
+  getExperimentData(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
       const { page, pageSize, tableName, columns, orderBy, orderDirection } = query;
 
       this.logger.log(
-        `Processing legacy data request for experiment ${experimentId} by user ${user.id}`,
+        `Processing legacy data request for experiment ${experimentId} by user ${session.user.id}`,
       );
 
-      const result = await this.getExperimentDataUseCase.execute(experimentId, user.id, {
+      const result = await this.getExperimentDataUseCase.execute(experimentId, session.user.id, {
         page,
         pageSize,
         tableName,
@@ -90,7 +89,7 @@ export class ExperimentDataController {
   }
 
   @TsRestHandler(contract.experiments.uploadExperimentData)
-  uploadExperimentData(@CurrentUser() user: { id: string }, @Req() request: Request) {
+  uploadExperimentData(@Session() session: UserSession, @Req() request: Request) {
     return tsRestHandler(contract.experiments.uploadExperimentData, async ({ params }) => {
       const { id: experimentId } = params;
 
@@ -103,10 +102,15 @@ export class ExperimentDataController {
         };
       }
 
-      this.logger.log(`Starting data upload for experiment ${experimentId} by user ${user.id}`);
+      this.logger.log(
+        `Starting data upload for experiment ${experimentId} by user ${session.user.id}`,
+      );
 
       // Prepare the upload environment - use case handles access control and experiment lookup
-      const prepResult = await this.uploadAmbyteDataUseCase.preexecute(experimentId, user.id);
+      const prepResult = await this.uploadAmbyteDataUseCase.preexecute(
+        experimentId,
+        session.user.id,
+      );
 
       if (prepResult.isFailure()) {
         this.logger.error(`Failed to prepare upload environment: ${prepResult.error.message}`);
@@ -274,18 +278,22 @@ export class ExperimentDataController {
   }
 
   @TsRestHandler(contract.experiments.downloadExperimentData)
-  downloadExperimentData(@CurrentUser() user: { id: string }) {
+  downloadExperimentData(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.downloadExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
       const { tableName } = query;
 
       this.logger.log(
-        `Processing download request for experiment ${experimentId}, table ${tableName} by user ${user.id}`,
+        `Processing download request for experiment ${experimentId}, table ${tableName} by user ${session.user.id}`,
       );
 
-      const result = await this.downloadExperimentDataUseCase.execute(experimentId, user.id, {
-        tableName,
-      });
+      const result = await this.downloadExperimentDataUseCase.execute(
+        experimentId,
+        session.user.id,
+        {
+          tableName,
+        },
+      );
 
       if (result.isSuccess()) {
         const data = result.value;

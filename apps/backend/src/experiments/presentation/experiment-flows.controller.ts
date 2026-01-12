@@ -1,12 +1,11 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateFlowUseCase } from "../application/use-cases/flows/create-flow";
@@ -14,7 +13,6 @@ import { GetFlowUseCase } from "../application/use-cases/flows/get-flow";
 import { UpdateFlowUseCase } from "../application/use-cases/flows/update-flow";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentFlowsController {
   private readonly logger = new Logger(ExperimentFlowsController.name);
 
@@ -25,9 +23,9 @@ export class ExperimentFlowsController {
   ) {}
 
   @TsRestHandler(contract.experiments.getFlow)
-  getFlow(@CurrentUser() user: User) {
+  getFlow(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getFlow, async ({ params }) => {
-      const result = await this.getFlowUseCase.execute(params.id, user.id);
+      const result = await this.getFlowUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         return {
@@ -41,9 +39,9 @@ export class ExperimentFlowsController {
   }
 
   @TsRestHandler(contract.experiments.createFlow)
-  createFlow(@CurrentUser() user: User) {
+  createFlow(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.createFlow, async ({ params, body }) => {
-      const result = await this.createFlowUseCase.execute(params.id, user.id, body);
+      const result = await this.createFlowUseCase.execute(params.id, session.user.id, body);
 
       if (result.isSuccess()) {
         return {
@@ -57,9 +55,9 @@ export class ExperimentFlowsController {
   }
 
   @TsRestHandler(contract.experiments.updateFlow)
-  updateFlow(@CurrentUser() user: User) {
+  updateFlow(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.updateFlow, async ({ params, body }) => {
-      const result = await this.updateFlowUseCase.execute(params.id, user.id, body);
+      const result = await this.updateFlowUseCase.execute(params.id, session.user.id, body);
 
       if (result.isSuccess()) {
         return {

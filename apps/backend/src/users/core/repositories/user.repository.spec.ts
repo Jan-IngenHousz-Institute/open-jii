@@ -6,7 +6,6 @@ import {
   profiles,
   accounts,
   sessions,
-  authenticators,
   experimentMembers,
   eq,
 } from "@repo/database";
@@ -44,7 +43,7 @@ describe("UserRepository", () => {
       const createUserDto = {
         name: "John Doe",
         email: "john.doe@example.com",
-        emailVerified: new Date(),
+        emailVerified: true,
         image: "https://example.com/avatar.jpg",
       };
 
@@ -464,9 +463,10 @@ describe("UserRepository", () => {
         .where(eq(users.id, userToDeleteId));
       expect(userRows.length).toBe(1);
       const userRow = userRows[0];
-      expect(userRow.email).toBeNull();
+      expect(userRow.email).not.toBe("delete@example.com"); // Email is anonymized, not null
+      expect(userRow.email).toMatch(/^deleted-/); // Starts with deleted- prefix
       expect(userRow.image).toBeNull();
-      expect(userRow.emailVerified).toBeNull();
+      expect(userRow.emailVerified).toBe(false); // NOT NULL constraint, defaults to false
       expect(userRow.name).toBe("Deleted User");
 
       // Verify related PII rows are removed
@@ -481,12 +481,6 @@ describe("UserRepository", () => {
         .from(sessions)
         .where(eq(sessions.userId, userToDeleteId));
       expect(sessionRows.length).toBe(0);
-
-      const authRows = await testApp.database
-        .select()
-        .from(authenticators)
-        .where(eq(authenticators.userId, userToDeleteId));
-      expect(authRows.length).toBe(0);
 
       // Profile should be anonymized, not deleted
       const profs = await testApp.database
