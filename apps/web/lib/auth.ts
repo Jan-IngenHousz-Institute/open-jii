@@ -1,37 +1,46 @@
-/* eslint-disable no-restricted-properties */
-import { initAuth } from "@repo/auth/next";
-import type { NextAuth, NextAuthResult } from "@repo/auth/next";
-import "@repo/auth/types";
+import { cookies } from "next/headers";
+import { env } from "~/env";
 
-import type { SecretMap } from "./secrets";
-import { getSecret, isLambdaEnvironment } from "./secrets";
+import type { Session } from "@repo/auth/types";
 
-const nextAuth = (async () => {
-  const isLambda = isLambdaEnvironment();
-  let authSecrets: SecretMap = {};
-  let dbSecrets: SecretMap = {};
-  let sesSecrets: SecretMap = {};
+const BACKEND_URL = env.NEXT_PUBLIC_API_URL;
 
-  if (isLambda) {
-    authSecrets = await getSecret(process.env.OAUTH_SECRET_ARN ?? "");
-    dbSecrets = await getSecret(process.env.DB_SECRET_ARN ?? "");
-    sesSecrets = await getSecret(process.env.SES_SECRET_ARN ?? "");
+/**
+ * Get the current session from Better Auth backend
+ * This is a server-side function for use in Server Components and Server Actions
+ */
+export async function auth(): Promise<Session | null> {
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get("better-auth.session-token")?.value;
+
+    if (!sessionToken) {
+      return null;
+    }
+
+    const response = await fetch(`${BACKEND_URL}/auth/session`, {
+      headers: {
+        Cookie: `better-auth.session-token=${sessionToken}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as Session;
+  } catch (error) {
+    console.error("Session fetch error:", error);
+    return null;
   }
+}
 
-  return initAuth({ authSecrets, dbSecrets, sesSecrets, isLambda });
-})();
-
-const {
-  handlers,
-  auth: _auth,
-  signIn: _signIn,
-  signOut: _signOut,
-  providerMap,
-  unstable_update: unstableUpdate,
-}: NextAuth = await nextAuth;
-
-const auth: NextAuthResult["auth"] = _auth;
-const signIn: NextAuthResult["signIn"] = _signIn;
-const signOut: NextAuthResult["signOut"] = _signOut;
-
-export { handlers, auth, signIn, signOut, providerMap, unstableUpdate };
+/**
+ * Provider map for displaying available auth providers
+ */
+export const providerMap = [
+  { id: "github", name: "GitHub" },
+  { id: "orcid", name: "ORCID" },
+  { id: "email", name: "Email" },
+];

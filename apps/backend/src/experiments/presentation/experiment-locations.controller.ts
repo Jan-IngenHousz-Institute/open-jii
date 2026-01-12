@@ -1,12 +1,11 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentLocationsUseCase } from "../application/use-cases/experiment-locations/add-experiment-locations";
@@ -16,7 +15,6 @@ import { SearchPlacesUseCase } from "../application/use-cases/experiment-locatio
 import { UpdateExperimentLocationsUseCase } from "../application/use-cases/experiment-locations/update-experiment-locations";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentLocationsController {
   private readonly logger = new Logger(ExperimentLocationsController.name);
 
@@ -29,9 +27,9 @@ export class ExperimentLocationsController {
   ) {}
 
   @TsRestHandler(contract.experiments.getExperimentLocations)
-  getLocations(@CurrentUser() user: User) {
+  getLocations(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperimentLocations, async ({ params }) => {
-      const result = await this.getExperimentLocationsUseCase.execute(params.id, user.id);
+      const result = await this.getExperimentLocationsUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         const locations = result.value;
@@ -65,7 +63,7 @@ export class ExperimentLocationsController {
   }
 
   @TsRestHandler(contract.experiments.addExperimentLocations)
-  addLocations(@CurrentUser() user: User) {
+  addLocations(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.addExperimentLocations, async ({ params, body }) => {
       // Transform API input to include experimentId
       const locationsWithExperimentId = body.locations.map((location) => ({
@@ -76,7 +74,7 @@ export class ExperimentLocationsController {
       const result = await this.addExperimentLocationsUseCase.execute(
         params.id,
         locationsWithExperimentId,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
@@ -101,7 +99,7 @@ export class ExperimentLocationsController {
         });
 
         this.logger.log(
-          `${body.locations.length} location(s) added to experiment ${params.id} by user ${user.id}`,
+          `${body.locations.length} location(s) added to experiment ${params.id} by user ${session.user.id}`,
         );
 
         return {
@@ -115,7 +113,7 @@ export class ExperimentLocationsController {
   }
 
   @TsRestHandler(contract.experiments.updateExperimentLocations)
-  updateLocations(@CurrentUser() user: User) {
+  updateLocations(@Session() session: UserSession) {
     return tsRestHandler(
       contract.experiments.updateExperimentLocations,
       async ({ params, body }) => {
@@ -128,7 +126,7 @@ export class ExperimentLocationsController {
         const result = await this.updateExperimentLocationsUseCase.execute(
           params.id,
           locationsWithExperimentId,
-          user.id,
+          session.user.id,
         );
 
         if (result.isSuccess()) {
@@ -153,7 +151,7 @@ export class ExperimentLocationsController {
           });
 
           this.logger.log(
-            `Locations updated for experiment ${params.id} by user ${user.id} (${locations.length} location(s))`,
+            `Locations updated for experiment ${params.id} by user ${session.user.id} (${locations.length} location(s))`,
           );
 
           return {

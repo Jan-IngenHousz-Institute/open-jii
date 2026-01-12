@@ -2,9 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { env } from "~/env";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -18,7 +20,7 @@ import {
   Input,
 } from "@repo/ui/components";
 
-import { signInAction } from "../app/actions/auth";
+import { signInWithEmail } from "../app/actions/auth";
 
 export function LoginProviderForm({
   provider,
@@ -29,7 +31,7 @@ export function LoginProviderForm({
   callbackUrl: string | undefined;
   layoutCount?: number;
 }) {
-  const isEmailProvider = provider.id === "nodemailer";
+  const isEmailProvider = provider.id === "email";
 
   if (isEmailProvider) {
     return <EmailLoginForm callbackUrl={callbackUrl} />;
@@ -40,36 +42,132 @@ export function LoginProviderForm({
 
 function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [isPending, setIsPending] = useState(false);
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [email, setEmail] = useState("");
 
   const emailSchema = z.object({
     email: z.string().min(1, t("auth.emailRequired")).email(t("auth.emailInvalid")),
   });
 
-  type EmailFormData = z.infer<typeof emailSchema>;
+  const otpSchema = z.object({
+    code: z.string().min(6, "Code must be 6 digits").max(6, "Code must be 6 digits"),
+  });
 
-  const form = useForm<EmailFormData>({
+  type EmailFormData = z.infer<typeof emailSchema>;
+  type OTPFormData = z.infer<typeof otpSchema>;
+
+  const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
       email: "",
     },
   });
 
-  async function onSubmit(data: EmailFormData) {
+  const otpForm = useForm<OTPFormData>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: {
+      code: "",
+    },
+  });
+
+  async function onEmailSubmit(data: EmailFormData) {
     if (isPending) return;
     setIsPending(true);
     try {
-      await signInAction("nodemailer", callbackUrl, data.email);
+      await signInWithEmail(data.email);
+      setEmail(data.email);
+      setShowOTPInput(true);
+    } catch (error) {
+      console.error("Email send error:", error);
     } finally {
       setIsPending(false);
     }
   }
 
+  async function onOTPSubmit(data: OTPFormData) {
+    if (isPending) return;
+    setIsPending(true);
+    try {
+      const { verifyEmailCode } = await import("../app/actions/auth");
+      await verifyEmailCode(email, data.code);
+      // Redirect to callback or platform
+      router.push(callbackUrl ?? "/platform");
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      otpForm.setError("code", { message: "Invalid code" });
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  if (showOTPInput) {
+    return (
+      <Form {...otpForm}>
+        <form onSubmit={otpForm.handleSubmit(onOTPSubmit)} className="space-y-4">
+          <p className="muted-foreground mb-4 text-sm">
+            {t("auth.otpSentTo", {
+              email: email.length > 30 ? `${email.slice(0, 30)}...` : email,
+            })}
+          </p>
+          <FormField
+            control={otpForm.control}
+            name="code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.verificationCode")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="text"
+                    placeholder="000000"
+                    disabled={isPending}
+                    className="h-12 rounded-xl"
+                    maxLength={6}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 flex-1 rounded-xl"
+              onClick={() => setShowOTPInput(false)}
+              disabled={isPending}
+            >
+              {t("auth.back")}
+            </Button>
+            <Button
+              type="submit"
+              variant="default"
+              className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 flex-1 rounded-xl"
+              disabled={isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("auth.verifying")}
+                </>
+              ) : (
+                t("auth.verify")
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    );
+  }
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <Form {...emailForm}>
+      <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
         <FormField
-          control={form.control}
+          control={emailForm.control}
           name="email"
           render={({ field }) => (
             <FormItem>
@@ -92,7 +190,7 @@ function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
           type="submit"
           variant="default"
           className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark mt-4 h-12 w-full rounded-xl"
-          disabled={isPending || (!form.formState.isValid && form.formState.isDirty)}
+          disabled={isPending || (!emailForm.formState.isValid && emailForm.formState.isDirty)}
         >
           {isPending ? (
             <>
@@ -120,15 +218,12 @@ function OAuthLoginForm({
   const { t } = useTranslation();
   const [isPending, setIsPending] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsPending(true);
-    try {
-      await signInAction(provider.id, callbackUrl);
-    } catch (error) {
-      setIsPending(false);
-      console.error("Sign in error:", error);
-    }
+    const redirectUrl = callbackUrl ?? "/platform";
+    const authUrl = `${env.NEXT_PUBLIC_API_URL}/auth/${provider.id}?callbackUrl=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = authUrl;
   };
 
   const providerName = provider.id.charAt(0).toUpperCase() + provider.id.slice(1);

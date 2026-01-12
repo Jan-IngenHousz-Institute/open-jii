@@ -8,8 +8,16 @@ import { LoginForm } from "./login-form";
 globalThis.React = React;
 
 // Mock Next.js modules
+const { mockPush, mockRedirect } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockRedirect: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
-  redirect: vi.fn(),
+  redirect: mockRedirect,
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }));
 
 // Mock auth module
@@ -17,20 +25,9 @@ vi.mock("@/lib/auth", () => ({
   signIn: vi.fn(),
   providerMap: [
     { id: "github", name: "GitHub" },
-    { id: "nodemailer", name: "Email" },
+    { id: "email", name: "Email" },
     { id: "orcid", name: "ORCID" },
   ],
-}));
-
-// Mock AuthError
-vi.mock("@repo/auth/next", () => ({
-  AuthError: class AuthError extends Error {
-    type: string;
-    constructor(type: string) {
-      super(type);
-      this.type = type;
-    }
-  },
 }));
 
 // Mock initTranslations
