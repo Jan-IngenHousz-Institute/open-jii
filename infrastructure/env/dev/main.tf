@@ -1211,6 +1211,10 @@ module "backend_ecs" {
       value = module.aurora_db.cluster_port
     },
     {
+      name  = "DB_SECRET_ARN"
+      value = module.aurora_db.master_user_secret_arn
+    },
+    {
       name  = "LOG_LEVEL"
       value = "debug"
     },
