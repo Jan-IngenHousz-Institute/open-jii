@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { env } from "~/env";
 
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -100,14 +99,16 @@ function EmailLoginForm({
     try {
       const result = await verifyEmailMutation.mutateAsync({ email, code: data.code });
 
-      const isRegistered = result?.user?.registered;
+      // Cast to specific type to avoid ESLint unsafe assignment error
+      const user = result.user as { registered?: boolean } | undefined;
+      const isRegistered = user?.registered;
 
       if (!isRegistered) {
         router.push(`/${locale}/register`);
       } else {
         router.push(callbackUrl ?? "/platform");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("OTP verification error:", error);
       otpForm.setError("code", { message: "Invalid code" });
     }
@@ -235,7 +236,7 @@ function OAuthLoginForm({
     const redirectUrl = callbackUrl ?? "/platform";
 
     await authClient.signIn.social({
-      provider: provider.id as any,
+      provider: provider.id as "github" | "orcid",
       callbackURL: redirectUrl,
     });
   };

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
@@ -6,6 +7,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LoginForm } from "./login-form";
 
 globalThis.React = React;
+
+// Helper
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
 
 // Mock Next.js modules
 const { mockPush, mockRedirect } = vi.hoisted(() => ({
@@ -188,7 +202,7 @@ describe("LoginForm", () => {
   });
 
   it("renders the login form with title and providers", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
     expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
@@ -197,7 +211,7 @@ describe("LoginForm", () => {
   });
 
   it("renders email input form for nodemailer provider", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     const emailInput = screen.getByLabelText("Email");
     expect(emailInput).toBeInTheDocument();
@@ -206,7 +220,7 @@ describe("LoginForm", () => {
   });
 
   it("renders provider icons correctly", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     // Check for GitHub SVG
     const githubSvg = screen.getByRole("button", { name: /github/i }).querySelector("svg");
@@ -218,13 +232,13 @@ describe("LoginForm", () => {
   });
 
   it("renders divider between email and OAuth providers", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     expect(screen.getByText("auth.or")).toBeInTheDocument();
   });
 
   it("renders all buttons with correct styling", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
     // Find the email submit button by its accessible name
     const emailButton = screen.getByRole("button", { name: "auth.continueWithEmail" });
     expect(emailButton).toHaveAttribute("data-variant", "default");
@@ -242,7 +256,7 @@ describe("LoginForm", () => {
   });
 
   it("renders providers in correct order (email first, then OAuth)", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     const buttons = screen.getAllByRole("button");
 
@@ -257,7 +271,7 @@ describe("LoginForm", () => {
   });
 
   it("renders forms with correct structure", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     const forms = document.querySelectorAll("form");
     expect(forms).toHaveLength(3); // One form for each provider
@@ -275,7 +289,7 @@ describe("LoginForm", () => {
       callbackUrl: undefined,
     };
 
-    render(await LoginForm(propsWithoutCallback));
+    render(await LoginForm(propsWithoutCallback), { wrapper: createWrapper() });
 
     // Should still render all the basic elements
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
@@ -285,7 +299,7 @@ describe("LoginForm", () => {
   });
 
   it("renders forms with proper submit handlers", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     const forms = document.querySelectorAll("form");
 
@@ -297,7 +311,7 @@ describe("LoginForm", () => {
   });
 
   it("only renders one email input", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     // Should only have one email input
     const emailInputs = document.querySelectorAll('input[type="email"]');
@@ -305,7 +319,7 @@ describe("LoginForm", () => {
   });
 
   it("renders provider buttons with proper submit types", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     const submitButtons = document.querySelectorAll('button[type="submit"]');
     expect(submitButtons).toHaveLength(3);
@@ -317,7 +331,7 @@ describe("LoginForm", () => {
   });
 
   it("renders OAuth providers container", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     const container = document.querySelector(".grid.gap-3");
     expect(container).toBeInTheDocument();
@@ -331,7 +345,7 @@ describe("LoginForm", () => {
       locale: "de-DE",
     };
 
-    render(await LoginForm(propsWithDifferentLocale));
+    render(await LoginForm(propsWithDifferentLocale), { wrapper: createWrapper() });
 
     // Should still render (translations will return keys with our mock)
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
@@ -344,7 +358,7 @@ describe("LoginForm", () => {
       callbackUrl: "",
     };
 
-    render(await LoginForm(propsWithEmptyCallback));
+    render(await LoginForm(propsWithEmptyCallback), { wrapper: createWrapper() });
 
     // Should still render all elements
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
@@ -353,7 +367,7 @@ describe("LoginForm", () => {
   });
 
   it("renders provider image components correctly", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     // Check that GitHub icon has the correct path content
     const githubButton = screen.getByRole("button", { name: /github/i });
@@ -369,7 +383,7 @@ describe("LoginForm", () => {
   });
 
   it("renders correct provider map length", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     // Should have exactly 3 providers as mocked
     const submitButtons = document.querySelectorAll('button[type="submit"]');
@@ -381,7 +395,7 @@ describe("LoginForm", () => {
   });
 
   it("renders terms and conditions dialog", async () => {
-    render(await LoginForm(defaultProps));
+    render(await LoginForm(defaultProps), { wrapper: createWrapper() });
 
     // Check for terms prefix text and link
     expect(screen.getByText("auth.continueTermsPrefix")).toBeInTheDocument();

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
@@ -6,6 +7,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignOutDialog } from "./signout-dialog";
 
 globalThis.React = React;
+
+// ---- Wrapper ----
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
 
 // ---- Mocks ----
 
@@ -16,9 +30,12 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-const handleLogoutMock = vi.fn(() => Promise.resolve());
-vi.mock("../app/actions/auth", () => ({
-  handleLogout: (...args: Parameters<typeof handleLogoutMock>) => handleLogoutMock(...args),
+const mockSignOutMutateAsync = vi.fn();
+vi.mock("../hooks/useAuth", () => ({
+  useSignOut: () => ({
+    mutateAsync: mockSignOutMutateAsync,
+    isPending: false,
+  }),
 }));
 
 // Mock UI components from @repo/ui
@@ -80,11 +97,11 @@ describe("<SignOutDialog />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBack.mockClear();
-    handleLogoutMock.mockClear();
+    mockSignOutMutateAsync.mockClear();
   });
 
   it("renders the dialog with correct translations", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+    render(<SignOutDialog translations={mockTranslations} />, { wrapper: createWrapper() });
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByTestId("dialog")).toHaveAttribute("data-open", "true");
@@ -95,7 +112,7 @@ describe("<SignOutDialog />", () => {
   });
 
   it("renders cancel and confirm buttons with correct labels", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+    render(<SignOutDialog translations={mockTranslations} />, { wrapper: createWrapper() });
 
     const cancelButton = screen.getByRole("button", { name: /Cancel/i });
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
@@ -104,11 +121,10 @@ describe("<SignOutDialog />", () => {
     expect(cancelButton).toHaveAttribute("data-variant", "ghost");
     expect(confirmButton).toBeInTheDocument();
     expect(confirmButton).toHaveAttribute("data-variant", "default");
-    expect(confirmButton).toHaveAttribute("type", "submit");
   });
 
   it("calls router.back() when cancel button is clicked", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+    render(<SignOutDialog translations={mockTranslations} />, { wrapper: createWrapper() });
 
     const cancelButton = screen.getByRole("button", { name: /Cancel/i });
     fireEvent.click(cancelButton);
@@ -117,14 +133,13 @@ describe("<SignOutDialog />", () => {
   });
 
   it("calls handleLogout when confirm button is clicked", () => {
-    render(<SignOutDialog translations={mockTranslations} />);
+    render(<useSignOut when confirm button is clicked", () => {
+    render(<SignOutDialog translations={mockTranslations} />, { wrapper: createWrapper() });
 
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
     fireEvent.click(confirmButton);
 
-    expect(handleLogoutMock).toHaveBeenCalledTimes(1);
-    expect(handleLogoutMock).toHaveBeenCalledWith();
-  });
+    expect(mockSignOutMutateAsync).toHaveBeenCalledTimes(1
 
   it("renders with custom translations", () => {
     const customTranslations = {
@@ -134,7 +149,7 @@ describe("<SignOutDialog />", () => {
       confirm: "Bestätigen",
     };
 
-    render(<SignOutDialog translations={customTranslations} />);
+    render(<SignOutDialog translations={customTranslations} />, { wrapper: createWrapper() });
 
     expect(screen.getByTestId("dialog-title")).toHaveTextContent("Abmelden");
     expect(screen.getByTestId("dialog-description")).toHaveTextContent(
