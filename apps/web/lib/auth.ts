@@ -10,7 +10,7 @@ import type { Session } from "@repo/auth/types";
 export async function auth(): Promise<Session | null> {
   try {
     const headersList = await headers();
-    
+
     // Use the authClient to fetch the session, passing the headers to forward cookies
     const { data } = await authClient.getSession({
       fetchOptions: {

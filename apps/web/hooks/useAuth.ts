@@ -115,20 +115,15 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
-      name?: string;
-      image?: string;
-      registered?: boolean;
-    }) => {
-      // @ts-expect-error - registered is a custom field
+    mutationFn: async (data: { name?: string; image?: string; registered?: boolean }) => {
       const response = await authClient.updateUser(data);
       if (response.error) {
         throw new Error(response.error.message ?? "Failed to update user");
       }
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["auth"] });
+    onSuccess: async (_data) => {
+      await queryClient.invalidateQueries({ queryKey: ["auth"] });
     },
   });
 }

@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { env } from "~/env";
 
+import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
@@ -20,7 +21,6 @@ import {
   Input,
 } from "@repo/ui/components";
 
-import { authClient } from "@repo/auth/client";
 import { useSignInEmail, useVerifyEmail } from "../hooks/useAuth";
 
 export function LoginProviderForm({
@@ -43,7 +43,13 @@ export function LoginProviderForm({
   return <OAuthLoginForm provider={provider} callbackUrl={callbackUrl} layoutCount={layoutCount} />;
 }
 
-function EmailLoginForm({ callbackUrl, locale }: { callbackUrl: string | undefined; locale: string }) {
+function EmailLoginForm({
+  callbackUrl,
+  locale,
+}: {
+  callbackUrl: string | undefined;
+  locale: string;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const [showOTPInput, setShowOTPInput] = useState(false);
@@ -93,13 +99,13 @@ function EmailLoginForm({ callbackUrl, locale }: { callbackUrl: string | undefin
     if (isPending) return;
     try {
       const result = await verifyEmailMutation.mutateAsync({ email, code: data.code });
-      
+
       const isRegistered = result?.user?.registered;
-      
+
       if (!isRegistered) {
-         router.push(`/${locale}/register`);
+        router.push(`/${locale}/register`);
       } else {
-         router.push(callbackUrl ?? "/platform");
+        router.push(callbackUrl ?? "/platform");
       }
     } catch (error) {
       console.error("OTP verification error:", error);
@@ -227,9 +233,9 @@ function OAuthLoginForm({
     e.preventDefault();
     setIsPending(true);
     const redirectUrl = callbackUrl ?? "/platform";
-    
+
     await authClient.signIn.social({
-      provider: provider.id as any, 
+      provider: provider.id as any,
       callbackURL: redirectUrl,
     });
   };

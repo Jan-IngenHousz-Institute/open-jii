@@ -7,10 +7,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
 
 export const authClient = createAuthClient({
   baseURL: `${BACKEND_URL}/api/v1/auth`,
-  plugins: [
-    inferAdditionalFields<typeof auth>(),
-    emailOTPClient(),
-  ],
+  plugins: [inferAdditionalFields<typeof auth>(), emailOTPClient()],
 });
 
 // Export useSession hook from Better Auth React

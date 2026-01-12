@@ -32,7 +32,9 @@ export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string;
       <h1 className="mb-4 text-left text-2xl font-bold">{t("auth.loginToAccount")}</h1>
 
       {/* Email provider */}
-      {emailProvider && <LoginProviderForm provider={emailProvider} callbackUrl={callbackUrl} locale={locale} />}
+      {emailProvider && (
+        <LoginProviderForm provider={emailProvider} callbackUrl={callbackUrl} locale={locale} />
+      )}
 
       {/* Divider */}
       {oauthProviders.length > 0 && (
