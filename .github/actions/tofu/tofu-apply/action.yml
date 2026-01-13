@@ -1,0 +1,17 @@
+name: "OpenTofu Apply"
+description: "Runs OpenTofu apply"
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve Environment
+      shell: bash
+      run: |
+        if [[ "${{ env.environment }}" == "prod" ]]; then
+          echo "RESOLVED_ENV=prod" >> "$GITHUB_ENV"
+        else
+          echo "RESOLVED_ENV=dev" >> "$GITHUB_ENV"
+        fi
+    - name: OpenTofu Apply
+      shell: bash
+      working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
+      run: tofu apply -auto-approve

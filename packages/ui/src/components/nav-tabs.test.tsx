@@ -68,7 +68,7 @@ describe("NavTabs", () => {
       expect(list.className).toContain("bg-surface");
       expect(list.className).toContain("inline-flex");
       expect(list.className).toContain("gap-1");
-      expect(list.className).toContain("rounded-xl");
+      expect(list.className).toContain("rounded-md");
       expect(list.className).toContain("p-1");
     });
 
@@ -133,7 +133,7 @@ describe("NavTabs", () => {
       expect(inactiveTrigger).toHaveAttribute("data-state", "inactive");
 
       // Check for base classes that should be present
-      expect(activeTrigger.className).toContain("rounded-lg");
+      expect(activeTrigger.className).toContain("rounded-sm");
       expect(activeTrigger.className).toContain("px-4");
       expect(activeTrigger.className).toContain("py-2");
     });

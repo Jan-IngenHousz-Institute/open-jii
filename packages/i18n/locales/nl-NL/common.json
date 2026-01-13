@@ -218,7 +218,13 @@
     "learnAboutUs": "Meer over ons",
     "needHelp": "Hulp nodig? Probeer terug te gaan naar de vorige pagina of neem contact op met de support.",
     "goBack": "Terug",
-    "brandTagline": "Jan IngenHousz Instituut - Fotosynthese verbeteren voor een duurzame toekomst"
+    "brandTagline": "Jan IngenHousz Instituut - Fotosynthese verbeteren voor een duurzame toekomst",
+    "notFound": "Niet gevonden",
+    "accessDenied": "Toegang geweigerd",
+    "error": "Fout",
+    "resourceNotFoundMessage": "De bron die je zoekt kon niet worden gevonden.",
+    "backToDashboard": "Terug naar Dashboard",
+    "viewExperiments": "Experimenten bekijken"
   },
   "footer": {
     "aboutUs": "Over ons",
@@ -236,9 +242,13 @@
     "home": "Home",
     "platform": "Platform",
     "experiments": "Experimenten",
+    "protocols": "Protocollen",
+    "macros": "Macro's",
     "new": "Nieuw",
     "edit": "Bewerken",
-    "view": "Bekijken"
+    "view": "Bekijken",
+    "account": "Account",
+    "settings": "Instellingen"
   },
   "experimentData": {
     "title": "Experimentgegevens",
@@ -323,7 +333,6 @@
     "family": "Sensor familie"
   },
   "experimentDataTable": {
-    "loading": "Gegevens laden... Even geduld. Dit kan enkele minuten duren.",
     "noData": "Geen gegevens ontvangen",
     "noResults": "Geen resultaten",
     "error": "Fout bij het laden van gegevens",

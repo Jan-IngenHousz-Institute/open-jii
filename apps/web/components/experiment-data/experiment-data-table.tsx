@@ -37,6 +37,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
   Table,
   TableBody,
 } from "@repo/ui/components";
@@ -44,6 +45,15 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { DataDownloadModal } from "./data-download-modal/data-download-modal";
 import { ExperimentDataTableChart } from "./experiment-data-table-chart";
+
+// Helper function to map column names for sorting
+function getSortColumnName(columnName: string, columnType?: string): string {
+  // For USER columns, sort by user_name instead of the column name
+  if (columnType === "USER") {
+    return "user_name";
+  }
+  return columnName;
+}
 
 const bulkSelectionFormSchema = z.object({
   selectedRowIds: z.array(z.string()),
@@ -53,15 +63,19 @@ export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 export function ExperimentDataTable({
   experimentId,
   tableName,
+  displayName,
   pageSize = 10,
 }: {
   experimentId: string;
   tableName: string;
+  displayName?: string;
   pageSize: number;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string | undefined>("timestamp");
+  const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
   // Annotation dialog states
   const [addAnnotationDialogOpen, setAddAnnotationDialogOpen] = useState(false);
@@ -89,21 +103,7 @@ export function ExperimentDataTable({
 
   const { t } = useTranslation();
 
-  // Show chart on hover (only if not pinned)
-  const showChartOnHover = useCallback((data: number[], columnName: string) => {
-    setChartDisplay((current) => {
-      if (current?.isPinned) return current;
-      return { data, columnName, isPinned: false };
-    });
-  }, []);
-
-  // Hide chart on leave (only if not pinned)
-  const hideChartOnLeave = useCallback(() => {
-    setChartDisplay((current) => {
-      if (current?.isPinned) return current;
-      return null;
-    });
-  }, []);
+  // Remove hover functionality - chart only shows on click
 
   // Toggle chart pinning on click
   const toggleChartPin = useCallback((data: number[], columnName: string) => {
@@ -141,17 +141,31 @@ export function ExperimentDataTable({
     [],
   );
 
+  // Toggle sorting for a column
+  const handleSort = useCallback(
+    (columnName: string, columnType?: string) => {
+      const actualSortColumn = getSortColumnName(columnName, columnType);
+      if (sortColumn === actualSortColumn) {
+        // Toggle direction if same column
+        setSortDirection((prev) => (prev === "ASC" ? "DESC" : "ASC"));
+      } else {
+        // New column, default to ASC
+        setSortColumn(actualSortColumn);
+        setSortDirection("ASC");
+      }
+    },
+    [sortColumn],
+  );
+
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, displayName, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
     experimentId,
     pagination.pageIndex + 1,
     pagination.pageSize,
     tableName,
-    undefined,
-    undefined,
+    sortColumn,
+    sortDirection,
     formatValue,
-    showChartOnHover,
-    hideChartOnLeave,
     toggleChartPin,
     openAddAnnotationDialog,
     openDeleteAnnotationsDialog,
@@ -241,7 +255,7 @@ export function ExperimentDataTable({
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     enableRowSelection: true,
-    getRowId: (row) => String(row.id),
+    getRowId: (row, index) => `${pagination.pageIndex}-${index}`,
     onRowSelectionChange: setRowSelection,
     onPaginationChange,
     state: {
@@ -273,7 +287,21 @@ export function ExperimentDataTable({
   }, [table]);
 
   if (isLoading && !persistedMetaData) {
-    return <div>{t("experimentDataTable.loading")}</div>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-7 w-48" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full" />
+          {Array.from({ length: pageSize }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-64" />
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -291,7 +319,7 @@ export function ExperimentDataTable({
   return (
     <Form {...selectionForm}>
       <form>
-        <h5 className="mb-3 text-base font-medium">{displayName ?? tableName}</h5>
+        <h5 className="mb-3 text-base font-medium">{displayName}</h5>
         <BulkActionsBar
           rowIds={selectedRowIds}
           tableRows={tableRows}
@@ -301,7 +329,12 @@ export function ExperimentDataTable({
         />
         <div className="text-muted-foreground relative -mt-px overflow-visible rounded-b-lg border">
           <Table>
-            <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
+            <ExperimentTableHeader
+              headerGroups={table.getHeaderGroups()}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            />
             <TableBody>
               {isLoading && persistedMetaData && (
                 <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
@@ -375,7 +408,7 @@ export function ExperimentDataTable({
           onOpenChange={setDownloadModalOpen}
         />
         {chartDisplay && (
-          <div className="mt-6">
+          <div id="experiment-data-chart" className="mt-6">
             <ExperimentDataTableChart
               data={chartDisplay.data}
               columnName={chartDisplay.columnName}

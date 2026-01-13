@@ -138,7 +138,7 @@ export function UserSearchPopover({
                 type="button"
                 onClick={() => handleSelectUser(user)}
                 onMouseDown={(e) => e.preventDefault()}
-                className="hover:bg-accent flex w-full items-center px-3 text-left"
+                className="hover:bg-surface flex w-full items-center px-3 text-left"
               >
                 <div className="flex-1 overflow-hidden">
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm">

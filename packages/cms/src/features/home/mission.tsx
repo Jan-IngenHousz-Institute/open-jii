@@ -9,6 +9,7 @@ import Image from "next/image";
 import React from "react";
 
 import type { PageHomeMissionFieldsFragment } from "../../lib/__generated/sdk";
+import type { EmbeddedEntryType } from "../contentful/ctf-rich-text";
 import { CtfRichText } from "../contentful/ctf-rich-text";
 
 interface HomeAboutMissionProps {
@@ -55,7 +56,14 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
               className="mt-6 text-xl leading-8 text-gray-700"
               {...inspectorProps({ fieldId: "mission" })}
             >
-              <CtfRichText json={currentMission.mission.json as Document} />
+              <CtfRichText
+                json={currentMission.mission.json as Document}
+                links={
+                  currentMission.mission.links as {
+                    entries: { block: EmbeddedEntryType[] };
+                  }
+                }
+              />
             </div>
           )}
         </div>
@@ -76,7 +84,16 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
                 className="mt-6 text-lg leading-7 text-gray-600"
                 {...inspectorProps({ fieldId: "about" })}
               >
-                <CtfRichText json={currentMission.about.json as Document} />
+                <CtfRichText
+                  json={currentMission.about.json as Document}
+                  links={
+                    currentMission.about.links as {
+                      entries: {
+                        block: EmbeddedEntryType[];
+                      };
+                    }
+                  }
+                />
               </div>
             )}
           </div>

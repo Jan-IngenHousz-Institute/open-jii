@@ -1,5 +1,6 @@
 {
   "common": {
+    "logo": "Jan IngenHousz Institute",
     "protocolLabel": "Protocol",
     "by": "by",
     "homepage": "Homepage",
@@ -24,6 +25,9 @@
     "close": "Close",
     "yes": "Yes",
     "no": "No",
+    "search": "Search",
+    "notifications": "Notifications",
+    "menu": "Menu",
     "noVariant": "no variant",
     "destructive": "destructive",
     "ghost": "ghost",
@@ -48,7 +52,8 @@
     "kilobytes": "KB",
     "megabytes": "MB",
     "comingSoon": "Coming Soon",
-    "ok": "OK"
+    "ok": "OK",
+    "greeting": "Hi, {{name}}"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -59,7 +64,9 @@
     "profile": "Profile",
     "logout": "Sign out",
     "home": "Home",
-    "openJII": "openJII"
+    "openJII": "openJII",
+    "support": "Support",
+    "faq": "FAQ"
   },
   "experiments": {
     "filterMy": "My Experiments",
@@ -81,7 +88,8 @@
     "createdAt": "Created At",
     "updatedAt": "Updated At",
     "loadingExperiments": "Loading experiments...",
-    "noExperiments": "No experiments found",
+    "noExperiments": "No experiments yet",
+    "noExperimentsDescription": "Get started by creating your first experiment to collect and analyze data.",
     "viewDetails": "View Details",
     "experimentCreated": "Experiment created successfully",
     "experimentUpdated": "Experiment updated successfully",
@@ -152,13 +160,44 @@
     "noMacrosFound": "No macros found",
     "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
     "noMacrosAvailable": "No macros available",
-    "createFirstMacro": "Create your first macro to get started"
+    "createFirstMacro": "Create your first macro to get started",
+    "requestTransfer": "Request Project Transfer"
+  },
+  "transferRequest": {
+    "title": "Request Project Transfer",
+    "introText": "We invite you to join openJII and continue your research without interruption. Using the form below, you can request the transfer of your data from the PhotosynQ platform. You remain in full control of what data is migrated and when. You may explore the platform first and request a data transfer later.",
+    "processText": "After submitting the form, our team will transfer your data and notify you once the process is complete. If you have multiple projects you want to transfer, you will have to make separate requests.",
+    "yourRequests": "Your Transfer Requests",
+    "noRequests": "No transfer requests yet",
+    "noRequestsDescription": "You haven't submitted any project transfer requests.",
+    "requestedAt": "Requested on",
+    "errorLoadingRequests": "Failed to load your transfer requests. Please try again later.",
+    "importantNote": "Important Information",
+    "note1": "Project transfers are not immediate and may require up to 2 weeks to process.",
+    "note2": "We will contact you via your openJII account email if we need additional information.",
+    "note3": "You will receive an email notification once the transfer has been completed.",
+    "projectIdLabel": "PhotosynQ Project ID",
+    "projectIdPlaceholder": "Enter the Project ID from PhotosynQ",
+    "projectIdDescription": "You can find this in your PhotosynQ project page in the left bar under \"Project ID\"",
+    "projectUrlLabel": "PhotosynQ Project URL",
+    "projectUrlPlaceholder": "https://photosynq.org/projects/...",
+    "projectUrlDescription": "The full URL to your project on PhotosynQ",
+    "consentLabel": "I confirm that I am the owner of this project or have permission to request this transfer.",
+    "submitButton": "Submit Transfer Request",
+    "successTitle": "Transfer Request Submitted",
+    "successMessage": "Thank you! We've received your transfer request. We'll contact you if we need more information and let you know when the project is available in openJII.",
+    "submitAnother": "Submit Another Request",
+    "errorTitle": "Submission Failed",
+    "errorMessage": "Something went wrong while submitting your request. Please try again later.",
+    "formTab": "Form",
+    "historyTab": "Previous Requests",
+    "errorLoadingRequest": "Error loading transfer requests"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
     "name": "Name",
     "description_field": "Description",
-    "descriptionPlaceholder": "Short summary of the experiment’s purpose. To add instructions, finish creating the experiment and use the Instruction Node in the flow section",
+    "descriptionPlaceholder": "Short summary of the experiment's purpose. To add instructions, finish creating the experiment and use the Instruction Node in the flow section",
     "visibility": "Visibility",
     "visibilityPlaceholder": "Select an experiment visibility",
     "cancel": "Cancel",
@@ -281,6 +320,9 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to openJII",
+    "transferBannerTitle": "Welcome to openJII",
+    "transferBannerDescription": "Continue your research without interruption, transfer your data now.",
+    "transferBannerButton": "Request Project Transfer",
     "recentExperiments": "Recent Experiments",
     "recentArticles": "Recent blog posts",
     "yourExperiments": "Your recent experiments",
@@ -403,7 +445,11 @@
     "goBack": "Go Back",
     "brandTagline": "Jan IngenHousz Institute - Improving photosynthesis for a sustainable future",
     "termsUnavailable": "Unable to load terms and conditions at this time.",
-    "termsContentUnavailable": "Terms and conditions content is not available."
+    "termsContentUnavailable": "Terms and conditions content is not available.",
+    "error": "Error",
+    "resourceNotFoundMessage": "The resource you're looking for could not be found.",
+    "backToDashboard": "Back to Dashboard",
+    "viewExperiments": "View Experiments"
   },
   "footer": {
     "aboutUs": "About Us",
@@ -421,13 +467,13 @@
     "home": "Home",
     "platform": "Platform",
     "experiments": "Experiments",
+    "protocols": "Protocols",
+    "macros": "Macros",
     "new": "New",
     "edit": "Edit",
     "view": "View",
     "account": "Account",
-    "settings": "Settings",
-    "protocols": "Protocols",
-    "macros": "Macros"
+    "settings": "Settings"
   },
   "experimentData": {
     "title": "Experiment Data",
@@ -442,7 +488,6 @@
     }
   },
   "experimentDataTable": {
-    "loading": "Data loading... Please wait. It can take several minutes.",
     "noData": "No data returned",
     "noResults": "No results",
     "error": "Error loading data",
@@ -646,5 +691,47 @@
     "delete": "Delete",
     "deleting": "Deleting...",
     "cancel": "Cancel"
+  },
+  "cookieBanner": {
+    "intro": "We use cookies to improve your experience on OpenJII, analyze site usage, and support core functionality. You can accept all cookies, reject non-essential cookies, or manage your preferences. See our ",
+    "cookiePolicy": "cookie policy.",
+    "managePreferences": "Manage preferences",
+    "rejectAll": "Reject all",
+    "acceptAll": "Accept all",
+    "dialogTitle": "Manage Cookie Preferences",
+    "dialogDescription": "Choose which cookies you want to allow. Essential cookies are always enabled.",
+    "essentialTitle": "Essential Cookies",
+    "essentialDescription": "Required for authentication, security, and basic functionality. These cannot be disabled.",
+    "essentialAlways": "Always Active",
+    "analyticsTitle": "Analytics Cookies",
+    "analyticsDescription": "Help us understand how you use our platform to improve your experience. Powered by PostHog.",
+    "saveClose": "Save & Close"
+  },
+  "cookieSettings": {
+    "title": "Cookie Settings",
+    "intro": "Manage your cookie preferences and understand how we use cookies on our platform.",
+    "essentialTitle": "Essential Cookies",
+    "essentialDescription": "These cookies are necessary for the website to function and cannot be disabled.",
+    "essentialPurpose": "Purpose:",
+    "essentialPurposeText": "Authentication, security, session management",
+    "essentialExamples": "Examples:",
+    "essentialExamplesText": "Login sessions, CSRF protection, secure connections",
+    "essentialStatus": "Status: Always Active",
+    "analyticsTitle": "Analytics Cookies",
+    "analyticsDescription": "These cookies help us understand how visitors interact with our website.",
+    "analyticsPurposeLabel": "Purpose:",
+    "analyticsPurposeText": "Product analytics, usage tracking, feature improvement",
+    "analyticsProviderLabel": "Provider:",
+    "analyticsProviderText": "PostHog (privacy-friendly analytics)",
+    "analyticsDataLabel": "Data collected:",
+    "analyticsDataText": "Page views, button clicks, feature usage patterns",
+    "currentStatus": "Current Status:",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
+    "statusNotSet": "Not Set",
+    "disableAnalytics": "Disable Analytics",
+    "enableAnalytics": "Enable Analytics",
+    "analyticsEnabledToast": "Analytics cookies have been enabled.",
+    "analyticsDisabledToast": "Analytics cookies have been disabled."
   }
 }

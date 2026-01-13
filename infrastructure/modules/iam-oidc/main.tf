@@ -193,6 +193,16 @@ locals {
       resource = "*"
     }
 
+    cloudwatch = {
+      actions = [
+        "cloudwatch:PutMetricData",
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics"
+      ]
+      resource = "*"
+    }
+
     sqs = {
       actions  = ["sqs:*"]
       resource = "*"
@@ -326,6 +336,35 @@ locals {
       ]
       resource = "*"
     }
+
+    grafana = {
+      actions = [
+        "grafana:CreateWorkspace",
+        "grafana:DeleteWorkspace",
+        "grafana:DescribeWorkspace",
+        "grafana:ListWorkspaces",
+        "grafana:UpdateWorkspace",
+        "grafana:UpdateWorkspaceAuthentication",
+        "grafana:UpdateWorkspaceConfiguration",
+        "grafana:AssociateLicense",
+        "grafana:DisassociateLicense",
+        "grafana:ListPermissions",
+        "grafana:UpdatePermissions",
+        "grafana:CreateWorkspaceApiKey",
+        "grafana:DeleteWorkspaceApiKey",
+        "grafana:DescribeWorkspaceApiKey",
+        "grafana:ListWorkspaceApiKeys",
+        "grafana:CreateWorkspaceServiceAccount",
+        "grafana:DeleteWorkspaceServiceAccount",
+        "grafana:DescribeWorkspaceServiceAccount",
+        "grafana:ListWorkspaceServiceAccounts",
+        "grafana:CreateWorkspaceServiceAccountToken",
+        "grafana:DeleteWorkspaceServiceAccountToken",
+        "grafana:ListWorkspaceServiceAccountTokens",
+        "grafana:DescribeWorkspaceConfiguration"
+      ]
+      resource = "*"
+    }
   }
 
   # Combine all service permissions into comprehensive policy statements
@@ -341,7 +380,7 @@ locals {
   # Split policies into 10 groups (AWS limit is 10 inline policies per role)
   num_policy_parts    = 10
   statements_per_part = ceil(length(local.all_policy_statements) / local.num_policy_parts)
-  
+
   # Create a map of policy parts for for_each
   policy_parts = {
     for i in range(local.num_policy_parts) : tostring(i + 1) => slice(

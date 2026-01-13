@@ -1,11 +1,15 @@
-# ---------------------------
-# WIP
-# Don't use this yet please.
-# ---------------------------
+# Backend Deployment Workflow
+# Builds Docker image and deploys to ECS
 
-name: Deploy Backend
+name: Backend Deployment Workflow
 
 on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
   workflow_call:
     inputs:
       environment:
@@ -14,8 +18,8 @@ on:
         type: string
 
 env:
-  AWS_REGION: eu-central-1
   ENV: ${{ inputs.environment }}
+  ECR_REPOSITORY: open-jii-backend
 
 permissions:
   id-token: write
@@ -30,27 +34,59 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: "pnpm"
+          fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
+      - name: Capture Deployment Start Time
+        id: deployment-start
+        run: |
+          DEPLOY_START=$(date +%s)
+          echo "DEPLOY_START_TIME=$DEPLOY_START" >> $GITHUB_ENV
+          echo "deploy_start_time=$DEPLOY_START" >> $GITHUB_OUTPUT
+          
+          # Get commit timestamp for lead time calculation
+          COMMIT_TIME=$(git show -s --format=%ct ${{ github.sha }})
+          echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
+          echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
+          
+          echo "📊 DORA Metrics Collection Started"
+          echo "  Commit SHA: ${{ github.sha }}"
+          echo "  Commit Time: $(date -d @$COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "  Deploy Start: $(date -d @$DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          version: 8
-          run_install: false
+          node-version: "22"
+          hoisted: "false"
+
+      - name: Check Docker
+        run: |
+          echo "🔍 Checking Docker..."
+
+          # Check if Docker is installed and running
+          if ! docker info &> /dev/null; then
+            echo "::error::Docker is not running or not available"
+            exit 1
+          fi
+
+          echo "🚀 Deploying backend to ${{ env.ENV }} environment in ${{ secrets.AWS_REGION }}"
+          echo "📦 Using image tag: ${{ github.sha }}"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsDeployAccess
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get Infrastructure Configuration
+        uses: ./.github/actions/get-infrastructure-config
+        with:
+          environment: ${{ inputs.environment }}
+          prefix: "/backend"
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -58,143 +94,174 @@ jobs:
 
       - name: Set environment variables
         run: |
+          # Set registry and image tag
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
-          echo "ECR_REPOSITORY=open-jii-backend" >> $GITHUB_ENV
           echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
-
-          # Get and validate AWS region
-          AWS_REGION="${{ env.AWS_REGION }}"
-          if [[ -z "$AWS_REGION" ]]; then
-            echo "::warning::AWS_REGION not set, using default: eu-central-1"
-            echo "AWS_REGION=eu-central-1" >> $GITHUB_ENV
-          else
-            echo "AWS_REGION=$AWS_REGION" >> $GITHUB_ENV
-          fi
 
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
-          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+          DOCKER_FILE_PATH: apps/backend/Dockerfile
         run: |
-          echo "Building Docker image for backend"
-
-          # Check if Dockerfile exists
-          if [[ ! -f "apps/backend/Dockerfile" ]]; then
-            echo "::error::Dockerfile not found at apps/backend/Dockerfile"
-            exit 1
-          fi
-
-          # Build image
-          echo "Building Docker image for backend"
-          docker build \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            --build-arg PROJECT=backend \
-            -f apps/backend/Dockerfile . > /dev/null
-
-          if [ $? -ne 0 ]; then
-            echo "::error::Docker build failed"
-            exit 1
-          fi
-
-          # Define the full image reference for consistency
-          FULL_IMAGE_REF="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-          echo "Pushing image to ECR repository"
-          docker push $FULL_IMAGE_REF > /dev/null
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to push image to ECR"
-            exit 1
-          fi
-
-          # Add latest tag using AWS ECR put-image command (no need to push again)
-          if ! aws ecr put-image --repository-name ${ECR_REPOSITORY} --image-tag latest \
-            --image-manifest "$(aws ecr batch-get-image --repository-name ${ECR_REPOSITORY} \
-            --image-ids imageTag=${IMAGE_TAG} --query 'images[].imageManifest' --output text)" \
-            --region ${AWS_REGION} &>/dev/null; then
-            echo "::warning::Failed to tag image as latest, but the version-specific tag was pushed successfully"
-          fi
-
-          # Store the full image reference for later use
-          echo "full_image_ref=$FULL_IMAGE_REF" >> $GITHUB_OUTPUT
-
-          echo "✅ Successfully built and pushed Docker image"
+          # Build a docker container and
+          # push it to ECR so that it can
+          # be deployed to ECS.
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f $DOCKER_FILE_PATH --platform linux/amd64 --build-arg PROJECT=backend .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Download ECS Task Definition
+      - name: Resolve task definition JSON from ARN
         run: |
-          aws ecs describe-task-definition --task-definition backend-${{ env.ENV }} \
-          --query taskDefinition > task-definition.json
+          set -euo pipefail
+          if [[ -z "${TASK_DEFINITION_ARN:-}" ]]; then
+            echo "::error::TASK_DEFINITION_ARN is not set. Ensure SSM parameter /backend/${{ env.ENV }}/ecs/task-definition-arn is present and loaded by 'Get Infrastructure Configuration'."
+            exit 1
+          fi
 
-      - name: Update ECS task definition
-        id: update-task-def
+          echo "Fetching task definition JSON for ARN: ${TASK_DEFINITION_ARN}"
+          aws ecs describe-task-definition \
+            --task-definition "${TASK_DEFINITION_ARN}" \
+            --query taskDefinition > task-definition.json
+
+          echo "ECS_TASK_DEFINITION=task-definition.json" >> "$GITHUB_ENV"
+
+      - name: Capture current service task definition
+        id: prev-task-def
         run: |
-          echo "Updating task definition with new image..."
+          set -euo pipefail
+          PREV=$(aws ecs describe-services \
+            --cluster "backend-cluster-${{ env.ENV }}" \
+            --services "backend-${{ env.ENV }}" \
+            --query "services[0].taskDefinition" \
+            --output text 2>/dev/null || echo "")
 
-          # Create a temporary file with the updated task definition
-          jq --arg IMAGE "${{ steps.build-image.outputs.full_image_ref }}" \
-            '.containerDefinitions[0].image = $IMAGE' \
-            task-definition.json > updated-task-definition.json
-            
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to update task definition"
-            exit 1
+          if [[ -z "$PREV" || "$PREV" == "None" ]]; then
+            echo "::warning::Previous task definition not found; rollback will be skipped"
+          else
+            echo "PREV_TASK_DEFINITION_ARN=$PREV" >> "$GITHUB_ENV"
+            echo "prev_task_definition_arn=$PREV" >> "$GITHUB_OUTPUT"
           fi
 
-          # Remove fields that can't be included in RegisterTaskDefinition
-          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
-            updated-task-definition.json > final-task-definition.json
-            
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to clean task definition"
-            exit 1
-          fi
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
 
-          # Register the new task definition
-          echo "Registering new task definition..."
-          TASK_DEF_ARN=$(aws ecs register-task-definition \
-            --cli-input-json "file://final-task-definition.json" \
-            --query 'taskDefinition.taskDefinitionArn' \
-            --output text)
-            
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to register task definition"
-            exit 1
-          fi
+      - name: Deploy to Amazon ECS
+        id: deploy-ecs
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: backend-${{ env.ENV }}
+          cluster: backend-cluster-${{ env.ENV }}
+          wait-for-service-stability: true
 
-          echo "task_def_arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
-          echo "✅ Registered new task definition: $TASK_DEF_ARN"
+      - name: Roll back to previous task definition
+        if: failure() && env.PREV_TASK_DEFINITION_ARN != ''
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ env.PREV_TASK_DEFINITION_ARN }}
+          service: backend-${{ env.ENV }}
+          cluster: backend-cluster-${{ env.ENV }}
+          wait-for-service-stability: true
 
-      - name: Deploy to ECS service
+      - name: Clean up
         run: |
-          TASK_DEF_ARN="${{ steps.update-task-def.outputs.task_def_arn }}"
-          CLUSTER_NAME="backend-cluster-${{ env.ENV }}"
-          SERVICE_NAME="backend-${{ env.ENV }}"
-
-          echo "Updating ECS service..."
-          aws ecs update-service \
-            --cluster $CLUSTER_NAME \
-            --service $SERVICE_NAME \
-            --task-definition $TASK_DEF_ARN \
-            --force-new-deployment > /dev/null
-            
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to update ECS service"
-            exit 1
-          fi
-
-          echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable \
-            --cluster $CLUSTER_NAME \
-            --services $SERVICE_NAME
-            
-          if [ $? -ne 0 ]; then
-            echo "::error::Service failed to stabilize"
-            exit 1
-          fi
-
-          echo "✅ Deployment completed successfully!"
-
           # Clean up temporary files
-          rm -f task-definition.json updated-task-definition.json final-task-definition.json
+          rm -f task-definition.json || true
+
+      - name: Calculate DORA Metrics
+        id: dora-metrics
+        if: success()
+        run: |
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START_TIME))
+          LEAD_TIME=$((DEPLOY_END - COMMIT_TIME))
+          
+          # Convert to milliseconds for CloudWatch
+          LEAD_TIME_MS=$((LEAD_TIME * 1000))
+          
+          echo "lead_time_ms=$LEAD_TIME_MS" >> $GITHUB_OUTPUT
+          echo "deployment_duration=$DEPLOY_DURATION" >> $GITHUB_OUTPUT
+          
+          echo "📊 DORA Metrics Calculated:"
+          echo "  Lead Time: ${LEAD_TIME}s (${LEAD_TIME_MS}ms)"
+          echo "  Deployment Duration: ${DEPLOY_DURATION}s"
+
+      - name: Publish DORA - Deployment Frequency
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentFrequency'
+          value: '1'
+          unit: 'Count'
+          service: 'backend'
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Lead Time
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'LeadTime'
+          value: ${{ steps.dora-metrics.outputs.lead_time_ms }}
+          unit: 'Milliseconds'
+          service: 'backend'
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Success
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentSuccess'
+          value: '1'
+          unit: 'Count'
+          service: 'backend'
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Failed
+        if: failure()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: 'DeploymentFailed'
+          value: '1'
+          unit: 'Count'
+          service: 'backend'
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "::group::=== Deployment Summary ==="
+          echo "Environment: ${{ env.ENV }}"
+          echo "Image tag: ${{ github.sha }}"
+          echo "AWS Region: ${{ secrets.AWS_REGION }}"
+
+          # Check if the ECS deployment step was successful
+          if [[ "${{ steps.deploy-ecs.outcome }}" == "success" ]]; then
+            echo "✅ Deployment completed successfully!"
+            echo "🌐 The backend service has been updated in the ${{ env.ENV }} environment"
+
+            # Get the service URL if available
+            SERVICE_URL=$(aws ecs describe-services --cluster "backend-cluster-${{ env.ENV }}" --services "backend-${{ env.ENV }}" \
+              --query "services[0].loadBalancers[0].targetGroupArn" --output text 2>/dev/null || echo "")
+              
+            if [[ ! -z "$SERVICE_URL" && "$SERVICE_URL" != "None" ]]; then
+              echo "Service target group: $SERVICE_URL"
+            fi
+            
+          else
+            echo "❌ Deployment failed!"
+            echo "🔍 Please check the logs above for error details"
+            echo "⚠️  The ${{ env.ENV }} environment may still be running the previous version"
+          fi
+          
+          echo "::endgroup::"

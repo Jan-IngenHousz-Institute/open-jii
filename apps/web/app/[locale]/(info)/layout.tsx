@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/unified-navbar/unified-navbar";
+import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import { auth } from "@/lib/auth";
 import { draftMode } from "next/headers";
 import React from "react";
@@ -7,6 +7,7 @@ import { getContentfulClients } from "~/lib/contentful";
 import { HomeFooter } from "@repo/cms";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";
+import { Toaster } from "@repo/ui/components";
 
 const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];
 
@@ -36,9 +37,10 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
       >
         <UnifiedNavbar locale={locale} session={session} />
         <div className="mx-auto flex w-full max-w-7xl justify-center">
-          <main className="flex min-h-screen w-full flex-col px-4 pb-24 pt-8">{children}</main>
+          <main className="flex min-h-screen w-full flex-col px-4">{children}</main>
         </div>
         <HomeFooter footerData={footerData} preview={preview} locale={locale} />
+        <Toaster />
       </ContentfulPreviewProvider>
     </>
   );

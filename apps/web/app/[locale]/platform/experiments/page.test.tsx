@@ -59,8 +59,8 @@ describe("ExperimentPage", () => {
     expect(screen.getByText("experiments.title")).toBeInTheDocument();
     expect(screen.getByText("experiments.listDescription")).toBeInTheDocument();
     expect(screen.getByTestId("list-experiments")).toBeInTheDocument();
-    expect(screen.getAllByTestId("button")).toHaveLength(2);
-    expect(screen.getAllByTestId("link")).toHaveLength(2);
+    expect(screen.getAllByTestId("button")).toHaveLength(3);
+    expect(screen.getAllByTestId("link")).toHaveLength(3);
   });
 
   it("renders the create new experiment button with correct text", async () => {
@@ -98,7 +98,6 @@ describe("ExperimentPage", () => {
 
     const titleElement = container.querySelector("h1");
     expect(titleElement).toBeInTheDocument();
-    expect(titleElement).toHaveClass("text-lg", "font-medium");
     expect(titleElement).toHaveTextContent("experiments.title");
 
     const descriptionElement = container.querySelector("p");

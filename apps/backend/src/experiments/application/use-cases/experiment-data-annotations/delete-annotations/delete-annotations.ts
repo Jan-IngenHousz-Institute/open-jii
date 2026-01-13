@@ -57,10 +57,14 @@ export class DeleteAnnotationsUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
+        if (!experiment.schemaName) {
+          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          return failure(AppError.internal("Experiment schema not provisioned"));
+        }
+
         if ("annotationId" in request) {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotation(
-            experiment.name,
-            experimentId,
+            experiment.schemaName,
             request.annotationId,
           );
 
@@ -69,23 +73,24 @@ export class DeleteAnnotationsUseCase {
           }
 
           // Trigger silver data refresh to update enriched tables with deleted annotation
-          const refreshResult = await this.databricksPort.refreshSilverData(
-            experiment.name,
-            experimentId,
-          );
-
-          if (refreshResult.isFailure()) {
-            this.logger.warn(
-              `Failed to trigger silver data refresh after deleting annotation: ${refreshResult.error.message}`,
+          if (experiment.schemaName && experiment.pipelineId) {
+            const refreshResult = await this.databricksPort.refreshSilverData(
+              experiment.schemaName,
+              experiment.pipelineId,
             );
-            // Don't fail the whole operation, just log the warning
+
+            if (refreshResult.isFailure()) {
+              this.logger.warn(
+                `Failed to trigger silver data refresh after deleting annotation: ${refreshResult.error.message}`,
+              );
+              // Don't fail the whole operation, just log the warning
+            }
           }
 
           return success(result.value);
         } else {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
-            experiment.name,
-            experimentId,
+            experiment.schemaName,
             request.tableName,
             request.rowIds,
             request.type,
@@ -96,16 +101,18 @@ export class DeleteAnnotationsUseCase {
           }
 
           // Trigger silver data refresh to update enriched tables with deleted annotations
-          const refreshResult = await this.databricksPort.refreshSilverData(
-            experiment.name,
-            experimentId,
-          );
-
-          if (refreshResult.isFailure()) {
-            this.logger.warn(
-              `Failed to trigger silver data refresh after bulk deleting annotations: ${refreshResult.error.message}`,
+          if (experiment.schemaName && experiment.pipelineId) {
+            const refreshResult = await this.databricksPort.refreshSilverData(
+              experiment.schemaName,
+              experiment.pipelineId,
             );
-            // Don't fail the whole operation, just log the warning
+
+            if (refreshResult.isFailure()) {
+              this.logger.warn(
+                `Failed to trigger silver data refresh after bulk deleting annotations: ${refreshResult.error.message}`,
+              );
+              // Don't fail the whole operation, just log the warning
+            }
           }
 
           return success(result.value);

@@ -22,10 +22,10 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         {/* Left: title, description and archive link */}
         <div>
-          <h1 className="text-lg font-medium">{t("experiments.title")}</h1>
+          <h1 className="text-4xl font-bold text-gray-900">{t("experiments.title")}</h1>
           <p>{t("experiments.listDescription")}</p>
 
           <Link href={`/${locale}/platform/experiments-archive`}>
@@ -35,8 +35,11 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
           </Link>
         </div>
 
-        {/* Right: actions (create) */}
-        <div>
+        {/* Right: actions (create, transfer) */}
+        <div className="flex gap-4">
+          <Link href={`/${locale}/platform/transfer-request`}>
+            <Button variant="secondary">{t("transferRequest.title")}</Button>
+          </Link>
           <Link href={`/platform/experiments/new`} locale={locale}>
             <Button>{t("experiments.create")}</Button>
           </Link>

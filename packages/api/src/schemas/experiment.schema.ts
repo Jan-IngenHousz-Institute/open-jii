@@ -219,6 +219,27 @@ export const zAnnotationRowsAffected = z.object({
   rowsAffected: z.number().int(),
 });
 
+// --- Project Transfer Request Schemas ---
+export const zTransferRequestStatus = z.enum(["pending", "completed", "rejected"]);
+
+export const zTransferRequest = z.object({
+  requestId: z.string().uuid(),
+  userId: z.string().uuid(),
+  userEmail: z.string().email(),
+  sourcePlatform: z.string(),
+  projectIdOld: z.string(),
+  projectUrlOld: z.string().url(),
+  status: zTransferRequestStatus,
+  requestedAt: z.string().datetime(),
+});
+
+export const zCreateTransferRequestBody = z.object({
+  projectIdOld: z.string().min(1, "Project ID is required").max(255).trim(),
+  projectUrlOld: z.string().url("Must be a valid URL"),
+});
+
+export const zTransferRequestList = z.array(zTransferRequest);
+
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zDataColumn),
@@ -741,7 +762,8 @@ export const zExperimentDataQuery = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
   tableName: z
     .string()
-    .optional()
+    .min(1)
+    .max(256)
     .describe("Optional table name to filter results to a specific table"),
   columns: z
     .string()
@@ -776,6 +798,29 @@ export const zExperimentMemberPathParam = z.object({
 export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
 
 export const zExperimentDataResponse = zExperimentDataTableList;
+
+// --- Table Metadata Schemas (without data) ---
+export const zColumnInfo = z.object({
+  name: z.string().describe("Column name"),
+  type_text: z.string().describe("Full type string representation"),
+  type_name: z.string().describe("Base type name (e.g., STRING, INT, ARRAY)"),
+  position: z.number().int().describe("Column position in the table"),
+  nullable: z.boolean().optional().describe("Whether the column can contain null values"),
+  comment: z.string().optional().describe("Column description or comment"),
+  type_json: z.string().optional().describe("JSON representation of complex types"),
+  type_precision: z.number().int().optional().describe("Precision for numeric types"),
+  type_scale: z.number().int().optional().describe("Scale for numeric types"),
+  partition_index: z.number().int().optional().describe("Partition index if partitioned"),
+});
+
+export const zExperimentTableMetadata = z.object({
+  name: z.string().describe("Technical name of the table used for queries and operations"),
+  displayName: z.string().describe("Human-readable display name of the table for UI"),
+  totalRows: z.number().int().describe("Total number of rows in the table"),
+  columns: z.array(zColumnInfo).optional().describe("Column information for the table"),
+});
+
+export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 
 // --- Data Upload Types ---
 export const zDataSourceType = z.enum(["ambyte"]).describe("Data source type for the upload");
@@ -828,6 +873,8 @@ export const zExperimentProvisioningStatusWebhookPayload = z.object({
   jobRunId: z.string(),
   taskRunId: z.string(),
   timestamp: z.string(),
+  pipelineId: z.string().optional(),
+  schemaName: z.string().optional(),
 });
 
 export const zExperimentWebhookSuccessResponse = z.object({
@@ -878,6 +925,9 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
+export type ColumnInfo = z.infer<typeof zColumnInfo>;
+export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
+export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
 export type DownloadExperimentDataQuery = z.infer<typeof zDownloadExperimentDataQuery>;
 export type DownloadExperimentDataResponse = z.infer<typeof zDownloadExperimentDataResponse>;
 export type IdPathParam = z.infer<typeof zIdPathParam>;
@@ -918,3 +968,9 @@ export type AddAnnotationsBulkBody = z.infer<typeof zAddAnnotationsBulkBody>;
 export type UpdateAnnotationBody = z.infer<typeof zUpdateAnnotationBody>;
 export type DeleteAnnotationsBulkBody = z.infer<typeof zAnnotationDeleteBulkBody>;
 export type AnnotationRowsAffected = z.infer<typeof zAnnotationRowsAffected>;
+
+// Transfer request types
+export type TransferRequestStatus = z.infer<typeof zTransferRequestStatus>;
+export type TransferRequest = z.infer<typeof zTransferRequest>;
+export type CreateTransferRequestBody = z.infer<typeof zCreateTransferRequestBody>;
+export type TransferRequestList = z.infer<typeof zTransferRequestList>;

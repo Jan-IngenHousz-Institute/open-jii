@@ -3,11 +3,21 @@
 import "quill/dist/quill.snow.css";
 import React from "react";
 
+import { cn } from "../lib/utils";
+
 interface RichTextRendererProps {
   content: string;
+  className?: string;
+  truncate?: boolean;
+  maxLines?: number;
 }
 
-export function RichTextRenderer({ content }: RichTextRendererProps) {
+export function RichTextRenderer({
+  content,
+  className,
+  truncate,
+  maxLines,
+}: RichTextRendererProps) {
   // Check for common HTML tags that Quill editor produces
   const htmlTags = [
     "<p>",
@@ -30,24 +40,80 @@ export function RichTextRenderer({ content }: RichTextRendererProps) {
   }
 
   if (!isRichText) {
-    return <p className="text-sm">{content}</p>;
+    return <p className={cn("text-sm", className)}>{content}</p>;
   }
+
+  const lineClampStyle = truncate ? { WebkitLineClamp: maxLines } : {};
 
   return (
     <>
-      <div className="ql-editor rich-text-renderer" dangerouslySetInnerHTML={{ __html: content }} />
+      <div
+        className={cn(
+          `ql-editor rich-text-renderer ${truncate ? "rich-text-renderer-truncate" : ""}`,
+          className,
+        )}
+        style={lineClampStyle}
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
       <style
         dangerouslySetInnerHTML={{
           __html: `
           .rich-text-renderer {
             padding: 8px 0;
             border: none;
-            font-size: inherit;
             line-height: 1.5;
             word-break: break-word;
             overflow-wrap: break-word;
             white-space: normal;
             min-width: 0;
+            cursor: inherit;
+          }
+          
+          .rich-text-renderer * {
+            cursor: inherit;
+          }
+
+          .rich-text-renderer-truncate {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            padding: 0;
+          }
+
+          .rich-text-renderer-truncate * {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          .rich-text-renderer-truncate p,
+          .rich-text-renderer-truncate ul,
+          .rich-text-renderer-truncate ol,
+          .rich-text-renderer-truncate li,
+          .rich-text-renderer-truncate h1,
+          .rich-text-renderer-truncate h2,
+          .rich-text-renderer-truncate h3,
+          .rich-text-renderer-truncate h4,
+          .rich-text-renderer-truncate h5,
+          .rich-text-renderer-truncate h6,
+          .rich-text-renderer-truncate div {
+            display: block !important;
+          }
+
+          .rich-text-renderer-truncate ul,
+          .rich-text-renderer-truncate ol {
+            padding-left: 20px !important;
+          }
+
+          .rich-text-renderer-truncate li {
+            display: list-item !important;
+          }
+
+          .rich-text-renderer-truncate br {
+            display: none;
+          }
+
+          .rich-text-renderer-truncate img {
+            display: none !important;
           }
 
           .rich-text-renderer h1 {

@@ -1,3 +1,5 @@
+import { shouldRetryQuery } from "@/util/query-retry";
+
 import { tsr } from "../../../lib/tsr";
 
 /**
@@ -9,5 +11,6 @@ export const useProtocol = (protocolId: string) => {
   return tsr.protocols.getProtocol.useQuery({
     queryData: { params: { id: protocolId } },
     queryKey: ["protocol", protocolId],
+    retry: shouldRetryQuery,
   });
 };

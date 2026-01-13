@@ -652,5 +652,51 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         vi.restoreAllMocks();
       }
     });
+
+    it("should fail when experiment has no schema name", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const mockVisualization: ExperimentVisualizationDto = {
+        id: visualizationId,
+        experimentId: experiment.id,
+        name: "Test Visualization",
+        description: "Test Description",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: {
+            ...experiment,
+            schemaName: null,
+          },
+          hasAccess: true,
+          hasArchiveAccess: true,
+          isAdmin: false,
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Experiment schema not provisioned");
+    });
   });
 });

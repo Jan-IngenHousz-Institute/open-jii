@@ -16,6 +16,7 @@ import {
   zExperimentMemberPathParam,
   zExperimentDataQuery,
   zExperimentDataResponse,
+  zExperimentTablesMetadataList,
   zExperimentProvisioningStatusWebhookPayload,
   zExperimentWebhookAuthHeader,
   zExperimentWebhookSuccessResponse,
@@ -39,6 +40,9 @@ import {
   zAnnotationDeleteBulkPathParam,
   zAnnotationDeleteBulkBody,
   zAnnotationRowsAffected,
+  zCreateTransferRequestBody,
+  zTransferRequest,
+  zTransferRequestList,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -205,6 +209,21 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment data",
     description: "Retrieves data tables from the experiment with pagination support",
+  },
+
+  getExperimentTables: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/tables",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentTablesMetadataList,
+      404: zErrorResponse,
+      403: zErrorResponse,
+      400: zErrorResponse,
+    },
+    summary: "Get experiment tables metadata",
+    description:
+      "Retrieves metadata for all tables in the experiment (names, display names, row counts) without data",
   },
 
   updateProvisioningStatus: {
@@ -551,5 +570,30 @@ export const experimentContract = c.router({
       403: zErrorResponse,
     },
     summary: "Delete multiple annotations",
+  },
+
+  // Project transfer request endpoints
+  createTransferRequest: {
+    method: "POST",
+    path: "/api/v1/transfer-requests",
+    body: zCreateTransferRequestBody,
+    responses: {
+      201: zTransferRequest,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      500: zErrorResponse,
+    },
+    summary: "Create a project transfer request",
+  },
+
+  listTransferRequests: {
+    method: "GET",
+    path: "/api/v1/transfer-requests",
+    responses: {
+      200: zTransferRequestList,
+      401: zErrorResponse,
+      500: zErrorResponse,
+    },
+    summary: "List all transfer requests for the authenticated user",
   },
 });

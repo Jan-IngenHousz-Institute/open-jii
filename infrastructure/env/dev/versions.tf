@@ -11,6 +11,10 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0"
     }
+    grafana = {
+      source  = "grafana/grafana"
+      version = ">= 4.2.1"
+    }
   }
 }
 
@@ -35,3 +39,8 @@ provider "databricks" {
   auth_type     = "oauth-m2m"
 }
 
+provider "grafana" {
+  alias = "amg"
+  url   = module.managed_grafana_workspace.amg_url
+  auth  = var.grafana_auth_service_token
+}

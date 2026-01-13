@@ -28,7 +28,7 @@ vi.mock("~/lib/contentful", () => ({
   getContentfulClients: (): unknown => mockGetContentfulClients(),
 }));
 
-vi.mock("@/components/unified-navbar/unified-navbar", () => ({
+vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: ({ locale, session }: { locale: string; session: unknown }) => (
     <div data-testid="unified-navbar">
       Navbar - {locale} - {session ? "with session" : "no session"}
@@ -153,15 +153,7 @@ describe("InfoLayout", () => {
 
     const mainElement = container.querySelector("main");
     expect(mainElement).toBeInTheDocument();
-    expect(mainElement).toHaveClass(
-      "flex",
-      "min-h-screen",
-      "w-full",
-      "flex-col",
-      "px-4",
-      "pb-24",
-      "pt-8",
-    );
+    expect(mainElement).toHaveClass("flex", "min-h-screen", "w-full", "flex-col", "px-4");
 
     const wrapperDiv = mainElement?.parentElement;
     expect(wrapperDiv).toHaveClass("mx-auto", "flex", "w-full", "max-w-7xl", "justify-center");

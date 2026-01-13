@@ -1,0 +1,39 @@
+name: DEV Release Workflow
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: "Target environment for production deployment"
+                required: true
+                default: "dev"
+                type: choice
+                options:
+                    - dev
+            deploy_all:
+                description: "Deploy all applications regardless of changes"
+                required: false
+                type: boolean
+                default: false
+
+concurrency:
+    group: main-deploy-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    actions: read
+    id-token: write
+
+jobs:
+    # Deploy to Dev Environment
+    deploy-dev:
+        name: Deploy to Dev
+        uses: ./.github/workflows/deploy.yml
+        with:
+            environment: dev
+            deploy_infrastructure: true
+            deploy_all: ${{ inputs.deploy_all || false }}
+        secrets: inherit

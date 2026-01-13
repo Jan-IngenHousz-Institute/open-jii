@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { ExperimentDataQuery } from "@repo/api";
+import type { ExperimentDataQuery } from "@repo/api";
 
 import type { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
 import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
@@ -75,6 +75,11 @@ export class GetExperimentDataUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
+        if (!experiment.schemaName) {
+          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          return failure(AppError.internal("Experiment schema not provisioned"));
+        }
+
         // Determine the data fetching approach based on the query parameters
         const {
           page = 1,
@@ -85,9 +90,7 @@ export class GetExperimentDataUseCase {
           orderDirection = "ASC",
         } = query;
 
-        // Form the schema name based on experiment ID and name
-        const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
-        const schemaName = `exp_${cleanName}_${experimentId}`;
+        const schemaName = experiment.schemaName;
 
         // Direct conditional logic for data fetching
         if (tableName && columns) {
@@ -115,27 +118,26 @@ export class GetExperimentDataUseCase {
             experiment,
             page,
             pageSize,
-            experimentId,
             orderBy,
             orderDirection,
           );
         } else {
-          // Multiple tables with sample data
-          this.logger.debug(`Fetching data for experiment ${experimentId} in sampling mode`);
-          return await this.fetchMultipleTablesSample(
-            schemaName,
-            experiment,
-            pageSize,
-            experimentId,
+          // No tableName provided - this is deprecated behavior
+          this.logger.warn(
+            `Deprecated: getExperimentData called without tableName for experiment ${experimentId}`,
+          );
+          return failure(
+            AppError.badRequest(
+              "tableName parameter is required. Use /tables endpoint for metadata or /tables/:tableName for data.",
+            ),
           );
         }
       },
     );
   }
 
-  private async getOrderByClause(
-    experimentName: string,
-    experimentId: string,
+  private getOrderByClause(
+    schemaName: string,
     tableName: string,
     orderBy?: string,
     orderDirection?: "ASC" | "DESC",
@@ -144,20 +146,6 @@ export class GetExperimentDataUseCase {
       // Add ORDER BY clause if specified
       return success(` ORDER BY \`${orderBy.trim()}\` ${orderDirection ?? "ASC"}`);
     } else {
-      // Check if a 'timestamp' column exists for default ordering
-      const metadataResult = await this.databricksPort.getTableMetadata(
-        experimentName,
-        experimentId,
-        tableName,
-      );
-      if (metadataResult.isFailure()) {
-        return failure(
-          AppError.internal(`Failed to get metadata: ${metadataResult.error.message}`),
-        );
-      }
-      if (metadataResult.value.has("timestamp")) {
-        return success(" ORDER BY timestamp DESC");
-      }
       return success("");
     }
   }
@@ -175,7 +163,7 @@ export class GetExperimentDataUseCase {
     orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
     // Validate table exists and get table metadata in one call
-    const tableResult = await this.validateTableExists(tableName, experiment.name, experimentId);
+    const tableResult = await this.validateTableExists(tableName, schemaName);
     if (tableResult.isFailure()) {
       return tableResult;
     }
@@ -190,9 +178,8 @@ export class GetExperimentDataUseCase {
     let sqlQuery = `SELECT ${columnList} FROM ${tableName}`;
 
     // Add ORDER BY clause
-    const orderByClauseResult = await this.getOrderByClause(
-      experiment.name,
-      experimentId,
+    const orderByClauseResult = this.getOrderByClause(
+      schemaName,
       tableName,
       orderBy,
       orderDirection,
@@ -240,12 +227,11 @@ export class GetExperimentDataUseCase {
     experiment: ExperimentDto,
     page: number,
     pageSize: number,
-    experimentId: string,
     orderBy?: string,
     orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
     // Validate table exists and get table metadata in one call
-    const tableResult = await this.validateTableExists(tableName, experiment.name, experimentId);
+    const tableResult = await this.validateTableExists(tableName, schemaName);
     if (tableResult.isFailure()) {
       return tableResult;
     }
@@ -269,9 +255,8 @@ export class GetExperimentDataUseCase {
     let sqlQuery = `SELECT * FROM ${tableName}`;
 
     // Add ORDER BY clause
-    const orderByClauseResult = await this.getOrderByClause(
-      experiment.name,
-      experimentId,
+    const orderByClauseResult = this.getOrderByClause(
+      schemaName,
       tableName,
       orderBy,
       orderDirection,
@@ -309,90 +294,11 @@ export class GetExperimentDataUseCase {
   }
 
   /**
-   * Fetch multiple tables with sample data
-   */
-  private async fetchMultipleTablesSample(
-    schemaName: string,
-    experiment: ExperimentDto,
-    pageSize: number,
-    experimentId: string,
-  ): Promise<Result<ExperimentDataDto>> {
-    const tablesResult = await this.databricksPort.listTables(experiment.name, experimentId);
-
-    if (tablesResult.isFailure()) {
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    // Filter tables to only include those with downstream: "false" (final/enriched tables for user consumption)
-    // and exclude annotations table.
-    const finalTables = tablesResult.value.tables.filter(
-      (table) => table.properties?.downstream === "false" && table.name !== "annotations",
-    );
-
-    // Make sure 'device' table is last if it exists and is marked as final
-    const tables: Table[] = [];
-    let deviceTable: Table | undefined;
-    for (const table of finalTables) {
-      if (table.name === "device") deviceTable = table;
-      else tables.push(table);
-    }
-    if (deviceTable) tables.push(deviceTable);
-
-    const response: ExperimentDataDto = [];
-
-    // Fetch sample data for each table
-    for (const table of tables) {
-      let sqlQuery = `SELECT * FROM ${table.name}`;
-
-      // Add ORDER BY clause
-      const orderByClauseResult = await this.getOrderByClause(
-        experiment.name,
-        experimentId,
-        table.name,
-      );
-      if (orderByClauseResult.isFailure()) {
-        return orderByClauseResult;
-      }
-      sqlQuery += orderByClauseResult.value;
-      sqlQuery += ` LIMIT ${pageSize}`;
-
-      const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
-
-      const tableInfo: TableDataDto = {
-        name: table.name,
-        displayName: table.properties?.display_name ?? table.name,
-        catalog_name: table.catalog_name,
-        schema_name: table.schema_name,
-        page: 1,
-        pageSize,
-        totalPages: 1,
-        totalRows: dataResult.isSuccess() ? dataResult.value.totalRows : 0,
-      };
-
-      if (dataResult.isSuccess()) {
-        tableInfo.data = await this.transformSchemaData(dataResult.value);
-      } else {
-        this.logger.warn(
-          `Failed to get sample data for table ${table.name}: ${dataResult.error.message}`,
-        );
-      }
-
-      response.push(tableInfo);
-    }
-
-    return success(response);
-  }
-
-  /**
    * Validate that a table exists in the experiment and is accessible (downstream: "false")
    * Returns the table object if valid, allowing callers to use it without additional lookups
    */
-  private async validateTableExists(
-    tableName: string,
-    experimentName: string,
-    experimentId: string,
-  ): Promise<Result<Table>> {
-    const tablesResult = await this.databricksPort.listTables(experimentName, experimentId);
+  private async validateTableExists(tableName: string, schemaName: string): Promise<Result<Table>> {
+    const tablesResult = await this.databricksPort.listTables(schemaName);
 
     if (tablesResult.isFailure()) {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
@@ -401,14 +307,14 @@ export class GetExperimentDataUseCase {
     const table = tablesResult.value.tables.find((table: Table) => table.name === tableName);
 
     if (!table) {
-      this.logger.warn(`Table ${tableName} not found in experiment ${experimentId}`);
+      this.logger.warn(`Table ${tableName} not found in schema ${schemaName}`);
       return failure(AppError.notFound(`Table '${tableName}' not found in this experiment`));
     }
 
     // Check if table is marked as accessible to users (downstream: "false")
     if (table.properties?.downstream !== "false") {
       this.logger.warn(
-        `Table ${tableName} in experiment ${experimentId} is not accessible (intermediate processing table)`,
+        `Table ${tableName} in schema ${schemaName} is not accessible (intermediate processing table)`,
       );
       return failure(
         AppError.forbidden(

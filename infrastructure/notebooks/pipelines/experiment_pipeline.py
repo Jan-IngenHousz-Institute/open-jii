@@ -3,10 +3,10 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
-%pip install mini-racer==0.12.4
-%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
+%pip install -q mini-racer==0.12.4
+%pip install -q /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
 # %pip install /Workspace/Shared/wheels/rpy2-3.6.4-py3-none-any.whl # Disabled R support for now, doesn't really work on serverless compute, maybe on custom clusters
-%pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
+%pip install -q /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 
@@ -382,7 +382,7 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
         "downstream": "true"
     }}
 )
-def {macro_table_name}_table():
+def macro_{macro_table_name}():
     base_df = (
         spark.readStream.table(f"{{CATALOG_NAME}}.{{CENTRAL_SCHEMA}}.{{CENTRAL_SILVER_TABLE}}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)
@@ -492,7 +492,7 @@ def {macro_table_name}_table():
         "downstream": "false"
     }}
 )
-def enriched_{macro_table_name}_table():
+def enriched_macro_{macro_table_name}_table():
     """
     Create an enriched macro table by combining macro output with user metadata and annotations.
     This creates a silver layer table with denormalized user information and annotation data.

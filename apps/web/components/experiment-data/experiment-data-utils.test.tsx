@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -37,6 +37,9 @@ vi.mock("@tanstack/react-table", () => ({
 vi.mock("lucide-react", () => ({
   ChevronDown: () => <div data-testid="chevron-down">▼</div>,
   ChevronRight: () => <div data-testid="chevron-right">▶</div>,
+  ArrowUp: () => <div data-testid="arrow-up">↑</div>,
+  ArrowDown: () => <div data-testid="arrow-down">↓</div>,
+  ArrowUpDown: () => <div data-testid="arrow-up-down">↕</div>,
 }));
 
 // Mock UI components
@@ -65,12 +68,14 @@ vi.mock("@repo/ui/components", () => ({
     children,
     className,
     style,
+    onClick,
   }: {
     children: React.ReactNode;
     className?: string;
     style?: React.CSSProperties;
+    onClick?: () => void;
   }) => (
-    <th className={className} style={style}>
+    <th className={className} style={style} onClick={onClick}>
       {children}
     </th>
   ),
@@ -176,6 +181,29 @@ vi.mock("./experiment-data-table-map-cell", () => ({
       // If parsing fails, just return the data
     }
     return <div data-testid="map-cell">{data}</div>;
+  },
+}));
+
+vi.mock("./experiment-data-table-annotations-cell", () => ({
+  ExperimentDataTableAnnotationsCell: ({
+    data,
+    rowId,
+  }: {
+    data: string;
+    rowId: string;
+    onAddAnnotation?: () => void;
+    onDeleteAnnotations?: () => void;
+  }) => {
+    try {
+      const parsed = JSON.parse(data) as unknown[];
+      return (
+        <div data-testid="annotations-cell">
+          {Array.isArray(parsed) ? `${parsed.length} annotations` : "0 annotations"} (row: {rowId})
+        </div>
+      );
+    } catch {
+      return <div data-testid="annotations-cell">Invalid annotations data</div>;
+    }
   },
 }));
 
@@ -357,10 +385,174 @@ describe("experiment-data-utils", () => {
       expect(React.isValidElement(result)).toBe(true);
       expect(result).toBeDefined();
     });
+
+    it("should handle ARRAY<REAL> type with chart cell", () => {
+      const mockOnChartClick = vi.fn();
+      const result = formatValue(
+        "[1.1, 2.2, 3.3]",
+        "ARRAY<REAL>",
+        "row-1",
+        "test-column",
+        mockOnChartClick,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result).toBeDefined();
+    });
+
+    it("should handle ARRAY<FLOAT> type with chart cell", () => {
+      const mockOnChartClick = vi.fn();
+      const result = formatValue(
+        "[5.5, 6.6, 7.7]",
+        "ARRAY<FLOAT>",
+        "row-1",
+        "test-column",
+        mockOnChartClick,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result).toBeDefined();
+    });
+
+    it("should handle complex type with ARRAY and DOUBLE in default case", () => {
+      const mockOnChartClick = vi.fn();
+      const result = formatValue(
+        "[10, 20, 30]",
+        "CUSTOM_ARRAY_DOUBLE_TYPE",
+        "row-1",
+        "test-column",
+        mockOnChartClick,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result).toBeDefined();
+    });
+
+    it("should handle complex type with ARRAY and REAL in default case", () => {
+      const mockOnChartClick = vi.fn();
+      const result = formatValue(
+        "[1.5, 2.5, 3.5]",
+        "SPECIAL_ARRAY_REAL_DATA",
+        "row-1",
+        "test-column",
+        mockOnChartClick,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result).toBeDefined();
+    });
+
+    it("should handle complex type with ARRAY and FLOAT in default case", () => {
+      const mockOnChartClick = vi.fn();
+      const result = formatValue(
+        "[8.8, 9.9]",
+        "CUSTOM_ARRAY_FLOAT",
+        "row-1",
+        "test-column",
+        mockOnChartClick,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result).toBeDefined();
+    });
+
+    it("should handle complex type with ARRAY and NUMERIC in default case", () => {
+      const mockOnChartClick = vi.fn();
+      const result = formatValue(
+        "[100, 200, 300]",
+        "ARRAY_NUMERIC_CUSTOM",
+        "row-1",
+        "test-column",
+        mockOnChartClick,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result).toBeDefined();
+    });
+
+    it("should return string for unknown types in default case", () => {
+      const result = formatValue("some value", "UNKNOWN_TYPE", "row-1");
+      expect(result).toBe("some value");
+    });
+
+    it("should handle MAP type without STRING prefix", () => {
+      const result = formatValue('{"key": "value"}', "MAP", "row-1", "test-column");
+      expect(React.isValidElement(result)).toBe(true);
+
+      render(<div>{result}</div>);
+      expect(screen.getByText("key:")).toBeInTheDocument();
+    });
+
+    it("should handle complex MAP types with different value types", () => {
+      const result = formatValue(
+        '{"id": 123, "active": true}',
+        "MAP<STRING,MIXED>",
+        "row-1",
+        "test-column",
+      );
+      expect(React.isValidElement(result)).toBe(true);
+
+      render(<div>{result}</div>);
+      expect(screen.getByTestId("map-cell")).toBeInTheDocument();
+    });
+
+    it("should handle annotations struct type", () => {
+      const annotationsData = JSON.stringify([
+        {
+          id: "ann-1",
+          rowId: "row-1",
+          type: "comment",
+          content: { text: "Test comment", flagType: "" },
+          createdBy: "user-1",
+          createdByName: "John Doe",
+          createdAt: "2023-01-01T10:00:00Z",
+          updatedAt: "2023-01-01T10:00:00Z",
+        },
+      ]);
+
+      const mockOnAddAnnotation = vi.fn();
+      const mockOnDeleteAnnotations = vi.fn();
+
+      const result = formatValue(
+        annotationsData,
+        "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
+        "row-1",
+        "annotations",
+        undefined,
+        mockOnAddAnnotation,
+        mockOnDeleteAnnotations,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render and verify the annotations cell
+      render(<div>{result}</div>);
+      expect(screen.getByTestId("annotations-cell")).toBeInTheDocument();
+      expect(screen.getByText(/1 annotations/)).toBeInTheDocument();
+      expect(screen.getByText(/row: row-1/)).toBeInTheDocument();
+    });
+
+    it("should handle basic ARRAY type for numeric data", () => {
+      const mockOnChartClick = vi.fn();
+      const result = formatValue(
+        "[1, 2, 3, 4, 5]",
+        "ARRAY",
+        "row-1",
+        "test-column",
+        mockOnChartClick,
+      );
+
+      expect(React.isValidElement(result)).toBe(true);
+    });
+
+    it("should handle unknown type and return as string", () => {
+      const result = formatValue("test value", "UNKNOWN_CUSTOM_TYPE", "row-1");
+      expect(result).toBe("test value");
+    });
   });
 
   describe("LoadingRows", () => {
-    it("should render loading message and skeleton rows", () => {
+    it("should render skeleton rows without loading message", () => {
       render(
         <table>
           <tbody>
@@ -369,11 +561,12 @@ describe("experiment-data-utils", () => {
         </table>,
       );
 
-      expect(screen.getByText("Loading...")).toBeInTheDocument();
+      // Should not display loading text anymore
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
 
-      // Should render 2 skeleton rows (rowCount - 1, since first row shows loading message)
+      // Should render 3 skeleton rows with 2 columns each
       const skeletons = screen.getAllByTestId("skeleton");
-      expect(skeletons).toHaveLength(4); // 2 rows × 2 columns
+      expect(skeletons).toHaveLength(6); // 3 rows × 2 columns
     });
 
     it("should render correct number of skeleton cells", () => {
@@ -385,9 +578,9 @@ describe("experiment-data-utils", () => {
         </table>,
       );
 
-      // Should render 1 skeleton row (rowCount - 1) with 3 columns
+      // Should render 2 skeleton rows with 3 columns
       const skeletons = screen.getAllByTestId("skeleton");
-      expect(skeletons).toHaveLength(3); // 1 row × 3 columns
+      expect(skeletons).toHaveLength(6); // 2 rows × 3 columns
     });
   });
 
@@ -401,6 +594,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header1",
               column: {
+                id: "name",
                 columnDef: {
                   header: "Name",
                   size: 150,
@@ -413,6 +607,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header2",
               column: {
+                id: "value",
                 columnDef: {
                   header: "Value",
                   size: 100,
@@ -425,6 +620,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header3",
               column: {
+                id: "count",
                 columnDef: {
                   header: "Count",
                   size: 80,
@@ -473,6 +669,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header1",
               column: {
+                id: "bigNumber",
                 columnDef: {
                   header: "Big Number",
                   size: 120,
@@ -485,6 +682,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header2",
               column: {
+                id: "veryBigNumber",
                 columnDef: {
                   header: "Very Big Number",
                   size: 140,
@@ -520,6 +718,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header1",
               column: {
+                id: "visibleHeader",
                 columnDef: {
                   header: "Visible Header",
                   size: 100,
@@ -532,6 +731,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header2",
               column: {
+                id: "hiddenHeader",
                 columnDef: {
                   header: "Hidden Header",
                   size: 100,
@@ -564,6 +764,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header1",
               column: {
+                id: "noMeta",
                 columnDef: {
                   header: "No Meta",
                   size: 100,
@@ -576,6 +777,7 @@ describe("experiment-data-utils", () => {
             {
               id: "header2",
               column: {
+                id: "emptyMeta",
                 columnDef: {
                   header: "Empty Meta",
                   size: 100,
@@ -600,6 +802,519 @@ describe("experiment-data-utils", () => {
 
       expect(noMetaHeader).toHaveClass("text-left");
       expect(emptyMetaHeader).toHaveClass("text-left");
+    });
+
+    it("should render sort icons and handle sorting", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "name",
+                columnDef: {
+                  header: "Name",
+                  size: 150,
+                  meta: { type: "STRING" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+            {
+              id: "header2",
+              column: {
+                id: "timestamp",
+                columnDef: {
+                  header: "Timestamp",
+                  size: 180,
+                  meta: { type: "TIMESTAMP" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="timestamp"
+            sortDirection="DESC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      // Check that headers are clickable
+      const nameHeader = screen.getByText("Name").closest("th");
+      const timestampHeader = screen.getByText("Timestamp").closest("th");
+
+      expect(nameHeader).toHaveClass("cursor-pointer");
+      expect(timestampHeader).toHaveClass("cursor-pointer");
+
+      // Check sort indicators are present
+      expect(screen.getByTestId("arrow-up-down")).toBeInTheDocument(); // For unsorted "name"
+      expect(screen.getByTestId("arrow-down")).toBeInTheDocument(); // For sorted "timestamp" DESC
+    });
+
+    it("should show ASC sort icon for ascending sort", () => {
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "name",
+                columnDef: {
+                  header: "Name",
+                  size: 150,
+                  meta: { type: "STRING" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="name"
+            sortDirection="ASC"
+            onSort={vi.fn()}
+          />
+        </table>,
+      );
+
+      expect(screen.getByTestId("arrow-up")).toBeInTheDocument();
+    });
+
+    it("should not show sort icons when onSort is not provided", () => {
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "name",
+                columnDef: {
+                  header: "Name",
+                  size: 150,
+                  meta: { type: "STRING" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader headerGroups={mockHeaderGroups} />
+        </table>,
+      );
+
+      const nameHeader = screen.getByText("Name").closest("th");
+      expect(nameHeader).not.toHaveClass("cursor-pointer");
+      expect(screen.queryByTestId("arrow-up-down")).not.toBeInTheDocument();
+    });
+
+    it("should not make checkbox column sortable", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "select",
+              column: {
+                id: "select",
+                columnDef: {
+                  header: () => <div>Select</div>,
+                  size: 50,
+                  meta: {},
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+            {
+              id: "header1",
+              column: {
+                id: "name",
+                columnDef: {
+                  header: "Name",
+                  size: 150,
+                  meta: { type: "STRING" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="name"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const selectHeader = screen.getByText("Select").closest("th");
+      const nameHeader = screen.getByText("Name").closest("th");
+
+      // Select column should not be sortable
+      expect(selectHeader).not.toHaveClass("cursor-pointer");
+
+      // Name column should be sortable
+      expect(nameHeader).toHaveClass("cursor-pointer");
+    });
+
+    it("should not show sort icons for unsortable column types - MAP", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "mapColumn",
+                columnDef: {
+                  header: "Map Data",
+                  size: 150,
+                  meta: { type: "MAP<STRING,STRING>" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="name"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const mapHeader = screen.getByText("Map Data").closest("th");
+      expect(mapHeader).not.toHaveClass("cursor-pointer");
+      expect(screen.queryByTestId("arrow-up-down")).not.toBeInTheDocument();
+    });
+
+    it("should not show sort icons for unsortable column types - ARRAY", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "arrayColumn",
+                columnDef: {
+                  header: "Array Data",
+                  size: 150,
+                  meta: { type: "ARRAY<STRUCT<...>>" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="name"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const arrayHeader = screen.getByText("Array Data").closest("th");
+      expect(arrayHeader).not.toHaveClass("cursor-pointer");
+    });
+
+    it("should not show sort icons for unsortable column types - STRUCT", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "structColumn",
+                columnDef: {
+                  header: "Struct Data",
+                  size: 150,
+                  meta: { type: "STRUCT<field1: STRING, field2: INT>" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="name"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const structHeader = screen.getByText("Struct Data").closest("th");
+      expect(structHeader).not.toHaveClass("cursor-pointer");
+    });
+
+    it("should show sort icons for BOOLEAN type", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "boolColumn",
+                columnDef: {
+                  header: "Boolean",
+                  size: 100,
+                  meta: { type: "BOOLEAN" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="boolColumn"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const boolHeader = screen.getByText("Boolean").closest("th");
+      expect(boolHeader).toHaveClass("cursor-pointer");
+      expect(screen.getByTestId("arrow-up")).toBeInTheDocument();
+    });
+
+    it("should show sort icons for DATE type", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "dateColumn",
+                columnDef: {
+                  header: "Date",
+                  size: 120,
+                  meta: { type: "DATE" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="dateColumn"
+            sortDirection="DESC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const dateHeader = screen.getByText("Date").closest("th");
+      expect(dateHeader).toHaveClass("cursor-pointer");
+      expect(screen.getByTestId("arrow-down")).toBeInTheDocument();
+    });
+
+    it("should show sort icons for USER type", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "userColumn",
+                columnDef: {
+                  header: "User",
+                  size: 150,
+                  meta: { type: "USER" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="user_name"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const userHeader = screen.getByText("User").closest("th");
+      expect(userHeader).toHaveClass("cursor-pointer");
+      expect(screen.getByTestId("arrow-up")).toBeInTheDocument();
+    });
+
+    it("should call onSort with column name and type when header is clicked", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "regularColumn",
+                columnDef: {
+                  header: "Regular Column",
+                  size: 150,
+                  meta: { type: "STRING" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="regularColumn"
+            sortDirection="DESC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const regularHeader = screen.getByText("Regular Column").closest("th");
+      expect(regularHeader).toHaveClass("cursor-pointer");
+
+      // Click to trigger sort
+      fireEvent.click(regularHeader as HTMLElement);
+
+      // Should be called with the actual column name and type
+      expect(mockOnSort).toHaveBeenCalledWith("regularColumn", "STRING");
+    });
+
+    it("should treat unknown types as sortable by default", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "customColumn",
+                columnDef: {
+                  header: "Custom Type",
+                  size: 150,
+                  meta: { type: "CUSTOM_UNKNOWN_TYPE" },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="customColumn"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const customHeader = screen.getByText("Custom Type").closest("th");
+      // Unknown types should default to sortable
+      expect(customHeader).toHaveClass("cursor-pointer");
+      expect(screen.getByTestId("arrow-up")).toBeInTheDocument();
     });
   });
 

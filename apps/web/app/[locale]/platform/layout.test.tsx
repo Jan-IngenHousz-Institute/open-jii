@@ -24,12 +24,12 @@ vi.mock("next/headers", () => ({
 
 vi.mock("next/navigation");
 
-vi.mock("@/components/app-breadcrumbs", () => ({
+vi.mock("@/components/navigation/navigation-breadcrumbs/navigation-breadcrumbs", () => ({
   Breadcrumbs: () => <div data-testid="breadcrumbs">Breadcrumbs</div>,
 }));
 
-vi.mock("@/components/app-sidebar-wrapper", () => ({
-  AppSidebarWrapper: ({ locale }: { locale: string }) => (
+vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper", () => ({
+  NavigationSidebarWrapper: ({ locale }: { locale: string }) => (
     <div data-testid="app-sidebar-wrapper" data-locale={locale}>
       Sidebar
     </div>
@@ -44,6 +44,14 @@ vi.mock("@/components/language-switcher", () => ({
   ),
 }));
 
+vi.mock("@/components/navigation/navigation-topbar/navigation-topbar", () => ({
+  NavigationTopbar: ({ locale }: { locale: string }) => (
+    <div data-testid="platform-top-bar" data-locale={locale}>
+      Platform Top Bar
+    </div>
+  ),
+}));
+
 vi.mock("@repo/ui/components", () => ({
   Separator: () => <div data-testid="separator">Separator</div>,
   SidebarInset: ({ children }: { children: React.ReactNode }) => (
@@ -54,6 +62,20 @@ vi.mock("@repo/ui/components", () => ({
   ),
   SidebarTrigger: () => <div data-testid="sidebar-trigger">Sidebar Trigger</div>,
   Toaster: () => <div data-testid="toaster">Toaster</div>,
+  Button: ({
+    children,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
+    <button {...props}>{children}</button>
+  ),
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
+    <div>{children}</div>
+  ),
 }));
 
 // --- Tests ---
@@ -78,11 +100,9 @@ describe("AppLayout", () => {
 
     expect(screen.getByTestId("sidebar-provider")).toBeInTheDocument();
     expect(screen.getByTestId("app-sidebar-wrapper")).toBeInTheDocument();
+    expect(screen.getByTestId("platform-top-bar")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar-inset")).toBeInTheDocument();
     expect(screen.getByTestId("breadcrumbs")).toBeInTheDocument();
-    expect(screen.getByTestId("language-switcher")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
-    expect(screen.getAllByTestId("separator")).toHaveLength(2);
     expect(screen.getByTestId("test-children")).toBeInTheDocument();
     expect(screen.getByTestId("toaster")).toBeInTheDocument();
   });
@@ -91,7 +111,7 @@ describe("AppLayout", () => {
     render(await AppLayout(defaultProps));
 
     expect(screen.getByTestId("app-sidebar-wrapper")).toHaveAttribute("data-locale", "en-US");
-    expect(screen.getByTestId("language-switcher")).toHaveAttribute("data-locale", "en-US");
+    expect(screen.getByTestId("platform-top-bar")).toHaveAttribute("data-locale", "en-US");
   });
 
   it("redirects to login when not authenticated", async () => {
@@ -156,39 +176,19 @@ describe("AppLayout", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/de/register?callbackUrl=%2Fplatform%2Fexperiments");
   });
 
-  it("renders with correct header structure", async () => {
-    const { container } = render(await AppLayout(defaultProps));
+  it("renders platform top bar", async () => {
+    render(await AppLayout(defaultProps));
 
-    const header = container.querySelector("header");
-    expect(header).toBeInTheDocument();
-    // Updated to match actual rendered classes
-    expect(header).toHaveClass(
-      "flex",
-      "h-16",
-      "shrink-0",
-      "items-center",
-      "gap-2",
-      "transition-[width,height]",
-      "ease-linear",
-    );
+    expect(screen.getByTestId("platform-top-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("platform-top-bar")).toHaveAttribute("data-locale", "en-US");
   });
 
-  it("renders main content with correct classes", async () => {
-    const { container } = render(await AppLayout(defaultProps));
+  it("renders content wrapper with correct structure", async () => {
+    render(await AppLayout(defaultProps));
 
-    const main = container.querySelector("main");
-    expect(main).toBeInTheDocument();
-    // Updated to match actual rendered classes
-    expect(main).toHaveClass(
-      "mx-auto",
-      "flex",
-      "w-full",
-      "max-w-7xl",
-      "flex-1",
-      "flex-col",
-      "px-8",
-      "py-4",
-    );
+    expect(screen.getByTestId("sidebar-inset")).toBeInTheDocument();
+    expect(screen.getByTestId("breadcrumbs")).toBeInTheDocument();
+    expect(screen.getByTestId("test-children")).toBeInTheDocument();
   });
 
   it("renders page title when provided", async () => {

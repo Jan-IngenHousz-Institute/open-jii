@@ -40,9 +40,7 @@ describe("DatabricksTablesService", () => {
   });
 
   describe("listTables", () => {
-    const experimentName = "test_experiment";
-    const experimentId = "123";
-    const schemaName = `exp_${experimentName}_${experimentId}`;
+    const schemaName = "exp_test_experiment_123";
 
     it("should successfully list tables", async () => {
       const mockTablesResponse = {
@@ -80,11 +78,12 @@ describe("DatabricksTablesService", () => {
         .query({
           catalog_name: "test_catalog",
           schema_name: schemaName,
+          omit_columns: false,
         })
         .reply(200, mockTablesResponse);
 
       // Execute list tables
-      const result = await tablesService.listTables(experimentName, experimentId);
+      const result = await tablesService.listTables(schemaName);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -107,7 +106,7 @@ describe("DatabricksTablesService", () => {
         .reply(404, { message: "Schema not found" });
 
       // Execute list tables
-      const result = await tablesService.listTables(experimentName, experimentId);
+      const result = await tablesService.listTables(schemaName);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);
@@ -122,7 +121,7 @@ describe("DatabricksTablesService", () => {
         .reply(401, { error_description: "Invalid client credentials" });
 
       // Execute list tables
-      const result = await tablesService.listTables(experimentName, experimentId);
+      const result = await tablesService.listTables(schemaName);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);

@@ -65,8 +65,13 @@ export class AddAnnotationsUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
+        if (!experiment.schemaName) {
+          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          return failure(AppError.internal("Experiment schema not provisioned"));
+        }
+
         const createResult = await this.experimentDataAnnotationsRepository.ensureTableExists(
-          experiment.name,
+          experiment.schemaName,
           experimentId,
         );
         if (createResult.isFailure()) {
@@ -108,8 +113,7 @@ export class AddAnnotationsUseCase {
         });
 
         const result = await this.experimentDataAnnotationsRepository.storeAnnotations(
-          experiment.name,
-          experimentId,
+          experiment.schemaName,
           newAnnotations,
         );
 
@@ -118,16 +122,18 @@ export class AddAnnotationsUseCase {
         }
 
         // Trigger silver data refresh to update enriched tables with new annotations
-        const refreshResult = await this.databricksPort.refreshSilverData(
-          experiment.name,
-          experimentId,
-        );
-
-        if (refreshResult.isFailure()) {
-          this.logger.warn(
-            `Failed to trigger silver data refresh after adding annotations: ${refreshResult.error.message}`,
+        if (experiment.schemaName && experiment.pipelineId) {
+          const refreshResult = await this.databricksPort.refreshSilverData(
+            experiment.schemaName,
+            experiment.pipelineId,
           );
-          // Don't fail the whole operation, just log the warning
+
+          if (refreshResult.isFailure()) {
+            this.logger.warn(
+              `Failed to trigger silver data refresh after adding annotations: ${refreshResult.error.message}`,
+            );
+            // Don't fail the whole operation, just log the warning
+          }
         }
 
         return success(result.value);

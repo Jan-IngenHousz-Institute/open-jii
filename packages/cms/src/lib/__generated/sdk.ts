@@ -947,6 +947,7 @@ export type ComponentPartner = Entry &
     logo?: Maybe<Asset>;
     subtitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
+    url?: Maybe<Scalars["String"]["output"]>;
   };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
@@ -969,6 +970,12 @@ export type ComponentPartnerLogoArgs = {
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
 export type ComponentPartnerSubtitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner) */
+export type ComponentPartnerUrlArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
@@ -1001,6 +1008,13 @@ export type ComponentPartnerFilter = {
   subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
+  url?: InputMaybe<Scalars["String"]["input"]>;
+  url_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  url_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  url_not?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
 export type ComponentPartnerLinkingCollections = {
@@ -1058,6 +1072,8 @@ export enum ComponentPartnerOrder {
   SysPublishedAtDesc = "sys_publishedAt_DESC",
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
 }
 
 /** To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage) */
@@ -2386,6 +2402,182 @@ export enum PageBlogPostRelatedBlogPostsCollectionOrder {
   TitleDesc = "title_DESC",
 }
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy) */
+export type PageCookiePolicy = Entry &
+  _Node & {
+    __typename?: "PageCookiePolicy";
+    _id: Scalars["ID"]["output"];
+    content?: Maybe<PageCookiePolicyContent>;
+    contentfulMetadata: ContentfulMetadata;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<PageCookiePolicyLinkingCollections>;
+    pageDescription?: Maybe<Scalars["String"]["output"]>;
+    pageTitle?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy) */
+export type PageCookiePolicyContentArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy) */
+export type PageCookiePolicyInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy) */
+export type PageCookiePolicyLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy) */
+export type PageCookiePolicyPageDescriptionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy) */
+export type PageCookiePolicyPageTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageCookiePolicy) */
+export type PageCookiePolicyTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageCookiePolicyCollection = {
+  __typename?: "PageCookiePolicyCollection";
+  items: Array<Maybe<PageCookiePolicy>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type PageCookiePolicyContent = {
+  __typename?: "PageCookiePolicyContent";
+  json: Scalars["JSON"]["output"];
+  links: PageCookiePolicyContentLinks;
+};
+
+export type PageCookiePolicyContentAssets = {
+  __typename?: "PageCookiePolicyContentAssets";
+  block: Array<Maybe<Asset>>;
+  hyperlink: Array<Maybe<Asset>>;
+};
+
+export type PageCookiePolicyContentEntries = {
+  __typename?: "PageCookiePolicyContentEntries";
+  block: Array<Maybe<Entry>>;
+  hyperlink: Array<Maybe<Entry>>;
+  inline: Array<Maybe<Entry>>;
+};
+
+export type PageCookiePolicyContentLinks = {
+  __typename?: "PageCookiePolicyContentLinks";
+  assets: PageCookiePolicyContentAssets;
+  entries: PageCookiePolicyContentEntries;
+  resources: PageCookiePolicyContentResources;
+};
+
+export type PageCookiePolicyContentResources = {
+  __typename?: "PageCookiePolicyContentResources";
+  block: Array<PageCookiePolicyContentResourcesBlock>;
+  hyperlink: Array<PageCookiePolicyContentResourcesHyperlink>;
+  inline: Array<PageCookiePolicyContentResourcesInline>;
+};
+
+export type PageCookiePolicyContentResourcesBlock = ResourceLink & {
+  __typename?: "PageCookiePolicyContentResourcesBlock";
+  sys: ResourceSys;
+};
+
+export type PageCookiePolicyContentResourcesHyperlink = ResourceLink & {
+  __typename?: "PageCookiePolicyContentResourcesHyperlink";
+  sys: ResourceSys;
+};
+
+export type PageCookiePolicyContentResourcesInline = ResourceLink & {
+  __typename?: "PageCookiePolicyContentResourcesInline";
+  sys: ResourceSys;
+};
+
+export type PageCookiePolicyFilter = {
+  AND?: InputMaybe<Array<InputMaybe<PageCookiePolicyFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<PageCookiePolicyFilter>>>;
+  content_contains?: InputMaybe<Scalars["String"]["input"]>;
+  content_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  content_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageDescription_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type PageCookiePolicyLinkingCollections = {
+  __typename?: "PageCookiePolicyLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+export type PageCookiePolicyLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export enum PageCookiePolicyOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
 export type PageFaq = Entry &
   _Node & {
@@ -3259,6 +3451,8 @@ export enum PageHomePartnersPartnersCollectionOrder {
   SysPublishedAtDesc = "sys_publishedAt_DESC",
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
 }
 
 /** To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding) */
@@ -3538,6 +3732,8 @@ export type PageTermsAndConditions = Entry &
     contentfulMetadata: ContentfulMetadata;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageTermsAndConditionsLinkingCollections>;
+    pageDescription?: Maybe<Scalars["String"]["output"]>;
+    pageTitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
   };
@@ -3557,6 +3753,18 @@ export type PageTermsAndConditionsInternalNameArgs = {
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
 export type PageTermsAndConditionsLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
+export type PageTermsAndConditionsPageDescriptionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
+export type PageTermsAndConditionsPageTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions) */
@@ -3635,6 +3843,20 @@ export type PageTermsAndConditionsFilter = {
   internalName_not?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageDescription_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
   title?: InputMaybe<Scalars["String"]["input"]>;
   title_contains?: InputMaybe<Scalars["String"]["input"]>;
@@ -3661,6 +3883,10 @@ export type PageTermsAndConditionsLinkingCollectionsEntryCollectionArgs = {
 export enum PageTermsAndConditionsOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -3702,6 +3928,8 @@ export type Query = {
   pageAboutCollection?: Maybe<PageAboutCollection>;
   pageBlogPost?: Maybe<PageBlogPost>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
+  pageCookiePolicy?: Maybe<PageCookiePolicy>;
+  pageCookiePolicyCollection?: Maybe<PageCookiePolicyCollection>;
   pageFaq?: Maybe<PageFaq>;
   pageFaqCollection?: Maybe<PageFaqCollection>;
   pageHomeFeatures?: Maybe<PageHomeFeatures>;
@@ -3946,6 +4174,23 @@ export type QueryPageBlogPostCollectionArgs = {
   skip?: InputMaybe<Scalars["Int"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageBlogPostFilter>;
+};
+
+export type QueryPageCookiePolicyArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryPageCookiePolicyCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageCookiePolicyOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageCookiePolicyFilter>;
 };
 
 export type QueryPageFaqArgs = {
@@ -4293,6 +4538,13 @@ export type CfComponentPartnerNestedFilter = {
   subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
+  url?: InputMaybe<Scalars["String"]["input"]>;
+  url_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  url_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  url_not?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
 export type CfComponentSeoNestedFilter = {
@@ -4475,7 +4727,39 @@ export type PageAboutFieldsFragment = {
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  description?: { __typename?: "PageAboutDescription"; json: any } | null;
+  description?: {
+    __typename?: "PageAboutDescription";
+    json: any;
+    links: {
+      __typename?: "PageAboutDescriptionLinks";
+      entries: {
+        __typename?: "PageAboutDescriptionEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
   image?: {
     __typename?: "Asset";
     url?: string | null;
@@ -4538,6 +4822,7 @@ export type PageBlogPostFieldsFragment = {
           | { __typename?: "LandingMetadata" }
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -4584,6 +4869,61 @@ export type PageBlogPostCollectionQuery = {
   pageBlogPostCollection?: {
     __typename?: "PageBlogPostCollection";
     items: Array<({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment) | null>;
+  } | null;
+};
+
+export type PageCookiePolicyFieldsFragment = {
+  __typename: "PageCookiePolicy";
+  pageTitle?: string | null;
+  pageDescription?: string | null;
+  internalName?: string | null;
+  title?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  content?: {
+    __typename?: "PageCookiePolicyContent";
+    json: any;
+    links: {
+      __typename?: "PageCookiePolicyContentLinks";
+      entries: {
+        __typename?: "PageCookiePolicyContentEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
+};
+
+export type PageCookiePolicyQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type PageCookiePolicyQuery = {
+  __typename?: "Query";
+  pageCookiePolicyCollection?: {
+    __typename?: "PageCookiePolicyCollection";
+    items: Array<({ __typename?: "PageCookiePolicy" } & PageCookiePolicyFieldsFragment) | null>;
   } | null;
 };
 
@@ -4703,8 +5043,72 @@ export type PageHomeMissionFieldsFragment = {
   title?: string | null;
   subtitle?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  about?: { __typename?: "PageHomeMissionAbout"; json: any } | null;
-  mission?: { __typename?: "PageHomeMissionMission"; json: any } | null;
+  about?: {
+    __typename?: "PageHomeMissionAbout";
+    json: any;
+    links: {
+      __typename?: "PageHomeMissionAboutLinks";
+      entries: {
+        __typename?: "PageHomeMissionAboutEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
+  mission?: {
+    __typename?: "PageHomeMissionMission";
+    json: any;
+    links: {
+      __typename?: "PageHomeMissionMissionLinks";
+      entries: {
+        __typename?: "PageHomeMissionMissionEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
   image?: {
     __typename?: "Asset";
     url?: string | null;
@@ -4748,6 +5152,7 @@ export type PageHomePartnersFieldsFragment = {
 export type PartnerFieldsFragment = {
   __typename: "ComponentPartner";
   subtitle?: string | null;
+  url?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
   logo?: {
     __typename?: "Asset";
@@ -4811,7 +5216,39 @@ export type PagePoliciesFieldsFragment = {
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  content?: { __typename?: "PagePoliciesContent"; json: any } | null;
+  content?: {
+    __typename?: "PagePoliciesContent";
+    json: any;
+    links: {
+      __typename?: "PagePoliciesContentLinks";
+      entries: {
+        __typename?: "PagePoliciesContentEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
 };
 
 export type PagePoliciesQueryVariables = Exact<{
@@ -4829,10 +5266,44 @@ export type PagePoliciesQuery = {
 
 export type PageTermsAndConditionsFieldsFragment = {
   __typename: "PageTermsAndConditions";
+  pageTitle?: string | null;
+  pageDescription?: string | null;
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  content?: { __typename?: "PageTermsAndConditionsContent"; json: any } | null;
+  content?: {
+    __typename?: "PageTermsAndConditionsContent";
+    json: any;
+    links: {
+      __typename?: "PageTermsAndConditionsContentLinks";
+      entries: {
+        __typename?: "PageTermsAndConditionsContentEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
 };
 
 export type PageTermsAndConditionsQueryVariables = Exact<{
@@ -4949,6 +5420,34 @@ export const LandingMetadataFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     description
   }
 `;
+export const ImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment ImageFields on Asset {
+    __typename
+    sys {
+      id
+    }
+    title
+    description
+    width
+    height
+    url
+    contentType
+  }
+`;
+export const RichImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment RichImageFields on ComponentRichImage {
+    __typename
+    internalName
+    sys {
+      id
+    }
+    image {
+      ...ImageFields
+    }
+    caption
+    fullWidth
+  }
+`;
 export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
   fragment PageAboutFields on PageAbout {
     __typename
@@ -4963,6 +5462,13 @@ export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     title
     description {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
     image {
       url
@@ -4973,20 +5479,6 @@ export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
         environmentId
       }
     }
-  }
-`;
-export const ImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
-  fragment ImageFields on Asset {
-    __typename
-    sys {
-      id
-    }
-    title
-    description
-    width
-    height
-    url
-    contentType
   }
 `;
 export const SeoFieldsFragmentDoc: ReturnType<typeof gql> = gql`
@@ -5015,20 +5507,6 @@ export const AuthorFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     avatar {
       ...ImageFields
     }
-  }
-`;
-export const RichImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
-  fragment RichImageFields on ComponentRichImage {
-    __typename
-    internalName
-    sys {
-      id
-    }
-    image {
-      ...ImageFields
-    }
-    caption
-    fullWidth
   }
 `;
 export const ReferencePageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
@@ -5084,6 +5562,30 @@ export const PageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     relatedBlogPostsCollection(limit: 2) {
       items {
         ...ReferencePageBlogPostFields
+      }
+    }
+  }
+`;
+export const PageCookiePolicyFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment PageCookiePolicyFields on PageCookiePolicy {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    pageTitle
+    pageDescription
+    internalName
+    title
+    content {
+      json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
       }
     }
   }
@@ -5210,10 +5712,24 @@ export const PageHomeMissionFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     title
     about {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
     subtitle
     mission {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
     image {
       url
@@ -5249,6 +5765,7 @@ export const PartnerFieldsFragmentDoc: ReturnType<typeof gql> = gql`
       }
     }
     subtitle
+    url
   }
 `;
 export const PageHomePartnersFieldsFragmentDoc: ReturnType<typeof gql> = gql`
@@ -5303,6 +5820,13 @@ export const PagePoliciesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     title
     content {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
   }
 `;
@@ -5314,10 +5838,19 @@ export const PageTermsAndConditionsFieldsFragmentDoc: ReturnType<typeof gql> = g
       publishedAt
       environmentId
     }
+    pageTitle
+    pageDescription
     internalName
     title
     content {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
   }
 `;
@@ -5370,6 +5903,8 @@ export const PageAboutDocument: ReturnType<typeof gql> = gql`
     }
   }
   ${PageAboutFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageBlogPostDocument: ReturnType<typeof gql> = gql`
   query pageBlogPost($slug: String!, $locale: String, $preview: Boolean) {
@@ -5413,6 +5948,18 @@ export const PageBlogPostCollectionDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ReferencePageBlogPostFieldsFragmentDoc}
 `;
+export const PageCookiePolicyDocument: ReturnType<typeof gql> = gql`
+  query pageCookiePolicy($locale: String, $preview: Boolean) {
+    pageCookiePolicyCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageCookiePolicyFields
+      }
+    }
+  }
+  ${PageCookiePolicyFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
+`;
 export const PageFaqDocument: ReturnType<typeof gql> = gql`
   query pageFaq($locale: String, $preview: Boolean) {
     pageFaqCollection(limit: 1, locale: $locale, preview: $preview) {
@@ -5455,6 +6002,7 @@ export const PageHomeMissionDocument: ReturnType<typeof gql> = gql`
     }
   }
   ${PageHomeMissionFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
 export const PageHomePartnersDocument: ReturnType<typeof gql> = gql`
@@ -5506,6 +6054,8 @@ export const PagePoliciesDocument: ReturnType<typeof gql> = gql`
     }
   }
   ${PagePoliciesFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageTermsAndConditionsDocument: ReturnType<typeof gql> = gql`
   query pageTermsAndConditions($locale: String, $preview: Boolean) {
@@ -5516,6 +6066,8 @@ export const PageTermsAndConditionsDocument: ReturnType<typeof gql> = gql`
     }
   }
   ${PageTermsAndConditionsFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const SitemapPagesDocument: ReturnType<typeof gql> = gql`
   query sitemapPages($locale: String!) {
@@ -5622,6 +6174,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageBlogPostCollection",
+        "query",
+        variables,
+      );
+    },
+    pageCookiePolicy(
+      variables?: PageCookiePolicyQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageCookiePolicyQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageCookiePolicyQuery>({
+            document: PageCookiePolicyDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageCookiePolicy",
         "query",
         variables,
       );

@@ -42,6 +42,11 @@ export default {
           DEFAULT: "#76b465", // Medium green
           foreground: "#ffffff",
         },
+        quaternary: {
+          DEFAULT: "#E2FCFC", // Light green
+          light: "#EDFFFF",
+          dark: "#DAF9F9",
+        },
         accent: {
           DEFAULT: "#afd7f4", // Light blue
           light: "#d7ebfa", // Lighter blue (50%)
@@ -58,6 +63,13 @@ export default {
           DEFAULT: "hsl(var(--sidebar-background))",
           background: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
+          "gradient-from": "#002F2F",
+          "gradient-to": "#005E5E",
+          "search-icon": "#638A8A",
+          "search-placeholder": "#729999",
+          "active-bg": "#1A4444",
+          "trigger-hover": "#007070",
+          "mobile-bg": "#002F2F",
         },
         badge: {
           DEFAULT: "#FBF8C1",
@@ -90,6 +102,10 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        checkbox: {
+          DEFAULT: "#09B732",
+          foreground: "#ffffff",
         },
       },
       borderRadius: {

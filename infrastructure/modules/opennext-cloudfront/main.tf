@@ -101,17 +101,36 @@ resource "aws_cloudfront_function" "forward_host_header" {
   code    = <<-EOT
 function handler(event) {
   var request = event.request;
-  var headers = request.headers;
-  
-  // Forward the host header as x-forwarded-host
+  var headers = request.headers || {};
+  var host = (headers.host && headers.host.value) ? headers.host.value : '';
+
+  // 1) Canonicalize host: redirect any "www." to non-www (preserve path & query)
+  if (host && host.startsWith('www.')) {
+    var targetHost = host.slice(4); // remove "www."
+    var uri = request.uri || '/';
+    var qs = request.querystring && request.querystring.length > 0 ? ('?' + request.querystring) : '';
+
+    return {
+      statusCode: 301,
+      statusDescription: 'Moved Permanently',
+      headers: {
+        location:       { value: 'https://' + targetHost + uri + qs },
+        'cache-control':{ value: 'public, max-age=300' }
+      }
+    };
+  }
+
+  // 2) Forward the host header as x-forwarded-host (required by OpenNext)
   if (headers.host) {
     headers['x-forwarded-host'] = headers.host;
   }
-  
+
+  // Continue to origin
   return request;
 }
 EOT
 }
+
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "distribution" {
@@ -257,6 +276,30 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   ordered_cache_behavior {
     path_pattern           = "/*/platform/signout"
+    target_origin_id       = "ServerLambda"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
+
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
+      include_body = true
+    }
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.forward_host_header.arn
+    }
+  }
+
+  # Cache behavior for PostHog ingest routes (with edge body handling)
+  ordered_cache_behavior {
+    path_pattern           = "/*/ingest/*"
     target_origin_id       = "ServerLambda"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
