@@ -276,10 +276,18 @@ function OAuthLoginForm({
     setIsPending(true);
     const redirectUrl = callbackUrl ?? "/platform";
 
-    await authClient.signIn.social({
-      provider: provider.id as "github" | "orcid",
-      callbackURL: redirectUrl,
-    });
+    // ORCID uses genericOAuth plugin (oauth2), GitHub uses built-in social provider
+    if (provider.id === "orcid") {
+      await authClient.signIn.oauth2({
+        providerId: "orcid",
+        callbackURL: redirectUrl,
+      });
+    } else {
+      await authClient.signIn.social({
+        provider: provider.id as "github",
+        callbackURL: redirectUrl,
+      });
+    }
   };
 
   const providerName = provider.id.charAt(0).toUpperCase() + provider.id.slice(1);
