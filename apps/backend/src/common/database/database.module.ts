@@ -26,4 +26,4 @@ import { getDatabaseCredentials } from "../config/database.config";
   ],
   exports: ["DATABASE"],
 })
-export class DatabaseModule { }
+export class DatabaseModule {}
