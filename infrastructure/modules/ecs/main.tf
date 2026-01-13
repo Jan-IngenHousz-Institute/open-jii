@@ -104,6 +104,38 @@ resource "aws_iam_role_policy_attachment" "additional_task_role_policies" {
   policy_arn = var.additional_task_role_policy_arns[count.index]
 }
 
+resource "aws_iam_role_policy" "runtime_secrets_access" {
+  count = length(var.runtime_secrets_arns) > 0 ? 1 : 0
+  name  = "${var.service_name}-${var.environment}-secrets-access-policy"
+  role  = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = var.runtime_secrets_arns
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "secretsmanager.${var.region}.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
 ##### AWS ECS Cluster #####
 resource "aws_ecs_cluster" "ecs_cluster" {
   name = "${var.service_name}-cluster-${var.environment}"

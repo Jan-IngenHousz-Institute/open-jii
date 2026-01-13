@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-location": "^3.682.0",
+    "@aws-sdk/client-secrets-manager": "^3.682.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.8",
     "@nestjs/config": "^4.0.2",

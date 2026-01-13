@@ -1257,6 +1257,10 @@ module "backend_ecs" {
     module.location_service.iam_policy_arn
   ]
 
+  runtime_secrets_arns = [
+    module.aurora_db.master_user_secret_arn
+  ]
+
   tags = {
     Environment = var.environment
     Project     = "open-jii"

@@ -227,3 +227,9 @@ variable "additional_task_role_policy_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "runtime_secrets_arns" {
+  description = "List of Secrets Manager ARNs that the container needs to access at runtime (not just at startup)"
+  type        = list(string)
+  default     = []
+}
