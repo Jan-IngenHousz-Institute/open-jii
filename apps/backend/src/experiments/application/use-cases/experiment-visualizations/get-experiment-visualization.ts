@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { EXPERIMENT_VISUALIZATIONS_LIST_FAILED } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -20,9 +21,14 @@ export class GetExperimentVisualizationUseCase {
     visualizationId: string,
     userId: string,
   ): Promise<Result<ExperimentVisualizationDto>> {
-    this.logger.log(
-      `Getting visualization ${visualizationId} of experiment ${experimentId} for user ${userId}`,
-    );
+    this.logger.log({
+      msg: "Getting visualization of experiment",
+      operation: "getExperimentVisualization",
+      context: GetExperimentVisualizationUseCase.name,
+      experimentId,
+      visualizationId,
+      userId,
+    });
 
     // Check if experiment exists and if user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -37,16 +43,26 @@ export class GetExperimentVisualizationUseCase {
         isAdmin: boolean;
       }) => {
         if (!experiment) {
-          this.logger.warn(
-            `Attempt to get visualization of non-existent experiment with ID ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to get visualization of non-existent experiment",
+            operation: "getExperimentVisualization",
+            context: GetExperimentVisualizationUseCase.name,
+            experimentId,
+            visualizationId,
+            userId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} does not have access to experiment ${experimentId} visualization ${visualizationId}`,
-          );
+          this.logger.warn({
+            msg: "User does not have access to experiment visualization",
+            operation: "getExperimentVisualization",
+            context: GetExperimentVisualizationUseCase.name,
+            experimentId,
+            visualizationId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
@@ -55,25 +71,43 @@ export class GetExperimentVisualizationUseCase {
           await this.experimentVisualizationRepository.findById(visualizationId);
 
         if (visualizationResult.isFailure()) {
-          this.logger.error(
-            `Failed to retrieve visualization ${visualizationId} for experiment ${experimentId}:`,
-            visualizationResult.error.message,
-          );
+          this.logger.error({
+            msg: "Failed to retrieve visualization for experiment",
+            errorCode: EXPERIMENT_VISUALIZATIONS_LIST_FAILED,
+            operation: "getExperimentVisualization",
+            context: GetExperimentVisualizationUseCase.name,
+            experimentId,
+            visualizationId,
+            userId,
+            error: visualizationResult.error.message,
+          });
           return failure(AppError.internal("Failed to retrieve experiment visualization"));
         }
 
         const visualization = visualizationResult.value;
 
         if (!visualization) {
-          this.logger.warn(`Visualization with ID ${visualizationId} not found`);
+          this.logger.warn({
+            msg: "Visualization not found",
+            operation: "getExperimentVisualization",
+            context: GetExperimentVisualizationUseCase.name,
+            experimentId,
+            visualizationId,
+            userId,
+          });
           return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
         }
 
         // Verify that the visualization belongs to the requested experiment
         if (visualization.experimentId !== experimentId) {
-          this.logger.warn(
-            `Visualization ${visualizationId} does not belong to experiment ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Visualization does not belong to experiment",
+            operation: "getExperimentVisualization",
+            context: GetExperimentVisualizationUseCase.name,
+            experimentId,
+            visualizationId,
+            userId,
+          });
           return failure(
             AppError.notFound(
               `Visualization with ID ${visualizationId} not found in this experiment`,
@@ -81,9 +115,14 @@ export class GetExperimentVisualizationUseCase {
           );
         }
 
-        this.logger.debug(
-          `Retrieved visualization ${visualizationId} for experiment ${experimentId}`,
-        );
+        this.logger.debug({
+          msg: "Retrieved visualization for experiment",
+          operation: "getExperimentVisualization",
+          context: GetExperimentVisualizationUseCase.name,
+          experimentId,
+          visualizationId,
+          userId,
+        });
 
         return success(visualization);
       },

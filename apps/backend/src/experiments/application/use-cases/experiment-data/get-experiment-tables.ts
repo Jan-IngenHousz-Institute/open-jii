@@ -1,5 +1,10 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import {
+  EXPERIMENT_NOT_FOUND,
+  FORBIDDEN,
+  EXPERIMENT_SCHEMA_NOT_READY,
+} from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -50,9 +55,13 @@ export class GetExperimentTablesUseCase {
     experimentId: string,
     userId: string,
   ): Promise<Result<ExperimentTablesMetadataDto>> {
-    this.logger.log(
-      `Getting experiment tables metadata for experiment ${experimentId}, user ${userId}`,
-    );
+    this.logger.log({
+      msg: "Getting experiment tables metadata",
+      operation: "getExperimentTables",
+      context: GetExperimentTablesUseCase.name,
+      experimentId,
+      userId,
+    });
 
     // Check if experiment exists and user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -66,18 +75,35 @@ export class GetExperimentTablesUseCase {
         experiment: ExperimentDto | null;
       }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment with ID ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            errorCode: EXPERIMENT_NOT_FOUND,
+            operation: "getExperimentTables",
+            context: GetExperimentTablesUseCase.name,
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} attempted to access tables of experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to access tables without proper permissions",
+            errorCode: FORBIDDEN,
+            operation: "getExperimentTables",
+            context: GetExperimentTablesUseCase.name,
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (!experiment.schemaName) {
-          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          this.logger.error({
+            msg: "Experiment has no schema name",
+            errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+            operation: "getExperimentTables",
+            context: GetExperimentTablesUseCase.name,
+            experimentId,
+          });
           return failure(AppError.internal("Experiment schema not provisioned"));
         }
 
@@ -110,9 +136,13 @@ export class GetExperimentTablesUseCase {
           if (countResult.isSuccess()) {
             totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
           } else {
-            this.logger.warn(
-              `Failed to get row count for table ${table.name}: ${countResult.error.message}`,
-            );
+            this.logger.warn({
+              msg: "Failed to get row count for table",
+              operation: "getExperimentTables",
+              context: GetExperimentTablesUseCase.name,
+              tableName: table.name,
+              error: countResult.error.message,
+            });
           }
 
           response.push({

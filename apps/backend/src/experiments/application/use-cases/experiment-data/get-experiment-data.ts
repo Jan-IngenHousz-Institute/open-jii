@@ -4,6 +4,11 @@ import type { ExperimentDataQuery } from "@repo/api";
 
 import type { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
 import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
+import {
+  EXPERIMENT_NOT_FOUND,
+  FORBIDDEN,
+  EXPERIMENT_SCHEMA_NOT_READY,
+} from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -47,11 +52,14 @@ export class GetExperimentDataUseCase {
     userId: string,
     query: ExperimentDataQuery,
   ): Promise<Result<ExperimentDataDto>> {
-    this.logger.log(
-      `Getting experiment data for experiment ${experimentId}, user ${userId}, query: ${JSON.stringify(
-        query,
-      )}`,
-    );
+    this.logger.log({
+      msg: "Getting experiment data",
+      operation: "getExperimentData",
+      context: GetExperimentDataUseCase.name,
+      experimentId,
+      userId,
+      query: JSON.stringify(query),
+    });
 
     // Check if experiment exists and user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -65,18 +73,35 @@ export class GetExperimentDataUseCase {
         experiment: ExperimentDto | null;
       }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment with ID ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            errorCode: EXPERIMENT_NOT_FOUND,
+            operation: "getExperimentData",
+            context: GetExperimentDataUseCase.name,
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to access experiment data without permission",
+            errorCode: FORBIDDEN,
+            operation: "getExperimentData",
+            context: GetExperimentDataUseCase.name,
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (!experiment.schemaName) {
-          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          this.logger.error({
+            msg: "Experiment has no schema name",
+            errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+            operation: "getExperimentData",
+            context: GetExperimentDataUseCase.name,
+            experimentId,
+          });
           return failure(AppError.internal("Experiment schema not provisioned"));
         }
 
@@ -95,9 +120,14 @@ export class GetExperimentDataUseCase {
         // Direct conditional logic for data fetching
         if (tableName && columns) {
           // Specific columns from a table, full data
-          this.logger.debug(
-            `Fetching data for experiment ${experimentId} in full-columns mode (table: ${tableName}) (columns: ${columns})`,
-          );
+          this.logger.debug({
+            msg: "Fetching data in full-columns mode",
+            operation: "getExperimentData",
+            context: GetExperimentDataUseCase.name,
+            experimentId,
+            tableName,
+            columns,
+          });
           return await this.fetchSpecificColumns(
             tableName,
             columns,
@@ -109,9 +139,13 @@ export class GetExperimentDataUseCase {
           );
         } else if (tableName) {
           // Single table with pagination
-          this.logger.debug(
-            `Fetching data for experiment ${experimentId} in paginated mode (table: ${tableName})`,
-          );
+          this.logger.debug({
+            msg: "Fetching data in paginated mode",
+            operation: "getExperimentData",
+            context: GetExperimentDataUseCase.name,
+            experimentId,
+            tableName,
+          });
           return await this.fetchSingleTablePaginated(
             tableName,
             schemaName,
@@ -123,9 +157,12 @@ export class GetExperimentDataUseCase {
           );
         } else {
           // No tableName provided - this is deprecated behavior
-          this.logger.warn(
-            `Deprecated: getExperimentData called without tableName for experiment ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Deprecated: getExperimentData called without tableName",
+            operation: "getExperimentData",
+            context: GetExperimentDataUseCase.name,
+            experimentId,
+          });
           return failure(
             AppError.badRequest(
               "tableName parameter is required. Use /tables endpoint for metadata or /tables/:tableName for data.",
@@ -189,7 +226,12 @@ export class GetExperimentDataUseCase {
     }
     sqlQuery += orderByClauseResult.value;
 
-    this.logger.debug(`Executing SQL query: ${sqlQuery}`);
+    this.logger.debug({
+      msg: "Executing SQL query",
+      operation: "fetchSpecificColumns",
+      context: GetExperimentDataUseCase.name,
+      sqlQuery,
+    });
 
     // Execute the query
     const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
@@ -307,15 +349,25 @@ export class GetExperimentDataUseCase {
     const table = tablesResult.value.tables.find((table: Table) => table.name === tableName);
 
     if (!table) {
-      this.logger.warn(`Table ${tableName} not found in schema ${schemaName}`);
+      this.logger.warn({
+        msg: "Table not found in schema",
+        operation: "validateTableExists",
+        context: GetExperimentDataUseCase.name,
+        tableName,
+        schemaName,
+      });
       return failure(AppError.notFound(`Table '${tableName}' not found in this experiment`));
     }
 
     // Check if table is marked as accessible to users (downstream: "false")
     if (table.properties?.downstream !== "false") {
-      this.logger.warn(
-        `Table ${tableName} in schema ${schemaName} is not accessible (intermediate processing table)`,
-      );
+      this.logger.warn({
+        msg: "Table is not accessible (intermediate processing table)",
+        operation: "validateTableExists",
+        context: GetExperimentDataUseCase.name,
+        tableName,
+        schemaName,
+      });
       return failure(
         AppError.forbidden(
           `Table '${tableName}' is not accessible. Only final processed tables are available.`,

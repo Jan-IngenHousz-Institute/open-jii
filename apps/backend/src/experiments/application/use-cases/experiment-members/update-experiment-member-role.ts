@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { INTERNAL_SERVER_ERROR } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   ExperimentMemberDto,
@@ -24,9 +25,15 @@ export class UpdateExperimentMemberRoleUseCase {
     newRole: ExperimentMemberRole,
     currentUserId: string,
   ): Promise<Result<ExperimentMemberDto>> {
-    this.logger.log(
-      `Updating role of member ${memberId} in experiment ${experimentId} to ${newRole} by user ${currentUserId}`,
-    );
+    this.logger.log({
+      msg: "Updating member role in experiment",
+      operation: "update-experiment-member-role",
+      context: UpdateExperimentMemberRoleUseCase.name,
+      experimentId,
+      memberId,
+      newRole,
+      userId: currentUserId,
+    });
 
     const accessCheckResult = await this.experimentRepository.checkAccess(
       experimentId,
@@ -36,19 +43,33 @@ export class UpdateExperimentMemberRoleUseCase {
     return accessCheckResult.chain(
       async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            operation: "update-experiment-member-role",
+            context: UpdateExperimentMemberRoleUseCase.name,
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (experiment.status === "archived") {
-          this.logger.warn(`Experiment ${experimentId} is archived`);
+          this.logger.warn({
+            msg: "Experiment is archived",
+            operation: "update-experiment-member-role",
+            context: UpdateExperimentMemberRoleUseCase.name,
+            experimentId,
+          });
           return failure(AppError.forbidden("Cannot update member roles in archived experiments"));
         }
 
         if (!isAdmin) {
-          this.logger.warn(
-            `User ${currentUserId} attempted to update member roles in experiment ${experimentId} without admin privileges`,
-          );
+          this.logger.warn({
+            msg: "User attempted to update member roles without admin privileges",
+            operation: "update-experiment-member-role",
+            context: UpdateExperimentMemberRoleUseCase.name,
+            experimentId,
+            userId: currentUserId,
+          });
           return failure(AppError.forbidden("Only admins can update member roles"));
         }
 
@@ -61,17 +82,26 @@ export class UpdateExperimentMemberRoleUseCase {
           const adminCount = adminCountResult.value;
 
           if (adminCount <= 1) {
-            this.logger.warn(
-              `User ${currentUserId} attempted to demote last admin in experiment ${experimentId}`,
-            );
+            this.logger.warn({
+              msg: "User attempted to demote last admin in experiment",
+              operation: "update-experiment-member-role",
+              context: UpdateExperimentMemberRoleUseCase.name,
+              experimentId,
+              userId: currentUserId,
+            });
             return failure(AppError.badRequest("Cannot demote the last admin of the experiment"));
           }
         }
 
         // Proceed with update
-        this.logger.debug(
-          `Updating member ${memberId} role to ${newRole} in experiment "${experiment.name}" (ID: ${experimentId})`,
-        );
+        this.logger.debug({
+          msg: "Updating member role in experiment",
+          operation: "update-experiment-member-role",
+          context: UpdateExperimentMemberRoleUseCase.name,
+          experimentId,
+          memberId,
+          newRole,
+        });
 
         const updateResult = await this.experimentMemberRepository.updateMemberRole(
           experimentId,
@@ -80,13 +110,27 @@ export class UpdateExperimentMemberRoleUseCase {
         );
 
         if (updateResult.isFailure()) {
-          this.logger.error(`Failed to update member ${memberId} in experiment ${experimentId}`);
+          this.logger.error({
+            msg: "Failed to update member in experiment",
+            errorCode: INTERNAL_SERVER_ERROR,
+            operation: "update-experiment-member-role",
+            context: UpdateExperimentMemberRoleUseCase.name,
+            experimentId,
+            memberId,
+            error: updateResult.error,
+          });
           return failure(AppError.internal("Failed to update member role"));
         }
 
-        this.logger.log(
-          `Successfully updated member ${memberId} role to ${newRole} in experiment "${experiment.name}" (ID: ${experimentId})`,
-        );
+        this.logger.log({
+          msg: "Successfully updated member role in experiment",
+          operation: "update-experiment-member-role",
+          context: UpdateExperimentMemberRoleUseCase.name,
+          experimentId,
+          memberId,
+          newRole,
+          status: "success",
+        });
 
         return updateResult;
       },

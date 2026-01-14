@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { MACRO_NOT_FOUND } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroDto } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -11,7 +12,12 @@ export class GetMacroUseCase {
   constructor(private readonly macroRepository: MacroRepository) {}
 
   async execute(id: string): Promise<Result<MacroDto>> {
-    this.logger.log(`Getting macro with id: ${id}`);
+    this.logger.log({
+      msg: "Getting macro",
+      operation: "getMacro",
+      context: GetMacroUseCase.name,
+      macroId: id,
+    });
 
     const result = await this.macroRepository.findById(id);
 
@@ -20,7 +26,13 @@ export class GetMacroUseCase {
     }
 
     if (!result.value) {
-      this.logger.warn(`Macro with id ${id} not found`);
+      this.logger.warn({
+        msg: "Macro not found",
+        errorCode: MACRO_NOT_FOUND,
+        operation: "getMacro",
+        context: GetMacroUseCase.name,
+        macroId: id,
+      });
       return failure(AppError.notFound("Macro not found"));
     }
 

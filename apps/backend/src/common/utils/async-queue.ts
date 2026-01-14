@@ -15,7 +15,13 @@ export class AsyncQueue<T = void> {
     this.concurrency = concurrency;
     this.logger = logger ?? new Logger(AsyncQueue.name);
     this.id = `queue-${Math.random().toString(36).substring(2, 10)}`;
-    this.logger.debug(`Created new AsyncQueue ${this.id} with concurrency ${concurrency}`);
+    this.logger.debug({
+      msg: "Created new AsyncQueue",
+      operation: "constructor",
+      context: AsyncQueue.name,
+      queueId: this.id,
+      concurrency,
+    });
   }
 
   /**
@@ -36,7 +42,12 @@ export class AsyncQueue<T = void> {
 
   private async processNext(): Promise<void> {
     if (this.queue.length === 0) {
-      this.logger.debug(`[Queue ${this.id}] Queue empty, nothing to process`);
+      this.logger.debug({
+        msg: "Queue empty",
+        operation: "processQueue",
+        context: AsyncQueue.name,
+        queueId: this.id,
+      });
       return;
     }
 
@@ -92,7 +103,12 @@ export class AsyncQueue<T = void> {
     return new Promise<void>((resolve) => {
       const checkInterval = setInterval(() => {
         if (this.queue.length === 0 && this.running === 0) {
-          this.logger.debug(`[Queue ${this.id}] All tasks processed, queue empty`);
+          this.logger.debug({
+            msg: "All tasks processed, queue empty",
+            operation: "waitForCompletion",
+            context: AsyncQueue.name,
+            queueId: this.id,
+          });
           clearInterval(checkInterval);
           resolve();
         } else {

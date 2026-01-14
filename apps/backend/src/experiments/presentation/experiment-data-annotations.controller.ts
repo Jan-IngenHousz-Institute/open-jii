@@ -25,7 +25,13 @@ export class ExperimentDataAnnotationsController {
     return tsRestHandler(contract.experiments.addAnnotation, async ({ params, body }) => {
       const { id: experimentId } = params;
 
-      this.logger.log(`Adding annotation to experiment ${experimentId} by user ${session.user.id}`);
+      this.logger.log({
+        msg: "Adding annotation to experiment",
+        operation: "addAnnotation",
+        context: ExperimentDataAnnotationsController.name,
+        experimentId,
+        userId: session.user.id,
+      });
 
       const addBody: AddAnnotationsBulkBody = {
         tableName: body.tableName,
@@ -54,7 +60,14 @@ export class ExperimentDataAnnotationsController {
     return tsRestHandler(contract.experiments.addAnnotationsBulk, async ({ params, body }) => {
       const { id: experimentId } = params;
 
-      this.logger.log(`Adding ${body.rowIds.length} annotations to experiment ${experimentId}`);
+      this.logger.log({
+        msg: "Adding annotations to experiment",
+        operation: "addAnnotationsBulk",
+        context: ExperimentDataAnnotationsController.name,
+        experimentId,
+        userId: session.user.id,
+        count: body.rowIds.length,
+      });
 
       const result = await this.addAnnotationsUseCase.execute(experimentId, body, session.user.id);
 
@@ -74,9 +87,14 @@ export class ExperimentDataAnnotationsController {
     return tsRestHandler(contract.experiments.updateAnnotation, async ({ params, body }) => {
       const { id: experimentId, annotationId } = params;
 
-      this.logger.log(
-        `Updating annotation ${annotationId} for experiment ${experimentId} (user ${session.user.id})`,
-      );
+      this.logger.log({
+        msg: "Updating annotation for experiment",
+        operation: "updateAnnotation",
+        context: ExperimentDataAnnotationsController.name,
+        experimentId,
+        annotationId,
+        userId: session.user.id,
+      });
 
       const result = await this.updateAnnotationUseCase.execute(
         experimentId,
@@ -101,9 +119,14 @@ export class ExperimentDataAnnotationsController {
     return tsRestHandler(contract.experiments.deleteAnnotation, async ({ params }) => {
       const { id: experimentId, annotationId } = params;
 
-      this.logger.log(
-        `Deleting annotation ${annotationId} from experiment ${experimentId} (user ${session.user.id})`,
-      );
+      this.logger.log({
+        msg: "Deleting annotation from experiment",
+        operation: "deleteAnnotation",
+        context: ExperimentDataAnnotationsController.name,
+        experimentId,
+        annotationId,
+        userId: session.user.id,
+      });
 
       const result = await this.deleteAnnotationsUseCase.execute(
         experimentId,
@@ -128,9 +151,15 @@ export class ExperimentDataAnnotationsController {
       const { id: experimentId } = params;
       const { tableName, rowIds, type } = body;
 
-      this.logger.log(
-        `Deleting all annotations for ${rowIds.length} row(s) of type ${type} from experiment ${experimentId} and table ${tableName} (user ${session.user.id})`,
-      );
+      this.logger.log({
+        msg: "Deleting annotations from experiment",
+        operation: "deleteAnnotationsBulk",
+        context: ExperimentDataAnnotationsController.name,
+        experimentId,
+        userId: session.user.id,
+        count: rowIds.length,
+        type,
+      });
 
       const result = await this.deleteAnnotationsUseCase.execute(
         experimentId,

@@ -12,7 +12,12 @@ export class ListTransferRequestsUseCase {
   constructor(private readonly transferRequestsRepository: ProjectTransferRequestsRepository) {}
 
   async execute(userId?: string): Promise<Result<BaseTransferRequest[]>> {
-    this.logger.log(`Listing transfer requests${userId ? ` for user ${userId}` : ""}`);
+    this.logger.log({
+      msg: "Listing transfer requests",
+      operation: "list_transfer_requests",
+      context: ListTransferRequestsUseCase.name,
+      userId,
+    });
 
     // List the transfer requests
     const listResult = await this.transferRequestsRepository.listTransferRequests(userId);

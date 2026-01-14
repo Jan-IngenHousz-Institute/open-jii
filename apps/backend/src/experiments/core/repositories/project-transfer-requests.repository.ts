@@ -104,7 +104,12 @@ export class ProjectTransferRequestsRepository {
   async createTransferRequest(
     request: CreateTransferRequestDto,
   ): Promise<Result<BaseTransferRequest>> {
-    this.logger.log(`Creating transfer request for user ${request.userId}`);
+    this.logger.log({
+      msg: "Creating transfer request",
+      operation: "createTransferRequest",
+      context: ProjectTransferRequestsRepository.name,
+      userId: request.userId,
+    });
 
     const now = new Date();
     const requestId = randomUUID().toString();
@@ -163,7 +168,12 @@ export class ProjectTransferRequestsRepository {
    * List all transfer requests (optionally filtered by user)
    */
   async listTransferRequests(userId?: string): Promise<Result<BaseTransferRequest[]>> {
-    this.logger.log(`Listing transfer requests${userId ? ` for user ${userId}` : ""}`);
+    this.logger.log({
+      msg: "Listing transfer requests",
+      operation: "listTransferRequests",
+      context: ProjectTransferRequestsRepository.name,
+      ...(userId && { userId }),
+    });
 
     if (userId) {
       const userIdValidation = this.validate.uuid(userId);
@@ -211,9 +221,13 @@ export class ProjectTransferRequestsRepository {
     userId: string,
     projectIdOld: string,
   ): Promise<Result<BaseTransferRequest | null>> {
-    this.logger.log(
-      `Checking for existing transfer request for user ${userId} and project ${projectIdOld}`,
-    );
+    this.logger.log({
+      msg: "Checking for existing transfer request",
+      operation: "findExistingRequest",
+      context: ProjectTransferRequestsRepository.name,
+      userId,
+      projectIdOld,
+    });
 
     // Validate inputs
     const userIdValidation = this.validate.uuid(userId);

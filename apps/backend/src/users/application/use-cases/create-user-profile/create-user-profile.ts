@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import { USER_NOT_FOUND, DATABRICKS_REFRESH_FAILED } from "../../../../common/utils/error-codes";
 import { failure, AppError, success } from "../../../../common/utils/fp-utils";
 import {
   UserDto,
@@ -21,14 +22,25 @@ export class CreateUserProfileUseCase {
   ) {}
 
   async execute(data: CreateUserProfileDto, userId: string) {
-    this.logger.log(`Creates user profile for user with ID ${userId}`);
+    this.logger.log({
+      msg: "Creating user profile",
+      operation: "createUserProfile",
+      context: CreateUserProfileUseCase.name,
+      userId,
+    });
 
     // Check if user exists
     const userResult = await this.userRepository.findOne(userId);
 
     return userResult.chain(async (user: UserDto | null) => {
       if (!user) {
-        this.logger.warn(`Attempt to create profile for non-existent user with ID ${userId}`);
+        this.logger.warn({
+          msg: "Attempt to create profile for non-existent user",
+          errorCode: USER_NOT_FOUND,
+          operation: "createUserProfile",
+          context: CreateUserProfileUseCase.name,
+          userId,
+        });
         return failure(AppError.notFound(`User with ID ${userId} not found`));
       }
 
@@ -63,27 +75,43 @@ export class CreateUserProfileUseCase {
 
         if (hasChangesInMetadata) {
           // Trigger enriched tables refresh for user metadata changes
-          this.logger.log(
-            `Triggering enriched tables refresh for user profile changes: ${userId} (firstName, lastName, or activated changed)`,
-          );
+          this.logger.log({
+            msg: "Triggering enriched tables refresh for profile changes",
+            operation: "createUserProfile",
+            context: CreateUserProfileUseCase.name,
+            userId,
+          });
           const refreshResult = await this.databricksPort.triggerEnrichedTablesRefreshJob(
             "user_id",
             userId,
           );
 
           if (refreshResult.isFailure()) {
-            this.logger.warn(
-              `Failed to trigger enriched tables refresh for user ${userId}: ${refreshResult.error.message}`,
-            );
+            this.logger.warn({
+              msg: "Failed to trigger enriched tables refresh",
+              errorCode: DATABRICKS_REFRESH_FAILED,
+              operation: "createUserProfile",
+              context: CreateUserProfileUseCase.name,
+              userId,
+              error: refreshResult.error.message,
+            });
             // Note: We don't fail the entire operation if the refresh trigger fails
             // The profile creation/update was successful and should be returned
           } else {
-            this.logger.log(`Successfully triggered enriched tables refresh for user ${userId}`);
+            this.logger.log({
+              msg: "Enriched tables refresh triggered successfully",
+              operation: "createUserProfile",
+              context: CreateUserProfileUseCase.name,
+              userId,
+            });
           }
         } else {
-          this.logger.debug(
-            `No relevant changes detected for user ${userId}, skipping enriched tables refresh`,
-          );
+          this.logger.debug({
+            msg: "No relevant changes detected, skipping refresh",
+            operation: "createUserProfile",
+            context: CreateUserProfileUseCase.name,
+            userId,
+          });
         }
 
         return success(userProfile);

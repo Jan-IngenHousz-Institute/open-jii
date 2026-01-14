@@ -1,5 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import {
+  PROTOCOL_NOT_FOUND,
+  PROTOCOL_UPDATE_FAILED,
+  PROTOCOL_ASSIGNED,
+} from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto, UpdateProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -11,7 +16,12 @@ export class UpdateProtocolUseCase {
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
   async execute(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto>> {
-    this.logger.log(`Updating protocol with ID "${id}"`);
+    this.logger.log({
+      msg: "Updating protocol",
+      operation: "updateProtocol",
+      context: UpdateProtocolUseCase.name,
+      protocolId: id,
+    });
 
     // Check if protocol exists
     const existingProtocolResult = await this.protocolRepository.findOne(id);
@@ -22,20 +32,37 @@ export class UpdateProtocolUseCase {
 
     const protocol = existingProtocolResult.value;
     if (!protocol) {
-      this.logger.warn(`Attempt to update non-existent protocol with ID ${id}`);
+      this.logger.warn({
+        msg: "Attempt to update non-existent protocol",
+        errorCode: PROTOCOL_NOT_FOUND,
+        operation: "updateProtocol",
+        context: UpdateProtocolUseCase.name,
+        protocolId: id,
+      });
       return failure(AppError.notFound(`Protocol not found`));
     }
 
     // Prevent update if protocol is assigned to any experiment
     const isAssignedResult = await this.protocolRepository.isAssignedToAnyExperiment(id);
     if (isAssignedResult.isFailure()) {
-      this.logger.error(`Error checking protocol assignment for ID ${id}:`, isAssignedResult.error);
+      this.logger.error({
+        msg: "Error checking protocol assignment",
+        errorCode: PROTOCOL_UPDATE_FAILED,
+        operation: "updateProtocol",
+        context: UpdateProtocolUseCase.name,
+        protocolId: id,
+        error: isAssignedResult.error,
+      });
       return failure(isAssignedResult.error);
     }
     if (isAssignedResult.value) {
-      this.logger.warn(
-        `Attempt to update protocol with ID ${id} which is assigned to an experiment`,
-      );
+      this.logger.warn({
+        msg: "Cannot update protocol assigned to experiment",
+        errorCode: PROTOCOL_ASSIGNED,
+        operation: "updateProtocol",
+        context: UpdateProtocolUseCase.name,
+        protocolId: id,
+      });
       return failure(AppError.forbidden("Cannot update protocol assigned to an experiment"));
     }
 
@@ -48,11 +75,23 @@ export class UpdateProtocolUseCase {
 
     const protocols = updateResult.value;
     if (protocols.length === 0) {
-      this.logger.error(`Failed to update protocol with ID ${id}`);
+      this.logger.error({
+        msg: "Failed to update protocol",
+        errorCode: PROTOCOL_UPDATE_FAILED,
+        operation: "updateProtocol",
+        context: UpdateProtocolUseCase.name,
+        protocolId: id,
+      });
       return failure(AppError.internal("Failed to update protocol"));
     }
 
-    this.logger.log(`Successfully updated protocol with ID ${id}`);
+    this.logger.log({
+      msg: "Protocol updated successfully",
+      operation: "updateProtocol",
+      context: UpdateProtocolUseCase.name,
+      protocolId: id,
+      status: "success",
+    });
     return success(protocols[0]);
   }
 }

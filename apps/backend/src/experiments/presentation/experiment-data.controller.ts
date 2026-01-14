@@ -9,6 +9,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api";
 
 import { AsyncQueue } from "../../common/utils/async-queue";
+import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "../../common/utils/error-codes";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
@@ -33,16 +34,26 @@ export class ExperimentDataController {
     return tsRestHandler(contract.experiments.getExperimentTables, async ({ params }) => {
       const { id: experimentId } = params;
 
-      this.logger.log(
-        `Processing tables metadata request for experiment ${experimentId} by user ${session.user.id}`,
-      );
+      this.logger.log({
+        msg: "Processing tables metadata request",
+        operation: "getTables",
+        context: ExperimentDataController.name,
+        experimentId,
+        userId: session.user.id,
+      });
 
       const result = await this.getExperimentTablesUseCase.execute(experimentId, session.user.id);
 
       if (result.isSuccess()) {
         const data = result.value;
 
-        this.logger.log(`Successfully retrieved table metadata for experiment ${experimentId}`);
+        this.logger.log({
+          msg: "Successfully retrieved table metadata",
+          operation: "getTables",
+          context: ExperimentDataController.name,
+          experimentId,
+          status: "success",
+        });
 
         return {
           status: StatusCodes.OK,
@@ -60,9 +71,13 @@ export class ExperimentDataController {
       const { id: experimentId } = params;
       const { page, pageSize, tableName, columns, orderBy, orderDirection } = query;
 
-      this.logger.log(
-        `Processing legacy data request for experiment ${experimentId} by user ${session.user.id}`,
-      );
+      this.logger.log({
+        msg: "Processing data request",
+        operation: "getData",
+        context: ExperimentDataController.name,
+        experimentId,
+        userId: session.user.id,
+      });
 
       const result = await this.getExperimentDataUseCase.execute(experimentId, session.user.id, {
         page,
@@ -76,7 +91,13 @@ export class ExperimentDataController {
       if (result.isSuccess()) {
         const data = result.value;
 
-        this.logger.log(`Successfully retrieved data for experiment ${experimentId}`);
+        this.logger.log({
+          msg: "Successfully retrieved data",
+          operation: "getData",
+          context: ExperimentDataController.name,
+          experimentId,
+          status: "success",
+        });
 
         return {
           status: StatusCodes.OK,
@@ -95,16 +116,26 @@ export class ExperimentDataController {
 
       const contentType = request.headers["content-type"];
       if (!contentType?.includes("multipart/form-data")) {
-        this.logger.error("Request is not multipart/form-data");
+        this.logger.error({
+          msg: "Request is not multipart/form-data",
+          errorCode: BAD_REQUEST,
+          operation: "uploadData",
+          context: ExperimentDataController.name,
+          experimentId,
+        });
         return {
           status: StatusCodes.BAD_REQUEST,
           body: { message: "Request must be multipart/form-data" },
         };
       }
 
-      this.logger.log(
-        `Starting data upload for experiment ${experimentId} by user ${session.user.id}`,
-      );
+      this.logger.log({
+        msg: "Starting data upload",
+        operation: "uploadData",
+        context: ExperimentDataController.name,
+        experimentId,
+        userId: session.user.id,
+      });
 
       // Prepare the upload environment - use case handles access control and experiment lookup
       const prepResult = await this.uploadAmbyteDataUseCase.preexecute(
@@ -113,18 +144,31 @@ export class ExperimentDataController {
       );
 
       if (prepResult.isFailure()) {
-        this.logger.error(`Failed to prepare upload environment: ${prepResult.error.message}`);
+        this.logger.error({
+          msg: "Failed to prepare upload environment",
+          errorCode: INTERNAL_SERVER_ERROR,
+          operation: "uploadData",
+          context: ExperimentDataController.name,
+          experimentId,
+          error: prepResult.error.message,
+        });
         return handleFailure(prepResult, this.logger);
       }
 
       const { experiment, volumeName, volumeCreated, volumeExists, directoryName } =
         prepResult.value;
 
-      this.logger.log(
-        `Upload environment prepared successfully for experiment ${experiment.name} (${experimentId}). ` +
-          `Volume: ${volumeName}, Created: ${volumeCreated}, Existed: ${volumeExists}, ` +
-          `Directory: ${directoryName}`,
-      );
+      this.logger.log({
+        msg: "Upload environment prepared successfully",
+        operation: "uploadData",
+        context: ExperimentDataController.name,
+        experimentId,
+        volumeName,
+        volumeCreated,
+        volumeExists,
+        directoryName,
+        status: "success",
+      });
 
       // Initialize arrays to collect results
       const successfulUploads: { fileName: string; fileId: string; filePath: string }[] = [];
@@ -136,7 +180,12 @@ export class ExperimentDataController {
       // Create a single shared processing queue with concurrency of 1
       // This queue will be used for all files to ensure sequential processing
       const processingQueue = new AsyncQueue(1, this.logger);
-      this.logger.log("Created shared file processing queue for all uploads");
+      this.logger.log({
+        msg: "Created shared file processing queue for all uploads",
+        operation: "uploadData",
+        context: ExperimentDataController.name,
+        experimentId,
+      });
 
       try {
         await new Promise<void>((resolve, reject) => {
@@ -151,7 +200,13 @@ export class ExperimentDataController {
 
           // Handle regular form fields
           bb.on("field", (fieldname, value) => {
-            this.logger.debug(`Received field: ${fieldname}`);
+            this.logger.debug({
+              msg: "Received field",
+              operation: "uploadData",
+              context: ExperimentDataController.name,
+              experimentId,
+              fieldname,
+            });
             if (fieldname === "sourceType") {
               sourceType = value;
             }
@@ -161,17 +216,37 @@ export class ExperimentDataController {
           bb.on("file", (fieldname, fileStream, info) => {
             const { filename, encoding, mimeType } = info;
 
-            this.logger.log(`Received file: ${filename}, fieldname: ${fieldname}`);
+            this.logger.log({
+              msg: "Received file",
+              operation: "uploadData",
+              context: ExperimentDataController.name,
+              experimentId,
+              filename,
+              fieldname,
+            });
 
             if (fieldname !== "files") {
-              this.logger.log(`Skipping file with non-matching fieldname: ${fieldname}`);
+              this.logger.log({
+                msg: "Skipping file with non-matching fieldname",
+                operation: "uploadData",
+                context: ExperimentDataController.name,
+                experimentId,
+                fieldname,
+              });
               fileStream.resume(); // Skip non-matching field names
               return;
             }
 
             // Check if sourceType is defined before processing any files
             if (sourceType === undefined) {
-              this.logger.error(`Received file ${filename} but sourceType is not defined`);
+              this.logger.error({
+                msg: "Received file but sourceType is not defined",
+                errorCode: BAD_REQUEST,
+                operation: "uploadData",
+                context: ExperimentDataController.name,
+                experimentId,
+                filename,
+              });
               fileStream.resume();
               reject(new Error("sourceType field must be provided before file uploads"));
               return;
@@ -179,7 +254,13 @@ export class ExperimentDataController {
 
             // Add the file processing task to the queue
             processingQueue.add(async () => {
-              this.logger.log(`Processing file: ${filename}`);
+              this.logger.log({
+                msg: "Processing file",
+                operation: "uploadData",
+                context: ExperimentDataController.name,
+                experimentId,
+                filename,
+              });
 
               try {
                 await this.uploadAmbyteDataUseCase.execute(
@@ -195,9 +276,24 @@ export class ExperimentDataController {
                   successfulUploads,
                   errors,
                 );
-                this.logger.log(`Completed processing file: ${filename}`);
+                this.logger.log({
+                  msg: "Completed processing file",
+                  operation: "uploadData",
+                  context: ExperimentDataController.name,
+                  experimentId,
+                  filename,
+                  status: "success",
+                });
               } catch (error) {
-                this.logger.error(`Error processing file ${filename}: ${String(error)}`);
+                this.logger.error({
+                  msg: "Error processing file",
+                  errorCode: INTERNAL_SERVER_ERROR,
+                  operation: "uploadData",
+                  context: ExperimentDataController.name,
+                  experimentId,
+                  filename,
+                  error: String(error),
+                });
                 errors.push({
                   fileName: filename,
                   error: String(error),
@@ -208,41 +304,78 @@ export class ExperimentDataController {
 
           // Handle errors
           bb.on("error", (err) => {
-            this.logger.error(`Error during file upload: ${String(err)}`);
+            this.logger.error({
+              msg: "Error during file upload",
+              errorCode: INTERNAL_SERVER_ERROR,
+              operation: "uploadData",
+              context: ExperimentDataController.name,
+              experimentId,
+              error: String(err),
+            });
             reject(err instanceof Error ? err : new Error(String(err)));
           });
 
           // Handle completion
           bb.on("close", () => {
-            this.logger.log(
-              "Busboy finished parsing the form, waiting for file processing to complete...",
-            );
+            this.logger.log({
+              msg: "Busboy finished parsing the form, waiting for file processing to complete",
+              operation: "uploadData",
+              context: ExperimentDataController.name,
+              experimentId,
+            });
 
             // Wait for all file processing to complete
             processingQueue
               .waitForCompletion()
               .then(() => {
-                this.logger.log("All file processing completed successfully");
+                this.logger.log({
+                  msg: "All file processing completed successfully",
+                  operation: "uploadData",
+                  context: ExperimentDataController.name,
+                  experimentId,
+                  status: "success",
+                });
                 resolve();
               })
               .catch((err) => {
-                this.logger.error(
-                  `Error while waiting for file processing to complete: ${String(err)}`,
-                );
+                this.logger.error({
+                  msg: "Error while waiting for file processing to complete",
+                  errorCode: INTERNAL_SERVER_ERROR,
+                  operation: "uploadData",
+                  context: ExperimentDataController.name,
+                  experimentId,
+                  error: String(err),
+                });
                 reject(err instanceof Error ? err : new Error(String(err)));
               });
           });
 
           // Pipe the request to busboy
-          this.logger.debug("Piping request to busboy");
+          this.logger.debug({
+            msg: "Piping request to busboy",
+            operation: "uploadData",
+            context: ExperimentDataController.name,
+            experimentId,
+          });
           request.pipe(bb);
         });
 
-        this.logger.log(`Processed all files for experiment ${experimentId}`);
+        this.logger.log({
+          msg: "Processed all files",
+          operation: "uploadData",
+          context: ExperimentDataController.name,
+          experimentId,
+          status: "success",
+        });
       } catch (error) {
-        this.logger.error(
-          `Error processing files for experiment ${experimentId}: ${String(error)}`,
-        );
+        this.logger.error({
+          msg: "Error processing files",
+          errorCode: INTERNAL_SERVER_ERROR,
+          operation: "uploadData",
+          context: ExperimentDataController.name,
+          experimentId,
+          error: String(error),
+        });
 
         // Check if error is due to missing sourceType
         if (String(error).includes("sourceType field must be provided")) {
@@ -283,9 +416,14 @@ export class ExperimentDataController {
       const { id: experimentId } = params;
       const { tableName } = query;
 
-      this.logger.log(
-        `Processing download request for experiment ${experimentId}, table ${tableName} by user ${session.user.id}`,
-      );
+      this.logger.log({
+        msg: "Processing download request",
+        operation: "downloadData",
+        context: ExperimentDataController.name,
+        experimentId,
+        userId: session.user.id,
+        tableName,
+      });
 
       const result = await this.downloadExperimentDataUseCase.execute(
         experimentId,
@@ -298,10 +436,15 @@ export class ExperimentDataController {
       if (result.isSuccess()) {
         const data = result.value;
 
-        this.logger.log(
-          `Successfully prepared download links for experiment ${experimentId}, table ${tableName}. ` +
-            `Total chunks: ${data.externalLinks.length}`,
-        );
+        this.logger.log({
+          msg: "Successfully prepared download links",
+          operation: "downloadData",
+          context: ExperimentDataController.name,
+          experimentId,
+          tableName,
+          totalChunks: data.externalLinks.length,
+          status: "success",
+        });
 
         return {
           status: StatusCodes.OK,

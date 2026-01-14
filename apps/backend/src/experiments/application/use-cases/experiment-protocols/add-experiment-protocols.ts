@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { FORBIDDEN, EXPERIMENT_PROTOCOLS_ADD_FAILED } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentProtocolDto } from "../../../core/models/experiment-protocols.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -20,9 +21,14 @@ export class AddExperimentProtocolsUseCase {
     protocols: { protocolId: string; order?: number }[],
     currentUserId: string,
   ): Promise<Result<ExperimentProtocolDto[]>> {
-    this.logger.log(
-      `Adding protocols [${protocols.map((p) => p.protocolId).join(", ")}] to experiment ${experimentId} by user ${currentUserId}`,
-    );
+    this.logger.log({
+      msg: "Adding protocols to experiment",
+      operation: "addExperimentProtocols",
+      context: AddExperimentProtocolsUseCase.name,
+      experimentId,
+      userId: currentUserId,
+      protocolCount: protocols.length,
+    });
 
     // Check if the experiment exists and if the user is an admin
     const accessCheckResult = await this.experimentRepository.checkAccess(
@@ -47,7 +53,14 @@ export class AddExperimentProtocolsUseCase {
         }
 
         if (!isAdmin) {
-          this.logger.warn(`User ${currentUserId} is not admin for experiment ${experimentId}`);
+          this.logger.warn({
+            msg: "User is not admin for experiment",
+            errorCode: FORBIDDEN,
+            operation: "addExperimentProtocols",
+            context: AddExperimentProtocolsUseCase.name,
+            experimentId,
+            userId: currentUserId,
+          });
           return failure(AppError.forbidden("Only admins can add experiment protocols"));
         }
 
@@ -58,15 +71,25 @@ export class AddExperimentProtocolsUseCase {
         );
 
         if (addProtocolsResult.isFailure()) {
-          this.logger.error(`Failed to add protocols to experiment ${experimentId}`);
+          this.logger.error({
+            msg: "Failed to add protocols to experiment",
+            errorCode: EXPERIMENT_PROTOCOLS_ADD_FAILED,
+            operation: "addExperimentProtocols",
+            context: AddExperimentProtocolsUseCase.name,
+            experimentId,
+          });
           return failure(AppError.internal("Failed to add experiment protocols"));
         }
 
-        this.logger.log(
-          `Successfully added protocols [${protocols
-            .map((p) => p.protocolId)
-            .join(", ")}] to experiment "${experiment.name}" (ID: ${experimentId})`,
-        );
+        this.logger.log({
+          msg: "Protocols added to experiment successfully",
+          operation: "addExperimentProtocols",
+          context: AddExperimentProtocolsUseCase.name,
+          experimentId,
+          userId: currentUserId,
+          protocolCount: protocols.length,
+          status: "success",
+        });
         return success(addProtocolsResult.value);
       },
     );

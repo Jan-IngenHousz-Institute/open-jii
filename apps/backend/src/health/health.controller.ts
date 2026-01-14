@@ -8,7 +8,11 @@ export class HealthController {
 
   @Get()
   check() {
-    this.logger.log("Health check endpoint called");
+    this.logger.log({
+      msg: "Health check endpoint called",
+      operation: "check",
+      context: HealthController.name,
+    });
     return {
       status: "ok",
       timestamp: new Date().toISOString(),
