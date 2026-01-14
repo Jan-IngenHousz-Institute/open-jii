@@ -836,15 +836,6 @@ module "opennext_waf" {
   rate_limit         = 500
   log_retention_days = 30
 
-  # Apply restrictive rate limiting to sensitive routes with flexible configuration
-  restrictive_rate_limit_routes = [
-    {
-      search_string         = "login"
-      positional_constraint = "CONTAINS_WORD"
-      method                = "POST"
-    },
-  ]
-
   tags = {
     Environment = var.environment
     Project     = "open-jii"
