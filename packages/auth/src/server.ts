@@ -76,7 +76,14 @@ export const auth = betterAuth({
   },
   advanced: {
     cookiePrefix: `better-auth.${environmentPrefix}`,
-    ...(cookieDomain ? { cookieDomain } : {}),
+    ...(cookieDomain
+      ? {
+          crossSubDomainCookies: {
+            enabled: true,
+            domain: cookieDomain,
+          },
+        }
+      : {}),
     database: {
       generateId: false, // Let Postgres generate UUIDs via defaultRandom()
     },
