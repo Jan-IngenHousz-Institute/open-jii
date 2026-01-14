@@ -67,4 +67,17 @@ export const db = drizzle({ client: getClient(), schema });
 export const lambdaDb = (secrets: Record<string, unknown>) =>
   drizzle({ client: getClient(secrets), schema });
 
+/**
+ * Create a database instance with dynamic credentials
+ * This is useful for applications that need to fetch credentials at runtime
+ * (e.g., from AWS Secrets Manager after rotation)
+ */
+export const createDatabaseWithCredentials = (credentials: {
+  username: string;
+  password: string;
+}) => {
+  const client = getClient(credentials);
+  return drizzle({ client, schema });
+};
+
 export type DatabaseInstance = typeof db;

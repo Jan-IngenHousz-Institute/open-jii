@@ -1211,6 +1211,10 @@ module "backend_ecs" {
       value = module.aurora_db.cluster_port
     },
     {
+      name  = "DB_SECRET_ARN"
+      value = module.aurora_db.master_user_secret_arn
+    },
+    {
       name  = "LOG_LEVEL"
       value = "debug"
     },
@@ -1251,6 +1255,10 @@ module "backend_ecs" {
   # Additional IAM policies for the task role
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn
+  ]
+
+  runtime_secrets_arns = [
+    module.aurora_db.master_user_secret_arn
   ]
 
   tags = {
