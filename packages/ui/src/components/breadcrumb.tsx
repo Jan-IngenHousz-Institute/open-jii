@@ -16,10 +16,7 @@ const BreadcrumbList = React.forwardRef<HTMLOListElement, React.ComponentPropsWi
   ({ className, ...props }, ref) => (
     <ol
       ref={ref}
-      className={cn(
-        "text-muted-foreground flex flex-wrap items-center gap-1.5 break-words text-sm sm:gap-2.5",
-        className,
-      )}
+      className={cn("flex flex-wrap items-center break-words text-sm font-medium gap-1", className)}
       {...props}
     />
   ),
@@ -69,7 +66,7 @@ const BreadcrumbSeparator = ({ children, className, ...props }: React.ComponentP
   <li
     role="presentation"
     aria-hidden="true"
-    className={cn("[&>svg]:h-3.5 [&>svg]:w-3.5", className)}
+    className={cn("text-muted-foreground [&>svg]:h-4 [&>svg]:w-4", className)}
     {...props}
   >
     {children ?? <ChevronRightIcon />}

@@ -56,6 +56,13 @@ vi.mock("~/components/experiment-overview/experiment-title", () => ({
   ExperimentTitle: ({ name }: { name: string }) => <div data-testid="experiment-title">{name}</div>,
 }));
 
+// Mock breadcrumb context
+vi.mock("@/components/navigation/breadcrumb-context", () => ({
+  useBreadcrumbContext: () => ({
+    setNameMapping: vi.fn(),
+  }),
+}));
+
 // -------------------
 // Test Data
 // -------------------
