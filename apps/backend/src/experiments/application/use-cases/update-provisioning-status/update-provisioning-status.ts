@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentProvisioningStatus } from "@repo/api";
 
+import { NOT_FOUND, INTERNAL_SERVER_ERROR } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentDto, ExperimentStatus } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -23,23 +24,28 @@ export class UpdateProvisioningStatusUseCase {
     pipelineId?: string;
     schemaName?: string;
   }): Promise<Result<ExperimentDto["status"]>> {
-    this.logger.log(
-      `Processing Databricks workflow status update for experiment ID ${experimentId} with status ${status}`,
-    );
-
-    if (pipelineId) {
-      this.logger.log(`Pipeline ID: ${pipelineId}`);
-    }
-    if (schemaName) {
-      this.logger.log(`Schema Name: ${schemaName}`);
-    }
+    this.logger.log({
+      msg: "Processing Databricks workflow status update",
+      operation: "update_provisioning_status",
+      context: UpdateProvisioningStatusUseCase.name,
+      experimentId,
+      status,
+      pipelineId,
+      schemaName,
+    });
 
     // Get the current experiment status first to make the operation idempotent
     const experimentResult = await this.experimentRepository.findOne(experimentId);
 
     return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
-        this.logger.error(`Experiment with ID ${experimentId} not found`);
+        this.logger.error({
+          msg: "Experiment not found",
+          errorCode: NOT_FOUND,
+          operation: "update_provisioning_status",
+          context: UpdateProvisioningStatusUseCase.name,
+          experimentId,
+        });
         return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
       }
 
@@ -67,15 +73,24 @@ export class UpdateProvisioningStatusUseCase {
 
       // If the experiment is already in the target state and no new metadata, return success without changing
       if (experiment.status === targetStatus && !pipelineId && !schemaName) {
-        this.logger.log(
-          `Experiment ${experimentId} is already in ${targetStatus} state. No update needed.`,
-        );
+        this.logger.log({
+          msg: "Experiment already in target state, no update needed",
+          operation: "update_provisioning_status",
+          context: UpdateProvisioningStatusUseCase.name,
+          experimentId,
+          status: targetStatus,
+        });
         return success(experiment.status);
       }
 
-      this.logger.log(
-        `Updating experiment ${experimentId} status from ${experiment.status} to ${targetStatus}`,
-      );
+      this.logger.log({
+        msg: "Updating experiment status",
+        operation: "update_provisioning_status",
+        context: UpdateProvisioningStatusUseCase.name,
+        experimentId,
+        fromStatus: experiment.status,
+        toStatus: targetStatus,
+      });
 
       const updateExperimentStatusResult = await this.experimentRepository.update(
         experimentId,
@@ -83,23 +98,39 @@ export class UpdateProvisioningStatusUseCase {
       );
 
       if (updateExperimentStatusResult.isFailure()) {
-        this.logger.error(
-          `Failed to update experiment ${experimentId} status: ${updateExperimentStatusResult.error.message}`,
-        );
+        this.logger.error({
+          msg: "Failed to update experiment status",
+          errorCode: updateExperimentStatusResult.error.code,
+          operation: "update_provisioning_status",
+          context: UpdateProvisioningStatusUseCase.name,
+          experimentId,
+          error: updateExperimentStatusResult.error,
+        });
         return updateExperimentStatusResult;
       }
 
       if (updateExperimentStatusResult.value.length === 0) {
-        this.logger.error(`No experiment was updated for ID ${experimentId}`);
+        this.logger.error({
+          msg: "No experiment was updated",
+          errorCode: INTERNAL_SERVER_ERROR,
+          operation: "update_provisioning_status",
+          context: UpdateProvisioningStatusUseCase.name,
+          experimentId,
+        });
         return failure(
           AppError.internal(`Failed to update experiment status for ID ${experimentId}`),
         );
       }
 
       const updatedExperiment = updateExperimentStatusResult.value[0];
-      this.logger.log(
-        `Successfully updated experiment "${updatedExperiment.name}" (ID: ${experimentId}) status to "${targetStatus}"`,
-      );
+      this.logger.log({
+        msg: "Successfully updated experiment status",
+        operation: "update_provisioning_status",
+        context: UpdateProvisioningStatusUseCase.name,
+        experimentId,
+        status: "success",
+        newStatus: targetStatus,
+      });
       return success(updatedExperiment.status);
     });
   }

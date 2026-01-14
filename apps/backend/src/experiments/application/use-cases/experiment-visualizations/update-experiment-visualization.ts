@@ -1,5 +1,9 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import {
+  EXPERIMENT_SCHEMA_NOT_READY,
+  EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
+} from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   UpdateExperimentVisualizationDto,
@@ -26,7 +30,13 @@ export class UpdateExperimentVisualizationUseCase {
     data: UpdateExperimentVisualizationDto,
     userId: string,
   ): Promise<Result<ExperimentVisualizationDto>> {
-    this.logger.log(`Updating visualization ${visualizationId} by user ${userId}`);
+    this.logger.log({
+      msg: "Updating visualization",
+      operation: "updateExperimentVisualization",
+      context: UpdateExperimentVisualizationUseCase.name,
+      visualizationId,
+      userId,
+    });
 
     // Find the visualization first
     const visualizationResult =
@@ -34,7 +44,13 @@ export class UpdateExperimentVisualizationUseCase {
 
     return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
       if (!visualization) {
-        this.logger.warn(`Attempt to update non-existent visualization with ID ${visualizationId}`);
+        this.logger.warn({
+          msg: "Attempt to update non-existent visualization",
+          operation: "updateExperimentVisualization",
+          context: UpdateExperimentVisualizationUseCase.name,
+          visualizationId,
+          userId,
+        });
         return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
       }
 
@@ -56,33 +72,56 @@ export class UpdateExperimentVisualizationUseCase {
           isAdmin: boolean;
         }) => {
           if (!experiment) {
-            this.logger.warn(
-              `Visualization ${visualizationId} belongs to non-existent experiment ${visualization.experimentId}`,
-            );
+            this.logger.warn({
+              msg: "Visualization belongs to non-existent experiment",
+              operation: "updateExperimentVisualization",
+              context: UpdateExperimentVisualizationUseCase.name,
+              experimentId: visualization.experimentId,
+              visualizationId,
+              userId,
+            });
             return failure(
               AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
             );
           }
 
           if (!hasArchiveAccess) {
-            this.logger.warn(
-              `User ${userId} does not have access to experiment ${visualization.experimentId}`,
-            );
+            this.logger.warn({
+              msg: "User does not have access to experiment",
+              operation: "updateExperimentVisualization",
+              context: UpdateExperimentVisualizationUseCase.name,
+              experimentId: visualization.experimentId,
+              visualizationId,
+              userId,
+            });
             return failure(AppError.forbidden("You do not have access to this experiment"));
           }
 
           // Check if user can modify this visualization
           if (visualization.createdBy !== userId && !isAdmin) {
-            this.logger.warn(
-              `User ${userId} does not have permission to modify visualization ${visualizationId}`,
-            );
+            this.logger.warn({
+              msg: "User does not have permission to modify visualization",
+              operation: "updateExperimentVisualization",
+              context: UpdateExperimentVisualizationUseCase.name,
+              experimentId: visualization.experimentId,
+              visualizationId,
+              userId,
+            });
             return failure(
               AppError.forbidden("You do not have permission to modify this visualization"),
             );
           }
 
           if (!experiment.schemaName) {
-            this.logger.error(`Experiment ${visualization.experimentId} has no schema name`);
+            this.logger.error({
+              msg: "Experiment has no schema name",
+              errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+              operation: "updateExperimentVisualization",
+              context: UpdateExperimentVisualizationUseCase.name,
+              experimentId: visualization.experimentId,
+              visualizationId,
+              userId,
+            });
             return failure(AppError.internal("Experiment schema not provisioned"));
           }
 
@@ -93,13 +132,26 @@ export class UpdateExperimentVisualizationUseCase {
           );
 
           if (dataSourceValidation.isFailure()) {
-            this.logger.warn(
-              `Data source validation failed: ${dataSourceValidation.error.message}`,
-            );
+            this.logger.warn({
+              msg: "Data source validation failed",
+              operation: "updateExperimentVisualization",
+              context: UpdateExperimentVisualizationUseCase.name,
+              experimentId: visualization.experimentId,
+              visualizationId,
+              userId,
+              error: dataSourceValidation.error.message,
+            });
             return failure(dataSourceValidation.error);
           }
 
-          this.logger.debug(`Updating visualization in repository: ${visualizationId}`);
+          this.logger.debug({
+            msg: "Updating visualization in repository",
+            operation: "updateExperimentVisualization",
+            context: UpdateExperimentVisualizationUseCase.name,
+            experimentId: visualization.experimentId,
+            visualizationId,
+            userId,
+          });
           // Update the visualization
           const updateResult = await this.experimentVisualizationRepository.update(
             visualizationId,
@@ -108,14 +160,28 @@ export class UpdateExperimentVisualizationUseCase {
 
           return updateResult.chain((updatedVisualizations: ExperimentVisualizationDto[]) => {
             if (updatedVisualizations.length === 0) {
-              this.logger.error(
-                `Failed to update visualization ${visualizationId} by user ${userId}`,
-              );
+              this.logger.error({
+                msg: "Failed to update visualization",
+                errorCode: EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
+                operation: "updateExperimentVisualization",
+                context: UpdateExperimentVisualizationUseCase.name,
+                experimentId: visualization.experimentId,
+                visualizationId,
+                userId,
+              });
               return failure(AppError.internal("Failed to update visualization"));
             }
 
             const updatedVisualization = updatedVisualizations[0];
-            this.logger.log(`Successfully updated visualization ${visualizationId}`);
+            this.logger.log({
+              msg: "Successfully updated visualization",
+              operation: "updateExperimentVisualization",
+              context: UpdateExperimentVisualizationUseCase.name,
+              experimentId: visualization.experimentId,
+              visualizationId,
+              userId,
+              status: "success",
+            });
             return success(updatedVisualization);
           });
         },

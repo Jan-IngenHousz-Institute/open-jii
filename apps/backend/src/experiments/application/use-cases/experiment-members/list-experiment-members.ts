@@ -16,7 +16,13 @@ export class ListExperimentMembersUseCase {
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentMemberDto[]>> {
-    this.logger.log(`Listing members of experiment ${experimentId} for user ${userId}`);
+    this.logger.log({
+      msg: "Listing experiment members",
+      operation: "list-experiment-members",
+      context: ListExperimentMembersUseCase.name,
+      experimentId,
+      userId,
+    });
 
     // Check if experiment exists and if user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -31,28 +37,42 @@ export class ListExperimentMembersUseCase {
         isAdmin: boolean;
       }) => {
         if (!experiment) {
-          this.logger.warn(
-            `Attempt to list members of non-existent experiment with ID ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to list members of non-existent experiment",
+            operation: "list-experiment-members",
+            context: ListExperimentMembersUseCase.name,
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} attempted to access members of experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to access experiment members without proper permissions",
+            operation: "list-experiment-members",
+            context: ListExperimentMembersUseCase.name,
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        this.logger.debug(
-          `Fetching members for experiment "${experiment.name}" (ID: ${experimentId})`,
-        );
+        this.logger.debug({
+          msg: "Fetching members for experiment",
+          operation: "list-experiment-members",
+          context: ListExperimentMembersUseCase.name,
+          experimentId,
+        });
         // Return the members
         const result = this.experimentMemberRepository.getMembers(experimentId);
 
-        this.logger.debug(
-          `Successfully retrieved members for experiment "${experiment.name}" (ID: ${experimentId})`,
-        );
+        this.logger.debug({
+          msg: "Successfully retrieved members for experiment",
+          operation: "list-experiment-members",
+          context: ListExperimentMembersUseCase.name,
+          experimentId,
+          status: "success",
+        });
         return result;
       },
     );

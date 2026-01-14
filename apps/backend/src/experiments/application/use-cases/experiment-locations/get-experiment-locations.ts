@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { EXPERIMENT_LOCATIONS_LIST_FAILED } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { LocationDto } from "../../../core/models/experiment-locations.model";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
@@ -15,36 +16,64 @@ export class GetExperimentLocationsUseCase {
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<LocationDto[]>> {
-    this.logger.log(`Getting locations for experiment ${experimentId} by user ${userId}`);
+    this.logger.log({
+      msg: "Getting locations for experiment",
+      operation: "getExperimentLocations",
+      context: GetExperimentLocationsUseCase.name,
+      experimentId,
+      userId,
+    });
 
     // Check if experiment exists and user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
     if (accessResult.isFailure()) {
-      this.logger.error(
-        `Failed to check experiment existence for ${experimentId}:`,
-        accessResult.error.message,
-      );
+      this.logger.error({
+        msg: "Failed to check experiment existence",
+        errorCode: EXPERIMENT_LOCATIONS_LIST_FAILED,
+        operation: "getExperimentLocations",
+        context: GetExperimentLocationsUseCase.name,
+        experimentId,
+        userId,
+        error: accessResult.error.message,
+      });
       return failure(AppError.notFound("Experiment not found"));
     }
 
     if (!accessResult.value.experiment) {
-      this.logger.warn(`Experiment ${experimentId} not found`);
+      this.logger.warn({
+        msg: "Experiment not found",
+        operation: "getExperimentLocations",
+        context: GetExperimentLocationsUseCase.name,
+        experimentId,
+        userId,
+      });
       return failure(AppError.notFound("Experiment not found"));
     }
 
     const locationsResult = await this.locationRepository.findByExperimentId(experimentId);
 
     if (locationsResult.isFailure()) {
-      this.logger.error(
-        `Failed to retrieve locations for experiment ${experimentId}:`,
-        locationsResult.error.message,
-      );
+      this.logger.error({
+        msg: "Failed to retrieve locations for experiment",
+        errorCode: EXPERIMENT_LOCATIONS_LIST_FAILED,
+        operation: "getExperimentLocations",
+        context: GetExperimentLocationsUseCase.name,
+        experimentId,
+        userId,
+        error: locationsResult.error.message,
+      });
       return locationsResult;
     }
 
-    this.logger.log(
-      `Successfully retrieved ${locationsResult.value.length} locations for experiment ${experimentId}`,
-    );
+    this.logger.log({
+      msg: "Successfully retrieved locations for experiment",
+      operation: "getExperimentLocations",
+      context: GetExperimentLocationsUseCase.name,
+      experimentId,
+      userId,
+      locationCount: locationsResult.value.length,
+      status: "success",
+    });
     return success(locationsResult.value);
   }
 }

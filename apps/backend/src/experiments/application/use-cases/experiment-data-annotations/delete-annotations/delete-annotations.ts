@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { AnnotationRowsAffected } from "@repo/api";
 
+import { EXPERIMENT_SCHEMA_NOT_READY } from "../../../../../common/utils/error-codes";
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
@@ -25,11 +26,22 @@ export class DeleteAnnotationsUseCase {
     request: DeleteAnnotationsRequest,
     userId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Deleting annotation(s) from experiment data for user ${userId}`);
+    this.logger.log({
+      msg: "Deleting annotation(s) from experiment data",
+      operation: "deleteAnnotations",
+      context: DeleteAnnotationsUseCase.name,
+      experimentId,
+      userId,
+    });
 
     // Validate that the user ID is provided
     if (!userId) {
-      this.logger.warn("Attempt to delete annotation(s) for experiment without user ID");
+      this.logger.warn({
+        msg: "Attempt to delete annotation(s) for experiment without user ID",
+        operation: "deleteAnnotations",
+        context: DeleteAnnotationsUseCase.name,
+        experimentId,
+      });
       return failure(
         AppError.badRequest("User ID is required to delete annotation(s) for an experiment"),
       );
@@ -47,18 +59,34 @@ export class DeleteAnnotationsUseCase {
         experiment: ExperimentDto | null;
       }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment with ID ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            operation: "deleteAnnotations",
+            context: DeleteAnnotationsUseCase.name,
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to access experiment data without proper permissions",
+            operation: "deleteAnnotations",
+            context: DeleteAnnotationsUseCase.name,
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (!experiment.schemaName) {
-          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          this.logger.error({
+            msg: "Experiment has no schema name",
+            errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+            operation: "deleteAnnotations",
+            context: DeleteAnnotationsUseCase.name,
+            experimentId,
+            error: "Experiment schema not provisioned",
+          });
           return failure(AppError.internal("Experiment schema not provisioned"));
         }
 
@@ -80,9 +108,14 @@ export class DeleteAnnotationsUseCase {
             );
 
             if (refreshResult.isFailure()) {
-              this.logger.warn(
-                `Failed to trigger silver data refresh after deleting annotation: ${refreshResult.error.message}`,
-              );
+              this.logger.warn({
+                msg: "Failed to trigger silver data refresh after deleting annotation",
+                operation: "deleteAnnotations",
+                context: DeleteAnnotationsUseCase.name,
+                experimentId,
+                schemaName: experiment.schemaName,
+                error: refreshResult.error.message,
+              });
               // Don't fail the whole operation, just log the warning
             }
           }
@@ -108,9 +141,14 @@ export class DeleteAnnotationsUseCase {
             );
 
             if (refreshResult.isFailure()) {
-              this.logger.warn(
-                `Failed to trigger silver data refresh after bulk deleting annotations: ${refreshResult.error.message}`,
-              );
+              this.logger.warn({
+                msg: "Failed to trigger silver data refresh after bulk deleting annotations",
+                operation: "deleteAnnotations",
+                context: DeleteAnnotationsUseCase.name,
+                experimentId,
+                schemaName: experiment.schemaName,
+                error: refreshResult.error.message,
+              });
               // Don't fail the whole operation, just log the warning
             }
           }

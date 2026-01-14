@@ -2,6 +2,7 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { DATABRICKS_FILE_FAILED } from "../../../../utils/error-codes";
 import { Result, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -39,7 +40,12 @@ export class DatabricksFilesService {
         const host = this.configService.getHost();
         const apiUrl = `${host}${DatabricksFilesService.FILES_ENDPOINT}`;
 
-        this.logger.debug(`Uploading file to Databricks at path ${filePath}`);
+        this.logger.debug({
+          msg: "Uploading file to Databricks",
+          operation: "uploadFile",
+          context: DatabricksFilesService.name,
+          filePath,
+        });
 
         const fullPath = `${apiUrl}${filePath}`;
 
@@ -54,14 +60,26 @@ export class DatabricksFilesService {
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
         });
 
-        this.logger.log(`Successfully uploaded file to Databricks at path ${filePath}`);
+        this.logger.log({
+          msg: "Successfully uploaded file to Databricks",
+          operation: "uploadFile",
+          context: DatabricksFilesService.name,
+          filePath,
+          status: "success",
+        });
 
         return {
           filePath,
         };
       },
       (error) => {
-        this.logger.error(`Failed to upload file to Databricks: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to upload file to Databricks",
+          errorCode: DATABRICKS_FILE_FAILED,
+          operation: "uploadFile",
+          context: DatabricksFilesService.name,
+          error,
+        });
         return apiErrorMapper(
           `Failed to upload file to Databricks: ${getAxiosErrorMessage(error)}`,
         );

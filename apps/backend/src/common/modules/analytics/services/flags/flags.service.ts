@@ -8,6 +8,7 @@ import {
   shutdownPostHog,
 } from "@repo/analytics/server";
 
+import { ANALYTICS_INIT_FAILED, FEATURE_FLAG_FAILED } from "../../../../utils/error-codes";
 import { AnalyticsConfigService } from "../config/config.service";
 
 /**
@@ -31,7 +32,12 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
     try {
       const posthogKey = this.configService.posthogKey;
       if (!posthogKey) {
-        this.logger.warn("PostHog key is missing after configuration check");
+        this.logger.warn({
+          msg: "PostHog key is missing after configuration check",
+          errorCode: ANALYTICS_INIT_FAILED,
+          operation: "initialize",
+          context: FlagsService.name,
+        });
         return;
       }
 
@@ -40,19 +46,40 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         this.configService.getPostHogServerConfig(),
       );
       if (this.initialized) {
-        this.logger.log("PostHog initialized successfully");
+        this.logger.log({
+          msg: "PostHog initialized successfully",
+          operation: "initialize",
+          context: FlagsService.name,
+          status: "success",
+        });
       } else {
-        this.logger.warn("PostHog initialization failed - using default feature flag values");
+        this.logger.warn({
+          msg: "PostHog initialization failed - using default feature flag values",
+          errorCode: ANALYTICS_INIT_FAILED,
+          operation: "initialize",
+          context: FlagsService.name,
+        });
       }
     } catch (error) {
-      this.logger.error("Failed to initialize PostHog", error);
+      this.logger.error({
+        msg: "Failed to initialize PostHog",
+        errorCode: ANALYTICS_INIT_FAILED,
+        operation: "initialize",
+        context: FlagsService.name,
+        error,
+      });
     }
   }
 
   async onModuleDestroy() {
     if (this.initialized) {
       await shutdownPostHog();
-      this.logger.log("PostHog shutdown completed");
+      this.logger.log({
+        msg: "PostHog shutdown completed",
+        operation: "onModuleDestroy",
+        context: FlagsService.name,
+        status: "success",
+      });
     }
   }
 
@@ -83,7 +110,14 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
 
       return result;
     } catch (error) {
-      this.logger.error(`Error checking feature flag ${flagKey}:`, error);
+      this.logger.error({
+        msg: "Error checking feature flag",
+        errorCode: FEATURE_FLAG_FAILED,
+        operation: "isFeatureFlagEnabled",
+        context: FlagsService.name,
+        flagKey,
+        error,
+      });
       return FEATURE_FLAG_DEFAULTS[flagKey];
     }
   }

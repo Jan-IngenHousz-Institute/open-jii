@@ -26,11 +26,22 @@ export class CreateTransferRequestUseCase {
     userEmail: string | null | undefined,
     input: CreateTransferRequestInput,
   ): Promise<Result<BaseTransferRequest>> {
-    this.logger.log(`Creating transfer request for user ${userId}`);
+    this.logger.log({
+      msg: "Creating transfer request",
+      operation: "create_transfer_request",
+      context: CreateTransferRequestUseCase.name,
+      userId,
+      projectIdOld: input.projectIdOld,
+    });
 
     // Validate that the user email is provided
     if (!userEmail) {
-      this.logger.warn(`User ${userId} does not have an email address`);
+      this.logger.warn({
+        msg: "User does not have an email address",
+        operation: "create_transfer_request",
+        context: CreateTransferRequestUseCase.name,
+        userId,
+      });
       return failure(AppError.badRequest("User account does not have an email address"));
     }
 
@@ -45,9 +56,14 @@ export class CreateTransferRequestUseCase {
     }
 
     if (existingRequestResult.value) {
-      this.logger.warn(
-        `User ${userId} already has a transfer request for project ${input.projectIdOld}`,
-      );
+      this.logger.warn({
+        msg: "User already has a transfer request for project",
+        operation: "create_transfer_request",
+        context: CreateTransferRequestUseCase.name,
+        userId,
+        projectIdOld: input.projectIdOld,
+        requestStatus: existingRequestResult.value.status,
+      });
       return failure(
         AppError.forbidden(
           `You already have a transfer request for this project (Status: ${existingRequestResult.value.status})`,
@@ -77,9 +93,14 @@ export class CreateTransferRequestUseCase {
     );
 
     if (emailResult.isFailure()) {
-      this.logger.warn(
-        `Failed to send transfer request confirmation email: ${emailResult.error.message}`,
-      );
+      this.logger.warn({
+        msg: "Failed to send transfer request confirmation email",
+        operation: "create_transfer_request",
+        context: CreateTransferRequestUseCase.name,
+        userId,
+        projectIdOld: input.projectIdOld,
+        error: emailResult.error,
+      });
       // Don't fail the whole operation, just log the warning
     }
 
