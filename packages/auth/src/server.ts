@@ -39,8 +39,7 @@ export const auth = betterAuth({
       session: schema.sessions,
       account: schema.accounts,
       verification: schema.verifications,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-      rateLimit: schema.rateLimits as any,
+      rateLimit: schema.rateLimits,
     },
   }),
   secret: process.env.AUTH_SECRET,
@@ -68,7 +67,7 @@ export const auth = betterAuth({
     },
   },
   rateLimit: {
-    enabled: process.env.NODE_ENV === "production" || process.env.RATE_LIMIT_ENABLED === "true",
+    enabled: true,
     window: 60, // 60 seconds
     max: 100, // 100 requests per window
     storage: "database", // Use database storage for production reliability

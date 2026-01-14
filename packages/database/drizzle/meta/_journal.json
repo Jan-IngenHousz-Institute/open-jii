@@ -120,6 +120,13 @@
       "when": 1768242897313,
       "tag": "0016_curved_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1768390388816,
+      "tag": "0017_white_arclight",
+      "breakpoints": true
     }
   ]
 }
