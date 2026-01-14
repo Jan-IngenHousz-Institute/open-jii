@@ -39,4 +39,11 @@ ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY
 ALTER TABLE "accounts" DROP COLUMN "type";--> statement-breakpoint
 ALTER TABLE "accounts" DROP COLUMN "token_type";--> statement-breakpoint
 ALTER TABLE "accounts" DROP COLUMN "session_state";--> statement-breakpoint
-ALTER TABLE "sessions" ADD CONSTRAINT "sessions_token_unique" UNIQUE("token");
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_token_unique" UNIQUE("token");--> statement-breakpoint
+CREATE TABLE "rate_limits" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"key" text NOT NULL,
+	"count" integer DEFAULT 0 NOT NULL,
+	"last_request" timestamp NOT NULL,
+	CONSTRAINT "rate_limits_key_unique" UNIQUE("key")
+);

@@ -71,6 +71,14 @@ export const verifications = pgTable("verifications", {
   ...timestamps,
 });
 
+// Rate Limit Table - for Better Auth rate limiting
+export const rateLimits = pgTable("rate_limits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull().default(0),
+  lastRequest: timestamp("last_request").notNull(),
+});
+
 // Organization Types Enum
 export const organizationTypeEnum = pgEnum("organization_type", [
   "research_institute",

@@ -39,6 +39,8 @@ export const auth = betterAuth({
       session: schema.sessions,
       account: schema.accounts,
       verification: schema.verifications,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+      rateLimit: schema.rateLimits as any,
     },
   }),
   secret: process.env.AUTH_SECRET,
@@ -63,6 +65,33 @@ export const auth = betterAuth({
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60, // 5 minutes
+    },
+  },
+  rateLimit: {
+    enabled: process.env.NODE_ENV === "production" || process.env.RATE_LIMIT_ENABLED === "true",
+    window: 60, // 60 seconds
+    max: 100, // 100 requests per window
+    storage: "database", // Use database storage for production reliability
+    customRules: {
+      // Stricter limits for OTP/email endpoints to prevent abuse
+      "/sign-in/email": {
+        window: 60, // 1 minute
+        max: 5, // 5 attempts per minute
+      },
+      "/sign-up/email": {
+        window: 60,
+        max: 5,
+      },
+      "/email-otp/send-verification-otp": {
+        window: 60,
+        max: 3, // Very strict - 3 OTP sends per minute
+      },
+      "/email-otp/verify-email": {
+        window: 60,
+        max: 10, // Allow more verification attempts
+      },
+      // Less restrictive for session checks
+      "/get-session": false, // Disable rate limiting for session checks
     },
   },
   user: {
