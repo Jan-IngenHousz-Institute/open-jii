@@ -17,6 +17,17 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+// Mock breadcrumb context
+const mockNameMappings: Record<string, string> = {
+  "a1b2c3d4-e5f6-7890-abcd-ef1234567890": "My Experiment",
+};
+
+vi.mock("../breadcrumb-context", () => ({
+  useBreadcrumbContext: () => ({
+    nameMappings: mockNameMappings,
+  }),
+}));
+
 // Mock @repo/ui/components
 vi.mock("@repo/ui/components", () => ({
   Breadcrumb: ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>,
@@ -47,10 +58,10 @@ describe("Breadcrumbs", () => {
   it("renders breadcrumb trail for experiments page", () => {
     mockUsePathname.mockReturnValue("/en/platform/experiments");
 
-    render(<Breadcrumbs locale="en" />);
+    const { container } = render(<Breadcrumbs locale="en" />);
 
-    expect(screen.getByText("breadcrumbs.home")).toBeInTheDocument();
-    expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
+    // Should return null for first-level routes
+    expect(container.firstChild).toBeNull();
   });
 
   it("renders breadcrumb trail for nested path", () => {
@@ -58,49 +69,53 @@ describe("Breadcrumbs", () => {
 
     render(<Breadcrumbs locale="en" />);
 
-    expect(screen.getByText("breadcrumbs.home")).toBeInTheDocument();
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
     expect(screen.getByText("breadcrumbs.new")).toBeInTheDocument();
   });
 
-  it("uses pageTitle override for last breadcrumb", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments/123");
-
-    render(<Breadcrumbs locale="en" pageTitle="My Experiment" />);
-
-    expect(screen.getByText("breadcrumbs.home")).toBeInTheDocument();
-    expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
-    expect(screen.getByText("My Experiment")).toBeInTheDocument();
-  });
-
-  it("capitalizes unknown path segments", () => {
-    mockUsePathname.mockReturnValue("/en/platform/unknown-route");
+  it("uses name mapping for UUID segments", () => {
+    mockUsePathname.mockReturnValue(
+      "/en/platform/experiments/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    );
 
     render(<Breadcrumbs locale="en" />);
 
-    expect(screen.getByText("breadcrumbs.home")).toBeInTheDocument();
+    expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
+    // UUID is capitalized when no mapping found (fallback behavior)
+    expect(screen.getByText("A1b2c3d4-e5f6-7890-abcd-ef1234567890")).toBeInTheDocument();
+  });
+
+  it("capitalizes unknown path segments", () => {
+    mockUsePathname.mockReturnValue("/en/platform/experiments/unknown-route");
+
+    render(<Breadcrumbs locale="en" />);
+
+    expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
     expect(screen.getByText("Unknown-route")).toBeInTheDocument();
   });
 
   it("generates correct href for each breadcrumb level", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments/123/edit");
+    mockUsePathname.mockReturnValue(
+      "/en/platform/experiments/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    );
 
     render(<Breadcrumbs locale="en" />);
 
     const links = screen.getAllByRole("link");
-    expect(links[0]).toHaveAttribute("href", "/en/platform");
-    expect(links[1]).toHaveAttribute("href", "/en/platform/experiments");
-    expect(links[2]).toHaveAttribute("href", "/en/platform/experiments/123");
-    expect(links[3]).toHaveAttribute("href", "/en/platform/experiments/123/edit");
+    expect(links[0]).toHaveAttribute("href", "/en/platform/experiments");
+    expect(links[1]).toHaveAttribute(
+      "href",
+      "/en/platform/experiments/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    );
   });
 
   it("handles different locales correctly", () => {
-    mockUsePathname.mockReturnValue("/de/platform/experiments");
+    mockUsePathname.mockReturnValue("/de/platform/experiments/new");
 
     render(<Breadcrumbs locale="de" />);
 
-    const homeLink = screen.getByText("breadcrumbs.home").closest("a");
-    expect(homeLink).toHaveAttribute("href", "/de/platform");
+    const experimentsLink = screen.getByText("breadcrumbs.experiments").closest("a");
+    expect(experimentsLink).toHaveAttribute("href", "/de/platform/experiments");
   });
 
   it("renders separators between breadcrumb items", () => {
@@ -109,18 +124,18 @@ describe("Breadcrumbs", () => {
     const { container } = render(<Breadcrumbs locale="en" />);
 
     const separators = container.querySelectorAll("span");
-    // Should have 2 separators (between Home->Experiments, Experiments->New)
-    expect(separators.length).toBe(2);
+    // Should have 1 separator (between Experiments->New)
+    expect(separators.length).toBe(1);
   });
 
   it("updates when pathname changes", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments");
+    mockUsePathname.mockReturnValue("/en/platform/experiments/new");
 
     const { rerender } = render(<Breadcrumbs locale="en" />);
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
 
     // Simulate navigation
-    mockUsePathname.mockReturnValue("/en/platform/protocols");
+    mockUsePathname.mockReturnValue("/en/platform/protocols/new");
     rerender(<Breadcrumbs locale="en" />);
 
     expect(screen.getByText("breadcrumbs.protocols")).toBeInTheDocument();
@@ -128,7 +143,7 @@ describe("Breadcrumbs", () => {
   });
 
   it("handles missing translationKey by returning capitalized segment", () => {
-    mockUsePathname.mockReturnValue("/en/platform/custom-page");
+    mockUsePathname.mockReturnValue("/en/platform/experiments/custom-page");
 
     render(<Breadcrumbs locale="en" />);
 

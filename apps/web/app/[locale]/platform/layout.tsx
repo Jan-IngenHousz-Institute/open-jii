@@ -6,6 +6,7 @@ import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 
+import { BreadcrumbProvider } from "../../../components/navigation/breadcrumb-context";
 import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
 import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
 
@@ -20,11 +21,9 @@ const getCallbackUrl = async () => {
 
 export default async function AppLayout({
   children,
-  pageTitle,
   params,
 }: Readonly<{
   children: React.ReactNode;
-  pageTitle?: string;
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
@@ -45,17 +44,19 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <NavigationSidebarWrapper locale={locale} />
-      <SidebarInset>
-        <NavigationTopbar locale={locale} user={session.user} />
-        <div className="flex flex-1 flex-col gap-4 p-6 pt-4">
-          <div className="mx-auto w-full max-w-7xl">
-            <Breadcrumbs pageTitle={pageTitle} locale={locale} />
-            {children}
+      <BreadcrumbProvider>
+        <NavigationSidebarWrapper locale={locale} />
+        <SidebarInset>
+          <NavigationTopbar locale={locale} user={session.user} />
+          <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
+            <div className="mx-auto w-full max-w-7xl">
+              <Breadcrumbs locale={locale} />
+              {children}
+            </div>
           </div>
-        </div>
-      </SidebarInset>
-      <Toaster />
+        </SidebarInset>
+        <Toaster />
+      </BreadcrumbProvider>
     </SidebarProvider>
   );
 }
