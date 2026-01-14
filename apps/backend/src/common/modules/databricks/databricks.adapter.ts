@@ -4,6 +4,7 @@ import { ExperimentVisualizationDto } from "../../../experiments/core/models/exp
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
+import { DATABRICKS_TABLE_FAILED, DATABRICKS_FILE_FAILED } from "../../utils/error-codes";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -66,7 +67,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     schemaName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>> {
-    this.logger.log(`Triggering ambyte processing job for schema ${schemaName}`);
+    this.logger.log({
+      msg: "Triggering ambyte processing job",
+      operation: "triggerAmbyteProcessingJob",
+      context: DatabricksAdapter.name,
+      schemaName,
+    });
 
     // Add experiment schema to params
     const jobParams = {
@@ -108,7 +114,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   ): Promise<Result<SchemaData>> {
     // tableName parameter is available for future use (e.g., logging, validation)
     if (tableName) {
-      this.logger.debug(`Executing SQL query on table ${tableName} in schema ${schemaName}`);
+      this.logger.debug({
+        msg: "Executing SQL query",
+        operation: "executeSqlQuery",
+        context: DatabricksAdapter.name,
+        schemaName,
+        tableName,
+      });
     }
     const result = await this.sqlService.executeSqlQuery(schemaName, sqlStatement, "INLINE");
     return result as Result<SchemaData>;
@@ -144,13 +156,25 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     dataConfig: ExperimentVisualizationDto["dataConfig"],
     schemaName: string,
   ): Promise<Result<boolean>> {
-    this.logger.log(`Validating data sources for schema ${schemaName}`);
+    this.logger.log({
+      msg: "Validating data sources",
+      operation: "validateDataSources",
+      context: DatabricksAdapter.name,
+      schemaName,
+    });
 
     // Check if table exists in Databricks
     const tablesResult = await this.listTables(schemaName);
 
     if (tablesResult.isFailure()) {
-      this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
+      this.logger.error({
+        msg: "Failed to list tables",
+        errorCode: DATABRICKS_TABLE_FAILED,
+        operation: "validateDataSources",
+        context: DatabricksAdapter.name,
+        schemaName,
+        error: tablesResult.error,
+      });
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 
@@ -159,7 +183,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     );
 
     if (!tableExists) {
-      this.logger.warn(`Table '${dataConfig.tableName}' does not exist in schema ${schemaName}`);
+      this.logger.warn({
+        msg: "Table does not exist in schema",
+        errorCode: DATABRICKS_TABLE_FAILED,
+        operation: "validateDataSources",
+        context: DatabricksAdapter.name,
+        schemaName,
+        tableName: dataConfig.tableName,
+      });
       return failure(
         AppError.badRequest(`Table '${dataConfig.tableName}' does not exist in this experiment`),
       );
@@ -168,11 +199,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     // Check if columns exist in the table by querying the table schema
     const schemaQuery = `DESCRIBE ${dataConfig.tableName}`;
 
-    this.logger.debug(`Executing schema query: ${schemaQuery} in schema: ${schemaName}`);
+    this.logger.debug({
+      msg: "Executing schema query",
+      operation: "validateDataSources",
+      context: DatabricksAdapter.name,
+      schemaName,
+      schemaQuery,
+    });
     const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
 
     if (schemaResult.isFailure()) {
-      this.logger.error(`Failed to get table schema: ${schemaResult.error.message}`);
+      this.logger.error({
+        msg: "Failed to get table schema",
+        errorCode: DATABRICKS_TABLE_FAILED,
+        operation: "validateDataSources",
+        context: DatabricksAdapter.name,
+        schemaName,
+        error: schemaResult.error,
+      });
       return failure(
         AppError.internal(`Failed to get table schema: ${schemaResult.error.message}`),
       );
@@ -252,7 +296,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       refreshSelection?: string[];
     },
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log(`Triggering pipeline ${pipelineId} for experiment ${experimentId}`);
+    this.logger.log({
+      msg: "Triggering pipeline",
+      operation: "triggerExperimentPipeline",
+      context: DatabricksAdapter.name,
+      pipelineId,
+      experimentId,
+    });
 
     // Start the pipeline update using the stored pipeline ID
     return this.pipelinesService.startPipelineUpdate({
@@ -290,13 +340,26 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     schemaName: string,
     pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log(`Refreshing silver data for schema ${schemaName} using pipeline ${pipelineId}`);
+    this.logger.log({
+      msg: "Refreshing silver data",
+      operation: "refreshSilverData",
+      context: DatabricksAdapter.name,
+      schemaName,
+      pipelineId,
+    });
 
     // First, get the list of tables in the experiment
     const tablesResult = await this.listTables(schemaName);
 
     if (tablesResult.isFailure()) {
-      this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
+      this.logger.error({
+        msg: "Failed to list tables for silver data refresh",
+        errorCode: DATABRICKS_TABLE_FAILED,
+        operation: "refreshSilverData",
+        context: DatabricksAdapter.name,
+        schemaName,
+        error: tablesResult.error,
+      });
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 
@@ -306,7 +369,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       .map((table) => table.name);
 
     if (silverTables.length === 0) {
-      this.logger.warn(`No silver quality tables found for schema ${schemaName}`);
+      this.logger.warn({
+        msg: "No silver quality tables found",
+        errorCode: DATABRICKS_TABLE_FAILED,
+        operation: "refreshSilverData",
+        context: DatabricksAdapter.name,
+        schemaName,
+      });
       return failure(AppError.notFound(`No silver quality tables found for schema ${schemaName}`));
     }
 
@@ -344,7 +413,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     volumeName: string,
     comment?: string,
   ): Promise<Result<VolumeResponse>> {
-    this.logger.log(`Creating managed volume '${volumeName}' for schema ${schemaName}`);
+    this.logger.log({
+      msg: "Creating managed volume",
+      operation: "createExperimentVolume",
+      context: DatabricksAdapter.name,
+      schemaName,
+      volumeName,
+    });
 
     const catalogName = this.configService.getCatalogName();
 
@@ -375,7 +450,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     schemaName: string,
     volumeName: string,
   ): Promise<Result<VolumeResponse>> {
-    this.logger.log(`Getting volume '${volumeName}' for schema ${schemaName}`);
+    this.logger.log({
+      msg: "Getting volume",
+      operation: "getExperimentVolume",
+      context: DatabricksAdapter.name,
+      schemaName,
+      volumeName,
+    });
 
     const catalogName = this.configService.getCatalogName();
 
@@ -395,15 +476,35 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     schemaName: string,
     tableName: string,
   ): Promise<Result<Map<string, string>>> {
-    this.logger.log(`Checking metadata for schema ${schemaName} table ${tableName}`);
+    this.logger.log({
+      msg: "Checking table metadata",
+      operation: "getTableMetadata",
+      context: DatabricksAdapter.name,
+      schemaName,
+      tableName,
+    });
 
     const schemaQuery = `DESCRIBE ${tableName}`;
 
-    this.logger.debug(`Executing schema query: ${schemaQuery} in schema: ${schemaName}`);
+    this.logger.debug({
+      msg: "Executing schema query",
+      operation: "getTableMetadata",
+      context: DatabricksAdapter.name,
+      schemaName,
+      schemaQuery,
+    });
     const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
 
     if (schemaResult.isFailure()) {
-      this.logger.error(`Failed to get metadata: ${schemaResult.error.message}`);
+      this.logger.error({
+        msg: "Failed to get metadata",
+        errorCode: DATABRICKS_TABLE_FAILED,
+        operation: "getTableMetadata",
+        context: DatabricksAdapter.name,
+        schemaName,
+        tableName,
+        error: schemaResult.error,
+      });
       return failure(AppError.internal(`Failed to get metadata: ${schemaResult.error.message}`));
     }
 
@@ -447,7 +548,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     const fileName = fileExtension ? `${filename}${fileExtension}` : filename;
 
-    this.logger.log(`Uploading macro code with filename: ${filename} (${language}) -> ${fileName}`);
+    this.logger.log({
+      msg: "Uploading macro code",
+      operation: "uploadMacroCode",
+      context: DatabricksAdapter.name,
+      filename,
+      language,
+      fileName,
+    });
 
     // Construct the workspace path for the macro
     const workspacePath = `/Shared/macros/${fileName}`;
@@ -468,7 +576,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * @returns Result containing the delete response
    */
   async deleteMacroCode(filename: string): Promise<Result<DeleteWorkspaceObjectResponse>> {
-    this.logger.log(`Deleting macro code with filename: ${filename}`);
+    this.logger.log({
+      msg: "Deleting macro code",
+      operation: "deleteMacroCode",
+      context: DatabricksAdapter.name,
+      filename,
+    });
 
     // Construct the workspace path for the macro - we need to determine the extension
     // For now, we'll try common extensions (this could be improved by storing extension separately)
@@ -484,7 +597,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
       // If deletion was successful or file was not found, we're done
       if (deleteResult.isSuccess()) {
-        this.logger.log(`Successfully deleted macro: ${workspacePath}`);
+        this.logger.log({
+          msg: "Successfully deleted macro",
+          operation: "deleteMacroCode",
+          context: DatabricksAdapter.name,
+          workspacePath,
+          status: "success",
+        });
         return deleteResult;
       }
 
@@ -495,7 +614,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     }
 
     // If we get here, the file wasn't found with any extension
-    this.logger.warn(`Macro file not found with filename: ${filename}`);
+    this.logger.warn({
+      msg: "Macro file not found",
+      errorCode: DATABRICKS_FILE_FAILED,
+      operation: "deleteMacroCode",
+      context: DatabricksAdapter.name,
+      filename,
+    });
     return this.workspaceService.deleteWorkspaceObject({
       path: `/Shared/macros/${filename}`,
       recursive: false,

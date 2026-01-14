@@ -49,7 +49,14 @@ export class ExperimentController {
       if (result.isSuccess()) {
         const experiment = result.value;
 
-        this.logger.log(`Experiment created: ${experiment.id} by user ${user.id}`);
+        this.logger.log({
+          msg: "Experiment created",
+          operation: "createExperiment",
+          context: ExperimentController.name,
+          experimentId: experiment.id,
+          userId: user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.CREATED,
           body: experiment,
@@ -71,7 +78,14 @@ export class ExperimentController {
         // Format dates to strings for the API contract
         const formattedExperiment = formatDates(experiment);
 
-        this.logger.log(`Experiment ${params.id} retrieved`);
+        this.logger.log({
+          msg: "Experiment retrieved",
+          operation: "getExperiment",
+          context: ExperimentController.name,
+          experimentId: params.id,
+          userId: user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formattedExperiment,
@@ -96,7 +110,14 @@ export class ExperimentController {
           experiment: formatDates(accessInfo.experiment),
         };
 
-        this.logger.log(`Experiment access info for ${params.id} retrieved for user ${user.id}`);
+        this.logger.log({
+          msg: "Experiment access info retrieved",
+          operation: "getExperimentAccess",
+          context: ExperimentController.name,
+          experimentId: params.id,
+          userId: user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formattedAccessInfo,
@@ -123,11 +144,14 @@ export class ExperimentController {
         // Format dates to strings for the API contract
         const formattedExperiments = formatDatesList(experiments);
 
-        this.logger.log(
-          `Listed experiments for user ${user.id} with filter: ${JSON.stringify(
-            query.filter,
-          )}, status: ${query.status}, search: ${query.search}`,
-        );
+        this.logger.log({
+          msg: "Experiments listed",
+          operation: "listExperiments",
+          context: ExperimentController.name,
+          userId: user.id,
+          count: experiments.length,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formattedExperiments,
@@ -159,7 +183,14 @@ export class ExperimentController {
         // Format dates to strings for the API contract
         const formattedExperiment = formatDates(experiment);
 
-        this.logger.log(`Experiment ${params.id} updated by user ${user.id}`);
+        this.logger.log({
+          msg: "Experiment updated",
+          operation: "updateExperiment",
+          context: ExperimentController.name,
+          experimentId: params.id,
+          userId: user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formattedExperiment,
@@ -188,7 +219,14 @@ export class ExperimentController {
       const result = await this.deleteExperimentUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
-        this.logger.log(`Experiment ${params.id} deleted`);
+        this.logger.log({
+          msg: "Experiment deleted",
+          operation: "deleteExperiment",
+          context: ExperimentController.name,
+          experimentId: params.id,
+          userId: user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,

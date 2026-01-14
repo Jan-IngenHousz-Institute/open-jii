@@ -1,5 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import {
+  EXPERIMENT_NOT_FOUND,
+  FORBIDDEN,
+  EXPERIMENT_LOCATIONS_UPDATE_FAILED,
+} from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type {
   CreateLocationDto,
@@ -23,7 +28,14 @@ export class UpdateExperimentLocationsUseCase {
     locationsData: CreateLocationDto[],
     userId: string,
   ): Promise<Result<LocationDto[]>> {
-    this.logger.log(`Updating locations for experiment ${experimentId} by user ${userId}`);
+    this.logger.log({
+      msg: "Updating experiment locations",
+      operation: "updateExperimentLocations",
+      context: UpdateExperimentLocationsUseCase.name,
+      experimentId,
+      userId,
+      locationCount: locationsData.length,
+    });
 
     // Check if experiment exists and user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -37,14 +49,25 @@ export class UpdateExperimentLocationsUseCase {
         hasArchiveAccess: boolean;
       }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            errorCode: EXPERIMENT_NOT_FOUND,
+            operation: "updateExperimentLocations",
+            context: UpdateExperimentLocationsUseCase.name,
+            experimentId,
+          });
           return failure(AppError.notFound("Experiment not found"));
         }
 
         if (!hasArchiveAccess) {
-          this.logger.warn(
-            `User ${userId} attempted to update locations of experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to update locations without permission",
+            errorCode: FORBIDDEN,
+            operation: "updateExperimentLocations",
+            context: UpdateExperimentLocationsUseCase.name,
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
@@ -61,18 +84,27 @@ export class UpdateExperimentLocationsUseCase {
         );
 
         if (replaceResult.isFailure()) {
-          this.logger.error(
-            `Failed to update locations for experiment ${experimentId}:`,
-            replaceResult.error.message,
-          );
+          this.logger.error({
+            msg: "Failed to update locations for experiment",
+            errorCode: EXPERIMENT_LOCATIONS_UPDATE_FAILED,
+            operation: "updateExperimentLocations",
+            context: UpdateExperimentLocationsUseCase.name,
+            experimentId,
+            error: replaceResult.error,
+          });
           return failure(
             AppError.badRequest(`Failed to update locations: ${replaceResult.error.message}`),
           );
         }
 
-        this.logger.log(
-          `Successfully updated locations for experiment ${experimentId} with ${replaceResult.value.length} locations`,
-        );
+        this.logger.log({
+          msg: "Experiment locations updated successfully",
+          operation: "updateExperimentLocations",
+          context: UpdateExperimentLocationsUseCase.name,
+          experimentId,
+          locationCount: replaceResult.value.length,
+          status: "success",
+        });
         return success(replaceResult.value);
       },
     );

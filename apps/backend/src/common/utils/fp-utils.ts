@@ -197,15 +197,37 @@ export class AppError extends Error {
  * Utility for handling errors in a controller context
  * @param failure The AppError object to handle
  * @param logger Logger to use for logging errors
+ * @param operation Optional operation name for structured logging
+ * @param context Optional context (class name) for structured logging
  */
-export function handleFailure(failure: Failure<AppError>, logger: Logger) {
+export function handleFailure(
+  failure: Failure<AppError>,
+  logger: Logger,
+  operation?: string,
+  context?: string,
+) {
   const error = failure.error;
 
-  // Log the error
+  // Log the error with structured logging
+  const logObject: Record<string, unknown> = {
+    msg: error.message,
+    errorCode: error.code,
+  };
+
+  if (operation) {
+    logObject.operation = operation;
+  }
+  if (context) {
+    logObject.context = context;
+  }
+  if (error.details) {
+    logObject.details = error.details;
+  }
+
   if (error.statusCode >= 500) {
-    logger.error(`${error.code}: ${error.message}`, error.details);
+    logger.error(logObject);
   } else {
-    logger.warn(`${error.code}: ${error.message}`, error.details);
+    logger.warn(logObject);
   }
 
   return {

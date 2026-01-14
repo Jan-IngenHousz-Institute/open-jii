@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
+import { EMBARGO_PROCESSING_FAILED } from "../../../common/utils/error-codes";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -18,24 +19,44 @@ export class EmbargoProcessorService {
     timeZone: "UTC",
   })
   async processExpiredEmbargoes(): Promise<void> {
-    this.logger.log("Starting embargo expiration processing...");
+    this.logger.log({
+      msg: "Starting embargo expiration processing",
+      operation: "processExpiredEmbargoes",
+      context: EmbargoProcessorService.name,
+    });
 
     try {
       const expiredExperimentsResult = await this.experimentRepository.findExpiredEmbargoes();
 
       if (expiredExperimentsResult.isFailure()) {
-        this.logger.error("Failed to fetch expired embargoes:", expiredExperimentsResult.error);
+        this.logger.error({
+          msg: "Failed to fetch expired embargoes",
+          errorCode: EMBARGO_PROCESSING_FAILED,
+          operation: "processExpiredEmbargoes",
+          context: EmbargoProcessorService.name,
+          error: expiredExperimentsResult.error,
+        });
         return;
       }
 
       const experiments = expiredExperimentsResult.value;
 
       if (experiments.length === 0) {
-        this.logger.log("No expired embargoes found");
+        this.logger.log({
+          msg: "No expired embargoes found",
+          operation: "processExpiredEmbargoes",
+          context: EmbargoProcessorService.name,
+          count: 0,
+        });
         return;
       }
 
-      this.logger.log(`Found ${experiments.length} experiment(s) with expired embargoes`);
+      this.logger.log({
+        msg: "Found expired embargoes",
+        operation: "processExpiredEmbargoes",
+        context: EmbargoProcessorService.name,
+        count: experiments.length,
+      });
 
       // Process each expired experiment
       let successCount = 0;
@@ -48,23 +69,42 @@ export class EmbargoProcessorService {
 
         if (updateResult.isSuccess()) {
           successCount++;
-          this.logger.log(
-            `Successfully updated experiment "${experiment.name}" (ID: ${experiment.id}) to public visibility`,
-          );
+          this.logger.log({
+            msg: "Experiment embargo expired and made public",
+            operation: "processExpiredEmbargoes",
+            context: EmbargoProcessorService.name,
+            experimentId: experiment.id,
+            status: "success",
+          });
         } else {
           failureCount++;
-          this.logger.error(
-            `Failed to update experiment "${experiment.name}" (ID: ${experiment.id}):`,
-            updateResult.error,
-          );
+          this.logger.error({
+            msg: "Failed to update experiment embargo",
+            errorCode: EMBARGO_PROCESSING_FAILED,
+            operation: "processExpiredEmbargoes",
+            context: EmbargoProcessorService.name,
+            experimentId: experiment.id,
+            error: updateResult.error,
+          });
         }
       }
 
-      this.logger.log(
-        `Embargo processing completed. Success: ${successCount}, Failures: ${failureCount}`,
-      );
+      this.logger.log({
+        msg: "Embargo processing completed",
+        operation: "processExpiredEmbargoes",
+        context: EmbargoProcessorService.name,
+        totalProcessed: experiments.length,
+        successCount,
+        failureCount,
+      });
     } catch (error) {
-      this.logger.error("Unexpected error during embargo processing:", error);
+      this.logger.error({
+        msg: "Unexpected error during embargo processing",
+        errorCode: EMBARGO_PROCESSING_FAILED,
+        operation: "processExpiredEmbargoes",
+        context: EmbargoProcessorService.name,
+        error,
+      });
     }
   }
 
@@ -76,7 +116,11 @@ export class EmbargoProcessorService {
     succeeded: number;
     failed: number;
   }> {
-    this.logger.log("Manual embargo processing triggered");
+    this.logger.log({
+      msg: "Manual embargo processing triggered",
+      operation: "processExpiredEmbargoesManually",
+      context: EmbargoProcessorService.name,
+    });
 
     const expiredExperimentsResult = await this.experimentRepository.findExpiredEmbargoes();
 

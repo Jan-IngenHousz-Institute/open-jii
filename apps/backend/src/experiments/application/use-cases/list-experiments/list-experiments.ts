@@ -18,18 +18,37 @@ export class ListExperimentsUseCase {
     status?: ExperimentStatus,
     search?: string,
   ): Promise<Result<ExperimentDto[]>> {
-    this.logger.log(
-      `Listing experiments for user ${userId}${filter ? ` with filter "${filter}"` : ""}${status ? ` and status "${status}"` : ""}${search ? ` and search "${search}"` : ""}`,
-    );
+    this.logger.log({
+      msg: "Listing experiments",
+      operation: "list",
+      context: ListExperimentsUseCase.name,
+      userId,
+      filter,
+      status,
+      search,
+    });
 
     const result = await this.experimentRepository.findAll(userId, filter, status, search);
 
     result.fold(
       (experiments: ExperimentDto[]) => {
-        this.logger.debug(`Found ${experiments.length} experiments for user ${userId}`);
+        this.logger.debug({
+          msg: "Found experiments",
+          operation: "list",
+          context: ListExperimentsUseCase.name,
+          userId,
+          count: experiments.length,
+        });
       },
       (error: AppError) => {
-        this.logger.error(`Failed to list experiments for user ${userId}: ${error.message}`);
+        this.logger.error({
+          msg: "Failed to list experiments",
+          errorCode: error.code,
+          operation: "list",
+          context: ListExperimentsUseCase.name,
+          userId,
+          error,
+        });
       },
     );
 

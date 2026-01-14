@@ -1,6 +1,11 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { z } from "zod";
 
+import {
+  EXPERIMENT_DATA_UPLOAD_FAILED,
+  BAD_REQUEST,
+  EXPERIMENT_SCHEMA_NOT_READY,
+} from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { streamToBuffer } from "../../../../common/utils/stream-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -46,7 +51,13 @@ export class UploadAmbyteDataUseCase {
       directoryName: string;
     }>
   > {
-    this.logger.log(`Preparing upload environment for experiment ${experimentId}`);
+    this.logger.log({
+      msg: "Preparing upload environment",
+      operation: "prepareUploadEnvironment",
+      context: UploadAmbyteDataUseCase.name,
+      experimentId,
+      userId,
+    });
 
     // Check access and get experiment
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -79,7 +90,13 @@ export class UploadAmbyteDataUseCase {
     const timestamp = now.toISOString().replace(/[-:]/g, "").replace("T", "_").split(".")[0];
     const directoryName = `upload_${timestamp}`;
 
-    this.logger.log(`Generated upload directory name: ${directoryName}`);
+    this.logger.log({
+      msg: "Generated upload directory name",
+      operation: "prepareUploadEnvironment",
+      context: UploadAmbyteDataUseCase.name,
+      experimentId,
+      directoryName,
+    });
 
     // Construct the volume name
     const volumeName = UploadAmbyteDataUseCase.UPLOADS_VOLUME_NAME;
@@ -92,7 +109,14 @@ export class UploadAmbyteDataUseCase {
 
     // If volume exists, return success
     if (getVolumeResult.isSuccess()) {
-      this.logger.log(`Volume "${volumeName}" already exists for schema ${experiment.schemaName}`);
+      this.logger.log({
+        msg: "Upload volume already exists",
+        operation: "prepareUploadEnvironment",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId,
+        volumeName,
+        status: "success",
+      });
       return success({
         experiment,
         volumeName,
@@ -103,9 +127,14 @@ export class UploadAmbyteDataUseCase {
     }
 
     // Volume doesn't exist, create it
-    this.logger.log(
-      `Volume "${volumeName}" doesn't exist for schema ${experiment.schemaName}, creating it now`,
-    );
+    this.logger.log({
+      msg: "Volume doesn't exist, creating it",
+      operation: "prepareUploadEnvironment",
+      context: UploadAmbyteDataUseCase.name,
+      experimentId,
+      volumeName,
+      schemaName: experiment.schemaName,
+    });
 
     const createVolumeResult = await this.databricksPort.createExperimentVolume(
       experiment.schemaName,
@@ -114,9 +143,15 @@ export class UploadAmbyteDataUseCase {
     );
 
     if (createVolumeResult.isSuccess()) {
-      this.logger.log(
-        `Successfully created volume "${volumeName}" for schema ${experiment.schemaName}`,
-      );
+      this.logger.log({
+        msg: "Successfully created volume",
+        operation: "prepareUploadEnvironment",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId,
+        volumeName,
+        schemaName: experiment.schemaName,
+        status: "success",
+      });
       return success({
         experiment,
         volumeName,
@@ -125,9 +160,16 @@ export class UploadAmbyteDataUseCase {
         directoryName,
       });
     } else {
-      this.logger.error(
-        `Failed to create volume "${volumeName}" for schema ${experiment.schemaName}: ${createVolumeResult.error.message}`,
-      );
+      this.logger.error({
+        msg: "Failed to create volume",
+        errorCode: EXPERIMENT_DATA_UPLOAD_FAILED,
+        operation: "prepareUploadEnvironment",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId,
+        volumeName,
+        schemaName: experiment.schemaName,
+        error: createVolumeResult.error.message,
+      });
       return failure(createVolumeResult.error);
     }
   }
@@ -143,9 +185,13 @@ export class UploadAmbyteDataUseCase {
     successfulUploads: { fileName: string; filePath: string }[],
     errors: { fileName: string; error: string }[],
   ): Promise<void> {
-    this.logger.log(
-      `Starting to process file stream: ${file.filename}, source type: ${sourceType}`,
-    );
+    this.logger.log({
+      msg: "Starting to process file stream",
+      operation: "processFileUpload",
+      context: UploadAmbyteDataUseCase.name,
+      fileName: file.filename,
+      sourceType,
+    });
 
     // Validate the file name
     if (!this.validateFileName(file.filename)) {
@@ -155,7 +201,13 @@ export class UploadAmbyteDataUseCase {
           'Invalid file format. Expected .txt files with either full paths like "Ambyte_N/*.txt" or "Ambyte_N/1-4/*.txt", or plain .txt filenames.',
       });
 
-      this.logger.warn(`Skipping invalid file: ${file.filename}`);
+      this.logger.warn({
+        msg: "Skipping invalid file",
+        errorCode: BAD_REQUEST,
+        operation: "processFileUpload",
+        context: UploadAmbyteDataUseCase.name,
+        fileName: file.filename,
+      });
       // Consume the stream to allow busboy to continue processing the form
       file.stream.resume();
       return;
@@ -163,10 +215,22 @@ export class UploadAmbyteDataUseCase {
 
     // Trim the filename to start with Ambyte_N/...
     const trimmedFileName = this.trimFileName(file.filename);
-    this.logger.debug(`Trimmed filename from "${file.filename}" to "${trimmedFileName}"`);
+    this.logger.debug({
+      msg: "Trimmed filename",
+      operation: "processFileUpload",
+      context: UploadAmbyteDataUseCase.name,
+      originalFileName: file.filename,
+      trimmedFileName,
+    });
 
     if (!sourceType) {
-      this.logger.error(`Source type is undefined for file: ${file.filename}`);
+      this.logger.error({
+        msg: "Source type is undefined",
+        errorCode: BAD_REQUEST,
+        operation: "processFileUpload",
+        context: UploadAmbyteDataUseCase.name,
+        fileName: file.filename,
+      });
       errors.push({
         fileName: file.filename,
         error: "Source type is required",
@@ -177,7 +241,13 @@ export class UploadAmbyteDataUseCase {
     }
 
     if (!experiment.schemaName) {
-      this.logger.error(`Experiment ${experiment.id} has no schema name`);
+      this.logger.error({
+        msg: "Experiment has no schema name",
+        errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+        operation: "processFileUpload",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId: experiment.id,
+      });
       errors.push({
         fileName: file.filename,
         error: "Experiment schema not provisioned",
@@ -193,11 +263,22 @@ export class UploadAmbyteDataUseCase {
       logger: this.logger,
     });
 
-    this.logger.debug(
-      `Successfully converted stream to buffer for file: ${trimmedFileName}, size: ${buffer.length} bytes`,
-    );
+    this.logger.debug({
+      msg: "Successfully converted stream to buffer",
+      operation: "processFileUpload",
+      context: UploadAmbyteDataUseCase.name,
+      fileName: trimmedFileName,
+      fileSize: buffer.length,
+    });
 
-    this.logger.log(`Uploading file to Databricks: ${trimmedFileName}`);
+    this.logger.log({
+      msg: "Uploading file to Databricks",
+      operation: "processFileUpload",
+      context: UploadAmbyteDataUseCase.name,
+      experimentId: experiment.id,
+      fileName: trimmedFileName,
+      fileSize: buffer.length,
+    });
     const uploadResult = await this.databricksPort.uploadExperimentData(
       experiment.schemaName,
       sourceType,
@@ -212,21 +293,37 @@ export class UploadAmbyteDataUseCase {
         filePath: uploadResult.value.filePath,
       });
 
-      this.logger.log(
-        `Successfully uploaded Ambyte data file "${trimmedFileName}" to experiment ${experiment.id}`,
-      );
+      this.logger.log({
+        msg: "Successfully uploaded Ambyte data file",
+        operation: "processFileUpload",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId: experiment.id,
+        fileName: trimmedFileName,
+        status: "success",
+      });
     } else {
       errors.push({
         fileName: trimmedFileName,
         error: uploadResult.error.message,
       });
 
-      this.logger.error(
-        `Failed to upload file "${trimmedFileName}": ${uploadResult.error.message}`,
-      );
+      this.logger.error({
+        msg: "Failed to upload file",
+        errorCode: EXPERIMENT_DATA_UPLOAD_FAILED,
+        operation: "processFileUpload",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId: experiment.id,
+        fileName: trimmedFileName,
+        error: uploadResult.error.message,
+      });
     }
 
-    this.logger.debug(`Completed processing for file: ${file.filename}`);
+    this.logger.debug({
+      msg: "Completed processing for file",
+      operation: "processFileUpload",
+      context: UploadAmbyteDataUseCase.name,
+      fileName: file.filename,
+    });
   }
 
   /**
@@ -238,9 +335,14 @@ export class UploadAmbyteDataUseCase {
     experiment: ExperimentDto,
     directoryName: string,
   ): Promise<Result<UploadAmbyteFilesResponse>> {
-    this.logger.log(
-      `Completing upload. ${successfulUploads.length} successful, ${errors.length} errors.`,
-    );
+    this.logger.log({
+      msg: "Completing upload",
+      operation: "postExecute",
+      context: UploadAmbyteDataUseCase.name,
+      experimentId: experiment.id,
+      successfulUploads: successfulUploads.length,
+      errors: errors.length,
+    });
 
     if (successfulUploads.length === 0) {
       return failure(
@@ -253,7 +355,12 @@ export class UploadAmbyteDataUseCase {
     }
 
     // Trigger ambyte processing job after successful file upload
-    this.logger.log(`Triggering ambyte processing job for experiment ${experiment.id}`);
+    this.logger.log({
+      msg: "Triggering ambyte processing job",
+      operation: "postExecute",
+      context: UploadAmbyteDataUseCase.name,
+      experimentId: experiment.id,
+    });
 
     if (!experiment.schemaName) {
       return failure(
@@ -271,13 +378,22 @@ export class UploadAmbyteDataUseCase {
     });
 
     if (jobResult.isSuccess()) {
-      this.logger.log(
-        `Successfully triggered ambyte processing job for experiment ${experiment.name} (${experiment.id}). Run ID: ${jobResult.value.run_id}`,
-      );
+      this.logger.log({
+        msg: "Successfully triggered ambyte processing job",
+        operation: "postExecute",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId: experiment.id,
+        runId: jobResult.value.run_id,
+        status: "success",
+      });
     } else {
-      this.logger.warn(
-        `Failed to trigger ambyte processing job for experiment ${experiment.id}: ${jobResult.error.message}`,
-      );
+      this.logger.warn({
+        msg: "Failed to trigger ambyte processing job",
+        operation: "postExecute",
+        context: UploadAmbyteDataUseCase.name,
+        experimentId: experiment.id,
+        error: jobResult.error.message,
+      });
     }
 
     return success({

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { PROTOCOL_NOT_FOUND, PROTOCOL_DELETE_FAILED } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -11,7 +12,12 @@ export class DeleteProtocolUseCase {
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
   async execute(id: string): Promise<Result<ProtocolDto>> {
-    this.logger.log(`Deleting protocol with ID "${id}"`);
+    this.logger.log({
+      msg: "Deleting protocol",
+      operation: "deleteProtocol",
+      context: DeleteProtocolUseCase.name,
+      protocolId: id,
+    });
 
     // Check if protocol exists
     const existingProtocolResult = await this.protocolRepository.findOne(id);
@@ -22,7 +28,13 @@ export class DeleteProtocolUseCase {
 
     const protocol = existingProtocolResult.value;
     if (!protocol) {
-      this.logger.warn(`Attempt to delete non-existent protocol with ID ${id}`);
+      this.logger.warn({
+        msg: "Attempt to delete non-existent protocol",
+        errorCode: PROTOCOL_NOT_FOUND,
+        operation: "deleteProtocol",
+        context: DeleteProtocolUseCase.name,
+        protocolId: id,
+      });
       return failure(AppError.notFound(`Protocol not found`));
     }
 
@@ -35,11 +47,23 @@ export class DeleteProtocolUseCase {
 
     const protocols = deleteResult.value;
     if (protocols.length === 0) {
-      this.logger.error(`Failed to delete protocol with ID ${id}`);
+      this.logger.error({
+        msg: "Failed to delete protocol",
+        errorCode: PROTOCOL_DELETE_FAILED,
+        operation: "execute",
+        context: DeleteProtocolUseCase.name,
+        protocolId: id,
+      });
       return failure(AppError.internal("Failed to delete protocol"));
     }
 
-    this.logger.log(`Successfully deleted protocol with ID ${id}`);
+    this.logger.log({
+      msg: "Successfully deleted protocol",
+      operation: "execute",
+      context: DeleteProtocolUseCase.name,
+      protocolId: id,
+      status: "success",
+    });
     return success(protocols[0]);
   }
 }

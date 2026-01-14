@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
+import { LoggerModule } from "nestjs-pino";
+
+import { pinoConfig } from "@repo/analytics";
 
 import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
@@ -20,6 +23,13 @@ import { UserModule } from "./users/user.module";
     ConfigModule.forRoot({
       isGlobal: true,
       load: [databaseConfig, databricksConfig, awsConfig, emailConfig, analyticsConfig],
+    }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        ...pinoConfig,
+        name: "backend",
+        autoLogging: false,
+      },
     }),
     ScheduleModule.forRoot(),
     AnalyticsModule,

@@ -25,7 +25,12 @@ export class ProjectTransferRequestsController {
   @TsRestHandler(contract.experiments.createTransferRequest)
   createTransferRequest(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.createTransferRequest, async ({ body }) => {
-      this.logger.log(`Creating transfer request for user ${user.id}`);
+      this.logger.log({
+        msg: "Creating transfer request",
+        operation: "createTransferRequest",
+        context: ProjectTransferRequestsController.name,
+        userId: user.id,
+      });
 
       const result = await this.createTransferRequestUseCase.execute(user.id, user.email, body);
 
@@ -48,7 +53,12 @@ export class ProjectTransferRequestsController {
   @TsRestHandler(contract.experiments.listTransferRequests)
   listTransferRequests(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.listTransferRequests, async () => {
-      this.logger.log(`Listing transfer requests for user ${user.id}`);
+      this.logger.log({
+        msg: "Listing transfer requests",
+        operation: "listTransferRequests",
+        context: ProjectTransferRequestsController.name,
+        userId: user.id,
+      });
 
       const result = await this.listTransferRequestsUseCase.execute(user.id);
 
