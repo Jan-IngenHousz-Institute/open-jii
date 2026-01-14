@@ -622,9 +622,6 @@ importers:
       '@repo/cms':
         specifier: workspace:*
         version: link:../../packages/cms
-      '@repo/database':
-        specifier: workspace:*
-        version: link:../../packages/database
       '@repo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
