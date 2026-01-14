@@ -18,7 +18,9 @@ ALTER TABLE "accounts" DROP CONSTRAINT "accounts_userId_users_id_fk";
 --> statement-breakpoint
 ALTER TABLE "sessions" DROP CONSTRAINT "sessions_userId_users_id_fk";
 --> statement-breakpoint
+UPDATE "users" SET "name" = '' WHERE "name" IS NULL;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "name" SET NOT NULL;--> statement-breakpoint
+UPDATE "users" SET "email" = '' WHERE "email" IS NULL;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "email" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "accounts" ADD COLUMN "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL;--> statement-breakpoint
 ALTER TABLE "accounts" ADD COLUMN "refresh_token_expires_at" timestamp;--> statement-breakpoint
