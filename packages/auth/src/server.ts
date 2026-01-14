@@ -67,7 +67,6 @@ export const auth = betterAuth({
     },
   },
   rateLimit: {
-    enabled: true,
     window: 60, // 60 seconds
     max: 100, // 100 requests per window
     storage: "database", // Use database storage for production reliability
