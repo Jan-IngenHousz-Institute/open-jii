@@ -1,6 +1,5 @@
 /**
  * Hook to access the current user session using Better Auth
- * This replaces the old useSessionStore with Better Auth's session management
  */
 import { authClient } from "~/lib/auth-client";
 
@@ -10,7 +9,6 @@ export function useSession() {
   return {
     session: session
       ? {
-          token: "managed-by-better-auth", // Token is managed internally
           data: {
             user: {
               id: session.user.id,
