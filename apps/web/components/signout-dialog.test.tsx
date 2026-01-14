@@ -33,7 +33,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockSignOutMutateAsync = vi.fn();
-vi.mock("../hooks/useAuth", () => ({
+vi.mock("../hooks/auth/useSignOut/useSignOut", () => ({
   useSignOut: () => ({
     mutateAsync: mockSignOutMutateAsync,
     isPending: false,

@@ -1,42 +1,35 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import { UserSessionData } from "~/api/get-session-data";
+/**
+ * Hook to access the current user session using Better Auth
+ * This replaces the old Zustand-based session store with Better Auth's session management
+ */
+import { authClient } from "~/lib/auth-client";
 
-interface Session {
-  token: string;
-  data: UserSessionData;
+export function useSessionStore() {
+  const { data: session, isPending, error } = authClient.useSession();
+
+  return {
+    session: session
+      ? {
+          data: {
+            user: {
+              id: session.user.id,
+              name: session.user.name,
+              email: session.user.email,
+              image: session.user.image,
+            },
+            expires: new Date(session.session.expiresAt).toISOString(),
+          },
+        }
+      : undefined,
+    isLoaded: !isPending,
+    isPending,
+    error,
+    // For compatibility with Better Auth
+    user: session?.user,
+    // Actions
+    signOut: () => authClient.signOut(),
+  };
 }
 
-interface State {
-  session?: Session;
-  isLoaded: boolean;
-}
-
-interface Actions {
-  setSession: (session: Session) => void;
-  clearSession: () => void;
-}
-
-export const useSessionStore = create<State & Actions>()(
-  persist(
-    (set) => {
-      const store: State & Actions = {
-        isLoaded: false,
-        setSession: (session) => set({ session }),
-        clearSession: () => set({ session: undefined }),
-      };
-
-      return store;
-    },
-    {
-      name: "session-storage",
-      storage: createJSONStorage(() => AsyncStorage),
-      onRehydrateStorage: () => {
-        return () => {
-          useSessionStore.setState({ isLoaded: true });
-        };
-      },
-    },
-  ),
-);
+// Export useSession as an alias for consistency
+export { useSessionStore as useSession };

@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
 
 // Mock useAuth
 const mockUpdateUserMutate = vi.fn();
-vi.mock("~/hooks/useAuth", () => ({
+vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   useUpdateUser: () => ({
     mutateAsync: mockUpdateUserMutate,
   }),
@@ -30,7 +30,10 @@ const createUserProfileMock = vi.fn();
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
     mutateAsync: async (args: unknown) => {
-      createUserProfileMock(args);
+      const result = createUserProfileMock(args) as unknown;
+      if (result instanceof Promise) {
+        await result;
+      }
       // simulate success callback
       await Promise.resolve(opts.onSuccess());
       return Promise.resolve();
@@ -251,5 +254,81 @@ describe("RegistrationForm", () => {
 
     expect(await screen.findByText("Custom Terms")).toBeInTheDocument();
     expect(await screen.findByText("Custom content")).toBeInTheDocument();
+  });
+
+  it("handles updateUser error after profile creation", async () => {
+    mockUpdateUserMutate.mockResolvedValue({
+      error: { message: "Update failed" },
+    });
+
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+
+    await userEvent.type(screen.getByLabelText("registration.firstName"), "Test");
+    await userEvent.type(screen.getByLabelText("registration.lastName"), "User");
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
+    });
+
+    // Should not navigate on error
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("handles form submission error and resets pending state", async () => {
+    // Create a mock that throws an error
+    createUserProfileMock.mockRejectedValue(new Error("Network error"));
+
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+
+    await userEvent.type(screen.getByLabelText("registration.firstName"), "Error");
+    await userEvent.type(screen.getByLabelText("registration.lastName"), "Test");
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    const submitButton = screen.getByRole("button", { name: "registration.register" });
+
+    expect(submitButton).not.toBeDisabled();
+
+    fireEvent.click(submitButton);
+
+    // Button should be disabled during submission
+    await waitFor(() => {
+      expect(createUserProfileMock).toHaveBeenCalled();
+    });
+
+    // After error, button should be enabled again (finally block)
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
+  });
+
+  it("prevents multiple submissions when already pending", async () => {
+    createUserProfileMock.mockImplementation(() => {
+      return new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+
+    await userEvent.type(screen.getByLabelText("registration.firstName"), "Multi");
+    await userEvent.type(screen.getByLabelText("registration.lastName"), "Submit");
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    const submitButton = screen.getByRole("button", { name: "registration.register" });
+
+    // First click
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(submitButton).toBeDisabled();
+    });
+
+    // Second click while pending
+    fireEvent.click(submitButton);
+
+    // Should only call once
+    expect(createUserProfileMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,9 +1,9 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
-import { auth } from "@/lib/auth";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import { auth } from "~/app/actions/auth";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { RegistrationForm } from "~/components/auth/registration-form";
 import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";

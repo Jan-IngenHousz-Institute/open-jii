@@ -7,8 +7,12 @@
       "default": "./dist/server.js"
     },
     "./client": {
-      "types": "./src/client.d.ts",
-      "default": "./dist/client.js"
+      "types": "./src/clients/client.web.d.ts",
+      "default": "./dist/clients/client.web.js"
+    },
+    "./client.native": {
+      "types": "./src/clients/client.native.d.ts",
+      "default": "./dist/clients/client.native.js"
     },
     "./types": {
       "types": "./src/types.d.ts",
@@ -25,6 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.4.12",
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",

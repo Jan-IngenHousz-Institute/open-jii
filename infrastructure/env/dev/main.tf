@@ -867,11 +867,6 @@ module "opennext" {
 
   function_url_authorization_type = "AWS_IAM"
 
-  # VPC configuration for server Lambda database access
-  enable_server_vpc               = true
-  server_subnet_ids               = module.vpc.private_subnets
-  server_lambda_security_group_id = module.vpc.server_lambda_security_group_id
-
   # WAF integration
   waf_acl_id = module.opennext_waf.cloudfront_web_acl_arn
 
@@ -879,17 +874,8 @@ module "opennext" {
   enable_logging = true
   log_bucket     = module.logs_bucket.bucket_id
 
-  # Secrets Manager Integration
-  db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
-  oauth_secret_arn          = module.auth_secrets.secret_arn
-  contentful_secret_arn     = module.contentful_secrets.secret_arn
-  ses_secret_arn            = module.ses_secrets.secret_arn
-
   server_environment_variables = {
     COOKIE_DOMAIN            = ".${var.environment}.${var.domain_name}"
-    DB_HOST                  = module.aurora_db.cluster_endpoint
-    DB_PORT                  = module.aurora_db.cluster_port
-    DB_NAME                  = module.aurora_db.database_name
     NODE_ENV                 = "production"
     NEXT_PUBLIC_POSTHOG_KEY  = var.posthog_key
     NEXT_PUBLIC_POSTHOG_HOST = var.posthog_host

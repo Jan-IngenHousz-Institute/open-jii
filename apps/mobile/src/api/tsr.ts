@@ -1,8 +1,8 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
-import { useSessionStore } from "~/hooks/use-session-store";
-import { getEnvName, getEnvVar } from "~/stores/environment-store";
+import { authClient } from "~/lib/auth-client";
+import { getEnvVar } from "~/stores/environment-store";
 
 import { contract } from "@repo/api";
 
@@ -15,13 +15,12 @@ function removeLeadingSlashes(value: string) {
 }
 
 const customApiFetcher = async (args: ApiFetcherArgs) => {
-  const token = useSessionStore.getState().session?.token;
-
-  const envName = getEnvName();
+  // Get cookies from Better Auth client
+  const cookies = authClient.getCookie();
 
   const enhancedHeaders = {
     ...args.headers,
-    Cookie: token ? `__Secure-authjs.${envName}.session-token=${token}` : "",
+    ...(cookies ? { Cookie: cookies } : {}),
   };
 
   const base = removeTrailingSlashes(getEnvVar("BACKEND_URI"));
@@ -34,8 +33,9 @@ const customApiFetcher = async (args: ApiFetcherArgs) => {
     headers: enhancedHeaders,
   });
 
+  // Clear session on 401 (unauthorized)
   if (result?.status === 401) {
-    useSessionStore.getState().clearSession();
+    await authClient.signOut();
   }
 
   return result;

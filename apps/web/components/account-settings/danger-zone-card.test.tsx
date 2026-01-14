@@ -34,7 +34,7 @@ vi.mock("@repo/ui/hooks", () => ({
 
 // useSignOut replacement for handleLogout
 const mockSignOutMutateAsync = vi.fn();
-vi.mock("~/hooks/useAuth", () => ({
+vi.mock("~/hooks/auth/useSignOut/useSignOut", () => ({
   useSignOut: () => ({
     mutateAsync: mockSignOutMutateAsync,
   }),

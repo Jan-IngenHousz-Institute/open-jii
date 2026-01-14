@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
-import { useUpdateUser } from "~/hooks/useAuth";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -93,6 +93,8 @@ export function RegistrationForm({
           organization: data.organization,
         },
       });
+    } catch (error) {
+      console.error("Registration error:", error);
     } finally {
       setIsPending(false);
     }
