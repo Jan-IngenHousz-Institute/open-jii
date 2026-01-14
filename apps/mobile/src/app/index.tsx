@@ -1,13 +1,13 @@
 import { Redirect } from "expo-router";
-import { useSessionStore } from "~/hooks/use-session-store";
+import { useSession } from "~/hooks/use-session";
 
 export default function Index() {
-  const { session, isLoaded } = useSessionStore();
+  const { session, isLoaded } = useSession();
   if (!isLoaded) {
     return null;
   }
 
-  if (session?.token) {
+  if (session) {
     return <Redirect href="(tabs)" />;
   }
 

@@ -1,3 +1,4 @@
+import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP, genericOAuth } from "better-auth/plugins";
@@ -8,7 +9,6 @@ import * as schema from "@repo/database/schema";
 import { sendOtpEmail } from "./email/otpEmail";
 import { orcidProvider } from "./providers/orcid";
 
-const useSecureCookies = process.env.NODE_ENV === "production";
 const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
 const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
@@ -44,7 +44,19 @@ export const auth = betterAuth({
   secret: process.env.AUTH_SECRET,
   basePath: "/api/v1/auth",
   baseURL: apiUrl, // Points to the backend where auth runs
-  trustedOrigins: [clientUrl], // Trusts the frontend calls
+  trustedOrigins: [
+    clientUrl,
+    "openjii://", // Primary mobile scheme
+    "photosynq://", // Secondary mobile scheme
+    // Development mode - Expo's exp:// scheme with local IP ranges
+    ...(process.env.NODE_ENV === "development"
+      ? [
+          "exp://", // Trust all Expo URLs (prefix matching)
+          "exp://**", // Trust all Expo URLs (wildcard matching)
+          "exp://192.168.*.*:*/**", // Trust 192.168.x.x IP range with any port and path
+        ]
+      : []),
+  ],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day (update session every day)
@@ -63,8 +75,7 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    cookiePrefix: `${useSecureCookies ? "__Secure-" : ""}better-auth.${environmentPrefix}`,
-    useSecureCookies,
+    cookiePrefix: `better-auth.${environmentPrefix}`,
     ...(cookieDomain ? { cookieDomain } : {}),
     database: {
       generateId: false, // Let Postgres generate UUIDs via defaultRandom()
@@ -74,6 +85,7 @@ export const auth = betterAuth({
     enabled: false,
   },
   plugins: [
+    expo(), // Add Expo plugin for mobile app support
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;

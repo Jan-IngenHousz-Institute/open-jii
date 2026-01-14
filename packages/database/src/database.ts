@@ -3,13 +3,6 @@ import postgres from "postgres";
 
 import * as schema from "./schema";
 
-// Only load dotenv in non-Next.js environments
-// Next.js handles environment variables differently
-if (!process.env.NEXT_RUNTIME) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require("dotenv/config");
-}
-
 const getDatabaseUrl = (secrets?: Record<string, unknown>) => {
   if (process.env.DATABASE_URL) {
     return process.env.DATABASE_URL;
@@ -63,8 +56,5 @@ export const getClient = (secrets?: Record<string, unknown>) =>
   postgres(getDatabaseUrl(secrets), { max: 1 });
 
 export const db = drizzle({ client: getClient(), schema });
-
-export const lambdaDb = (secrets: Record<string, unknown>) =>
-  drizzle({ client: getClient(secrets), schema });
 
 export type DatabaseInstance = typeof db;

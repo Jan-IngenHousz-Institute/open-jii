@@ -9,7 +9,7 @@ globalThis.React = React;
 
 // --- Mocks ---
 const mockAuth = vi.fn();
-vi.mock("@/lib/auth", () => ({
+vi.mock("~/app/actions/auth", () => ({
   auth: (): unknown => mockAuth(),
   providerMap: [],
 }));
@@ -34,6 +34,10 @@ vi.mock("~/components/auth/login-form", () => ({
       Login form - {locale} - {callbackUrl ?? "no callback"}
     </div>
   ),
+}));
+
+vi.mock("~/components/auth/terms-and-conditions-dialog", () => ({
+  TermsAndConditionsDialog: () => Promise.resolve({ terms: [] }),
 }));
 
 // --- Tests ---

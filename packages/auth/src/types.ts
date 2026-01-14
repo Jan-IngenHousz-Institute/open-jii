@@ -1,4 +1,4 @@
-import type { authClient } from "./client";
+import type { authClient } from "./clients/client.web";
 
 export type Session = typeof authClient.$Infer.Session;
 export type User = NonNullable<Session>["user"];

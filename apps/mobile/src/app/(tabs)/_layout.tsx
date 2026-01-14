@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
-import { useSessionStore } from "~/hooks/use-session-store";
+import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
@@ -13,13 +13,13 @@ export default function TabLayout() {
   const { colors } = theme;
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { session, isLoaded } = useSessionStore();
+  const { session, isLoaded } = useSession();
 
   useEffect(() => {
-    if (isLoaded && !session?.token) {
+    if (isLoaded && !session) {
       router.replace("/callback");
     }
-  }, [isLoaded, session?.token, router]);
+  }, [isLoaded, session, router]);
 
   return (
     <View style={{ flex: 1 }}>

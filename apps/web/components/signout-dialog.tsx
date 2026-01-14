@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@repo/ui/components";
 
-import { useSignOut } from "../hooks/useAuth";
+import { useSignOut } from "../hooks/auth/useSignOut/useSignOut";
 
 interface SignOutDialogProps {
   translations: {

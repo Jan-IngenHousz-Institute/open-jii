@@ -10,7 +10,7 @@ globalThis.React = React;
 
 // --- Mocks ---
 const mockAuth = vi.fn();
-vi.mock("@/lib/auth", () => ({
+vi.mock("~/app/actions/auth", () => ({
   auth: (): unknown => mockAuth(),
 }));
 

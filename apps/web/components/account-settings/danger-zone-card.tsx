@@ -2,9 +2,9 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
+import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useDeleteUser } from "~/hooks/profile/useDeleteUser/useDeleteUser";
-import { useSignOut } from "~/hooks/useAuth";
 import { parseApiError } from "~/util/apiError";
 
 import type { CreateUserProfileBody } from "@repo/api";

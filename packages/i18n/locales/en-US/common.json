@@ -381,6 +381,8 @@
     "resendCode": "Resend code",
     "codeExpired": "Code expired. Please request a new one.",
     "invalidCode": "Invalid verification code",
+    "otpError": "The code you entered is invalid or has expired. Please try again or request a new one.",
+    "otpInstructions": "Please enter the 6-digit code we sent to",
     "heroTitle": "Open Science for Photosynthesis",
     "heroDescription": "Empowering global collaboration in plant science and photosynthesis research.",
     "brandName": "openJII",

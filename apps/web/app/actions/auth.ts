@@ -24,12 +24,3 @@ export async function auth(): Promise<Session | null> {
     return null;
   }
 }
-
-/**
- * Provider map for displaying available auth providers
- */
-export const providerMap = [
-  { id: "github", name: "GitHub" },
-  { id: "orcid", name: "ORCID" },
-  { id: "email", name: "Email" },
-];

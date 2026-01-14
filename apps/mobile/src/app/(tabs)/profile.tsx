@@ -8,21 +8,21 @@ import { View, Text, StyleSheet, ScrollView, Alert, Linking } from "react-native
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
-import { useSessionStore } from "~/hooks/use-session-store";
+import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { getEnvVar } from "~/stores/environment-store";
 import { formatRelativeTime } from "~/utils/format-relative-time";
 
 export default function ProfileScreen() {
-  const { clearSession, session } = useSessionStore();
+  const { session, signOut } = useSession();
   const queryClient = useQueryClient();
   const router = useRouter();
   const theme = useTheme();
   const { colors } = theme;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     queryClient.resetQueries();
-    clearSession();
+    await signOut();
     router.replace("/callback");
   };
 

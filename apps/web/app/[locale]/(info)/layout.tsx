@@ -1,7 +1,7 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
-import { auth } from "@/lib/auth";
 import { draftMode } from "next/headers";
 import React from "react";
+import { auth } from "~/app/actions/auth";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { HomeFooter } from "@repo/cms";

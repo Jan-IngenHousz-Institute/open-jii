@@ -1,8 +1,8 @@
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
+import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 

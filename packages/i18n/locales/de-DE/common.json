@@ -285,6 +285,8 @@
     "resendCode": "Code erneut senden",
     "codeExpired": "Code abgelaufen. Bitte fordern Sie einen neuen an.",
     "invalidCode": "Ungültiger Bestätigungscode",
+    "otpError": "Der eingegebene Code ist ungültig oder abgelaufen. Bitte versuchen Sie es erneut oder fordern Sie einen neuen Code an.",
+    "otpInstructions": "Bitte geben Sie den 6-stelligen Code ein, den wir gesendet haben an",
     "heroTitle": "Offene Wissenschaft für Photosynthese",
     "heroDescription": "Ermächtigung globaler Zusammenarbeit in der Pflanzenwissenschaft und Photosynthese-Forschung.",
     "brandName": "openJII",
