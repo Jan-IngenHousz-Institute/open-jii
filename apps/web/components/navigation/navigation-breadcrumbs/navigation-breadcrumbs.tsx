@@ -18,6 +18,9 @@ interface BreadcrumbsProps {
   locale: string;
 }
 
+// UUID regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 // Translation key mapping for breadcrumb items
 const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
   platform: "breadcrumbs.platform",
@@ -37,6 +40,19 @@ function getTitle(title: string, t?: (key: string) => string): string {
     return t(translationKey);
   }
 
+  // Handle titles with dashes (but not UUIDs)
+  if (title.includes("-") && !UUID_REGEX.test(title)) {
+    return title
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
+  // If it's a UUID, return as-is
+  if (UUID_REGEX.test(title)) {
+    return title;
+  }
+
   // Fallback to capitalize first letter
   return title.charAt(0).toUpperCase() + title.slice(1);
 }
@@ -45,8 +61,6 @@ export function Breadcrumbs({ locale }: BreadcrumbsProps) {
   const { t } = useTranslation("common");
   const pathname = usePathname();
   const { nameMappings } = useBreadcrumbContext();
-
-  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   const pathNames = pathname.split("/").filter((path) => path);
   // Remove the first item which is the locale (e.g., 'en-US', 'de-DE')
