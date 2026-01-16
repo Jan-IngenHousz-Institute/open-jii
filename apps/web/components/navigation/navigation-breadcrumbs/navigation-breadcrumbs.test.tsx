@@ -17,14 +17,11 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-// Mock breadcrumb context
-const mockNameMappings: Record<string, string> = {
-  "a1b2c3d4-e5f6-7890-abcd-ef1234567890": "My Experiment",
-};
-
 vi.mock("../breadcrumb-context", () => ({
   useBreadcrumbContext: () => ({
-    nameMappings: mockNameMappings,
+    nameMappings: {
+      "a1b2c3d4-e5f6-4890-abcd-ef1234567890": "My Experiment",
+    },
   }),
 }));
 
@@ -75,14 +72,14 @@ describe("Breadcrumbs", () => {
 
   it("uses name mapping for UUID segments", () => {
     mockUsePathname.mockReturnValue(
-      "/en/platform/experiments/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
     );
 
     render(<Breadcrumbs locale="en" />);
 
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
-    // UUID is capitalized when no mapping found (fallback behavior)
-    expect(screen.getByText("A1b2c3d4-e5f6-7890-abcd-ef1234567890")).toBeInTheDocument();
+    // UUID with mapping displays the mapped name
+    expect(screen.getByText("My Experiment")).toBeInTheDocument();
   });
 
   it("capitalizes unknown path segments", () => {
@@ -91,12 +88,12 @@ describe("Breadcrumbs", () => {
     render(<Breadcrumbs locale="en" />);
 
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
-    expect(screen.getByText("Unknown-route")).toBeInTheDocument();
+    expect(screen.getByText("Unknown Route")).toBeInTheDocument();
   });
 
   it("generates correct href for each breadcrumb level", () => {
     mockUsePathname.mockReturnValue(
-      "/en/platform/experiments/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
     );
 
     render(<Breadcrumbs locale="en" />);
@@ -105,7 +102,7 @@ describe("Breadcrumbs", () => {
     expect(links[0]).toHaveAttribute("href", "/en/platform/experiments");
     expect(links[1]).toHaveAttribute(
       "href",
-      "/en/platform/experiments/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
     );
   });
 
@@ -147,6 +144,6 @@ describe("Breadcrumbs", () => {
 
     render(<Breadcrumbs locale="en" />);
 
-    expect(screen.getByText("Custom-page")).toBeInTheDocument();
+    expect(screen.getByText("Custom Page")).toBeInTheDocument();
   });
 });
