@@ -1,6 +1,7 @@
 import { useAsyncCallback } from "react-async-hook";
 import { Text, TouchableOpacity, View } from "react-native";
-import { authClient } from "~/lib/auth-client";
+
+import { authClient } from "@repo/auth/client.native";
 
 export function LoginWidget() {
   const { data: session, isPending } = authClient.useSession();

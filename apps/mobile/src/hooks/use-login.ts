@@ -1,5 +1,6 @@
 import { useAsyncCallback } from "react-async-hook";
-import { authClient } from "~/lib/auth-client";
+
+import { authClient } from "@repo/auth/client.native";
 
 export function useLoginFlow() {
   const { execute: startGitHubLogin, loading: githubLoading } = useAsyncCallback(async () => {
@@ -18,7 +19,7 @@ export function useLoginFlow() {
     try {
       await authClient.signIn.oauth2({
         providerId: "orcid",
-        callbackURL: "/",
+        callbackURL: "openjii://(tabs)/", // Use absolute URL with proper scheme
       });
     } catch (error) {
       console.error("ORCID login error:", error);
@@ -61,6 +62,9 @@ export function useLoginFlow() {
     startOrcidLogin,
     sendEmailOTP,
     verifyEmailOTP,
-    loading: githubLoading || orcidLoading || emailLoading || verifyLoading,
+    githubLoading,
+    orcidLoading,
+    emailLoading,
+    verifyLoading,
   };
 }

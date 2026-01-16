@@ -33,7 +33,7 @@
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
-    "better-auth": "^1.4.10",
+    "better-auth": "^1.4.12",
     "next": "catalog:",
     "nodemailer": "catalog:",
     "qrcode": "^1.5.4",
@@ -50,5 +50,13 @@
     "@types/qrcode": "^1.5.5",
     "eslint": "catalog:",
     "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "expo-secure-store": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo-secure-store": {
+      "optional": true
+    }
   }
 }

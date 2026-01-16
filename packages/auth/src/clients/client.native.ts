@@ -1,49 +1,24 @@
 import { expoClient } from "@better-auth/expo/client";
-import {
-  emailOTPClient,
-  genericOAuthClient,
-  inferAdditionalFields,
-} from "better-auth/client/plugins";
+import { emailOTPClient, genericOAuthClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
+import * as SecureStore from "expo-secure-store";
 
-import type { auth } from "../server";
+const BACKEND_URL = process.env.EXPO_PUBLIC_PROD_BACKEND_URI ?? "http://localhost:3020";
+const SCHEME = "openjii";
+const STORAGE_PREFIX = "openjii";
 
-export interface NativeAuthConfig {
-  backendUrl: string;
-  environmentName: string;
-  storage: {
-    setItem: (key: string, value: string) => void;
-    getItem: (key: string) => string | null;
-  };
-  scheme?: string;
-  storagePrefix?: string;
-}
+export const authClient = createAuthClient({
+  baseURL: `${BACKEND_URL}/api/v1/auth`,
+  plugins: [
+    emailOTPClient(),
+    genericOAuthClient(),
+    expoClient({
+      scheme: SCHEME,
+      storagePrefix: STORAGE_PREFIX,
+      storage: SecureStore,
+    }),
+  ],
+});
 
-export function createNativeAuthClient(config: NativeAuthConfig) {
-  const {
-    backendUrl,
-    environmentName,
-    storage,
-    scheme = "openjii",
-    storagePrefix = "openjii",
-  } = config;
-
-  return createAuthClient({
-    baseURL: `${backendUrl}/api/v1/auth`,
-    plugins: [
-      inferAdditionalFields<typeof auth>(),
-      emailOTPClient(),
-      genericOAuthClient(),
-      expoClient({
-        scheme,
-        storagePrefix,
-        storage,
-        cookiePrefix: [
-          "better-auth",
-          `better-auth.${environmentName}`,
-          `__Secure-better-auth.${environmentName}`,
-        ],
-      }),
-    ],
-  });
-}
+export const useSession = authClient.useSession;
+export type AuthClient = typeof authClient;

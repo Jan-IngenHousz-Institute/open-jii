@@ -1,10 +1,10 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
-import { authClient } from "~/lib/auth-client";
 import { getEnvVar } from "~/stores/environment-store";
 
 import { contract } from "@repo/api";
+import { authClient } from "@repo/auth/client.native";
 
 function removeTrailingSlashes(value: string) {
   return value.replace(/\/+$/, "");

@@ -29,7 +29,7 @@ if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
 
 export const auth = betterAuth({
   logger: {
-    level: "debug",
+    level: "info",
     disabled: false,
   },
   database: drizzleAdapter(db, {
@@ -131,6 +131,7 @@ export const auth = betterAuth({
             otp,
             emailServer,
             emailFrom,
+            senderName: "openJII",
             baseUrl: clientUrl,
           });
         }

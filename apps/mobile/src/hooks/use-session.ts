@@ -1,10 +1,11 @@
 /**
  * Hook to access the current user session using Better Auth
  */
-import { authClient } from "~/lib/auth-client";
+import { authClient } from "@repo/auth/client.native";
 
 export function useSession() {
   const { data: session, isPending, error } = authClient.useSession();
+  // console.log("useSession:", { session, isPending, error });
 
   return {
     session: session

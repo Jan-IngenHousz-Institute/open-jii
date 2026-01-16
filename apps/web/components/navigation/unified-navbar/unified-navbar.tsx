@@ -13,9 +13,10 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useSignOut } from "~/hooks/auth";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import type { Session } from "@repo/auth/types";
@@ -49,11 +50,18 @@ function UserMenu({
   displayName: string;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const signOut = useSignOut();
 
   if (!session?.user) {
     return null;
   }
+
+  const handleSignOut = async () => {
+    await signOut.mutateAsync();
+    router.push("/");
+  };
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -110,14 +118,13 @@ function UserMenu({
             {t("auth.account")}
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link
-            href={`/${locale}/platform/signout?hideBackground=true`}
-            className="flex w-full cursor-default items-center"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            {t("auth.signOut", "Sign Out")}
-          </Link>
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          disabled={signOut.isPending}
+          className="flex w-full cursor-default items-center"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          {t("auth.signOut", "Sign Out")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -127,12 +134,19 @@ function UserMenu({
 export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNavbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const router = useRouter();
   const [isIntersecting, setIsIntersecting] = useState(true);
+  const signOut = useSignOut();
 
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
   const profile = userProfile?.body;
   const displayName =
     profile?.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : "";
+
+  const handleSignOut = async () => {
+    await signOut.mutateAsync();
+    router.push("/");
+  };
 
   // Intersection observer for hero section (only on home page)
   useEffect(() => {
@@ -353,14 +367,13 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                         {t("auth.account")}
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={`/${locale}/platform/signout?hideBackground=true`}
-                        className="flex w-full cursor-default items-center"
-                      >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        {t("auth.signOut", "Sign Out")}
-                      </Link>
+                    <DropdownMenuItem
+                      onClick={handleSignOut}
+                      disabled={signOut.isPending}
+                      className="flex w-full cursor-default items-center"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {t("auth.signOut", "Sign Out")}
                     </DropdownMenuItem>
                   </>
                 )}

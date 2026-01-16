@@ -3,7 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
-import type { User, UserProfile } from "@repo/api";
+import type { UserProfile } from "@repo/api";
+import type { User } from "@repo/auth/types";
 
 import { NavigationTopbar } from "./navigation-topbar";
 
@@ -25,8 +26,21 @@ vi.mock("@/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
 
 // Mock next/navigation
 let mockPathname = "/en/platform";
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
+// Mock useSignOut
+const mockSignOutMutateAsync = vi.fn();
+vi.mock("~/hooks/auth", () => ({
+  useSignOut: () => ({
+    mutateAsync: mockSignOutMutateAsync,
+    isPending: false,
+  }),
 }));
 
 // Mock posthog
@@ -108,10 +122,11 @@ describe("NavigationTopbar", () => {
     id: "user-123",
     name: "Test User",
     email: "test@example.com",
-    emailVerified: "true",
+    emailVerified: true,
     image: "/avatar.jpg",
     registered: true,
-    createdAt: "2024-01-01T00:00:00Z",
+    createdAt: new Date("2024-01-01T00:00:00Z"),
+    updatedAt: new Date("2024-01-01T00:00:00Z"),
   };
 
   it("renders the component with all main elements", () => {
@@ -162,7 +177,7 @@ describe("NavigationTopbar", () => {
   });
 
   it('displays "User" when email is not available', () => {
-    const userWithoutEmail = { ...mockUser, email: null };
+    const userWithoutEmail = { ...mockUser, email: null } as unknown as User;
     render(<NavigationTopbar locale="en" user={userWithoutEmail} />);
 
     // Should render component without crashing
@@ -245,7 +260,7 @@ describe("NavigationTopbar", () => {
   });
 
   it("handles user with null email prop", () => {
-    const userWithNullEmail = { ...mockUser, email: null };
+    const userWithNullEmail = { ...mockUser, email: null } as unknown as User;
     render(<NavigationTopbar locale="en" user={userWithNullEmail} />);
 
     // Line 105: email: user.email ?? ""
@@ -380,5 +395,38 @@ describe("NavigationTopbar", () => {
       // Should have multiple locale links when multi-language is enabled
       expect(links.length).toBeGreaterThan(1);
     });
+  });
+
+  it("calls signOut and navigates to home when sign out button is clicked", async () => {
+    const user = userEvent.setup();
+    render(<NavigationTopbar locale="en" user={mockUser} />);
+
+    // Open mobile menu
+    const menuButton = screen.getByLabelText("Open menu");
+    await user.click(menuButton);
+
+    // Wait for sheet to open
+    await waitFor(() => {
+      expect(screen.getByTestId("sheet-content")).toBeInTheDocument();
+    });
+
+    // Find and click the sign out button
+    const sheetContent = screen.getByTestId("sheet-content");
+    const signOutButton = Array.from(sheetContent.querySelectorAll("button")).find((btn) =>
+      btn.textContent.includes("navigation.logout"),
+    );
+
+    expect(signOutButton).toBeDefined();
+    if (signOutButton) {
+      await user.click(signOutButton);
+
+      // Verify signOut was called
+      expect(mockSignOutMutateAsync).toHaveBeenCalled();
+
+      // Wait for async operations to complete
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith("/");
+      });
+    }
   });
 });

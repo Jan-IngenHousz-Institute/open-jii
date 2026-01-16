@@ -19,6 +19,9 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
+// Enable package exports for Better Auth
+config.resolver.unstable_enablePackageExports = true;
+
 config.resolver.assetExts.push("txt");
 
 module.exports = config;
