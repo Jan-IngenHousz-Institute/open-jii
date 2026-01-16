@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { env } from "~/env";
 
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -20,7 +21,11 @@ export function OAuthLoginForm({ provider, callbackUrl, layoutCount }: OAuthLogi
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsPending(true);
-    const redirectUrl = callbackUrl ?? "/platform";
+    const redirectUrl = callbackUrl
+      ? callbackUrl.startsWith("http")
+        ? callbackUrl
+        : `${env.NEXT_PUBLIC_BASE_URL}${callbackUrl}`
+      : `${env.NEXT_PUBLIC_BASE_URL}/platform`;
 
     // ORCID uses genericOAuth plugin (oauth2), GitHub uses built-in social provider
     if (provider.id === "orcid") {

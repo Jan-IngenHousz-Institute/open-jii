@@ -138,10 +138,4 @@ export const userNavigation = {
     url: (locale: string) => `/${locale}/faq`,
     icon: "HelpCircle",
   },
-  logout: {
-    titleKey: "navigation.logout",
-    namespace: "navigation",
-    url: (locale: string) => `/${locale}/platform/signout`,
-    icon: "LogOut",
-  },
 } as const;

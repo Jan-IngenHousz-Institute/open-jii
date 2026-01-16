@@ -77,7 +77,7 @@ describe("OAuthLoginForm", () => {
 
       expect(mockSignInSocial).toHaveBeenCalledWith({
         provider: "github",
-        callbackURL: "/dashboard",
+        callbackURL: "http://localhost:3000/dashboard",
       });
     });
 
@@ -90,7 +90,7 @@ describe("OAuthLoginForm", () => {
 
       expect(mockSignInSocial).toHaveBeenCalledWith({
         provider: "github",
-        callbackURL: "/platform",
+        callbackURL: "http://localhost:3000/platform",
       });
     });
 
@@ -122,7 +122,7 @@ describe("OAuthLoginForm", () => {
 
       expect(mockSignInOAuth2).toHaveBeenCalledWith({
         providerId: "orcid",
-        callbackURL: "/dashboard",
+        callbackURL: "http://localhost:3000/dashboard",
       });
     });
 

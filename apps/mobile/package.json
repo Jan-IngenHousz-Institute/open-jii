@@ -4,7 +4,7 @@
   "main": "index.tsx",
   "scripts": {
     "clean": "git clean -xdf .cache .expo .turbo android ios node_modules",
-    "start": "expo start",
+    "start": "expo start -c",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
@@ -13,7 +13,7 @@
     "submit-to-google-play": "eas build -p android --profile production --clear-cache  --non-interactive --no-wait --auto-submit",
     "lint": "eslint 'src/**/*' --fix",
     "typecheck": "tsc --noEmit",
-    "postinstall": "cd ../../packages/api && pnpm run build"
+    "postinstall": "cd ../../packages/api && pnpm run build && cd - &&  cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd -"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "^3.806.0",

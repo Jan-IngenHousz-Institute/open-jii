@@ -2,10 +2,8 @@ import {
   Body,
   Container,
   Head,
-  Heading,
   Hr,
   Html,
-  Img,
   Preview,
   Section,
   Text,
@@ -15,42 +13,51 @@ import * as React from "react";
 
 interface OtpEmailProps {
   otp: string;
-  baseUrl: string;
+  senderName: string;
+  host: string;
 }
 
-export const OtpEmail = ({ otp, baseUrl }: OtpEmailProps) => {
-  const previewText = `Your openJII login code`;
-
+export const OtpEmail = ({ otp, senderName, host }: OtpEmailProps) => {
   return (
     <Html>
-      <Head />
-      <Preview>{previewText}</Preview>
       <Tailwind>
-        <Body className="bg-white font-sans text-gray-900 antialiased">
-          <Container className="mx-auto my-[40px] max-w-lg p-[20px]">
-            <Section className="mt-[32px]">
-              <Img
-                src={`${baseUrl}/static/logo.png`}
-                width="140"
-                height="32"
-                alt="OpenJII"
-                className="my-0"
-              />
+        <Head />
+        <Body className="mx-auto my-auto bg-gray-50 font-sans" style={{ color: "#374151" }}>
+          <Container className="mx-auto my-[40px] w-[580px] rounded-lg border border-solid border-gray-200 bg-white shadow-sm">
+            <Preview>Your openJII login code</Preview>
+
+            {/* Header */}
+            <Section className="rounded-t-lg bg-[#005e5e] px-8 py-6">
+              <Text className="m-0 text-center text-[28px] font-bold text-white">{senderName}</Text>
             </Section>
-            <Heading className="mx-0 my-[30px] p-0 text-[24px] font-normal text-gray-900">
-              Your login code
-            </Heading>
-            <Text className="text-[14px] leading-[24px] text-gray-900">
-              Enter the following code to sign in to openJII. This code will expire in 5 minutes.
-            </Text>
-            <Section className="my-[32px] rounded border border-solid border-gray-200 bg-gray-50 p-[24px] text-center">
-              <Text className="m-0 text-[32px] font-bold tracking-widest text-gray-900">{otp}</Text>
+
+            {/* Main Content */}
+            <Section className="px-8 py-8">
+              <Text className="mb-4 mt-0 text-center text-[24px] font-semibold text-gray-800">
+                Your login code
+              </Text>
+              <Text className="mb-8 text-center text-[16px] leading-relaxed text-gray-600">
+                Enter the following code to sign in to your openJII account. This code will expire
+                in 5 minutes.
+              </Text>
+              <Section className="my-[32px] rounded border border-solid border-gray-200 bg-gray-50 p-[24px] text-center">
+                <Text className="m-0 text-[32px] font-bold tracking-widest text-gray-900">
+                  {otp}
+                </Text>
+              </Section>
+              <Hr className="my-6 border-gray-200" />
+              <Text className="mb-0 mt-6 text-[14px] leading-relaxed text-gray-500">
+                If you didn't request this code, you can safely ignore this email. Your account
+                remains secure.
+              </Text>
             </Section>
-            <Text className="text-[14px] leading-[24px] text-gray-500">
-              If you didn't request this email, you can safely ignore it.
-            </Text>
-            <Hr className="mx-0 my-[26px] w-full border border-solid border-gray-200" />
-            <Text className="pl-1 text-[12px] leading-[24px] text-gray-500">JII Open Platform</Text>
+
+            {/* Footer */}
+            <Section className="rounded-b-lg border-t border-gray-100 bg-gray-50 px-8 py-4">
+              <Text className="m-0 text-center text-[12px] text-gray-400">
+                This email was sent by {senderName} • {host}
+              </Text>
+            </Section>
           </Container>
         </Body>
       </Tailwind>
@@ -62,5 +69,6 @@ export default OtpEmail;
 
 OtpEmail.PreviewProps = {
   otp: "123456",
-  baseUrl: "http://localhost:3000",
+  senderName: "openJII",
+  host: "localhost",
 } as OtpEmailProps;

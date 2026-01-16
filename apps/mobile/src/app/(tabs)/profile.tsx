@@ -4,7 +4,7 @@ import * as Application from "expo-application";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Alert, Linking, Image } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
@@ -43,6 +43,8 @@ export default function ProfileScreen() {
 
   const { user, expires } = session.data;
 
+  console.log(expires);
+
   return (
     <ScrollView
       style={[
@@ -55,7 +57,11 @@ export default function ProfileScreen() {
     >
       <View style={styles.profileHeader}>
         <View style={[styles.avatarContainer, { backgroundColor: colors.primary.dark + "30" }]}>
-          <User size={40} color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface} />
+          {user.image ? (
+            <Image source={{ uri: user.image }} style={styles.avatarImage} />
+          ) : (
+            <User size={40} color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface} />
+          )}
         </View>
         <Text
           style={[
@@ -203,6 +209,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 40,
   },
   userName: {
     fontSize: 20,
