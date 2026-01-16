@@ -52,3 +52,19 @@ variable "db_cluster_identifier" {
   description = "The identifier of the Aurora DB cluster to monitor"
   type        = string
 }
+
+variable "kinesis_stream_name" {
+  description = "The name of the Kinesis Data Stream to monitor"
+  type        = string
+}
+
+variable "ecs_log_group_name" {
+  description = "The CloudWatch Log Group name for ECS backend container logs"
+  type        = string
+}
+
+variable "iot_log_group_name" {
+  description = "The CloudWatch Log Group name for IoT Core logs"
+  type        = string
+  default     = "AWSIotLogsV2"
+}

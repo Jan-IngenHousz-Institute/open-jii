@@ -8,11 +8,14 @@ terraform {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
 locals {
   dashboard_json_file = file("${path.module}/dashboard.json.tftpl")
 
   dashboard_vars = {
     datasource_uid             = grafana_data_source.cloudwatch_source.uid
+    logs_datasource_uid        = grafana_data_source.cloudwatch_logs_source.uid
     project                    = var.project
     environment                = var.environment
     aws_region                 = var.aws_region
@@ -23,6 +26,10 @@ locals {
     ecs_service_name           = var.ecs_service_name
     server_function_name       = var.server_function_name
     db_cluster_identifier      = var.db_cluster_identifier
+    kinesis_stream_name        = var.kinesis_stream_name
+    ecs_log_group_name         = var.ecs_log_group_name
+    iot_log_group_name         = var.iot_log_group_name
+    account_id                 = data.aws_caller_identity.current.account_id
   }
 }
 
@@ -36,6 +43,20 @@ resource "grafana_data_source" "cloudwatch_source" {
   json_data_encoded = jsonencode({
     defaultRegion = var.aws_region
     authType      = "default" # AMG uses SigV4 with the workspace role
+  })
+}
+
+# Create a separate CloudWatch Logs data source for log queries
+resource "grafana_data_source" "cloudwatch_logs_source" {
+  provider   = grafana.amg
+  type       = "cloudwatch"
+  name       = "cw-logs-datasource"
+  is_default = false
+
+  json_data_encoded = jsonencode({
+    defaultRegion = var.aws_region
+    authType      = "default"
+    logGroupNames = [var.ecs_log_group_name]
   })
 }
 
@@ -637,6 +658,69 @@ EOT
   }
 }
 
+# ECS Container Logs Alerts
+resource "grafana_rule_group" "ecs_logs_alerts" {
+  provider         = grafana.amg
+  name             = "ECS Container Logs"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  rule {
+    name      = "ECS Container Errors Detected"
+    condition = "B"
+
+    data {
+      ref_id         = "A"
+      query_type     = "logsVolume"
+      datasource_uid = grafana_data_source.cloudwatch_logs_source.uid
+
+      model = jsonencode({
+        expression = "fields @timestamp, @message | filter @message like /ERROR/ | stats count() as error_count"
+        logGroups  = [var.ecs_log_group_name]
+        region     = var.aws_region
+        refId      = "A"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "2m"
+
+    annotations = {
+      description = "ERROR detected in ECS container logs for ${var.ecs_service_name}. [View logs](d/${grafana_dashboard.dashboard.uid}?viewPanel=305)"
+      summary     = "ECS container error detected"
+      runbook_url = "d/${grafana_dashboard.dashboard.uid}?viewPanel=305"
+    }
+    labels = {
+      severity = "warning"
+      service  = "ecs"
+    }
+  }
+}
+
 # Notification policy
 resource "grafana_notification_policy" "policy" {
   provider = grafana.amg
@@ -666,6 +750,6 @@ resource "grafana_notification_policy" "policy" {
     }
     group_by        = ["alertname"]
     contact_point   = grafana_contact_point.slack.name
-    repeat_interval = "24h"
+    repeat_interval = "1d"
   }
 }
