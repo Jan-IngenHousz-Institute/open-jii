@@ -1567,7 +1567,6 @@ module "grafana_dashboard" {
 
   # IoT and Kinesis monitoring
   kinesis_stream_name = module.kinesis.kinesis_stream_name
-  iot_endpoint        = "" # IoT Core doesn't have a specific endpoint for metrics
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 

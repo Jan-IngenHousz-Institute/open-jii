@@ -58,12 +58,6 @@ variable "kinesis_stream_name" {
   type        = string
 }
 
-variable "iot_endpoint" {
-  description = "The IoT Core endpoint for monitoring"
-  type        = string
-  default     = ""
-}
-
 variable "ecs_log_group_name" {
   description = "The CloudWatch Log Group name for ECS backend container logs"
   type        = string

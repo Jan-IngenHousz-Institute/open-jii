@@ -40,7 +40,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -94,11 +94,11 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56",
-            "TargetGroup": "targetgroup/backend-tg/d521505d8de24066"
+            "LoadBalancer": "${load_balancer_dimension}",
+            "TargetGroup": "${target_group_dimension}"
           },
           "expression": "",
           "id": "",
@@ -112,7 +112,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -123,7 +123,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -180,10 +180,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -197,7 +197,7 @@
           "period": "60",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -208,7 +208,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -267,10 +267,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -284,7 +284,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -295,7 +295,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -352,10 +352,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -369,7 +369,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "p95"
         }
@@ -380,7 +380,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -437,10 +437,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -454,7 +454,7 @@
           "period": "60",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -478,7 +478,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -558,10 +558,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DistributionId": "E3K6NF2RKOFQPG"
+            "DistributionId": "${cloudfront_distribution_id}"
           },
           "expression": "",
           "id": "",
@@ -586,7 +586,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -666,10 +666,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DistributionId": "E3K6NF2RKOFQPG"
+            "DistributionId": "${cloudfront_distribution_id}"
           },
           "expression": "",
           "id": "",
@@ -690,10 +690,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DistributionId": "E3K6NF2RKOFQPG"
+            "DistributionId": "${cloudfront_distribution_id}"
           },
           "expression": "",
           "id": "",
@@ -714,10 +714,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DistributionId": "E3K6NF2RKOFQPG"
+            "DistributionId": "${cloudfront_distribution_id}"
           },
           "expression": "",
           "id": "",
@@ -742,7 +742,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -828,10 +828,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DistributionId": "E3K6NF2RKOFQPG"
+            "DistributionId": "${cloudfront_distribution_id}"
           },
           "expression": "",
           "id": "",
@@ -869,7 +869,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -981,10 +981,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -998,13 +998,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -1018,7 +1018,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -1029,7 +1029,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1109,10 +1109,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -1126,13 +1126,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -1146,13 +1146,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56"
+            "LoadBalancer": "${load_balancer_dimension}"
           },
           "expression": "",
           "id": "",
@@ -1166,7 +1166,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "C",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -1177,7 +1177,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1259,11 +1259,11 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "ClusterName": "backend-cluster-dev",
-            "ServiceName": "backend-dev"
+            "ClusterName": "${ecs_cluster_name}",
+            "ServiceName": "${ecs_service_name}"
           },
           "expression": "",
           "id": "",
@@ -1277,14 +1277,14 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "dimensions": {
-            "ClusterName": "backend-cluster-dev",
-            "ServiceName": "backend-dev"
+            "ClusterName": "${ecs_cluster_name}",
+            "ServiceName": "${ecs_service_name}"
           },
           "expression": "",
           "id": "",
@@ -1298,7 +1298,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -1309,7 +1309,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1389,11 +1389,11 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "ClusterName": "backend-cluster-dev",
-            "ServiceName": "backend-dev"
+            "ClusterName": "${ecs_cluster_name}",
+            "ServiceName": "${ecs_service_name}"
           },
           "expression": "",
           "id": "",
@@ -1407,18 +1407,18 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56",
-            "TargetGroup": "targetgroup/backend-tg/d521505d8de24066"
+            "LoadBalancer": "${load_balancer_dimension}",
+            "TargetGroup": "${target_group_dimension}"
           },
           "expression": "",
           "id": "",
@@ -1432,18 +1432,18 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "LoadBalancer": "app/backend-alb/69b4da672442cb56",
-            "TargetGroup": "targetgroup/backend-tg/d521505d8de24066"
+            "LoadBalancer": "${load_balancer_dimension}",
+            "TargetGroup": "${target_group_dimension}"
           },
           "expression": "",
           "id": "",
@@ -1457,7 +1457,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "C",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -1468,7 +1468,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "efa8bbew2qewwa"
+        "uid": "${logs_datasource_uid}"
       },
       "gridPos": {
         "h": 12,
@@ -1491,20 +1491,20 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "efa8bbew2qewwa"
+            "uid": "${logs_datasource_uid}"
           },
           "expression": "fields @timestamp, @message | sort @timestamp desc | limit 1000",
           "id": "",
           "logGroups": [
             {
-              "accountId": "084375565727",
-              "arn": "arn:aws:logs:eu-central-1:084375565727:log-group:/aws/ecs/backend-service-dev:*",
-              "name": "/aws/ecs/backend-service-dev"
+              "accountId": "${account_id}",
+              "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${ecs_log_group_name}:*",
+              "name": "${ecs_log_group_name}"
             }
           ],
           "queryMode": "Logs",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "statsGroups": []
         }
       ],
@@ -1527,7 +1527,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1607,10 +1607,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "FunctionName": "open-jii-dev-opennext-server"
+            "FunctionName": "${server_function_name}"
           },
           "expression": "",
           "id": "",
@@ -1624,13 +1624,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "FunctionName": "open-jii-dev-opennext-server"
+            "FunctionName": "${server_function_name}"
           },
           "expression": "",
           "id": "",
@@ -1644,13 +1644,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "FunctionName": "open-jii-dev-opennext-server"
+            "FunctionName": "${server_function_name}"
           },
           "expression": "",
           "id": "",
@@ -1664,7 +1664,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "C",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -1675,7 +1675,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1787,10 +1787,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "FunctionName": "open-jii-dev-opennext-server"
+            "FunctionName": "${server_function_name}"
           },
           "expression": "",
           "id": "",
@@ -1804,13 +1804,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "p50"
         },
         {
           "dimensions": {
-            "FunctionName": "open-jii-dev-opennext-server"
+            "FunctionName": "${server_function_name}"
           },
           "expression": "",
           "id": "",
@@ -1824,13 +1824,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "p95"
         },
         {
           "dimensions": {
-            "FunctionName": "open-jii-dev-opennext-server"
+            "FunctionName": "${server_function_name}"
           },
           "expression": "",
           "id": "",
@@ -1844,13 +1844,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "C",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "p99"
         },
         {
           "dimensions": {
-            "FunctionName": "open-jii-dev-opennext-server"
+            "FunctionName": "${server_function_name}"
           },
           "expression": "",
           "id": "",
@@ -1864,7 +1864,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "D",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Maximum"
         }
@@ -1888,7 +1888,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1968,10 +1968,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -1985,7 +1985,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -1996,7 +1996,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2080,10 +2080,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -2097,13 +2097,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -2117,7 +2117,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -2128,7 +2128,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2214,10 +2214,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -2231,7 +2231,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -2242,7 +2242,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2322,10 +2322,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -2339,13 +2339,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -2359,7 +2359,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -2370,7 +2370,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2450,10 +2450,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -2467,13 +2467,13 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "dimensions": {
-            "DBClusterIdentifier": "open-jii-dev-db-cluster"
+            "DBClusterIdentifier": "${db_cluster_identifier}"
           },
           "expression": "",
           "id": "",
@@ -2487,7 +2487,7 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -2511,7 +2511,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2565,7 +2565,7 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {},
           "expression": "",
@@ -2579,7 +2579,7 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -2590,7 +2590,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2644,7 +2644,7 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
             "Protocol": "HTTP"
@@ -2660,14 +2660,14 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
             "Protocol": "MQTT"
@@ -2683,7 +2683,7 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -2694,7 +2694,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Connection successes and errors",
       "fieldConfig": {
@@ -2775,7 +2775,7 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {},
           "expression": "",
@@ -2789,14 +2789,14 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {},
           "expression": "",
@@ -2810,7 +2810,7 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "B",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -2821,7 +2821,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Messages published over time",
       "fieldConfig": {
@@ -2902,7 +2902,7 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
             "Protocol": "MQTT"
@@ -2918,7 +2918,7 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -2929,7 +2929,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "efa8bbew2qewwa"
+        "uid": "${logs_datasource_uid}"
       },
       "gridPos": {
         "h": 9,
@@ -2952,7 +2952,7 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "efa8bbew2qewwa"
+            "uid": "${logs_datasource_uid}"
           },
           "dimensions": {},
           "expression": "fields @timestamp, @message |\n sort @timestamp desc |\n limit 20",
@@ -2960,9 +2960,9 @@
           "label": "",
           "logGroups": [
             {
-              "accountId": "084375565727",
-              "arn": "arn:aws:logs:eu-central-1:084375565727:log-group:AWSIotLogsV2:*",
-              "name": "AWSIotLogsV2"
+              "accountId": "${account_id}",
+              "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${iot_log_group_name}:*",
+              "name": "${iot_log_group_name}"
             }
           ],
           "matchExact": true,
@@ -2973,7 +2973,7 @@
           "period": "",
           "queryMode": "Logs",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average",
           "statsGroups": []
@@ -2998,7 +2998,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Age of the oldest record read from the stream (indicates consumer lag)",
       "fieldConfig": {
@@ -3083,10 +3083,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "StreamName": "open-jii-dev-data-ingest-stream"
+            "StreamName": "${kinesis_stream_name}"
           },
           "expression": "",
           "id": "",
@@ -3099,7 +3099,7 @@
           "period": "60",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Maximum"
         }
@@ -3110,7 +3110,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3189,7 +3189,7 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {},
           "expression": "",
@@ -3204,7 +3204,7 @@
           "period": "",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -3215,7 +3215,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "GetRecords throughput in MiB/second",
       "fieldConfig": {
@@ -3292,10 +3292,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "StreamName": "open-jii-dev-data-ingest-stream"
+            "StreamName": "${kinesis_stream_name}"
           },
           "expression": "m0/1024/1024/PERIOD(m0)",
           "id": "e0",
@@ -3306,16 +3306,16 @@
           "period": "60",
           "queryMode": "Metrics",
           "refId": "e0",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": ""
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "StreamName": "open-jii-dev-data-ingest-stream"
+            "StreamName": "${kinesis_stream_name}"
           },
           "expression": "",
           "hide": false,
@@ -3329,7 +3329,7 @@
           "period": "60",
           "queryMode": "Metrics",
           "refId": "m0",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -3340,7 +3340,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Maximum GetRecords limit for the stream",
       "fieldConfig": {
@@ -3417,10 +3417,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "StreamName": "open-jii-dev-data-ingest-stream"
+            "StreamName": "${kinesis_stream_name}"
           },
           "expression": "1 * 2 * IF(m0, 1, 1)",
           "id": "e1",
@@ -3431,16 +3431,16 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "e1",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": ""
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "StreamName": "open-jii-dev-data-ingest-stream"
+            "StreamName": "${kinesis_stream_name}"
           },
           "expression": "",
           "hide": false,
@@ -3454,7 +3454,7 @@
           "period": "86400",
           "queryMode": "Metrics",
           "refId": "m0",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -3478,7 +3478,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Total number of deployments across all services in the last 24 hours",
       "fieldConfig": {
@@ -3532,7 +3532,7 @@
       "targets": [
         {
           "dimensions": {
-            "Environment": "dev"
+            "Environment": "${environment}"
           },
           "expression": "",
           "id": "",
@@ -3545,7 +3545,7 @@
           "period": "604800",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -3556,7 +3556,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Average time from commit to production deployment",
       "fieldConfig": {
@@ -3611,7 +3611,7 @@
       "targets": [
         {
           "dimensions": {
-            "Environment": "dev"
+            "Environment": "${environment}"
           },
           "expression": "",
           "id": "",
@@ -3624,7 +3624,7 @@
           "period": "604800",
           "queryMode": "Metrics",
           "refId": "A",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -3635,7 +3635,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Percentage of deployments that failed",
       "fieldConfig": {
@@ -3698,10 +3698,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "Environment": "dev"
+            "Environment": "${environment}"
           },
           "expression": "",
           "id": "",
@@ -3714,17 +3714,17 @@
           "period": "604800",
           "queryMode": "Metrics",
           "refId": "Failed",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "Environment": "dev"
+            "Environment": "${environment}"
           },
           "expression": "",
           "id": "",
@@ -3737,14 +3737,14 @@
           "period": "604800",
           "queryMode": "Metrics",
           "refId": "Success",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {},
           "expression": "(Failed / (Success + Failed)) * 100",
@@ -3758,7 +3758,7 @@
           "period": "",
           "queryMode": "Metrics",
           "refId": "CFR",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sql": {
             "select": {
               "name": "AVG",
@@ -3774,7 +3774,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Percentage of successful deployments",
       "fieldConfig": {
@@ -3832,10 +3832,10 @@
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "Environment": "dev"
+            "Environment": "${environment}"
           },
           "expression": "",
           "id": "",
@@ -3848,17 +3848,17 @@
           "period": "604800",
           "queryMode": "Metrics",
           "refId": "Failed",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {
-            "Environment": "dev"
+            "Environment": "${environment}"
           },
           "expression": "",
           "id": "",
@@ -3871,14 +3871,14 @@
           "period": "604800",
           "queryMode": "Metrics",
           "refId": "Success",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "datasource": {
             "type": "cloudwatch",
-            "uid": "ef9ggkfv7gef4a"
+            "uid": "${datasource_uid}"
           },
           "dimensions": {},
           "expression": "(Success / (Success + Failed)) * 100",
@@ -3892,7 +3892,7 @@
           "period": "",
           "queryMode": "Metrics",
           "refId": "SR",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sql": {
             "select": {
               "name": "AVG",
@@ -3908,7 +3908,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Number of deployments per service over time",
       "fieldConfig": {
@@ -3988,7 +3988,7 @@
       "targets": [
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "backend"
           },
           "expression": "",
@@ -4002,13 +4002,13 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Backend",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "web"
           },
           "expression": "",
@@ -4022,13 +4022,13 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Web",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "docs"
           },
           "expression": "",
@@ -4042,13 +4042,13 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Docs",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         },
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "database"
           },
           "expression": "",
@@ -4062,7 +4062,7 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Database",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
         }
@@ -4073,7 +4073,7 @@
     {
       "datasource": {
         "type": "cloudwatch",
-        "uid": "ef9ggkfv7gef4a"
+        "uid": "${datasource_uid}"
       },
       "description": "Average lead time from commit to deployment",
       "fieldConfig": {
@@ -4153,7 +4153,7 @@
       "targets": [
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "backend"
           },
           "expression": "",
@@ -4167,13 +4167,13 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Backend",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "web"
           },
           "expression": "",
@@ -4187,13 +4187,13 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Web",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "docs"
           },
           "expression": "",
@@ -4207,13 +4207,13 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Docs",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         },
         {
           "dimensions": {
-            "Environment": "dev",
+            "Environment": "${environment}",
             "Service": "database"
           },
           "expression": "",
@@ -4227,7 +4227,7 @@
           "period": "3600",
           "queryMode": "Metrics",
           "refId": "Database",
-          "region": "eu-central-1",
+          "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Average"
         }
@@ -4254,7 +4254,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "open-jii - Platform Monitoring Dashboard",
-  "uid": "dev-platform-overview",
+  "uid": "${environment}-platform-overview",
   "version": 17,
   "weekStart": ""
 }
