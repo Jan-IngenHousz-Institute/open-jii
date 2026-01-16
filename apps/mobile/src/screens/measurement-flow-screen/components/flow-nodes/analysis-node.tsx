@@ -6,7 +6,7 @@ import { MeasurementResult } from "~/components/measurement-result/measurement-r
 import { useExperiments } from "~/hooks/use-experiments";
 import { useMacro } from "~/hooks/use-macro";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
-import { useSessionStore } from "~/hooks/use-session-store";
+import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
@@ -32,7 +32,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     flowNodes,
   } = useMeasurementFlowStore();
   const { experiments } = useExperiments();
-  const { session } = useSessionStore();
+  const { session } = useSession();
 
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";

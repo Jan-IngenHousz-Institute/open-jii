@@ -60,7 +60,8 @@ describe("DeleteUserUseCase", () => {
       .where(eq(users.id, userToDeleteId));
 
     expect(deletedUser).toBeDefined();
-    expect(deletedUser.email).toBeNull();
+    expect(deletedUser.email).not.toBe("to-delete@example.com"); // Email is anonymized
+    expect(deletedUser.email).toMatch(/^deleted-/); // Starts with deleted- prefix
     expect(deletedUser.name).toBe("Deleted User");
   });
 
@@ -126,7 +127,8 @@ describe("DeleteUserUseCase", () => {
       .where(eq(users.id, userToDeleteId));
 
     expect(deletedUser).toBeDefined();
-    expect(deletedUser.email).toBeNull();
+    expect(deletedUser.email).not.toBe("to-delete@example.com"); // Email is anonymized
+    expect(deletedUser.email).toMatch(/^deleted-/); // Starts with deleted- prefix
     expect(deletedUser.name).toBe("Deleted User");
   });
 

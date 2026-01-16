@@ -62,7 +62,12 @@ describe("GetUserProfileUseCase", () => {
     // Arrange: create a different user with no profile
     const [userWithoutProfile] = await testApp.database
       .insert(users)
-      .values({ email: "no-profile@example.com", name: "No Profile" })
+      .values({
+        email: "no-profile@example.com",
+        name: "No Profile",
+        emailVerified: false,
+        registered: false,
+      })
       .returning();
     const userWithoutProfileId = userWithoutProfile.id;
 

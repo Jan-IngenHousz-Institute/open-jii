@@ -1,13 +1,12 @@
-import { Controller, Inject, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Inject, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { macroContract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure, isSuccess } from "../../common/utils/fp-utils";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
@@ -33,10 +32,9 @@ export class MacroController {
   ) {}
 
   @TsRestHandler(macroContract.createMacro)
-  @UseGuards(AuthGuard)
-  createMacro(@CurrentUser() user: User) {
+  createMacro(@Session() session: UserSession) {
     return tsRestHandler(macroContract.createMacro, async ({ body }) => {
-      const result = await this.createMacroUseCase.execute(body, user.id);
+      const result = await this.createMacroUseCase.execute(body, session.user.id);
 
       if (result.isSuccess()) {
         return {
@@ -50,7 +48,6 @@ export class MacroController {
   }
 
   @TsRestHandler(macroContract.getMacro)
-  @UseGuards(AuthGuard)
   getMacro() {
     return tsRestHandler(macroContract.getMacro, async ({ params }) => {
       const result = await this.getMacroUseCase.execute(params.id);
@@ -67,7 +64,6 @@ export class MacroController {
   }
 
   @TsRestHandler(macroContract.listMacros)
-  @UseGuards(AuthGuard)
   listMacros() {
     return tsRestHandler(macroContract.listMacros, async ({ query }) => {
       const result = await this.listMacrosUseCase.execute({
@@ -87,10 +83,9 @@ export class MacroController {
   }
 
   @TsRestHandler(macroContract.updateMacro)
-  @UseGuards(AuthGuard)
-  updateMacro(@CurrentUser() user: User) {
+  updateMacro(@Session() session: UserSession) {
     return tsRestHandler(macroContract.updateMacro, async ({ params, body }) => {
-      const result = await this.updateMacroUseCase.execute(params.id, body, user.id);
+      const result = await this.updateMacroUseCase.execute(params.id, body, session.user.id);
 
       if (result.isSuccess()) {
         return {
@@ -104,12 +99,11 @@ export class MacroController {
   }
 
   @TsRestHandler(macroContract.deleteMacro)
-  @UseGuards(AuthGuard)
-  deleteMacro(@CurrentUser() user: User) {
+  deleteMacro(@Session() session: UserSession) {
     return tsRestHandler(macroContract.deleteMacro, async ({ params }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.MACRO_DELETION,
-        user.email ?? user.id,
+        session.user.email || session.user.id,
       );
 
       if (!isDeletionEnabled) {
@@ -119,7 +113,7 @@ export class MacroController {
         };
       }
 
-      const result = await this.deleteMacroUseCase.execute(params.id, user.id);
+      const result = await this.deleteMacroUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         return {

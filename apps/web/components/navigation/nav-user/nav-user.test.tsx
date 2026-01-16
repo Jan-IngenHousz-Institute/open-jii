@@ -30,6 +30,23 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+// Mock useRouter
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
+// Mock useSignOut
+const mockSignOutMutateAsync = vi.fn();
+vi.mock("~/hooks/auth", () => ({
+  useSignOut: () => ({
+    mutateAsync: mockSignOutMutateAsync,
+    isPending: false,
+  }),
+}));
+
 // Profile hook
 type ProfileBody = { firstName?: string; lastName?: string } | undefined;
 const useGetUserProfileMock = vi.fn();
@@ -128,13 +145,33 @@ describe("<NavUser />", () => {
     expect(accountItem).toHaveAttribute("href", "/en-US/platform/account/settings");
 
     const logoutItem = screen.getByRole("menuitem", { name: "navigation.logout" });
-    expect(logoutItem).toHaveAttribute("href", "/en-US/platform/signout");
+    expect(logoutItem).toBeInTheDocument();
+    expect(logoutItem).not.toHaveAttribute("href"); // Button, not link
 
     const supportItem = screen.getByRole("menuitem", { name: "navigation.support" });
     expect(supportItem).toHaveAttribute("href", "http://localhost:3010");
 
     const faqItem = screen.getByRole("menuitem", { name: "navigation.faq" });
     expect(faqItem).toHaveAttribute("href", "/en-US/faq");
+  });
+
+  it("calls signOut and navigates to home when logout is clicked", async () => {
+    const user = userEvent.setup();
+    renderNav({
+      profile: { firstName: "Ada", lastName: "Lovelace" },
+      locale: "en-US",
+    });
+
+    // Open the menu
+    await user.click(screen.getByRole("button"));
+
+    const logoutItem = screen.getByRole("menuitem", { name: "navigation.logout" });
+
+    // Click logout
+    await user.click(logoutItem);
+
+    expect(mockSignOutMutateAsync).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith("/");
   });
 
   it("uses correct docs URL from environment", async () => {

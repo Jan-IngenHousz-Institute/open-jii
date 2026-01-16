@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
-import { handleLogout } from "~/app/actions/auth";
+import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useDeleteUser } from "~/hooks/profile/useDeleteUser/useDeleteUser";
 import { parseApiError } from "~/util/apiError";
@@ -35,13 +35,15 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
   const { t } = useTranslation("account");
   const [openModal, setOpenModal] = useState<"deactivate" | "delete" | null>(null);
   const [confirmation, setConfirmation] = useState("");
+  const signOut = useSignOut();
 
   const { mutate: updateProfile, isPending } = useCreateUserProfile({
     onSuccess: async () => {
       toast({ description: t("dangerZone.deactivate.successMessage") });
       // Sign out after deactivation
       if (profile?.activated) {
-        await handleLogout({ redirectTo: "/" });
+        await signOut.mutateAsync();
+        window.location.href = "/";
       }
     },
   });
@@ -73,7 +75,8 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
       });
       handleClose();
       // Sign out after successful deletion
-      await handleLogout({ redirectTo: "/" });
+      await signOut.mutateAsync();
+      window.location.href = "/";
     },
   });
 

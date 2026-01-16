@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth } from "~/app/actions/auth";
 import { AccountSettings } from "~/components/account-settings/account-settings";
 
 export default async function AccountSettingsPage() {

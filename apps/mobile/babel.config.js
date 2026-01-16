@@ -9,7 +9,6 @@ module.exports = function (api) {
           "react-compiler": false,
         },
       ],
-      "nativewind/babel",
     ],
     plugins: ["@babel/plugin-transform-class-static-block", "inline-dotenv"],
   };

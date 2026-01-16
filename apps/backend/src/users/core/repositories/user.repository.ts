@@ -11,7 +11,7 @@ import {
   users,
   accounts,
   sessions,
-  authenticators,
+  // authenticators table removed - Better Auth uses accounts table
   experimentMembers,
   sql,
   isNull,
@@ -183,10 +183,9 @@ export class UserRepository {
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.transaction(async (tx) => {
-        // 1. Delete OAuth accounts, sessions, and authenticators
+        // 1. Delete OAuth accounts and sessions
         await tx.delete(accounts).where(eq(accounts.userId, id));
         await tx.delete(sessions).where(eq(sessions.userId, id));
-        await tx.delete(authenticators).where(eq(authenticators.userId, id));
 
         // 2. Delete experiment memberships
         await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
@@ -208,10 +207,10 @@ export class UserRepository {
         await tx
           .update(users)
           .set({
-            email: null,
             name: `Deleted User`,
+            email: sql`'deleted-' || ${users.id} || '@example.com'`,
             image: null,
-            emailVerified: null,
+            emailVerified: false,
           })
           .where(eq(users.id, id));
       });

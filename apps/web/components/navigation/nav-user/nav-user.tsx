@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { env } from "~/env";
+import { useSignOut } from "~/hooks/auth";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import { useTranslation } from "@repo/i18n";
@@ -43,7 +45,9 @@ interface NavUserProps {
 
 export function NavUser({ user, locale, compact = false }: NavUserProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const signOut = useSignOut();
 
   const { data: userProfile } = useGetUserProfile(user.id);
   const userProfileBody = userProfile?.body;
@@ -51,6 +55,11 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
     userProfileBody?.firstName && userProfileBody.lastName
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
       : "";
+
+  const handleSignOut = async () => {
+    await signOut.mutateAsync();
+    router.push("/");
+  };
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
 
@@ -136,14 +145,13 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
           </DropdownMenuItem>
 
           {/* SIGN OUT */}
-          <DropdownMenuItem asChild>
-            <Link
-              href={`/${locale}/platform/signout`}
-              className="flex w-full cursor-default items-center"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              {t("navigation.logout")}
-            </Link>
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            disabled={signOut.isPending}
+            className="flex w-full cursor-default items-center"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {t("navigation.logout")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -238,14 +246,13 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
             </DropdownMenuItem>
 
             {/* SIGN OUT */}
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/${locale}/platform/signout`}
-                className="flex w-full cursor-default items-center"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                {t("navigation.logout")}
-              </Link>
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              disabled={signOut.isPending}
+              className="flex w-full cursor-default items-center"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              {t("navigation.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

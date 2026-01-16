@@ -1,10 +1,11 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
-import { auth } from "@/lib/auth";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
 import Image from "next/image";
+import { auth } from "~/app/actions/auth";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { LoginForm } from "~/components/auth/login-form";
+import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
 
 export default async function LoginPage(props: {
   params: Promise<{ locale: string }>;
@@ -13,6 +14,9 @@ export default async function LoginPage(props: {
   const { locale } = await props.params;
   const { callbackUrl } = await props.searchParams;
   const session = await auth();
+
+  // Fetch terms data on the server
+  const termsData = await TermsAndConditionsDialog({ locale });
 
   // Pick random background image
   const bgIndex = Math.floor(Math.random() * 4) + 1;
@@ -38,7 +42,11 @@ export default async function LoginPage(props: {
             {/* Login Form */}
             <div className="flex flex-col p-0 md:px-10">
               <div className="w-full md:max-w-md">
-                <LoginForm callbackUrl={getFirstSearchParam(callbackUrl)} locale={locale} />
+                <LoginForm
+                  callbackUrl={getFirstSearchParam(callbackUrl)}
+                  locale={locale}
+                  termsData={termsData}
+                />
               </div>
             </div>
 

@@ -11,6 +11,10 @@
       "types": "./dist/emails/verification-request.d.ts",
       "default": "./dist/emails/verification-request.js"
     },
+    "./emails/otp-email": {
+      "types": "./dist/emails/otp-email.d.ts",
+      "default": "./dist/emails/otp-email.js"
+    },
     "./emails/transfer-request-confirmation": {
       "types": "./dist/emails/transfer-request-confirmation.d.ts",
       "default": "./dist/emails/transfer-request-confirmation.js"

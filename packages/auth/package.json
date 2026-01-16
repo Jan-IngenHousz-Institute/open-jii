@@ -2,33 +2,21 @@
   "name": "@repo/auth",
   "version": "0.0.1",
   "exports": {
-    "./adapter": {
-      "types": "./src/adapter.d.ts",
-      "default": "./dist/adapter.js"
-    },
-    "./config": {
-      "types": "./src/config.d.ts",
-      "default": "./dist/config.js"
-    },
-    "./next": {
-      "types": "./src/next.d.ts",
-      "default": "./dist/next.js"
-    },
-    "./express": {
-      "types": "./src/express.d.ts",
-      "default": "./dist/express.js"
+    "./server": {
+      "types": "./src/server.d.ts",
+      "default": "./dist/server.js"
     },
     "./client": {
-      "types": "./src/client.d.ts",
-      "default": "./dist/client.js"
+      "types": "./src/clients/client.web.d.ts",
+      "default": "./dist/clients/client.web.js"
+    },
+    "./client.native": {
+      "types": "./src/clients/client.native.d.ts",
+      "default": "./dist/clients/client.native.js"
     },
     "./types": {
       "types": "./src/types.d.ts",
       "default": "./dist/types.js"
-    },
-    "./providers/orcid": {
-      "types": "./src/providers/orcid.d.ts",
-      "default": "./dist/providers/orcid.js"
     }
   },
   "private": true,
@@ -41,14 +29,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@auth/core": "^0.41.1",
-    "@auth/drizzle-adapter": "^1.11.1",
-    "@auth/express": "^0.12.1",
+    "@better-auth/expo": "^1.4.12",
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
+    "better-auth": "^1.4.12",
     "next": "catalog:",
-    "next-auth": "5.0.0-beta.30",
     "nodemailer": "catalog:",
     "qrcode": "^1.5.4",
     "react": "catalog:react19",
@@ -64,5 +50,13 @@
     "@types/qrcode": "^1.5.5",
     "eslint": "catalog:",
     "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "expo-secure-store": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo-secure-store": {
+      "optional": true
+    }
   }
 }
