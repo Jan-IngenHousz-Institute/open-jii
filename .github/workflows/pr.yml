@@ -92,6 +92,10 @@ jobs:
         with:
           node-version: "22"
       
+      - name: Fetch Base Branch
+        run: |
+          git fetch origin main:main --depth=50
+
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
