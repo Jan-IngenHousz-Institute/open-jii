@@ -1,5 +1,18 @@
 # Report issue / request feature
 
-Please use https://github.com/Jan-IngenHousz-Institute/open-jii/discussions to report any issues and [request features (aka "Ideas")](https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/categories/ideas)
+## Did you find a bug?
+Do not open up a GitHub issue if the bug is a security vulnerability. Please refer to our security policy [Security policy](https://github.com/Jan-IngenHousz-Institute/open-jii/security).
+
+Ensure the bug was not already reported by searching [Issues](https://github.com/Jan-IngenHousz-Institute/open-jii/issues).
+
+If you can't find an open issue addressing the problem, [open a new one](https://github.com/Jan-IngenHousz-Institute/open-jii/issues/new). Include:
+
+- Clear title and description
+- As much relevant information as possible
+- Code sample or test case demonstrating the issue
+- Version of openJII you're using
+
+## Request feature
+Please use [request features (aka "Ideas")](https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/categories/ideas)
 
 You can contribute code, documentation, or ideas through our GitHub repository or by joining the open science working group.

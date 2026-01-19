@@ -193,6 +193,16 @@ locals {
       resource = "*"
     }
 
+    cloudwatch = {
+      actions = [
+        "cloudwatch:PutMetricData",
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics"
+      ]
+      resource = "*"
+    }
+
     sqs = {
       actions  = ["sqs:*"]
       resource = "*"

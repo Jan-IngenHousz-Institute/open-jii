@@ -47,8 +47,10 @@ jobs:
           TOKEN_ID=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.id')
           TOKEN_VALUE=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.key')
           TOKEN_NAME=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.name')
-          CREATED_AT=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.createdAt')
-          EXPIRES_AT=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.expiresAt')
+          
+          # Calculate dates (30 days = 2592000 seconds)
+          CREATED_AT=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          EXPIRES_AT=$(date -u -d '+30 days' '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -u -v+30d '+%Y-%m-%d %H:%M:%S UTC')
           
           echo "token_id=$TOKEN_ID" >> $GITHUB_OUTPUT
           echo "token_name=$TOKEN_NAME" >> $GITHUB_OUTPUT
@@ -65,7 +67,7 @@ jobs:
 
       - name: Update GitHub Secret
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           # Update GitHub environment secret for dev
           echo "$TOKEN_VALUE" | gh secret set "GRAFANA_SERVICE_TOKEN" \
