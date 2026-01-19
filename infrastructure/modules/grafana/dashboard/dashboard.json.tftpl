@@ -2931,73 +2931,7 @@
         "type": "cloudwatch",
         "uid": "${logs_datasource_uid}"
       },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "@timestamp"
-            },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "targetBlank": true,
-                    "title": "View in CloudWatch Logs",
-                    "url": "https://console.aws.amazon.com/cloudwatch/home?region=${aws_region}#logEventViewer:group=$${__urlencode:$${__data.fields.log_group}};stream=$${__urlencode:$${__data.fields.log_stream}}"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "log_group"
-            },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "targetBlank": true,
-                    "title": "View in CloudWatch Logs",
-                    "url": "https://console.aws.amazon.com/cloudwatch/home?region=${aws_region}#logEventViewer:group=$${__urlencode:$${__value.raw}};stream=$${__urlencode:$${__data.fields.log_stream}}"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "log_stream"
-            },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "targetBlank": true,
-                    "title": "View in CloudWatch Logs",
-                    "url": "https://console.aws.amazon.com/cloudwatch/home?region=${aws_region}#logEventViewer:group=$${__urlencode:$${__data.fields.log_group}};stream=$${__urlencode:$${__value.raw}}"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
+      "description": "[View in CloudWatch Logs](https://${aws_region}.console.aws.amazon.com/cloudwatch/home?region=${aws_region}#logsV2:log-groups/log-group/${iot_log_group_name})",
       "gridPos": {
         "h": 9,
         "w": 24,
@@ -3023,7 +2957,7 @@
             "uid": "${logs_datasource_uid}"
           },
           "dimensions": {},
-          "expression": "fields @timestamp, @message, @log as log_group, @logStream as log_stream |\n sort @timestamp desc |\n limit 20",
+          "expression": "fields @timestamp, @message, @logStream |\n sort @timestamp desc |\n limit 20",
           "id": "",
           "label": "",
           "logGroups": [
