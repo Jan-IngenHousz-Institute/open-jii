@@ -52,12 +52,11 @@ describe("Breadcrumbs", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders breadcrumb trail for experiments page", () => {
+  it("does not render breadcrumbs for first-level platform routes", () => {
     mockUsePathname.mockReturnValue("/en/platform/experiments");
 
     const { container } = render(<Breadcrumbs locale="en" />);
 
-    // Should return null for first-level routes
     expect(container.firstChild).toBeNull();
   });
 
