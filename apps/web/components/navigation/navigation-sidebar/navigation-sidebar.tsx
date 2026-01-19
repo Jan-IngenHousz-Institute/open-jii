@@ -90,14 +90,14 @@ export function AppSidebar({
         <div className="flex h-16 items-center justify-between px-4 group-data-[collapsible=icon]:h-16 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-3">
           <Link href={`/${locale}/platform`} className="flex items-center gap-2">
             <Image
-              src="/openJII_logo_RGB_horizontal_yellow.svg"
+              src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
               alt={translations.logoAlt}
               width={116}
               height={34}
-              className="h-auto w-full max-w-[140px] group-data-[collapsible=icon]:hidden"
+              className="h-auto w-full max-w-[120px] group-data-[collapsible=icon]:hidden"
             />
             <Image
-              src="/openJII-logo-vertical-yellow.png"
+              src="/openJII-logo-vertical-yellow-transparentBG.png"
               alt={translations.logoAlt}
               width={42}
               height={42}
