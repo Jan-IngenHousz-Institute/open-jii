@@ -1,9 +1,10 @@
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP, genericOAuth } from "better-auth/plugins";
 
-import { db } from "@repo/database";
+import { db, and, eq, profiles } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { sendOtpEmail } from "./email/otpEmail";
@@ -156,6 +157,31 @@ export const auth = betterAuth({
           },
         }
       : {}),
+  },
+  // Lifecycle hooks
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      // Trigger on any sign-in method (social, email OTP, etc.)
+      const isSignIn =
+        ctx.path === "/sign-in/social" ||
+        ctx.path === "/sign-in/email-otp" ||
+        ctx.path === "/sign-in/email";
+
+      if (isSignIn) {
+        try {
+          const session = ctx.context.newSession;
+          // Reactivate user profile on successful sign-in
+          if (session?.user.id) {
+            await db
+              .update(profiles)
+              .set({ activated: true })
+              .where(and(eq(profiles.userId, session.user.id), eq(profiles.activated, false)));
+          }
+        } catch (err) {
+          console.warn("Failed to reactivate profile on sign-in:", err);
+        }
+      }
+    }),
   },
 });
 
