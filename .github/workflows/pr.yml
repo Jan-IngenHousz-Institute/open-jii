@@ -95,13 +95,42 @@ jobs:
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
+
+      - name: Filter Release Apps (apps/* with .releaserc.js)
+        id: release_apps
+        run: |
+          AFFECTED='${{ steps.detect.outputs.affected_apps }}'
+
+          FILTERED=()
+          for APP in $(echo "$AFFECTED" | jq -r '.[]'); do
+            # Accept both bare names (backend) and paths (apps/backend)
+            APP_PATH="$APP"
+            if [ -d "$APP_PATH" ] && [ -f "$APP_PATH/.releaserc.js" ]; then
+              FILTERED+=("$APP_PATH")
+              continue
+            fi
+
+            if [ -d "apps/$APP" ] && [ -f "apps/$APP/.releaserc.js" ]; then
+              FILTERED+=("$APP")
+            fi
+          done
+
+          if [ ${#FILTERED[@]} -eq 0 ]; then
+            echo "release_apps=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          printf '%s\n' "${FILTERED[@]}" | jq -R . | jq -s '.' | {
+            read JSON
+            echo "release_apps=$JSON" >> $GITHUB_OUTPUT
+          }
       
       - name: Preview Release (Dry Run)
         id: preview
         if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/semantic-release
         with:
-          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+          affected_apps: ${{ steps.release_apps.outputs.release_apps }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           dry_run: 'true'
       
