@@ -101,6 +101,11 @@ jobs:
         run: |
           AFFECTED='${{ steps.detect.outputs.affected_apps }}'
 
+          if [ -z "$AFFECTED" ] || [ "$AFFECTED" = "[]" ]; then
+            echo "release_apps=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           FILTERED=()
           for APP in $(echo "$AFFECTED" | jq -r '.[]'); do
             # Accept both bare names (backend) and paths (apps/backend)
@@ -125,12 +130,23 @@ jobs:
             echo "release_apps=$JSON" >> $GITHUB_OUTPUT
           }
       
+      - name: Prepare Release Apps JSON
+        id: release_apps_json
+        run: |
+          RAW='${{ steps.release_apps.outputs.release_apps }}'
+
+          if echo "$RAW" | jq empty >/dev/null 2>&1; then
+            echo "json=$(echo "$RAW" | jq -c '.')" >> $GITHUB_OUTPUT
+          else
+            echo "json=[]" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Preview Release (Dry Run)
         id: preview
         if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/semantic-release
         with:
-          affected_apps: ${{ steps.release_apps.outputs.release_apps }}
+          affected_apps: ${{ steps.release_apps_json.outputs.json }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           dry_run: 'true'
       
