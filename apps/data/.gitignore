@@ -8,10 +8,17 @@ dist/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+.mypy_cache/
 
 # Build artifacts
 build/
 *.egg
+*.whl
+
+# Databricks
+.databricks/
 
 # IDE
 .vscode/
