@@ -12,7 +12,7 @@ import hmac
 import hashlib
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pyspark.dbutils import DBUtils
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -56,7 +56,6 @@ logger = logging.getLogger("experiment_status_updater")
 # COMMAND ----------
 
 # DBTITLE 1,Parameter Extraction
-
 
 # Mapping from Databricks result_state to ProvisioningStatus
 DATABRICKS_RESULT_STATE_TO_PROVISIONING_STATUS = {

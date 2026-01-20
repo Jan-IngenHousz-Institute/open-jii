@@ -39,9 +39,8 @@ source_table_full = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{SOURCE_TABLE}"
 # Metadata stored in S3 alongside backups (survives catalog deletion)
 metadata_location = f"{BACKUP_LOCATION}_metadata"
 
-# Generate backup timestamp (filesystem-friendly format)
+# Generate backup timestamp
 backup_timestamp = datetime.now(timezone.utc)
-backup_timestamp_str = backup_timestamp.strftime("%Y%m%d_%H%M%S")
 backup_date = backup_timestamp.strftime("%Y-%m-%d")
 backup_hour = backup_timestamp.strftime("%H")
 
@@ -91,7 +90,7 @@ def perform_backup():
     # Add backup metadata columns
     backup_df = (
         source_df
-        .withColumn("backup_timestamp", F.lit(backup_timestamp_str))
+        .withColumn("backup_timestamp", F.lit(backup_timestamp))
         .withColumn("backup_date", F.lit(backup_date))
         .withColumn("backup_hour", F.lit(backup_hour))
     )
@@ -116,7 +115,7 @@ def perform_backup():
     return {
         "status": "success",
         "records_backed_up": record_count,
-        "backup_timestamp": backup_timestamp_str,
+        "backup_timestamp": backup_timestamp.isoformat(),
         "backup_location": BACKUP_LOCATION
     }
 
@@ -187,16 +186,14 @@ try:
     # Log results
     logger.info(f"Backup result: {result}")
     
-    # Output result for job status (use json for proper formatting)
-    import json
-    dbutils.notebook.exit(json.dumps(result))
+    # Output result for job status
+    dbutils.notebook.exit(str(result))
     
 except Exception as e:
     error_msg = f"Backup failed with error: {str(e)}"
     logger.error(error_msg)
     
-    import json
-    dbutils.notebook.exit(json.dumps({"status": "failed", "error": error_msg}))
+    dbutils.notebook.exit(str({"status": "failed", "error": error_msg}))
 
 # COMMAND ----------
 
