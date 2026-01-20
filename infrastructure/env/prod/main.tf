@@ -1114,8 +1114,24 @@ module "backend_ecs" {
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_SECRET::"
     },
     {
+      name      = "AUTH_ORCID_ID"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_ID::"
+    },
+    {
+      name      = "AUTH_ORCID_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_SECRET::"
+    },
+    {
       name      = "AUTH_SECRET"
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "AUTH_EMAIL_SERVER"
+      valueFrom = "${module.ses_secrets.secret_arn}:AUTH_EMAIL_SERVER::"
+    },
+    {
+      name      = "AUTH_EMAIL_FROM"
+      valueFrom = "${module.ses_secrets.secret_arn}:AUTH_EMAIL_FROM::"
     },
     {
       name      = "DATABRICKS_CLIENT_ID"
