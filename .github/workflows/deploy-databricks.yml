@@ -8,7 +8,6 @@ on:
         required: true
         type: string
 
-
 permissions:
   id-token: write
   contents: read
@@ -53,7 +52,7 @@ jobs:
       - name: Deployment summary
         run: |
           echo "Deployment to ${{ inputs.environment }} completed successfully"
-          echo "Bundle: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/"
-          echo "Notebooks: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/notebooks/"
-          echo "Artifacts: /Workspace/Shared/.bundle/open-jii-notebooks/${{ inputs.environment }}/artifacts/"
+          echo "Bundle: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/"
+          echo "Notebooks: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/notebooks/"
+          echo "Artifacts: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/artifacts/"
           echo "Workspace: ${{ secrets.DATABRICKS_HOST }}"
