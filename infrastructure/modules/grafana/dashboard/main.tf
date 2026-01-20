@@ -8,11 +8,14 @@ terraform {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
 locals {
   dashboard_json_file = file("${path.module}/dashboard.json.tftpl")
 
   dashboard_vars = {
     datasource_uid             = grafana_data_source.cloudwatch_source.uid
+    logs_datasource_uid        = grafana_data_source.cloudwatch_logs_source.uid
     project                    = var.project
     environment                = var.environment
     aws_region                 = var.aws_region
@@ -23,6 +26,10 @@ locals {
     ecs_service_name           = var.ecs_service_name
     server_function_name       = var.server_function_name
     db_cluster_identifier      = var.db_cluster_identifier
+    kinesis_stream_name        = var.kinesis_stream_name
+    ecs_log_group_name         = var.ecs_log_group_name
+    iot_log_group_name         = var.iot_log_group_name
+    account_id                 = data.aws_caller_identity.current.account_id
   }
 }
 
@@ -36,6 +43,20 @@ resource "grafana_data_source" "cloudwatch_source" {
   json_data_encoded = jsonencode({
     defaultRegion = var.aws_region
     authType      = "default" # AMG uses SigV4 with the workspace role
+  })
+}
+
+# Create a separate CloudWatch Logs data source for log queries
+resource "grafana_data_source" "cloudwatch_logs_source" {
+  provider   = grafana.amg
+  type       = "cloudwatch"
+  name       = "cw-logs-datasource"
+  is_default = false
+
+  json_data_encoded = jsonencode({
+    defaultRegion = var.aws_region
+    authType      = "default"
+    logGroupNames = [var.ecs_log_group_name]
   })
 }
 
@@ -666,6 +687,6 @@ resource "grafana_notification_policy" "policy" {
     }
     group_by        = ["alertname"]
     contact_point   = grafana_contact_point.slack.name
-    repeat_interval = "24h"
+    repeat_interval = "1d"
   }
 }
