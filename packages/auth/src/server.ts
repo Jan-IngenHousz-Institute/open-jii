@@ -165,7 +165,8 @@ export const auth = betterAuth({
       const isSignIn =
         ctx.path === "/sign-in/social" ||
         ctx.path === "/sign-in/email-otp" ||
-        ctx.path === "/sign-in/email";
+        ctx.path === "/sign-in/email" ||
+        ctx.path.startsWith("/callback/");
 
       if (isSignIn) {
         try {
