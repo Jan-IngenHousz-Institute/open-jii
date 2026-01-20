@@ -6,7 +6,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Install Dependencies
-%pip install /Workspace/Shared/.bundle/open-jii/dev/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl
+%pip install /Workspace/Shared/wheels/ambyte-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 
