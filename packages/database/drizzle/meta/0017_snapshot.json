@@ -1,5 +1,5 @@
 {
-  "id": "46420527-aeed-45ce-8843-53834eec1e51",
+  "id": "2f899a86-9877-4108-9a97-290030d576a7",
   "prevId": "576590bd-c64e-4ab6-9886-8ab034571148",
   "version": "7",
   "dialect": "postgresql",
@@ -1106,7 +1106,7 @@
         },
         "last_request": {
           "name": "last_request",
-          "type": "timestamp",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         }

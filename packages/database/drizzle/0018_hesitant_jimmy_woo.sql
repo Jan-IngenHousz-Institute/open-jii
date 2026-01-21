@@ -1,1 +1,0 @@
-ALTER TABLE "rate_limits" ALTER COLUMN "last_request" SET DATA TYPE bigint;
