@@ -1,5 +1,5 @@
 interface ORCIDRecordResponse {
-  record: {
+  record?: {
     "orcid-identifier"?: {
       uri: string;
       path: string;
@@ -102,6 +102,10 @@ export function orcidProvider(config: OrcidProviderConfig) {
         throw new Error("Access token not found");
       }
 
+      const publicApiUrl = isProduction
+        ? "https://pub.orcid.org/v3.0"
+        : "https://pub.sandbox.orcid.org/v3.0";
+
       // Use /record endpoint to ensure we get email address if public
       // Requires /read-public scope
       const response = await fetch(`${publicApiUrl}/${orcidId}/record`, {
@@ -132,13 +136,13 @@ export function orcidProvider(config: OrcidProviderConfig) {
       let email = "";
       let emailVerified = false;
 
-      if (person?.emails?.email?.length) {
+      const emails = person?.emails?.email;
+      if (emails?.length) {
         // Try to find a primary email, or take the first one
-        const publicEmail = person.emails.email.find((e) => e.primary) ?? person.emails.email[0];
-        if (publicEmail) {
-          email = publicEmail.email;
-          emailVerified = publicEmail.verified;
-        }
+        const publicEmail = emails.find((e) => e.primary) ?? emails[0];
+        // We checked length > 0, so publicEmail is guaranteed to be defined
+        email = publicEmail.email;
+        emailVerified = publicEmail.verified;
       }
 
       // Final fallback: If no email is available, use the ORCID ID
@@ -153,11 +157,6 @@ export function orcidProvider(config: OrcidProviderConfig) {
         email,
         image: undefined,
         emailVerified,
-        id: orcidId,
-        name: displayName,
-        email,
-        image: undefined,
-        emailVerified: !!email, // Only verified if we received an email
       };
     },
   };
