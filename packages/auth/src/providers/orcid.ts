@@ -85,7 +85,7 @@ export function orcidProvider(config: OrcidProviderConfig) {
     clientSecret: config.clientSecret,
     authorizationUrl: `${baseUrl}/oauth/authorize`,
     tokenUrl: `${baseUrl}/oauth/token`,
-    scopes: config.scopes ?? ["/authenticate", "/read-public"],
+    scopes: config.scopes ?? ["openid", "/authenticate"],
     redirectURI: config.redirectURI,
     disableImplicitSignUp: config.disableImplicitSignUp,
     overrideUserInfo: config.overrideUserInfo,
