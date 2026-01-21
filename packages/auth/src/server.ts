@@ -4,7 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP, genericOAuth } from "better-auth/plugins";
 
-import { db, and, eq, profiles } from "@repo/database";
+import { db, and, eq, profiles, users, accounts } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { sendOtpEmail } from "./email/otpEmail";
@@ -171,12 +171,29 @@ export const auth = betterAuth({
       if (isSignIn) {
         try {
           const session = ctx.context.newSession;
-          // Reactivate user profile on successful sign-in
           if (session?.user.id) {
+            // Reactivate user profile on successful sign-in
             await db
               .update(profiles)
               .set({ activated: true })
               .where(and(eq(profiles.userId, session.user.id), eq(profiles.activated, false)));
+
+            // Fix legacy ORCID users with 'noemail-' emails
+            const user = session.user;
+            if (user.email.startsWith("noemail-")) {
+              // Find ORCID account for this user
+              const orcidAccount = await db.query.accounts.findFirst({
+                where: and(eq(accounts.userId, user.id), eq(accounts.providerId, "orcid")),
+              });
+
+              if (orcidAccount?.accountId) {
+                // Update email to ORCID ID
+                await db
+                  .update(users)
+                  .set({ email: orcidAccount.accountId })
+                  .where(eq(users.id, user.id));
+              }
+            }
           }
         } catch (err) {
           console.warn("Failed to reactivate profile on sign-in:", err);
