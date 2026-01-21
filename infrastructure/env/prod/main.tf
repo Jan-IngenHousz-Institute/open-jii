@@ -866,6 +866,9 @@ module "opennext" {
   enable_logging = true
   log_bucket     = module.logs_bucket.bucket_id
 
+  # Secrets Manager integration
+  contentful_secret_arn = module.contentful_secrets.secret_arn
+
   server_environment_variables = {
     COOKIE_DOMAIN            = ".${var.domain_name}"
     NODE_ENV                 = "production"
@@ -877,9 +880,6 @@ module "opennext" {
   # Performance configuration
   enable_lambda_warming = true
   price_class           = "PriceClass_100"
-
-  # Secrets Manager integration
-  contentful_secret_arn = module.contentful_secrets.secret_arn
 
   # Monitoring configuration
   enable_cloudwatch_logs = true
