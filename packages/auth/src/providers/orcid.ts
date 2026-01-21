@@ -1,19 +1,24 @@
-export interface ORCIDProfile extends Record<string, unknown> {
-  "orcid-identifier"?: {
-    uri: string;
-    path: string;
-    host: string;
-  };
-  person?: {
-    name?: {
-      "given-names": { value: string };
-      "family-name": { value: string };
-      "credit-name": null | { value: string };
+interface ORCIDRecordResponse {
+  record: {
+    "orcid-identifier"?: {
+      uri: string;
+      path: string;
+      host: string;
     };
-    emails?: {
-      email: {
-        email: string;
-      }[];
+    person?: {
+      name?: {
+        "given-names": { value: string };
+        "family-name": { value: string };
+        "credit-name": null | { value: string };
+      };
+      emails?: {
+        email?: {
+          email: string;
+          verified: boolean;
+          visibility: string;
+          primary: boolean;
+        }[];
+      };
     };
   };
 }
@@ -100,34 +105,13 @@ export function orcidProvider(config: OrcidProviderConfig) {
       let email = "";
       let emailVerified = false;
 
-      // OIDC: Attempt to extract email from id_token
-      const idToken = tokens.raw?.id_token as string | undefined;
-
-      if (idToken) {
-        try {
-          const payloadPart = idToken.split(".")[1];
-          if (payloadPart) {
-            const payload = JSON.parse(Buffer.from(payloadPart, "base64").toString()) as {
-              email?: string;
-              email_verified?: boolean | string;
-            };
-
-            if (payload.email) {
-              email = payload.email;
-              emailVerified = String(payload.email_verified) === "true";
-            }
-          }
-        } catch {
-          // Ignore JWT parse error
-        }
-      }
-
       // Fetch user profile from ORCID public API
       const publicApiUrl = isProduction
         ? "https://pub.orcid.org/v3.0"
         : "https://pub.sandbox.orcid.org/v3.0";
 
-      const response = await fetch(`${publicApiUrl}/${orcidId}/person`, {
+      // Use /record endpoint to ensure we get email address if public
+      const response = await fetch(`${publicApiUrl}/${orcidId}/record`, {
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${tokens.accessToken}`,
@@ -135,27 +119,29 @@ export function orcidProvider(config: OrcidProviderConfig) {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch ORCID profile: ${response.statusText}`);
+        throw new Error(`Failed to fetch ORCID record: ${response.statusText}`);
       }
 
-      const profile = (await response.json()) as ORCIDProfile & {
-        "orcid-identifier"?: { path: string };
-      };
+      const data = (await response.json()) as ORCIDRecordResponse;
+      const person = data.record.person;
 
       // Extract names from ORCID person data
-      const givenName = profile.person?.name?.["given-names"]?.value ?? "";
-      const familyName = profile.person?.name?.["family-name"]?.value ?? "";
+      const givenName = person?.name?.["given-names"]?.value ?? "";
+      const familyName = person?.name?.["family-name"]?.value ?? "";
       const fullName = `${givenName} ${familyName}`.trim();
 
       // Use credit name, constructed full name, or fallback to ORCID iD
-      const creditName = profile.person?.name?.["credit-name"]?.value;
+      const creditName = person?.name?.["credit-name"]?.value;
       const nonEmptyFullName = fullName || undefined;
       const displayName = creditName ?? nonEmptyFullName ?? orcidId;
 
-      // Fallback: Extract email from profile (may be private/not available)
-      if (!email) {
-        email = profile.person?.emails?.email[0]?.email ?? "";
-        emailVerified = !!email; // Only verified if we received an email here (usually implies public/verified)
+      // Fallback: Extract email from record (public emails only)
+      if (!email && person?.emails?.email?.length) {
+        // Try to find a primary email, or take the first one
+        const publicEmail = person.emails.email.find((e) => e.primary) ?? person.emails.email[0];
+
+        email = publicEmail.email;
+        emailVerified = publicEmail.verified;
       }
 
       // Final fallback: If no email is available, use the ORCID ID
