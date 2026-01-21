@@ -1,5 +1,5 @@
 interface ORCIDRecordResponse {
-  record: {
+  record?: {
     "orcid-identifier"?: {
       uri: string;
       path: string;
@@ -85,7 +85,7 @@ export function orcidProvider(config: OrcidProviderConfig) {
     clientSecret: config.clientSecret,
     authorizationUrl: `${baseUrl}/oauth/authorize`,
     tokenUrl: `${baseUrl}/oauth/token`,
-    scopes: config.scopes ?? ["openid", "/authenticate"],
+    scopes: config.scopes ?? ["/authenticate", "/read-public"],
     redirectURI: config.redirectURI,
     disableImplicitSignUp: config.disableImplicitSignUp,
     overrideUserInfo: config.overrideUserInfo,
@@ -102,15 +102,12 @@ export function orcidProvider(config: OrcidProviderConfig) {
         throw new Error("Access token not found");
       }
 
-      let email = "";
-      let emailVerified = false;
-
-      // Fetch user profile from ORCID public API
       const publicApiUrl = isProduction
         ? "https://pub.orcid.org/v3.0"
         : "https://pub.sandbox.orcid.org/v3.0";
 
       // Use /record endpoint to ensure we get email address if public
+      // Requires /read-public scope
       const response = await fetch(`${publicApiUrl}/${orcidId}/record`, {
         headers: {
           Accept: "application/json",
@@ -123,7 +120,7 @@ export function orcidProvider(config: OrcidProviderConfig) {
       }
 
       const data = (await response.json()) as ORCIDRecordResponse;
-      const person = data.record.person;
+      const person = data.record?.person;
 
       // Extract names from ORCID person data
       const givenName = person?.name?.["given-names"]?.value ?? "";
@@ -136,10 +133,14 @@ export function orcidProvider(config: OrcidProviderConfig) {
       const displayName = creditName ?? nonEmptyFullName ?? orcidId;
 
       // Fallback: Extract email from record (public emails only)
-      if (!email && person?.emails?.email?.length) {
-        // Try to find a primary email, or take the first one
-        const publicEmail = person.emails.email.find((e) => e.primary) ?? person.emails.email[0];
+      let email = "";
+      let emailVerified = false;
 
+      const emails = person?.emails?.email;
+      if (emails?.length) {
+        // Try to find a primary email, or take the first one
+        const publicEmail = emails.find((e) => e.primary) ?? emails[0];
+        // We checked length > 0, so publicEmail is guaranteed to be defined
         email = publicEmail.email;
         emailVerified = publicEmail.verified;
       }
