@@ -869,7 +869,6 @@ module "opennext" {
   contentful_secret_arn = module.contentful_secrets.secret_arn
 
   server_environment_variables = {
-    COOKIE_DOMAIN            = ".${var.environment}.${var.domain_name}"
     NODE_ENV                 = "production"
     NEXT_PUBLIC_POSTHOG_KEY  = var.posthog_key
     NEXT_PUBLIC_POSTHOG_HOST = var.posthog_host
@@ -1221,6 +1220,10 @@ module "backend_ecs" {
     {
       name  = "COOKIE_DOMAIN"
       value = ".${var.environment}.${var.domain_name}"
+    },
+    {
+      name  = "ENVIRONMENT_PREFIX"
+      value = var.environment
     },
     {
       name  = "AWS_LOCATION_PLACE_INDEX_NAME"

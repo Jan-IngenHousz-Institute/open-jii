@@ -872,7 +872,6 @@ module "opennext" {
   server_environment_variables = {
     COOKIE_DOMAIN            = ".${var.domain_name}"
     NODE_ENV                 = "production"
-    ENVIRONMENT_PREFIX       = var.environment
     NEXT_PUBLIC_POSTHOG_KEY  = var.posthog_key
     NEXT_PUBLIC_POSTHOG_HOST = var.posthog_host
   }
