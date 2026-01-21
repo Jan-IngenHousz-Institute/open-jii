@@ -1573,6 +1573,11 @@ module "grafana_dashboard" {
   slack_webhook_url          = var.slack_webhook_url
   db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
 
+  # IoT and Kinesis monitoring
+  kinesis_stream_name = module.kinesis.kinesis_stream_name
+  ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
+  iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
+
   providers = {
     grafana.amg = grafana.amg
   }
