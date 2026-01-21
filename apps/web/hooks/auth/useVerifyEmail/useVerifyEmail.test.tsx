@@ -17,6 +17,11 @@ vi.mock("@repo/auth/client", () => ({
   },
 }));
 
+// Mock the revalidate server action
+vi.mock("~/app/actions/revalidate", () => ({
+  revalidateAuth: vi.fn(),
+}));
+
 describe("useVerifyEmail", () => {
   let queryClient: QueryClient;
 

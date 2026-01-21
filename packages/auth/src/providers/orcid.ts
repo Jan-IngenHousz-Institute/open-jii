@@ -80,7 +80,7 @@ export function orcidProvider(config: OrcidProviderConfig) {
     clientSecret: config.clientSecret,
     authorizationUrl: `${baseUrl}/oauth/authorize`,
     tokenUrl: `${baseUrl}/oauth/token`,
-    scopes: config.scopes ?? ["/authenticate"],
+    scopes: config.scopes ?? ["openid", "/authenticate"],
     redirectURI: config.redirectURI,
     disableImplicitSignUp: config.disableImplicitSignUp,
     overrideUserInfo: config.overrideUserInfo,
@@ -95,6 +95,31 @@ export function orcidProvider(config: OrcidProviderConfig) {
 
       if (!tokens.accessToken) {
         throw new Error("Access token not found");
+      }
+
+      let email = "";
+      let emailVerified = false;
+
+      // OIDC: Attempt to extract email from id_token
+      const idToken = tokens.raw?.id_token as string | undefined;
+
+      if (idToken) {
+        try {
+          const payloadPart = idToken.split(".")[1];
+          if (payloadPart) {
+            const payload = JSON.parse(Buffer.from(payloadPart, "base64").toString()) as {
+              email?: string;
+              email_verified?: boolean | string;
+            };
+
+            if (payload.email) {
+              email = payload.email;
+              emailVerified = String(payload.email_verified) === "true";
+            }
+          }
+        } catch {
+          // Ignore JWT parse error
+        }
       }
 
       // Fetch user profile from ORCID public API
@@ -127,15 +152,24 @@ export function orcidProvider(config: OrcidProviderConfig) {
       const nonEmptyFullName = fullName || undefined;
       const displayName = creditName ?? nonEmptyFullName ?? orcidId;
 
-      // Extract email (may be private/not available)
-      const email = profile.person?.emails?.email[0]?.email ?? "";
+      // Fallback: Extract email from profile (may be private/not available)
+      if (!email) {
+        email = profile.person?.emails?.email[0]?.email ?? "";
+        emailVerified = !!email; // Only verified if we received an email here (usually implies public/verified)
+      }
+
+      // Final fallback: If no email is available, use the ORCID ID
+      if (!email) {
+        email = orcidId;
+        emailVerified = true;
+      }
 
       return {
         id: orcidId,
         name: displayName,
         email,
         image: undefined,
-        emailVerified: !!email, // Only verified if we received an email
+        emailVerified,
       };
     },
   };
