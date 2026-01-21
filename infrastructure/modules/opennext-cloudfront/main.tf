@@ -124,7 +124,7 @@ function handler(event) {
   if (headers.host) {
     headers['x-forwarded-host'] = headers.host;
   }
-f
+
   // Continue to origin
   return request;
 }
