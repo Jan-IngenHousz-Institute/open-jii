@@ -22,33 +22,6 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    asChild,
-    variant,
-    className,
-    size,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-    variant?: string;
-    className?: string;
-    size?: string;
-  }) => {
-    if (asChild && React.isValidElement(children)) {
-      // When asChild is true, clone the child element and pass Button props to it
-      return React.cloneElement(children, { className, "data-variant": variant, "data-size": size } as any);
-    }
-    return (
-      <button data-testid="button" data-variant={variant} className={className} data-size={size}>
-        {children}
-      </button>
-    );
-  },
-}));
-
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   AlertCircle: ({ className }: { className?: string }) => (
@@ -115,13 +88,13 @@ describe("ErrorContent", () => {
 
     expect(mockT).toHaveBeenCalledWith("auth.errorTryAgain");
     const tryAgainLink = screen.getByRole("link", { name: "auth.errorTryAgain" });
-    
+
     expect(tryAgainLink).toBeInTheDocument();
     expect(tryAgainLink).toHaveAttribute("href", "/en-US/login");
 
     expect(mockT).toHaveBeenCalledWith("auth.errorGoHome");
     const goHomeLink = screen.getByRole("link", { name: "auth.errorGoHome" });
-    
+
     expect(goHomeLink).toBeInTheDocument();
     expect(goHomeLink).toHaveAttribute("href", "/en-US");
 
@@ -134,7 +107,7 @@ describe("ErrorContent", () => {
 
     const tryAgainLink = screen.getByRole("link", { name: "auth.errorTryAgain" });
     const goHomeLink = screen.getByRole("link", { name: "auth.errorGoHome" });
-    
+
     expect(tryAgainLink).toHaveAttribute("href", "/de-DE/login");
     expect(goHomeLink).toHaveAttribute("href", "/de-DE");
     render(<ErrorContent {...defaultProps} />);
@@ -184,7 +157,7 @@ describe("ErrorContent", () => {
 
     const tryAgainLink = screen.getByRole("link", { name: "auth.errorTryAgain" });
     const goHomeLink = screen.getByRole("link", { name: "auth.errorGoHome" });
-    
+
     // Both buttons should have the same base styling
     expect(tryAgainLink).toHaveClass("h-12 w-full rounded-full");
     expect(goHomeLink).toHaveClass("h-12 w-full rounded-full");

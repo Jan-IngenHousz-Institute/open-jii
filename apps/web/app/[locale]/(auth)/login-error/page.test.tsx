@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
+import { notFound } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -13,9 +14,8 @@ vi.mock("~/app/actions/auth", () => ({
   auth: (): unknown => mockAuth(),
 }));
 
-const mockNotFound = vi.fn();
 vi.mock("next/navigation", () => ({
-  notFound: () => mockNotFound(),
+  notFound: vi.fn(),
 }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
@@ -102,7 +102,7 @@ describe("AuthErrorPage", () => {
 
     await AuthErrorPage(propsWithoutError);
 
-    expect(mockNotFound).toHaveBeenCalled();
+    expect(notFound).toHaveBeenCalled();
   });
 
   it("renders when error parameter is empty string", async () => {
@@ -114,6 +114,6 @@ describe("AuthErrorPage", () => {
     render(await AuthErrorPage(propsWithEmptyError));
 
     expect(screen.getByTestId("error-content")).toBeInTheDocument();
-    expect(mockNotFound).not.toHaveBeenCalled();
+    expect(notFound).not.toHaveBeenCalled();
   });
 });
