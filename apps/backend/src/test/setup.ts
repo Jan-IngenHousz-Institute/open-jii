@@ -15,11 +15,11 @@ vi.mock("@repo/auth/server", () => ({
     },
     options: {
       trustedOrigins: ["http://localhost:3000"],
-      baseURL: "http://localhost:3000",
+      baseURL: "http://localhost:3020",
       secret: "test-secret",
     },
     trustedOrigins: ["http://localhost:3000"],
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3020",
     secret: "test-secret",
   },
 }));

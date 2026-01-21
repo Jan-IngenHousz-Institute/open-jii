@@ -43,8 +43,6 @@ export default function ProfileScreen() {
 
   const { user, expires } = session.data;
 
-  console.log(expires);
-
   return (
     <ScrollView
       style={[
