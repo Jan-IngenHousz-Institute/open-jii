@@ -1,11 +1,25 @@
 import { config } from "dotenv";
 import { resolve } from "path";
-import { vi } from "vitest";
 
-// Setup environment variables for tests
+// Setup environment variables for tests FIRST before any other imports
 config({ path: resolve(__dirname, "../../.env.test") });
 
-// Setup authentication mock
-vi.mock("@repo/auth/express", () => ({
-  getSession: vi.fn().mockResolvedValue(null),
+// Create a mock function that can be accessed and modified by tests
+export const mockGetSession = vi.fn().mockResolvedValue(null);
+
+// Mock Better Auth to prevent database connection during import
+vi.mock("@repo/auth/server", () => ({
+  auth: {
+    api: {
+      getSession: mockGetSession,
+    },
+    options: {
+      trustedOrigins: ["http://localhost:3000"],
+      baseURL: "http://localhost:3020",
+      secret: "test-secret",
+    },
+    trustedOrigins: ["http://localhost:3000"],
+    baseURL: "http://localhost:3020",
+    secret: "test-secret",
+  },
 }));

@@ -44,8 +44,21 @@ vi.mock("next/link", () => ({
 }));
 
 const usePathnameMock = vi.fn();
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: (): string => usePathnameMock() as string,
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
+// Mock useSignOut
+const mockSignOutMutateAsync = vi.fn();
+vi.mock("~/hooks/auth", () => ({
+  useSignOut: () => ({
+    mutateAsync: mockSignOutMutateAsync,
+    isPending: false,
+  }),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -318,11 +331,13 @@ describe("<UnifiedNavbar />", () => {
     const account = within(desktopDropdown).getByRole("link", { name: /Account/i });
     expect(account).toHaveAttribute("href", "/en-US/platform/account/settings");
 
-    const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
-    expect(signOutLink).toBeInTheDocument();
+    const signOutButton = within(desktopDropdown).getByRole("menuitem", { name: /Sign Out/i });
+    expect(signOutButton).toBeInTheDocument();
+    expect(signOutButton).not.toHaveAttribute("href"); // Button, not link
   });
 
-  it("navigates to signout page when sign out is clicked", () => {
+  it("calls signOut when sign out button is clicked", async () => {
+    const user = userEvent.setup();
     renderNavbar({
       locale: "en-US",
       pathname: "/en-US/blog",
@@ -330,22 +345,12 @@ describe("<UnifiedNavbar />", () => {
     });
 
     const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
-    const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
+    const signOutButton = within(desktopDropdown).getByRole("menuitem", { name: /Sign Out/i });
 
-    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
-  });
+    await user.click(signOutButton);
 
-  it("navigates to signout page when currently on /platform", () => {
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US/platform",
-      session: makeSession(),
-    });
-
-    const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
-    const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
-
-    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
+    expect(mockSignOutMutateAsync).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith("/");
   });
 
   it("mobile menu trigger is present (icon button)", () => {

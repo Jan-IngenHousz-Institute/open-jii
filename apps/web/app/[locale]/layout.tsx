@@ -9,7 +9,6 @@ import { getContentfulClients } from "~/lib/contentful";
 import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { SessionProvider } from "@repo/auth/client";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import type { LandingMetadataFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import { defaultLocale, namespaces } from "@repo/i18n";
@@ -120,10 +119,8 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         targetOrigin={allowedOriginList}
       >
         <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
-          <SessionProvider>
-            <PostHogIdentifier />
-            <QueryProvider>{children}</QueryProvider>
-          </SessionProvider>
+          <PostHogIdentifier />
+          <QueryProvider>{children}</QueryProvider>
         </TranslationsProvider>
       </ContentfulPreviewProvider>
     </div>

@@ -1,13 +1,12 @@
-import { Controller, Inject, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Inject, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
@@ -20,7 +19,6 @@ import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentController {
   private readonly logger = new Logger(ExperimentController.name);
 
@@ -36,7 +34,7 @@ export class ExperimentController {
   ) {}
 
   @TsRestHandler(contract.experiments.createExperiment)
-  createExperiment(@CurrentUser() user: User) {
+  createExperiment(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.createExperiment, async ({ body }) => {
       // Convert embargoUntil from ISO string to Date object
       const transformedBody = {
@@ -44,12 +42,12 @@ export class ExperimentController {
         embargoUntil: body.embargoUntil ? new Date(body.embargoUntil) : undefined,
       };
 
-      const result = await this.createExperimentUseCase.execute(transformedBody, user.id);
+      const result = await this.createExperimentUseCase.execute(transformedBody, session.user.id);
 
       if (result.isSuccess()) {
         const experiment = result.value;
 
-        this.logger.log(`Experiment created: ${experiment.id} by user ${user.id}`);
+        this.logger.log(`Experiment created: ${experiment.id} by user ${session.user.id}`);
         return {
           status: StatusCodes.CREATED,
           body: experiment,
@@ -61,9 +59,9 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.getExperiment)
-  getExperiment(@CurrentUser() user: User) {
+  getExperiment(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperiment, async ({ params }) => {
-      const result = await this.getExperimentUseCase.execute(params.id, user.id);
+      const result = await this.getExperimentUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         const experiment = result.value;
@@ -83,9 +81,9 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.getExperimentAccess)
-  getExperimentAccess(@CurrentUser() user: User) {
+  getExperimentAccess(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperimentAccess, async ({ params }) => {
-      const result = await this.getExperimentAccessUseCase.execute(params.id, user.id);
+      const result = await this.getExperimentAccessUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         const accessInfo = result.value;
@@ -96,7 +94,9 @@ export class ExperimentController {
           experiment: formatDates(accessInfo.experiment),
         };
 
-        this.logger.log(`Experiment access info for ${params.id} retrieved for user ${user.id}`);
+        this.logger.log(
+          `Experiment access info for ${params.id} retrieved for user ${session.user.id}`,
+        );
         return {
           status: StatusCodes.OK,
           body: formattedAccessInfo,
@@ -108,10 +108,10 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.listExperiments)
-  listExperiments(@CurrentUser() user: User) {
+  listExperiments(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.listExperiments, async ({ query }) => {
       const result = await this.listExperimentsUseCase.execute(
-        user.id,
+        session.user.id,
         query.filter,
         query.status,
         query.search,
@@ -124,7 +124,7 @@ export class ExperimentController {
         const formattedExperiments = formatDatesList(experiments);
 
         this.logger.log(
-          `Listed experiments for user ${user.id} with filter: ${JSON.stringify(
+          `Listed experiments for user ${session.user.id} with filter: ${JSON.stringify(
             query.filter,
           )}, status: ${query.status}, search: ${query.search}`,
         );
@@ -139,7 +139,7 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.updateExperiment)
-  updateExperiment(@CurrentUser() user: User) {
+  updateExperiment(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.updateExperiment, async ({ params, body }) => {
       // Convert embargoUntil from ISO string to Date object
       const transformedBody = {
@@ -150,7 +150,7 @@ export class ExperimentController {
       const result = await this.updateExperimentUseCase.execute(
         params.id,
         transformedBody,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
@@ -159,7 +159,7 @@ export class ExperimentController {
         // Format dates to strings for the API contract
         const formattedExperiment = formatDates(experiment);
 
-        this.logger.log(`Experiment ${params.id} updated by user ${user.id}`);
+        this.logger.log(`Experiment ${params.id} updated by user ${session.user.id}`);
         return {
           status: StatusCodes.OK,
           body: formattedExperiment,
@@ -171,11 +171,11 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.deleteExperiment)
-  deleteExperiment(@CurrentUser() user: User) {
+  deleteExperiment(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.deleteExperiment, async ({ params }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.EXPERIMENT_DELETION,
-        user.email ?? user.id,
+        session.user.email || session.user.id,
       );
 
       if (!isDeletionEnabled) {
@@ -185,7 +185,7 @@ export class ExperimentController {
         };
       }
 
-      const result = await this.deleteExperimentUseCase.execute(params.id, user.id);
+      const result = await this.deleteExperimentUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         this.logger.log(`Experiment ${params.id} deleted`);

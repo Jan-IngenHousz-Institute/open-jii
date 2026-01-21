@@ -179,7 +179,18 @@
     "sendingEmail": "We sturen je een e-mail...",
     "account": "Account",
     "userMenu": "Gebruikersmenu",
-    "signingOut": "Uitloggen..."
+    "signingOut": "Uitloggen...",
+    "otpSentTo": "We hebben een verificatiecode naar {{email}} gestuurd",
+    "verificationCode": "Verificatiecode",
+    "verificationCodePlaceholder": "Voer 6-cijferige code in",
+    "verifying": "Verifiëren...",
+    "verify": "Verifiëren",
+    "back": "Terug",
+    "resendCode": "Code opnieuw versturen",
+    "codeExpired": "Code verlopen. Vraag een nieuwe aan.",
+    "invalidCode": "Ongeldige verificatiecode",
+    "otpError": "De ingevoerde code is ongeldig of verlopen. Probeer het opnieuw of vraag een nieuwe code aan.",
+    "otpInstructions": "Voer de 6-cijferige code in die we hebben verzonden naar"
   },
   "signout": {
     "title": "Uitloggen",

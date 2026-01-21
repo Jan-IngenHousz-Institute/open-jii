@@ -13,7 +13,7 @@ import { useTheme } from "~/hooks/use-theme";
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: "primary" | "secondary" | "outline" | "ghost";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "surface";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
   isDisabled?: boolean;
@@ -29,6 +29,7 @@ const buttonVariants = cva("rounded-lg items-center justify-center", {
       secondary: "bg-[#afd7f4]",
       outline: "bg-transparent border border-[#005e5e]",
       ghost: "bg-transparent",
+      surface: "bg-gray-200",
     },
     size: {
       sm: "py-1.5 px-3",
@@ -66,6 +67,7 @@ const textVariants = cva("font-semibold text-center", {
       secondary: "text-black",
       outline: "text-[#005e5e]",
       ghost: "text-[#005e5e]",
+      surface: "text-black",
     },
     size: {
       sm: "text-sm",

@@ -836,15 +836,6 @@ module "opennext_waf" {
   rate_limit         = 500
   log_retention_days = 30
 
-  # Apply restrictive rate limiting to sensitive routes with flexible configuration
-  restrictive_rate_limit_routes = [
-    {
-      search_string         = "login"
-      positional_constraint = "CONTAINS_WORD"
-      method                = "POST"
-    },
-  ]
-
   tags = {
     Environment = var.environment
     Project     = "open-jii"
@@ -868,11 +859,6 @@ module "opennext" {
 
   function_url_authorization_type = "AWS_IAM"
 
-  # VPC configuration for server Lambda database access
-  enable_server_vpc               = true
-  server_subnet_ids               = module.vpc.private_subnets
-  server_lambda_security_group_id = module.vpc.server_lambda_security_group_id
-
   # WAF integration
   waf_acl_id = module.opennext_waf.cloudfront_web_acl_arn
 
@@ -880,19 +866,12 @@ module "opennext" {
   enable_logging = true
   log_bucket     = module.logs_bucket.bucket_id
 
-  # Secrets Manager Integration
-  db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
-  oauth_secret_arn          = module.auth_secrets.secret_arn
-  contentful_secret_arn     = module.contentful_secrets.secret_arn
-  ses_secret_arn            = module.ses_secrets.secret_arn
+  # Secrets Manager integration
+  contentful_secret_arn = module.contentful_secrets.secret_arn
 
   server_environment_variables = {
     COOKIE_DOMAIN            = ".${var.domain_name}"
-    DB_HOST                  = module.aurora_db.cluster_endpoint
-    DB_PORT                  = module.aurora_db.cluster_port
-    DB_NAME                  = module.aurora_db.database_name
     NODE_ENV                 = "production"
-    ENVIRONMENT_PREFIX       = var.environment
     NEXT_PUBLIC_POSTHOG_KEY  = var.posthog_key
     NEXT_PUBLIC_POSTHOG_HOST = var.posthog_host
   }
@@ -1137,8 +1116,24 @@ module "backend_ecs" {
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_SECRET::"
     },
     {
+      name      = "AUTH_ORCID_ID"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_ID::"
+    },
+    {
+      name      = "AUTH_ORCID_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_SECRET::"
+    },
+    {
       name      = "AUTH_SECRET"
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "AUTH_EMAIL_SERVER"
+      valueFrom = "${module.ses_secrets.secret_arn}:AUTH_EMAIL_SERVER::"
+    },
+    {
+      name      = "AUTH_EMAIL_FROM"
+      valueFrom = "${module.ses_secrets.secret_arn}:AUTH_EMAIL_FROM::"
     },
     {
       name      = "DATABRICKS_CLIENT_ID"
