@@ -27,16 +27,20 @@ export function OAuthLoginForm({ provider, callbackUrl, layoutCount }: OAuthLogi
         : `${env.NEXT_PUBLIC_BASE_URL}${callbackUrl}`
       : `${env.NEXT_PUBLIC_BASE_URL}/platform`;
 
+    const errorURL = `${env.NEXT_PUBLIC_BASE_URL}/login-error`;
+
     // ORCID uses genericOAuth plugin (oauth2), GitHub uses built-in social provider
     if (provider.id === "orcid") {
       await authClient.signIn.oauth2({
         providerId: "orcid",
         callbackURL: redirectUrl,
+        errorCallbackURL: errorURL,
       });
     } else {
       await authClient.signIn.social({
         provider: provider.id as "github",
         callbackURL: redirectUrl,
+        errorCallbackURL: errorURL,
       });
     }
   }

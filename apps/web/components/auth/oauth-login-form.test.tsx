@@ -78,6 +78,7 @@ describe("OAuthLoginForm", () => {
       expect(mockSignInSocial).toHaveBeenCalledWith({
         provider: "github",
         callbackURL: "http://localhost:3000/dashboard",
+        errorCallbackURL: "http://localhost:3000/login-error",
       });
     });
 
@@ -91,6 +92,7 @@ describe("OAuthLoginForm", () => {
       expect(mockSignInSocial).toHaveBeenCalledWith({
         provider: "github",
         callbackURL: "http://localhost:3000/platform",
+        errorCallbackURL: "http://localhost:3000/login-error",
       });
     });
 
@@ -123,6 +125,7 @@ describe("OAuthLoginForm", () => {
       expect(mockSignInOAuth2).toHaveBeenCalledWith({
         providerId: "orcid",
         callbackURL: "http://localhost:3000/dashboard",
+        errorCallbackURL: "http://localhost:3000/login-error",
       });
     });
 

@@ -392,7 +392,12 @@
     "or": "or continue with",
     "termsPrefix": "I accept the ",
     "continueTermsPrefix": "By continuing you accept the ",
-    "terms": "terms and conditions"
+    "terms": "terms and conditions",
+    "errorTitle": "Oh no! Something went wrong",
+    "errorDescription": "We encountered an error while trying to authenticate you.",
+    "errorTryAgain": "Try Again",
+    "errorGoHome": "Go to Homepage",
+    "errorSupport": "If this problem persists, please contact support."
   },
   "registration": {
     "title": "Registration",
