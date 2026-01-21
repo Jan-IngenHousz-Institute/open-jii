@@ -1,45 +1,26 @@
-"use server";
+import { headers } from "next/headers";
 
-import { signIn, signOut, auth, unstableUpdate } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { authClient } from "@repo/auth/client";
+import type { Session } from "@repo/auth/types";
 
-import { AuthError } from "@repo/auth/next";
-
-const SIGNIN_ERROR_URL = "/error";
-
-export async function handleLogin() {
-  await signIn();
-}
-
-export async function handleLogout({ redirectTo = "/", redirect = true } = {}) {
-  await signOut({ redirectTo, redirect });
-}
-
-export async function handleRegister() {
-  const session = await auth();
-
-  if (session?.user) {
-    await unstableUpdate({ ...session, user: { ...session.user, registered: true } });
-  }
-}
-
-export async function signInAction(
-  providerId: string,
-  callbackUrl: string | undefined,
-  email?: string,
-) {
+/**
+ * Get the current session from Better Auth backend
+ * This is a server-side function for use in Server Components and Server Actions
+ */
+export async function auth(): Promise<Session | null> {
   try {
-    if (providerId === "nodemailer" && !email) {
-      throw new Error("Email is required");
-    }
-    await signIn(providerId, {
-      redirectTo: callbackUrl,
-      ...(providerId === "nodemailer" && email ? { email } : {}),
+    const headersList = await headers();
+
+    // Use the authClient to fetch the session, passing the headers to forward cookies
+    const { data } = await authClient.getSession({
+      fetchOptions: {
+        headers: headersList,
+      },
     });
+
+    return data;
   } catch (error) {
-    if (error instanceof AuthError) {
-      return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
-    }
-    throw error;
+    console.error("Session fetch error:", error);
+    return null;
   }
 }

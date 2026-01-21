@@ -1,70 +1,14 @@
-import type { DefaultSession, DefaultUser } from "@auth/core/types";
-import type { DefaultJWT } from "next-auth/jwt";
+import type { authClient } from "./clients/client.web";
 
-declare module "@auth/core/jwt" {
-  /** Augment JWT to include user's id and additional properties */
-  interface JWT extends Record<string, unknown>, DefaultJWT {
-    id: string;
-    registered: boolean;
-    // Example on how to extend the User type
-    // role?: "admin" | "user";
-  }
-}
-
-declare module "@auth/core/types" {
-  /**
-   * Returned by `auth`, `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
-   */
-  interface Session extends DefaultSession {
-    user: User;
-  }
-
-  /** Augment the default `User` type to match our application's `User` */
-  interface User extends DefaultUser {
-    id: string;
-    registered: boolean;
-    /** ORCID iD URI if user authenticated with ORCID */
-    orcid?: string;
-    // Example on how to extend the User type
-    // role?: "admin" | "user";
-  }
-}
-
-declare module "@auth/core/adapters" {
-  /** Augment the default `AdapterUser` to match our application's `User` */
-  interface AdapterUser extends User {
-    id: string;
-    registered: boolean;
-    // Example on how to extend the User type
-    // role?: "admin" | "user";
-  }
-}
-
-export interface User extends DefaultUser {
-  id: string;
-  registered: boolean;
-  // Example on how to extend the User type
-  // role?: "admin" | "user";
-}
-
-export interface Session extends DefaultSession {
-  user: User;
-}
+export type Session = typeof authClient.$Infer.Session;
+export type User = NonNullable<Session>["user"];
 
 /**
- * Type guard to check if the session is of type `Session`
+ * Type guard to check if the session exists and has a user
  *
  * @param session - The session object to check
- * @returns true if the session is of type `Session`, false otherwise
+ * @returns true if the session exists and has a user, false otherwise
  */
-export const isSession = (session: unknown): session is Session => {
-  return (
-    typeof session === "object" &&
-    session !== null &&
-    "user" in session &&
-    typeof session.user === "object" &&
-    session.user !== null &&
-    "id" in session.user &&
-    "registered" in session.user
-  );
+export const isSession = (session: Session): session is NonNullable<Session> => {
+  return !!session.user;
 };

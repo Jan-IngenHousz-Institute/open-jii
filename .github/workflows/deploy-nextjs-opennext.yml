@@ -71,24 +71,20 @@ jobs:
             NEXT_PUBLIC_API_URL="https://api.${WEB_BASE_ORIGIN}"
             NEXT_PUBLIC_DOCS_URL="https://docs.${WEB_BASE_ORIGIN}"
             NEXT_PUBLIC_BASE_URL="https://${WEB_BASE_ORIGIN}"
-            ENVIRONMENT_PREFIX="prod"
           else
             NEXT_PUBLIC_API_URL="https://api.dev.${WEB_BASE_ORIGIN}"
             NEXT_PUBLIC_DOCS_URL="https://docs.dev.${WEB_BASE_ORIGIN}"
             NEXT_PUBLIC_BASE_URL="https://dev.${WEB_BASE_ORIGIN}"
-            ENVIRONMENT_PREFIX="dev"
           fi
 
           echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DOCS_URL=${NEXT_PUBLIC_DOCS_URL}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> $GITHUB_ENV
-          echo "ENVIRONMENT_PREFIX=${ENVIRONMENT_PREFIX}" >> $GITHUB_ENV
           echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
 
       - name: Build Next.js Application
         env:
           NODE_ENV: ${{ env.NODE_ENV }}
-          ENVIRONMENT_PREFIX: ${{ env.ENVIRONMENT_PREFIX }}
           NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_BASE_URL: ${{ env.NEXT_PUBLIC_BASE_URL }}
         run: |

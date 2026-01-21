@@ -2,7 +2,6 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  ENVIRONMENT_PREFIX: z.string().optional().default("dev"),
   NEXT_PUBLIC_BASE_URL: z.string().url().default("http://localhost:3000"),
   NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:3020"),
   NEXT_PUBLIC_DOCS_URL: z.string().url().default("http://localhost:3010"),
@@ -24,7 +23,6 @@ const parseEnv = () => {
     // We need to access it directly to ensure proper bundling
     const rawEnv = {
       NODE_ENV: process.env.NODE_ENV,
-      ENVIRONMENT_PREFIX: process.env.ENVIRONMENT_PREFIX,
       NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
       NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
       NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
