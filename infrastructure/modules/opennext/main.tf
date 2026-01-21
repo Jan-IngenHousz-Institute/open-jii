@@ -18,7 +18,7 @@ locals {
 
   # Domain configuration
   domain_name = var.subdomain != "" && var.domain_name != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name
-  aliases = local.domain_name != "" ? [local.domain_name, "www.${local.domain_name}"] : []
+  aliases     = local.domain_name != "" ? [local.domain_name, "www.${local.domain_name}"] : []
 
   # Common tags
   common_tags = merge(var.tags, {
@@ -26,6 +26,18 @@ locals {
     Environment = var.environment
     ManagedBy   = "terraform"
     Component   = "opennext"
+  })
+
+  # IAM policy for Lambda to read Contentful secrets
+  lambda_secrets_policy_json = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "secretsmanager:GetSecretValue",
+        Resource = compact([var.contentful_secret_arn])
+      }
+    ]
   })
 }
 
@@ -160,6 +172,12 @@ module "server_function" {
   sqs_permissions      = true
   sqs_queue_arns       = [module.sqs.queue_arn]
 
+  lambda_layers = compact([var.secrets_extension_layer_arn]) # compact removes empty strings if var is empty
+
+  additional_iam_policies = {
+    "SecretsManagerRead" = local.lambda_secrets_policy_json
+  }
+
   environment_variables = merge({
     # Cache bucket configuration
     CACHE_BUCKET_REGION = data.aws_region.current.id
@@ -171,6 +189,9 @@ module "server_function" {
     # Revalidation queue configuration
     REVALIDATION_QUEUE_REGION = data.aws_region.current.id
     REVALIDATION_QUEUE_URL    = module.sqs.queue_url
+
+    # Contentful secret
+    CONTENTFUL_SECRET_ARN = var.contentful_secret_arn
   }, var.server_environment_variables)
 
   tags = local.common_tags

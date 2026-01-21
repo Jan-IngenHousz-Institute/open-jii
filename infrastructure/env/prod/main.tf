@@ -878,6 +878,9 @@ module "opennext" {
   enable_lambda_warming = true
   price_class           = "PriceClass_100"
 
+  # Secrets Manager integration
+  contentful_secret_arn = module.contentful_secrets.secret_arn
+
   # Monitoring configuration
   enable_cloudwatch_logs = true
   log_retention_days     = 14
