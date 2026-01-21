@@ -10,6 +10,7 @@ import {
   pgEnum,
   uuid,
   integer,
+  bigint,
   decimal,
 } from "drizzle-orm/pg-core";
 
@@ -76,7 +77,7 @@ export const rateLimits = pgTable("rate_limits", {
   id: uuid("id").primaryKey().defaultRandom(),
   key: text("key").notNull().unique(),
   count: integer("count").notNull().default(0),
-  lastRequest: timestamp("last_request").notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
 
 // Organization Types Enum

@@ -1244,6 +1244,14 @@ module "backend_ecs" {
     {
       name  = "POSTHOG_HOST"
       value = var.posthog_host
+    },
+    {
+      name  = "NEXT_PUBLIC_BASE_URL"
+      value = "https://${module.route53.environment_domain}"
+    },
+    {
+      name  = "NEXT_PUBLIC_API_URL"
+      value = "https://${module.route53.api_domain}"
     }
   ]
 
