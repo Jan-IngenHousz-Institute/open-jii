@@ -190,7 +190,12 @@
     "codeExpired": "Code verlopen. Vraag een nieuwe aan.",
     "invalidCode": "Ongeldige verificatiecode",
     "otpError": "De ingevoerde code is ongeldig of verlopen. Probeer het opnieuw of vraag een nieuwe code aan.",
-    "otpInstructions": "Voer de 6-cijferige code in die we hebben verzonden naar"
+    "otpInstructions": "Voer de 6-cijferige code in die we hebben verzonden naar",
+    "errorTitle": "Oh nee! Er is iets misgegaan",
+    "errorDescription": "Er is een fout opgetreden tijdens het authenticeren.",
+    "errorTryAgain": "Probeer opnieuw",
+    "errorGoHome": "Naar Homepage",
+    "errorSupport": "Als dit probleem aanhoudt, neem dan contact op met ons ondersteuningsteam."
   },
   "signout": {
     "title": "Uitloggen",
