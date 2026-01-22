@@ -1,8 +1,7 @@
 {
   "expo": {
     "scheme": [
-      "openjii",
-      "photosynq"
+      "openjii"
     ],
     "name": "openJII",
     "slug": "openjii",

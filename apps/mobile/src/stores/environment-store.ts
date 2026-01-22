@@ -72,4 +72,17 @@ export function getEnvVar<K extends keyof (typeof env)[keyof typeof env]>(
   return value;
 }
 
+export function useEnvVar<K extends keyof (typeof env)[keyof typeof env]>(
+  key: K,
+): (typeof env)[keyof typeof env][K] {
+  const environment = useEnvironmentStore((state) => state.environment);
+
+  console.log("environment", environment);
+
+  const envName = environment ?? "prod";
+  const value = env[envName][key];
+
+  return value;
+}
+
 export const supportedEnvsList: string[] = Object.keys(env);
