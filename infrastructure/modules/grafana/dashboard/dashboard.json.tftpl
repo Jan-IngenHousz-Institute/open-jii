@@ -3485,7 +3485,16 @@
       "description": "Total number of deployments across all services in the last 24 hours",
       "fieldConfig": {
         "defaults": {
-          "mappings": [],
+          "mappings": [
+            {
+              "type": 1,
+              "options": {
+                "null": {
+                  "text": "0"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3552,6 +3561,7 @@
           "statistic": "Sum"
         }
       ],
+      "timeFrom": "7d",
       "title": "Deployment Frequency (Weekly)",
       "type": "stat"
     },
@@ -3631,6 +3641,7 @@
           "statistic": "Average"
         }
       ],
+      "timeFrom": "7d",
       "title": "Average Lead Time (Weekly)",
       "type": "stat"
     },
@@ -3639,10 +3650,19 @@
         "type": "cloudwatch",
         "uid": "${datasource_uid}"
       },
-      "description": "Total number of deployments across all services in the last 24 hours",
+      "description": "Number of failed deployments (weekly)",
       "fieldConfig": {
         "defaults": {
-          "mappings": [],
+          "mappings": [
+            {
+              "type": 1,
+              "options": {
+                "null": {
+                  "text": "0"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3667,10 +3687,10 @@
       "gridPos": {
         "h": 4,
         "w": 6,
-        "x": 0,
+        "x": 12,
         "y": 115
       },
-      "id": 601,
+      "id": 811,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -3709,6 +3729,7 @@
           "statistic": "Sum"
         }
       ],
+      "timeFrom": "7d",
       "title": "Change Failure Count (Weekly)",
       "type": "stat"
     },
@@ -3720,7 +3741,16 @@
       "description": "Number of successful deployments (weekly)",
       "fieldConfig": {
         "defaults": {
-          "mappings": [],
+          "mappings": [
+            {
+              "type": 1,
+              "options": {
+                "null": {
+                  "text": "0"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3787,6 +3817,7 @@
           "statistic": "Sum"
         }
       ],
+      "timeFrom": "7d",
       "title": "Deployment Success Count (Weekly)",
       "type": "stat"
     },
@@ -3952,6 +3983,7 @@
           "statistic": "Sum"
         }
       ],
+      "timeFrom": "7d",
       "title": "Deployment Frequency by Service (7d)",
       "type": "timeseries"
     },
@@ -4117,6 +4149,7 @@
           "statistic": "Average"
         }
       ],
+      "timeFrom": "7d",
       "title": "Lead Time Trend by Service (7d)",
       "type": "timeseries"
     }

@@ -643,7 +643,7 @@ EOT
       }
     }
 
-    no_data_state  = "NoData"
+    no_data_state  = "OK"
     exec_err_state = "OK"
     for            = "5m"
 
