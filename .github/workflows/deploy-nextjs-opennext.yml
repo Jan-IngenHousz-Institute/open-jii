@@ -61,6 +61,7 @@ jobs:
       - name: Set build environment variables
         env:
           WEB_BASE_ORIGIN: ${{ vars.WEB_BASE_ORIGIN }}
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
         run: |
           echo "Preparing build-time environment variables..."
 
@@ -77,9 +78,17 @@ jobs:
             NEXT_PUBLIC_BASE_URL="https://dev.${WEB_BASE_ORIGIN}"
           fi
 
+          # PostHog configuration
+          NEXT_PUBLIC_POSTHOG_KEY="${POSTHOG_KEY}"
+          NEXT_PUBLIC_POSTHOG_HOST="https://eu.i.posthog.com"
+          NEXT_PUBLIC_POSTHOG_UI_HOST="https://eu.posthog.com"
+
           echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DOCS_URL=${NEXT_PUBLIC_DOCS_URL}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_POSTHOG_UI_HOST=${NEXT_PUBLIC_POSTHOG_UI_HOST}" >> $GITHUB_ENV
           echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
 
       - name: Build Next.js Application
@@ -87,6 +96,9 @@ jobs:
           NODE_ENV: ${{ env.NODE_ENV }}
           NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_BASE_URL: ${{ env.NEXT_PUBLIC_BASE_URL }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ env.NEXT_PUBLIC_POSTHOG_KEY }}
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ env.NEXT_PUBLIC_POSTHOG_HOST }}
+          NEXT_PUBLIC_POSTHOG_UI_HOST: ${{ env.NEXT_PUBLIC_POSTHOG_UI_HOST }}
         run: |
           echo "Building Next.js application..."
           pnpm run build --filter=web
@@ -503,7 +515,7 @@ jobs:
         if: success()
         uses: ./.github/actions/publish-dora-metric
         with:
-          metric-name: 'DeploymentFrequency'
+          metric-name: 'DeploymentSuccess'
           value: '1'
           unit: 'Count'
           service: 'web'
