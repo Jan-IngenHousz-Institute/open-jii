@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { EXPERIMENT_NOT_FOUND, FORBIDDEN } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentProtocolDto } from "../../../core/models/experiment-protocols.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -40,7 +40,7 @@ export class ListExperimentProtocolsUseCase {
         if (!experiment) {
           this.logger.warn({
             msg: "Attempt to list protocols of non-existent experiment",
-            errorCode: EXPERIMENT_NOT_FOUND,
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "listExperimentProtocols",
             context: ListExperimentProtocolsUseCase.name,
             experimentId,
@@ -51,7 +51,7 @@ export class ListExperimentProtocolsUseCase {
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn({
             msg: "User attempted to access protocols without permission",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "listExperimentProtocols",
             context: ListExperimentProtocolsUseCase.name,
             experimentId,

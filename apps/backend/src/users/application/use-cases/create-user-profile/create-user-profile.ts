@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { USER_NOT_FOUND, DATABRICKS_REFRESH_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { failure, AppError, success } from "../../../../common/utils/fp-utils";
 import {
   UserDto,
@@ -36,7 +36,7 @@ export class CreateUserProfileUseCase {
       if (!user) {
         this.logger.warn({
           msg: "Attempt to create profile for non-existent user",
-          errorCode: USER_NOT_FOUND,
+          errorCode: ErrorCodes.USER_NOT_FOUND,
           operation: "createUserProfile",
           context: CreateUserProfileUseCase.name,
           userId,
@@ -89,7 +89,7 @@ export class CreateUserProfileUseCase {
           if (refreshResult.isFailure()) {
             this.logger.warn({
               msg: "Failed to trigger enriched tables refresh",
-              errorCode: DATABRICKS_REFRESH_FAILED,
+              errorCode: ErrorCodes.DATABRICKS_REFRESH_FAILED,
               operation: "createUserProfile",
               context: CreateUserProfileUseCase.name,
               userId,

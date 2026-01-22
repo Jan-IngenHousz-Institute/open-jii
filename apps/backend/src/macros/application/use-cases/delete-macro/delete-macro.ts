@@ -1,10 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import {
-  MACRO_NOT_FOUND,
-  FORBIDDEN,
-  DATABRICKS_FILE_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { DATABRICKS_PORT, DatabricksPort } from "../../../core/ports/databricks.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -37,7 +33,7 @@ export class DeleteMacroUseCase {
     if (!macroResult.value) {
       this.logger.warn({
         msg: "Macro not found for deletion",
-        errorCode: MACRO_NOT_FOUND,
+        errorCode: ErrorCodes.MACRO_NOT_FOUND,
         operation: "deleteMacro",
         context: DeleteMacroUseCase.name,
         macroId: id,
@@ -52,7 +48,7 @@ export class DeleteMacroUseCase {
     if (macro.createdBy !== userId) {
       this.logger.warn({
         msg: "Unauthorized macro deletion attempt",
-        errorCode: FORBIDDEN,
+        errorCode: ErrorCodes.FORBIDDEN,
         operation: "deleteMacro",
         context: DeleteMacroUseCase.name,
         macroId: id,
@@ -67,7 +63,7 @@ export class DeleteMacroUseCase {
     if (databricksResult.isFailure()) {
       this.logger.warn({
         msg: "Failed to delete macro from Databricks",
-        errorCode: DATABRICKS_FILE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
         operation: "deleteMacro",
         context: DeleteMacroUseCase.name,
         macroId: id,

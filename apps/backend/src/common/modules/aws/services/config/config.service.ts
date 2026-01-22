@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import { AWS_CONFIG_INVALID } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { AwsConfig, awsConfigSchema } from "./config.types";
 
 @Injectable()
@@ -44,7 +44,7 @@ export class AwsConfigService {
     } catch (error) {
       this.logger.error({
         msg: "Invalid AWS configuration",
-        errorCode: AWS_CONFIG_INVALID,
+        errorCode: ErrorCodes.AWS_CONFIG_INVALID,
         operation: "validateConfig",
         context: AwsConfigService.name,
         error,

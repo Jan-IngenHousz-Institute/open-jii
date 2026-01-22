@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { EXPERIMENT_VISUALIZATIONS_LIST_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -69,7 +69,7 @@ export class ListExperimentVisualizationsUseCase {
         if (visualizationsResult.isFailure()) {
           this.logger.error({
             msg: "Failed to retrieve visualizations for experiment",
-            errorCode: EXPERIMENT_VISUALIZATIONS_LIST_FAILED,
+            errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_LIST_FAILED,
             operation: "listExperimentVisualizations",
             context: ListExperimentVisualizationsUseCase.name,
             experimentId,

@@ -2,7 +2,7 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
-import { DATABRICKS_TABLE_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -68,7 +68,7 @@ export class DatabricksTablesService {
       (error) => {
         this.logger.error({
           msg: "Failed to list tables",
-          errorCode: DATABRICKS_TABLE_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
           operation: "listTables",
           context: DatabricksTablesService.name,
           schemaName,

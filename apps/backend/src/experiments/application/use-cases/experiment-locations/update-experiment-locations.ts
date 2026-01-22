@@ -1,10 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import {
-  EXPERIMENT_NOT_FOUND,
-  FORBIDDEN,
-  EXPERIMENT_LOCATIONS_UPDATE_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type {
   CreateLocationDto,
@@ -51,7 +47,7 @@ export class UpdateExperimentLocationsUseCase {
         if (!experiment) {
           this.logger.warn({
             msg: "Experiment not found",
-            errorCode: EXPERIMENT_NOT_FOUND,
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "updateExperimentLocations",
             context: UpdateExperimentLocationsUseCase.name,
             experimentId,
@@ -62,7 +58,7 @@ export class UpdateExperimentLocationsUseCase {
         if (!hasArchiveAccess) {
           this.logger.warn({
             msg: "User attempted to update locations without permission",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "updateExperimentLocations",
             context: UpdateExperimentLocationsUseCase.name,
             experimentId,
@@ -86,7 +82,7 @@ export class UpdateExperimentLocationsUseCase {
         if (replaceResult.isFailure()) {
           this.logger.error({
             msg: "Failed to update locations for experiment",
-            errorCode: EXPERIMENT_LOCATIONS_UPDATE_FAILED,
+            errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_UPDATE_FAILED,
             operation: "updateExperimentLocations",
             context: UpdateExperimentLocationsUseCase.name,
             experimentId,

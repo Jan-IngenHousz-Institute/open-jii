@@ -2,7 +2,7 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { AddAnnotationsBulkBody, AnnotationRowsAffected } from "@repo/api";
 
-import { EXPERIMENT_SCHEMA_NOT_READY } from "../../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../../common/utils/fp-utils";
@@ -89,7 +89,7 @@ export class AddAnnotationsUseCase {
         if (!experiment.schemaName) {
           this.logger.error({
             msg: "Experiment has no schema name",
-            errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "addAnnotations",
             context: AddAnnotationsUseCase.name,
             experimentId,

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { EXPERIMENT_NOT_FOUND, FORBIDDEN } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -28,7 +28,7 @@ export class GetExperimentUseCase {
         if (!experiment) {
           this.logger.warn({
             msg: "Experiment not found",
-            errorCode: EXPERIMENT_NOT_FOUND,
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "getExperiment",
             context: GetExperimentUseCase.name,
             experimentId: id,
@@ -41,7 +41,7 @@ export class GetExperimentUseCase {
         if (!(hasAccess || isPublic)) {
           this.logger.warn({
             msg: "User does not have access to private experiment",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "getExperiment",
             context: GetExperimentUseCase.name,
             experimentId: id,

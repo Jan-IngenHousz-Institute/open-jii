@@ -1,11 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { z } from "zod";
 
-import {
-  EXPERIMENT_DATA_UPLOAD_FAILED,
-  BAD_REQUEST,
-  EXPERIMENT_SCHEMA_NOT_READY,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { streamToBuffer } from "../../../../common/utils/stream-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -162,7 +158,7 @@ export class UploadAmbyteDataUseCase {
     } else {
       this.logger.error({
         msg: "Failed to create volume",
-        errorCode: EXPERIMENT_DATA_UPLOAD_FAILED,
+        errorCode: ErrorCodes.EXPERIMENT_DATA_UPLOAD_FAILED,
         operation: "prepareUploadEnvironment",
         context: UploadAmbyteDataUseCase.name,
         experimentId,
@@ -203,7 +199,7 @@ export class UploadAmbyteDataUseCase {
 
       this.logger.warn({
         msg: "Skipping invalid file",
-        errorCode: BAD_REQUEST,
+        errorCode: ErrorCodes.BAD_REQUEST,
         operation: "processFileUpload",
         context: UploadAmbyteDataUseCase.name,
         fileName: file.filename,
@@ -226,7 +222,7 @@ export class UploadAmbyteDataUseCase {
     if (!sourceType) {
       this.logger.error({
         msg: "Source type is undefined",
-        errorCode: BAD_REQUEST,
+        errorCode: ErrorCodes.BAD_REQUEST,
         operation: "processFileUpload",
         context: UploadAmbyteDataUseCase.name,
         fileName: file.filename,
@@ -243,7 +239,7 @@ export class UploadAmbyteDataUseCase {
     if (!experiment.schemaName) {
       this.logger.error({
         msg: "Experiment has no schema name",
-        errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+        errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
         operation: "processFileUpload",
         context: UploadAmbyteDataUseCase.name,
         experimentId: experiment.id,
@@ -309,7 +305,7 @@ export class UploadAmbyteDataUseCase {
 
       this.logger.error({
         msg: "Failed to upload file",
-        errorCode: EXPERIMENT_DATA_UPLOAD_FAILED,
+        errorCode: ErrorCodes.EXPERIMENT_DATA_UPLOAD_FAILED,
         operation: "processFileUpload",
         context: UploadAmbyteDataUseCase.name,
         experimentId: experiment.id,

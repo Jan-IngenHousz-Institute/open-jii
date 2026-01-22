@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { PlaceSearchResult } from "@repo/api";
 
 import { AwsLocationService } from "../../../common/modules/aws/services/location/location.service";
-import { AWS_LOCATION_FAILED } from "../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import type { Result } from "../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type {
@@ -44,7 +44,7 @@ export class AwsAdapter implements AwsPort {
     } catch (error) {
       this.logger.error({
         msg: "Place search failed",
-        errorCode: AWS_LOCATION_FAILED,
+        errorCode: ErrorCodes.AWS_LOCATION_FAILED,
         operation: "searchPlaces",
         context: AwsAdapter.name,
         query: request.query,

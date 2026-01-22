@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentProvisioningStatus } from "@repo/api";
 
-import { NOT_FOUND, INTERNAL_SERVER_ERROR } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentDto, ExperimentStatus } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -41,7 +41,7 @@ export class UpdateProvisioningStatusUseCase {
       if (!experiment) {
         this.logger.error({
           msg: "Experiment not found",
-          errorCode: NOT_FOUND,
+          errorCode: ErrorCodes.NOT_FOUND,
           operation: "update_provisioning_status",
           context: UpdateProvisioningStatusUseCase.name,
           experimentId,
@@ -112,7 +112,7 @@ export class UpdateProvisioningStatusUseCase {
       if (updateExperimentStatusResult.value.length === 0) {
         this.logger.error({
           msg: "No experiment was updated",
-          errorCode: INTERNAL_SERVER_ERROR,
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "update_provisioning_status",
           context: UpdateProvisioningStatusUseCase.name,
           experimentId,

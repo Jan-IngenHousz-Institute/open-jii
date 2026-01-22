@@ -10,7 +10,7 @@ import { ConfigService } from "@nestjs/config";
 import * as crypto from "crypto";
 import type { Request } from "express";
 
-import { HMAC_AUTHENTICATION_FAILED } from "../utils/error-codes";
+import { ErrorCodes } from "../utils/error-codes";
 import { stableStringify } from "../utils/stable-json";
 
 @Injectable()
@@ -35,7 +35,7 @@ export class HmacGuard implements CanActivate {
       if (!apiKey) {
         this.logger.warn({
           msg: "API key not found",
-          errorCode: HMAC_AUTHENTICATION_FAILED,
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
           operation: "hmacAuth",
           keyId,
         });
@@ -46,7 +46,7 @@ export class HmacGuard implements CanActivate {
     } catch (error) {
       this.logger.error({
         msg: "Failed to get API key",
-        errorCode: HMAC_AUTHENTICATION_FAILED,
+        errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
         operation: "hmacAuth",
         keyId,
         error,
@@ -66,7 +66,7 @@ export class HmacGuard implements CanActivate {
       if (!apiKeyId) {
         this.logger.warn({
           msg: "Missing API key ID",
-          errorCode: HMAC_AUTHENTICATION_FAILED,
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
           operation: "hmacAuth",
         });
         throw new UnauthorizedException("Unauthorized");
@@ -77,7 +77,7 @@ export class HmacGuard implements CanActivate {
       if (!apiKey) {
         this.logger.warn({
           msg: "Invalid API key ID provided",
-          errorCode: HMAC_AUTHENTICATION_FAILED,
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
           operation: "hmacAuth",
           keyId: apiKeyId,
         });
@@ -91,7 +91,7 @@ export class HmacGuard implements CanActivate {
       if (!signature || !timestamp) {
         this.logger.warn({
           msg: "Missing signature or timestamp headers",
-          errorCode: HMAC_AUTHENTICATION_FAILED,
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
           operation: "hmacAuth",
         });
         throw new UnauthorizedException("Unauthorized");
@@ -106,7 +106,7 @@ export class HmacGuard implements CanActivate {
       if (isNaN(timestampValue) || Math.abs(currentTime - timestampValue) > fiveMinutesInSeconds) {
         this.logger.warn({
           msg: "Invalid timestamp",
-          errorCode: HMAC_AUTHENTICATION_FAILED,
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
           operation: "hmacAuth",
           timestamp,
           currentTime,
@@ -130,7 +130,7 @@ export class HmacGuard implements CanActivate {
       } catch (error) {
         this.logger.error({
           msg: "Failed to get raw request body",
-          errorCode: HMAC_AUTHENTICATION_FAILED,
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
           operation: "hmacAuth",
           error,
         });
@@ -153,7 +153,7 @@ export class HmacGuard implements CanActivate {
         if (!crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)) {
           this.logger.warn({
             msg: "Invalid signature provided",
-            errorCode: HMAC_AUTHENTICATION_FAILED,
+            errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
             operation: "hmacAuth",
           });
           throw new UnauthorizedException("Unauthorized");
@@ -162,7 +162,7 @@ export class HmacGuard implements CanActivate {
         // This can happen if the signatures have different lengths or are not valid hex
         this.logger.warn({
           msg: "Signature comparison failed",
-          errorCode: HMAC_AUTHENTICATION_FAILED,
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
           operation: "hmacAuth",
           error,
         });
@@ -177,7 +177,7 @@ export class HmacGuard implements CanActivate {
 
       this.logger.error({
         msg: "HMAC verification failed",
-        errorCode: HMAC_AUTHENTICATION_FAILED,
+        errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
         operation: "hmacAuth",
         error,
       });

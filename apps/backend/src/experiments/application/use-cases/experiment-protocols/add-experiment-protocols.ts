@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { FORBIDDEN, EXPERIMENT_PROTOCOLS_ADD_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentProtocolDto } from "../../../core/models/experiment-protocols.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -55,7 +55,7 @@ export class AddExperimentProtocolsUseCase {
         if (!isAdmin) {
           this.logger.warn({
             msg: "User is not admin for experiment",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "addExperimentProtocols",
             context: AddExperimentProtocolsUseCase.name,
             experimentId,
@@ -73,7 +73,7 @@ export class AddExperimentProtocolsUseCase {
         if (addProtocolsResult.isFailure()) {
           this.logger.error({
             msg: "Failed to add protocols to experiment",
-            errorCode: EXPERIMENT_PROTOCOLS_ADD_FAILED,
+            errorCode: ErrorCodes.EXPERIMENT_PROTOCOLS_ADD_FAILED,
             operation: "addExperimentProtocols",
             context: AddExperimentProtocolsUseCase.name,
             experimentId,

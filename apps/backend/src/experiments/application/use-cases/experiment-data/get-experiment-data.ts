@@ -4,11 +4,7 @@ import type { ExperimentDataQuery } from "@repo/api";
 
 import type { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
 import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
-import {
-  EXPERIMENT_NOT_FOUND,
-  FORBIDDEN,
-  EXPERIMENT_SCHEMA_NOT_READY,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -75,7 +71,7 @@ export class GetExperimentDataUseCase {
         if (!experiment) {
           this.logger.warn({
             msg: "Experiment not found",
-            errorCode: EXPERIMENT_NOT_FOUND,
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "getExperimentData",
             context: GetExperimentDataUseCase.name,
             experimentId,
@@ -85,7 +81,7 @@ export class GetExperimentDataUseCase {
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn({
             msg: "User attempted to access experiment data without permission",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "getExperimentData",
             context: GetExperimentDataUseCase.name,
             experimentId,
@@ -97,7 +93,7 @@ export class GetExperimentDataUseCase {
         if (!experiment.schemaName) {
           this.logger.error({
             msg: "Experiment has no schema name",
-            errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "getExperimentData",
             context: GetExperimentDataUseCase.name,
             experimentId,

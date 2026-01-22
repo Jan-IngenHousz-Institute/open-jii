@@ -1,10 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import {
-  PROTOCOL_NOT_FOUND,
-  PROTOCOL_UPDATE_FAILED,
-  PROTOCOL_ASSIGNED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto, UpdateProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -34,7 +30,7 @@ export class UpdateProtocolUseCase {
     if (!protocol) {
       this.logger.warn({
         msg: "Attempt to update non-existent protocol",
-        errorCode: PROTOCOL_NOT_FOUND,
+        errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
         operation: "updateProtocol",
         context: UpdateProtocolUseCase.name,
         protocolId: id,
@@ -47,7 +43,7 @@ export class UpdateProtocolUseCase {
     if (isAssignedResult.isFailure()) {
       this.logger.error({
         msg: "Error checking protocol assignment",
-        errorCode: PROTOCOL_UPDATE_FAILED,
+        errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
         operation: "updateProtocol",
         context: UpdateProtocolUseCase.name,
         protocolId: id,
@@ -58,7 +54,7 @@ export class UpdateProtocolUseCase {
     if (isAssignedResult.value) {
       this.logger.warn({
         msg: "Cannot update protocol assigned to experiment",
-        errorCode: PROTOCOL_ASSIGNED,
+        errorCode: ErrorCodes.PROTOCOL_ASSIGNED,
         operation: "updateProtocol",
         context: UpdateProtocolUseCase.name,
         protocolId: id,
@@ -77,7 +73,7 @@ export class UpdateProtocolUseCase {
     if (protocols.length === 0) {
       this.logger.error({
         msg: "Failed to update protocol",
-        errorCode: PROTOCOL_UPDATE_FAILED,
+        errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
         operation: "updateProtocol",
         context: UpdateProtocolUseCase.name,
         protocolId: id,

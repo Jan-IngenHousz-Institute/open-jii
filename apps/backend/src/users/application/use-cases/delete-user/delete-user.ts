@@ -1,10 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import {
-  USER_NOT_FOUND,
-  USER_IS_ONLY_ADMIN,
-  DATABRICKS_REFRESH_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { success, Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UserDto } from "../../../core/models/user.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -35,7 +31,7 @@ export class DeleteUserUseCase {
       if (!user) {
         this.logger.warn({
           msg: "Attempt to delete non-existent user",
-          errorCode: USER_NOT_FOUND,
+          errorCode: ErrorCodes.USER_NOT_FOUND,
           operation: "deleteUser",
           context: DeleteUserUseCase.name,
           userId: id,
@@ -50,7 +46,7 @@ export class DeleteUserUseCase {
         if (isOnlyAdmin) {
           this.logger.warn({
             msg: "Cannot delete user - only admin of experiments",
-            errorCode: USER_IS_ONLY_ADMIN,
+            errorCode: ErrorCodes.USER_IS_ONLY_ADMIN,
             operation: "deleteUser",
             context: DeleteUserUseCase.name,
             userId: id,
@@ -98,7 +94,7 @@ export class DeleteUserUseCase {
         if (refreshResult.isFailure()) {
           this.logger.warn({
             msg: "Failed to trigger enriched tables refresh",
-            errorCode: DATABRICKS_REFRESH_FAILED,
+            errorCode: ErrorCodes.DATABRICKS_REFRESH_FAILED,
             operation: "deleteUser",
             context: DeleteUserUseCase.name,
             userId: id,

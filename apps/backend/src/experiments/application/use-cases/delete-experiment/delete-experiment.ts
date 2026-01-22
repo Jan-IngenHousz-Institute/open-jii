@@ -1,10 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import {
-  EXPERIMENT_NOT_FOUND,
-  FORBIDDEN,
-  EXPERIMENT_DELETE_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -38,7 +34,7 @@ export class DeleteExperimentUseCase {
         if (!experiment) {
           this.logger.warn({
             msg: "Attempt to delete non-existent experiment",
-            errorCode: EXPERIMENT_NOT_FOUND,
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "deleteExperiment",
             context: DeleteExperimentUseCase.name,
             experimentId: id,
@@ -49,7 +45,7 @@ export class DeleteExperimentUseCase {
         if (!hasAccess) {
           this.logger.warn({
             msg: "User is not a member of experiment",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "deleteExperiment",
             context: DeleteExperimentUseCase.name,
             experimentId: id,
@@ -79,7 +75,7 @@ export class DeleteExperimentUseCase {
         } else {
           this.logger.error({
             msg: "Failed to delete experiment",
-            errorCode: EXPERIMENT_DELETE_FAILED,
+            errorCode: ErrorCodes.EXPERIMENT_DELETE_FAILED,
             operation: "deleteExperiment",
             context: DeleteExperimentUseCase.name,
             experimentId: id,

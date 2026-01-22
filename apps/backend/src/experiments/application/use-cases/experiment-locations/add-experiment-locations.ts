@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { EXPERIMENT_LOCATIONS_CREATE_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type {
   CreateLocationDto,
@@ -89,7 +89,7 @@ export class AddExperimentLocationsUseCase {
         if (createResult.isFailure()) {
           this.logger.error({
             msg: "Failed to create locations for experiment",
-            errorCode: EXPERIMENT_LOCATIONS_CREATE_FAILED,
+            errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_CREATE_FAILED,
             operation: "addExperimentLocations",
             context: AddExperimentLocationsUseCase.name,
             experimentId,

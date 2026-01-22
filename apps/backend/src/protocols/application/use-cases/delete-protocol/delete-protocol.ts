@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { PROTOCOL_NOT_FOUND, PROTOCOL_DELETE_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -30,7 +30,7 @@ export class DeleteProtocolUseCase {
     if (!protocol) {
       this.logger.warn({
         msg: "Attempt to delete non-existent protocol",
-        errorCode: PROTOCOL_NOT_FOUND,
+        errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
         operation: "deleteProtocol",
         context: DeleteProtocolUseCase.name,
         protocolId: id,
@@ -49,7 +49,7 @@ export class DeleteProtocolUseCase {
     if (protocols.length === 0) {
       this.logger.error({
         msg: "Failed to delete protocol",
-        errorCode: PROTOCOL_DELETE_FAILED,
+        errorCode: ErrorCodes.PROTOCOL_DELETE_FAILED,
         operation: "execute",
         context: DeleteProtocolUseCase.name,
         protocolId: id,

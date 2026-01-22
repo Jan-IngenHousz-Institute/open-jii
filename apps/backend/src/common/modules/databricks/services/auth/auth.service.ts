@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
-import { DATABRICKS_AUTH_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, success, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksConfigService } from "../config/config.service";
 import { TokenResponse } from "./auth.types";
@@ -70,7 +70,7 @@ export class DatabricksAuthService {
       (error) => {
         this.logger.error({
           msg: "Failed to obtain Databricks access token",
-          errorCode: DATABRICKS_AUTH_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_AUTH_FAILED,
           operation: "getAccessToken",
           context: DatabricksAuthService.name,
           error,
@@ -108,7 +108,7 @@ export class DatabricksAuthService {
       (error) => {
         this.logger.error({
           msg: "Failed to obtain access token",
-          errorCode: DATABRICKS_AUTH_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_AUTH_FAILED,
           operation: "getAccessToken",
           context: DatabricksAuthService.name,
           error,

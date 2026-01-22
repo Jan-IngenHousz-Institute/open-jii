@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { EXPERIMENT_PROTOCOLS_REMOVE_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
@@ -60,7 +60,7 @@ export class RemoveExperimentProtocolUseCase {
         if (protocolsResult.isFailure()) {
           this.logger.error({
             msg: "Failed to fetch protocols for experiment",
-            errorCode: EXPERIMENT_PROTOCOLS_REMOVE_FAILED,
+            errorCode: ErrorCodes.EXPERIMENT_PROTOCOLS_REMOVE_FAILED,
             operation: "removeExperimentProtocol",
             context: RemoveExperimentProtocolUseCase.name,
             experimentId,

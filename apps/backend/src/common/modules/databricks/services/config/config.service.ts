@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import { DATABRICKS_CONFIG_INVALID } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { DatabricksConfig, databricksConfigSchema } from "./config.types";
 
 @Injectable()
@@ -61,7 +61,7 @@ export class DatabricksConfigService {
     } catch {
       this.logger.error({
         msg: "Invalid Databricks configuration",
-        errorCode: DATABRICKS_CONFIG_INVALID,
+        errorCode: ErrorCodes.DATABRICKS_CONFIG_INVALID,
         operation: "validateConfig",
         context: DatabricksConfigService.name,
       });

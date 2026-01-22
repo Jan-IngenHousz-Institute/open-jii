@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
-import { DATABRICKS_SQL_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, failure, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -108,7 +108,7 @@ export class DatabricksSqlService {
         } catch (error) {
           this.logger.error({
             msg: "Error executing SQL query",
-            errorCode: DATABRICKS_SQL_FAILED,
+            errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
             operation: "executeSqlQuery",
             context: DatabricksSqlService.name,
             error,
@@ -123,7 +123,7 @@ export class DatabricksSqlService {
       (error) => {
         this.logger.error({
           msg: "Failed to execute SQL query",
-          errorCode: DATABRICKS_SQL_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
           operation: "executeSqlQuery",
           context: DatabricksSqlService.name,
           error,
@@ -184,7 +184,7 @@ export class DatabricksSqlService {
       } catch (error) {
         this.logger.error({
           msg: "Error polling SQL statement execution",
-          errorCode: DATABRICKS_SQL_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
           operation: "pollStatementExecution",
           context: DatabricksSqlService.name,
           error,

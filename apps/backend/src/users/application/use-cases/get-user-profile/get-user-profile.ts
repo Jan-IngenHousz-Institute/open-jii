@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { USER_PROFILE_NOT_FOUND } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UserProfileDto } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
@@ -25,7 +25,7 @@ export class GetUserProfileUseCase {
       if (!userProfile) {
         this.logger.warn({
           msg: "User profile not found",
-          errorCode: USER_PROFILE_NOT_FOUND,
+          errorCode: ErrorCodes.USER_PROFILE_NOT_FOUND,
           operation: "getUserProfile",
           context: GetUserProfileUseCase.name,
           userId: id,

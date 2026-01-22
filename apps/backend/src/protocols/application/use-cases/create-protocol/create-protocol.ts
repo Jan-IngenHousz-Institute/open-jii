@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { PROTOCOL_CREATE_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateProtocolDto, ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -25,7 +25,7 @@ export class CreateProtocolUseCase {
       if (protocolResult.value.length === 0) {
         this.logger.error({
           msg: "Failed to create protocol",
-          errorCode: PROTOCOL_CREATE_FAILED,
+          errorCode: ErrorCodes.PROTOCOL_CREATE_FAILED,
           operation: "createProtocol",
           context: CreateProtocolUseCase.name,
           userId,

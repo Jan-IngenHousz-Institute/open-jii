@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { USER_NOT_FOUND } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result } from "../../../../common/utils/fp-utils";
 import { UserProfileDto, SearchUsersParams } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
@@ -36,7 +36,7 @@ export class SearchUsersUseCase {
       (error: AppError) => {
         this.logger.error({
           msg: "Failed to search users",
-          errorCode: USER_NOT_FOUND,
+          errorCode: ErrorCodes.USER_NOT_FOUND,
           operation: "searchUsers",
           context: SearchUsersUseCase.name,
           error,

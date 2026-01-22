@@ -6,7 +6,7 @@ import Mail from "nodemailer/lib/mailer";
 import { AddedUserNotification } from "@repo/transactional/emails/added-user-notification";
 import { TransferRequestConfirmation } from "@repo/transactional/emails/transfer-request-confirmation";
 
-import { EMAIL_SEND_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { apiErrorMapper, tryCatch } from "../../../../utils/fp-utils";
 import { EmailConfigService } from "../config/config.service";
 
@@ -92,7 +92,7 @@ export class NotificationsService {
       (error) => {
         this.logger.error({
           msg: "Failed to send added user notification email",
-          errorCode: EMAIL_SEND_FAILED,
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendAddedUserNotification",
           context: NotificationsService.name,
           email,
@@ -184,7 +184,7 @@ export class NotificationsService {
       (error) => {
         this.logger.error({
           msg: "Failed to send transfer request confirmation email",
-          errorCode: EMAIL_SEND_FAILED,
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendTransferRequestConfirmation",
           context: NotificationsService.name,
           email,

@@ -1,11 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import {
-  EXPERIMENT_NOT_FOUND,
-  FORBIDDEN,
-  UNPROCESSABLE_ENTITY,
-  EXPERIMENT_UPDATE_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto, UpdateExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -45,7 +40,7 @@ export class UpdateExperimentUseCase {
         if (!experiment) {
           this.logger.warn({
             msg: "Attempt to update non-existent experiment",
-            errorCode: EXPERIMENT_NOT_FOUND,
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "updateExperiment",
             context: UpdateExperimentUseCase.name,
             experimentId: id,
@@ -57,7 +52,7 @@ export class UpdateExperimentUseCase {
         if (data.status === "archived" && experiment.status !== "archived" && !isAdmin) {
           this.logger.warn({
             msg: "Non-admin cannot archive experiment",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "updateExperiment",
             context: UpdateExperimentUseCase.name,
             experimentId: id,
@@ -69,7 +64,7 @@ export class UpdateExperimentUseCase {
         if (!hasAccess) {
           this.logger.warn({
             msg: "User does not have access to experiment",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "updateExperiment",
             context: UpdateExperimentUseCase.name,
             experimentId: id,
@@ -83,7 +78,7 @@ export class UpdateExperimentUseCase {
           if (!isAdmin) {
             this.logger.warn({
               msg: "Non-admin attempted to update archived experiment",
-              errorCode: FORBIDDEN,
+              errorCode: ErrorCodes.FORBIDDEN,
               operation: "updateExperiment",
               context: UpdateExperimentUseCase.name,
               experimentId: id,
@@ -97,7 +92,7 @@ export class UpdateExperimentUseCase {
           if (updateFields.length !== 1 || updateFields[0] !== "status") {
             this.logger.warn({
               msg: "Admin attempted to update fields other than status on archived experiment",
-              errorCode: UNPROCESSABLE_ENTITY,
+              errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
               operation: "updateExperiment",
               context: UpdateExperimentUseCase.name,
               experimentId: id,
@@ -130,7 +125,7 @@ export class UpdateExperimentUseCase {
           if (updatedExperiments.length === 0) {
             this.logger.error({
               msg: "Failed to update experiment",
-              errorCode: EXPERIMENT_UPDATE_FAILED,
+              errorCode: ErrorCodes.EXPERIMENT_UPDATE_FAILED,
               operation: "updateExperiment",
               context: UpdateExperimentUseCase.name,
               experimentId: id,

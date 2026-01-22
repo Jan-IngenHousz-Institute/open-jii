@@ -1,9 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import {
-  EXPERIMENT_SCHEMA_NOT_READY,
-  EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   UpdateExperimentVisualizationDto,
@@ -115,7 +112,7 @@ export class UpdateExperimentVisualizationUseCase {
           if (!experiment.schemaName) {
             this.logger.error({
               msg: "Experiment has no schema name",
-              errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+              errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
               operation: "updateExperimentVisualization",
               context: UpdateExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
@@ -162,7 +159,7 @@ export class UpdateExperimentVisualizationUseCase {
             if (updatedVisualizations.length === 0) {
               this.logger.error({
                 msg: "Failed to update visualization",
-                errorCode: EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
+                errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
                 operation: "updateExperimentVisualization",
                 context: UpdateExperimentVisualizationUseCase.name,
                 experimentId: visualization.experimentId,

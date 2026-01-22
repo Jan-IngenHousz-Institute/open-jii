@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { INTERNAL_SERVER_ERROR } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   ExperimentMemberDto,
@@ -112,7 +112,7 @@ export class UpdateExperimentMemberRoleUseCase {
         if (updateResult.isFailure()) {
           this.logger.error({
             msg: "Failed to update member in experiment",
-            errorCode: INTERNAL_SERVER_ERROR,
+            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "update-experiment-member-role",
             context: UpdateExperimentMemberRoleUseCase.name,
             experimentId,

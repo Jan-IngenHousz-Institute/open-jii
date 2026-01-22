@@ -1,10 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import {
-  EXPERIMENT_NOT_FOUND,
-  FORBIDDEN,
-  EXPERIMENT_SCHEMA_NOT_READY,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -77,7 +73,7 @@ export class GetExperimentTablesUseCase {
         if (!experiment) {
           this.logger.warn({
             msg: "Experiment not found",
-            errorCode: EXPERIMENT_NOT_FOUND,
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "getExperimentTables",
             context: GetExperimentTablesUseCase.name,
             experimentId,
@@ -87,7 +83,7 @@ export class GetExperimentTablesUseCase {
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn({
             msg: "User attempted to access tables without proper permissions",
-            errorCode: FORBIDDEN,
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "getExperimentTables",
             context: GetExperimentTablesUseCase.name,
             experimentId,
@@ -99,7 +95,7 @@ export class GetExperimentTablesUseCase {
         if (!experiment.schemaName) {
           this.logger.error({
             msg: "Experiment has no schema name",
-            errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "getExperimentTables",
             context: GetExperimentTablesUseCase.name,
             experimentId,

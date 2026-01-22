@@ -4,7 +4,7 @@ import { ExperimentVisualizationDto } from "../../../experiments/core/models/exp
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
-import { DATABRICKS_TABLE_FAILED, DATABRICKS_FILE_FAILED } from "../../utils/error-codes";
+import { ErrorCodes } from "../../utils/error-codes";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -169,7 +169,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     if (tablesResult.isFailure()) {
       this.logger.error({
         msg: "Failed to list tables",
-        errorCode: DATABRICKS_TABLE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "validateDataSources",
         context: DatabricksAdapter.name,
         schemaName,
@@ -185,7 +185,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     if (!tableExists) {
       this.logger.warn({
         msg: "Table does not exist in schema",
-        errorCode: DATABRICKS_TABLE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "validateDataSources",
         context: DatabricksAdapter.name,
         schemaName,
@@ -211,7 +211,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     if (schemaResult.isFailure()) {
       this.logger.error({
         msg: "Failed to get table schema",
-        errorCode: DATABRICKS_TABLE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "validateDataSources",
         context: DatabricksAdapter.name,
         schemaName,
@@ -354,7 +354,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     if (tablesResult.isFailure()) {
       this.logger.error({
         msg: "Failed to list tables for silver data refresh",
-        errorCode: DATABRICKS_TABLE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "refreshSilverData",
         context: DatabricksAdapter.name,
         schemaName,
@@ -371,7 +371,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     if (silverTables.length === 0) {
       this.logger.warn({
         msg: "No silver quality tables found",
-        errorCode: DATABRICKS_TABLE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "refreshSilverData",
         context: DatabricksAdapter.name,
         schemaName,
@@ -498,7 +498,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     if (schemaResult.isFailure()) {
       this.logger.error({
         msg: "Failed to get metadata",
-        errorCode: DATABRICKS_TABLE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "getTableMetadata",
         context: DatabricksAdapter.name,
         schemaName,
@@ -616,7 +616,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     // If we get here, the file wasn't found with any extension
     this.logger.warn({
       msg: "Macro file not found",
-      errorCode: DATABRICKS_FILE_FAILED,
+      errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
       operation: "deleteMacroCode",
       context: DatabricksAdapter.name,
       filename,

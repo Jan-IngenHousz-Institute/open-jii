@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 
 import { createPostHogServerConfig } from "@repo/analytics";
 
-import { ANALYTICS_CONFIG_INVALID } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { AnalyticsConfig, analyticsConfigSchema } from "./config.types";
 
 @Injectable()
@@ -46,7 +46,7 @@ export class AnalyticsConfigService {
     } catch (error) {
       this.logger.error({
         msg: "Invalid analytics configuration",
-        errorCode: ANALYTICS_CONFIG_INVALID,
+        errorCode: ErrorCodes.ANALYTICS_CONFIG_INVALID,
         operation: "validateConfig",
         context: AnalyticsConfigService.name,
         error,

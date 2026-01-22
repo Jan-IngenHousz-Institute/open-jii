@@ -1,11 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import {
-  MACRO_NOT_FOUND,
-  FORBIDDEN,
-  MACRO_UPDATE_FAILED,
-  DATABRICKS_FILE_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UpdateMacroDto, MacroDto } from "../../../core/models/macro.model";
 import { DATABRICKS_PORT, DatabricksPort } from "../../../core/ports/databricks.port";
@@ -40,7 +35,7 @@ export class UpdateMacroUseCase {
     if (!existingMacro) {
       this.logger.warn({
         msg: "Attempt to update non-existent macro",
-        errorCode: MACRO_NOT_FOUND,
+        errorCode: ErrorCodes.MACRO_NOT_FOUND,
         operation: "updateMacro",
         context: UpdateMacroUseCase.name,
         macroId: id,
@@ -53,7 +48,7 @@ export class UpdateMacroUseCase {
     if (existingMacro.createdBy !== userId) {
       this.logger.warn({
         msg: "Unauthorized macro update attempt",
-        errorCode: FORBIDDEN,
+        errorCode: ErrorCodes.FORBIDDEN,
         operation: "updateMacro",
         context: UpdateMacroUseCase.name,
         macroId: id,
@@ -73,7 +68,7 @@ export class UpdateMacroUseCase {
     if (macros.length === 0) {
       this.logger.error({
         msg: "Failed to update macro",
-        errorCode: MACRO_UPDATE_FAILED,
+        errorCode: ErrorCodes.MACRO_UPDATE_FAILED,
         operation: "updateMacro",
         context: UpdateMacroUseCase.name,
         macroId: id,
@@ -95,7 +90,7 @@ export class UpdateMacroUseCase {
       if (databricksResult.isFailure()) {
         this.logger.error({
           msg: "Failed to upload updated macro code to Databricks",
-          errorCode: DATABRICKS_FILE_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
           operation: "updateMacro",
           context: UpdateMacroUseCase.name,
           macroId: macro.id,

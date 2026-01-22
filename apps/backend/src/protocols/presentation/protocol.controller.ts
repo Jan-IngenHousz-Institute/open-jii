@@ -8,7 +8,7 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract, validateProtocolJson } from "@repo/api";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { BAD_REQUEST, UNPROCESSABLE_ENTITY, FORBIDDEN } from "../../common/utils/error-codes";
+import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
@@ -41,7 +41,7 @@ function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknow
     } catch (error) {
       logger.error({
         msg: "Failed to parse protocol code",
-        errorCode: BAD_REQUEST,
+        errorCode: ErrorCodes.BAD_REQUEST,
         operation: "parseProtocolCode",
         context: "ProtocolController",
         error,
@@ -76,7 +76,7 @@ function validateJsonStructure(code: unknown, logger: Logger) {
   } catch (error) {
     logger.warn({
       msg: "Protocol JSON structure validation failed",
-      errorCode: BAD_REQUEST,
+      errorCode: ErrorCodes.BAD_REQUEST,
       operation: "validateJsonStructure",
       context: "ProtocolController",
       error,
@@ -113,7 +113,7 @@ async function validateProtocolCode(
   if (!validationResult.success) {
     logger.warn({
       msg: "Protocol validation failed",
-      errorCode: UNPROCESSABLE_ENTITY,
+      errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
       operation: "validateProtocolCode",
       context: "ProtocolController",
       validationError: validationResult.error,
@@ -240,7 +240,7 @@ export class ProtocolController {
       if (protocolResult.value.createdBy !== user.id) {
         this.logger.warn({
           msg: "Unauthorized protocol update attempt",
-          errorCode: FORBIDDEN,
+          errorCode: ErrorCodes.FORBIDDEN,
           operation: "updateProtocol",
           context: ProtocolController.name,
           protocolId: params.id,
@@ -323,7 +323,7 @@ export class ProtocolController {
       if (protocolResult.value.createdBy !== user.id) {
         this.logger.warn({
           msg: "Unauthorized protocol delete attempt",
-          errorCode: FORBIDDEN,
+          errorCode: ErrorCodes.FORBIDDEN,
           operation: "deleteProtocol",
           context: ProtocolController.name,
           protocolId: params.id,

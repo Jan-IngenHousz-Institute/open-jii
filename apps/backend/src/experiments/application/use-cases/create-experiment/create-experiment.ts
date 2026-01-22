@@ -1,11 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import {
-  BAD_REQUEST,
-  EXPERIMENT_DUPLICATE_NAME,
-  EXPERIMENT_CREATE_FAILED,
-  DATABRICKS_JOB_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateExperimentDto, ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -39,7 +34,7 @@ export class CreateExperimentUseCase {
     if (!userId) {
       this.logger.warn({
         msg: "Attempt to create experiment without user ID",
-        errorCode: BAD_REQUEST,
+        errorCode: ErrorCodes.BAD_REQUEST,
         operation: "createExperiment",
         context: CreateExperimentUseCase.name,
       });
@@ -50,7 +45,7 @@ export class CreateExperimentUseCase {
     if (!data.name || data.name.trim() === "") {
       this.logger.warn({
         msg: "Invalid experiment name provided",
-        errorCode: BAD_REQUEST,
+        errorCode: ErrorCodes.BAD_REQUEST,
         operation: "createExperiment",
         context: CreateExperimentUseCase.name,
         userId,
@@ -65,7 +60,7 @@ export class CreateExperimentUseCase {
       if (existingExperiment) {
         this.logger.warn({
           msg: "Attempt to create duplicate experiment",
-          errorCode: EXPERIMENT_DUPLICATE_NAME,
+          errorCode: ErrorCodes.EXPERIMENT_DUPLICATE_NAME,
           operation: "createExperiment",
           context: CreateExperimentUseCase.name,
           userId,
@@ -88,7 +83,7 @@ export class CreateExperimentUseCase {
         if (experiments.length === 0) {
           this.logger.error({
             msg: "Failed to create experiment in repository",
-            errorCode: EXPERIMENT_CREATE_FAILED,
+            errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
             operation: "createExperiment",
             context: CreateExperimentUseCase.name,
             userId,
@@ -128,7 +123,7 @@ export class CreateExperimentUseCase {
             if (addProtocolsResult.isFailure()) {
               this.logger.error({
                 msg: "Failed to associate protocols with experiment",
-                errorCode: EXPERIMENT_CREATE_FAILED,
+                errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
                 operation: "createExperiment",
                 context: CreateExperimentUseCase.name,
                 experimentId: experiment.id,
@@ -154,7 +149,7 @@ export class CreateExperimentUseCase {
             if (addLocationsResult.isFailure()) {
               this.logger.error({
                 msg: "Failed to associate locations with experiment",
-                errorCode: EXPERIMENT_CREATE_FAILED,
+                errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
                 operation: "createExperiment",
                 context: CreateExperimentUseCase.name,
                 experimentId: experiment.id,
@@ -187,7 +182,7 @@ export class CreateExperimentUseCase {
           if (databricksResult.isFailure()) {
             this.logger.warn({
               msg: "Failed to trigger Databricks provisioning job",
-              errorCode: DATABRICKS_JOB_FAILED,
+              errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
               operation: "createExperiment",
               context: CreateExperimentUseCase.name,
               experimentId: experiment.id,

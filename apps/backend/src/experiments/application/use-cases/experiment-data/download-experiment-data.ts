@@ -1,11 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import {
-  EXPERIMENT_NOT_FOUND,
-  FORBIDDEN,
-  EXPERIMENT_SCHEMA_NOT_READY,
-  EXPERIMENT_DATA_DOWNLOAD_FAILED,
-} from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -75,7 +70,7 @@ export class DownloadExperimentDataUseCase {
       if (!experiment) {
         this.logger.warn({
           msg: "Experiment not found",
-          errorCode: EXPERIMENT_NOT_FOUND,
+          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
           operation: "downloadExperimentData",
           context: DownloadExperimentDataUseCase.name,
           experimentId,
@@ -86,7 +81,7 @@ export class DownloadExperimentDataUseCase {
       if (!hasAccess && experiment.visibility !== "public") {
         this.logger.warn({
           msg: "Access denied to experiment",
-          errorCode: FORBIDDEN,
+          errorCode: ErrorCodes.FORBIDDEN,
           operation: "downloadExperimentData",
           context: DownloadExperimentDataUseCase.name,
           experimentId,
@@ -98,7 +93,7 @@ export class DownloadExperimentDataUseCase {
       if (!experiment.schemaName) {
         this.logger.error({
           msg: "Experiment has no schema name",
-          errorCode: EXPERIMENT_SCHEMA_NOT_READY,
+          errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
           operation: "downloadExperimentData",
           context: DownloadExperimentDataUseCase.name,
           experimentId,
@@ -184,7 +179,7 @@ export class DownloadExperimentDataUseCase {
     } catch (error) {
       this.logger.error({
         msg: "Unexpected error in download experiment data use case",
-        errorCode: EXPERIMENT_DATA_DOWNLOAD_FAILED,
+        errorCode: ErrorCodes.EXPERIMENT_DATA_DOWNLOAD_FAILED,
         operation: "downloadExperimentData",
         context: DownloadExperimentDataUseCase.name,
         error: error instanceof Error ? error.message : "Unknown error",

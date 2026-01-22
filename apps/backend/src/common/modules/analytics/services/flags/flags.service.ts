@@ -8,7 +8,7 @@ import {
   shutdownPostHog,
 } from "@repo/analytics/server";
 
-import { ANALYTICS_INIT_FAILED, FEATURE_FLAG_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { AnalyticsConfigService } from "../config/config.service";
 
 /**
@@ -34,7 +34,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
       if (!posthogKey) {
         this.logger.warn({
           msg: "PostHog key is missing after configuration check",
-          errorCode: ANALYTICS_INIT_FAILED,
+          errorCode: ErrorCodes.ANALYTICS_INIT_FAILED,
           operation: "initialize",
           context: FlagsService.name,
         });
@@ -55,7 +55,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
       } else {
         this.logger.warn({
           msg: "PostHog initialization failed - using default feature flag values",
-          errorCode: ANALYTICS_INIT_FAILED,
+          errorCode: ErrorCodes.ANALYTICS_INIT_FAILED,
           operation: "initialize",
           context: FlagsService.name,
         });
@@ -63,7 +63,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error({
         msg: "Failed to initialize PostHog",
-        errorCode: ANALYTICS_INIT_FAILED,
+        errorCode: ErrorCodes.ANALYTICS_INIT_FAILED,
         operation: "initialize",
         context: FlagsService.name,
         error,
@@ -112,7 +112,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error({
         msg: "Error checking feature flag",
-        errorCode: FEATURE_FLAG_FAILED,
+        errorCode: ErrorCodes.FEATURE_FLAG_FAILED,
         operation: "isFeatureFlagEnabled",
         context: FlagsService.name,
         flagKey,

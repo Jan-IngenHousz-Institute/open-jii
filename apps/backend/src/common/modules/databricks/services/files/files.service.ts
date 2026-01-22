@@ -2,7 +2,7 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
-import { DATABRICKS_FILE_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -75,7 +75,7 @@ export class DatabricksFilesService {
       (error) => {
         this.logger.error({
           msg: "Failed to upload file to Databricks",
-          errorCode: DATABRICKS_FILE_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
           operation: "uploadFile",
           context: DatabricksFilesService.name,
           error,

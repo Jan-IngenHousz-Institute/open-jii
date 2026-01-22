@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
-import { EMBARGO_PROCESSING_FAILED } from "../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -31,7 +31,7 @@ export class EmbargoProcessorService {
       if (expiredExperimentsResult.isFailure()) {
         this.logger.error({
           msg: "Failed to fetch expired embargoes",
-          errorCode: EMBARGO_PROCESSING_FAILED,
+          errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
           operation: "processExpiredEmbargoes",
           context: EmbargoProcessorService.name,
           error: expiredExperimentsResult.error,
@@ -80,7 +80,7 @@ export class EmbargoProcessorService {
           failureCount++;
           this.logger.error({
             msg: "Failed to update experiment embargo",
-            errorCode: EMBARGO_PROCESSING_FAILED,
+            errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
             operation: "processExpiredEmbargoes",
             context: EmbargoProcessorService.name,
             experimentId: experiment.id,
@@ -100,7 +100,7 @@ export class EmbargoProcessorService {
     } catch (error) {
       this.logger.error({
         msg: "Unexpected error during embargo processing",
-        errorCode: EMBARGO_PROCESSING_FAILED,
+        errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
         operation: "processExpiredEmbargoes",
         context: EmbargoProcessorService.name,
         error,

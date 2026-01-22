@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
-import { DATABRICKS_JOB_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -51,7 +51,7 @@ export class DatabricksJobsService {
       (error) => {
         this.logger.error({
           msg: "Failed to trigger Databricks job",
-          errorCode: DATABRICKS_JOB_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
           operation: "triggerJob",
           context: DatabricksJobsService.name,
           error,
@@ -99,7 +99,7 @@ export class DatabricksJobsService {
       (error) => {
         this.logger.error({
           msg: "Error executing job trigger",
-          errorCode: DATABRICKS_JOB_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
           operation: "triggerJobInternal",
           context: DatabricksJobsService.name,
           error,
@@ -178,7 +178,7 @@ export class DatabricksJobsService {
       (error) => {
         this.logger.error({
           msg: "Databricks health check failed",
-          errorCode: DATABRICKS_JOB_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
           operation: "healthCheck",
           context: DatabricksJobsService.name,
           error,

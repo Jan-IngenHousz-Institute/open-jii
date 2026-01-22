@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { MACRO_NOT_FOUND } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroDto } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -28,7 +28,7 @@ export class GetMacroUseCase {
     if (!result.value) {
       this.logger.warn({
         msg: "Macro not found",
-        errorCode: MACRO_NOT_FOUND,
+        errorCode: ErrorCodes.MACRO_NOT_FOUND,
         operation: "getMacro",
         context: GetMacroUseCase.name,
         macroId: id,

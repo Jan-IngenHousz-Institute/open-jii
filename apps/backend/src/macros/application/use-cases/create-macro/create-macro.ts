@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import { MACRO_CREATE_FAILED, DATABRICKS_FILE_FAILED } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateMacroDto, MacroDto } from "../../../core/models/macro.model";
 import { DATABRICKS_PORT, DatabricksPort } from "../../../core/ports/databricks.port";
@@ -42,7 +42,7 @@ export class CreateMacroUseCase {
     if (macroResult.value.length === 0) {
       this.logger.error({
         msg: "Failed to create macro in database",
-        errorCode: MACRO_CREATE_FAILED,
+        errorCode: ErrorCodes.MACRO_CREATE_FAILED,
         operation: "createMacro",
         context: CreateMacroUseCase.name,
         userId,
@@ -61,7 +61,7 @@ export class CreateMacroUseCase {
     if (databricksResult.isFailure()) {
       this.logger.error({
         msg: "Failed to upload macro code to Databricks",
-        errorCode: DATABRICKS_FILE_FAILED,
+        errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
         operation: "createMacro",
         context: CreateMacroUseCase.name,
         macroId: macro.id,

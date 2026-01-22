@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import { INTERNAL_SERVER_ERROR } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   ExperimentMemberDto,
@@ -85,7 +85,7 @@ export class AddExperimentMembersUseCase {
         if (addMembersResult.isFailure()) {
           this.logger.error({
             msg: "Failed to add members to experiment",
-            errorCode: INTERNAL_SERVER_ERROR,
+            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "add-experiment-members",
             context: AddExperimentMembersUseCase.name,
             experimentId,
@@ -110,7 +110,7 @@ export class AddExperimentMembersUseCase {
         if (actorProfileResult.isFailure()) {
           this.logger.error({
             msg: "Failed to retrieve profile for user",
-            errorCode: INTERNAL_SERVER_ERROR,
+            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "add-experiment-members",
             context: AddExperimentMembersUseCase.name,
             userId: currentUserId,

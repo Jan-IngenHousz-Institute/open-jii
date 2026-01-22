@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { PROTOCOL_NOT_FOUND } from "../../../../common/utils/error-codes";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -29,7 +29,7 @@ export class GetProtocolUseCase {
     if (!protocol) {
       this.logger.warn({
         msg: "Protocol not found",
-        errorCode: PROTOCOL_NOT_FOUND,
+        errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
         operation: "getProtocol",
         context: GetProtocolUseCase.name,
         protocolId: id,

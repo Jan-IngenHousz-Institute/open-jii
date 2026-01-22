@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
-import { DATABRICKS_VOLUME_FAILED } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -79,7 +79,7 @@ export class DatabricksVolumesService {
       (error) => {
         this.logger.error({
           msg: "Failed to create volume",
-          errorCode: DATABRICKS_VOLUME_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_VOLUME_FAILED,
           operation: "createVolume",
           context: DatabricksVolumesService.name,
           error,
@@ -143,7 +143,7 @@ export class DatabricksVolumesService {
       (error) => {
         this.logger.error({
           msg: "Failed to get volume",
-          errorCode: DATABRICKS_VOLUME_FAILED,
+          errorCode: ErrorCodes.DATABRICKS_VOLUME_FAILED,
           operation: "getVolume",
           context: DatabricksVolumesService.name,
           error,

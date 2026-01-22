@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import { EMAIL_CONFIG_INVALID } from "../../../../utils/error-codes";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { EmailConfig, emailConfigSchema } from "./config.types";
 
 @Injectable()
@@ -45,7 +45,7 @@ export class EmailConfigService {
     } catch {
       this.logger.error({
         msg: "Invalid Email configuration",
-        errorCode: EMAIL_CONFIG_INVALID,
+        errorCode: ErrorCodes.EMAIL_CONFIG_INVALID,
         operation: "validateConfig",
         context: EmailConfigService.name,
       });

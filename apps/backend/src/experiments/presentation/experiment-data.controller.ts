@@ -9,7 +9,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api";
 
 import { AsyncQueue } from "../../common/utils/async-queue";
-import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "../../common/utils/error-codes";
+import { ErrorCodes } from "../../common/utils/error-codes";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
@@ -118,7 +118,7 @@ export class ExperimentDataController {
       if (!contentType?.includes("multipart/form-data")) {
         this.logger.error({
           msg: "Request is not multipart/form-data",
-          errorCode: BAD_REQUEST,
+          errorCode: ErrorCodes.BAD_REQUEST,
           operation: "uploadData",
           context: ExperimentDataController.name,
           experimentId,
@@ -146,7 +146,7 @@ export class ExperimentDataController {
       if (prepResult.isFailure()) {
         this.logger.error({
           msg: "Failed to prepare upload environment",
-          errorCode: INTERNAL_SERVER_ERROR,
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "uploadData",
           context: ExperimentDataController.name,
           experimentId,
@@ -241,7 +241,7 @@ export class ExperimentDataController {
             if (sourceType === undefined) {
               this.logger.error({
                 msg: "Received file but sourceType is not defined",
-                errorCode: BAD_REQUEST,
+                errorCode: ErrorCodes.BAD_REQUEST,
                 operation: "uploadData",
                 context: ExperimentDataController.name,
                 experimentId,
@@ -287,7 +287,7 @@ export class ExperimentDataController {
               } catch (error) {
                 this.logger.error({
                   msg: "Error processing file",
-                  errorCode: INTERNAL_SERVER_ERROR,
+                  errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
                   operation: "uploadData",
                   context: ExperimentDataController.name,
                   experimentId,
@@ -306,7 +306,7 @@ export class ExperimentDataController {
           bb.on("error", (err) => {
             this.logger.error({
               msg: "Error during file upload",
-              errorCode: INTERNAL_SERVER_ERROR,
+              errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
               operation: "uploadData",
               context: ExperimentDataController.name,
               experimentId,
@@ -340,7 +340,7 @@ export class ExperimentDataController {
               .catch((err) => {
                 this.logger.error({
                   msg: "Error while waiting for file processing to complete",
-                  errorCode: INTERNAL_SERVER_ERROR,
+                  errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
                   operation: "uploadData",
                   context: ExperimentDataController.name,
                   experimentId,
@@ -370,7 +370,7 @@ export class ExperimentDataController {
       } catch (error) {
         this.logger.error({
           msg: "Error processing files",
-          errorCode: INTERNAL_SERVER_ERROR,
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "uploadData",
           context: ExperimentDataController.name,
           experimentId,
