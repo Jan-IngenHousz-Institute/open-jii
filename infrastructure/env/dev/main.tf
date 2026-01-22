@@ -869,10 +869,7 @@ module "opennext" {
   contentful_secret_arn = module.contentful_secrets.secret_arn
 
   server_environment_variables = {
-    NODE_ENV                    = "production"
-    NEXT_PUBLIC_POSTHOG_KEY     = var.posthog_key
-    NEXT_PUBLIC_POSTHOG_HOST    = var.posthog_host
-    NEXT_PUBLIC_POSTHOG_UI_HOST = var.posthog_ui_host
+    NODE_ENV = "production"
   }
 
   # Performance configuration
