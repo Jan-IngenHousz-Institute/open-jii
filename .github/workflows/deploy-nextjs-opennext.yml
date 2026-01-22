@@ -263,10 +263,72 @@ jobs:
           zip -r ../../server-function.zip .
           cd -
           echo "Uploading server function code to Lambda..."
-          aws lambda update-function-code \
+          UPDATE_OUTPUT=$(aws lambda update-function-code \
             --function-name "${{ env.SERVER_FUNCTION }}" \
             --zip-file fileb://apps/web/.open-next/server-function.zip \
-            --publish
+            --publish)
+          VERSION=$(echo "$UPDATE_OUTPUT" | jq -r '.Version')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get Previous Server Alias Version
+        id: get-server-alias
+        run: |
+          ALIAS_NAME="live"
+          PREV_VERSION=$(aws lambda get-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --query 'FunctionVersion' --output text || echo "")
+          echo "prev_version=$PREV_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Server Alias to New Version
+        id: update-server-alias
+        run: |
+          ALIAS_NAME="live"
+          aws lambda update-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "${{ steps.deploy-server.outputs.version }}" || \
+          aws lambda create-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "${{ steps.deploy-server.outputs.version }}"
+
+      - name: Health Check Server Lambda
+        id: healthcheck-server
+        run: |
+          ALIAS_NAME="live"
+          FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
+          aws lambda invoke --function-name "$FUNCTION_NAME:$ALIAS_NAME" --payload '{"healthcheck":true}' /tmp/response.json
+          # Check for error in response
+          if jq -e '.errorMessage' /tmp/response.json > /dev/null; then
+            echo "Lambda returned errorMessage"
+            cat /tmp/response.json
+            exit 1
+          fi
+
+      - name: Rollback Server Alias if Health Check Fails
+        if: failure() && steps.get-server-alias.outputs.prev_version != ''
+        run: |
+          ALIAS_NAME="live"
+          aws lambda update-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "${{ steps.get-server-alias.outputs.prev_version }}"
+          echo "Rolled back Lambda alias to previous version"
+
+      - name: Revert S3 Asset Uploads on Health Check Failure
+        if: failure() && steps.upload-assets.outputs.uploaded == 'true'
+        env:
+          ASSETS_BUCKET: ${{ env.ASSETS_BUCKET }}
+        run: |
+          echo "Reverting latest S3 asset versions due to failed Lambda health check..."
+          # List all latest versions in the bucket (excluding folders)
+          aws s3api list-object-versions --bucket "$ASSETS_BUCKET" --query 'Versions[?IsLatest && !contains(Key, "/") == `false`].{Key:Key,VersionId:VersionId}' --output text | \
+          awk '{print $1, $2}' | while read key version; do
+            echo "Deleting $key version $version"
+            aws s3api delete-object --bucket "$ASSETS_BUCKET" --key "$key" --version-id "$version"
+          done
+          echo "S3 asset revert complete."
+      
+      - name: Prune old Lambda versions (keep 10 latest)
+        run: |
+          FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
+          KEEP=10
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=\"\$LATEST\"].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              echo "Deleting old version: $VERSION"
+              aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+            done
 
       - name: Check Image Optimization Function
         id: check-image
