@@ -77,8 +77,6 @@ export function useEnvVar<K extends keyof (typeof env)[keyof typeof env]>(
 ): (typeof env)[keyof typeof env][K] {
   const environment = useEnvironmentStore((state) => state.environment);
 
-  console.log("environment", environment);
-
   const envName = environment ?? "prod";
   const value = env[envName][key];
 
