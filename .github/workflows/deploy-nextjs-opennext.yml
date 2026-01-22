@@ -453,7 +453,7 @@ jobs:
         if: success()
         uses: ./.github/actions/publish-dora-metric
         with:
-          metric-name: 'DeploymentFrequency'
+          metric-name: 'DeploymentSuccess'
           value: '1'
           unit: 'Count'
           service: 'web'
