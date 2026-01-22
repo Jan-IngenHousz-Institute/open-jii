@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, desc, eq, ilike, macros, profiles } from "@repo/database";
+import { and, asc, eq, ilike, macros, profiles, sql } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -55,7 +55,7 @@ export class MacroRepository {
         })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
-        .orderBy(desc(macros.updatedAt));
+        .orderBy(sql`${macros.sortOrder} IS NULL`, asc(macros.sortOrder), asc(macros.name));
 
       // Build array of conditions for filters
       const conditions: (SQL | undefined)[] = [];

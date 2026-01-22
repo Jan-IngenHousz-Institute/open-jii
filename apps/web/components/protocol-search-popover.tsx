@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { SearchX, PlusSquare, ExternalLink } from "lucide-react";
+import { SearchX, PlusSquare, ExternalLink, Star } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
@@ -17,6 +17,22 @@ import {
   CommandList,
 } from "@repo/ui/components";
 import { PopoverContent } from "@repo/ui/components";
+import { cva } from "@repo/ui/lib/utils";
+
+const protocolItemVariants = cva(
+  "mb-1 flex items-center justify-between gap-2 rounded border p-2 relative",
+  {
+    variants: {
+      featured: {
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
+        false: "border-gray-200 bg-white",
+      },
+    },
+    defaultVariants: {
+      featured: false,
+    },
+  },
+);
 
 // Props for the ProtocolList component
 interface ProtocolListProps {
@@ -49,58 +65,66 @@ function ProtocolList({
 
   return (
     <>
-      {protocols.map((protocol) => (
-        <CommandItem
-          key={protocol.id}
-          value={protocol.id}
-          className="mb-1 flex items-center justify-between gap-2 rounded border p-2"
-        >
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-            {/* Protocol name */}
-            <h4 className="text-foreground truncate text-sm font-medium">{protocol.name}</h4>
+      {protocols.map((protocol) => {
+        const isFeatured = protocol.sortOrder !== null;
+        return (
+          <CommandItem
+            key={protocol.id}
+            value={protocol.id}
+            className={protocolItemVariants({ featured: isFeatured })}
+          >
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+              {/* Protocol name */}
+              <div className="flex items-center gap-1.5">
+                <h4 className="text-foreground truncate text-sm font-medium">{protocol.name}</h4>
+                {isFeatured && (
+                  <Star className="fill-secondary text-secondary h-3.5 w-3.5 flex-shrink-0" />
+                )}
+              </div>
 
-            {/* Family */}
-            <div className="text-muted-foreground truncate text-xs">
-              <span className="opacity-75">{t("experiments.family")}</span>{" "}
-              <span className="font-medium">{protocol.family}</span>
+              {/* Family */}
+              <div className="text-muted-foreground truncate text-xs">
+                <span className="opacity-75">{t("experiments.family")}</span>{" "}
+                <span className="font-medium">{protocol.family}</span>
+              </div>
+
+              {/* Created by */}
+              {protocol.createdByName && (
+                <div className="text-muted-foreground truncate text-xs">
+                  <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
+                  <span className="font-medium">{protocol.createdByName}</span>
+                </div>
+              )}
             </div>
 
-            {/* Created by */}
-            {protocol.createdByName && (
-              <div className="text-muted-foreground truncate text-xs">
-                <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
-                <span className="font-medium">{protocol.createdByName}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center gap-0">
-            {/* Add button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-primary hover:bg-accent/40 h-8 w-8 p-0"
-              title={t("experiments.addProtocol")}
-              onClick={async (e) => handleAddProtocol(e, protocol.id)}
-              disabled={isAddingProtocol}
-              aria-label={t("experiments.addProtocol")}
-            >
-              <PlusSquare className="h-5 w-5" />
-            </Button>
-            {/* CTA button for more details */}
-            <Link
-              href={`/${locale}/platform/protocols/${protocol.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={t("experiments.seeProtocolDetails")}
-              aria-label={t("experiments.seeProtocolDetails")}
-              className="group p-1.5"
-            >
-              <ExternalLink className="group-hover:text-muted-foreground h-5 w-5 transition-colors" />
-            </Link>
-          </div>
-        </CommandItem>
-      ))}
+            <div className="flex flex-col items-center gap-0">
+              {/* Add button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary hover:bg-accent/40 h-8 w-8 p-0"
+                title={t("experiments.addProtocol")}
+                onClick={async (e) => handleAddProtocol(e, protocol.id)}
+                disabled={isAddingProtocol}
+                aria-label={t("experiments.addProtocol")}
+              >
+                <PlusSquare className="h-5 w-5" />
+              </Button>
+              {/* CTA button for more details */}
+              <Link
+                href={`/${locale}/platform/protocols/${protocol.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={t("experiments.seeProtocolDetails")}
+                aria-label={t("experiments.seeProtocolDetails")}
+                className="group p-1.5"
+              >
+                <ExternalLink className="group-hover:text-muted-foreground h-5 w-5 transition-colors" />
+              </Link>
+            </div>
+          </CommandItem>
+        );
+      })}
     </>
   );
 }

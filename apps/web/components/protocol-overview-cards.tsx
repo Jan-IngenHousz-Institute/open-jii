@@ -1,10 +1,25 @@
-import { ArrowRight, Calendar, User, Webcam } from "lucide-react";
+import { Calendar, ChevronRight, Star, User, Webcam } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "~/util/date";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
+import { cva } from "@repo/ui/lib/utils";
+
+const cardVariants = cva(
+  "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
+  {
+    variants: {
+      featured: {
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm",
+        false: "border-gray-200 bg-white",
+      },
+    },
+    defaultVariants: {
+      featured: false,
+    },
+  },
+);
 
 export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | undefined }) {
   const { t } = useTranslation("common");
@@ -22,19 +37,19 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
       {/* Protocols Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {protocols.map((protocol) => {
+          const isFeatured = protocol.sortOrder !== null;
           return (
             <Link key={protocol.id} href={`/platform/protocols/${protocol.id}`}>
-              <Card className="bg-white transition-shadow hover:shadow-md">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="mb-2 overflow-hidden truncate whitespace-nowrap font-semibold text-gray-900">
-                        {protocol.name}
-                      </h3>
-                    </div>
+              <div className={cardVariants({ featured: isFeatured })}>
+                {isFeatured && (
+                  <div className="absolute right-5 top-5">
+                    <Star className="fill-secondary text-secondary h-5 w-5" />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                )}
+                <div className="mb-auto">
+                  <h3 className="mb-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+                    {protocol.name}
+                  </h3>
                   <div className="space-y-2 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
                       <Webcam className="h-4 w-4" />
@@ -49,16 +64,9 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
                       <span>Updated {formatDate(protocol.updatedAt)}</span>
                     </div>
                   </div>
-
-                  <Button
-                    variant="ghost"
-                    className="mt-6 h-auto w-full justify-between p-0 font-normal text-gray-700 hover:text-gray-900"
-                  >
-                    {t("protocols.viewDetails")}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
+                </div>
+                <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+              </div>
             </Link>
           );
         })}

@@ -63,7 +63,7 @@ export function MacroSearchWithDropdown({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between p-0"
+          className={"hover:bg-surface-light w-full justify-between p-0 font-normal"}
           disabled={disabled}
         >
           <div className="flex w-full items-center gap-3 px-3 py-2.5">

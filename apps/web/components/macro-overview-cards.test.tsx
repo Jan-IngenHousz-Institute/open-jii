@@ -31,38 +31,8 @@ vi.mock("lucide-react", () => ({
   ArrowRight: () => <div data-testid="icon-arrow-right" />,
   Calendar: () => <div data-testid="icon-calendar" />,
   User: () => <div data-testid="icon-user" />,
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    variant,
-    className,
-    children,
-  }: {
-    variant: string;
-    className: string;
-    children: React.ReactNode;
-  }) => (
-    <button data-testid="button" data-variant={variant} className={className}>
-      {children}
-    </button>
-  ),
-  Card: ({ className, children }: { className: string; children: React.ReactNode }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({ className, children }: { className?: string; children: React.ReactNode }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
-  CardHeader: ({ className, children }: { className?: string; children: React.ReactNode }) => (
-    <div data-testid="card-header" className={className}>
-      {children}
-    </div>
-  ),
+  Star: () => <div data-testid="icon-star" />,
+  ChevronRight: () => <div data-testid="icon-chevron-right" />,
 }));
 
 describe("<MacroOverviewCards />", () => {
@@ -74,6 +44,7 @@ describe("<MacroOverviewCards />", () => {
       language: "python" as const,
       code: "python_macro.py",
       filename: "python_macro.py",
+      sortOrder: null,
       createdBy: "user1",
       createdByName: "User One",
       createdAt: "2023-01-01T00:00:00Z",
@@ -86,6 +57,7 @@ describe("<MacroOverviewCards />", () => {
       language: "r" as const,
       code: "r_macro.r",
       filename: "r_macro.r",
+      sortOrder: null,
       createdBy: "user2",
       createdByName: "User Two",
       createdAt: "2023-02-01T00:00:00Z",
@@ -98,6 +70,7 @@ describe("<MacroOverviewCards />", () => {
       language: "javascript" as const,
       code: "js_macro.js",
       filename: "js_macro.js",
+      sortOrder: 1,
       createdBy: "user3",
       createdByName: "User Three",
       createdAt: "2023-03-01T00:00:00Z",
@@ -109,29 +82,29 @@ describe("<MacroOverviewCards />", () => {
     render(<MacroOverviewCards macros={[]} isLoading={true} />);
 
     expect(screen.getByText("common.loading")).toBeInTheDocument();
-    expect(screen.queryByTestId("card")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("renders 'no macros' message when macros array is empty", () => {
     render(<MacroOverviewCards macros={[]} isLoading={false} />);
 
     expect(screen.getByText("macros.noMacros")).toBeInTheDocument();
-    expect(screen.queryByTestId("card")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("renders 'no macros' message when macros is undefined", () => {
     render(<MacroOverviewCards macros={undefined} isLoading={false} />);
 
     expect(screen.getByText("macros.noMacros")).toBeInTheDocument();
-    expect(screen.queryByTestId("card")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("renders a grid of macro cards when macros are provided", () => {
     render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
 
-    // Check that we have 3 cards
-    const cards = screen.getAllByTestId("card");
-    expect(cards).toHaveLength(3);
+    // Check that we have 3 links (one for each card)
+    const links = screen.getAllByTestId("macro-link");
+    expect(links).toHaveLength(3);
 
     // Check that all macro names are displayed
     expect(screen.getByText("Python Macro")).toBeInTheDocument();
@@ -168,19 +141,20 @@ describe("<MacroOverviewCards />", () => {
     expect(screen.getAllByText(/common\.updated/)).toHaveLength(3);
   });
 
-  it("renders view details buttons", () => {
+  it("renders featured macro with star icon", () => {
     render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
 
-    const buttons = screen.getAllByTestId("button");
-    expect(buttons).toHaveLength(3);
+    // Only the JavaScript macro has sortOrder, so it should have a star
+    const stars = screen.getAllByTestId("icon-star");
+    expect(stars).toHaveLength(1);
+  });
 
-    // Check that each button has the correct text
-    buttons.forEach((button) => {
-      expect(button).toHaveTextContent("macros.viewDetails");
-    });
+  it("renders chevron icons on mobile", () => {
+    render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
 
-    // Check for arrow icons
-    expect(screen.getAllByTestId("icon-arrow-right")).toHaveLength(3);
+    // Check for chevron icons (one per card)
+    const chevrons = screen.getAllByTestId("icon-chevron-right");
+    expect(chevrons).toHaveLength(3);
   });
 
   it("creates links to individual macro pages", () => {
