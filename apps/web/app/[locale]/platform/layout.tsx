@@ -1,8 +1,8 @@
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
+import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 
@@ -33,9 +33,8 @@ export default async function AppLayout({
   if (!session?.user) {
     const callbackUrl = await getCallbackUrl();
 
-    // The redirect() function throws an error to stop rendering and initiate the redirect,
-    // so no 'return' statement is needed after it.
-    redirect(`/api/auth/signin?callbackUrl=${callbackUrl}`);
+    // Redirect to login if no session
+    redirect(`/${locale}/login?callbackUrl=${callbackUrl}`);
   }
   if (!session.user.registered) {
     const callbackUrl = await getCallbackUrl();

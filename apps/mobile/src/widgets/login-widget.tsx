@@ -1,33 +1,37 @@
 import { useAsyncCallback } from "react-async-hook";
 import { Text, TouchableOpacity, View } from "react-native";
-import { getSessionData } from "~/api/get-session-data";
-import { login } from "~/auth/login";
+
+import { authClient } from "@repo/auth/client.native";
 
 export function LoginWidget() {
-  const {
-    execute: startLoginFlow,
-    result: user,
-    reset,
-  } = useAsyncCallback(async () => {
-    const token = await login();
+  const { data: session, isPending } = authClient.useSession();
 
-    if (!token) {
-      return undefined;
-    }
-
-    return getSessionData(token);
+  const { execute: startLoginFlow } = useAsyncCallback(async () => {
+    // Trigger GitHub OAuth login (or whichever provider you want)
+    await authClient.signIn.social({
+      provider: "github",
+      callbackURL: "/", // Will be converted to openjii:// deep link
+    });
   });
 
-  function handleLogout() {
-    reset();
+  async function handleLogout() {
+    await authClient.signOut();
+  }
+
+  if (isPending) {
+    return (
+      <View className="flex-row items-center justify-end p-4">
+        <Text className="text-base text-gray-600">Loading...</Text>
+      </View>
+    );
   }
 
   return (
     <View className="flex-row items-center justify-end p-4">
-      {user ? (
+      {session ? (
         <View className="flex-row items-center gap-4 space-x-3">
           <Text className="text-base font-medium text-gray-800">
-            Hello {user?.user.email ?? "unknown"}
+            Hello {session.user.email ?? "unknown"}
           </Text>
           <TouchableOpacity onPress={handleLogout} className="rounded-full bg-red-500 px-3 py-1">
             <Text className="font-semibold text-white">Logout</Text>

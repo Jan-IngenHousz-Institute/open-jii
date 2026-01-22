@@ -10,13 +10,13 @@ import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
-import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
 import {
   experimentMembers,
   experimentLocations,
   experiments,
   users,
+  sessions,
   auditLogs,
   profiles,
   protocols,
@@ -30,6 +30,7 @@ import {
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
+import { mockGetSession } from "./setup";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -153,7 +154,11 @@ export class TestHarness {
    * Clean up after each test
    */
   public afterEach() {
-    // Any post-test cleanup that might be needed
+    // Reset the mock to default state (no session)
+    mockGetSession.mockResolvedValue({
+      session: null,
+      user: null,
+    });
   }
 
   /**
@@ -187,6 +192,8 @@ export class TestHarness {
     await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
     await this.database.delete(organizations).execute();
+    // Sessions reference users, delete before users
+    await this.database.delete(sessions).execute();
     await this.database.delete(users).execute();
   }
 
@@ -224,14 +231,14 @@ export class TestHarness {
       withAuth: (userId: string) => {
         // Add mock session to request
         req.set("Authorization", `Bearer test-token-for-${userId}`);
-        // Mock the getSession function to return a session with the user
+        // Mock the Better Auth session
         this.mockUserSession(userId);
         return req;
       },
       withoutAuth: () => {
         // Ensure no auth headers
         req.unset("Authorization");
-        // Mock getSession to return null (unauthorized)
+        // Mock no session
         this.mockNoSession();
         return req;
       },
@@ -244,22 +251,37 @@ export class TestHarness {
     return extendedReq;
   };
 
-  // Mock the auth session for testing
+  // Mock the Better Auth session for testing
   private mockUserSession(userId: string) {
-    vi.spyOn(authExpress, "getSession").mockResolvedValue({
+    // Update the exported mock function's return value
+    mockGetSession.mockResolvedValue({
+      session: {
+        id: `session-${userId}`,
+        userId,
+        token: `test-token-${userId}`,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        ipAddress: "127.0.0.1",
+        userAgent: "test-agent",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
       user: {
         id: userId,
         name: "Test User",
         email: "test@example.com",
+        emailVerified: false,
+        image: null,
         registered: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
-      expires: new Date(Date.now() + 60 * 1000).toISOString(),
     });
   }
 
   // Mock no session for unauthorized tests
   private mockNoSession() {
-    vi.spyOn(authExpress, "getSession").mockResolvedValue(null);
+    // Update the exported mock function's return value
+    mockGetSession.mockResolvedValue(null);
   }
 
   // HTTP request methods
@@ -279,21 +301,23 @@ export class TestHarness {
   public async createTestUser({
     email = faker.internet.email(),
     name = faker.person.fullName(),
-    emailVerified = null,
+    emailVerified = false,
     image = null,
     activated = true,
     createProfile = true,
+    registered = true,
   }: {
     email?: string;
     name?: string;
-    emailVerified?: Date | null;
+    emailVerified?: boolean;
     image?: string | null;
     activated?: boolean;
     createProfile?: boolean;
+    registered?: boolean;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
-      .values({ email, name, emailVerified, image })
+      .values({ email, name, emailVerified, image, registered })
       .returning();
 
     if (createProfile) {

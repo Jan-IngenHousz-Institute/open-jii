@@ -18,7 +18,7 @@ locals {
 
   # Domain configuration
   domain_name = var.subdomain != "" && var.domain_name != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name
-  aliases = local.domain_name != "" ? [local.domain_name, "www.${local.domain_name}"] : []
+  aliases     = local.domain_name != "" ? [local.domain_name, "www.${local.domain_name}"] : []
 
   # Common tags
   common_tags = merge(var.tags, {
@@ -28,14 +28,14 @@ locals {
     Component   = "opennext"
   })
 
-  # IAM policy for Lambda to read secrets
+  # IAM policy for Lambda to read Contentful secrets
   lambda_secrets_policy_json = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
         Effect   = "Allow",
         Action   = "secretsmanager:GetSecretValue",
-        Resource = compact([var.db_credentials_secret_arn, var.oauth_secret_arn, var.contentful_secret_arn, var.ses_secret_arn])
+        Resource = compact([var.contentful_secret_arn])
       }
     ]
   })
@@ -165,11 +165,6 @@ module "server_function" {
   create_function_url             = true
   function_url_authorization_type = var.function_url_authorization_type
 
-  # VPC Configuration for database access
-  enable_vpc         = var.enable_server_vpc
-  subnet_ids         = var.server_subnet_ids
-  security_group_ids = var.enable_server_vpc ? [var.server_lambda_security_group_id] : []
-
   s3_permissions       = true
   s3_bucket_arns       = [aws_s3_bucket.assets.arn, aws_s3_bucket.cache.arn]
   dynamodb_permissions = true
@@ -195,11 +190,8 @@ module "server_function" {
     REVALIDATION_QUEUE_REGION = data.aws_region.current.id
     REVALIDATION_QUEUE_URL    = module.sqs.queue_url
 
-    # Credentials and secrets
-    DB_SECRET_ARN         = var.db_credentials_secret_arn
-    OAUTH_SECRET_ARN      = var.oauth_secret_arn
+    # Contentful secret
     CONTENTFUL_SECRET_ARN = var.contentful_secret_arn
-    SES_SECRET_ARN        = var.ses_secret_arn
   }, var.server_environment_variables)
 
   tags = local.common_tags

@@ -77,10 +77,5 @@ describe("navigation-config", () => {
       const url = userNavigation.faq.url(testLocale);
       expect(url).toBe(`/${testLocale}/faq`);
     });
-
-    it("generates logout URL correctly", () => {
-      const url = userNavigation.logout.url(testLocale);
-      expect(url).toBe(`/${testLocale}/platform/signout`);
-    });
   });
 });

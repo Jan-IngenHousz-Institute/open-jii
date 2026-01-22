@@ -27,14 +27,18 @@ export interface PostHogEnvConfig {
 
 /**
  * Create PostHog client configuration for browser
+ * @param apiHost - The host for API requests (can be a reverse proxy path like '/ingest')
+ * @param uiHost - The PostHog UI host for toolbar/links (e.g., 'https://eu.posthog.com')
+ * @param options - Additional PostHog configuration options
  */
 export function createPostHogClientConfig(
-  host: string,
+  apiHost: string,
+  uiHost: string,
   options?: Partial<PostHogConfig>,
 ): Partial<PostHogConfig> {
   return {
-    api_host: host,
-    ui_host: host,
+    api_host: apiHost,
+    ui_host: uiHost,
     person_profiles: "identified_only",
     capture_pageview: true,
     capture_pageleave: true,

@@ -10,7 +10,7 @@ globalThis.React = React;
 
 // --- Mocks ---
 const mockAuth = vi.fn();
-vi.mock("@/lib/auth", () => ({
+vi.mock("~/app/actions/auth", () => ({
   auth: (): unknown => mockAuth(),
 }));
 
@@ -122,9 +122,7 @@ describe("AppLayout", () => {
     });
 
     await expect(AppLayout(defaultProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith(
-      "/api/auth/signin?callbackUrl=%2Fplatform%2Fexperiments",
-    );
+    expect(mockRedirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=%2Fplatform%2Fexperiments");
   });
 
   it("handles different locale in redirect URL", async () => {
@@ -139,9 +137,7 @@ describe("AppLayout", () => {
     });
 
     await expect(AppLayout(germanProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith(
-      "/api/auth/signin?callbackUrl=%2Fplatform%2Fexperiments",
-    );
+    expect(mockRedirect).toHaveBeenCalledWith("/de/login?callbackUrl=%2Fplatform%2Fexperiments");
   });
 
   it("redirects to registration when user is not registered", async () => {
