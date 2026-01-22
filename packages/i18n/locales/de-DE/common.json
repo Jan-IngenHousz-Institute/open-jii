@@ -296,7 +296,12 @@
     "or": "oder fortfahren mit",
     "termsPrefix": "Ich akzeptiere die ",
     "continueTermsPrefix": "Indem Sie fortfahren, akzeptieren Sie die ",
-    "terms": "Allgemeinen Geschäftsbedingungen"
+    "terms": "Allgemeinen Geschäftsbedingungen",
+    "errorTitle": "Oh nein! Etwas ist schief gelaufen",
+    "errorDescription": "Bei der Authentifizierung ist ein Fehler aufgetreten.",
+    "errorTryAgain": "Erneut versuchen",
+    "errorGoHome": "Zur Startseite",
+    "errorSupport": "Wenn dieses Problem weiterhin besteht, kontaktieren Sie bitte unser Support-Team."
   },
   "registration": {
     "title": "Registrierung",

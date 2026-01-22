@@ -175,6 +175,12 @@ variable "posthog_host" {
   default     = "https://eu.i.posthog.com"
 }
 
+variable "posthog_ui_host" {
+  description = "PostHog UI host URL for toolbar and links"
+  type        = string
+  default     = "https://eu.posthog.com"
+}
+
 variable "grafana_auth_service_token" {
   description = "Grafana AMG service account token for API access"
   type        = string
