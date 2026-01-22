@@ -171,8 +171,8 @@ export const auth = betterAuth({
       if (isSignIn) {
         try {
           const session = ctx.context.newSession;
-          // Reactivate user profile on successful sign-in
           if (session?.user.id) {
+            // Reactivate user profile on successful sign-in
             await db
               .update(profiles)
               .set({ activated: true })

@@ -5,6 +5,7 @@ ALTER TABLE "accounts" RENAME COLUMN "userId" TO "user_id";--> statement-breakpo
 ALTER TABLE "accounts" RENAME COLUMN "providerAccountId" TO "account_id";--> statement-breakpoint
 ALTER TABLE "accounts" RENAME COLUMN "provider" TO "provider_id";--> statement-breakpoint
 ALTER TABLE "accounts" RENAME COLUMN "expires_at" TO "access_token_expires_at";--> statement-breakpoint
+ALTER TABLE "accounts" ALTER COLUMN "access_token_expires_at" SET DATA TYPE timestamp USING to_timestamp("access_token_expires_at" / 1000.0);--> statement-breakpoint
 ALTER TABLE "sessions" RENAME COLUMN "userId" TO "user_id";--> statement-breakpoint
 ALTER TABLE "sessions" RENAME COLUMN "sessionToken" TO "token";--> statement-breakpoint
 ALTER TABLE "sessions" RENAME COLUMN "expires" TO "expires_at";--> statement-breakpoint

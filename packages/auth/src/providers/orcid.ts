@@ -1,24 +1,22 @@
 interface ORCIDRecordResponse {
-  record?: {
-    "orcid-identifier"?: {
-      uri: string;
-      path: string;
-      host: string;
+  "orcid-identifier"?: {
+    uri: string;
+    path: string;
+    host: string;
+  };
+  person?: {
+    name?: {
+      "given-names": { value: string };
+      "family-name": { value: string };
+      "credit-name": null | { value: string };
     };
-    person?: {
-      name?: {
-        "given-names": { value: string };
-        "family-name": { value: string };
-        "credit-name": null | { value: string };
-      };
-      emails?: {
-        email?: {
-          email: string;
-          verified: boolean;
-          visibility: string;
-          primary: boolean;
-        }[];
-      };
+    emails?: {
+      email?: {
+        email: string;
+        verified: boolean;
+        visibility: string;
+        primary: boolean;
+      }[];
     };
   };
 }
@@ -106,9 +104,8 @@ export function orcidProvider(config: OrcidProviderConfig) {
         ? "https://pub.orcid.org/v3.0"
         : "https://pub.sandbox.orcid.org/v3.0";
 
-      // Use /record endpoint to ensure we get email address if public
-      // Requires /read-public scope
-      const response = await fetch(`${publicApiUrl}/${orcidId}/record`, {
+      // Fetch ORCID public profile
+      const response = await fetch(`${publicApiUrl}/${orcidId}`, {
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${tokens.accessToken}`,
@@ -120,7 +117,7 @@ export function orcidProvider(config: OrcidProviderConfig) {
       }
 
       const data = (await response.json()) as ORCIDRecordResponse;
-      const person = data.record?.person;
+      const person = data.person;
 
       // Extract names from ORCID person data
       const givenName = person?.name?.["given-names"]?.value ?? "";
