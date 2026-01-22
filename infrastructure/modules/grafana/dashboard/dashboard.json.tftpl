@@ -3639,69 +3639,57 @@
         "type": "cloudwatch",
         "uid": "${datasource_uid}"
       },
-      "description": "Percentage of deployments that failed",
+      "description": "Total number of deployments across all services in the last 24 hours",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
           "mappings": [],
-          "max": 100,
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 15
+                "value": 1
               },
               {
-                "color": "red",
-                "value": 30
+                "color": "green",
+                "value": 5
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 4,
         "w": 6,
-        "x": 12,
+        "x": 0,
         "y": 115
       },
-      "id": 603,
+      "id": 601,
       "options": {
-        "displayMode": "gradient",
-        "maxVizHeight": 300,
-        "minVizHeight": 16,
-        "minVizWidth": 8,
-        "namePlacement": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
         },
-        "showUnfilled": true,
-        "sizing": "auto",
-        "valueMode": "color"
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
       },
       "pluginVersion": "10.4.1",
       "targets": [
         {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
           "dimensions": {
             "Environment": "${environment}"
           },
@@ -3715,76 +3703,24 @@
           "namespace": "DORA/Metrics",
           "period": "604800",
           "queryMode": "Metrics",
-          "refId": "Failed",
+          "refId": "A",
           "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {
-            "Environment": "${environment}"
-          },
-          "expression": "",
-          "id": "",
-          "label": "",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "DeploymentSuccess",
-          "metricQueryType": 0,
-          "namespace": "DORA/Metrics",
-          "period": "604800",
-          "queryMode": "Metrics",
-          "refId": "Success",
-          "region": "${aws_region}",
-          "sqlExpression": "",
-          "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {},
-          "expression": "(Failed / (Success + Failed)) * 100",
-          "id": "",
-          "label": "Failure Rate %",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "",
-          "metricQueryType": 1,
-          "namespace": "",
-          "period": "",
-          "queryMode": "Metrics",
-          "refId": "CFR",
-          "region": "${aws_region}",
-          "sql": {
-            "select": {
-              "name": "AVG",
-              "type": "function"
-            }
-          },
-          "statistic": ""
         }
       ],
-      "title": "Change Failure Rate (Weekly)",
-      "type": "bargauge"
+      "title": "Change Failure Count (Weekly)",
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "cloudwatch",
         "uid": "${datasource_uid}"
       },
-      "description": "Percentage of successful deployments",
+      "description": "Number of successful deployments (weekly)",
       "fieldConfig": {
         "defaults": {
-          "decimals": 1,
           "mappings": [],
-          "max": 100,
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3794,15 +3730,15 @@
               },
               {
                 "color": "yellow",
-                "value": 70
+                "value": 1
               },
               {
                 "color": "green",
-                "value": 85
+                "value": 5
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -3820,7 +3756,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -3832,33 +3768,6 @@
       "pluginVersion": "10.4.1",
       "targets": [
         {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {
-            "Environment": "${environment}"
-          },
-          "expression": "",
-          "id": "",
-          "label": "",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "DeploymentFailed",
-          "metricQueryType": 0,
-          "namespace": "DORA/Metrics",
-          "period": "604800",
-          "queryMode": "Metrics",
-          "refId": "Failed",
-          "region": "${aws_region}",
-          "sqlExpression": "",
-          "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
           "dimensions": {
             "Environment": "${environment}"
           },
@@ -3872,39 +3781,13 @@
           "namespace": "DORA/Metrics",
           "period": "604800",
           "queryMode": "Metrics",
-          "refId": "Success",
+          "refId": "A",
           "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {},
-          "expression": "(Success / (Success + Failed)) * 100",
-          "id": "",
-          "label": "Success Rate %",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "",
-          "metricQueryType": 1,
-          "namespace": "",
-          "period": "",
-          "queryMode": "Metrics",
-          "refId": "SR",
-          "region": "${aws_region}",
-          "sql": {
-            "select": {
-              "name": "AVG",
-              "type": "function"
-            }
-          },
-          "statistic": ""
         }
       ],
-      "title": "Deployment Success Rate (Weekly)",
+      "title": "Deployment Success Count (Weekly)",
       "type": "stat"
     },
     {
