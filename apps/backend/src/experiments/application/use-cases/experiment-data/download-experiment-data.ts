@@ -47,7 +47,6 @@ export class DownloadExperimentDataUseCase {
       this.logger.debug({
         msg: "Starting data download",
         operation: "downloadExperimentData",
-        context: DownloadExperimentDataUseCase.name,
         experimentId,
         tableName: query.tableName,
       });
@@ -59,7 +58,6 @@ export class DownloadExperimentDataUseCase {
         this.logger.warn({
           msg: "Failed to check access for experiment",
           operation: "downloadExperimentData",
-          context: DownloadExperimentDataUseCase.name,
           experimentId,
         });
         return failure(AppError.internal("Failed to verify experiment access"));
@@ -72,7 +70,6 @@ export class DownloadExperimentDataUseCase {
           msg: "Experiment not found",
           errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
           operation: "downloadExperimentData",
-          context: DownloadExperimentDataUseCase.name,
           experimentId,
         });
         return failure(AppError.notFound("Experiment not found"));
@@ -83,7 +80,6 @@ export class DownloadExperimentDataUseCase {
           msg: "Access denied to experiment",
           errorCode: ErrorCodes.FORBIDDEN,
           operation: "downloadExperimentData",
-          context: DownloadExperimentDataUseCase.name,
           experimentId,
           userId,
         });
@@ -95,7 +91,6 @@ export class DownloadExperimentDataUseCase {
           msg: "Experiment has no schema name",
           errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
           operation: "downloadExperimentData",
-          context: DownloadExperimentDataUseCase.name,
           experimentId,
         });
         return failure(AppError.internal("Experiment schema not provisioned"));
@@ -106,7 +101,6 @@ export class DownloadExperimentDataUseCase {
       this.logger.debug({
         msg: "Using schema for data download",
         operation: "downloadExperimentData",
-        context: DownloadExperimentDataUseCase.name,
         experimentId,
         schemaName,
       });
@@ -125,7 +119,6 @@ export class DownloadExperimentDataUseCase {
         this.logger.warn({
           msg: "Table not found in experiment",
           operation: "downloadExperimentData",
-          context: DownloadExperimentDataUseCase.name,
           experimentId,
           tableName: query.tableName,
         });
@@ -139,7 +132,6 @@ export class DownloadExperimentDataUseCase {
       this.logger.debug({
         msg: "Executing download query",
         operation: "downloadExperimentData",
-        context: DownloadExperimentDataUseCase.name,
         experimentId,
         sqlQuery,
       });
@@ -167,7 +159,6 @@ export class DownloadExperimentDataUseCase {
       this.logger.log({
         msg: "Successfully prepared download",
         operation: "downloadExperimentData",
-        context: DownloadExperimentDataUseCase.name,
         experimentId,
         tableName: query.tableName,
         totalRows: data.totalRows,
@@ -181,7 +172,6 @@ export class DownloadExperimentDataUseCase {
         msg: "Unexpected error in download experiment data use case",
         errorCode: ErrorCodes.EXPERIMENT_DATA_DOWNLOAD_FAILED,
         operation: "downloadExperimentData",
-        context: DownloadExperimentDataUseCase.name,
         error: error instanceof Error ? error.message : "Unknown error",
       });
       return failure(

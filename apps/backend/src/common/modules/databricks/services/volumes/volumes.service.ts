@@ -81,7 +81,6 @@ export class DatabricksVolumesService {
           msg: "Failed to create volume",
           errorCode: ErrorCodes.DATABRICKS_VOLUME_FAILED,
           operation: "createVolume",
-          context: DatabricksVolumesService.name,
           error,
         });
         return apiErrorMapper(`Failed to create volume: ${getAxiosErrorMessage(error)}`);
@@ -118,7 +117,6 @@ export class DatabricksVolumesService {
         this.logger.debug({
           msg: "Getting volume information",
           operation: "getVolume",
-          context: DatabricksVolumesService.name,
           volumeName: params.name,
         });
 
@@ -145,7 +143,6 @@ export class DatabricksVolumesService {
           msg: "Failed to get volume",
           errorCode: ErrorCodes.DATABRICKS_VOLUME_FAILED,
           operation: "getVolume",
-          context: DatabricksVolumesService.name,
           error,
         });
         return apiErrorMapper(`Failed to get volume: ${getAxiosErrorMessage(error)}`);

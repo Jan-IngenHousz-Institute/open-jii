@@ -29,7 +29,6 @@ export class DeleteAnnotationsUseCase {
     this.logger.log({
       msg: "Deleting annotation(s) from experiment data",
       operation: "deleteAnnotations",
-      context: DeleteAnnotationsUseCase.name,
       experimentId,
       userId,
     });
@@ -39,7 +38,6 @@ export class DeleteAnnotationsUseCase {
       this.logger.warn({
         msg: "Attempt to delete annotation(s) for experiment without user ID",
         operation: "deleteAnnotations",
-        context: DeleteAnnotationsUseCase.name,
         experimentId,
       });
       return failure(
@@ -62,7 +60,6 @@ export class DeleteAnnotationsUseCase {
           this.logger.warn({
             msg: "Experiment not found",
             operation: "deleteAnnotations",
-            context: DeleteAnnotationsUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -71,7 +68,6 @@ export class DeleteAnnotationsUseCase {
           this.logger.warn({
             msg: "User attempted to access experiment data without proper permissions",
             operation: "deleteAnnotations",
-            context: DeleteAnnotationsUseCase.name,
             experimentId,
             userId,
           });
@@ -83,7 +79,6 @@ export class DeleteAnnotationsUseCase {
             msg: "Experiment has no schema name",
             errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "deleteAnnotations",
-            context: DeleteAnnotationsUseCase.name,
             experimentId,
             error: "Experiment schema not provisioned",
           });
@@ -111,7 +106,6 @@ export class DeleteAnnotationsUseCase {
               this.logger.warn({
                 msg: "Failed to trigger silver data refresh after deleting annotation",
                 operation: "deleteAnnotations",
-                context: DeleteAnnotationsUseCase.name,
                 experimentId,
                 schemaName: experiment.schemaName,
                 error: refreshResult.error.message,
@@ -144,7 +138,6 @@ export class DeleteAnnotationsUseCase {
               this.logger.warn({
                 msg: "Failed to trigger silver data refresh after bulk deleting annotations",
                 operation: "deleteAnnotations",
-                context: DeleteAnnotationsUseCase.name,
                 experimentId,
                 schemaName: experiment.schemaName,
                 error: refreshResult.error.message,

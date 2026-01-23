@@ -18,7 +18,6 @@ export class DeleteMacroUseCase {
     this.logger.log({
       msg: "Deleting macro",
       operation: "deleteMacro",
-      context: DeleteMacroUseCase.name,
       macroId: id,
       userId,
     });
@@ -35,7 +34,6 @@ export class DeleteMacroUseCase {
         msg: "Macro not found for deletion",
         errorCode: ErrorCodes.MACRO_NOT_FOUND,
         operation: "deleteMacro",
-        context: DeleteMacroUseCase.name,
         macroId: id,
         userId,
       });
@@ -50,7 +48,6 @@ export class DeleteMacroUseCase {
         msg: "Unauthorized macro deletion attempt",
         errorCode: ErrorCodes.FORBIDDEN,
         operation: "deleteMacro",
-        context: DeleteMacroUseCase.name,
         macroId: id,
         userId,
       });
@@ -65,7 +62,6 @@ export class DeleteMacroUseCase {
         msg: "Failed to delete macro from Databricks",
         errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
         operation: "deleteMacro",
-        context: DeleteMacroUseCase.name,
         macroId: id,
         error: databricksResult.error.message,
       });
@@ -84,7 +80,6 @@ export class DeleteMacroUseCase {
     this.logger.log({
       msg: "Macro deleted successfully",
       operation: "deleteMacro",
-      context: DeleteMacroUseCase.name,
       macroId: id,
       userId,
       status: "success",

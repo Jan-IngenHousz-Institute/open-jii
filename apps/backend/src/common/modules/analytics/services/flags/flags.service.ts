@@ -36,7 +36,6 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
           msg: "PostHog key is missing after configuration check",
           errorCode: ErrorCodes.ANALYTICS_INIT_FAILED,
           operation: "initialize",
-          context: FlagsService.name,
         });
         return;
       }
@@ -49,7 +48,6 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         this.logger.log({
           msg: "PostHog initialized successfully",
           operation: "initialize",
-          context: FlagsService.name,
           status: "success",
         });
       } else {
@@ -57,7 +55,6 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
           msg: "PostHog initialization failed - using default feature flag values",
           errorCode: ErrorCodes.ANALYTICS_INIT_FAILED,
           operation: "initialize",
-          context: FlagsService.name,
         });
       }
     } catch (error) {
@@ -65,7 +62,6 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         msg: "Failed to initialize PostHog",
         errorCode: ErrorCodes.ANALYTICS_INIT_FAILED,
         operation: "initialize",
-        context: FlagsService.name,
         error,
       });
     }
@@ -77,7 +73,6 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
       this.logger.log({
         msg: "PostHog shutdown completed",
         operation: "onModuleDestroy",
-        context: FlagsService.name,
         status: "success",
       });
     }
@@ -114,7 +109,6 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         msg: "Error checking feature flag",
         errorCode: ErrorCodes.FEATURE_FLAG_FAILED,
         operation: "isFeatureFlagEnabled",
-        context: FlagsService.name,
         flagKey,
         error,
       });

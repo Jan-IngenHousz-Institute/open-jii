@@ -30,7 +30,6 @@ export class AddExperimentMembersUseCase {
     this.logger.log({
       msg: "Adding members to experiment",
       operation: "add-experiment-members",
-      context: AddExperimentMembersUseCase.name,
       experimentId,
       userId: currentUserId,
       memberCount: members.length,
@@ -48,7 +47,6 @@ export class AddExperimentMembersUseCase {
           this.logger.warn({
             msg: "Attempt to add members to non-existent experiment",
             operation: "add-experiment-members",
-            context: AddExperimentMembersUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -58,7 +56,6 @@ export class AddExperimentMembersUseCase {
           this.logger.warn({
             msg: "Attempt to add members to archived experiment",
             operation: "add-experiment-members",
-            context: AddExperimentMembersUseCase.name,
             experimentId,
             userId: currentUserId,
           });
@@ -69,7 +66,6 @@ export class AddExperimentMembersUseCase {
           this.logger.warn({
             msg: "User is not admin for experiment",
             operation: "add-experiment-members",
-            context: AddExperimentMembersUseCase.name,
             experimentId,
             userId: currentUserId,
           });
@@ -87,7 +83,6 @@ export class AddExperimentMembersUseCase {
             msg: "Failed to add members to experiment",
             errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "add-experiment-members",
-            context: AddExperimentMembersUseCase.name,
             experimentId,
             error: addMembersResult.error,
           });
@@ -97,7 +92,6 @@ export class AddExperimentMembersUseCase {
         this.logger.log({
           msg: "Successfully added members to experiment",
           operation: "add-experiment-members",
-          context: AddExperimentMembersUseCase.name,
           experimentId,
           memberCount: members.length,
           status: "success",
@@ -112,7 +106,6 @@ export class AddExperimentMembersUseCase {
             msg: "Failed to retrieve profile for user",
             errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "add-experiment-members",
-            context: AddExperimentMembersUseCase.name,
             userId: currentUserId,
             error: actorProfileResult.error,
           });
@@ -122,7 +115,6 @@ export class AddExperimentMembersUseCase {
         this.logger.log({
           msg: "Current user id",
           operation: "add-experiment-members",
-          context: AddExperimentMembersUseCase.name,
           userId: currentUserId,
         });
         const actor = actorProfileResult.value

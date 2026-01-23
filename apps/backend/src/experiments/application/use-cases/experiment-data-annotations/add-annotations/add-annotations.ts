@@ -37,7 +37,6 @@ export class AddAnnotationsUseCase {
     this.logger.log({
       msg: "Adding annotation(s) to experiment data",
       operation: "addAnnotations",
-      context: AddAnnotationsUseCase.name,
       experimentId,
       userId,
     });
@@ -47,7 +46,6 @@ export class AddAnnotationsUseCase {
       this.logger.warn({
         msg: "Attempt to add annotation(s) to experiment without user ID",
         operation: "addAnnotations",
-        context: AddAnnotationsUseCase.name,
         experimentId,
       });
       return failure(
@@ -70,7 +68,6 @@ export class AddAnnotationsUseCase {
           this.logger.warn({
             msg: "Experiment not found",
             operation: "addAnnotations",
-            context: AddAnnotationsUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -79,7 +76,6 @@ export class AddAnnotationsUseCase {
           this.logger.warn({
             msg: "User attempted to access experiment data without proper permissions",
             operation: "addAnnotations",
-            context: AddAnnotationsUseCase.name,
             experimentId,
             userId,
           });
@@ -91,7 +87,6 @@ export class AddAnnotationsUseCase {
             msg: "Experiment has no schema name",
             errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "addAnnotations",
-            context: AddAnnotationsUseCase.name,
             experimentId,
             error: "Experiment schema not provisioned",
           });
@@ -112,7 +107,6 @@ export class AddAnnotationsUseCase {
           this.logger.warn({
             msg: "Failed to fetch user profile",
             operation: "addAnnotations",
-            context: AddAnnotationsUseCase.name,
             userId,
             experimentId,
           });
@@ -166,7 +160,6 @@ export class AddAnnotationsUseCase {
             this.logger.warn({
               msg: "Failed to trigger silver data refresh after adding annotations",
               operation: "addAnnotations",
-              context: AddAnnotationsUseCase.name,
               experimentId,
               schemaName: experiment.schemaName,
               error: refreshResult.error.message,

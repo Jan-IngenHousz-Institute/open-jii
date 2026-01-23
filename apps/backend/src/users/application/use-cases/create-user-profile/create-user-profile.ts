@@ -25,7 +25,6 @@ export class CreateUserProfileUseCase {
     this.logger.log({
       msg: "Creating user profile",
       operation: "createUserProfile",
-      context: CreateUserProfileUseCase.name,
       userId,
     });
 
@@ -38,7 +37,6 @@ export class CreateUserProfileUseCase {
           msg: "Attempt to create profile for non-existent user",
           errorCode: ErrorCodes.USER_NOT_FOUND,
           operation: "createUserProfile",
-          context: CreateUserProfileUseCase.name,
           userId,
         });
         return failure(AppError.notFound(`User with ID ${userId} not found`));
@@ -78,7 +76,6 @@ export class CreateUserProfileUseCase {
           this.logger.log({
             msg: "Triggering enriched tables refresh for profile changes",
             operation: "createUserProfile",
-            context: CreateUserProfileUseCase.name,
             userId,
           });
           const refreshResult = await this.databricksPort.triggerEnrichedTablesRefreshJob(
@@ -91,7 +88,6 @@ export class CreateUserProfileUseCase {
               msg: "Failed to trigger enriched tables refresh",
               errorCode: ErrorCodes.DATABRICKS_REFRESH_FAILED,
               operation: "createUserProfile",
-              context: CreateUserProfileUseCase.name,
               userId,
               error: refreshResult.error.message,
             });
@@ -101,7 +97,6 @@ export class CreateUserProfileUseCase {
             this.logger.log({
               msg: "Enriched tables refresh triggered successfully",
               operation: "createUserProfile",
-              context: CreateUserProfileUseCase.name,
               userId,
             });
           }
@@ -109,7 +104,6 @@ export class CreateUserProfileUseCase {
           this.logger.debug({
             msg: "No relevant changes detected, skipping refresh",
             operation: "createUserProfile",
-            context: CreateUserProfileUseCase.name,
             userId,
           });
         }

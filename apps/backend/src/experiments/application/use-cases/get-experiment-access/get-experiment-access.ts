@@ -20,7 +20,6 @@ export class GetExperimentAccessUseCase {
     this.logger.log({
       msg: "Getting experiment access",
       operation: "get_access",
-      context: GetExperimentAccessUseCase.name,
       experimentId: id,
       userId,
     });
@@ -42,7 +41,6 @@ export class GetExperimentAccessUseCase {
           this.logger.warn({
             msg: "Experiment not found",
             operation: "get_access",
-            context: GetExperimentAccessUseCase.name,
             experimentId: id,
           });
           return failure(AppError.notFound(`Experiment with ID ${id} not found`));
@@ -54,7 +52,6 @@ export class GetExperimentAccessUseCase {
           this.logger.warn({
             msg: "User does not have access to private experiment",
             operation: "get_access",
-            context: GetExperimentAccessUseCase.name,
             experimentId: id,
             userId,
           });
@@ -66,7 +63,6 @@ export class GetExperimentAccessUseCase {
         this.logger.debug({
           msg: "Retrieved experiment access",
           operation: "get_access",
-          context: GetExperimentAccessUseCase.name,
           experimentId: id,
           hasAccess,
           isAdmin,

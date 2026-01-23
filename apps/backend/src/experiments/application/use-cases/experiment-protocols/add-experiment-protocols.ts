@@ -24,7 +24,6 @@ export class AddExperimentProtocolsUseCase {
     this.logger.log({
       msg: "Adding protocols to experiment",
       operation: "addExperimentProtocols",
-      context: AddExperimentProtocolsUseCase.name,
       experimentId,
       userId: currentUserId,
       protocolCount: protocols.length,
@@ -57,7 +56,6 @@ export class AddExperimentProtocolsUseCase {
             msg: "User is not admin for experiment",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "addExperimentProtocols",
-            context: AddExperimentProtocolsUseCase.name,
             experimentId,
             userId: currentUserId,
           });
@@ -75,7 +73,6 @@ export class AddExperimentProtocolsUseCase {
             msg: "Failed to add protocols to experiment",
             errorCode: ErrorCodes.EXPERIMENT_PROTOCOLS_ADD_FAILED,
             operation: "addExperimentProtocols",
-            context: AddExperimentProtocolsUseCase.name,
             experimentId,
           });
           return failure(AppError.internal("Failed to add experiment protocols"));
@@ -84,7 +81,6 @@ export class AddExperimentProtocolsUseCase {
         this.logger.log({
           msg: "Protocols added to experiment successfully",
           operation: "addExperimentProtocols",
-          context: AddExperimentProtocolsUseCase.name,
           experimentId,
           userId: currentUserId,
           protocolCount: protocols.length,

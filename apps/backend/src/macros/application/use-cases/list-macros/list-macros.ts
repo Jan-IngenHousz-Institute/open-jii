@@ -14,7 +14,6 @@ export class ListMacrosUseCase {
     this.logger.log({
       msg: "Listing macros",
       operation: "listMacros",
-      context: ListMacrosUseCase.name,
       language: filter?.language,
       hasSearch: !!filter?.search,
     });

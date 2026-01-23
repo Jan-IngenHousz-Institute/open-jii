@@ -50,7 +50,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.log({
       msg: "Preparing upload environment",
       operation: "prepareUploadEnvironment",
-      context: UploadAmbyteDataUseCase.name,
       experimentId,
       userId,
     });
@@ -89,7 +88,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.log({
       msg: "Generated upload directory name",
       operation: "prepareUploadEnvironment",
-      context: UploadAmbyteDataUseCase.name,
       experimentId,
       directoryName,
     });
@@ -108,7 +106,6 @@ export class UploadAmbyteDataUseCase {
       this.logger.log({
         msg: "Upload volume already exists",
         operation: "prepareUploadEnvironment",
-        context: UploadAmbyteDataUseCase.name,
         experimentId,
         volumeName,
         status: "success",
@@ -126,7 +123,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.log({
       msg: "Volume doesn't exist, creating it",
       operation: "prepareUploadEnvironment",
-      context: UploadAmbyteDataUseCase.name,
       experimentId,
       volumeName,
       schemaName: experiment.schemaName,
@@ -142,7 +138,6 @@ export class UploadAmbyteDataUseCase {
       this.logger.log({
         msg: "Successfully created volume",
         operation: "prepareUploadEnvironment",
-        context: UploadAmbyteDataUseCase.name,
         experimentId,
         volumeName,
         schemaName: experiment.schemaName,
@@ -160,7 +155,6 @@ export class UploadAmbyteDataUseCase {
         msg: "Failed to create volume",
         errorCode: ErrorCodes.EXPERIMENT_DATA_UPLOAD_FAILED,
         operation: "prepareUploadEnvironment",
-        context: UploadAmbyteDataUseCase.name,
         experimentId,
         volumeName,
         schemaName: experiment.schemaName,
@@ -184,7 +178,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.log({
       msg: "Starting to process file stream",
       operation: "processFileUpload",
-      context: UploadAmbyteDataUseCase.name,
       fileName: file.filename,
       sourceType,
     });
@@ -201,7 +194,6 @@ export class UploadAmbyteDataUseCase {
         msg: "Skipping invalid file",
         errorCode: ErrorCodes.BAD_REQUEST,
         operation: "processFileUpload",
-        context: UploadAmbyteDataUseCase.name,
         fileName: file.filename,
       });
       // Consume the stream to allow busboy to continue processing the form
@@ -214,7 +206,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.debug({
       msg: "Trimmed filename",
       operation: "processFileUpload",
-      context: UploadAmbyteDataUseCase.name,
       originalFileName: file.filename,
       trimmedFileName,
     });
@@ -224,7 +215,6 @@ export class UploadAmbyteDataUseCase {
         msg: "Source type is undefined",
         errorCode: ErrorCodes.BAD_REQUEST,
         operation: "processFileUpload",
-        context: UploadAmbyteDataUseCase.name,
         fileName: file.filename,
       });
       errors.push({
@@ -241,7 +231,6 @@ export class UploadAmbyteDataUseCase {
         msg: "Experiment has no schema name",
         errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
         operation: "processFileUpload",
-        context: UploadAmbyteDataUseCase.name,
         experimentId: experiment.id,
       });
       errors.push({
@@ -262,7 +251,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.debug({
       msg: "Successfully converted stream to buffer",
       operation: "processFileUpload",
-      context: UploadAmbyteDataUseCase.name,
       fileName: trimmedFileName,
       fileSize: buffer.length,
     });
@@ -270,7 +258,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.log({
       msg: "Uploading file to Databricks",
       operation: "processFileUpload",
-      context: UploadAmbyteDataUseCase.name,
       experimentId: experiment.id,
       fileName: trimmedFileName,
       fileSize: buffer.length,
@@ -292,7 +279,6 @@ export class UploadAmbyteDataUseCase {
       this.logger.log({
         msg: "Successfully uploaded Ambyte data file",
         operation: "processFileUpload",
-        context: UploadAmbyteDataUseCase.name,
         experimentId: experiment.id,
         fileName: trimmedFileName,
         status: "success",
@@ -307,7 +293,6 @@ export class UploadAmbyteDataUseCase {
         msg: "Failed to upload file",
         errorCode: ErrorCodes.EXPERIMENT_DATA_UPLOAD_FAILED,
         operation: "processFileUpload",
-        context: UploadAmbyteDataUseCase.name,
         experimentId: experiment.id,
         fileName: trimmedFileName,
         error: uploadResult.error.message,
@@ -317,7 +302,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.debug({
       msg: "Completed processing for file",
       operation: "processFileUpload",
-      context: UploadAmbyteDataUseCase.name,
       fileName: file.filename,
     });
   }
@@ -334,7 +318,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.log({
       msg: "Completing upload",
       operation: "postExecute",
-      context: UploadAmbyteDataUseCase.name,
       experimentId: experiment.id,
       successfulUploads: successfulUploads.length,
       errors: errors.length,
@@ -354,7 +337,6 @@ export class UploadAmbyteDataUseCase {
     this.logger.log({
       msg: "Triggering ambyte processing job",
       operation: "postExecute",
-      context: UploadAmbyteDataUseCase.name,
       experimentId: experiment.id,
     });
 
@@ -377,7 +359,6 @@ export class UploadAmbyteDataUseCase {
       this.logger.log({
         msg: "Successfully triggered ambyte processing job",
         operation: "postExecute",
-        context: UploadAmbyteDataUseCase.name,
         experimentId: experiment.id,
         runId: jobResult.value.run_id,
         status: "success",
@@ -386,7 +367,6 @@ export class UploadAmbyteDataUseCase {
       this.logger.warn({
         msg: "Failed to trigger ambyte processing job",
         operation: "postExecute",
-        context: UploadAmbyteDataUseCase.name,
         experimentId: experiment.id,
         error: jobResult.error.message,
       });

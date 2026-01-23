@@ -43,7 +43,6 @@ function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknow
         msg: "Failed to parse protocol code",
         errorCode: ErrorCodes.BAD_REQUEST,
         operation: "parseProtocolCode",
-        context: "ProtocolController",
         error,
       });
       return [{}];
@@ -78,7 +77,6 @@ function validateJsonStructure(code: unknown, logger: Logger) {
       msg: "Protocol JSON structure validation failed",
       errorCode: ErrorCodes.BAD_REQUEST,
       operation: "validateJsonStructure",
-      context: "ProtocolController",
       error,
     });
     return failure(AppError.badRequest("Invalid JSON structure"));
@@ -115,7 +113,6 @@ async function validateProtocolCode(
       msg: "Protocol validation failed",
       errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
       operation: "validateProtocolCode",
-      context: "ProtocolController",
       validationError: validationResult.error,
     });
     return failure(AppError.badRequest("Protocol validation failed"));
@@ -212,7 +209,6 @@ export class ProtocolController {
         this.logger.log({
           msg: "Protocol created",
           operation: "createProtocol",
-          context: ProtocolController.name,
           protocolId: protocol.id,
           userId: session.user.id,
           status: "success",
@@ -242,7 +238,6 @@ export class ProtocolController {
           msg: "Unauthorized protocol update attempt",
           errorCode: ErrorCodes.FORBIDDEN,
           operation: "updateProtocol",
-          context: ProtocolController.name,
           protocolId: params.id,
           userId: session.user.id,
           ownerId: protocolResult.value.createdBy,
@@ -283,7 +278,6 @@ export class ProtocolController {
         this.logger.log({
           msg: "Protocol updated",
           operation: "updateProtocol",
-          context: ProtocolController.name,
           protocolId: protocol.id,
           userId: session.user.id,
           status: "success",
@@ -325,7 +319,6 @@ export class ProtocolController {
           msg: "Unauthorized protocol delete attempt",
           errorCode: ErrorCodes.FORBIDDEN,
           operation: "deleteProtocol",
-          context: ProtocolController.name,
           protocolId: params.id,
           userId: session.user.id,
           ownerId: protocolResult.value.createdBy,
@@ -342,7 +335,6 @@ export class ProtocolController {
         this.logger.log({
           msg: "Protocol deleted",
           operation: "deleteProtocol",
-          context: ProtocolController.name,
           protocolId: params.id,
           userId: session.user.id,
           status: "success",

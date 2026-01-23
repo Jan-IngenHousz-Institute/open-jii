@@ -30,7 +30,6 @@ export class CreateExperimentVisualizationUseCase {
     this.logger.log({
       msg: "Creating visualization for experiment",
       operation: "createExperimentVisualization",
-      context: CreateExperimentVisualizationUseCase.name,
       experimentId,
       userId,
     });
@@ -40,7 +39,6 @@ export class CreateExperimentVisualizationUseCase {
       this.logger.warn({
         msg: "Invalid visualization name provided",
         operation: "createExperimentVisualization",
-        context: CreateExperimentVisualizationUseCase.name,
         experimentId,
         userId,
       });
@@ -64,7 +62,6 @@ export class CreateExperimentVisualizationUseCase {
           this.logger.warn({
             msg: "Attempt to create visualization in non-existent experiment",
             operation: "createExperimentVisualization",
-            context: CreateExperimentVisualizationUseCase.name,
             experimentId,
             userId,
           });
@@ -75,7 +72,6 @@ export class CreateExperimentVisualizationUseCase {
           this.logger.warn({
             msg: "User does not have access to create visualization in experiment",
             operation: "createExperimentVisualization",
-            context: CreateExperimentVisualizationUseCase.name,
             experimentId,
             userId,
           });
@@ -87,7 +83,6 @@ export class CreateExperimentVisualizationUseCase {
             msg: "Experiment has no schema name",
             errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "createExperimentVisualization",
-            context: CreateExperimentVisualizationUseCase.name,
             experimentId,
             userId,
           });
@@ -104,7 +99,6 @@ export class CreateExperimentVisualizationUseCase {
           this.logger.warn({
             msg: "Data source validation failed",
             operation: "createExperimentVisualization",
-            context: CreateExperimentVisualizationUseCase.name,
             experimentId,
             userId,
             error: dataSourceValidation.error.message,
@@ -115,7 +109,6 @@ export class CreateExperimentVisualizationUseCase {
         this.logger.debug({
           msg: "Creating visualization in repository",
           operation: "createExperimentVisualization",
-          context: CreateExperimentVisualizationUseCase.name,
           experimentId,
           userId,
         });
@@ -132,7 +125,6 @@ export class CreateExperimentVisualizationUseCase {
               msg: "Failed to create visualization",
               errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_CREATE_FAILED,
               operation: "createExperimentVisualization",
-              context: CreateExperimentVisualizationUseCase.name,
               experimentId,
               userId,
             });
@@ -143,7 +135,6 @@ export class CreateExperimentVisualizationUseCase {
           this.logger.log({
             msg: "Successfully created visualization for experiment",
             operation: "createExperimentVisualization",
-            context: CreateExperimentVisualizationUseCase.name,
             experimentId,
             visualizationId: visualization.id,
             userId,

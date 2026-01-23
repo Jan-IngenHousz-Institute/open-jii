@@ -107,7 +107,6 @@ export class ProjectTransferRequestsRepository {
     this.logger.log({
       msg: "Creating transfer request",
       operation: "createTransferRequest",
-      context: ProjectTransferRequestsRepository.name,
       userId: request.userId,
     });
 
@@ -171,7 +170,6 @@ export class ProjectTransferRequestsRepository {
     this.logger.log({
       msg: "Listing transfer requests",
       operation: "listTransferRequests",
-      context: ProjectTransferRequestsRepository.name,
       ...(userId && { userId }),
     });
 
@@ -224,7 +222,6 @@ export class ProjectTransferRequestsRepository {
     this.logger.log({
       msg: "Checking for existing transfer request",
       operation: "findExistingRequest",
-      context: ProjectTransferRequestsRepository.name,
       userId,
       projectIdOld,
     });

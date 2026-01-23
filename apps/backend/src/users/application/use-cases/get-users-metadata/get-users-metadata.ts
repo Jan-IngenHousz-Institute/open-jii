@@ -18,7 +18,6 @@ export class GetUsersMetadataUseCase {
     this.logger.log({
       msg: "Fetching users metadata",
       operation: "getUsersMetadata",
-      context: GetUsersMetadataUseCase.name,
       userCount: params.userIds.length,
     });
 

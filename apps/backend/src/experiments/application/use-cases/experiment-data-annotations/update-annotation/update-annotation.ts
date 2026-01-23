@@ -30,7 +30,6 @@ export class UpdateAnnotationUseCase {
     this.logger.log({
       msg: "Updating annotation to experiment data",
       operation: "updateAnnotation",
-      context: UpdateAnnotationUseCase.name,
       experimentId,
       annotationId,
       userId,
@@ -41,7 +40,6 @@ export class UpdateAnnotationUseCase {
       this.logger.warn({
         msg: "Attempt to update annotation for experiment without user ID",
         operation: "updateAnnotation",
-        context: UpdateAnnotationUseCase.name,
         experimentId,
         annotationId,
       });
@@ -65,7 +63,6 @@ export class UpdateAnnotationUseCase {
           this.logger.warn({
             msg: "Experiment not found",
             operation: "updateAnnotation",
-            context: UpdateAnnotationUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -74,7 +71,6 @@ export class UpdateAnnotationUseCase {
           this.logger.warn({
             msg: "User attempted to access experiment data without proper permissions",
             operation: "updateAnnotation",
-            context: UpdateAnnotationUseCase.name,
             experimentId,
             userId,
           });
@@ -86,7 +82,6 @@ export class UpdateAnnotationUseCase {
             msg: "Experiment has no schema name",
             errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "updateAnnotation",
-            context: UpdateAnnotationUseCase.name,
             experimentId,
             error: "Experiment schema not provisioned",
           });
@@ -123,7 +118,6 @@ export class UpdateAnnotationUseCase {
             this.logger.warn({
               msg: "Failed to trigger silver data refresh after updating annotation",
               operation: "updateAnnotation",
-              context: UpdateAnnotationUseCase.name,
               experimentId,
               annotationId,
               schemaName: experiment.schemaName,

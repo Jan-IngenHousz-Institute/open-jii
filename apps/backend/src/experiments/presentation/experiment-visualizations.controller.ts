@@ -62,7 +62,6 @@ export class ExperimentVisualizationsController {
           this.logger.log({
             msg: "Visualization created for experiment",
             operation: "createExperimentVisualization",
-            context: ExperimentVisualizationsController.name,
             experimentId: params.id,
             visualizationId: visualization.id,
             userId: session.user.id,
@@ -94,7 +93,6 @@ export class ExperimentVisualizationsController {
         this.logger.log({
           msg: "Visualization retrieved for experiment",
           operation: "getExperimentVisualization",
-          context: ExperimentVisualizationsController.name,
           experimentId: params.id,
           visualizationId: params.visualizationId,
           userId: session.user.id,
@@ -127,7 +125,6 @@ export class ExperimentVisualizationsController {
           this.logger.log({
             msg: "Visualization updated",
             operation: "updateExperimentVisualization",
-            context: ExperimentVisualizationsController.name,
             visualizationId: params.visualizationId,
             userId: session.user.id,
             status: "success",
@@ -156,7 +153,6 @@ export class ExperimentVisualizationsController {
         this.logger.log({
           msg: "Visualization deleted",
           operation: "deleteExperimentVisualization",
-          context: ExperimentVisualizationsController.name,
           visualizationId: params.visualizationId,
           userId: session.user.id,
           status: "success",

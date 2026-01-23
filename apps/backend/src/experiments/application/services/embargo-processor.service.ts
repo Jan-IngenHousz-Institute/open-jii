@@ -22,7 +22,6 @@ export class EmbargoProcessorService {
     this.logger.log({
       msg: "Starting embargo expiration processing",
       operation: "processExpiredEmbargoes",
-      context: EmbargoProcessorService.name,
     });
 
     try {
@@ -33,7 +32,6 @@ export class EmbargoProcessorService {
           msg: "Failed to fetch expired embargoes",
           errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
           operation: "processExpiredEmbargoes",
-          context: EmbargoProcessorService.name,
           error: expiredExperimentsResult.error,
         });
         return;
@@ -45,7 +43,6 @@ export class EmbargoProcessorService {
         this.logger.log({
           msg: "No expired embargoes found",
           operation: "processExpiredEmbargoes",
-          context: EmbargoProcessorService.name,
           count: 0,
         });
         return;
@@ -54,7 +51,6 @@ export class EmbargoProcessorService {
       this.logger.log({
         msg: "Found expired embargoes",
         operation: "processExpiredEmbargoes",
-        context: EmbargoProcessorService.name,
         count: experiments.length,
       });
 
@@ -72,7 +68,6 @@ export class EmbargoProcessorService {
           this.logger.log({
             msg: "Experiment embargo expired and made public",
             operation: "processExpiredEmbargoes",
-            context: EmbargoProcessorService.name,
             experimentId: experiment.id,
             status: "success",
           });
@@ -82,7 +77,6 @@ export class EmbargoProcessorService {
             msg: "Failed to update experiment embargo",
             errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
             operation: "processExpiredEmbargoes",
-            context: EmbargoProcessorService.name,
             experimentId: experiment.id,
             error: updateResult.error,
           });
@@ -92,7 +86,6 @@ export class EmbargoProcessorService {
       this.logger.log({
         msg: "Embargo processing completed",
         operation: "processExpiredEmbargoes",
-        context: EmbargoProcessorService.name,
         totalProcessed: experiments.length,
         successCount,
         failureCount,
@@ -102,7 +95,6 @@ export class EmbargoProcessorService {
         msg: "Unexpected error during embargo processing",
         errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
         operation: "processExpiredEmbargoes",
-        context: EmbargoProcessorService.name,
         error,
       });
     }
@@ -119,7 +111,6 @@ export class EmbargoProcessorService {
     this.logger.log({
       msg: "Manual embargo processing triggered",
       operation: "processExpiredEmbargoesManually",
-      context: EmbargoProcessorService.name,
     });
 
     const expiredExperimentsResult = await this.experimentRepository.findExpiredEmbargoes();

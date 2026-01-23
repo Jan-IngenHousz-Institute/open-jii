@@ -15,7 +15,6 @@ export class GetProtocolUseCase {
     this.logger.log({
       msg: "Getting protocol",
       operation: "getProtocol",
-      context: GetProtocolUseCase.name,
       protocolId: id,
     });
 
@@ -31,7 +30,6 @@ export class GetProtocolUseCase {
         msg: "Protocol not found",
         errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
         operation: "getProtocol",
-        context: GetProtocolUseCase.name,
         protocolId: id,
       });
       return failure(AppError.notFound(`Protocol not found`));
@@ -40,7 +38,6 @@ export class GetProtocolUseCase {
     this.logger.log({
       msg: "Protocol retrieved successfully",
       operation: "getProtocol",
-      context: GetProtocolUseCase.name,
       protocolId: id,
       status: "success",
     });

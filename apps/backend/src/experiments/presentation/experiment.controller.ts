@@ -50,7 +50,6 @@ export class ExperimentController {
         this.logger.log({
           msg: "Experiment created",
           operation: "createExperiment",
-          context: ExperimentController.name,
           experimentId: experiment.id,
           userId: session.user.id,
           status: "success",
@@ -79,7 +78,6 @@ export class ExperimentController {
         this.logger.log({
           msg: "Experiment retrieved",
           operation: "getExperiment",
-          context: ExperimentController.name,
           experimentId: params.id,
           userId: session.user.id,
           status: "success",
@@ -111,7 +109,6 @@ export class ExperimentController {
         this.logger.log({
           msg: "Experiment access info retrieved",
           operation: "getExperimentAccess",
-          context: ExperimentController.name,
           experimentId: params.id,
           userId: session.user.id,
           status: "success",
@@ -145,7 +142,6 @@ export class ExperimentController {
         this.logger.log({
           msg: "Experiments listed",
           operation: "listExperiments",
-          context: ExperimentController.name,
           userId: session.user.id,
           count: experiments.length,
           status: "success",
@@ -184,7 +180,6 @@ export class ExperimentController {
         this.logger.log({
           msg: "Experiment updated",
           operation: "updateExperiment",
-          context: ExperimentController.name,
           experimentId: params.id,
           userId: session.user.id,
           status: "success",
@@ -220,7 +215,6 @@ export class ExperimentController {
         this.logger.log({
           msg: "Experiment deleted",
           operation: "deleteExperiment",
-          context: ExperimentController.name,
           experimentId: params.id,
           userId: session.user.id,
           status: "success",

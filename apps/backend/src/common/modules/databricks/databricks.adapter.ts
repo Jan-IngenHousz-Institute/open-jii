@@ -70,7 +70,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Triggering ambyte processing job",
       operation: "triggerAmbyteProcessingJob",
-      context: DatabricksAdapter.name,
       schemaName,
     });
 
@@ -117,7 +116,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       this.logger.debug({
         msg: "Executing SQL query",
         operation: "executeSqlQuery",
-        context: DatabricksAdapter.name,
         schemaName,
         tableName,
       });
@@ -159,7 +157,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Validating data sources",
       operation: "validateDataSources",
-      context: DatabricksAdapter.name,
       schemaName,
     });
 
@@ -171,7 +168,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         msg: "Failed to list tables",
         errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "validateDataSources",
-        context: DatabricksAdapter.name,
         schemaName,
         error: tablesResult.error,
       });
@@ -187,7 +183,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         msg: "Table does not exist in schema",
         errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "validateDataSources",
-        context: DatabricksAdapter.name,
         schemaName,
         tableName: dataConfig.tableName,
       });
@@ -202,7 +197,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.debug({
       msg: "Executing schema query",
       operation: "validateDataSources",
-      context: DatabricksAdapter.name,
       schemaName,
       schemaQuery,
     });
@@ -213,7 +207,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         msg: "Failed to get table schema",
         errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "validateDataSources",
-        context: DatabricksAdapter.name,
         schemaName,
         error: schemaResult.error,
       });
@@ -299,7 +292,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Triggering pipeline",
       operation: "triggerExperimentPipeline",
-      context: DatabricksAdapter.name,
       pipelineId,
       experimentId,
     });
@@ -343,7 +335,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Refreshing silver data",
       operation: "refreshSilverData",
-      context: DatabricksAdapter.name,
       schemaName,
       pipelineId,
     });
@@ -356,7 +347,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         msg: "Failed to list tables for silver data refresh",
         errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "refreshSilverData",
-        context: DatabricksAdapter.name,
         schemaName,
         error: tablesResult.error,
       });
@@ -373,7 +363,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         msg: "No silver quality tables found",
         errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "refreshSilverData",
-        context: DatabricksAdapter.name,
         schemaName,
       });
       return failure(AppError.notFound(`No silver quality tables found for schema ${schemaName}`));
@@ -416,7 +405,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Creating managed volume",
       operation: "createExperimentVolume",
-      context: DatabricksAdapter.name,
       schemaName,
       volumeName,
     });
@@ -453,7 +441,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Getting volume",
       operation: "getExperimentVolume",
-      context: DatabricksAdapter.name,
       schemaName,
       volumeName,
     });
@@ -479,7 +466,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Checking table metadata",
       operation: "getTableMetadata",
-      context: DatabricksAdapter.name,
       schemaName,
       tableName,
     });
@@ -489,7 +475,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.debug({
       msg: "Executing schema query",
       operation: "getTableMetadata",
-      context: DatabricksAdapter.name,
       schemaName,
       schemaQuery,
     });
@@ -500,7 +485,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         msg: "Failed to get metadata",
         errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
         operation: "getTableMetadata",
-        context: DatabricksAdapter.name,
         schemaName,
         tableName,
         error: schemaResult.error,
@@ -551,7 +535,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Uploading macro code",
       operation: "uploadMacroCode",
-      context: DatabricksAdapter.name,
       filename,
       language,
       fileName,
@@ -579,7 +562,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     this.logger.log({
       msg: "Deleting macro code",
       operation: "deleteMacroCode",
-      context: DatabricksAdapter.name,
       filename,
     });
 
@@ -600,7 +582,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         this.logger.log({
           msg: "Successfully deleted macro",
           operation: "deleteMacroCode",
-          context: DatabricksAdapter.name,
           workspacePath,
           status: "success",
         });
@@ -618,7 +599,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       msg: "Macro file not found",
       errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
       operation: "deleteMacroCode",
-      context: DatabricksAdapter.name,
       filename,
     });
     return this.workspaceService.deleteWorkspaceObject({

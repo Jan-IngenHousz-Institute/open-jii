@@ -35,7 +35,6 @@ export class DatabricksTablesService {
         this.logger.debug({
           msg: "Listing tables",
           operation: "listTables",
-          context: DatabricksTablesService.name,
           schemaName,
         });
 
@@ -70,7 +69,6 @@ export class DatabricksTablesService {
           msg: "Failed to list tables",
           errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
           operation: "listTables",
-          context: DatabricksTablesService.name,
           schemaName,
           error,
         });

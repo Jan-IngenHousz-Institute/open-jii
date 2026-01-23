@@ -27,7 +27,6 @@ export class ProjectTransferRequestsController {
       this.logger.log({
         msg: "Creating transfer request",
         operation: "createTransferRequest",
-        context: ProjectTransferRequestsController.name,
         userId: session.user.id,
       });
 
@@ -59,7 +58,6 @@ export class ProjectTransferRequestsController {
       this.logger.log({
         msg: "Listing transfer requests",
         operation: "listTransferRequests",
-        context: ProjectTransferRequestsController.name,
         userId: session.user.id,
       });
 

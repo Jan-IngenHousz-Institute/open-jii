@@ -29,7 +29,6 @@ export class CreateTransferRequestUseCase {
     this.logger.log({
       msg: "Creating transfer request",
       operation: "create_transfer_request",
-      context: CreateTransferRequestUseCase.name,
       userId,
       projectIdOld: input.projectIdOld,
     });
@@ -39,7 +38,6 @@ export class CreateTransferRequestUseCase {
       this.logger.warn({
         msg: "User does not have an email address",
         operation: "create_transfer_request",
-        context: CreateTransferRequestUseCase.name,
         userId,
       });
       return failure(AppError.badRequest("User account does not have an email address"));
@@ -59,7 +57,6 @@ export class CreateTransferRequestUseCase {
       this.logger.warn({
         msg: "User already has a transfer request for project",
         operation: "create_transfer_request",
-        context: CreateTransferRequestUseCase.name,
         userId,
         projectIdOld: input.projectIdOld,
         requestStatus: existingRequestResult.value.status,
@@ -96,7 +93,6 @@ export class CreateTransferRequestUseCase {
       this.logger.warn({
         msg: "Failed to send transfer request confirmation email",
         operation: "create_transfer_request",
-        context: CreateTransferRequestUseCase.name,
         userId,
         projectIdOld: input.projectIdOld,
         error: emailResult.error,

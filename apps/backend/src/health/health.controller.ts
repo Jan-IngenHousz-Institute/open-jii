@@ -11,7 +11,6 @@ export class HealthController {
     this.logger.log({
       msg: "Health check endpoint called",
       operation: "check",
-      context: HealthController.name,
     });
     return {
       status: "ok",

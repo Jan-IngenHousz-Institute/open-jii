@@ -20,7 +20,6 @@ export class DeleteUserUseCase {
     this.logger.log({
       msg: "Starting user deletion",
       operation: "deleteUser",
-      context: DeleteUserUseCase.name,
       userId: id,
     });
 
@@ -33,7 +32,6 @@ export class DeleteUserUseCase {
           msg: "Attempt to delete non-existent user",
           errorCode: ErrorCodes.USER_NOT_FOUND,
           operation: "deleteUser",
-          context: DeleteUserUseCase.name,
           userId: id,
         });
         return failure(AppError.notFound(`User with ID ${id} not found`));
@@ -48,7 +46,6 @@ export class DeleteUserUseCase {
             msg: "Cannot delete user - only admin of experiments",
             errorCode: ErrorCodes.USER_IS_ONLY_ADMIN,
             operation: "deleteUser",
-            context: DeleteUserUseCase.name,
             userId: id,
           });
           return failure(
@@ -62,7 +59,6 @@ export class DeleteUserUseCase {
         this.logger.log({
           msg: "Soft-deleting user",
           operation: "deleteUser",
-          context: DeleteUserUseCase.name,
           userId: id,
         });
         const deleteResult = await this.userRepository.delete(id);
@@ -74,7 +70,6 @@ export class DeleteUserUseCase {
         this.logger.log({
           msg: "User soft-deleted successfully",
           operation: "deleteUser",
-          context: DeleteUserUseCase.name,
           userId: id,
           status: "success",
         });
@@ -83,7 +78,6 @@ export class DeleteUserUseCase {
         this.logger.log({
           msg: "Triggering enriched tables refresh",
           operation: "deleteUser",
-          context: DeleteUserUseCase.name,
           userId: id,
         });
         const refreshResult = await this.databricksPort.triggerEnrichedTablesRefreshJob(
@@ -96,7 +90,6 @@ export class DeleteUserUseCase {
             msg: "Failed to trigger enriched tables refresh",
             errorCode: ErrorCodes.DATABRICKS_REFRESH_FAILED,
             operation: "deleteUser",
-            context: DeleteUserUseCase.name,
             userId: id,
             error: refreshResult.error.message,
           });
@@ -106,7 +99,6 @@ export class DeleteUserUseCase {
           this.logger.log({
             msg: "Enriched tables refresh triggered successfully",
             operation: "deleteUser",
-            context: DeleteUserUseCase.name,
             userId: id,
           });
         }
@@ -114,7 +106,6 @@ export class DeleteUserUseCase {
         this.logger.log({
           msg: "User deletion completed",
           operation: "deleteUser",
-          context: DeleteUserUseCase.name,
           userId: id,
           status: "success",
         });

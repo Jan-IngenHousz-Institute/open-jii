@@ -19,7 +19,6 @@ export class GetExperimentLocationsUseCase {
     this.logger.log({
       msg: "Getting locations for experiment",
       operation: "getExperimentLocations",
-      context: GetExperimentLocationsUseCase.name,
       experimentId,
       userId,
     });
@@ -31,7 +30,6 @@ export class GetExperimentLocationsUseCase {
         msg: "Failed to check experiment existence",
         errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_LIST_FAILED,
         operation: "getExperimentLocations",
-        context: GetExperimentLocationsUseCase.name,
         experimentId,
         userId,
         error: accessResult.error.message,
@@ -43,7 +41,6 @@ export class GetExperimentLocationsUseCase {
       this.logger.warn({
         msg: "Experiment not found",
         operation: "getExperimentLocations",
-        context: GetExperimentLocationsUseCase.name,
         experimentId,
         userId,
       });
@@ -57,7 +54,6 @@ export class GetExperimentLocationsUseCase {
         msg: "Failed to retrieve locations for experiment",
         errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_LIST_FAILED,
         operation: "getExperimentLocations",
-        context: GetExperimentLocationsUseCase.name,
         experimentId,
         userId,
         error: locationsResult.error.message,
@@ -68,7 +64,6 @@ export class GetExperimentLocationsUseCase {
     this.logger.log({
       msg: "Successfully retrieved locations for experiment",
       operation: "getExperimentLocations",
-      context: GetExperimentLocationsUseCase.name,
       experimentId,
       userId,
       locationCount: locationsResult.value.length,

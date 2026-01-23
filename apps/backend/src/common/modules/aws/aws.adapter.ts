@@ -26,7 +26,6 @@ export class AwsAdapter implements AwsPort {
     this.logger.log({
       msg: "Searching places",
       operation: "searchPlaces",
-      context: AwsAdapter.name,
       query: request.query,
     });
 
@@ -36,7 +35,6 @@ export class AwsAdapter implements AwsPort {
       this.logger.debug({
         msg: "Place search completed",
         operation: "searchPlaces",
-        context: AwsAdapter.name,
         resultsCount: results.length,
       });
 
@@ -46,7 +44,6 @@ export class AwsAdapter implements AwsPort {
         msg: "Place search failed",
         errorCode: ErrorCodes.AWS_LOCATION_FAILED,
         operation: "searchPlaces",
-        context: AwsAdapter.name,
         query: request.query,
         error,
       });
@@ -66,7 +63,6 @@ export class AwsAdapter implements AwsPort {
     this.logger.log({
       msg: "Geocoding location",
       operation: "geocodeLocation",
-      context: AwsAdapter.name,
       latitude: request.latitude,
       longitude: request.longitude,
     });

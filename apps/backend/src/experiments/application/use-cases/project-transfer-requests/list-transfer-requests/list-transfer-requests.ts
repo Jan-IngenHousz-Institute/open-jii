@@ -15,7 +15,6 @@ export class ListTransferRequestsUseCase {
     this.logger.log({
       msg: "Listing transfer requests",
       operation: "list_transfer_requests",
-      context: ListTransferRequestsUseCase.name,
       userId,
     });
 

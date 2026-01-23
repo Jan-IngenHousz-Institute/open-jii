@@ -25,7 +25,6 @@ export class AnalyticsAdapter implements AnalyticsPort {
     this.logger.debug({
       msg: "Checking feature flag",
       operation: "isFeatureFlagEnabled",
-      context: AnalyticsAdapter.name,
       flagKey,
       distinctId,
     });

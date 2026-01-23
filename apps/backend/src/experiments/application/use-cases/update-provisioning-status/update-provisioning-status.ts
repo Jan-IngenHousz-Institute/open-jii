@@ -27,7 +27,6 @@ export class UpdateProvisioningStatusUseCase {
     this.logger.log({
       msg: "Processing Databricks workflow status update",
       operation: "update_provisioning_status",
-      context: UpdateProvisioningStatusUseCase.name,
       experimentId,
       status,
       pipelineId,
@@ -43,7 +42,6 @@ export class UpdateProvisioningStatusUseCase {
           msg: "Experiment not found",
           errorCode: ErrorCodes.NOT_FOUND,
           operation: "update_provisioning_status",
-          context: UpdateProvisioningStatusUseCase.name,
           experimentId,
         });
         return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -76,7 +74,6 @@ export class UpdateProvisioningStatusUseCase {
         this.logger.log({
           msg: "Experiment already in target state, no update needed",
           operation: "update_provisioning_status",
-          context: UpdateProvisioningStatusUseCase.name,
           experimentId,
           status: targetStatus,
         });
@@ -86,7 +83,6 @@ export class UpdateProvisioningStatusUseCase {
       this.logger.log({
         msg: "Updating experiment status",
         operation: "update_provisioning_status",
-        context: UpdateProvisioningStatusUseCase.name,
         experimentId,
         fromStatus: experiment.status,
         toStatus: targetStatus,
@@ -102,7 +98,6 @@ export class UpdateProvisioningStatusUseCase {
           msg: "Failed to update experiment status",
           errorCode: updateExperimentStatusResult.error.code,
           operation: "update_provisioning_status",
-          context: UpdateProvisioningStatusUseCase.name,
           experimentId,
           error: updateExperimentStatusResult.error,
         });
@@ -114,7 +109,6 @@ export class UpdateProvisioningStatusUseCase {
           msg: "No experiment was updated",
           errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "update_provisioning_status",
-          context: UpdateProvisioningStatusUseCase.name,
           experimentId,
         });
         return failure(
@@ -126,7 +120,6 @@ export class UpdateProvisioningStatusUseCase {
       this.logger.log({
         msg: "Successfully updated experiment status",
         operation: "update_provisioning_status",
-        context: UpdateProvisioningStatusUseCase.name,
         experimentId,
         status: "success",
         newStatus: targetStatus,

@@ -20,7 +20,6 @@ export class DeleteExperimentVisualizationUseCase {
     this.logger.log({
       msg: "Deleting visualization",
       operation: "deleteExperimentVisualization",
-      context: DeleteExperimentVisualizationUseCase.name,
       visualizationId,
       userId,
     });
@@ -34,7 +33,6 @@ export class DeleteExperimentVisualizationUseCase {
         this.logger.warn({
           msg: "Attempt to delete non-existent visualization",
           operation: "deleteExperimentVisualization",
-          context: DeleteExperimentVisualizationUseCase.name,
           visualizationId,
           userId,
         });
@@ -60,7 +58,6 @@ export class DeleteExperimentVisualizationUseCase {
             this.logger.warn({
               msg: "Visualization belongs to non-existent experiment",
               operation: "deleteExperimentVisualization",
-              context: DeleteExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -74,7 +71,6 @@ export class DeleteExperimentVisualizationUseCase {
             this.logger.warn({
               msg: "User does not have access to experiment",
               operation: "deleteExperimentVisualization",
-              context: DeleteExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -88,7 +84,6 @@ export class DeleteExperimentVisualizationUseCase {
           this.logger.debug({
             msg: "Deleting visualization from repository",
             operation: "deleteExperimentVisualization",
-            context: DeleteExperimentVisualizationUseCase.name,
             experimentId: visualization.experimentId,
             visualizationId,
             userId,
@@ -101,7 +96,6 @@ export class DeleteExperimentVisualizationUseCase {
               msg: "Failed to delete visualization",
               errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_DELETE_FAILED,
               operation: "deleteExperimentVisualization",
-              context: DeleteExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -113,7 +107,6 @@ export class DeleteExperimentVisualizationUseCase {
           this.logger.log({
             msg: "Successfully deleted visualization",
             operation: "deleteExperimentVisualization",
-            context: DeleteExperimentVisualizationUseCase.name,
             experimentId: visualization.experimentId,
             visualizationId,
             userId,

@@ -21,7 +21,6 @@ export class AwsConfigService {
     this.logger.debug({
       msg: "Loading AWS configuration",
       operation: "loadConfig",
-      context: AwsConfigService.name,
     });
     return {
       region: this.configService.getOrThrow<string>("aws.region"),
@@ -38,7 +37,6 @@ export class AwsConfigService {
       this.logger.debug({
         msg: "AWS configuration validated successfully",
         operation: "validateConfig",
-        context: AwsConfigService.name,
         status: "success",
       });
     } catch (error) {
@@ -46,7 +44,6 @@ export class AwsConfigService {
         msg: "Invalid AWS configuration",
         errorCode: ErrorCodes.AWS_CONFIG_INVALID,
         operation: "validateConfig",
-        context: AwsConfigService.name,
         error,
       });
       throw new Error(

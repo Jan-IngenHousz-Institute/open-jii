@@ -26,7 +26,6 @@ export class DatabricksConfigService {
     this.logger.debug({
       msg: "Loading Databricks configuration",
       operation: "loadConfig",
-      context: DatabricksConfigService.name,
     });
     return {
       host: this.configService.getOrThrow<string>("databricks.host"),
@@ -55,7 +54,6 @@ export class DatabricksConfigService {
       this.logger.debug({
         msg: "Databricks configuration validated successfully",
         operation: "validateConfig",
-        context: DatabricksConfigService.name,
         status: "success",
       });
     } catch {
@@ -63,7 +61,6 @@ export class DatabricksConfigService {
         msg: "Invalid Databricks configuration",
         errorCode: ErrorCodes.DATABRICKS_CONFIG_INVALID,
         operation: "validateConfig",
-        context: DatabricksConfigService.name,
       });
       throw new Error("Invalid Databricks configuration: all fields must be non-empty strings");
     }

@@ -21,7 +21,6 @@ export class EmailConfigService {
     this.logger.debug({
       msg: "Loading Email configuration",
       operation: "loadConfig",
-      context: EmailConfigService.name,
     });
     return {
       baseUrl: this.configService.getOrThrow<string>("email.baseUrl"),
@@ -39,7 +38,6 @@ export class EmailConfigService {
       this.logger.debug({
         msg: "Email configuration validated successfully",
         operation: "validateConfig",
-        context: EmailConfigService.name,
         status: "success",
       });
     } catch {
@@ -47,7 +45,6 @@ export class EmailConfigService {
         msg: "Invalid Email configuration",
         errorCode: ErrorCodes.EMAIL_CONFIG_INVALID,
         operation: "validateConfig",
-        context: EmailConfigService.name,
       });
       throw new Error("Invalid Email configuration: all fields must be non-empty strings");
     }

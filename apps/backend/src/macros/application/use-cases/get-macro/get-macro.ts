@@ -15,7 +15,6 @@ export class GetMacroUseCase {
     this.logger.log({
       msg: "Getting macro",
       operation: "getMacro",
-      context: GetMacroUseCase.name,
       macroId: id,
     });
 
@@ -30,7 +29,6 @@ export class GetMacroUseCase {
         msg: "Macro not found",
         errorCode: ErrorCodes.MACRO_NOT_FOUND,
         operation: "getMacro",
-        context: GetMacroUseCase.name,
         macroId: id,
       });
       return failure(AppError.notFound("Macro not found"));

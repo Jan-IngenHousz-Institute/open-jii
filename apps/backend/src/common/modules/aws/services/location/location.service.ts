@@ -90,7 +90,6 @@ export class AwsLocationService {
         msg: "Failed to search places",
         errorCode: ErrorCodes.AWS_LOCATION_FAILED,
         operation: "searchPlaces",
-        context: AwsLocationService.name,
         query: request.query,
         error,
       });

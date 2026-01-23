@@ -37,7 +37,6 @@ export class ExperimentDataController {
       this.logger.log({
         msg: "Processing tables metadata request",
         operation: "getTables",
-        context: ExperimentDataController.name,
         experimentId,
         userId: session.user.id,
       });
@@ -50,7 +49,6 @@ export class ExperimentDataController {
         this.logger.log({
           msg: "Successfully retrieved table metadata",
           operation: "getTables",
-          context: ExperimentDataController.name,
           experimentId,
           status: "success",
         });
@@ -74,7 +72,6 @@ export class ExperimentDataController {
       this.logger.log({
         msg: "Processing data request",
         operation: "getData",
-        context: ExperimentDataController.name,
         experimentId,
         userId: session.user.id,
       });
@@ -94,7 +91,6 @@ export class ExperimentDataController {
         this.logger.log({
           msg: "Successfully retrieved data",
           operation: "getData",
-          context: ExperimentDataController.name,
           experimentId,
           status: "success",
         });
@@ -120,7 +116,6 @@ export class ExperimentDataController {
           msg: "Request is not multipart/form-data",
           errorCode: ErrorCodes.BAD_REQUEST,
           operation: "uploadData",
-          context: ExperimentDataController.name,
           experimentId,
         });
         return {
@@ -132,7 +127,6 @@ export class ExperimentDataController {
       this.logger.log({
         msg: "Starting data upload",
         operation: "uploadData",
-        context: ExperimentDataController.name,
         experimentId,
         userId: session.user.id,
       });
@@ -148,7 +142,6 @@ export class ExperimentDataController {
           msg: "Failed to prepare upload environment",
           errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "uploadData",
-          context: ExperimentDataController.name,
           experimentId,
           error: prepResult.error.message,
         });
@@ -161,7 +154,6 @@ export class ExperimentDataController {
       this.logger.log({
         msg: "Upload environment prepared successfully",
         operation: "uploadData",
-        context: ExperimentDataController.name,
         experimentId,
         volumeName,
         volumeCreated,
@@ -183,7 +175,6 @@ export class ExperimentDataController {
       this.logger.log({
         msg: "Created shared file processing queue for all uploads",
         operation: "uploadData",
-        context: ExperimentDataController.name,
         experimentId,
       });
 
@@ -203,7 +194,6 @@ export class ExperimentDataController {
             this.logger.debug({
               msg: "Received field",
               operation: "uploadData",
-              context: ExperimentDataController.name,
               experimentId,
               fieldname,
             });
@@ -219,7 +209,6 @@ export class ExperimentDataController {
             this.logger.log({
               msg: "Received file",
               operation: "uploadData",
-              context: ExperimentDataController.name,
               experimentId,
               filename,
               fieldname,
@@ -229,7 +218,6 @@ export class ExperimentDataController {
               this.logger.log({
                 msg: "Skipping file with non-matching fieldname",
                 operation: "uploadData",
-                context: ExperimentDataController.name,
                 experimentId,
                 fieldname,
               });
@@ -243,7 +231,6 @@ export class ExperimentDataController {
                 msg: "Received file but sourceType is not defined",
                 errorCode: ErrorCodes.BAD_REQUEST,
                 operation: "uploadData",
-                context: ExperimentDataController.name,
                 experimentId,
                 filename,
               });
@@ -257,7 +244,6 @@ export class ExperimentDataController {
               this.logger.log({
                 msg: "Processing file",
                 operation: "uploadData",
-                context: ExperimentDataController.name,
                 experimentId,
                 filename,
               });
@@ -279,7 +265,6 @@ export class ExperimentDataController {
                 this.logger.log({
                   msg: "Completed processing file",
                   operation: "uploadData",
-                  context: ExperimentDataController.name,
                   experimentId,
                   filename,
                   status: "success",
@@ -289,7 +274,6 @@ export class ExperimentDataController {
                   msg: "Error processing file",
                   errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
                   operation: "uploadData",
-                  context: ExperimentDataController.name,
                   experimentId,
                   filename,
                   error: String(error),
@@ -308,7 +292,6 @@ export class ExperimentDataController {
               msg: "Error during file upload",
               errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
               operation: "uploadData",
-              context: ExperimentDataController.name,
               experimentId,
               error: String(err),
             });
@@ -320,7 +303,6 @@ export class ExperimentDataController {
             this.logger.log({
               msg: "Busboy finished parsing the form, waiting for file processing to complete",
               operation: "uploadData",
-              context: ExperimentDataController.name,
               experimentId,
             });
 
@@ -331,7 +313,6 @@ export class ExperimentDataController {
                 this.logger.log({
                   msg: "All file processing completed successfully",
                   operation: "uploadData",
-                  context: ExperimentDataController.name,
                   experimentId,
                   status: "success",
                 });
@@ -342,7 +323,6 @@ export class ExperimentDataController {
                   msg: "Error while waiting for file processing to complete",
                   errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
                   operation: "uploadData",
-                  context: ExperimentDataController.name,
                   experimentId,
                   error: String(err),
                 });
@@ -354,7 +334,6 @@ export class ExperimentDataController {
           this.logger.debug({
             msg: "Piping request to busboy",
             operation: "uploadData",
-            context: ExperimentDataController.name,
             experimentId,
           });
           request.pipe(bb);
@@ -363,7 +342,6 @@ export class ExperimentDataController {
         this.logger.log({
           msg: "Processed all files",
           operation: "uploadData",
-          context: ExperimentDataController.name,
           experimentId,
           status: "success",
         });
@@ -372,7 +350,6 @@ export class ExperimentDataController {
           msg: "Error processing files",
           errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "uploadData",
-          context: ExperimentDataController.name,
           experimentId,
           error: String(error),
         });
@@ -419,7 +396,6 @@ export class ExperimentDataController {
       this.logger.log({
         msg: "Processing download request",
         operation: "downloadData",
-        context: ExperimentDataController.name,
         experimentId,
         userId: session.user.id,
         tableName,
@@ -439,7 +415,6 @@ export class ExperimentDataController {
         this.logger.log({
           msg: "Successfully prepared download links",
           operation: "downloadData",
-          context: ExperimentDataController.name,
           experimentId,
           tableName,
           totalChunks: data.externalLinks.length,

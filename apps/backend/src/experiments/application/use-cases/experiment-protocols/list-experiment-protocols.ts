@@ -20,7 +20,6 @@ export class ListExperimentProtocolsUseCase {
     this.logger.log({
       msg: "Listing experiment protocols",
       operation: "listExperimentProtocols",
-      context: ListExperimentProtocolsUseCase.name,
       experimentId,
       userId,
     });
@@ -42,7 +41,6 @@ export class ListExperimentProtocolsUseCase {
             msg: "Attempt to list protocols of non-existent experiment",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "listExperimentProtocols",
-            context: ListExperimentProtocolsUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -53,7 +51,6 @@ export class ListExperimentProtocolsUseCase {
             msg: "User attempted to access protocols without permission",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "listExperimentProtocols",
-            context: ListExperimentProtocolsUseCase.name,
             experimentId,
             userId,
           });
@@ -63,7 +60,6 @@ export class ListExperimentProtocolsUseCase {
         this.logger.debug({
           msg: "Fetching protocols for experiment",
           operation: "listExperimentProtocols",
-          context: ListExperimentProtocolsUseCase.name,
           experimentId,
         });
         // Return the protocols
@@ -72,7 +68,6 @@ export class ListExperimentProtocolsUseCase {
         this.logger.debug({
           msg: "Protocols retrieved successfully",
           operation: "listExperimentProtocols",
-          context: ListExperimentProtocolsUseCase.name,
           experimentId,
           status: "success",
         });

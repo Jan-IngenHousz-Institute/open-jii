@@ -26,7 +26,6 @@ export class CreateExperimentUseCase {
     this.logger.log({
       msg: "Creating experiment",
       operation: "createExperiment",
-      context: CreateExperimentUseCase.name,
       userId,
     });
 
@@ -36,7 +35,6 @@ export class CreateExperimentUseCase {
         msg: "Attempt to create experiment without user ID",
         errorCode: ErrorCodes.BAD_REQUEST,
         operation: "createExperiment",
-        context: CreateExperimentUseCase.name,
       });
       return failure(AppError.badRequest("User ID is required to create an experiment"));
     }
@@ -47,7 +45,6 @@ export class CreateExperimentUseCase {
         msg: "Invalid experiment name provided",
         errorCode: ErrorCodes.BAD_REQUEST,
         operation: "createExperiment",
-        context: CreateExperimentUseCase.name,
         userId,
       });
       return failure(AppError.badRequest("Experiment name is required"));
@@ -62,7 +59,6 @@ export class CreateExperimentUseCase {
           msg: "Attempt to create duplicate experiment",
           errorCode: ErrorCodes.EXPERIMENT_DUPLICATE_NAME,
           operation: "createExperiment",
-          context: CreateExperimentUseCase.name,
           userId,
         });
         return failure(
@@ -73,7 +69,6 @@ export class CreateExperimentUseCase {
       this.logger.debug({
         msg: "Creating experiment in repository",
         operation: "createExperiment",
-        context: CreateExperimentUseCase.name,
         userId,
       });
       // Create the experiment
@@ -85,7 +80,6 @@ export class CreateExperimentUseCase {
             msg: "Failed to create experiment in repository",
             errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
             operation: "createExperiment",
-            context: CreateExperimentUseCase.name,
             userId,
           });
           return failure(AppError.internal("Failed to create experiment"));
@@ -95,7 +89,6 @@ export class CreateExperimentUseCase {
         this.logger.debug({
           msg: "Adding admin member to experiment",
           operation: "createExperiment",
-          context: CreateExperimentUseCase.name,
           experimentId: experiment.id,
           userId,
         });
@@ -125,7 +118,6 @@ export class CreateExperimentUseCase {
                 msg: "Failed to associate protocols with experiment",
                 errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
                 operation: "createExperiment",
-                context: CreateExperimentUseCase.name,
                 experimentId: experiment.id,
                 error: addProtocolsResult.error,
               });
@@ -151,7 +143,6 @@ export class CreateExperimentUseCase {
                 msg: "Failed to associate locations with experiment",
                 errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
                 operation: "createExperiment",
-                context: CreateExperimentUseCase.name,
                 experimentId: experiment.id,
                 error: addLocationsResult.error,
               });
@@ -166,7 +157,6 @@ export class CreateExperimentUseCase {
           this.logger.debug({
             msg: "Triggering Databricks provisioning job",
             operation: "createExperiment",
-            context: CreateExperimentUseCase.name,
             experimentId: experiment.id,
           });
           // Trigger Databricks job for the new experiment
@@ -184,7 +174,6 @@ export class CreateExperimentUseCase {
               msg: "Failed to trigger Databricks provisioning job",
               errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
               operation: "createExperiment",
-              context: CreateExperimentUseCase.name,
               experimentId: experiment.id,
               error: databricksResult.error,
             });
@@ -192,7 +181,6 @@ export class CreateExperimentUseCase {
             this.logger.log({
               msg: "Successfully triggered Databricks provisioning job",
               operation: "createExperiment",
-              context: CreateExperimentUseCase.name,
               experimentId: experiment.id,
               status: "success",
             });
@@ -201,7 +189,6 @@ export class CreateExperimentUseCase {
           this.logger.log({
             msg: "Experiment created successfully",
             operation: "createExperiment",
-            context: CreateExperimentUseCase.name,
             experimentId: experiment.id,
             userId,
             status: "success",

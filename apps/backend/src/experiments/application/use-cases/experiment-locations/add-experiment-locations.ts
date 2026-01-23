@@ -27,7 +27,6 @@ export class AddExperimentLocationsUseCase {
     this.logger.log({
       msg: "Adding locations to experiment",
       operation: "addExperimentLocations",
-      context: AddExperimentLocationsUseCase.name,
       experimentId,
       userId,
       locationCount: locationsData.length,
@@ -48,7 +47,6 @@ export class AddExperimentLocationsUseCase {
           this.logger.warn({
             msg: "Experiment not found",
             operation: "addExperimentLocations",
-            context: AddExperimentLocationsUseCase.name,
             experimentId,
             userId,
           });
@@ -59,7 +57,6 @@ export class AddExperimentLocationsUseCase {
           this.logger.warn({
             msg: "User attempted to add locations without proper permissions",
             operation: "addExperimentLocations",
-            context: AddExperimentLocationsUseCase.name,
             experimentId,
             userId,
           });
@@ -70,7 +67,6 @@ export class AddExperimentLocationsUseCase {
           this.logger.warn({
             msg: "No locations provided for experiment",
             operation: "addExperimentLocations",
-            context: AddExperimentLocationsUseCase.name,
             experimentId,
             userId,
           });
@@ -91,7 +87,6 @@ export class AddExperimentLocationsUseCase {
             msg: "Failed to create locations for experiment",
             errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_CREATE_FAILED,
             operation: "addExperimentLocations",
-            context: AddExperimentLocationsUseCase.name,
             experimentId,
             userId,
             error: createResult.error.message,
@@ -104,7 +99,6 @@ export class AddExperimentLocationsUseCase {
         this.logger.log({
           msg: "Successfully added locations to experiment",
           operation: "addExperimentLocations",
-          context: AddExperimentLocationsUseCase.name,
           experimentId,
           userId,
           locationCount: createResult.value.length,

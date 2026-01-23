@@ -28,7 +28,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending added user notification email",
           operation: "sendAddedUserNotification",
-          context: NotificationsService.name,
           email,
           role,
           experimentId,
@@ -83,7 +82,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Added user notification email sent successfully",
           operation: "sendAddedUserNotification",
-          context: NotificationsService.name,
           email,
           experimentId,
           status: "success",
@@ -94,7 +92,6 @@ export class NotificationsService {
           msg: "Failed to send added user notification email",
           errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendAddedUserNotification",
-          context: NotificationsService.name,
           email,
           experimentId,
           error,
@@ -116,7 +113,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Sending transfer request confirmation email",
           operation: "sendTransferRequestConfirmation",
-          context: NotificationsService.name,
           email,
           projectId: projectIdOld,
         });
@@ -175,7 +171,6 @@ export class NotificationsService {
         this.logger.log({
           msg: "Transfer request confirmation email sent successfully",
           operation: "sendTransferRequestConfirmation",
-          context: NotificationsService.name,
           email,
           projectId: projectIdOld,
           status: "success",
@@ -186,7 +181,6 @@ export class NotificationsService {
           msg: "Failed to send transfer request confirmation email",
           errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendTransferRequestConfirmation",
-          context: NotificationsService.name,
           email,
           projectId: projectIdOld,
           error,

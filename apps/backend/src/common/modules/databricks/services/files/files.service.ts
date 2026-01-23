@@ -43,7 +43,6 @@ export class DatabricksFilesService {
         this.logger.debug({
           msg: "Uploading file to Databricks",
           operation: "uploadFile",
-          context: DatabricksFilesService.name,
           filePath,
         });
 
@@ -63,7 +62,6 @@ export class DatabricksFilesService {
         this.logger.log({
           msg: "Successfully uploaded file to Databricks",
           operation: "uploadFile",
-          context: DatabricksFilesService.name,
           filePath,
           status: "success",
         });
@@ -77,7 +75,6 @@ export class DatabricksFilesService {
           msg: "Failed to upload file to Databricks",
           errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
           operation: "uploadFile",
-          context: DatabricksFilesService.name,
           error,
         });
         return apiErrorMapper(

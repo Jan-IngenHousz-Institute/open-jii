@@ -28,7 +28,6 @@ export class UpdateExperimentMemberRoleUseCase {
     this.logger.log({
       msg: "Updating member role in experiment",
       operation: "update-experiment-member-role",
-      context: UpdateExperimentMemberRoleUseCase.name,
       experimentId,
       memberId,
       newRole,
@@ -46,7 +45,6 @@ export class UpdateExperimentMemberRoleUseCase {
           this.logger.warn({
             msg: "Experiment not found",
             operation: "update-experiment-member-role",
-            context: UpdateExperimentMemberRoleUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -56,7 +54,6 @@ export class UpdateExperimentMemberRoleUseCase {
           this.logger.warn({
             msg: "Experiment is archived",
             operation: "update-experiment-member-role",
-            context: UpdateExperimentMemberRoleUseCase.name,
             experimentId,
           });
           return failure(AppError.forbidden("Cannot update member roles in archived experiments"));
@@ -66,7 +63,6 @@ export class UpdateExperimentMemberRoleUseCase {
           this.logger.warn({
             msg: "User attempted to update member roles without admin privileges",
             operation: "update-experiment-member-role",
-            context: UpdateExperimentMemberRoleUseCase.name,
             experimentId,
             userId: currentUserId,
           });
@@ -85,7 +81,6 @@ export class UpdateExperimentMemberRoleUseCase {
             this.logger.warn({
               msg: "User attempted to demote last admin in experiment",
               operation: "update-experiment-member-role",
-              context: UpdateExperimentMemberRoleUseCase.name,
               experimentId,
               userId: currentUserId,
             });
@@ -97,7 +92,6 @@ export class UpdateExperimentMemberRoleUseCase {
         this.logger.debug({
           msg: "Updating member role in experiment",
           operation: "update-experiment-member-role",
-          context: UpdateExperimentMemberRoleUseCase.name,
           experimentId,
           memberId,
           newRole,
@@ -114,7 +108,6 @@ export class UpdateExperimentMemberRoleUseCase {
             msg: "Failed to update member in experiment",
             errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "update-experiment-member-role",
-            context: UpdateExperimentMemberRoleUseCase.name,
             experimentId,
             memberId,
             error: updateResult.error,
@@ -125,7 +118,6 @@ export class UpdateExperimentMemberRoleUseCase {
         this.logger.log({
           msg: "Successfully updated member role in experiment",
           operation: "update-experiment-member-role",
-          context: UpdateExperimentMemberRoleUseCase.name,
           experimentId,
           memberId,
           newRole,

@@ -15,7 +15,6 @@ export class GetUserProfileUseCase {
     this.logger.log({
       msg: "Getting user profile",
       operation: "getUserProfile",
-      context: GetUserProfileUseCase.name,
       userId: id,
     });
 
@@ -27,7 +26,6 @@ export class GetUserProfileUseCase {
           msg: "User profile not found",
           errorCode: ErrorCodes.USER_PROFILE_NOT_FOUND,
           operation: "getUserProfile",
-          context: GetUserProfileUseCase.name,
           userId: id,
         });
         return failure(AppError.notFound(`User profile with ID ${id} not found`));
@@ -36,7 +34,6 @@ export class GetUserProfileUseCase {
       this.logger.debug({
         msg: "User profile retrieved successfully",
         operation: "getUserProfile",
-        context: GetUserProfileUseCase.name,
         userId: id,
         status: "success",
       });

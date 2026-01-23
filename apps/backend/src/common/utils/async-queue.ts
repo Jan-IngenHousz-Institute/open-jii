@@ -18,7 +18,6 @@ export class AsyncQueue<T = void> {
     this.logger.debug({
       msg: "Created new AsyncQueue",
       operation: "constructor",
-      context: AsyncQueue.name,
       queueId: this.id,
       concurrency,
     });
@@ -45,7 +44,6 @@ export class AsyncQueue<T = void> {
       this.logger.debug({
         msg: "Queue empty",
         operation: "processQueue",
-        context: AsyncQueue.name,
         queueId: this.id,
       });
       return;
@@ -106,7 +104,6 @@ export class AsyncQueue<T = void> {
           this.logger.debug({
             msg: "All tasks processed, queue empty",
             operation: "waitForCompletion",
-            context: AsyncQueue.name,
             queueId: this.id,
           });
           clearInterval(checkInterval);

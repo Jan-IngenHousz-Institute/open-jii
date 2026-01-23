@@ -19,7 +19,6 @@ export class UpdateMacroUseCase {
     this.logger.log({
       msg: "Updating macro",
       operation: "updateMacro",
-      context: UpdateMacroUseCase.name,
       macroId: id,
       userId,
     });
@@ -37,7 +36,6 @@ export class UpdateMacroUseCase {
         msg: "Attempt to update non-existent macro",
         errorCode: ErrorCodes.MACRO_NOT_FOUND,
         operation: "updateMacro",
-        context: UpdateMacroUseCase.name,
         macroId: id,
         userId,
       });
@@ -50,7 +48,6 @@ export class UpdateMacroUseCase {
         msg: "Unauthorized macro update attempt",
         errorCode: ErrorCodes.FORBIDDEN,
         operation: "updateMacro",
-        context: UpdateMacroUseCase.name,
         macroId: id,
         userId,
       });
@@ -70,7 +67,6 @@ export class UpdateMacroUseCase {
         msg: "Failed to update macro",
         errorCode: ErrorCodes.MACRO_UPDATE_FAILED,
         operation: "updateMacro",
-        context: UpdateMacroUseCase.name,
         macroId: id,
         userId,
       });
@@ -92,7 +88,6 @@ export class UpdateMacroUseCase {
           msg: "Failed to upload updated macro code to Databricks",
           errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
           operation: "updateMacro",
-          context: UpdateMacroUseCase.name,
           macroId: macro.id,
           userId,
           error: databricksResult.error.message,
@@ -105,7 +100,6 @@ export class UpdateMacroUseCase {
     this.logger.log({
       msg: "Macro updated successfully",
       operation: "updateMacro",
-      context: UpdateMacroUseCase.name,
       macroId: macro.id,
       userId,
       status: "success",

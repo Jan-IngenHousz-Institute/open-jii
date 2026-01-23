@@ -21,7 +21,6 @@ export class ListExperimentsUseCase {
     this.logger.log({
       msg: "Listing experiments",
       operation: "list",
-      context: ListExperimentsUseCase.name,
       userId,
       filter,
       status,
@@ -35,7 +34,6 @@ export class ListExperimentsUseCase {
         this.logger.debug({
           msg: "Found experiments",
           operation: "list",
-          context: ListExperimentsUseCase.name,
           userId,
           count: experiments.length,
         });
@@ -45,7 +43,6 @@ export class ListExperimentsUseCase {
           msg: "Failed to list experiments",
           errorCode: error.code,
           operation: "list",
-          context: ListExperimentsUseCase.name,
           userId,
           error,
         });

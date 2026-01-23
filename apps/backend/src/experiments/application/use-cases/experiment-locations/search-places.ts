@@ -19,7 +19,6 @@ export class SearchPlacesUseCase {
     this.logger.log({
       msg: "Searching places",
       operation: "searchPlaces",
-      context: SearchPlacesUseCase.name,
       query: request.query,
     });
 

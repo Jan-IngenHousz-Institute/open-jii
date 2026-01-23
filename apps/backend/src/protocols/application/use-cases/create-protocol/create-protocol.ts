@@ -15,7 +15,6 @@ export class CreateProtocolUseCase {
     this.logger.log({
       msg: "Creating protocol",
       operation: "createProtocol",
-      context: CreateProtocolUseCase.name,
       userId,
     });
 
@@ -27,7 +26,6 @@ export class CreateProtocolUseCase {
           msg: "Failed to create protocol",
           errorCode: ErrorCodes.PROTOCOL_CREATE_FAILED,
           operation: "createProtocol",
-          context: CreateProtocolUseCase.name,
           userId,
         });
         return failure(AppError.internal("Failed to create protocol"));
@@ -37,7 +35,6 @@ export class CreateProtocolUseCase {
       this.logger.log({
         msg: "Protocol created successfully",
         operation: "createProtocol",
-        context: CreateProtocolUseCase.name,
         protocolId: protocol.id,
         userId,
         status: "success",

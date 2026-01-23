@@ -20,7 +20,6 @@ export class EmailAdapter implements EmailPort {
     this.logger.log({
       msg: "Sending email notification",
       operation: "sendAddedUserNotification",
-      context: EmailAdapter.name,
       experimentId,
       email,
     });
@@ -42,7 +41,6 @@ export class EmailAdapter implements EmailPort {
     this.logger.log({
       msg: "Sending transfer request confirmation",
       operation: "sendTransferRequestConfirmation",
-      context: EmailAdapter.name,
       email,
       projectIdOld,
     });

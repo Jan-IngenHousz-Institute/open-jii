@@ -15,7 +15,6 @@ export class SearchUsersUseCase {
     this.logger.log({
       msg: "Searching users",
       operation: "searchUsers",
-      context: SearchUsersUseCase.name,
       query: params.query,
       limit: params.limit,
       offset: params.offset,
@@ -28,7 +27,6 @@ export class SearchUsersUseCase {
         this.logger.debug({
           msg: "Users search completed",
           operation: "searchUsers",
-          context: SearchUsersUseCase.name,
           count: users.length,
           status: "success",
         });
@@ -38,7 +36,6 @@ export class SearchUsersUseCase {
           msg: "Failed to search users",
           errorCode: ErrorCodes.USER_NOT_FOUND,
           operation: "searchUsers",
-          context: SearchUsersUseCase.name,
           error,
         });
       },

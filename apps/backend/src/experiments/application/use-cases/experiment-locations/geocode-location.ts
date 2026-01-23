@@ -17,7 +17,6 @@ export class GeocodeLocationUseCase {
     this.logger.log({
       msg: "Geocoding location",
       operation: "geocodeLocation",
-      context: GeocodeLocationUseCase.name,
       latitude: request.latitude,
       longitude: request.longitude,
     });

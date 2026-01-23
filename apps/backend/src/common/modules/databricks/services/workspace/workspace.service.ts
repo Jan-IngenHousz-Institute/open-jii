@@ -48,7 +48,6 @@ export class DatabricksWorkspaceService {
         this.logger.debug({
           msg: "Importing workspace object",
           operation: "importWorkspaceObject",
-          context: DatabricksWorkspaceService.name,
           path: request.path,
         });
 
@@ -71,7 +70,6 @@ export class DatabricksWorkspaceService {
         this.logger.log({
           msg: "Successfully imported workspace object",
           operation: "importWorkspaceObject",
-          context: DatabricksWorkspaceService.name,
           path: request.path,
           status: "success",
         });
@@ -109,7 +107,6 @@ export class DatabricksWorkspaceService {
         this.logger.debug({
           msg: "Deleting workspace object",
           operation: "deleteWorkspaceObject",
-          context: DatabricksWorkspaceService.name,
           path: request.path,
         });
 
@@ -129,7 +126,6 @@ export class DatabricksWorkspaceService {
         this.logger.log({
           msg: "Successfully deleted workspace object",
           operation: "deleteWorkspaceObject",
-          context: DatabricksWorkspaceService.name,
           path: request.path,
           status: "success",
         });

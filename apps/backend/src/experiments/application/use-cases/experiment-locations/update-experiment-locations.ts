@@ -27,7 +27,6 @@ export class UpdateExperimentLocationsUseCase {
     this.logger.log({
       msg: "Updating experiment locations",
       operation: "updateExperimentLocations",
-      context: UpdateExperimentLocationsUseCase.name,
       experimentId,
       userId,
       locationCount: locationsData.length,
@@ -49,7 +48,6 @@ export class UpdateExperimentLocationsUseCase {
             msg: "Experiment not found",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "updateExperimentLocations",
-            context: UpdateExperimentLocationsUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound("Experiment not found"));
@@ -60,7 +58,6 @@ export class UpdateExperimentLocationsUseCase {
             msg: "User attempted to update locations without permission",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "updateExperimentLocations",
-            context: UpdateExperimentLocationsUseCase.name,
             experimentId,
             userId,
           });
@@ -84,7 +81,6 @@ export class UpdateExperimentLocationsUseCase {
             msg: "Failed to update locations for experiment",
             errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_UPDATE_FAILED,
             operation: "updateExperimentLocations",
-            context: UpdateExperimentLocationsUseCase.name,
             experimentId,
             error: replaceResult.error,
           });
@@ -96,7 +92,6 @@ export class UpdateExperimentLocationsUseCase {
         this.logger.log({
           msg: "Experiment locations updated successfully",
           operation: "updateExperimentLocations",
-          context: UpdateExperimentLocationsUseCase.name,
           experimentId,
           locationCount: replaceResult.value.length,
           status: "success",

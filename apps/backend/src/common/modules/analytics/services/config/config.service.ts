@@ -23,7 +23,6 @@ export class AnalyticsConfigService {
     this.logger.debug({
       msg: "Loading analytics configuration",
       operation: "loadConfig",
-      context: AnalyticsConfigService.name,
     });
     return {
       posthogKey: this.configService.getOrThrow("analytics.posthogKey"),
@@ -40,7 +39,6 @@ export class AnalyticsConfigService {
       this.logger.debug({
         msg: "Analytics configuration validated successfully",
         operation: "validateConfig",
-        context: AnalyticsConfigService.name,
         status: "success",
       });
     } catch (error) {
@@ -48,7 +46,6 @@ export class AnalyticsConfigService {
         msg: "Invalid analytics configuration",
         errorCode: ErrorCodes.ANALYTICS_CONFIG_INVALID,
         operation: "validateConfig",
-        context: AnalyticsConfigService.name,
         error,
       });
       throw new Error(

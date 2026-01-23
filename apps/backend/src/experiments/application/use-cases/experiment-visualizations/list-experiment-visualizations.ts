@@ -23,7 +23,6 @@ export class ListExperimentVisualizationsUseCase {
     this.logger.log({
       msg: "Listing visualizations of experiment",
       operation: "listExperimentVisualizations",
-      context: ListExperimentVisualizationsUseCase.name,
       experimentId,
       userId,
     });
@@ -44,7 +43,6 @@ export class ListExperimentVisualizationsUseCase {
           this.logger.warn({
             msg: "Attempt to list visualizations of non-existent experiment",
             operation: "listExperimentVisualizations",
-            context: ListExperimentVisualizationsUseCase.name,
             experimentId,
             userId,
           });
@@ -55,7 +53,6 @@ export class ListExperimentVisualizationsUseCase {
           this.logger.warn({
             msg: "User does not have access to experiment visualizations",
             operation: "listExperimentVisualizations",
-            context: ListExperimentVisualizationsUseCase.name,
             experimentId,
             userId,
           });
@@ -71,7 +68,6 @@ export class ListExperimentVisualizationsUseCase {
             msg: "Failed to retrieve visualizations for experiment",
             errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_LIST_FAILED,
             operation: "listExperimentVisualizations",
-            context: ListExperimentVisualizationsUseCase.name,
             experimentId,
             userId,
             error: visualizationsResult.error.message,
@@ -82,7 +78,6 @@ export class ListExperimentVisualizationsUseCase {
         this.logger.debug({
           msg: "Retrieved visualizations for experiment",
           operation: "listExperimentVisualizations",
-          context: ListExperimentVisualizationsUseCase.name,
           experimentId,
           userId,
           count: visualizationsResult.value.length,

@@ -15,7 +15,6 @@ export class DeleteExperimentUseCase {
     this.logger.log({
       msg: "Deleting experiment",
       operation: "deleteExperiment",
-      context: DeleteExperimentUseCase.name,
       experimentId: id,
       userId,
     });
@@ -36,7 +35,6 @@ export class DeleteExperimentUseCase {
             msg: "Attempt to delete non-existent experiment",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "deleteExperiment",
-            context: DeleteExperimentUseCase.name,
             experimentId: id,
           });
           return failure(AppError.notFound(`Experiment with ID ${id} not found`));
@@ -47,7 +45,6 @@ export class DeleteExperimentUseCase {
             msg: "User is not a member of experiment",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "deleteExperiment",
-            context: DeleteExperimentUseCase.name,
             experimentId: id,
             userId,
           });
@@ -57,7 +54,6 @@ export class DeleteExperimentUseCase {
         this.logger.debug({
           msg: "Deleting experiment from repository",
           operation: "deleteExperiment",
-          context: DeleteExperimentUseCase.name,
           experimentId: id,
         });
         // Delete the experiment
@@ -67,7 +63,6 @@ export class DeleteExperimentUseCase {
           this.logger.log({
             msg: "Experiment deleted successfully",
             operation: "deleteExperiment",
-            context: DeleteExperimentUseCase.name,
             experimentId: id,
             userId,
             status: "success",
@@ -77,7 +72,6 @@ export class DeleteExperimentUseCase {
             msg: "Failed to delete experiment",
             errorCode: ErrorCodes.EXPERIMENT_DELETE_FAILED,
             operation: "deleteExperiment",
-            context: DeleteExperimentUseCase.name,
             experimentId: id,
             userId,
           });

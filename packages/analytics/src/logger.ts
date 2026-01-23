@@ -12,7 +12,7 @@ export const pinoConfig: LoggerOptions = {
         target: "pino-pretty",
         options: {
           colorize: true,
-          singleLine: true,
+          singleLine: false,
         },
       }
     : undefined,

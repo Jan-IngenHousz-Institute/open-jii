@@ -34,7 +34,6 @@ export class UserWebhookController {
         this.logger.log({
           msg: "Successfully retrieved user metadata",
           operation: "getUsersMetadata",
-          context: UserWebhookController.name,
           usersCount: users.length,
           status: "success",
         });

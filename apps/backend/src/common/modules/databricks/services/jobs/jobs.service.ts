@@ -53,7 +53,6 @@ export class DatabricksJobsService {
           msg: "Failed to trigger Databricks job",
           errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
           operation: "triggerJob",
-          context: DatabricksJobsService.name,
           error,
         });
         return apiErrorMapper(`Databricks job trigger: ${getAxiosErrorMessage(error)}`);
@@ -101,7 +100,6 @@ export class DatabricksJobsService {
           msg: "Error executing job trigger",
           errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
           operation: "triggerJobInternal",
-          context: DatabricksJobsService.name,
           error,
         });
         return apiErrorMapper(`Databricks job execution: ${getAxiosErrorMessage(error)}`);
@@ -151,7 +149,6 @@ export class DatabricksJobsService {
         this.logger.debug({
           msg: "Calling Databricks health check",
           operation: "healthCheck",
-          context: DatabricksJobsService.name,
           apiUrl,
         });
 
@@ -180,7 +177,6 @@ export class DatabricksJobsService {
           msg: "Databricks health check failed",
           errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
           operation: "healthCheck",
-          context: DatabricksJobsService.name,
           error,
         });
         return apiErrorMapper(`Databricks service unavailable: ${getAxiosErrorMessage(error)}`);

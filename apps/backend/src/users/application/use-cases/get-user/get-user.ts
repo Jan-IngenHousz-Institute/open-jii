@@ -15,7 +15,6 @@ export class GetUserUseCase {
     this.logger.log({
       msg: "Getting user",
       operation: "getUser",
-      context: GetUserUseCase.name,
       userId: id,
     });
 
@@ -27,7 +26,6 @@ export class GetUserUseCase {
           msg: "User not found",
           errorCode: ErrorCodes.USER_NOT_FOUND,
           operation: "getUser",
-          context: GetUserUseCase.name,
           userId: id,
         });
         return failure(AppError.notFound(`User with ID ${id} not found`));
@@ -36,7 +34,6 @@ export class GetUserUseCase {
       this.logger.debug({
         msg: "User retrieved successfully",
         operation: "getUser",
-        context: GetUserUseCase.name,
         userId: id,
         status: "success",
       });

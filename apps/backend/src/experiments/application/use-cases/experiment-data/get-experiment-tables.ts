@@ -54,7 +54,6 @@ export class GetExperimentTablesUseCase {
     this.logger.log({
       msg: "Getting experiment tables metadata",
       operation: "getExperimentTables",
-      context: GetExperimentTablesUseCase.name,
       experimentId,
       userId,
     });
@@ -75,7 +74,6 @@ export class GetExperimentTablesUseCase {
             msg: "Experiment not found",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "getExperimentTables",
-            context: GetExperimentTablesUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -85,7 +83,6 @@ export class GetExperimentTablesUseCase {
             msg: "User attempted to access tables without proper permissions",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "getExperimentTables",
-            context: GetExperimentTablesUseCase.name,
             experimentId,
             userId,
           });
@@ -97,7 +94,6 @@ export class GetExperimentTablesUseCase {
             msg: "Experiment has no schema name",
             errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "getExperimentTables",
-            context: GetExperimentTablesUseCase.name,
             experimentId,
           });
           return failure(AppError.internal("Experiment schema not provisioned"));
@@ -135,7 +131,6 @@ export class GetExperimentTablesUseCase {
             this.logger.warn({
               msg: "Failed to get row count for table",
               operation: "getExperimentTables",
-              context: GetExperimentTablesUseCase.name,
               tableName: table.name,
               error: countResult.error.message,
             });

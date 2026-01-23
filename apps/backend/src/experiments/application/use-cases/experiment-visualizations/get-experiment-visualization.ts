@@ -24,7 +24,6 @@ export class GetExperimentVisualizationUseCase {
     this.logger.log({
       msg: "Getting visualization of experiment",
       operation: "getExperimentVisualization",
-      context: GetExperimentVisualizationUseCase.name,
       experimentId,
       visualizationId,
       userId,
@@ -46,7 +45,6 @@ export class GetExperimentVisualizationUseCase {
           this.logger.warn({
             msg: "Attempt to get visualization of non-existent experiment",
             operation: "getExperimentVisualization",
-            context: GetExperimentVisualizationUseCase.name,
             experimentId,
             visualizationId,
             userId,
@@ -58,7 +56,6 @@ export class GetExperimentVisualizationUseCase {
           this.logger.warn({
             msg: "User does not have access to experiment visualization",
             operation: "getExperimentVisualization",
-            context: GetExperimentVisualizationUseCase.name,
             experimentId,
             visualizationId,
             userId,
@@ -75,7 +72,6 @@ export class GetExperimentVisualizationUseCase {
             msg: "Failed to retrieve visualization for experiment",
             errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_LIST_FAILED,
             operation: "getExperimentVisualization",
-            context: GetExperimentVisualizationUseCase.name,
             experimentId,
             visualizationId,
             userId,
@@ -90,7 +86,6 @@ export class GetExperimentVisualizationUseCase {
           this.logger.warn({
             msg: "Visualization not found",
             operation: "getExperimentVisualization",
-            context: GetExperimentVisualizationUseCase.name,
             experimentId,
             visualizationId,
             userId,
@@ -103,7 +98,6 @@ export class GetExperimentVisualizationUseCase {
           this.logger.warn({
             msg: "Visualization does not belong to experiment",
             operation: "getExperimentVisualization",
-            context: GetExperimentVisualizationUseCase.name,
             experimentId,
             visualizationId,
             userId,
@@ -118,7 +112,6 @@ export class GetExperimentVisualizationUseCase {
         this.logger.debug({
           msg: "Retrieved visualization for experiment",
           operation: "getExperimentVisualization",
-          context: GetExperimentVisualizationUseCase.name,
           experimentId,
           visualizationId,
           userId,

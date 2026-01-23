@@ -15,7 +15,6 @@ export class UpdateProtocolUseCase {
     this.logger.log({
       msg: "Updating protocol",
       operation: "updateProtocol",
-      context: UpdateProtocolUseCase.name,
       protocolId: id,
     });
 
@@ -32,7 +31,6 @@ export class UpdateProtocolUseCase {
         msg: "Attempt to update non-existent protocol",
         errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
         operation: "updateProtocol",
-        context: UpdateProtocolUseCase.name,
         protocolId: id,
       });
       return failure(AppError.notFound(`Protocol not found`));
@@ -45,7 +43,6 @@ export class UpdateProtocolUseCase {
         msg: "Error checking protocol assignment",
         errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
         operation: "updateProtocol",
-        context: UpdateProtocolUseCase.name,
         protocolId: id,
         error: isAssignedResult.error,
       });
@@ -56,7 +53,6 @@ export class UpdateProtocolUseCase {
         msg: "Cannot update protocol assigned to experiment",
         errorCode: ErrorCodes.PROTOCOL_ASSIGNED,
         operation: "updateProtocol",
-        context: UpdateProtocolUseCase.name,
         protocolId: id,
       });
       return failure(AppError.forbidden("Cannot update protocol assigned to an experiment"));
@@ -75,7 +71,6 @@ export class UpdateProtocolUseCase {
         msg: "Failed to update protocol",
         errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
         operation: "updateProtocol",
-        context: UpdateProtocolUseCase.name,
         protocolId: id,
       });
       return failure(AppError.internal("Failed to update protocol"));
@@ -84,7 +79,6 @@ export class UpdateProtocolUseCase {
     this.logger.log({
       msg: "Protocol updated successfully",
       operation: "updateProtocol",
-      context: UpdateProtocolUseCase.name,
       protocolId: id,
       status: "success",
     });

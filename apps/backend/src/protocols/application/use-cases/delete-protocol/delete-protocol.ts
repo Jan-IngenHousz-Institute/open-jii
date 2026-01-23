@@ -15,7 +15,6 @@ export class DeleteProtocolUseCase {
     this.logger.log({
       msg: "Deleting protocol",
       operation: "deleteProtocol",
-      context: DeleteProtocolUseCase.name,
       protocolId: id,
     });
 
@@ -32,7 +31,6 @@ export class DeleteProtocolUseCase {
         msg: "Attempt to delete non-existent protocol",
         errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
         operation: "deleteProtocol",
-        context: DeleteProtocolUseCase.name,
         protocolId: id,
       });
       return failure(AppError.notFound(`Protocol not found`));
@@ -51,7 +49,6 @@ export class DeleteProtocolUseCase {
         msg: "Failed to delete protocol",
         errorCode: ErrorCodes.PROTOCOL_DELETE_FAILED,
         operation: "execute",
-        context: DeleteProtocolUseCase.name,
         protocolId: id,
       });
       return failure(AppError.internal("Failed to delete protocol"));
@@ -60,7 +57,6 @@ export class DeleteProtocolUseCase {
     this.logger.log({
       msg: "Successfully deleted protocol",
       operation: "execute",
-      context: DeleteProtocolUseCase.name,
       protocolId: id,
       status: "success",
     });

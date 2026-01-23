@@ -51,7 +51,6 @@ export class GetExperimentDataUseCase {
     this.logger.log({
       msg: "Getting experiment data",
       operation: "getExperimentData",
-      context: GetExperimentDataUseCase.name,
       experimentId,
       userId,
       query: JSON.stringify(query),
@@ -73,7 +72,6 @@ export class GetExperimentDataUseCase {
             msg: "Experiment not found",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "getExperimentData",
-            context: GetExperimentDataUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -83,7 +81,6 @@ export class GetExperimentDataUseCase {
             msg: "User attempted to access experiment data without permission",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "getExperimentData",
-            context: GetExperimentDataUseCase.name,
             experimentId,
             userId,
           });
@@ -95,7 +92,6 @@ export class GetExperimentDataUseCase {
             msg: "Experiment has no schema name",
             errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
             operation: "getExperimentData",
-            context: GetExperimentDataUseCase.name,
             experimentId,
           });
           return failure(AppError.internal("Experiment schema not provisioned"));
@@ -119,7 +115,6 @@ export class GetExperimentDataUseCase {
           this.logger.debug({
             msg: "Fetching data in full-columns mode",
             operation: "getExperimentData",
-            context: GetExperimentDataUseCase.name,
             experimentId,
             tableName,
             columns,
@@ -138,7 +133,6 @@ export class GetExperimentDataUseCase {
           this.logger.debug({
             msg: "Fetching data in paginated mode",
             operation: "getExperimentData",
-            context: GetExperimentDataUseCase.name,
             experimentId,
             tableName,
           });
@@ -156,7 +150,6 @@ export class GetExperimentDataUseCase {
           this.logger.warn({
             msg: "Deprecated: getExperimentData called without tableName",
             operation: "getExperimentData",
-            context: GetExperimentDataUseCase.name,
             experimentId,
           });
           return failure(
@@ -225,7 +218,6 @@ export class GetExperimentDataUseCase {
     this.logger.debug({
       msg: "Executing SQL query",
       operation: "fetchSpecificColumns",
-      context: GetExperimentDataUseCase.name,
       sqlQuery,
     });
 
@@ -348,7 +340,6 @@ export class GetExperimentDataUseCase {
       this.logger.warn({
         msg: "Table not found in schema",
         operation: "validateTableExists",
-        context: GetExperimentDataUseCase.name,
         tableName,
         schemaName,
       });
@@ -360,7 +351,6 @@ export class GetExperimentDataUseCase {
       this.logger.warn({
         msg: "Table is not accessible (intermediate processing table)",
         operation: "validateTableExists",
-        context: GetExperimentDataUseCase.name,
         tableName,
         schemaName,
       });

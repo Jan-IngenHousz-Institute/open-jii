@@ -30,7 +30,6 @@ export class UpdateExperimentVisualizationUseCase {
     this.logger.log({
       msg: "Updating visualization",
       operation: "updateExperimentVisualization",
-      context: UpdateExperimentVisualizationUseCase.name,
       visualizationId,
       userId,
     });
@@ -44,7 +43,6 @@ export class UpdateExperimentVisualizationUseCase {
         this.logger.warn({
           msg: "Attempt to update non-existent visualization",
           operation: "updateExperimentVisualization",
-          context: UpdateExperimentVisualizationUseCase.name,
           visualizationId,
           userId,
         });
@@ -72,7 +70,6 @@ export class UpdateExperimentVisualizationUseCase {
             this.logger.warn({
               msg: "Visualization belongs to non-existent experiment",
               operation: "updateExperimentVisualization",
-              context: UpdateExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -86,7 +83,6 @@ export class UpdateExperimentVisualizationUseCase {
             this.logger.warn({
               msg: "User does not have access to experiment",
               operation: "updateExperimentVisualization",
-              context: UpdateExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -99,7 +95,6 @@ export class UpdateExperimentVisualizationUseCase {
             this.logger.warn({
               msg: "User does not have permission to modify visualization",
               operation: "updateExperimentVisualization",
-              context: UpdateExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -114,7 +109,6 @@ export class UpdateExperimentVisualizationUseCase {
               msg: "Experiment has no schema name",
               errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
               operation: "updateExperimentVisualization",
-              context: UpdateExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -132,7 +126,6 @@ export class UpdateExperimentVisualizationUseCase {
             this.logger.warn({
               msg: "Data source validation failed",
               operation: "updateExperimentVisualization",
-              context: UpdateExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
@@ -144,7 +137,6 @@ export class UpdateExperimentVisualizationUseCase {
           this.logger.debug({
             msg: "Updating visualization in repository",
             operation: "updateExperimentVisualization",
-            context: UpdateExperimentVisualizationUseCase.name,
             experimentId: visualization.experimentId,
             visualizationId,
             userId,
@@ -161,7 +153,6 @@ export class UpdateExperimentVisualizationUseCase {
                 msg: "Failed to update visualization",
                 errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
                 operation: "updateExperimentVisualization",
-                context: UpdateExperimentVisualizationUseCase.name,
                 experimentId: visualization.experimentId,
                 visualizationId,
                 userId,
@@ -173,7 +164,6 @@ export class UpdateExperimentVisualizationUseCase {
             this.logger.log({
               msg: "Successfully updated visualization",
               operation: "updateExperimentVisualization",
-              context: UpdateExperimentVisualizationUseCase.name,
               experimentId: visualization.experimentId,
               visualizationId,
               userId,

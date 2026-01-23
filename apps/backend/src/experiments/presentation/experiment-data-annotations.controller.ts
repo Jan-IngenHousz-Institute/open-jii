@@ -28,7 +28,6 @@ export class ExperimentDataAnnotationsController {
       this.logger.log({
         msg: "Adding annotation to experiment",
         operation: "addAnnotation",
-        context: ExperimentDataAnnotationsController.name,
         experimentId,
         userId: session.user.id,
       });
@@ -63,7 +62,6 @@ export class ExperimentDataAnnotationsController {
       this.logger.log({
         msg: "Adding annotations to experiment",
         operation: "addAnnotationsBulk",
-        context: ExperimentDataAnnotationsController.name,
         experimentId,
         userId: session.user.id,
         count: body.rowIds.length,
@@ -90,7 +88,6 @@ export class ExperimentDataAnnotationsController {
       this.logger.log({
         msg: "Updating annotation for experiment",
         operation: "updateAnnotation",
-        context: ExperimentDataAnnotationsController.name,
         experimentId,
         annotationId,
         userId: session.user.id,
@@ -122,7 +119,6 @@ export class ExperimentDataAnnotationsController {
       this.logger.log({
         msg: "Deleting annotation from experiment",
         operation: "deleteAnnotation",
-        context: ExperimentDataAnnotationsController.name,
         experimentId,
         annotationId,
         userId: session.user.id,
@@ -154,7 +150,6 @@ export class ExperimentDataAnnotationsController {
       this.logger.log({
         msg: "Deleting annotations from experiment",
         operation: "deleteAnnotationsBulk",
-        context: ExperimentDataAnnotationsController.name,
         experimentId,
         userId: session.user.id,
         count: rowIds.length,

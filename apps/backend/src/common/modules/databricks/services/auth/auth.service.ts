@@ -44,7 +44,6 @@ export class DatabricksAuthService {
         this.logger.debug({
           msg: "Requesting new Databricks OAuth token",
           operation: "getAccessToken",
-          context: DatabricksAuthService.name,
         });
 
         const tokenResult = await this.requestNewToken();
@@ -62,7 +61,6 @@ export class DatabricksAuthService {
         this.logger.debug({
           msg: "Successfully obtained Databricks OAuth token",
           operation: "getAccessToken",
-          context: DatabricksAuthService.name,
           status: "success",
         });
         return this.accessToken;
@@ -72,7 +70,6 @@ export class DatabricksAuthService {
           msg: "Failed to obtain Databricks access token",
           errorCode: ErrorCodes.DATABRICKS_AUTH_FAILED,
           operation: "getAccessToken",
-          context: DatabricksAuthService.name,
           error,
         });
         return apiErrorMapper(error, "Databricks authentication");
@@ -110,7 +107,6 @@ export class DatabricksAuthService {
           msg: "Failed to obtain access token",
           errorCode: ErrorCodes.DATABRICKS_AUTH_FAILED,
           operation: "getAccessToken",
-          context: DatabricksAuthService.name,
           error,
         });
         return apiErrorMapper(`Databricks token request: ${getAxiosErrorMessage(error)}`);

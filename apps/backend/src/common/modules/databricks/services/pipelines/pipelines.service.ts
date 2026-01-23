@@ -52,7 +52,6 @@ export class DatabricksPipelinesService {
         this.logger.debug({
           msg: "Listing Databricks pipelines",
           operation: "listPipelines",
-          context: DatabricksPipelinesService.name,
         });
 
         // Prepare request parameters
@@ -91,7 +90,6 @@ export class DatabricksPipelinesService {
               msg: "Error listing pipelines",
               errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
               operation: "listPipelines",
-              context: DatabricksPipelinesService.name,
               error,
             });
             return apiErrorMapper(`Databricks pipeline list: ${getAxiosErrorMessage(error)}`);
@@ -109,7 +107,6 @@ export class DatabricksPipelinesService {
           msg: "Failed to list Databricks pipelines",
           errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
           operation: "listPipelines",
-          context: DatabricksPipelinesService.name,
           error,
         });
         return apiErrorMapper(`Databricks pipelines list: ${getAxiosErrorMessage(error)}`);
@@ -141,7 +138,6 @@ export class DatabricksPipelinesService {
         this.logger.debug({
           msg: "Listing Databricks pipelines",
           operation: "getPipelineByName",
-          context: DatabricksPipelinesService.name,
         });
 
         const listResult = await tryCatch(
@@ -170,7 +166,6 @@ export class DatabricksPipelinesService {
               msg: "Error listing pipelines (internal)",
               errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
               operation: "getPipelineByName",
-              context: DatabricksPipelinesService.name,
               error,
             });
             return apiErrorMapper(`Databricks pipeline list: ${getAxiosErrorMessage(error)}`);
@@ -193,7 +188,6 @@ export class DatabricksPipelinesService {
             msg: "Pipeline not found",
             errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
             operation: "getPipelineByName",
-            context: DatabricksPipelinesService.name,
             pipelineName: params.pipelineName,
           });
           throw AppError.notFound(`Pipeline with name '${params.pipelineName}' not found`);
@@ -205,7 +199,6 @@ export class DatabricksPipelinesService {
         this.logger.debug({
           msg: "Getting Databricks pipeline",
           operation: "getPipelineByName",
-          context: DatabricksPipelinesService.name,
           pipelineId: targetPipeline.pipeline_id,
         });
 
@@ -237,7 +230,6 @@ export class DatabricksPipelinesService {
               msg: "Error getting pipeline",
               errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
               operation: "getPipelineByName",
-              context: DatabricksPipelinesService.name,
               error,
             });
             return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
@@ -282,7 +274,6 @@ export class DatabricksPipelinesService {
         this.logger.debug({
           msg: "Getting Databricks pipeline",
           operation: "getPipelineById",
-          context: DatabricksPipelinesService.name,
           pipelineId: params.pipelineId,
         });
 
@@ -314,7 +305,6 @@ export class DatabricksPipelinesService {
               msg: "Error getting pipeline",
               errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
               operation: "getPipelineById",
-              context: DatabricksPipelinesService.name,
               error,
             });
             return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
@@ -332,7 +322,6 @@ export class DatabricksPipelinesService {
           msg: "Failed to get Databricks pipeline",
           errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
           operation: "getPipelineById",
-          context: DatabricksPipelinesService.name,
           error,
         });
         return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
@@ -363,7 +352,6 @@ export class DatabricksPipelinesService {
         this.logger.debug({
           msg: "Starting update for Databricks pipeline",
           operation: "startPipelineUpdate",
-          context: DatabricksPipelinesService.name,
           pipelineId: params.pipelineId,
         });
 
@@ -418,7 +406,6 @@ export class DatabricksPipelinesService {
               msg: "Error starting pipeline update",
               errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
               operation: "startPipelineUpdate",
-              context: DatabricksPipelinesService.name,
               error,
             });
             return apiErrorMapper(

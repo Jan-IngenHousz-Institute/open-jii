@@ -23,7 +23,6 @@ export class RemoveExperimentMemberUseCase {
     this.logger.log({
       msg: "Removing member from experiment",
       operation: "remove-experiment-member",
-      context: RemoveExperimentMemberUseCase.name,
       experimentId,
       memberId,
       userId: currentUserId,
@@ -47,7 +46,6 @@ export class RemoveExperimentMemberUseCase {
           this.logger.warn({
             msg: "Attempt to remove member from non-existent experiment",
             operation: "remove-experiment-member",
-            context: RemoveExperimentMemberUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -57,7 +55,6 @@ export class RemoveExperimentMemberUseCase {
           this.logger.warn({
             msg: "Attempt to remove member from archived experiment",
             operation: "remove-experiment-member",
-            context: RemoveExperimentMemberUseCase.name,
             experimentId,
             userId: currentUserId,
           });
@@ -68,7 +65,6 @@ export class RemoveExperimentMemberUseCase {
           this.logger.warn({
             msg: "User is not a member of experiment",
             operation: "remove-experiment-member",
-            context: RemoveExperimentMemberUseCase.name,
             experimentId,
             userId: currentUserId,
           });
@@ -78,7 +74,6 @@ export class RemoveExperimentMemberUseCase {
         this.logger.debug({
           msg: "Fetching members for experiment",
           operation: "remove-experiment-member",
-          context: RemoveExperimentMemberUseCase.name,
           experimentId,
         });
         // Check if user has admin permission
@@ -93,7 +88,6 @@ export class RemoveExperimentMemberUseCase {
             this.logger.warn({
               msg: "User attempted to remove member without admin privileges",
               operation: "remove-experiment-member",
-              context: RemoveExperimentMemberUseCase.name,
               experimentId,
               userId: currentUserId,
             });
@@ -106,7 +100,6 @@ export class RemoveExperimentMemberUseCase {
             this.logger.warn({
               msg: "Attempt to remove non-existent member from experiment",
               operation: "remove-experiment-member",
-              context: RemoveExperimentMemberUseCase.name,
               experimentId,
               memberId,
             });
@@ -128,7 +121,6 @@ export class RemoveExperimentMemberUseCase {
               this.logger.warn({
                 msg: "User attempted to remove the last admin from experiment",
                 operation: "remove-experiment-member",
-                context: RemoveExperimentMemberUseCase.name,
                 experimentId,
                 memberId,
                 userId: currentUserId,
@@ -142,7 +134,6 @@ export class RemoveExperimentMemberUseCase {
           this.logger.debug({
             msg: "Removing member from experiment",
             operation: "remove-experiment-member",
-            context: RemoveExperimentMemberUseCase.name,
             experimentId,
             memberId,
           });
@@ -152,7 +143,6 @@ export class RemoveExperimentMemberUseCase {
           this.logger.log({
             msg: "Successfully removed member from experiment",
             operation: "remove-experiment-member",
-            context: RemoveExperimentMemberUseCase.name,
             experimentId,
             memberId,
             status: "success",

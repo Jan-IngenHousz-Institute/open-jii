@@ -23,7 +23,6 @@ export class RemoveExperimentProtocolUseCase {
     this.logger.log({
       msg: "Removing protocol from experiment",
       operation: "removeExperimentProtocol",
-      context: RemoveExperimentProtocolUseCase.name,
       experimentId,
       protocolId,
       userId: currentUserId,
@@ -62,7 +61,6 @@ export class RemoveExperimentProtocolUseCase {
             msg: "Failed to fetch protocols for experiment",
             errorCode: ErrorCodes.EXPERIMENT_PROTOCOLS_REMOVE_FAILED,
             operation: "removeExperimentProtocol",
-            context: RemoveExperimentProtocolUseCase.name,
             experimentId,
           });
           return failure(AppError.internal("Failed to fetch experiment protocols"));

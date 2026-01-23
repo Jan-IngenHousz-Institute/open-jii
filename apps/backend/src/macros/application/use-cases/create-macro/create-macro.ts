@@ -19,7 +19,6 @@ export class CreateMacroUseCase {
     this.logger.log({
       msg: "Creating macro",
       operation: "createMacro",
-      context: CreateMacroUseCase.name,
       language: data.language,
       userId,
     });
@@ -44,7 +43,6 @@ export class CreateMacroUseCase {
         msg: "Failed to create macro in database",
         errorCode: ErrorCodes.MACRO_CREATE_FAILED,
         operation: "createMacro",
-        context: CreateMacroUseCase.name,
         userId,
       });
       return failure(AppError.internal("Failed to create macro"));
@@ -63,7 +61,6 @@ export class CreateMacroUseCase {
         msg: "Failed to upload macro code to Databricks",
         errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
         operation: "createMacro",
-        context: CreateMacroUseCase.name,
         macroId: macro.id,
         userId,
         error: databricksResult.error.message,
@@ -78,7 +75,6 @@ export class CreateMacroUseCase {
     this.logger.log({
       msg: "Macro created successfully",
       operation: "createMacro",
-      context: CreateMacroUseCase.name,
       macroId: macro.id,
       userId,
       status: "success",

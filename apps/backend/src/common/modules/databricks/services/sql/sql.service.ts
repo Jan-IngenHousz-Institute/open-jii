@@ -110,7 +110,6 @@ export class DatabricksSqlService {
             msg: "Error executing SQL query",
             errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
             operation: "executeSqlQuery",
-            context: DatabricksSqlService.name,
             error,
           });
           throw error instanceof AppError
@@ -125,7 +124,6 @@ export class DatabricksSqlService {
           msg: "Failed to execute SQL query",
           errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
           operation: "executeSqlQuery",
-          context: DatabricksSqlService.name,
           error,
         });
         return apiErrorMapper(`Databricks SQL query execution: ${getAxiosErrorMessage(error)}`);
@@ -186,7 +184,6 @@ export class DatabricksSqlService {
           msg: "Error polling SQL statement execution",
           errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
           operation: "pollStatementExecution",
-          context: DatabricksSqlService.name,
           error,
         });
         return failure(

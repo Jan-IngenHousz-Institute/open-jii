@@ -35,7 +35,6 @@ export class UserController {
         this.logger.log({
           msg: "User deleted",
           operation: "deleteUser",
-          context: UserController.name,
           userId: params.id,
           status: "success",
         });
@@ -67,7 +66,6 @@ export class UserController {
         this.logger.log({
           msg: "Users searched",
           operation: "searchUsers",
-          context: UserController.name,
           userId: session.user.id,
           resultCount: users.length,
           status: "success",
@@ -96,7 +94,6 @@ export class UserController {
         this.logger.log({
           msg: "User retrieved",
           operation: "getUser",
-          context: UserController.name,
           userId: params.id,
           status: "success",
         });
@@ -118,7 +115,6 @@ export class UserController {
         this.logger.log({
           msg: "User profile created",
           operation: "createUserProfile",
-          context: UserController.name,
           userId: session.user.id,
           status: "success",
         });
@@ -142,7 +138,6 @@ export class UserController {
         this.logger.log({
           msg: "User profile retrieved",
           operation: "getUserProfile",
-          context: UserController.name,
           userId: params.id,
           status: "success",
         });

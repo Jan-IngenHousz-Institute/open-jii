@@ -19,7 +19,6 @@ export class ListExperimentMembersUseCase {
     this.logger.log({
       msg: "Listing experiment members",
       operation: "list-experiment-members",
-      context: ListExperimentMembersUseCase.name,
       experimentId,
       userId,
     });
@@ -40,7 +39,6 @@ export class ListExperimentMembersUseCase {
           this.logger.warn({
             msg: "Attempt to list members of non-existent experiment",
             operation: "list-experiment-members",
-            context: ListExperimentMembersUseCase.name,
             experimentId,
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -50,7 +48,6 @@ export class ListExperimentMembersUseCase {
           this.logger.warn({
             msg: "User attempted to access experiment members without proper permissions",
             operation: "list-experiment-members",
-            context: ListExperimentMembersUseCase.name,
             experimentId,
             userId,
           });
@@ -60,7 +57,6 @@ export class ListExperimentMembersUseCase {
         this.logger.debug({
           msg: "Fetching members for experiment",
           operation: "list-experiment-members",
-          context: ListExperimentMembersUseCase.name,
           experimentId,
         });
         // Return the members
@@ -69,7 +65,6 @@ export class ListExperimentMembersUseCase {
         this.logger.debug({
           msg: "Successfully retrieved members for experiment",
           operation: "list-experiment-members",
-          context: ListExperimentMembersUseCase.name,
           experimentId,
           status: "success",
         });

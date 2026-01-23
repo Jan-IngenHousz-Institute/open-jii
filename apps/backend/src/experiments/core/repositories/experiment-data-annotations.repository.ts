@@ -120,7 +120,6 @@ export class ExperimentDataAnnotationsRepository {
     this.logger.debug({
       msg: "Annotation table not found, creating annotations table",
       operation: "ensureTableExists",
-      context: ExperimentDataAnnotationsRepository.name,
       experimentId,
       schemaName,
     });
@@ -186,7 +185,6 @@ export class ExperimentDataAnnotationsRepository {
     this.logger.log({
       msg: "Storing annotations",
       operation: "storeAnnotations",
-      context: ExperimentDataAnnotationsRepository.name,
       schemaName,
       annotationCount: annotations.length,
     });
@@ -270,7 +268,6 @@ export class ExperimentDataAnnotationsRepository {
     this.logger.log({
       msg: "Updating annotation",
       operation: "updateAnnotation",
-      context: ExperimentDataAnnotationsRepository.name,
       schemaName,
       annotationId,
     });
@@ -324,7 +321,6 @@ export class ExperimentDataAnnotationsRepository {
     this.logger.log({
       msg: "Deleting annotation",
       operation: "deleteAnnotation",
-      context: ExperimentDataAnnotationsRepository.name,
       schemaName,
       annotationId,
     });
@@ -362,7 +358,6 @@ export class ExperimentDataAnnotationsRepository {
     this.logger.log({
       msg: "Bulk deleting annotations",
       operation: "deleteAnnotationsBulk",
-      context: ExperimentDataAnnotationsRepository.name,
       schemaName,
       tableName,
       type,

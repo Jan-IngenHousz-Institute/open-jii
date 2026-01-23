@@ -19,7 +19,6 @@ export class UpdateExperimentUseCase {
     this.logger.log({
       msg: "Updating experiment",
       operation: "updateExperiment",
-      context: UpdateExperimentUseCase.name,
       experimentId: id,
       userId,
     });
@@ -42,7 +41,6 @@ export class UpdateExperimentUseCase {
             msg: "Attempt to update non-existent experiment",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "updateExperiment",
-            context: UpdateExperimentUseCase.name,
             experimentId: id,
           });
           return failure(AppError.notFound(`Experiment with ID ${id} not found`));
@@ -54,7 +52,6 @@ export class UpdateExperimentUseCase {
             msg: "Non-admin cannot archive experiment",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "updateExperiment",
-            context: UpdateExperimentUseCase.name,
             experimentId: id,
             userId,
           });
@@ -66,7 +63,6 @@ export class UpdateExperimentUseCase {
             msg: "User does not have access to experiment",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "updateExperiment",
-            context: UpdateExperimentUseCase.name,
             experimentId: id,
             userId,
           });
@@ -80,7 +76,6 @@ export class UpdateExperimentUseCase {
               msg: "Non-admin attempted to update archived experiment",
               errorCode: ErrorCodes.FORBIDDEN,
               operation: "updateExperiment",
-              context: UpdateExperimentUseCase.name,
               experimentId: id,
               userId,
             });
@@ -94,7 +89,6 @@ export class UpdateExperimentUseCase {
               msg: "Admin attempted to update fields other than status on archived experiment",
               errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
               operation: "updateExperiment",
-              context: UpdateExperimentUseCase.name,
               experimentId: id,
               userId,
             });
@@ -106,7 +100,6 @@ export class UpdateExperimentUseCase {
           this.logger.debug({
             msg: "Admin updating archived experiment status",
             operation: "updateExperiment",
-            context: UpdateExperimentUseCase.name,
             experimentId: id,
             userId,
           });
@@ -114,7 +107,6 @@ export class UpdateExperimentUseCase {
           this.logger.debug({
             msg: "Updating experiment",
             operation: "updateExperiment",
-            context: UpdateExperimentUseCase.name,
             experimentId: id,
           });
         }
@@ -127,7 +119,6 @@ export class UpdateExperimentUseCase {
               msg: "Failed to update experiment",
               errorCode: ErrorCodes.EXPERIMENT_UPDATE_FAILED,
               operation: "updateExperiment",
-              context: UpdateExperimentUseCase.name,
               experimentId: id,
             });
             return failure(AppError.internal(`Failed to update experiment ${id}`));
@@ -137,7 +128,6 @@ export class UpdateExperimentUseCase {
           this.logger.log({
             msg: "Experiment updated successfully",
             operation: "updateExperiment",
-            context: UpdateExperimentUseCase.name,
             experimentId: id,
             userId,
             status: "success",

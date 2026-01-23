@@ -15,7 +15,6 @@ export class GetExperimentUseCase {
     this.logger.log({
       msg: "Getting experiment",
       operation: "getExperiment",
-      context: GetExperimentUseCase.name,
       experimentId: id,
       userId,
     });
@@ -30,7 +29,6 @@ export class GetExperimentUseCase {
             msg: "Experiment not found",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "getExperiment",
-            context: GetExperimentUseCase.name,
             experimentId: id,
           });
           return failure(AppError.notFound(`Experiment with ID ${id} not found`));
@@ -43,7 +41,6 @@ export class GetExperimentUseCase {
             msg: "User does not have access to private experiment",
             errorCode: ErrorCodes.FORBIDDEN,
             operation: "getExperiment",
-            context: GetExperimentUseCase.name,
             experimentId: id,
             userId,
           });
@@ -55,7 +52,6 @@ export class GetExperimentUseCase {
         this.logger.debug({
           msg: "Experiment retrieved successfully",
           operation: "getExperiment",
-          context: GetExperimentUseCase.name,
           experimentId: id,
           userId,
           isPublic,
