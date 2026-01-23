@@ -1,25 +1,15 @@
+import { LocationClient } from "@aws-sdk/client-location";
+
 import { TestHarness } from "../../../../../test/test-harness";
 import { AwsLocationService } from "./location.service";
 
-// Mock the AWS SDK with vi.hoisted to avoid hoisting issues
-const mockSend = vi.hoisted(() => vi.fn());
+vi.mock("@aws-sdk/client-location", { spy: true });
 
-vi.mock("@aws-sdk/client-location", () => {
-  const mockLocationClient = {
-    send: mockSend,
-  };
-
-  return {
-    LocationClient: vi.fn(() => mockLocationClient),
-    SearchPlaceIndexForSuggestionsCommand: vi.fn(),
-    GetPlaceCommand: vi.fn(),
-    SearchPlaceIndexForPositionCommand: vi.fn(),
-  };
-});
-
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 describe("AwsLocationService", () => {
   const testApp = TestHarness.App;
   let service: AwsLocationService;
+  let mockSend: ReturnType<typeof vi.spyOn>;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -28,7 +18,13 @@ describe("AwsLocationService", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     service = testApp.module.get(AwsLocationService);
+    mockSend = vi.spyOn(LocationClient.prototype, "send");
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {

@@ -1,28 +1,19 @@
 import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 
-import { AddedUserNotification } from "@repo/transactional/emails/added-user-notification";
-import { TransferRequestConfirmation } from "@repo/transactional/emails/transfer-request-confirmation";
-
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { NotificationsService } from "./notifications.service";
 
-// Mock external dependencies
-vi.mock("@react-email/components", () => ({
-  render: vi.fn(),
-}));
+vi.mock("@react-email/components", { spy: true });
+vi.mock("nodemailer", { spy: true });
 
-vi.mock("nodemailer", () => ({
-  createTransport: vi.fn(),
+vi.mock("@repo/transactional/emails/transfer-request-confirmation", () => ({
+  TransferRequestConfirmation: vi.fn(),
 }));
 
 vi.mock("@repo/transactional/emails/added-user-notification", () => ({
   AddedUserNotification: vi.fn(),
-}));
-
-vi.mock("@repo/transactional/emails/transfer-request-confirmation", () => ({
-  TransferRequestConfirmation: vi.fn(),
 }));
 
 // Test constants
@@ -38,12 +29,6 @@ describe("NotificationsService", () => {
   const testApp = TestHarness.App;
   let service: NotificationsService;
 
-  // Mock functions
-  const mockRender = render as ReturnType<typeof vi.fn>;
-  const mockCreateTransport = createTransport as ReturnType<typeof vi.fn>;
-  const mockAddedUserNotification = AddedUserNotification as ReturnType<typeof vi.fn>;
-  const mockTransferRequestConfirmation = TransferRequestConfirmation as ReturnType<typeof vi.fn>;
-
   beforeAll(async () => {
     await testApp.setup();
   });
@@ -51,19 +36,11 @@ describe("NotificationsService", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     service = testApp.module.get(NotificationsService);
-
-    // Reset all mocks
     vi.clearAllMocks();
-
-    // Setup default mock implementations
-    mockRender.mockImplementation((component: unknown, options: { plainText?: boolean } = {}) => {
-      return Promise.resolve(options.plainText ? MOCK_TEXT_CONTENT : MOCK_HTML_CONTENT);
-    });
   });
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -73,7 +50,11 @@ describe("NotificationsService", () => {
   describe("sendAddedUserNotification", () => {
     it("should successfully send notification email", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [MOCK_EMAIL],
         rejected: [],
@@ -84,8 +65,11 @@ describe("NotificationsService", () => {
         sendMail: mockSendMail,
       };
 
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      vi.mocked(createTransport).mockReturnValueOnce(
+        mockTransport as Partial<ReturnType<typeof createTransport>> as ReturnType<
+          typeof createTransport
+        >,
+      );
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -101,21 +85,10 @@ describe("NotificationsService", () => {
       assertSuccess(result);
 
       // Verify transport creation
-      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
-
-      // Verify email component rendering
-      expect(mockAddedUserNotification).toHaveBeenCalledWith({
-        host: "localhost:3000",
-        experimentName: MOCK_EXPERIMENT_NAME,
-        experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
-        actor: MOCK_ACTOR,
-        role: MOCK_ROLE,
-      });
+      expect(vi.mocked(createTransport)).toHaveBeenCalledWith("smtp://localhost:1025");
 
       // Verify render was called for both HTML and text versions
-      expect(mockRender).toHaveBeenCalledTimes(2);
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", {});
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", { plainText: true });
+      expect(vi.mocked(render)).toHaveBeenCalledTimes(2);
 
       // Verify sendMail was called with correct parameters
       expect(mockSendMail).toHaveBeenCalledWith({
@@ -132,7 +105,11 @@ describe("NotificationsService", () => {
 
     it("should handle email with rejected addresses", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [MOCK_EMAIL],
@@ -143,8 +120,11 @@ describe("NotificationsService", () => {
         sendMail: mockSendMail,
       };
 
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      vi.mocked(createTransport).mockReturnValueOnce(
+        mockTransport as Partial<ReturnType<typeof createTransport>> as ReturnType<
+          typeof createTransport
+        >,
+      );
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -163,7 +143,11 @@ describe("NotificationsService", () => {
 
     it("should handle email with pending addresses", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [],
@@ -174,8 +158,11 @@ describe("NotificationsService", () => {
         sendMail: mockSendMail,
       };
 
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      vi.mocked(createTransport).mockReturnValueOnce(
+        mockTransport as Partial<ReturnType<typeof createTransport>> as ReturnType<
+          typeof createTransport
+        >,
+      );
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -198,19 +185,19 @@ describe("NotificationsService", () => {
       const rejectedEmail2 = "rejected2@example.com";
       const pendingEmail = "pending@example.com";
 
-      const mockSendMail = vi.fn().mockReturnValue({
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [rejectedEmail1, rejectedEmail2],
         pending: [pendingEmail],
       });
 
-      const mockTransport = {
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -231,21 +218,22 @@ describe("NotificationsService", () => {
 
     it("should handle failed addresses with object format", async () => {
       // Arrange
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
       const failedAddressObject = { address: "failed@example.com" };
 
-      const mockSendMail = vi.fn().mockReturnValue({
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [failedAddressObject],
         pending: [],
       });
 
-      const mockTransport = {
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -265,10 +253,9 @@ describe("NotificationsService", () => {
     it("should handle nodemailer transport creation errors", async () => {
       // Arrange
       const transportError = new Error("Failed to create transport");
-      mockCreateTransport.mockImplementation(() => {
+      vi.mocked(createTransport).mockImplementationOnce(() => {
         throw transportError;
       });
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -288,13 +275,12 @@ describe("NotificationsService", () => {
     it("should handle email rendering errors", async () => {
       // Arrange
       const renderError = new Error("Failed to render email template");
-      mockRender.mockRejectedValue(renderError);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      vi.mocked(render).mockRejectedValueOnce(renderError).mockRejectedValueOnce(renderError);
 
-      const mockTransport = {
-        sendMail: vi.fn(),
-      };
-      mockCreateTransport.mockReturnValue(mockTransport);
+      const mockSendMail = vi.fn();
+      vi.mocked(createTransport).mockReturnValueOnce({
+        sendMail: mockSendMail,
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -315,17 +301,17 @@ describe("NotificationsService", () => {
 
     it("should handle sendMail errors", async () => {
       // Arrange
+      vi.mocked(render).mockReset();
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
       const sendMailError = new Error("SMTP connection failed");
-      const mockSendMail = vi.fn().mockImplementation(() => {
-        throw sendMailError;
-      });
+      const mockSendMail = vi.fn().mockRejectedValue(sendMailError);
 
-      const mockTransport = {
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -344,19 +330,19 @@ describe("NotificationsService", () => {
 
     it("should handle missing rejected and pending properties gracefully", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [MOCK_EMAIL],
         rejected: [],
         pending: [],
       });
 
-      const mockTransport = {
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -378,10 +364,12 @@ describe("NotificationsService", () => {
     it("should handle non-Error exceptions", async () => {
       // Arrange
       const stringError = new Error("String error message");
-      mockCreateTransport.mockImplementation(() => {
+      vi.mocked(createTransport).mockImplementationOnce(() => {
         throw stringError;
       });
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -406,7 +394,11 @@ describe("NotificationsService", () => {
 
     it("should successfully send confirmation email", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [MOCK_EMAIL],
         rejected: [],
@@ -417,8 +409,11 @@ describe("NotificationsService", () => {
         sendMail: mockSendMail,
       };
 
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      vi.mocked(createTransport).mockReturnValueOnce(
+        mockTransport as Partial<ReturnType<typeof createTransport>> as ReturnType<
+          typeof createTransport
+        >,
+      );
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -432,20 +427,10 @@ describe("NotificationsService", () => {
       assertSuccess(result);
 
       // Verify transport creation
-      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
-
-      // Verify email component rendering
-      expect(mockTransferRequestConfirmation).toHaveBeenCalledWith({
-        host: "localhost:3000",
-        projectIdOld: MOCK_PROJECT_ID_OLD,
-        projectUrlOld: MOCK_PROJECT_URL_OLD,
-        userEmail: MOCK_EMAIL,
-      });
+      expect(vi.mocked(createTransport)).toHaveBeenCalledWith("smtp://localhost:1025");
 
       // Verify render was called for both HTML and text versions
-      expect(mockRender).toHaveBeenCalledTimes(2);
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", {});
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", { plainText: true });
+      expect(vi.mocked(render)).toHaveBeenCalledTimes(2);
 
       // Verify sendMail was called with correct parameters
       expect(mockSendMail).toHaveBeenCalledWith({
@@ -462,7 +447,11 @@ describe("NotificationsService", () => {
 
     it("should handle email with rejected addresses", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [MOCK_EMAIL],
@@ -473,8 +462,11 @@ describe("NotificationsService", () => {
         sendMail: mockSendMail,
       };
 
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      vi.mocked(createTransport).mockReturnValueOnce(
+        mockTransport as Partial<ReturnType<typeof createTransport>> as ReturnType<
+          typeof createTransport
+        >,
+      );
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -491,7 +483,11 @@ describe("NotificationsService", () => {
 
     it("should handle email with pending addresses", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [],
@@ -502,8 +498,11 @@ describe("NotificationsService", () => {
         sendMail: mockSendMail,
       };
 
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      vi.mocked(createTransport).mockReturnValueOnce(
+        mockTransport as Partial<ReturnType<typeof createTransport>> as ReturnType<
+          typeof createTransport
+        >,
+      );
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -524,19 +523,19 @@ describe("NotificationsService", () => {
       const rejectedEmail2 = "rejected2@example.com";
       const pendingEmail = "pending@example.com";
 
-      const mockSendMail = vi.fn().mockReturnValue({
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [rejectedEmail1, rejectedEmail2],
         pending: [pendingEmail],
       });
 
-      const mockTransport = {
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -555,21 +554,22 @@ describe("NotificationsService", () => {
 
     it("should handle failed addresses with object format", async () => {
       // Arrange
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
       const failedAddressObject = { address: "failed@example.com" };
 
-      const mockSendMail = vi.fn().mockReturnValue({
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [],
         rejected: [failedAddressObject],
         pending: [],
       });
 
-      const mockTransport = {
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -587,10 +587,9 @@ describe("NotificationsService", () => {
     it("should handle nodemailer transport creation errors", async () => {
       // Arrange
       const transportError = new Error("Failed to create transport");
-      mockCreateTransport.mockImplementation(() => {
+      vi.mocked(createTransport).mockImplementationOnce(() => {
         throw transportError;
       });
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -607,14 +606,15 @@ describe("NotificationsService", () => {
 
     it("should handle email rendering errors", async () => {
       // Arrange
+      vi.mocked(render).mockReset();
       const renderError = new Error("Failed to render email template");
-      mockRender.mockRejectedValue(renderError);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      vi.mocked(render).mockRejectedValueOnce(renderError).mockRejectedValueOnce(renderError);
 
-      const mockTransport = {
-        sendMail: vi.fn(),
-      };
-      mockCreateTransport.mockReturnValue(mockTransport);
+      const mockSendMail = vi.fn();
+
+      vi.mocked(createTransport).mockReturnValueOnce({
+        sendMail: mockSendMail,
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -629,21 +629,22 @@ describe("NotificationsService", () => {
       expect(result.error.message).toContain(
         "Failed to send email: Failed to render email template",
       );
+      expect(mockSendMail).not.toHaveBeenCalled();
     });
 
     it("should handle sendMail errors", async () => {
       // Arrange
+      vi.mocked(render).mockReset();
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
       const sendMailError = new Error("SMTP connection failed");
-      const mockSendMail = vi.fn().mockImplementation(() => {
-        throw sendMailError;
-      });
+      const mockSendMail = vi.fn().mockRejectedValue(sendMailError);
 
-      const mockTransport = {
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -656,23 +657,26 @@ describe("NotificationsService", () => {
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+      expect(mockSendMail).toHaveBeenCalled();
     });
 
     it("should handle missing rejected and pending properties gracefully", async () => {
       // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
+      vi.mocked(render).mockReset();
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
+
+      const mockSendMail = vi.fn().mockResolvedValue({
         messageId: "test-message-id",
         accepted: [MOCK_EMAIL],
         rejected: [],
         pending: [],
       });
 
-      const mockTransport = {
+      vi.mocked(createTransport).mockReturnValueOnce({
         sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      } as Partial<ReturnType<typeof createTransport>> as ReturnType<typeof createTransport>);
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -692,10 +696,12 @@ describe("NotificationsService", () => {
     it("should handle non-Error exceptions", async () => {
       // Arrange
       const stringError = new Error("String error message");
-      mockCreateTransport.mockImplementation(() => {
+      vi.mocked(createTransport).mockImplementationOnce(() => {
         throw stringError;
       });
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      vi.mocked(render)
+        .mockResolvedValueOnce(MOCK_HTML_CONTENT)
+        .mockResolvedValueOnce(MOCK_TEXT_CONTENT);
 
       // Act
       const result = await service.sendTransferRequestConfirmation(

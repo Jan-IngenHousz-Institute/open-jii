@@ -17,6 +17,7 @@ describe("AnalyticsAdapter", () => {
     await testApp.beforeEach();
     adapter = testApp.module.get(AnalyticsAdapter);
     flagsService = testApp.module.get(FlagsService);
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {

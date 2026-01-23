@@ -13,15 +13,33 @@ vi.mock("~/env", () => ({
   },
 }));
 
-// Mock posthog-node - create mock instance outside so it's consistent
-const mockPostHogInstance = {
-  isFeatureEnabled: vi.fn(),
-  shutdown: vi.fn(),
-};
+// Mock posthog-node completely
+vi.mock("posthog-node", () => {
+  return {
+    PostHog: vi.fn(),
+  };
+});
 
-vi.mock("posthog-node", () => ({
-  PostHog: vi.fn(() => mockPostHogInstance),
-}));
+// Get the mocked constructor
+const MockedPostHog = vi.mocked(PostHog);
+
+// Create mock functions
+const mockIsFeatureEnabled = vi.fn();
+const mockShutdown = vi.fn();
+
+// Set up the mock implementation using a proper constructor function
+MockedPostHog.mockImplementation(function MockPostHogInstance() {
+  return {
+    isFeatureEnabled: mockIsFeatureEnabled,
+    shutdown: mockShutdown,
+  };
+});
+
+// Create interface for tests
+const mockPostHogInstance = {
+  isFeatureEnabled: mockIsFeatureEnabled,
+  shutdown: mockShutdown,
+};
 
 describe("posthog-server", () => {
   beforeEach(async () => {
@@ -147,7 +165,7 @@ describe("posthog-server", () => {
       await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
       // PostHog constructor should only be called once (singleton)
-      expect(PostHog).toHaveBeenCalledTimes(1);
+      expect(MockedPostHog).toHaveBeenCalledTimes(1);
       // But isFeatureEnabled should be called three times
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledTimes(3);
     });
@@ -179,14 +197,14 @@ describe("posthog-server", () => {
 
       // Create and use client
       await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
-      expect(PostHog).toHaveBeenCalledTimes(1);
+      expect(MockedPostHog).toHaveBeenCalledTimes(1);
 
       // Shutdown
       await shutdownPostHog();
 
       // Use again - should create new instance
       await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
-      expect(PostHog).toHaveBeenCalledTimes(2);
+      expect(MockedPostHog).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -196,7 +214,7 @@ describe("posthog-server", () => {
 
       await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
-      expect(PostHog).toHaveBeenCalledWith("phc_test_key_123", {
+      expect(MockedPostHog).toHaveBeenCalledWith("phc_test_key_123", {
         host: "https://eu.i.posthog.com",
         flushAt: 20,
         flushInterval: 10000,
