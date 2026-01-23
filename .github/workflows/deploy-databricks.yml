@@ -38,7 +38,8 @@ jobs:
         run: databricks bundle validate -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_CLIENT_SECRET }}
 
       - name: Deploy bundle
         working-directory: apps/data
@@ -47,7 +48,8 @@ jobs:
           databricks bundle deploy -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_CLIENT_SECRET }}
 
       - name: Deployment summary
         run: |
