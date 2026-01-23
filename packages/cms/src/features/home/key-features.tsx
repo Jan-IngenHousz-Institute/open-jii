@@ -4,10 +4,10 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import Image from "next/image";
 import React from "react";
 
 import type { PageHomeFeaturesFieldsFragment } from "../../lib/__generated/sdk";
+import { CtfImage } from "../contentful";
 
 interface HomeKeyFeaturesProps {
   featuresData: PageHomeFeaturesFieldsFragment;
@@ -53,14 +53,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
               className="flex h-20 w-20 shrink-0 items-center justify-center"
               {...featureInspectorProps({ fieldId: "icon" })}
             >
-              {feature.icon?.url && (
-                <Image
-                  src={feature.icon.url}
-                  alt={feature.icon.title ?? "Feature icon"}
-                  width={96}
-                  height={96}
-                />
-              )}
+              {feature.icon && <CtfImage {...feature.icon} />}
             </div>
 
             {/* Text content */}
@@ -108,14 +101,14 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
             </div>
 
             {/* RIGHT BIG IMAGE */}
-            {currentFeatures.image?.url && (
-              <Image
-                src={currentFeatures.image.url}
-                alt={currentFeatures.image.title ?? "Product feature screenshot"}
-                width={600}
-                height={600}
-                className="lg:w-5xl relative -z-20 min-w-full max-w-xl rounded-xl shadow-xl ring-1 ring-white/10 lg:row-span-4 lg:max-w-none"
-                {...inspectorProps({ fieldId: "image" })}
+            {currentFeatures.image && (
+              <CtfImage
+                {...currentFeatures.image}
+                nextImageProps={{
+                  className:
+                    "lg:w-5xl relative -z-20 min-w-full max-w-xl rounded-xl shadow-xl ring-1 ring-white/10 lg:row-span-4 lg:max-w-none",
+                  ...inspectorProps({ fieldId: "image" }),
+                }}
               />
             )}
 

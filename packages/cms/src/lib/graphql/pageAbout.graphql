@@ -20,13 +20,7 @@ fragment PageAboutFields on PageAbout {
     }
   }
   image {
-    url
-    title
-    sys {
-      id
-      publishedAt
-      environmentId
-    }
+    ...ImageFields
   }
 }
 

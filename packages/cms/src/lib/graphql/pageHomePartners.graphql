@@ -27,13 +27,7 @@ fragment PartnerFields on ComponentPartner {
     environmentId
   }
   logo {
-    url
-    title
-    sys {
-      id
-      publishedAt
-      environmentId
-    }
+    ...ImageFields
   }
   subtitle
   url
