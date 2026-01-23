@@ -290,6 +290,29 @@ jobs:
           echo "prev_version=$PREV_VERSION" >> $GITHUB_OUTPUT
           echo "Current alias version: $PREV_VERSION"
 
+      - name: Wait Until Lambda Is Active
+        id: wait-lambda-active
+        run: |
+          FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
+          NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
+          echo "Waiting for Lambda $FUNCTION_NAME version $NEW_VERSION to become Active..."
+          MAX_ATTEMPTS=30
+          SLEEP_SECONDS=2
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            STATE=$(aws lambda get-function-configuration --function-name "$FUNCTION_NAME" --qualifier "$NEW_VERSION" --query 'State' --output text)
+            echo "Current state: $STATE"
+            if [[ "$STATE" == "Active" ]]; then
+              echo "Lambda is Active."
+              break
+            fi
+            sleep $SLEEP_SECONDS
+          done
+          if [[ "$STATE" != "Active" ]]; then
+            WAITED=$((MAX_ATTEMPTS * SLEEP_SECONDS))
+            echo "❌ Lambda did not become Active after waiting $WAITED seconds."
+            exit 1
+          fi
+
       - name: Health Check New Version (before updating alias)
         id: healthcheck-server
         run: |
