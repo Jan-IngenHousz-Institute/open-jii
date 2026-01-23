@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
+import { usePathname } from "next/navigation";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { enrichPathSegments } from "~/app/actions/breadcrumbs";
@@ -18,7 +19,7 @@ vi.mock("~/app/actions/breadcrumbs", () => ({
 }));
 
 const mockEnrichPathSegments = vi.mocked(enrichPathSegments);
-const mockUsePathname = vi.fn();
+const mockUsePathname = vi.mocked(usePathname);
 
 describe("useBreadcrumbs", () => {
   let queryClient: QueryClient;
