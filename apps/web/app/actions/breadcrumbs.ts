@@ -50,8 +50,6 @@ async function fetchEntityName(
   type: EntityInfo["type"],
 ): Promise<{ name: string } | null> {
   try {
-    console.log(`[fetchEntityName] Fetching ${type} with id: ${id}`);
-
     const client = await getClient();
 
     switch (type) {
@@ -60,10 +58,7 @@ async function fetchEntityName(
           params: { id },
         });
 
-        console.log(`[fetchEntityName] experiment response status:`, response.status);
-
         if (response.status === 200) {
-          console.log(`[fetchEntityName] experiment name:`, response.body.experiment.name);
           return { name: response.body.experiment.name };
         }
         break;
@@ -74,10 +69,7 @@ async function fetchEntityName(
           params: { id },
         });
 
-        console.log(`[fetchEntityName] macro response status:`, response.status);
-
         if (response.status === 200) {
-          console.log(`[fetchEntityName] macro name:`, response.body.name);
           return { name: response.body.name };
         }
         break;
@@ -88,18 +80,14 @@ async function fetchEntityName(
           params: { id },
         });
 
-        console.log(`[fetchEntityName] protocol response status:`, response.status);
-        console.log(`[fetchEntityName] protocol response body:`, response.body);
-
         if (response.status === 200) {
-          console.log(`[fetchEntityName] protocol name:`, response.body.name);
           return { name: response.body.name };
         }
         break;
       }
     }
   } catch (error) {
-    console.error(`Failed to fetch ${type} name for ${id}:`, error);
+    console.error("Failed to fetch %s name for %s:", type, id, error);
   }
 
   return null;
@@ -150,11 +138,9 @@ export async function enrichPathSegments(
 
     // Check if this segment is an entity ID based on position
     const entityType = detectEntityType(displaySegments, i);
-    console.log(`[enrichPathSegments] segment ${i}: "${segment}", entityType:`, entityType);
 
     if (entityType) {
       const entityInfo = await fetchEntityName(segment, entityType);
-      console.log(`[enrichPathSegments] fetched entity info for "${segment}":`, entityInfo);
       if (entityInfo) {
         title = entityInfo.name;
       }
@@ -168,8 +154,6 @@ export async function enrichPathSegments(
       href,
     });
   }
-
-  console.log("[enrichPathSegments] final enrichedSegments:", enrichedSegments);
 
   return enrichedSegments;
 }
