@@ -34,12 +34,8 @@
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "better-auth": "^1.4.12",
-    "next": "catalog:",
     "nodemailer": "catalog:",
-    "qrcode": "^1.5.4",
-    "react": "catalog:react19",
-    "react-dom": "catalog:react19",
-    "react-email": "catalog:react-email"
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
