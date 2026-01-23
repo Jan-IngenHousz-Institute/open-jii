@@ -6,7 +6,6 @@ import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 
-import { BreadcrumbProvider } from "../../../components/navigation/breadcrumb-context";
 import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
 import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
 
@@ -44,19 +43,17 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <BreadcrumbProvider>
-        <NavigationSidebarWrapper locale={locale} />
-        <SidebarInset>
-          <NavigationTopbar locale={locale} user={session.user} />
-          <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
-            <div className="mx-auto w-full max-w-7xl">
-              <Breadcrumbs locale={locale} />
-              {children}
-            </div>
+      <NavigationSidebarWrapper locale={locale} />
+      <SidebarInset>
+        <NavigationTopbar locale={locale} user={session.user} />
+        <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
+          <div className="mx-auto w-full max-w-7xl">
+            <Breadcrumbs locale={locale} />
+            {children}
           </div>
-        </SidebarInset>
-        <Toaster />
-      </BreadcrumbProvider>
+        </div>
+      </SidebarInset>
+      <Toaster />
     </SidebarProvider>
   );
 }

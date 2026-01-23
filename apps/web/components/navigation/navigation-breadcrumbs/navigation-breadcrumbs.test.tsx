@@ -1,9 +1,17 @@
+import { useBreadcrumbs } from "@/hooks/breadcrumbs/useBreadcrumbs";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
-import { usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { Breadcrumbs } from "./navigation-breadcrumbs";
+
+// Mock useBreadcrumbs hook
+vi.mock("@/hooks/breadcrumbs/useBreadcrumbs", () => ({
+  useBreadcrumbs: vi.fn(),
+}));
+
+const mockUseBreadcrumbs = vi.mocked(useBreadcrumbs);
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -37,65 +45,95 @@ vi.mock("@repo/ui/components", () => ({
 }));
 
 describe("Breadcrumbs", () => {
-  const mockUsePathname = usePathname as ReturnType<typeof vi.fn>;
+  let queryClient: QueryClient;
+
+  const renderWithQueryClient = (component: React.ReactElement) => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders nothing on platform root", () => {
-    mockUsePathname.mockReturnValue("/en/platform");
+  it("renders nothing on platform root and first-level routes", () => {
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [],
+    } as unknown as ReturnType<typeof useBreadcrumbs>);
 
-    const { container } = render(<Breadcrumbs locale="en" />);
-
-    // Component returns null when on platform root (no sub-paths)
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("does not render breadcrumbs for first-level platform routes", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments");
-
-    const { container } = render(<Breadcrumbs locale="en" />);
+    const { container } = renderWithQueryClient(<Breadcrumbs locale="en" />);
 
     expect(container.firstChild).toBeNull();
   });
 
   it("renders breadcrumb trail for nested path", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments/new");
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+        { segment: "new", title: "new", href: "/en/platform/experiments/new" },
+      ],
+    } as unknown as ReturnType<typeof useBreadcrumbs>);
 
-    render(<Breadcrumbs locale="en" />);
+    renderWithQueryClient(<Breadcrumbs locale="en" />);
 
+    // Component translates the segments using getTranslatedTitle
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
     expect(screen.getByText("breadcrumbs.new")).toBeInTheDocument();
   });
 
-  it("uses name mapping for UUID segments", () => {
-    mockUsePathname.mockReturnValue(
-      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-    );
+  it("displays name for UUID segments", () => {
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+        {
+          segment: "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+          title: "My Experiment",
+          href: "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+        },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
 
-    render(<Breadcrumbs locale="en" />);
+    renderWithQueryClient(<Breadcrumbs locale="en" />);
 
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
-    // UUID with mapping displays the mapped name
     expect(screen.getByText("My Experiment")).toBeInTheDocument();
   });
 
   it("capitalizes unknown path segments", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments/unknown-route");
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+        {
+          segment: "unknown-route",
+          title: "Unknown Route",
+          href: "/en/platform/experiments/unknown-route",
+        },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
 
-    render(<Breadcrumbs locale="en" />);
+    renderWithQueryClient(<Breadcrumbs locale="en" />);
 
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
     expect(screen.getByText("Unknown Route")).toBeInTheDocument();
   });
 
   it("generates correct href for each breadcrumb level", () => {
-    mockUsePathname.mockReturnValue(
-      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-    );
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+        {
+          segment: "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+          title: "My Experiment",
+          href: "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+        },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
 
-    render(<Breadcrumbs locale="en" />);
+    renderWithQueryClient(<Breadcrumbs locale="en" />);
 
     const links = screen.getAllByRole("link");
     expect(links[0]).toHaveAttribute("href", "/en/platform/experiments");
@@ -106,18 +144,28 @@ describe("Breadcrumbs", () => {
   });
 
   it("handles different locales correctly", () => {
-    mockUsePathname.mockReturnValue("/de/platform/experiments/new");
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/de/platform/experiments" },
+        { segment: "new", title: "new", href: "/de/platform/experiments/new" },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
 
-    render(<Breadcrumbs locale="de" />);
+    renderWithQueryClient(<Breadcrumbs locale="de" />);
 
     const experimentsLink = screen.getByText("breadcrumbs.experiments").closest("a");
     expect(experimentsLink).toHaveAttribute("href", "/de/platform/experiments");
   });
 
   it("renders separators between breadcrumb items", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments/new");
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+        { segment: "new", title: "new", href: "/en/platform/experiments/new" },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
 
-    const { container } = render(<Breadcrumbs locale="en" />);
+    const { container } = renderWithQueryClient(<Breadcrumbs locale="en" />);
 
     const separators = container.querySelectorAll("span");
     // Should have 1 separator (between Experiments->New)
@@ -125,23 +173,47 @@ describe("Breadcrumbs", () => {
   });
 
   it("updates when pathname changes", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments/new");
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+        { segment: "new", title: "new", href: "/en/platform/experiments/new" },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
 
-    const { rerender } = render(<Breadcrumbs locale="en" />);
+    const { rerender } = renderWithQueryClient(<Breadcrumbs locale="en" />);
+
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
 
     // Simulate navigation
-    mockUsePathname.mockReturnValue("/en/platform/protocols/new");
-    rerender(<Breadcrumbs locale="en" />);
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "protocols", title: "protocols", href: "/en/platform/protocols" },
+        { segment: "new", title: "new", href: "/en/platform/protocols/new" },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <Breadcrumbs locale="en" />
+      </QueryClientProvider>,
+    );
 
     expect(screen.getByText("breadcrumbs.protocols")).toBeInTheDocument();
     expect(screen.queryByText("breadcrumbs.experiments")).not.toBeInTheDocument();
   });
 
   it("handles missing translationKey by returning capitalized segment", () => {
-    mockUsePathname.mockReturnValue("/en/platform/experiments/custom-page");
+    mockUseBreadcrumbs.mockReturnValue({
+      data: [
+        { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+        {
+          segment: "custom-page",
+          title: "Custom Page",
+          href: "/en/platform/experiments/custom-page",
+        },
+      ],
+    } as ReturnType<typeof useBreadcrumbs>);
 
-    render(<Breadcrumbs locale="en" />);
+    renderWithQueryClient(<Breadcrumbs locale="en" />);
 
     expect(screen.getByText("Custom Page")).toBeInTheDocument();
   });

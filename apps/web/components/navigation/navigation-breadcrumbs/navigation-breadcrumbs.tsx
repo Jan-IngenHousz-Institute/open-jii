@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useBreadcrumbs } from "@/hooks/breadcrumbs/useBreadcrumbs";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -12,14 +12,9 @@ import {
   BreadcrumbSeparator,
 } from "@repo/ui/components";
 
-import { useBreadcrumbContext } from "../breadcrumb-context";
-
 interface BreadcrumbsProps {
   locale: string;
 }
-
-// UUID regex pattern
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Translation key mapping for breadcrumb items
 const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
@@ -34,72 +29,46 @@ const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
   macros: "breadcrumbs.macros",
 };
 
-function getTitle(title: string, t?: (key: string) => string): string {
-  const translationKey = BREADCRUMB_TRANSLATIONS[title];
-  if (translationKey && t) {
+function getTranslatedTitle(segment: string, t: (key: string) => string): string {
+  const translationKey = BREADCRUMB_TRANSLATIONS[segment];
+  if (translationKey) {
     return t(translationKey);
   }
 
-  // Handle titles with dashes (but not UUIDs)
-  if (title.includes("-") && !UUID_REGEX.test(title)) {
-    return title
+  // Handle segments with dashes - convert to title case
+  if (segment.includes("-")) {
+    return segment
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
   }
 
-  // If it's a UUID, return as-is
-  if (UUID_REGEX.test(title)) {
-    return title;
-  }
-
   // Fallback to capitalize first letter
-  return title.charAt(0).toUpperCase() + title.slice(1);
+  return segment.charAt(0).toUpperCase() + segment.slice(1);
 }
 
 export function Breadcrumbs({ locale }: BreadcrumbsProps) {
   const { t } = useTranslation("common");
-  const pathname = usePathname();
-  const { nameMappings } = useBreadcrumbContext();
+  const { data: segments } = useBreadcrumbs(locale);
 
-  const pathNames = pathname.split("/").filter((path) => path);
-  // Remove the first item which is the locale (e.g., 'en-US', 'de-DE')
-  // and the second item 'platform' since we don't show it in breadcrumbs
-
-  let pathNamesWithoutLocale = pathNames.slice(2);
-
-  // Find the first UUID in the path
-  const uuidIndex = pathNamesWithoutLocale.findIndex((segment) => UUID_REGEX.test(segment));
-
-  // Prevents tab routes from appearing in breadcrumbs
-  if (uuidIndex !== -1) {
-    pathNamesWithoutLocale = pathNamesWithoutLocale.slice(0, uuidIndex + 1);
-  }
-
-  // Do not render breadcrumbs for first level routes (e.g. /platform/experiments)
-  if (pathNamesWithoutLocale.length <= 1) {
+  // Don't render if no segments
+  if (!segments || segments.length === 0) {
     return null;
   }
 
   return (
     <Breadcrumb className="pb-6">
       <BreadcrumbList>
-        {pathNamesWithoutLocale.map((link, index) => {
-          const href = `/${locale}/platform/${pathNamesWithoutLocale.slice(0, index + 1).join("/")}`;
-
-          // Check if this segment is a UUID and has a mapping
-          let title: string;
-          if (UUID_REGEX.test(link) && nameMappings[link]) {
-            title = nameMappings[link];
-          } else {
-            title = getTitle(link, t);
-          }
+        {segments.map((item, index) => {
+          // Use the enriched title if available, otherwise translate the segment
+          const title =
+            item.title !== item.segment ? item.title : getTranslatedTitle(item.segment, t);
 
           return (
-            <React.Fragment key={href}>
+            <React.Fragment key={item.href}>
               {index !== 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem>
-                <BreadcrumbLink href={href}>{title}</BreadcrumbLink>
+                <BreadcrumbLink href={item.href}>{title}</BreadcrumbLink>
               </BreadcrumbItem>
             </React.Fragment>
           );

@@ -5,9 +5,7 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
-import { useEffect } from "react";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
-import { useBreadcrumbContext } from "~/components/navigation/breadcrumb-context";
 
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components";
@@ -22,20 +20,12 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const { t } = useTranslation("experiments");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
-  const { setNameMapping } = useBreadcrumbContext();
 
   // Access check
   const { data: accessData, error, isLoading } = useExperimentAccess(id);
   const apiBody = accessData?.body;
   const experiment = apiBody?.experiment;
   const hasAccess = apiBody?.hasAccess;
-
-  // Register experiment name in breadcrumb context
-  useEffect(() => {
-    if (experiment?.name) {
-      setNameMapping(id, experiment.name);
-    }
-  }, [id, experiment?.name, setNameMapping]);
 
   // Loading
   if (isLoading) {
