@@ -54,12 +54,12 @@ async function fetchEntityName(
 
     switch (type) {
       case "experiment": {
-        const response = await client.experiments.getExperimentAccess({
+        const response = await client.experiments.getExperiment({
           params: { id },
         });
 
         if (response.status === 200) {
-          return { name: response.body.experiment.name };
+          return { name: response.body.name };
         }
         break;
       }

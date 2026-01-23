@@ -23,7 +23,7 @@ const mockInitClient = vi.mocked(initClient);
 
 describe("enrichPathSegments", () => {
   let mockClient: {
-    experiments: { getExperimentAccess: ReturnType<typeof vi.fn> };
+    experiments: { getExperiment: ReturnType<typeof vi.fn> };
     macros: { getMacro: ReturnType<typeof vi.fn> };
     protocols: { getProtocol: ReturnType<typeof vi.fn> };
   };
@@ -33,7 +33,7 @@ describe("enrichPathSegments", () => {
 
     mockClient = {
       experiments: {
-        getExperimentAccess: vi.fn(),
+        getExperiment: vi.fn(),
       },
       macros: {
         getMacro: vi.fn(),
@@ -78,13 +78,11 @@ describe("enrichPathSegments", () => {
   });
 
   it("fetches and enriches experiment names for UUID segments", async () => {
-    mockClient.experiments.getExperimentAccess.mockResolvedValue({
+    mockClient.experiments.getExperiment.mockResolvedValue({
       status: 200,
       body: {
-        experiment: {
-          id: "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-          name: "My Experiment",
-        },
+        id: "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+        name: "My Experiment",
       },
     });
 
@@ -106,7 +104,7 @@ describe("enrichPathSegments", () => {
       },
     ]);
 
-    expect(mockClient.experiments.getExperimentAccess).toHaveBeenCalledWith({
+    expect(mockClient.experiments.getExperiment).toHaveBeenCalledWith({
       params: { id: "a1b2c3d4-e5f6-4890-abcd-ef1234567890" },
     });
   });
@@ -170,7 +168,7 @@ describe("enrichPathSegments", () => {
   });
 
   it("handles API errors gracefully and keeps original segment", async () => {
-    mockClient.experiments.getExperimentAccess.mockRejectedValue(new Error("API Error"));
+    mockClient.experiments.getExperiment.mockRejectedValue(new Error("API Error"));
 
     const result = await enrichPathSegments("/en/platform/experiments/exp-123", "en");
 
@@ -189,7 +187,7 @@ describe("enrichPathSegments", () => {
   });
 
   it("handles non-200 status codes gracefully", async () => {
-    mockClient.experiments.getExperimentAccess.mockResolvedValue({
+    mockClient.experiments.getExperiment.mockResolvedValue({
       status: 404,
       body: { message: "Not found" },
     });
@@ -211,13 +209,11 @@ describe("enrichPathSegments", () => {
   });
 
   it("stops at entity ID and excludes tab routes", async () => {
-    mockClient.experiments.getExperimentAccess.mockResolvedValue({
+    mockClient.experiments.getExperiment.mockResolvedValue({
       status: 200,
       body: {
-        experiment: {
-          id: "exp-123",
-          name: "My Experiment",
-        },
+        id: "exp-123",
+        name: "My Experiment",
       },
     });
 
@@ -239,13 +235,11 @@ describe("enrichPathSegments", () => {
   });
 
   it("handles experiments-archive route correctly", async () => {
-    mockClient.experiments.getExperimentAccess.mockResolvedValue({
+    mockClient.experiments.getExperiment.mockResolvedValue({
       status: 200,
       body: {
-        experiment: {
-          id: "archived-123",
-          name: "Archived Experiment",
-        },
+        id: "archived-123",
+        name: "Archived Experiment",
       },
     });
 
@@ -264,7 +258,7 @@ describe("enrichPathSegments", () => {
       },
     ]);
 
-    expect(mockClient.experiments.getExperimentAccess).toHaveBeenCalledWith({
+    expect(mockClient.experiments.getExperiment).toHaveBeenCalledWith({
       params: { id: "archived-123" },
     });
   });
