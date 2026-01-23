@@ -390,7 +390,7 @@ describe("<UnifiedNavbar />", () => {
     const unobserveMock = vi.fn();
     let observerCallback: IntersectionObserverCallback | null = null;
 
-    const mockIntersectionObserver = vi.fn((callback: IntersectionObserverCallback) => {
+    const mockIntersectionObserver = vi.fn(function (callback: IntersectionObserverCallback) {
       observerCallback = callback;
       return {
         observe: observeMock,
@@ -546,11 +546,13 @@ describe("<UnifiedNavbar />", () => {
     const unobserve = vi.fn();
     const disconnect = vi.fn();
 
-    const mockObserver = vi.fn().mockImplementation(() => ({
-      observe,
-      unobserve,
-      disconnect,
-    }));
+    const mockObserver = vi.fn(function () {
+      return {
+        observe,
+        unobserve,
+        disconnect,
+      };
+    });
 
     vi.stubGlobal("IntersectionObserver", mockObserver);
 
