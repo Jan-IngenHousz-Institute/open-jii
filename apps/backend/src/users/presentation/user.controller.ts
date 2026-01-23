@@ -68,7 +68,7 @@ export class UserController {
           msg: "Users searched",
           operation: "searchUsers",
           context: UserController.name,
-          userId: user.id,
+          userId: session.user.id,
           resultCount: users.length,
           status: "success",
         });
@@ -119,7 +119,7 @@ export class UserController {
           msg: "User profile created",
           operation: "createUserProfile",
           context: UserController.name,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {

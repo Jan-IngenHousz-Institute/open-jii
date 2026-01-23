@@ -81,7 +81,7 @@ export class ExperimentController {
           operation: "getExperiment",
           context: ExperimentController.name,
           experimentId: params.id,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {
@@ -113,7 +113,7 @@ export class ExperimentController {
           operation: "getExperimentAccess",
           context: ExperimentController.name,
           experimentId: params.id,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {
@@ -146,7 +146,7 @@ export class ExperimentController {
           msg: "Experiments listed",
           operation: "listExperiments",
           context: ExperimentController.name,
-          userId: user.id,
+          userId: session.user.id,
           count: experiments.length,
           status: "success",
         });
@@ -186,7 +186,7 @@ export class ExperimentController {
           operation: "updateExperiment",
           context: ExperimentController.name,
           experimentId: params.id,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {
@@ -222,7 +222,7 @@ export class ExperimentController {
           operation: "deleteExperiment",
           context: ExperimentController.name,
           experimentId: params.id,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {

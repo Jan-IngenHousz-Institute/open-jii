@@ -214,7 +214,7 @@ export class ProtocolController {
           operation: "createProtocol",
           context: ProtocolController.name,
           protocolId: protocol.id,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {
@@ -244,7 +244,7 @@ export class ProtocolController {
           operation: "updateProtocol",
           context: ProtocolController.name,
           protocolId: params.id,
-          userId: user.id,
+          userId: session.user.id,
           ownerId: protocolResult.value.createdBy,
         });
         return {
@@ -285,7 +285,7 @@ export class ProtocolController {
           operation: "updateProtocol",
           context: ProtocolController.name,
           protocolId: protocol.id,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {
@@ -327,7 +327,7 @@ export class ProtocolController {
           operation: "deleteProtocol",
           context: ProtocolController.name,
           protocolId: params.id,
-          userId: user.id,
+          userId: session.user.id,
           ownerId: protocolResult.value.createdBy,
         });
         return {
@@ -344,7 +344,7 @@ export class ProtocolController {
           operation: "deleteProtocol",
           context: ProtocolController.name,
           protocolId: params.id,
-          userId: user.id,
+          userId: session.user.id,
           status: "success",
         });
         return {

@@ -28,7 +28,7 @@ export class ProjectTransferRequestsController {
         msg: "Creating transfer request",
         operation: "createTransferRequest",
         context: ProjectTransferRequestsController.name,
-        userId: user.id,
+        userId: session.user.id,
       });
 
       const result = await this.createTransferRequestUseCase.execute(
@@ -60,7 +60,7 @@ export class ProjectTransferRequestsController {
         msg: "Listing transfer requests",
         operation: "listTransferRequests",
         context: ProjectTransferRequestsController.name,
-        userId: user.id,
+        userId: session.user.id,
       });
 
       const result = await this.listTransferRequestsUseCase.execute(session.user.id);
