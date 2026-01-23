@@ -1,4 +1,4 @@
-name: Deploy Databricks Bundle
+name: Databricks Deployment Workflow
 
 on:
   workflow_call:
