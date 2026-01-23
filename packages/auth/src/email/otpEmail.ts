@@ -1,7 +1,6 @@
-import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 
-import { OtpEmail } from "@repo/transactional/emails/otp-email";
+import { renderOtpEmail } from "@repo/transactional/render/otp-email";
 
 interface SendOtpEmailParams {
   to: string;
@@ -20,10 +19,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams) {
 
   const transport = createTransport(emailServer);
 
-  const emailHtml = await render(OtpEmail({ otp, senderName, host }), {});
-  const emailText = await render(OtpEmail({ otp, senderName, host }), {
-    plainText: true,
-  });
+  const { html, text } = await renderOtpEmail({ otp, senderName, host });
 
   await transport.sendMail({
     to,
@@ -32,7 +28,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams) {
       address: emailFrom,
     },
     subject: `Your login code for ${senderName}`,
-    html: emailHtml,
-    text: emailText,
+    html,
+    text,
   });
 }
