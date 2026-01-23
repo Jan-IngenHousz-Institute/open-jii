@@ -17,7 +17,12 @@ export class EmailAdapter implements EmailPort {
     role: string,
     email: string,
   ): Promise<Result<void>> {
-    this.logger.log(`Sending email notification for ${experimentId} (${experimentName})`);
+    this.logger.log({
+      msg: "Sending email notification",
+      operation: "sendAddedUserNotification",
+      experimentId,
+      email,
+    });
 
     return this.notificationService.sendAddedUserNotification(
       experimentId,
@@ -33,7 +38,12 @@ export class EmailAdapter implements EmailPort {
     projectIdOld: string,
     projectUrlOld: string,
   ): Promise<Result<void>> {
-    this.logger.log(`Sending transfer request confirmation to ${email}`);
+    this.logger.log({
+      msg: "Sending transfer request confirmation",
+      operation: "sendTransferRequestConfirmation",
+      email,
+      projectIdOld,
+    });
 
     return this.notificationService.sendTransferRequestConfirmation(
       email,

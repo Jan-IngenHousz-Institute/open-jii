@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { EmailConfig, emailConfigSchema } from "./config.types";
 
 @Injectable()
@@ -17,7 +18,10 @@ export class EmailConfigService {
    * Loads Databricks configuration from environment variables
    */
   private loadConfig(): EmailConfig {
-    this.logger.debug("Loading Email configuration");
+    this.logger.debug({
+      msg: "Loading Email configuration",
+      operation: "loadConfig",
+    });
     return {
       baseUrl: this.configService.getOrThrow<string>("email.baseUrl"),
       server: this.configService.getOrThrow<string>("email.server"),
@@ -31,9 +35,17 @@ export class EmailConfigService {
   private validateConfig(): void {
     try {
       emailConfigSchema.parse(this.config);
-      this.logger.debug("Email configuration validated successfully");
+      this.logger.debug({
+        msg: "Email configuration validated successfully",
+        operation: "validateConfig",
+        status: "success",
+      });
     } catch {
-      this.logger.error("Invalid Email configuration");
+      this.logger.error({
+        msg: "Invalid Email configuration",
+        errorCode: ErrorCodes.EMAIL_CONFIG_INVALID,
+        operation: "validateConfig",
+      });
       throw new Error("Invalid Email configuration: all fields must be non-empty strings");
     }
   }

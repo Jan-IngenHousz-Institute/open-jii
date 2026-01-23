@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { AnnotationRowsAffected, UpdateAnnotationBody } from "@repo/api";
 
+import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { UpdateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
@@ -26,11 +27,22 @@ export class UpdateAnnotationUseCase {
     data: UpdateAnnotationBody,
     userId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Updating annotation to experiment data for user ${userId}`);
+    this.logger.log({
+      msg: "Updating annotation to experiment data",
+      operation: "updateAnnotation",
+      experimentId,
+      annotationId,
+      userId,
+    });
 
     // Validate that the user ID is provided
     if (!userId) {
-      this.logger.warn("Attempt to update annotation for experiment without user ID");
+      this.logger.warn({
+        msg: "Attempt to update annotation for experiment without user ID",
+        operation: "updateAnnotation",
+        experimentId,
+        annotationId,
+      });
       return failure(
         AppError.badRequest("User ID is required to update annotation for experiment"),
       );
@@ -48,18 +60,31 @@ export class UpdateAnnotationUseCase {
         experiment: ExperimentDto | null;
       }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment with ID ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            operation: "updateAnnotation",
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to access experiment data without proper permissions",
+            operation: "updateAnnotation",
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (!experiment.schemaName) {
-          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          this.logger.error({
+            msg: "Experiment has no schema name",
+            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
+            operation: "updateAnnotation",
+            experimentId,
+            error: "Experiment schema not provisioned",
+          });
           return failure(AppError.internal("Experiment schema not provisioned"));
         }
 
@@ -90,9 +115,14 @@ export class UpdateAnnotationUseCase {
           );
 
           if (refreshResult.isFailure()) {
-            this.logger.warn(
-              `Failed to trigger silver data refresh after updating annotation: ${refreshResult.error.message}`,
-            );
+            this.logger.warn({
+              msg: "Failed to trigger silver data refresh after updating annotation",
+              operation: "updateAnnotation",
+              experimentId,
+              annotationId,
+              schemaName: experiment.schemaName,
+              error: refreshResult.error.message,
+            });
             // Don't fail the whole operation, just log the warning
           }
         }

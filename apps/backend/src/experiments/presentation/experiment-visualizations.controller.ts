@@ -59,9 +59,14 @@ export class ExperimentVisualizationsController {
 
         if (result.isSuccess()) {
           const visualization = result.value;
-          this.logger.log(
-            `Visualization "${visualization.name}" created for experiment ${params.id} by user ${session.user.id}`,
-          );
+          this.logger.log({
+            msg: "Visualization created for experiment",
+            operation: "createExperimentVisualization",
+            experimentId: params.id,
+            visualizationId: visualization.id,
+            userId: session.user.id,
+            status: "success",
+          });
 
           return {
             status: StatusCodes.CREATED as const,
@@ -85,9 +90,14 @@ export class ExperimentVisualizationsController {
 
       if (result.isSuccess()) {
         const visualization = result.value;
-        this.logger.log(
-          `Visualization ${params.visualizationId} retrieved for experiment ${params.id} by user ${session.user.id}`,
-        );
+        this.logger.log({
+          msg: "Visualization retrieved for experiment",
+          operation: "getExperimentVisualization",
+          experimentId: params.id,
+          visualizationId: params.visualizationId,
+          userId: session.user.id,
+          status: "success",
+        });
 
         return {
           status: StatusCodes.OK as const,
@@ -112,9 +122,13 @@ export class ExperimentVisualizationsController {
 
         if (result.isSuccess()) {
           const visualization = result.value;
-          this.logger.log(
-            `Visualization ${params.visualizationId} updated by user ${session.user.id}`,
-          );
+          this.logger.log({
+            msg: "Visualization updated",
+            operation: "updateExperimentVisualization",
+            visualizationId: params.visualizationId,
+            userId: session.user.id,
+            status: "success",
+          });
 
           return {
             status: StatusCodes.OK as const,
@@ -136,9 +150,13 @@ export class ExperimentVisualizationsController {
       );
 
       if (result.isSuccess()) {
-        this.logger.log(
-          `Visualization ${params.visualizationId} deleted by user ${session.user.id}`,
-        );
+        this.logger.log({
+          msg: "Visualization deleted",
+          operation: "deleteExperimentVisualization",
+          visualizationId: params.visualizationId,
+          userId: session.user.id,
+          status: "success",
+        });
 
         return {
           status: StatusCodes.NO_CONTENT as const,

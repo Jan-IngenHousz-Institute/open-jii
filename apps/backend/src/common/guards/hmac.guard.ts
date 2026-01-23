@@ -10,6 +10,7 @@ import { ConfigService } from "@nestjs/config";
 import * as crypto from "crypto";
 import type { Request } from "express";
 
+import { ErrorCodes } from "../utils/error-codes";
 import { stableStringify } from "../utils/stable-json";
 
 @Injectable()
@@ -32,13 +33,24 @@ export class HmacGuard implements CanActivate {
       const apiKey = apiKeys[keyId];
 
       if (!apiKey) {
-        this.logger.warn(`API key not found for ID: ${keyId}`);
+        this.logger.warn({
+          msg: "API key not found",
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+          operation: "hmacAuth",
+          keyId,
+        });
         return null;
       }
 
       return apiKey;
     } catch (error) {
-      this.logger.error(`Failed to get API key for ID: ${keyId}`, error);
+      this.logger.error({
+        msg: "Failed to get API key",
+        errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+        operation: "hmacAuth",
+        keyId,
+        error,
+      });
       return null;
     }
   }
@@ -52,14 +64,23 @@ export class HmacGuard implements CanActivate {
     try {
       // Validate API key ID and look up the actual API key
       if (!apiKeyId) {
-        this.logger.warn("Missing API key ID");
+        this.logger.warn({
+          msg: "Missing API key ID",
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+          operation: "hmacAuth",
+        });
         throw new UnauthorizedException("Unauthorized");
       }
 
       // Get the actual API key using the ID
       const apiKey = this.getApiKeyById(apiKeyId);
       if (!apiKey) {
-        this.logger.warn("Invalid API key ID provided");
+        this.logger.warn({
+          msg: "Invalid API key ID provided",
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+          operation: "hmacAuth",
+          keyId: apiKeyId,
+        });
         throw new UnauthorizedException("Unauthorized");
       }
 
@@ -68,7 +89,11 @@ export class HmacGuard implements CanActivate {
 
       // Validate HMAC signature
       if (!signature || !timestamp) {
-        this.logger.warn("Missing signature or timestamp headers");
+        this.logger.warn({
+          msg: "Missing signature or timestamp headers",
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+          operation: "hmacAuth",
+        });
         throw new UnauthorizedException("Unauthorized");
       }
 
@@ -79,7 +104,14 @@ export class HmacGuard implements CanActivate {
       const fiveMinutesInSeconds = 5 * 60;
 
       if (isNaN(timestampValue) || Math.abs(currentTime - timestampValue) > fiveMinutesInSeconds) {
-        this.logger.warn(`Invalid timestamp: ${timestamp}. Current time: ${currentTime}`);
+        this.logger.warn({
+          msg: "Invalid timestamp",
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+          operation: "hmacAuth",
+          timestamp,
+          currentTime,
+          timeDiff: Math.abs(currentTime - timestampValue),
+        });
         throw new UnauthorizedException("Unauthorized");
       }
 
@@ -96,7 +128,12 @@ export class HmacGuard implements CanActivate {
           rawBody = "";
         }
       } catch (error) {
-        this.logger.error("Failed to get raw request body", error);
+        this.logger.error({
+          msg: "Failed to get raw request body",
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+          operation: "hmacAuth",
+          error,
+        });
         throw new InternalServerErrorException("Failed to process request body");
       }
 
@@ -114,12 +151,21 @@ export class HmacGuard implements CanActivate {
         const expectedSignatureBuffer = Buffer.from(expectedSignature, "hex");
 
         if (!crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)) {
-          this.logger.warn("Invalid signature provided");
+          this.logger.warn({
+            msg: "Invalid signature provided",
+            errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+            operation: "hmacAuth",
+          });
           throw new UnauthorizedException("Unauthorized");
         }
       } catch (error) {
         // This can happen if the signatures have different lengths or are not valid hex
-        this.logger.warn("Signature comparison failed", error);
+        this.logger.warn({
+          msg: "Signature comparison failed",
+          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+          operation: "hmacAuth",
+          error,
+        });
         throw new UnauthorizedException("Unauthorized");
       }
 
@@ -129,7 +175,12 @@ export class HmacGuard implements CanActivate {
         throw error;
       }
 
-      this.logger.error("HMAC verification failed", error);
+      this.logger.error({
+        msg: "HMAC verification failed",
+        errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+        operation: "hmacAuth",
+        error,
+      });
       throw new InternalServerErrorException("HMAC verification failed");
     }
   }

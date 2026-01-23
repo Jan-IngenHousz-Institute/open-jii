@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UpdateMacroDto, MacroDto } from "../../../core/models/macro.model";
 import { DATABRICKS_PORT, DatabricksPort } from "../../../core/ports/databricks.port";
@@ -15,7 +16,12 @@ export class UpdateMacroUseCase {
   ) {}
 
   async execute(id: string, data: UpdateMacroDto, userId: string): Promise<Result<MacroDto>> {
-    this.logger.log(`Updating macro with id: ${id}`);
+    this.logger.log({
+      msg: "Updating macro",
+      operation: "updateMacro",
+      macroId: id,
+      userId,
+    });
 
     // First, fetch the macro to check access
     const macroResult = await this.macroRepository.findById(id);
@@ -26,13 +32,25 @@ export class UpdateMacroUseCase {
 
     const existingMacro = macroResult.value;
     if (!existingMacro) {
-      this.logger.warn(`Attempt to update non-existent macro with ID ${id}`);
+      this.logger.warn({
+        msg: "Attempt to update non-existent macro",
+        errorCode: ErrorCodes.MACRO_NOT_FOUND,
+        operation: "updateMacro",
+        macroId: id,
+        userId,
+      });
       return failure(AppError.notFound(`Macro with ID ${id} not found`));
     }
 
     // Check if user is the creator
     if (existingMacro.createdBy !== userId) {
-      this.logger.warn(`User ${userId} attempted to update macro ${id} without permission`);
+      this.logger.warn({
+        msg: "Unauthorized macro update attempt",
+        errorCode: ErrorCodes.FORBIDDEN,
+        operation: "updateMacro",
+        macroId: id,
+        userId,
+      });
       return failure(AppError.forbidden("Only the macro creator can update this macro"));
     }
 
@@ -45,7 +63,13 @@ export class UpdateMacroUseCase {
 
     const macros = updateResult.value;
     if (macros.length === 0) {
-      this.logger.error(`Failed to update macro with id ${id}`);
+      this.logger.error({
+        msg: "Failed to update macro",
+        errorCode: ErrorCodes.MACRO_UPDATE_FAILED,
+        operation: "updateMacro",
+        macroId: id,
+        userId,
+      });
       return failure(AppError.internal("Failed to update macro"));
     }
 
@@ -60,16 +84,26 @@ export class UpdateMacroUseCase {
       });
 
       if (databricksResult.isFailure()) {
-        this.logger.error(
-          `Failed to upload macro code through Databricks for macro ${macro.id}`,
-          databricksResult.error.message,
-        );
+        this.logger.error({
+          msg: "Failed to upload updated macro code to Databricks",
+          errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
+          operation: "updateMacro",
+          macroId: macro.id,
+          userId,
+          error: databricksResult.error.message,
+        });
 
         return failure(AppError.internal(databricksResult.error.message));
       }
     }
 
-    this.logger.log(`Successfully updated macro "${macro.name}" (ID: ${macro.id})`);
+    this.logger.log({
+      msg: "Macro updated successfully",
+      operation: "updateMacro",
+      macroId: macro.id,
+      userId,
+      status: "success",
+    });
     return success(macro);
   }
 }

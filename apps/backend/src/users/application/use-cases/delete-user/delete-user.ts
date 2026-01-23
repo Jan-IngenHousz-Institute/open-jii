@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { success, Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UserDto } from "../../../core/models/user.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -16,12 +17,23 @@ export class DeleteUserUseCase {
   ) {}
 
   async execute(id: string): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Starting user deletion",
+      operation: "deleteUser",
+      userId: id,
+    });
+
     // Check if user exists
     const userResult = await this.userRepository.findOne(id);
 
     return userResult.chain(async (user: UserDto | null) => {
       if (!user) {
-        this.logger.warn(`Attempt to delete non-existent user with ID ${id}`);
+        this.logger.warn({
+          msg: "Attempt to delete non-existent user",
+          errorCode: ErrorCodes.USER_NOT_FOUND,
+          operation: "deleteUser",
+          userId: id,
+        });
         return failure(AppError.notFound(`User with ID ${id} not found`));
       }
 
@@ -30,9 +42,12 @@ export class DeleteUserUseCase {
 
       return adminCheckResult.chain(async (isOnlyAdmin: boolean) => {
         if (isOnlyAdmin) {
-          this.logger.warn(
-            `Cannot delete user ${id} - user is the only admin of one or more experiments`,
-          );
+          this.logger.warn({
+            msg: "Cannot delete user - only admin of experiments",
+            errorCode: ErrorCodes.USER_IS_ONLY_ADMIN,
+            operation: "deleteUser",
+            userId: id,
+          });
           return failure(
             AppError.forbidden(
               `Cannot delete account - you are the only admin of one or more experiments. Please assign other admins before deleting.`,
@@ -41,31 +56,59 @@ export class DeleteUserUseCase {
         }
 
         // Soft delete
-        this.logger.log(`Soft-deleting user with ID ${id}`);
+        this.logger.log({
+          msg: "Soft-deleting user",
+          operation: "deleteUser",
+          userId: id,
+        });
         const deleteResult = await this.userRepository.delete(id);
 
         if (deleteResult.isFailure()) {
           return deleteResult;
         }
 
-        this.logger.log(`Successfully soft-deleted user ${id}`);
+        this.logger.log({
+          msg: "User soft-deleted successfully",
+          operation: "deleteUser",
+          userId: id,
+          status: "success",
+        });
 
         // Trigger enriched tables refresh for user deletion
-        this.logger.log(`Triggering enriched tables refresh for user deletion: ${id}`);
+        this.logger.log({
+          msg: "Triggering enriched tables refresh",
+          operation: "deleteUser",
+          userId: id,
+        });
         const refreshResult = await this.databricksPort.triggerEnrichedTablesRefreshJob(
           "user_id",
           id,
         );
 
         if (refreshResult.isFailure()) {
-          this.logger.warn(
-            `Failed to trigger enriched tables refresh for deleted user ${id}: ${refreshResult.error.message}`,
-          );
+          this.logger.warn({
+            msg: "Failed to trigger enriched tables refresh",
+            errorCode: ErrorCodes.DATABRICKS_REFRESH_FAILED,
+            operation: "deleteUser",
+            userId: id,
+            error: refreshResult.error.message,
+          });
           // Note: We don't fail the entire operation if the refresh trigger fails
           // The user deletion was successful and should be returned
         } else {
-          this.logger.log(`Successfully triggered enriched tables refresh for deleted user ${id}`);
+          this.logger.log({
+            msg: "Enriched tables refresh triggered successfully",
+            operation: "deleteUser",
+            userId: id,
+          });
         }
+
+        this.logger.log({
+          msg: "User deletion completed",
+          operation: "deleteUser",
+          userId: id,
+          status: "success",
+        });
 
         return success(undefined);
       });

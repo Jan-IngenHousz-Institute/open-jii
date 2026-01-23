@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -19,7 +20,12 @@ export class ListExperimentVisualizationsUseCase {
     experimentId: string,
     userId: string,
   ): Promise<Result<ExperimentVisualizationDto[]>> {
-    this.logger.log(`Listing visualizations of experiment ${experimentId} for user ${userId}`);
+    this.logger.log({
+      msg: "Listing visualizations of experiment",
+      operation: "listExperimentVisualizations",
+      experimentId,
+      userId,
+    });
 
     // Check if experiment exists and if user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -34,16 +40,22 @@ export class ListExperimentVisualizationsUseCase {
         isAdmin: boolean;
       }) => {
         if (!experiment) {
-          this.logger.warn(
-            `Attempt to list visualizations of non-existent experiment with ID ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to list visualizations of non-existent experiment",
+            operation: "listExperimentVisualizations",
+            experimentId,
+            userId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} does not have access to experiment ${experimentId} visualizations`,
-          );
+          this.logger.warn({
+            msg: "User does not have access to experiment visualizations",
+            operation: "listExperimentVisualizations",
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
@@ -52,16 +64,24 @@ export class ListExperimentVisualizationsUseCase {
           await this.experimentVisualizationRepository.listVisualizations(experimentId);
 
         if (visualizationsResult.isFailure()) {
-          this.logger.error(
-            `Failed to retrieve visualizations for experiment ${experimentId}:`,
-            visualizationsResult.error.message,
-          );
+          this.logger.error({
+            msg: "Failed to retrieve visualizations for experiment",
+            errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_LIST_FAILED,
+            operation: "listExperimentVisualizations",
+            experimentId,
+            userId,
+            error: visualizationsResult.error.message,
+          });
           return failure(AppError.internal("Failed to retrieve experiment visualizations"));
         }
 
-        this.logger.debug(
-          `Retrieved ${visualizationsResult.value.length} visualizations for experiment ${experimentId}`,
-        );
+        this.logger.debug({
+          msg: "Retrieved visualizations for experiment",
+          operation: "listExperimentVisualizations",
+          experimentId,
+          userId,
+          count: visualizationsResult.value.length,
+        });
         return visualizationsResult;
       },
     );
