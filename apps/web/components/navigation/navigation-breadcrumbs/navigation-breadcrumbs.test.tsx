@@ -25,14 +25,6 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-vi.mock("../breadcrumb-context", () => ({
-  useBreadcrumbContext: () => ({
-    nameMappings: {
-      "a1b2c3d4-e5f6-4890-abcd-ef1234567890": "My Experiment",
-    },
-  }),
-}));
-
 // Mock @repo/ui/components
 vi.mock("@repo/ui/components", () => ({
   Breadcrumb: ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>,
