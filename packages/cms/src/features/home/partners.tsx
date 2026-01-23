@@ -4,7 +4,6 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
@@ -12,6 +11,7 @@ import type {
   PageHomePartnersFieldsFragment,
   PartnerFieldsFragment,
 } from "../../lib/__generated/sdk";
+import { CtfImage } from "../contentful";
 
 interface HomePartnersProps {
   partnersData: PageHomePartnersFieldsFragment;
@@ -53,16 +53,15 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
               locale,
             });
 
-            if (!partner.logo?.url) return null;
+            if (!partner.logo) return null;
 
             const content = (
-              <Image
-                src={partner.logo.url}
-                alt={partner.logo.title ?? "Partner logo"}
-                width={200}
-                height={40}
-                className="h-20 w-auto object-contain"
-                {...partnerInspectorProps({ fieldId: "logo" })}
+              <CtfImage
+                {...partner.logo}
+                nextImageProps={{
+                  className: "h-20 w-auto object-contain",
+                  ...partnerInspectorProps({ fieldId: "logo" }),
+                }}
               />
             );
 
