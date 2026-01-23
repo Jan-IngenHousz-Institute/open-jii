@@ -131,7 +131,10 @@ module "databricks_workspace" {
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
 
-  principal_ids = [module.node_service_principal.service_principal_id]
+  principal_ids = [
+    module.node_service_principal.service_principal_id,
+    module.github_cicd_service_principal.service_principal_id
+  ]
 
   providers = {
     databricks.mws       = databricks.mws
@@ -143,6 +146,17 @@ module "node_service_principal" {
   source = "../../modules/databricks/service_principal"
 
   display_name  = "node-service-principal-${var.environment}"
+  create_secret = true
+
+  providers = {
+    databricks.mws = databricks.mws
+  }
+}
+
+module "github_cicd_service_principal" {
+  source = "../../modules/databricks/service_principal"
+
+  display_name  = "github-cicd-service-principal-${var.environment}"
   create_secret = true
 
   providers = {
