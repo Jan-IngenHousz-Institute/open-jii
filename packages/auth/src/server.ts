@@ -162,13 +162,14 @@ export const auth = betterAuth({
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       // Trigger on any sign-in method (social, email OTP, etc.)
-      const isSignIn =
-        ctx.path === "/sign-in/social" ||
-        ctx.path === "/sign-in/email-otp" ||
-        ctx.path === "/sign-in/email" ||
-        ctx.path.startsWith("/callback/");
+      const isSignIn = ["/sign-in/social", "/sign-in/email-otp", "/sign-in/email"].includes(
+        ctx.path,
+      );
 
-      if (isSignIn) {
+      const isSignInCallback =
+        ctx.path.startsWith("/callback/") || ctx.path.startsWith("/oauth2/callback/");
+
+      if (isSignIn || isSignInCallback) {
         try {
           const session = ctx.context.newSession;
           if (session?.user.id) {
