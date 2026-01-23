@@ -331,7 +331,7 @@ export class TestHarness {
       }
 
       await this.database.insert(profiles).values({
-        userId: session.user.id,
+        userId: user.id,
         firstName,
         lastName,
         activated,

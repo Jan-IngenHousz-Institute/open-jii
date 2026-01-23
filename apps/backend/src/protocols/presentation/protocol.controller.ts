@@ -237,7 +237,7 @@ export class ProtocolController {
         return handleFailure(protocolResult, this.logger);
       }
 
-      if (protocolResult.value.createdBy !== user.id) {
+      if (protocolResult.value.createdBy !== session.user.id) {
         this.logger.warn({
           msg: "Unauthorized protocol update attempt",
           errorCode: ErrorCodes.FORBIDDEN,
@@ -320,7 +320,7 @@ export class ProtocolController {
         return handleFailure(protocolResult, this.logger);
       }
 
-      if (protocolResult.value.createdBy !== user.id) {
+      if (protocolResult.value.createdBy !== session.user.id) {
         this.logger.warn({
           msg: "Unauthorized protocol delete attempt",
           errorCode: ErrorCodes.FORBIDDEN,
