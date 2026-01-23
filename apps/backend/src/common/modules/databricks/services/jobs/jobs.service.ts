@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -48,7 +49,12 @@ export class DatabricksJobsService {
         return result.value;
       },
       (error) => {
-        this.logger.error(`Failed to trigger Databricks job: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to trigger Databricks job",
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+          operation: "triggerJob",
+          error,
+        });
         return apiErrorMapper(`Databricks job trigger: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -90,7 +96,12 @@ export class DatabricksJobsService {
         return jobRunResponse;
       },
       (error) => {
-        this.logger.error(`Error executing job trigger: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Error executing job trigger",
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+          operation: "triggerJobInternal",
+          error,
+        });
         return apiErrorMapper(`Databricks job execution: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -135,7 +146,11 @@ export class DatabricksJobsService {
         const host = this.configService.getHost();
         const apiUrl = `${host}${DatabricksJobsService.JOBS_ENDPOINT}/list`;
 
-        this.logger.debug(`Calling Databricks health check at: ${apiUrl}`);
+        this.logger.debug({
+          msg: "Calling Databricks health check",
+          operation: "healthCheck",
+          apiUrl,
+        });
 
         const requestParams: DatabricksJobsListRequest = {
           limit: 1,
@@ -158,7 +173,12 @@ export class DatabricksJobsService {
         };
       },
       (error) => {
-        this.logger.error(`Databricks health check failed: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Databricks health check failed",
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+          operation: "healthCheck",
+          error,
+        });
         return apiErrorMapper(`Databricks service unavailable: ${getAxiosErrorMessage(error)}`);
       },
     );

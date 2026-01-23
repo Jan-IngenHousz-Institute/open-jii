@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { AwsConfig, awsConfigSchema } from "./config.types";
 
 @Injectable()
@@ -17,7 +18,10 @@ export class AwsConfigService {
    * Loads AWS configuration from environment variables
    */
   private loadConfig(): AwsConfig {
-    this.logger.debug("Loading AWS configuration");
+    this.logger.debug({
+      msg: "Loading AWS configuration",
+      operation: "loadConfig",
+    });
     return {
       region: this.configService.getOrThrow<string>("aws.region"),
       placeIndexName: this.configService.getOrThrow<string>("aws.location.placeIndexName"),
@@ -30,9 +34,18 @@ export class AwsConfigService {
   private validateConfig(): void {
     try {
       awsConfigSchema.parse(this.config);
-      this.logger.debug("AWS configuration validated successfully");
+      this.logger.debug({
+        msg: "AWS configuration validated successfully",
+        operation: "validateConfig",
+        status: "success",
+      });
     } catch (error) {
-      this.logger.error("Invalid AWS configuration", error);
+      this.logger.error({
+        msg: "Invalid AWS configuration",
+        errorCode: ErrorCodes.AWS_CONFIG_INVALID,
+        operation: "validateConfig",
+        error,
+      });
       throw new Error(
         `AWS configuration validation failed: ${error instanceof Error ? error.message : String(error)}`,
       );

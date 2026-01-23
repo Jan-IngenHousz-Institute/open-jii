@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -11,7 +12,11 @@ export class GetProtocolUseCase {
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
   async execute(id: string): Promise<Result<ProtocolDto>> {
-    this.logger.log(`Getting protocol with ID "${id}"`);
+    this.logger.log({
+      msg: "Getting protocol",
+      operation: "getProtocol",
+      protocolId: id,
+    });
 
     const result = await this.protocolRepository.findOne(id);
 
@@ -21,11 +26,21 @@ export class GetProtocolUseCase {
 
     const protocol = result.value;
     if (!protocol) {
-      this.logger.warn(`Protocol with ID ${id} not found`);
+      this.logger.warn({
+        msg: "Protocol not found",
+        errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
+        operation: "getProtocol",
+        protocolId: id,
+      });
       return failure(AppError.notFound(`Protocol not found`));
     }
 
-    this.logger.log(`Successfully retrieved protocol with ID ${id}`);
+    this.logger.log({
+      msg: "Protocol retrieved successfully",
+      operation: "getProtocol",
+      protocolId: id,
+      status: "success",
+    });
     return success(protocol);
   }
 }

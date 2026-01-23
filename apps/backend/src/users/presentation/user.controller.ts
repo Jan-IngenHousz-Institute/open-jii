@@ -32,7 +32,12 @@ export class UserController {
       const result = await this.deleteUserUseCase.execute(params.id);
 
       if (result.isSuccess()) {
-        this.logger.log(`Deleted user ${params.id}`);
+        this.logger.log({
+          msg: "User deleted",
+          operation: "deleteUser",
+          userId: params.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,
@@ -58,9 +63,13 @@ export class UserController {
         // Format dates to strings for the API contract
         const formattedUsers = formatDatesList(users);
 
-        this.logger.log(
-          `Searched users for user ${session.user.id} with query: ${JSON.stringify(query)}`,
-        );
+        this.logger.log({
+          msg: "Users searched",
+          operation: "searchUsers",
+          userId: session.user.id,
+          resultCount: users.length,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formattedUsers,
@@ -82,7 +91,12 @@ export class UserController {
         // Format dates to strings for the API contract
         const formattedUser = formatDates(user);
 
-        this.logger.log(`User ${params.id} retrieved`);
+        this.logger.log({
+          msg: "User retrieved",
+          operation: "getUser",
+          userId: params.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formattedUser,
@@ -98,7 +112,12 @@ export class UserController {
     return tsRestHandler(contract.users.createUserProfile, async ({ body }) => {
       const result = await this.createUserProfileUseCase.execute(body, session.user.id);
       if (result.isSuccess()) {
-        this.logger.log(`Created user profile for ${session.user.id}`);
+        this.logger.log({
+          msg: "User profile created",
+          operation: "createUserProfile",
+          userId: session.user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.CREATED,
           body: {},
@@ -116,7 +135,12 @@ export class UserController {
 
       if (result.isSuccess()) {
         const userProfile = result.value;
-        this.logger.log(`User profile ${params.id} retrieved`);
+        this.logger.log({
+          msg: "User profile retrieved",
+          operation: "getUserProfile",
+          userId: params.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: userProfile,

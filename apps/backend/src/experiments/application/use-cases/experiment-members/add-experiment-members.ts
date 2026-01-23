@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   ExperimentMemberDto,
@@ -26,9 +27,13 @@ export class AddExperimentMembersUseCase {
     members: { userId: string; role?: ExperimentMemberRole }[],
     currentUserId: string,
   ): Promise<Result<ExperimentMemberDto[]>> {
-    this.logger.log(
-      `Adding members [${members.map((m) => m.userId).join(", ")}] to experiment ${experimentId} by user ${currentUserId}`,
-    );
+    this.logger.log({
+      msg: "Adding members to experiment",
+      operation: "add-experiment-members",
+      experimentId,
+      userId: currentUserId,
+      memberCount: members.length,
+    });
 
     // Check if the experiment exists and if the user is an admin
     const accessCheckResult = await this.experimentRepository.checkAccess(
@@ -39,21 +44,31 @@ export class AddExperimentMembersUseCase {
     return accessCheckResult.chain(
       async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
         if (!experiment) {
-          this.logger.warn(
-            `Attempt to add members to non-existent experiment with ID ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to add members to non-existent experiment",
+            operation: "add-experiment-members",
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (experiment.status === "archived") {
-          this.logger.warn(
-            `Attempt to add members to archived experiment ${experimentId} by user ${currentUserId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to add members to archived experiment",
+            operation: "add-experiment-members",
+            experimentId,
+            userId: currentUserId,
+          });
           return failure(AppError.forbidden("Cannot add members to archived experiments"));
         }
 
         if (!isAdmin) {
-          this.logger.warn(`User ${currentUserId} is not admin for experiment ${experimentId}`);
+          this.logger.warn({
+            msg: "User is not admin for experiment",
+            operation: "add-experiment-members",
+            experimentId,
+            userId: currentUserId,
+          });
           return failure(AppError.forbidden("Only admins can add experiment members"));
         }
 
@@ -64,26 +79,44 @@ export class AddExperimentMembersUseCase {
         );
 
         if (addMembersResult.isFailure()) {
-          this.logger.error(`Failed to add members to experiment ${experimentId}`);
+          this.logger.error({
+            msg: "Failed to add members to experiment",
+            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+            operation: "add-experiment-members",
+            experimentId,
+            error: addMembersResult.error,
+          });
           return failure(AppError.internal("Failed to add experiment members"));
         }
 
-        this.logger.log(
-          `Successfully added members [${members
-            .map((m) => m.userId)
-            .join(", ")}] to experiment "${experiment.name}" (ID: ${experimentId})`,
-        );
+        this.logger.log({
+          msg: "Successfully added members to experiment",
+          operation: "add-experiment-members",
+          experimentId,
+          memberCount: members.length,
+          status: "success",
+        });
 
         // Send notifications to the added members
         const actorProfileResult =
           await this.experimentMemberRepository.findUserFullNameFromProfile(currentUserId);
 
         if (actorProfileResult.isFailure()) {
-          this.logger.error(`Failed to retrieve profile for user ${currentUserId}`);
+          this.logger.error({
+            msg: "Failed to retrieve profile for user",
+            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+            operation: "add-experiment-members",
+            userId: currentUserId,
+            error: actorProfileResult.error,
+          });
           return failure(AppError.internal("Failed to retrieve actor profile"));
         }
 
-        this.logger.log("Current user id", currentUserId);
+        this.logger.log({
+          msg: "Current user id",
+          operation: "add-experiment-members",
+          userId: currentUserId,
+        });
         const actor = actorProfileResult.value
           ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
           : "Anonymous User";

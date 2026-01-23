@@ -5,6 +5,7 @@ import Mail from "nodemailer/lib/mailer";
 import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { apiErrorMapper, tryCatch } from "../../../../utils/fp-utils";
 import { EmailConfigService } from "../config/config.service";
 
@@ -23,9 +24,14 @@ export class NotificationsService {
   ) {
     return await tryCatch(
       async () => {
-        this.logger.log(
-          `Sending added user notification to ${email} with role ${role} for experiment ${experimentId} by actor ${actor}`,
-        );
+        this.logger.log({
+          msg: "Sending added user notification email",
+          operation: "sendAddedUserNotification",
+          email,
+          role,
+          experimentId,
+          actor,
+        });
 
         const { host } = new URL(this.emailConfigService.getBaseUrl());
         const { href: experimentUrl } = new URL(
@@ -68,9 +74,24 @@ export class NotificationsService {
           );
           throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
         }
+
+        this.logger.log({
+          msg: "Added user notification email sent successfully",
+          operation: "sendAddedUserNotification",
+          email,
+          experimentId,
+          status: "success",
+        });
       },
       (error) => {
-        this.logger.error(`Failed to send email notification to {email}`, error);
+        this.logger.error({
+          msg: "Failed to send added user notification email",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendAddedUserNotification",
+          email,
+          experimentId,
+          error,
+        });
         return apiErrorMapper(
           `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
@@ -85,9 +106,12 @@ export class NotificationsService {
   ) {
     return await tryCatch(
       async () => {
-        this.logger.log(
-          `Sending transfer request confirmation to ${email} for project ${projectIdOld}`,
-        );
+        this.logger.log({
+          msg: "Sending transfer request confirmation email",
+          operation: "sendTransferRequestConfirmation",
+          email,
+          projectId: projectIdOld,
+        });
 
         const { host } = new URL(this.emailConfigService.getBaseUrl());
         const transport = createTransport(this.emailConfigService.getServer());
@@ -125,9 +149,24 @@ export class NotificationsService {
           );
           throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
         }
+
+        this.logger.log({
+          msg: "Transfer request confirmation email sent successfully",
+          operation: "sendTransferRequestConfirmation",
+          email,
+          projectId: projectIdOld,
+          status: "success",
+        });
       },
       (error) => {
-        this.logger.error(`Failed to send transfer request confirmation to ${email}`, error);
+        this.logger.error({
+          msg: "Failed to send transfer request confirmation email",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendTransferRequestConfirmation",
+          email,
+          projectId: projectIdOld,
+          error,
+        });
         return apiErrorMapper(
           `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
