@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, success, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksConfigService } from "../config/config.service";
 import { TokenResponse } from "./auth.types";
@@ -40,7 +41,10 @@ export class DatabricksAuthService {
 
     return await tryCatch(
       async () => {
-        this.logger.debug("Requesting new Databricks OAuth token");
+        this.logger.debug({
+          msg: "Requesting new Databricks OAuth token",
+          operation: "getAccessToken",
+        });
 
         const tokenResult = await this.requestNewToken();
         if (tokenResult.isFailure()) {
@@ -54,13 +58,20 @@ export class DatabricksAuthService {
           throw AppError.internal("Failed to obtain Databricks access token");
         }
 
-        this.logger.debug("Successfully obtained Databricks OAuth token");
+        this.logger.debug({
+          msg: "Successfully obtained Databricks OAuth token",
+          operation: "getAccessToken",
+          status: "success",
+        });
         return this.accessToken;
       },
       (error) => {
-        this.logger.error(
-          `Failed to obtain Databricks access token: ${getAxiosErrorMessage(error)}`,
-        );
+        this.logger.error({
+          msg: "Failed to obtain Databricks access token",
+          errorCode: ErrorCodes.DATABRICKS_AUTH_FAILED,
+          operation: "getAccessToken",
+          error,
+        });
         return apiErrorMapper(error, "Databricks authentication");
       },
     );
@@ -92,7 +103,12 @@ export class DatabricksAuthService {
         return { access_token, token_type, expires_in };
       },
       (error) => {
-        this.logger.error(`Failed to obtain access token: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to obtain access token",
+          errorCode: ErrorCodes.DATABRICKS_AUTH_FAILED,
+          operation: "getAccessToken",
+          error,
+        });
         return apiErrorMapper(`Databricks token request: ${getAxiosErrorMessage(error)}`);
       },
     );

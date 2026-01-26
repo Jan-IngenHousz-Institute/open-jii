@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -76,7 +77,12 @@ export class DatabricksVolumesService {
         return volumeResponse;
       },
       (error) => {
-        this.logger.error(`Failed to create volume: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to create volume",
+          errorCode: ErrorCodes.DATABRICKS_VOLUME_FAILED,
+          operation: "createVolume",
+          error,
+        });
         return apiErrorMapper(`Failed to create volume: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -108,7 +114,11 @@ export class DatabricksVolumesService {
         const queryParams = params.include_browse ? `?include_browse=${params.include_browse}` : "";
         const fullUrl = `${volumeUrl}${queryParams}`;
 
-        this.logger.debug(`Getting volume information for '${params.name}'`);
+        this.logger.debug({
+          msg: "Getting volume information",
+          operation: "getVolume",
+          volumeName: params.name,
+        });
 
         const response: AxiosResponse<VolumeResponse> = await this.httpService.axiosRef.get(
           fullUrl,
@@ -129,7 +139,12 @@ export class DatabricksVolumesService {
         return volumeResponse;
       },
       (error) => {
-        this.logger.error(`Failed to get volume: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to get volume",
+          errorCode: ErrorCodes.DATABRICKS_VOLUME_FAILED,
+          operation: "getVolume",
+          error,
+        });
         return apiErrorMapper(`Failed to get volume: ${getAxiosErrorMessage(error)}`);
       },
     );

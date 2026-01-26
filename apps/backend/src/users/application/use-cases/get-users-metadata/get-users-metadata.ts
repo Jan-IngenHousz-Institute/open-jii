@@ -15,7 +15,11 @@ export class GetUsersMetadataUseCase {
   constructor(private readonly userRepository: UserRepository) {}
 
   async execute(params: GetUsersMetadataParams): Promise<Result<UserProfileMetadata[]>> {
-    this.logger.log(`Fetching user ELT metadata for ${params.userIds.length} user IDs`);
+    this.logger.log({
+      msg: "Fetching users metadata",
+      operation: "getUsersMetadata",
+      userCount: params.userIds.length,
+    });
 
     return await this.userRepository.findUsersByIds(params.userIds);
   }

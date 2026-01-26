@@ -16,11 +16,16 @@ export type { FeatureFlagKey };
 
 /**
  * PostHog client configuration for browser
+ * Uses reverse proxy at /ingest to avoid ad blockers
  */
-export const POSTHOG_CLIENT_CONFIG = createPostHogClientConfig(env.NEXT_PUBLIC_POSTHOG_HOST, {
-  // Add any web-specific overrides here if needed
-  debug: false,
-});
+export const POSTHOG_CLIENT_CONFIG = createPostHogClientConfig(
+  "/ingest",
+  env.NEXT_PUBLIC_POSTHOG_UI_HOST,
+  {
+    // Add any web-specific overrides here if needed
+    debug: false,
+  },
+);
 
 /**
  * PostHog server configuration for Node.js

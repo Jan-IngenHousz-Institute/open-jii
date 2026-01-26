@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { PlaceSearchResult } from "@repo/api";
 
 import { AwsLocationService } from "../../../common/modules/aws/services/location/location.service";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import type { Result } from "../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type {
@@ -22,16 +23,30 @@ export class AwsAdapter implements AwsPort {
    * Search for places using text query
    */
   async searchPlaces(request: SearchPlacesRequest): Promise<Result<PlaceSearchResult[]>> {
-    this.logger.log(`Searching places with query: "${request.query}"`);
+    this.logger.log({
+      msg: "Searching places",
+      operation: "searchPlaces",
+      query: request.query,
+    });
 
     try {
       const results = await this.awsLocationService.searchPlaces(request);
 
-      this.logger.debug(`Place search completed: found ${results.length} results`);
+      this.logger.debug({
+        msg: "Place search completed",
+        operation: "searchPlaces",
+        resultsCount: results.length,
+      });
 
       return success(results);
     } catch (error) {
-      this.logger.error(`Place search failed for query "${request.query}":`, error);
+      this.logger.error({
+        msg: "Place search failed",
+        errorCode: ErrorCodes.AWS_LOCATION_FAILED,
+        operation: "searchPlaces",
+        query: request.query,
+        error,
+      });
 
       if (error instanceof Error) {
         return failure(AppError.badRequest(`Place search failed: ${error.message}`));
@@ -45,7 +60,12 @@ export class AwsAdapter implements AwsPort {
    * Reverse geocode coordinates to get place information
    */
   async geocodeLocation(request: GeocodeLocationRequest): Promise<Result<GeocodeResult[]>> {
-    this.logger.log(`Geocoding location: lat=${request.latitude}, lon=${request.longitude}`);
+    this.logger.log({
+      msg: "Geocoding location",
+      operation: "geocodeLocation",
+      latitude: request.latitude,
+      longitude: request.longitude,
+    });
 
     try {
       const results = await this.awsLocationService.geocodeLocation(request);

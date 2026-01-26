@@ -5,12 +5,11 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import type { Document } from "@contentful/rich-text-types";
-import Image from "next/image";
 import React from "react";
 
 import type { PageHomeMissionFieldsFragment } from "../../lib/__generated/sdk";
+import { CtfImage, CtfRichText } from "../contentful";
 import type { EmbeddedEntryType } from "../contentful/ctf-rich-text";
-import { CtfRichText } from "../contentful/ctf-rich-text";
 
 interface HomeAboutMissionProps {
   missionData: PageHomeMissionFieldsFragment;
@@ -109,13 +108,12 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
                   key={img?.sys.id}
                   className={`aspect-square overflow-hidden rounded-xl shadow-xl outline outline-1 -outline-offset-1 outline-black/10 ${index % 2 === 1 ? "-mt-8 lg:-mt-40" : ""} `}
                 >
-                  {img?.url && (
-                    <Image
-                      src={img.url}
-                      alt={img.title ?? `Mission image ${index + 1}`}
-                      width={560}
-                      height={560}
-                      className="block h-full w-full object-cover"
+                  {img && (
+                    <CtfImage
+                      {...img}
+                      nextImageProps={{
+                        className: "block h-full w-full object-cover",
+                      }}
                     />
                   )}
                 </div>

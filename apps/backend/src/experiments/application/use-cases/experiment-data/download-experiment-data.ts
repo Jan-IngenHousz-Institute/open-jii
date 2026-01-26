@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -43,38 +44,66 @@ export class DownloadExperimentDataUseCase {
     query: DownloadExperimentDataQuery,
   ): Promise<Result<DownloadExperimentDataDto>> {
     try {
-      this.logger.debug(
-        `Starting data download for experiment ${experimentId}, table ${query.tableName}`,
-      );
+      this.logger.debug({
+        msg: "Starting data download",
+        operation: "downloadExperimentData",
+        experimentId,
+        tableName: query.tableName,
+      });
 
       // Validate experiment exists and user has access
       const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
       if (accessResult.isFailure()) {
-        this.logger.warn(`Failed to check access for experiment ${experimentId}`);
+        this.logger.warn({
+          msg: "Failed to check access for experiment",
+          operation: "downloadExperimentData",
+          experimentId,
+        });
         return failure(AppError.internal("Failed to verify experiment access"));
       }
 
       const { experiment, hasAccess } = accessResult.value;
 
       if (!experiment) {
-        this.logger.warn(`Experiment not found: ${experimentId}`);
+        this.logger.warn({
+          msg: "Experiment not found",
+          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
+          operation: "downloadExperimentData",
+          experimentId,
+        });
         return failure(AppError.notFound("Experiment not found"));
       }
 
       if (!hasAccess && experiment.visibility !== "public") {
-        this.logger.warn(`Access denied for user ${userId} to experiment ${experimentId}`);
+        this.logger.warn({
+          msg: "Access denied to experiment",
+          errorCode: ErrorCodes.FORBIDDEN,
+          operation: "downloadExperimentData",
+          experimentId,
+          userId,
+        });
         return failure(AppError.forbidden("Access denied to this experiment"));
       }
 
       if (!experiment.schemaName) {
-        this.logger.error(`Experiment ${experimentId} has no schema name`);
+        this.logger.error({
+          msg: "Experiment has no schema name",
+          errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
+          operation: "downloadExperimentData",
+          experimentId,
+        });
         return failure(AppError.internal("Experiment schema not provisioned"));
       }
 
       const schemaName = experiment.schemaName;
 
-      this.logger.debug(`Using schema: ${schemaName} for data download`);
+      this.logger.debug({
+        msg: "Using schema for data download",
+        operation: "downloadExperimentData",
+        experimentId,
+        schemaName,
+      });
 
       // First, validate that the table exists by listing all tables
       const tablesResult = await this.databricksPort.listTables(schemaName);
@@ -87,7 +116,12 @@ export class DownloadExperimentDataUseCase {
       const tableExists = tablesResult.value.tables.some((table) => table.name === query.tableName);
 
       if (!tableExists) {
-        this.logger.warn(`Table ${query.tableName} not found in experiment ${experimentId}`);
+        this.logger.warn({
+          msg: "Table not found in experiment",
+          operation: "downloadExperimentData",
+          experimentId,
+          tableName: query.tableName,
+        });
         return failure(
           AppError.notFound(`Table '${query.tableName}' not found in this experiment`),
         );
@@ -95,7 +129,12 @@ export class DownloadExperimentDataUseCase {
 
       // Execute SQL query to get all data from the table using EXTERNAL_LINKS
       const sqlQuery = `SELECT * FROM ${query.tableName}`;
-      this.logger.debug(`Executing download query: ${sqlQuery}`);
+      this.logger.debug({
+        msg: "Executing download query",
+        operation: "downloadExperimentData",
+        experimentId,
+        sqlQuery,
+      });
 
       const dataResult = await this.databricksPort.downloadExperimentData(schemaName, sqlQuery);
 
@@ -117,16 +156,24 @@ export class DownloadExperimentDataUseCase {
         })),
       };
 
-      this.logger.log(
-        `Successfully prepared download for experiment ${experimentId}, table ${query.tableName}. ` +
-          `Total rows: ${data.totalRows}, Total chunks: ${response.externalLinks.length}`,
-      );
+      this.logger.log({
+        msg: "Successfully prepared download",
+        operation: "downloadExperimentData",
+        experimentId,
+        tableName: query.tableName,
+        totalRows: data.totalRows,
+        totalChunks: response.externalLinks.length,
+        status: "success",
+      });
 
       return success(response);
     } catch (error) {
-      this.logger.error(
-        `Unexpected error in download experiment data use case: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      this.logger.error({
+        msg: "Unexpected error in download experiment data use case",
+        errorCode: ErrorCodes.EXPERIMENT_DATA_DOWNLOAD_FAILED,
+        operation: "downloadExperimentData",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
       return failure(
         AppError.internal(
           `Failed to prepare data download: ${error instanceof Error ? error.message : "Unknown error"}`,

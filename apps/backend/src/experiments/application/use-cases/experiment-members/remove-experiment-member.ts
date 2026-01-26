@@ -20,9 +20,13 @@ export class RemoveExperimentMemberUseCase {
     memberId: string,
     currentUserId: string,
   ): Promise<Result<void>> {
-    this.logger.log(
-      `Removing member ${memberId} from experiment ${experimentId} by user ${currentUserId}`,
-    );
+    this.logger.log({
+      msg: "Removing member from experiment",
+      operation: "remove-experiment-member",
+      experimentId,
+      memberId,
+      userId: currentUserId,
+    });
 
     // Check if experiment exists and user is a member
     const accessCheckResult = await this.experimentRepository.checkAccess(
@@ -39,27 +43,39 @@ export class RemoveExperimentMemberUseCase {
         hasAccess: boolean;
       }) => {
         if (!experiment) {
-          this.logger.warn(
-            `Attempt to remove member from non-existent experiment with ID ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to remove member from non-existent experiment",
+            operation: "remove-experiment-member",
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (experiment.status === "archived") {
-          this.logger.warn(
-            `Attempt to remove member from archived experiment ${experimentId} by user ${currentUserId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to remove member from archived experiment",
+            operation: "remove-experiment-member",
+            experimentId,
+            userId: currentUserId,
+          });
           return failure(AppError.forbidden("Cannot remove members from archived experiments"));
         }
 
         if (!hasAccess) {
-          this.logger.warn(`User ${currentUserId} is not a member of experiment ${experimentId}`);
+          this.logger.warn({
+            msg: "User is not a member of experiment",
+            operation: "remove-experiment-member",
+            experimentId,
+            userId: currentUserId,
+          });
           return failure(AppError.forbidden("Only experiment members can remove members"));
         }
 
-        this.logger.debug(
-          `Fetching members for experiment "${experiment.name}" (ID: ${experimentId})`,
-        );
+        this.logger.debug({
+          msg: "Fetching members for experiment",
+          operation: "remove-experiment-member",
+          experimentId,
+        });
         // Check if user has admin permission
         const membersResult = await this.experimentMemberRepository.getMembers(experimentId);
 
@@ -69,18 +85,24 @@ export class RemoveExperimentMemberUseCase {
           // Allow non-admins to remove themselves only
           const isRemovingSelf = memberId === currentUserId;
           if (!isRemovingSelf && currentUserMember?.role !== "admin") {
-            this.logger.warn(
-              `User ${currentUserId} attempted to remove member from experiment ${experimentId} without admin privileges`,
-            );
+            this.logger.warn({
+              msg: "User attempted to remove member without admin privileges",
+              operation: "remove-experiment-member",
+              experimentId,
+              userId: currentUserId,
+            });
             return failure(AppError.forbidden("Only experiment admins can remove members"));
           }
 
           // Check if memberId exists and belongs to this experiment
           const memberExists = members.some((member) => member.user.id === memberId);
           if (!memberExists) {
-            this.logger.warn(
-              `Attempt to remove non-existent member ${memberId} from experiment ${experimentId}`,
-            );
+            this.logger.warn({
+              msg: "Attempt to remove non-existent member from experiment",
+              operation: "remove-experiment-member",
+              experimentId,
+              memberId,
+            });
             return failure(
               AppError.notFound(`Member with ID ${memberId} not found in this experiment`),
             );
@@ -96,24 +118,35 @@ export class RemoveExperimentMemberUseCase {
               (member: ExperimentMemberDto) => member.role === "admin",
             ).length;
             if (adminCount <= 1) {
-              this.logger.warn(
-                `User ${currentUserId} attempted to remove the last admin (${memberId}) from experiment ${experimentId}`,
-              );
+              this.logger.warn({
+                msg: "User attempted to remove the last admin from experiment",
+                operation: "remove-experiment-member",
+                experimentId,
+                memberId,
+                userId: currentUserId,
+              });
               return failure(
                 AppError.badRequest("Cannot remove the last admin from the experiment"),
               );
             }
           }
 
-          this.logger.debug(
-            `Removing member ${memberId} from experiment "${experiment.name}" (ID: ${experimentId})`,
-          );
+          this.logger.debug({
+            msg: "Removing member from experiment",
+            operation: "remove-experiment-member",
+            experimentId,
+            memberId,
+          });
           // Remove the member
           const removeResult = this.experimentMemberRepository.removeMember(experimentId, memberId);
 
-          this.logger.log(
-            `Successfully removed member ${memberId} from experiment "${experiment.name}" (ID: ${experimentId})`,
-          );
+          this.logger.log({
+            msg: "Successfully removed member from experiment",
+            operation: "remove-experiment-member",
+            experimentId,
+            memberId,
+            status: "success",
+          });
           return removeResult;
         });
       },

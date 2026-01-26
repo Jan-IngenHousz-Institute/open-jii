@@ -1,14 +1,14 @@
-import { Controller, Inject, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Inject, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract, validateProtocolJson } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
+import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
@@ -39,7 +39,12 @@ function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknow
     try {
       return JSON.parse(code) as Record<string, unknown>[];
     } catch (error) {
-      logger.error("Error parsing protocol code:", error);
+      logger.error({
+        msg: "Failed to parse protocol code",
+        errorCode: ErrorCodes.BAD_REQUEST,
+        operation: "parseProtocolCode",
+        error,
+      });
       return [{}];
     }
   }
@@ -68,7 +73,12 @@ function validateJsonStructure(code: unknown, logger: Logger) {
     JSON.stringify(code);
     return success(code);
   } catch (error) {
-    logger.warn("Protocol JSON structure validation failed", error);
+    logger.warn({
+      msg: "Protocol JSON structure validation failed",
+      errorCode: ErrorCodes.BAD_REQUEST,
+      operation: "validateJsonStructure",
+      error,
+    });
     return failure(AppError.badRequest("Invalid JSON structure"));
   }
 }
@@ -99,14 +109,18 @@ async function validateProtocolCode(
   // Otherwise, perform full protocol validation
   const validationResult = validateProtocolJson(code);
   if (!validationResult.success) {
-    logger.warn("Protocol validation failed", validationResult.error);
+    logger.warn({
+      msg: "Protocol validation failed",
+      errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
+      operation: "validateProtocolCode",
+      validationError: validationResult.error,
+    });
     return failure(AppError.badRequest("Protocol validation failed"));
   }
   return success(validationResult.data);
 }
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ProtocolController {
   private readonly logger = new Logger(ProtocolController.name);
 
@@ -165,7 +179,7 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.createProtocol)
-  createProtocol(@CurrentUser() user: User) {
+  createProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.createProtocol, async ({ body }) => {
       const validationResult = await validateProtocolCode(
         body.code,
@@ -184,7 +198,7 @@ export class ProtocolController {
         family: body.family,
       };
 
-      const result = await this.createProtocolUseCase.execute(createDto, user.id);
+      const result = await this.createProtocolUseCase.execute(createDto, session.user.id);
 
       if (result.isSuccess()) {
         const protocol = {
@@ -192,7 +206,13 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        this.logger.log(`Protocol created: ${protocol.id} by user ${user.id}`);
+        this.logger.log({
+          msg: "Protocol created",
+          operation: "createProtocol",
+          protocolId: protocol.id,
+          userId: session.user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.CREATED,
           body: formatDates(protocol),
@@ -204,7 +224,7 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.updateProtocol)
-  updateProtocol(@CurrentUser() user: User) {
+  updateProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.updateProtocol, async ({ params, body }) => {
       // First check if protocol exists and user is the creator
       const protocolResult = await this.getProtocolUseCase.execute(params.id);
@@ -213,10 +233,15 @@ export class ProtocolController {
         return handleFailure(protocolResult, this.logger);
       }
 
-      if (protocolResult.value.createdBy !== user.id) {
-        this.logger.warn(
-          `User ${user.id} attempted to update protocol ${params.id} without permission`,
-        );
+      if (protocolResult.value.createdBy !== session.user.id) {
+        this.logger.warn({
+          msg: "Unauthorized protocol update attempt",
+          errorCode: ErrorCodes.FORBIDDEN,
+          operation: "updateProtocol",
+          protocolId: params.id,
+          userId: session.user.id,
+          ownerId: protocolResult.value.createdBy,
+        });
         return {
           status: StatusCodes.FORBIDDEN,
           body: { message: "Only the protocol creator can update this protocol" },
@@ -250,7 +275,13 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        this.logger.log(`Protocol updated: ${protocol.id} by user ${user.id}`);
+        this.logger.log({
+          msg: "Protocol updated",
+          operation: "updateProtocol",
+          protocolId: protocol.id,
+          userId: session.user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formatDates(protocol),
@@ -262,11 +293,11 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.deleteProtocol)
-  deleteProtocol(@CurrentUser() user: User) {
+  deleteProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.deleteProtocol, async ({ params }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_DELETION,
-        user.email ?? user.id,
+        session.user.email || session.user.id,
       );
 
       if (!isDeletionEnabled) {
@@ -283,10 +314,15 @@ export class ProtocolController {
         return handleFailure(protocolResult, this.logger);
       }
 
-      if (protocolResult.value.createdBy !== user.id) {
-        this.logger.warn(
-          `User ${user.id} attempted to delete protocol ${params.id} without permission`,
-        );
+      if (protocolResult.value.createdBy !== session.user.id) {
+        this.logger.warn({
+          msg: "Unauthorized protocol delete attempt",
+          errorCode: ErrorCodes.FORBIDDEN,
+          operation: "deleteProtocol",
+          protocolId: params.id,
+          userId: session.user.id,
+          ownerId: protocolResult.value.createdBy,
+        });
         return {
           status: StatusCodes.FORBIDDEN,
           body: { message: "Only the protocol creator can delete this protocol" },
@@ -296,7 +332,13 @@ export class ProtocolController {
       const result = await this.deleteProtocolUseCase.execute(params.id);
 
       if (result.isSuccess()) {
-        this.logger.log(`Protocol deleted: ${params.id} by user ${user.id}`);
+        this.logger.log({
+          msg: "Protocol deleted",
+          operation: "deleteProtocol",
+          protocolId: params.id,
+          userId: session.user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,

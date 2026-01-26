@@ -1,12 +1,11 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/create-experiment-visualization";
@@ -16,7 +15,6 @@ import { ListExperimentVisualizationsUseCase } from "../application/use-cases/ex
 import { UpdateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/update-experiment-visualization";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentVisualizationsController {
   private readonly logger = new Logger(ExperimentVisualizationsController.name);
 
@@ -29,9 +27,12 @@ export class ExperimentVisualizationsController {
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentVisualizations)
-  listVisualizations(@CurrentUser() user: User) {
+  listVisualizations(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.listExperimentVisualizations, async ({ params }) => {
-      const result = await this.listExperimentVisualizationsUseCase.execute(params.id, user.id);
+      const result = await this.listExperimentVisualizationsUseCase.execute(
+        params.id,
+        session.user.id,
+      );
 
       if (result.isSuccess()) {
         const visualizations = formatDatesList(result.value);
@@ -46,21 +47,26 @@ export class ExperimentVisualizationsController {
   }
 
   @TsRestHandler(contract.experiments.createExperimentVisualization)
-  createVisualization(@CurrentUser() user: User) {
+  createVisualization(@Session() session: UserSession) {
     return tsRestHandler(
       contract.experiments.createExperimentVisualization,
       async ({ params, body }) => {
         const result = await this.createExperimentVisualizationUseCase.execute(
           params.id,
           body,
-          user.id,
+          session.user.id,
         );
 
         if (result.isSuccess()) {
           const visualization = result.value;
-          this.logger.log(
-            `Visualization "${visualization.name}" created for experiment ${params.id} by user ${user.id}`,
-          );
+          this.logger.log({
+            msg: "Visualization created for experiment",
+            operation: "createExperimentVisualization",
+            experimentId: params.id,
+            visualizationId: visualization.id,
+            userId: session.user.id,
+            status: "success",
+          });
 
           return {
             status: StatusCodes.CREATED as const,
@@ -74,19 +80,24 @@ export class ExperimentVisualizationsController {
   }
 
   @TsRestHandler(contract.experiments.getExperimentVisualization)
-  getVisualization(@CurrentUser() user: User) {
+  getVisualization(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperimentVisualization, async ({ params }) => {
       const result = await this.getExperimentVisualizationUseCase.execute(
         params.id,
         params.visualizationId,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
         const visualization = result.value;
-        this.logger.log(
-          `Visualization ${params.visualizationId} retrieved for experiment ${params.id} by user ${user.id}`,
-        );
+        this.logger.log({
+          msg: "Visualization retrieved for experiment",
+          operation: "getExperimentVisualization",
+          experimentId: params.id,
+          visualizationId: params.visualizationId,
+          userId: session.user.id,
+          status: "success",
+        });
 
         return {
           status: StatusCodes.OK as const,
@@ -99,19 +110,25 @@ export class ExperimentVisualizationsController {
   }
 
   @TsRestHandler(contract.experiments.updateExperimentVisualization)
-  updateVisualization(@CurrentUser() user: User) {
+  updateVisualization(@Session() session: UserSession) {
     return tsRestHandler(
       contract.experiments.updateExperimentVisualization,
       async ({ params, body }) => {
         const result = await this.updateExperimentVisualizationUseCase.execute(
           params.visualizationId,
           body,
-          user.id,
+          session.user.id,
         );
 
         if (result.isSuccess()) {
           const visualization = result.value;
-          this.logger.log(`Visualization ${params.visualizationId} updated by user ${user.id}`);
+          this.logger.log({
+            msg: "Visualization updated",
+            operation: "updateExperimentVisualization",
+            visualizationId: params.visualizationId,
+            userId: session.user.id,
+            status: "success",
+          });
 
           return {
             status: StatusCodes.OK as const,
@@ -125,15 +142,21 @@ export class ExperimentVisualizationsController {
   }
 
   @TsRestHandler(contract.experiments.deleteExperimentVisualization)
-  deleteVisualization(@CurrentUser() user: User) {
+  deleteVisualization(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.deleteExperimentVisualization, async ({ params }) => {
       const result = await this.deleteExperimentVisualizationUseCase.execute(
         params.visualizationId,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
-        this.logger.log(`Visualization ${params.visualizationId} deleted by user ${user.id}`);
+        this.logger.log({
+          msg: "Visualization deleted",
+          operation: "deleteExperimentVisualization",
+          visualizationId: params.visualizationId,
+          userId: session.user.id,
+          status: "success",
+        });
 
         return {
           status: StatusCodes.NO_CONTENT as const,

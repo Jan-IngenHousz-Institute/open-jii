@@ -1,12 +1,11 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
@@ -15,7 +14,6 @@ import { RemoveExperimentMemberUseCase } from "../application/use-cases/experime
 import { UpdateExperimentMemberRoleUseCase } from "../application/use-cases/experiment-members/update-experiment-member-role";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentMembersController {
   private readonly logger = new Logger(ExperimentMembersController.name);
 
@@ -27,9 +25,9 @@ export class ExperimentMembersController {
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
-  listMembers(@CurrentUser() user: User) {
+  listMembers(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.listExperimentMembers, async ({ params }) => {
-      const result = await this.listExperimentMembersUseCase.execute(params.id, user.id);
+      const result = await this.listExperimentMembersUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         // Format dates to strings for the API contract
@@ -47,12 +45,12 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.addExperimentMembers)
-  addMembers(@CurrentUser() user: User) {
+  addMembers(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.addExperimentMembers, async ({ params, body }) => {
       const result = await this.addExperimentMembersUseCase.execute(
         params.id,
         body.members,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
@@ -60,7 +58,7 @@ export class ExperimentMembersController {
         const formattedMembers = formatDatesList(members);
 
         this.logger.log(
-          `Members [${body.members.map((m) => m.userId).join(", ")}] added to experiment ${params.id} by user ${user.id}`,
+          `Members [${body.members.map((m) => m.userId).join(", ")}] added to experiment ${params.id} by user ${session.user.id}`,
         );
 
         return {
@@ -74,17 +72,17 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.removeExperimentMember)
-  removeMember(@CurrentUser() user: User) {
+  removeMember(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.removeExperimentMember, async ({ params }) => {
       const result = await this.removeExperimentMemberUseCase.execute(
         params.id,
         params.memberId,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
         this.logger.log(
-          `Member ${params.memberId} removed from experiment ${params.id} by user ${user.id}`,
+          `Member ${params.memberId} removed from experiment ${params.id} by user ${session.user.id}`,
         );
 
         return {
@@ -98,7 +96,7 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.updateExperimentMemberRole)
-  updateMemberRole(@CurrentUser() user: User) {
+  updateMemberRole(@Session() session: UserSession) {
     return tsRestHandler(
       contract.experiments.updateExperimentMemberRole,
       async ({ params, body }) => {
@@ -106,7 +104,7 @@ export class ExperimentMembersController {
           params.id,
           params.memberId,
           body.role,
-          user.id,
+          session.user.id,
         );
 
         if (result.isSuccess()) {
@@ -114,7 +112,7 @@ export class ExperimentMembersController {
           const formattedMember = formatDatesList([member])[0];
 
           this.logger.log(
-            `Member ${params.memberId} role updated to ${body.role} in experiment ${params.id} by user ${user.id}`,
+            `Member ${params.memberId} role updated to ${body.role} in experiment ${params.id} by user ${session.user.id}`,
           );
 
           return {
