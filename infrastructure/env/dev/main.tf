@@ -694,6 +694,17 @@ module "aurora_db" {
   skip_final_snapshot      = true # Skip snapshot on deletion in dev
 }
 
+module "secrets_rotation_trigger" {
+  source = "../../modules/secrets-manager-rotation/secrets-rotation-trigger"
+
+  ecs_cluster_name            = module.backend_ecs.ecs_cluster_name
+  ecs_service_name            = module.backend_ecs.ecs_service_name
+  region                      = var.aws_region
+  secret_name                 = module.aurora_db.master_user_secret_name
+  ecs_task_execution_role_arn = module.backend_ecs.ecs_execution_role_arn
+  ecs_task_role_arn           = module.backend_ecs.ecs_task_role_arn
+}
+
 # Authentication secrets
 module "auth_secrets" {
   source = "../../modules/secrets-manager"
