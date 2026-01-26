@@ -1,6 +1,7 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
+    "lib": ["es2017"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,

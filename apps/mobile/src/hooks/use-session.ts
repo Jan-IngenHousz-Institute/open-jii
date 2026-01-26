@@ -1,9 +1,10 @@
 /**
  * Hook to access the current user session using Better Auth
  */
-import { authClient } from "@repo/auth/client.native";
+import { useAuthClient } from "~/services/auth";
 
 export function useSession() {
+  const authClient = useAuthClient();
   const { data: session, isPending, error } = authClient.useSession();
   // console.log("useSession:", { session, isPending, error });
 
@@ -30,6 +31,3 @@ export function useSession() {
     signOut: () => authClient.signOut(),
   };
 }
-
-// Export a compatibility hook name
-export { useSession as useSessionStore };
