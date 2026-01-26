@@ -26,3 +26,8 @@ We provide an open platform that connects field sensor measurements, experiment 
 	<DocButton href="./quick-start-guide" variant="primary">Follow the Quick Start Guide</DocButton>
 
 </div>
+
+<div style={{marginTop: '0.6rem'}}>
+	<DocButton href="../data-platform/report-issue" variant="primary">Report bug</DocButton>
+
+</div>
