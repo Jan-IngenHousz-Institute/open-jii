@@ -523,10 +523,10 @@ module "experiment_provisioning_job" {
         "experiment_name"          = "{{experiment_name}}"
         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
         # "experiment_pipeline_path" = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/experiment_pipeline"
-        "catalog_name"             = module.databricks_catalog.catalog_name
-        "central_schema"           = "centrum"
-        "environment"              = upper(var.environment)
-        "slack_channel"            = var.slack_channel
+        "catalog_name"   = module.databricks_catalog.catalog_name
+        "central_schema" = "centrum"
+        "environment"    = upper(var.environment)
+        "slack_channel"  = var.slack_channel
       }
     },
     {
