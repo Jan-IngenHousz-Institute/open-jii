@@ -12,6 +12,7 @@ import type {
 } from "@aws-sdk/client-location";
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { AwsConfigService } from "../config/config.service";
 import type {
   PlaceSearchResult,
@@ -85,7 +86,13 @@ export class AwsLocationService {
 
       return results;
     } catch (error) {
-      this.logger.error(`Failed to search places for query: ${request.query}`, error);
+      this.logger.error({
+        msg: "Failed to search places",
+        errorCode: ErrorCodes.AWS_LOCATION_FAILED,
+        operation: "searchPlaces",
+        query: request.query,
+        error,
+      });
       throw new Error(
         `Place search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );

@@ -274,6 +274,10 @@ describe("useExperimentUpdate", () => {
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experiments"],
       });
+
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["breadcrumbs"],
+      });
     });
 
     it("should invalidate queries even when there is an error", async () => {
@@ -291,7 +295,7 @@ describe("useExperimentUpdate", () => {
 
       await onSettled?.(undefined, error, variables);
 
-      expect(mockInvalidateQueries).toHaveBeenCalledTimes(3);
+      expect(mockInvalidateQueries).toHaveBeenCalledTimes(4);
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experiment", "exp-123"],
         exact: true,
@@ -301,6 +305,9 @@ describe("useExperimentUpdate", () => {
       });
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experiments"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["breadcrumbs"],
       });
     });
   });

@@ -2,6 +2,7 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -31,7 +32,11 @@ export class DatabricksTablesService {
         const host = this.configService.getHost();
         const apiUrl = `${host}${DatabricksTablesService.TABLES_ENDPOINT}`;
 
-        this.logger.debug(`Listing tables for schema ${schemaName}`);
+        this.logger.debug({
+          msg: "Listing tables",
+          operation: "listTables",
+          schemaName,
+        });
 
         const response = await this.httpService.axiosRef.get<ListTablesResponse>(apiUrl, {
           headers: {
@@ -60,7 +65,13 @@ export class DatabricksTablesService {
         };
       },
       (error) => {
-        this.logger.error(`Failed to list tables: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to list tables",
+          errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
+          operation: "listTables",
+          schemaName,
+          error,
+        });
         return apiErrorMapper(`Failed to list Databricks tables: ${getAxiosErrorMessage(error)}`);
       },
     );

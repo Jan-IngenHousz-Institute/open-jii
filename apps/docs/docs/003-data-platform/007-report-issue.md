@@ -1,11 +1,11 @@
 # Report issue / request feature
 
 ## Did you find a bug?
-Do not open up a GitHub issue if the bug is a security vulnerability. Please refer to our security policy [Security policy](https://github.com/Jan-IngenHousz-Institute/open-jii/security).
+Do not open up a GitHub issue if the bug is a security vulnerability. Please refer to our [Security policy](https://github.com/Jan-IngenHousz-Institute/open-jii/security).
 
 Ensure the bug was not already reported by searching [Issues](https://github.com/Jan-IngenHousz-Institute/open-jii/issues).
 
-If you can't find an open issue addressing the problem, [open a new one](https://github.com/Jan-IngenHousz-Institute/open-jii/issues/new). Include:
+If you can't find an open issue addressing the problem, log in at GitHub and [open a new bug report](https://github.com/Jan-IngenHousz-Institute/open-jii/issues/new?template=bug_report.md). Include:
 
 - Clear title and description
 - As much relevant information as possible
