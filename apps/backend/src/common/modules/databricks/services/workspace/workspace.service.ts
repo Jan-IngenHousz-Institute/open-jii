@@ -45,7 +45,11 @@ export class DatabricksWorkspaceService {
         const host = this.configService.getHost();
         const apiUrl = `${host}${DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT}`;
 
-        this.logger.debug(`Importing workspace object to path: ${request.path}`);
+        this.logger.debug({
+          msg: "Importing workspace object",
+          operation: "importWorkspaceObject",
+          path: request.path,
+        });
 
         const requestBody = {
           content: request.content,
@@ -63,7 +67,12 @@ export class DatabricksWorkspaceService {
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
         });
 
-        this.logger.log(`Successfully imported workspace object to path: ${request.path}`);
+        this.logger.log({
+          msg: "Successfully imported workspace object",
+          operation: "importWorkspaceObject",
+          path: request.path,
+          status: "success",
+        });
 
         return {};
       },
@@ -95,7 +104,11 @@ export class DatabricksWorkspaceService {
         const host = this.configService.getHost();
         const apiUrl = `${host}${DatabricksWorkspaceService.WORKSPACE_DELETE_ENDPOINT}`;
 
-        this.logger.debug(`Deleting workspace object at path: ${request.path}`);
+        this.logger.debug({
+          msg: "Deleting workspace object",
+          operation: "deleteWorkspaceObject",
+          path: request.path,
+        });
 
         const requestBody = {
           path: request.path,
@@ -110,7 +123,12 @@ export class DatabricksWorkspaceService {
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
         });
 
-        this.logger.log(`Successfully deleted workspace object at path: ${request.path}`);
+        this.logger.log({
+          msg: "Successfully deleted workspace object",
+          operation: "deleteWorkspaceObject",
+          path: request.path,
+          status: "success",
+        });
 
         return {};
       },

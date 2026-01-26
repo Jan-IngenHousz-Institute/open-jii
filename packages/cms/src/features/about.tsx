@@ -5,12 +5,11 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import type { Document } from "@contentful/rich-text-types";
-import Image from "next/image";
 import React from "react";
 
 import type { PageAboutFieldsFragment } from "../lib/__generated/sdk";
+import { CtfImage, CtfRichText } from "./contentful";
 import type { EmbeddedEntryType } from "./contentful/ctf-rich-text";
-import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface AboutContentProps {
   about: PageAboutFieldsFragment;
@@ -70,19 +69,18 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
         </div>
 
         {/* IMAGE */}
-        {currentAbout.image?.url && (
+        {currentAbout.image && (
           <div className="mt-10 xl:row-span-2 xl:row-end-2 xl:mt-20">
             <div
               className="relative h-[550px] w-full max-w-3xl overflow-hidden rounded-2xl outline outline-1 outline-black/5"
               {...inspectorProps({ fieldId: "image" })}
             >
-              <Image
-                src={currentAbout.image.url}
-                alt={currentAbout.image.title ?? currentAbout.title ?? "About"}
-                width={1600}
-                height={1200}
-                className="h-full w-full object-cover"
-                priority
+              <CtfImage
+                {...currentAbout.image}
+                nextImageProps={{
+                  priority: true,
+                  className: "h-full w-full object-cover",
+                }}
               />
             </div>
           </div>

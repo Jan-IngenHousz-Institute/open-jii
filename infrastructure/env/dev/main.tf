@@ -869,9 +869,7 @@ module "opennext" {
   contentful_secret_arn = module.contentful_secrets.secret_arn
 
   server_environment_variables = {
-    NODE_ENV                 = "production"
-    NEXT_PUBLIC_POSTHOG_KEY  = var.posthog_key
-    NEXT_PUBLIC_POSTHOG_HOST = var.posthog_host
+    NODE_ENV = "production"
   }
 
   # Performance configuration
@@ -1244,6 +1242,14 @@ module "backend_ecs" {
     {
       name  = "POSTHOG_HOST"
       value = var.posthog_host
+    },
+    {
+      name  = "NEXT_PUBLIC_BASE_URL"
+      value = "https://${module.route53.environment_domain}"
+    },
+    {
+      name  = "NEXT_PUBLIC_API_URL"
+      value = "https://${module.route53.api_domain}"
     }
   ]
 

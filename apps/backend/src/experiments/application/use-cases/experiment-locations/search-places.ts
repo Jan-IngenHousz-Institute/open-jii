@@ -16,7 +16,11 @@ export class SearchPlacesUseCase {
   ) {}
 
   async execute(request: SearchPlacesRequest): Promise<Result<PlaceSearchResult[]>> {
-    this.logger.log(`Searching places with query: "${request.query}"`);
+    this.logger.log({
+      msg: "Searching places",
+      operation: "searchPlaces",
+      query: request.query,
+    });
 
     return this.AwsPort.searchPlaces(request);
   }

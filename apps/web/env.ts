@@ -9,6 +9,7 @@ const envSchema = z.object({
   // PostHog configuration - Optional for development
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional().default("https://eu.i.posthog.com"),
+  NEXT_PUBLIC_POSTHOG_UI_HOST: z.string().url().optional().default("https://eu.posthog.com"),
   CONTENTFUL_SPACE_ID: z.string().optional(),
   CONTENTFUL_ACCESS_TOKEN: z.string().optional(),
   CONTENTFUL_PREVIEW_ACCESS_TOKEN: z.string().optional(),
@@ -28,6 +29,7 @@ const parseEnv = () => {
       NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
       NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
       NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+      NEXT_PUBLIC_POSTHOG_UI_HOST: process.env.NEXT_PUBLIC_POSTHOG_UI_HOST,
       VERCEL_AUTOMATION_BYPASS_SECRET: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
       CONTENTFUL_SPACE_ID: process.env.CONTENTFUL_SPACE_ID,
       CONTENTFUL_ACCESS_TOKEN: process.env.CONTENTFUL_ACCESS_TOKEN,

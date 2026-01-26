@@ -20,11 +20,9 @@ const getCallbackUrl = async () => {
 
 export default async function AppLayout({
   children,
-  pageTitle,
   params,
 }: Readonly<{
   children: React.ReactNode;
-  pageTitle?: string;
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
@@ -48,9 +46,9 @@ export default async function AppLayout({
       <NavigationSidebarWrapper locale={locale} />
       <SidebarInset>
         <NavigationTopbar locale={locale} user={session.user} />
-        <div className="flex flex-1 flex-col gap-4 p-6 pt-4">
+        <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
           <div className="mx-auto w-full max-w-7xl">
-            <Breadcrumbs pageTitle={pageTitle} locale={locale} />
+            <Breadcrumbs locale={locale} />
             {children}
           </div>
         </div>

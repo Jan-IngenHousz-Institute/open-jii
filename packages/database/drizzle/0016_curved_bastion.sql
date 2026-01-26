@@ -5,6 +5,7 @@ ALTER TABLE "accounts" RENAME COLUMN "userId" TO "user_id";--> statement-breakpo
 ALTER TABLE "accounts" RENAME COLUMN "providerAccountId" TO "account_id";--> statement-breakpoint
 ALTER TABLE "accounts" RENAME COLUMN "provider" TO "provider_id";--> statement-breakpoint
 ALTER TABLE "accounts" RENAME COLUMN "expires_at" TO "access_token_expires_at";--> statement-breakpoint
+ALTER TABLE "accounts" ALTER COLUMN "access_token_expires_at" SET DATA TYPE timestamp USING to_timestamp("access_token_expires_at" / 1000.0);--> statement-breakpoint
 ALTER TABLE "sessions" RENAME COLUMN "userId" TO "user_id";--> statement-breakpoint
 ALTER TABLE "sessions" RENAME COLUMN "sessionToken" TO "token";--> statement-breakpoint
 ALTER TABLE "sessions" RENAME COLUMN "expires" TO "expires_at";--> statement-breakpoint
@@ -20,7 +21,7 @@ ALTER TABLE "sessions" DROP CONSTRAINT "sessions_userId_users_id_fk";
 --> statement-breakpoint
 UPDATE "users" SET "name" = '' WHERE "name" IS NULL;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "name" SET NOT NULL;--> statement-breakpoint
-UPDATE "users" SET "email" = '' WHERE "email" IS NULL;--> statement-breakpoint
+UPDATE "users" SET "email" = 'noemail-' || "id" WHERE "email" IS NULL OR "email" = '';--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "email" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "accounts" ADD COLUMN "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL;--> statement-breakpoint
 ALTER TABLE "accounts" ADD COLUMN "refresh_token_expires_at" timestamp;--> statement-breakpoint

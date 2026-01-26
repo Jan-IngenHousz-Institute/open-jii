@@ -22,7 +22,12 @@ export class AnalyticsAdapter implements AnalyticsPort {
    * @returns Whether the flag is enabled
    */
   async isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId = "anonymous"): Promise<boolean> {
-    this.logger.debug(`Checking feature flag ${flagKey} for ${distinctId}`);
+    this.logger.debug({
+      msg: "Checking feature flag",
+      operation: "isFeatureFlagEnabled",
+      flagKey,
+      distinctId,
+    });
     return this.flagsService.isFeatureFlagEnabled(flagKey, distinctId);
   }
 }

@@ -26,8 +26,8 @@ Log in in the app via ORCID, Github or if you want to user a phone that does **n
 use the following steps to **log in via email**.
 - Download the openJII app on the phone (lets cal it the 'sensorphone') that you want to connect to your sensor
 - Open the app and enter your emailaddress at the login screen
-- Now go to a device that has your emailbox, like a desktop, laptop, tablet or (personal) mobile phone, open the email and scroll to the QR code
-- Use the sensorphones' camera to scan the QR code 
+- Now go to a device that has your emailbox, like a desktop, laptop, tablet or (personal) mobile phone, open the email and scroll to the 6-digit code
+- Use the sensorphone and enter the 6-digit code
 - You will be logged in to the app
 
 ### Minimal specs

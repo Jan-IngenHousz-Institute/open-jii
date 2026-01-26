@@ -14,13 +14,7 @@ fragment PageHomeFeaturesFields on PageHomeFeatures {
     }
   }
   image {
-    url
-    title
-    sys {
-      id
-      publishedAt
-      environmentId
-    }
+    ...ImageFields
   }
 }
 
@@ -35,13 +29,7 @@ fragment FeatureFields on ComponentFeature {
   title
   subtitle
   icon {
-    url
-    title
-    sys {
-      id
-      publishedAt
-      environmentId
-    }
+    ...ImageFields
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { revalidateAuth } from "~/app/actions/revalidate";
 
 import { authClient } from "@repo/auth/client";
 
@@ -14,10 +15,13 @@ export function useSignOut() {
     mutationFn: async () => {
       await authClient.signOut();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Clear session cache
       queryClient.setQueryData(["auth", "session"], null);
       void queryClient.invalidateQueries({ queryKey: ["auth"] });
+
+      // Revalidate Next.js cache
+      await revalidateAuth();
     },
   });
 }

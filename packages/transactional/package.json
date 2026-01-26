@@ -32,8 +32,7 @@
     "start:mailcatcher": "docker compose -f docker-compose.yml up mailcatcher"
   },
   "dependencies": {
-    "@react-email/components": "catalog:react-email",
-    "react-email": "catalog:react-email"
+    "@react-email/components": "catalog:react-email"
   },
   "devDependencies": {
     "@react-email/preview-server": "4.1.3",
@@ -42,6 +41,7 @@
     "@types/react": "catalog:react19",
     "eslint": "catalog:",
     "react": "catalog:react19",
+    "react-email": "catalog:react-email",
     "typescript": "catalog:"
   }
 }
