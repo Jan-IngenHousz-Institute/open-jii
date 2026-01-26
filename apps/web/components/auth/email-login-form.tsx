@@ -168,6 +168,7 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
                 <FormControl>
                   <InputOTP
                     maxLength={OTP_LENGTH}
+                    autoComplete="one-time-code"
                     pattern={REGEXP_ONLY_DIGITS_PATTERN}
                     containerClassName="gap-2 justify-center"
                     onComplete={() => otpForm.handleSubmit(handleOTPSubmit)()}

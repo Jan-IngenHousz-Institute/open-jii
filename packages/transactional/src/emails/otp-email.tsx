@@ -59,6 +59,9 @@ export const OtpEmail = ({ otp, senderName, host }: OtpEmailProps) => {
               </Text>
             </Section>
           </Container>
+          <Text className="hidden opacity-0">
+            @{host} #{otp}
+          </Text>
         </Body>
       </Tailwind>
     </Html>
