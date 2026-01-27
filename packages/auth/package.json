@@ -30,12 +30,10 @@
   },
   "dependencies": {
     "@better-auth/expo": "^1.4.12",
-    "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "better-auth": "^1.4.12",
-    "nodemailer": "catalog:",
-    "qrcode": "^1.5.4"
+    "nodemailer": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -43,7 +41,6 @@
     "@types/express": "^5.0.1",
     "@types/node": "catalog:",
     "@types/nodemailer": "catalog:",
-    "@types/qrcode": "^1.5.5",
     "eslint": "catalog:",
     "typescript": "catalog:"
   },
