@@ -1,9 +1,7 @@
-import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 import type { SentMessageInfo } from "nodemailer";
-import QRCode from "qrcode";
 
-import { VerificationRequest } from "@repo/transactional/emails/verification-request";
+import { renderVerificationRequest } from "@repo/transactional/render/verification-request";
 
 interface ExtendedSentMessageInfo extends SentMessageInfo {
   rejected?: string[];
@@ -24,16 +22,10 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
   const { host } = new URL(url);
   const transport = createTransport(emailServer);
 
-  const qrCodeBuffer = await QRCode.toBuffer(url, {
-    width: 200,
-    margin: 1,
-    errorCorrectionLevel: "M",
-  });
-
-  // Render email using React Email component
-  const emailHtml = await render(VerificationRequest({ url, host, senderName: "openJII" }), {});
-  const emailText = await render(VerificationRequest({ url, host, senderName: "openJII" }), {
-    plainText: true,
+  const { html, text, qrCodeBuffer } = await renderVerificationRequest({
+    url,
+    host,
+    senderName: "openJII",
   });
 
   const result = await transport.sendMail({
@@ -43,8 +35,8 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
       address: emailFrom,
     },
     subject: `Sign in to the openJII Platform`,
-    html: emailHtml,
-    text: emailText,
+    html,
+    text,
     attachments: [
       {
         filename: "qrcode.png",
