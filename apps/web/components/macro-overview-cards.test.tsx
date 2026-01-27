@@ -28,7 +28,6 @@ vi.mock("@/util/date", () => ({
 
 // Mock Lucide icons
 vi.mock("lucide-react", () => ({
-  ArrowRight: () => <div data-testid="icon-arrow-right" />,
   Calendar: () => <div data-testid="icon-calendar" />,
   User: () => <div data-testid="icon-user" />,
   Star: () => <div data-testid="icon-star" />,
@@ -142,10 +141,9 @@ describe("<MacroOverviewCards />", () => {
     expect(screen.getAllByText(/common\.updated/)).toHaveLength(3);
   });
 
-  it("renders featured macro with Preferred badge", () => {
+  it("renders preferred macro with Preferred badge", () => {
     render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
 
-    // Only the JavaScript macro has sortOrder, so it should have a Preferred badge
     const badge = screen.getByText("common.preferred");
     expect(badge).toBeInTheDocument();
   });
