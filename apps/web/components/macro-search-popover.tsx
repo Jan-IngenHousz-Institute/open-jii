@@ -1,13 +1,13 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { SearchX, PlusSquare, ExternalLink, Star } from "lucide-react";
+import { SearchX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
 import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components";
 import {
   Command,
   CommandEmpty,
@@ -20,7 +20,7 @@ import { PopoverContent } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
 
 const macroItemVariants = cva(
-  "mb-1 flex items-center justify-between gap-2 rounded border p-2 relative",
+  "mb-1 flex items-center justify-between gap-2 rounded border p-2.5 relative",
   {
     variants: {
       featured: {
@@ -48,8 +48,7 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
   const { t } = useTranslation("common");
 
   const handleAddMacro = useCallback(
-    async (e: React.MouseEvent, macroId: string) => {
-      e.stopPropagation();
+    async (macroId: string) => {
       await onAddMacro(macroId);
       setOpen(false);
       onSearchChange("");
@@ -60,61 +59,53 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
   return (
     <>
       {macros.map((macro) => {
-        const isFeatured = macro.sortOrder !== null;
+        const isPreferred = macro.sortOrder !== null;
         return (
           <CommandItem
             key={macro.id}
             value={macro.id}
-            className={macroItemVariants({ featured: isFeatured })}
+            className={macroItemVariants({ featured: isPreferred })}
+            onSelect={() => handleAddMacro(macro.id)}
+            disabled={isAddingMacro}
           >
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
               {/* Macro name */}
-              <div className="flex items-center gap-1.5">
+              <div className="mb-1 flex items-center gap-1">
                 <h4 className="text-foreground truncate text-sm font-medium">{macro.name}</h4>
-                {isFeatured && (
-                  <Star className="fill-secondary text-secondary h-3.5 w-3.5 flex-shrink-0" />
+
+                <Link
+                  href={`/${locale}/platform/macros/${macro.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={t("experiments.seeMacroDetails")}
+                  aria-label={t("experiments.seeMacroDetails")}
+                  className="group p-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
+                </Link>
+
+                {isPreferred && (
+                  <div className="ml-auto">
+                    <Badge className={"bg-secondary/30 text-primary"}>
+                      {t("common.preferred")}
+                    </Badge>
+                  </div>
                 )}
               </div>
-
               {/* Language */}
               <div className="text-muted-foreground truncate text-xs">
-                <span className="opacity-75">{t("language")}</span>{" "}
+                <span className="opacity-75">{t("common.language")}</span>{" "}
                 <span className="font-medium">{macro.language}</span>
               </div>
 
               {/* Created by */}
               {macro.createdByName && (
                 <div className="text-muted-foreground truncate text-xs">
-                  <span className="opacity-75">{t("createdBy")}</span>{" "}
+                  <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
                   <span className="font-medium">{macro.createdByName}</span>
                 </div>
               )}
-            </div>
-
-            <div className="flex flex-col items-center gap-0">
-              {/* Add button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary hover:bg-accent/40 h-8 w-8 p-0"
-                title={t("experiments.addMacro")}
-                onClick={async (e) => handleAddMacro(e, macro.id)}
-                disabled={isAddingMacro}
-                aria-label={t("experiments.addMacro")}
-              >
-                <PlusSquare className="h-5 w-5" />
-              </Button>
-              {/* CTA button for more details */}
-              <Link
-                href={`/${locale}/platform/macros/${macro.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={t("experiments.seeMacroDetails")}
-                aria-label={t("experiments.seeMacroDetails")}
-                className="group p-1.5"
-              >
-                <ExternalLink className="group-hover:text-muted-foreground h-5 w-5 transition-colors" />
-              </Link>
             </div>
           </CommandItem>
         );

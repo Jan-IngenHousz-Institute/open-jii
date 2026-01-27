@@ -1,10 +1,11 @@
 import { formatDate } from "@/util/date";
-import { Calendar, ChevronRight, Star, User } from "lucide-react";
+import { Calendar, ChevronRight, User } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
 import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Badge, Skeleton } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
 
 const cardVariants = cva(
@@ -45,9 +46,9 @@ const getLanguageColor = (language: string) => {
     case "python":
       return "bg-badge-published";
     case "r":
-      return "bg-badge-active";
+      return "bg-badge-stale";
     case "javascript":
-      return "bg-badge-provisioning";
+      return "bg-badge-provisioningFailed";
     default:
       return "bg-badge-archived";
   }
@@ -57,7 +58,13 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
   const { t } = useTranslation(["macro", "common"]);
 
   if (isLoading) {
-    return <div className="py-8 text-center">{t("common.loading")}</div>;
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-48" />
+        ))}
+      </div>
+    );
   }
 
   if (!macros || macros.length === 0) {
@@ -69,19 +76,23 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
       {/* Macros Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {macros.map((macro) => {
-          const isFeatured = macro.sortOrder !== null;
+          const isPreferred = macro.sortOrder !== null;
           return (
             <Link key={macro.id} href={`/platform/macros/${macro.id}`}>
-              <div className={cardVariants({ featured: isFeatured })}>
-                {isFeatured && (
-                  <div className="absolute right-5 top-5">
-                    <Star className="fill-secondary text-secondary h-5 w-5" />
-                  </div>
-                )}
+              <div className={cardVariants({ featured: isPreferred })}>
                 <div className="mb-auto">
-                  <h3 className="mb-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-                    {macro.name}
-                  </h3>
+                  <div className="mb-2 flex items-start gap-2">
+                    <h3 className="min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
+                      {macro.name}
+                    </h3>
+                    {isPreferred && (
+                      <div className="shrink-0">
+                        <Badge className={"bg-secondary/30 text-primary"}>
+                          {t("common.preferred")}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
                   <span
                     className={`text-muted-dark mb-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${getLanguageColor(
                       macro.language,

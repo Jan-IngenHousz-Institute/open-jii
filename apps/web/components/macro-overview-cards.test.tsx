@@ -79,10 +79,11 @@ describe("<MacroOverviewCards />", () => {
   ];
 
   it("renders loading state when isLoading is true", () => {
-    render(<MacroOverviewCards macros={[]} isLoading={true} />);
+    const { container } = render(<MacroOverviewCards macros={[]} isLoading={true} />);
 
-    expect(screen.getByText("common.loading")).toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    // Check for skeleton loaders
+    const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it("renders 'no macros' message when macros array is empty", () => {
@@ -141,12 +142,12 @@ describe("<MacroOverviewCards />", () => {
     expect(screen.getAllByText(/common\.updated/)).toHaveLength(3);
   });
 
-  it("renders featured macro with star icon", () => {
+  it("renders featured macro with Preferred badge", () => {
     render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
 
-    // Only the JavaScript macro has sortOrder, so it should have a star
-    const stars = screen.getAllByTestId("icon-star");
-    expect(stars).toHaveLength(1);
+    // Only the JavaScript macro has sortOrder, so it should have a Preferred badge
+    const badge = screen.getByText("common.preferred");
+    expect(badge).toBeInTheDocument();
   });
 
   it("renders chevron icons on mobile", () => {

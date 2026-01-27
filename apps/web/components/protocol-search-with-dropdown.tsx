@@ -1,11 +1,13 @@
 "use client";
 
-import { ChevronsUpDown } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { ChevronsUpDown, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components";
+import { Button } from "@repo/ui/components";
 import { Popover, PopoverTrigger } from "@repo/ui/components";
 
 import { ProtocolSearchPopover } from "./protocol-search-popover";
@@ -34,6 +36,7 @@ export function ProtocolSearchWithDropdown({
   disabled = false,
 }: ProtocolSearchWithDropdownProps) {
   const [open, setOpen] = useState(false);
+  const locale = useLocale();
   const { t } = useTranslation("common");
 
   // Snapshot the selected protocol when it’s visible in the current list.
@@ -64,37 +67,36 @@ export function ProtocolSearchWithDropdown({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={"hover:bg-surface-light w-full justify-between p-0 font-normal"}
+          className="hover:bg-surface-light w-full justify-start py-6 text-left font-normal"
         >
-          <div className="flex w-full items-center gap-3 px-3 py-2.5">
+          <div className="flex w-full items-start gap-1">
             {selectedProtocol ? (
-              <>
-                {selectedProtocol.createdByName && (
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src="" alt={selectedProtocol.createdByName} />
-                    <AvatarFallback className="text-xs">
-                      {selectedProtocol.createdByName.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div className="flex flex-1 flex-col">
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
-                    {t("common.protocolLabel")}: {selectedProtocol.name}
-                  </span>
-                  <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-                    #{selectedProtocol.family}
-                    {selectedProtocol.createdByName && (
-                      <>
-                        • {t("common.by")} {selectedProtocol.createdByName}
-                      </>
-                    )}
-                  </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-0 items-center gap-1">
+                  <span className="truncate text-sm font-medium">{selectedProtocol.name}</span>
+                  <Link
+                    href={`/${locale}/platform/protocols/${selectedProtocol.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t("experiments.seeProtocolDetails")}
+                    aria-label={t("experiments.seeProtocolDetails")}
+                    className="group shrink-0 p-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
+                  </Link>
                 </div>
-              </>
+                <span className="text-muted-foreground truncate text-xs">
+                  {selectedProtocol.family} • {t("common.by")} {selectedProtocol.createdByName}
+                </span>
+              </div>
             ) : (
-              <div className="flex-1">{placeholder ?? t("experiments.searchProtocols")}</div>
+              <div className="text-muted-foreground flex-1 italic">
+                {placeholder ?? t("experiments.searchProtocols")}
+              </div>
             )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 self-center opacity-50" />
           </div>
         </Button>
       </PopoverTrigger>

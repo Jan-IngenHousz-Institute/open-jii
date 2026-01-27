@@ -1,16 +1,15 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { SearchX, PlusSquare, ExternalLink, Star } from "lucide-react";
+import { SearchX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
 import {
+  Badge,
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -20,7 +19,7 @@ import { PopoverContent } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
 
 const protocolItemVariants = cva(
-  "mb-1 flex items-center justify-between gap-2 rounded border p-2 relative",
+  "mb-1 flex items-center justify-between gap-2 rounded border p-2.5 relative",
   {
     variants: {
       featured: {
@@ -54,8 +53,7 @@ function ProtocolList({
   const { t } = useTranslation("common");
 
   const handleAddProtocol = useCallback(
-    async (e: React.MouseEvent, protocolId: string) => {
-      e.stopPropagation();
+    async (protocolId: string) => {
       await onAddProtocol(protocolId);
       setOpen(false);
       onSearchChange("");
@@ -66,22 +64,40 @@ function ProtocolList({
   return (
     <>
       {protocols.map((protocol) => {
-        const isFeatured = protocol.sortOrder !== null;
+        const isPreferred = protocol.sortOrder !== null;
         return (
           <CommandItem
             key={protocol.id}
             value={protocol.id}
-            className={protocolItemVariants({ featured: isFeatured })}
+            className={protocolItemVariants({ featured: isPreferred })}
+            onSelect={() => handleAddProtocol(protocol.id)}
+            disabled={isAddingProtocol}
           >
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
               {/* Protocol name */}
-              <div className="flex items-center gap-1.5">
+              <div className="mb-1 flex items-center gap-1">
                 <h4 className="text-foreground truncate text-sm font-medium">{protocol.name}</h4>
-                {isFeatured && (
-                  <Star className="fill-secondary text-secondary h-3.5 w-3.5 flex-shrink-0" />
+
+                <Link
+                  href={`/${locale}/platform/protocols/${protocol.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={t("experiments.seeProtocolDetails")}
+                  aria-label={t("experiments.seeProtocolDetails")}
+                  className="group p-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
+                </Link>
+
+                {isPreferred && (
+                  <div className="ml-auto">
+                    <Badge className={"bg-secondary/30 text-primary"}>
+                      {t("common.preferred")}
+                    </Badge>
+                  </div>
                 )}
               </div>
-
               {/* Family */}
               <div className="text-muted-foreground truncate text-xs">
                 <span className="opacity-75">{t("experiments.family")}</span>{" "}
@@ -95,32 +111,6 @@ function ProtocolList({
                   <span className="font-medium">{protocol.createdByName}</span>
                 </div>
               )}
-            </div>
-
-            <div className="flex flex-col items-center gap-0">
-              {/* Add button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary hover:bg-accent/40 h-8 w-8 p-0"
-                title={t("experiments.addProtocol")}
-                onClick={async (e) => handleAddProtocol(e, protocol.id)}
-                disabled={isAddingProtocol}
-                aria-label={t("experiments.addProtocol")}
-              >
-                <PlusSquare className="h-5 w-5" />
-              </Button>
-              {/* CTA button for more details */}
-              <Link
-                href={`/${locale}/platform/protocols/${protocol.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={t("experiments.seeProtocolDetails")}
-                aria-label={t("experiments.seeProtocolDetails")}
-                className="group p-1.5"
-              >
-                <ExternalLink className="group-hover:text-muted-foreground h-5 w-5 transition-colors" />
-              </Link>
             </div>
           </CommandItem>
         );
@@ -143,22 +133,30 @@ function SearchStatus({ loading, hasProtocols, hasSearchQuery, searchValue }: Se
 
   if (loading) {
     return (
-      <div className="text-muted-foreground p-4 text-center text-sm">
-        {t("experiments.loadingProtocols")}
+      <div className="text-muted-foreground flex items-center justify-center py-4 text-sm">
+        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+        {t("experiments.searchingProtocols")}
       </div>
     );
   }
 
   if (!hasProtocols && hasSearchQuery) {
     return (
-      <CommandEmpty>{t("experiments.noProtocolsFoundFor", { search: searchValue })}</CommandEmpty>
+      <div className="text-muted-foreground flex flex-col items-center justify-center py-6 text-sm">
+        <SearchX className="mb-2 h-8 w-8" />
+        <span className="mb-1 font-medium">{t("experiments.noProtocolsFound")}</span>
+        <span className="text-xs">
+          {t("experiments.tryDifferentSearchProtocols", { searchValue })}
+        </span>
+      </div>
     );
   }
 
   if (!hasProtocols && !hasSearchQuery) {
     return (
-      <div className="text-muted-foreground p-4 text-center text-sm">
-        {t("experiments.noProtocolsAvailable")}
+      <div className="text-muted-foreground flex flex-col items-center justify-center py-6 text-sm">
+        <span className="mb-1 font-medium">{t("experiments.noProtocolsAvailable")}</span>
+        <span className="text-xs">{t("experiments.createFirstProtocol")}</span>
       </div>
     );
   }

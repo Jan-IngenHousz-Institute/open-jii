@@ -28,11 +28,15 @@ vi.mock("~/components/ExperimentStatusBadge", () => ({
 }));
 
 // Mock RichTextRenderer
-vi.mock("@repo/ui/components", () => ({
-  RichTextRenderer: ({ content }: { content: string }) => (
-    <div data-testid="rich-text">{content}</div>
-  ),
-}));
+vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    RichTextRenderer: ({ content }: { content: string }) => (
+      <div data-testid="rich-text">{content}</div>
+    ),
+  };
+});
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -51,18 +55,21 @@ const mockExperiment: Experiment = {
   name: "Test Experiment",
   description: "Test description",
   status: "active",
+  visibility: "private",
+  createdBy: "user-1",
   createdAt: "2025-01-01T00:00:00.000Z",
   updatedAt: "2025-01-15T00:00:00.000Z",
-  metadata: {},
-  members: [],
-  organizationId: "org-1",
+  embargoUntil: "2025-12-31T23:59:59.999Z",
+  ownerFirstName: "John",
+  ownerLastName: "Doe",
 };
 
 describe("ExperimentOverviewCards", () => {
   describe("loading state", () => {
-    it("renders loading message when experiments is undefined", () => {
-      render(<ExperimentOverviewCards experiments={undefined} />);
-      expect(screen.getByText("Loading experiments...")).toBeInTheDocument();
+    it("renders skeleton loaders when experiments is undefined", () => {
+      const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
+      const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
+      expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 

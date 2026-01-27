@@ -1,9 +1,10 @@
-import { Calendar, ChevronRight, Star, User, Webcam } from "lucide-react";
+import { Calendar, ChevronRight, User, Webcam } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "~/util/date";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Badge, Skeleton } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
 
 const cardVariants = cva(
@@ -25,7 +26,13 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
   const { t } = useTranslation("common");
 
   if (!protocols) {
-    return <span>{t("protocols.loadingProtocols")}</span>;
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-48" />
+        ))}
+      </div>
+    );
   }
 
   if (protocols.length === 0) {
@@ -37,19 +44,23 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
       {/* Protocols Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {protocols.map((protocol) => {
-          const isFeatured = protocol.sortOrder !== null;
+          const isPreferred = protocol.sortOrder !== null;
           return (
             <Link key={protocol.id} href={`/platform/protocols/${protocol.id}`}>
-              <div className={cardVariants({ featured: isFeatured })}>
-                {isFeatured && (
-                  <div className="absolute right-5 top-5">
-                    <Star className="fill-secondary text-secondary h-5 w-5" />
-                  </div>
-                )}
+              <div className={cardVariants({ featured: isPreferred })}>
                 <div className="mb-auto">
-                  <h3 className="mb-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-                    {protocol.name}
-                  </h3>
+                  <div className="mb-2 flex items-start gap-2">
+                    <h3 className="min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
+                      {protocol.name}
+                    </h3>
+                    {isPreferred && (
+                      <div className="shrink-0">
+                        <Badge className={"bg-secondary/30 text-primary"}>
+                          {t("common.preferred")}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-2 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
                       <Webcam className="h-4 w-4" />
