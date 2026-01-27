@@ -1,10 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 
-import { AddedUserNotification } from "@repo/transactional/emails/added-user-notification";
-import { TransferRequestConfirmation } from "@repo/transactional/emails/transfer-request-confirmation";
+import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
+import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { apiErrorMapper, tryCatch } from "../../../../utils/fp-utils";
@@ -41,16 +40,13 @@ export class NotificationsService {
         );
         const transport = createTransport(this.emailConfigService.getServer());
 
-        const emailHtml = await render(
-          AddedUserNotification({ host, experimentName, experimentUrl, actor, role }),
-          {},
-        );
-        const emailText = await render(
-          AddedUserNotification({ host, experimentName, experimentUrl, actor, role }),
-          {
-            plainText: true,
-          },
-        );
+        const { html, text } = await renderAddedUserNotification({
+          host,
+          experimentName,
+          experimentUrl,
+          actor,
+          role,
+        });
 
         const result = await transport.sendMail({
           to: email,
@@ -59,8 +55,8 @@ export class NotificationsService {
             address: this.emailConfigService.getFrom(),
           },
           subject: `Added to experiment on the openJII Platform`,
-          html: emailHtml,
-          text: emailText,
+          html,
+          text,
         });
 
         // Handle rejected and pending addresses
@@ -120,26 +116,12 @@ export class NotificationsService {
         const { host } = new URL(this.emailConfigService.getBaseUrl());
         const transport = createTransport(this.emailConfigService.getServer());
 
-        const emailHtml = await render(
-          TransferRequestConfirmation({
-            host,
-            projectIdOld,
-            projectUrlOld,
-            userEmail: email,
-          }),
-          {},
-        );
-        const emailText = await render(
-          TransferRequestConfirmation({
-            host,
-            projectIdOld,
-            projectUrlOld,
-            userEmail: email,
-          }),
-          {
-            plainText: true,
-          },
-        );
+        const { html, text } = await renderTransferRequestConfirmation({
+          host,
+          projectIdOld,
+          projectUrlOld,
+          userEmail: email,
+        });
 
         const result = await transport.sendMail({
           to: email,
@@ -148,8 +130,8 @@ export class NotificationsService {
             address: this.emailConfigService.getFrom(),
           },
           subject: `Project Transfer Request Received - openJII`,
-          html: emailHtml,
-          text: emailText,
+          html,
+          text,
         });
 
         // Handle rejected and pending addresses

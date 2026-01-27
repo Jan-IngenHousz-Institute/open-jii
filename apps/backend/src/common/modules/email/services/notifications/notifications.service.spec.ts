@@ -1,28 +1,23 @@
-import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
 
-import { AddedUserNotification } from "@repo/transactional/emails/added-user-notification";
-import { TransferRequestConfirmation } from "@repo/transactional/emails/transfer-request-confirmation";
+import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
+import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { NotificationsService } from "./notifications.service";
 
 // Mock external dependencies
-vi.mock("@react-email/components", () => ({
-  render: vi.fn(),
+vi.mock("@repo/transactional/render/added-user-notification", () => ({
+  renderAddedUserNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/transfer-request-confirmation", () => ({
+  renderTransferRequestConfirmation: vi.fn(),
 }));
 
 vi.mock("nodemailer", () => ({
   createTransport: vi.fn(),
-}));
-
-vi.mock("@repo/transactional/emails/added-user-notification", () => ({
-  AddedUserNotification: vi.fn(),
-}));
-
-vi.mock("@repo/transactional/emails/transfer-request-confirmation", () => ({
-  TransferRequestConfirmation: vi.fn(),
 }));
 
 // Test constants
@@ -39,10 +34,11 @@ describe("NotificationsService", () => {
   let service: NotificationsService;
 
   // Mock functions
-  const mockRender = render as ReturnType<typeof vi.fn>;
   const mockCreateTransport = createTransport as ReturnType<typeof vi.fn>;
-  const mockAddedUserNotification = AddedUserNotification as ReturnType<typeof vi.fn>;
-  const mockTransferRequestConfirmation = TransferRequestConfirmation as ReturnType<typeof vi.fn>;
+  const mockRenderAddedUserNotification = renderAddedUserNotification as ReturnType<typeof vi.fn>;
+  const mockRenderTransferRequestConfirmation = renderTransferRequestConfirmation as ReturnType<
+    typeof vi.fn
+  >;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -56,8 +52,14 @@ describe("NotificationsService", () => {
     vi.clearAllMocks();
 
     // Setup default mock implementations
-    mockRender.mockImplementation((component: unknown, options: { plainText?: boolean } = {}) => {
-      return Promise.resolve(options.plainText ? MOCK_TEXT_CONTENT : MOCK_HTML_CONTENT);
+    mockRenderAddedUserNotification.mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
+
+    mockRenderTransferRequestConfirmation.mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
     });
   });
 
@@ -85,7 +87,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -103,19 +104,14 @@ describe("NotificationsService", () => {
       // Verify transport creation
       expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
 
-      // Verify email component rendering
-      expect(mockAddedUserNotification).toHaveBeenCalledWith({
+      // Verify email render function was called
+      expect(mockRenderAddedUserNotification).toHaveBeenCalledWith({
         host: "localhost:3000",
         experimentName: MOCK_EXPERIMENT_NAME,
         experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
         actor: MOCK_ACTOR,
         role: MOCK_ROLE,
       });
-
-      // Verify render was called for both HTML and text versions
-      expect(mockRender).toHaveBeenCalledTimes(2);
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", {});
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", { plainText: true });
 
       // Verify sendMail was called with correct parameters
       expect(mockSendMail).toHaveBeenCalledWith({
@@ -144,7 +140,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -175,7 +170,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -210,7 +204,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -245,7 +238,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -268,7 +260,6 @@ describe("NotificationsService", () => {
       mockCreateTransport.mockImplementation(() => {
         throw transportError;
       });
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -288,8 +279,7 @@ describe("NotificationsService", () => {
     it("should handle email rendering errors", async () => {
       // Arrange
       const renderError = new Error("Failed to render email template");
-      mockRender.mockRejectedValue(renderError);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
+      mockRenderAddedUserNotification.mockRejectedValue(renderError);
 
       const mockTransport = {
         sendMail: vi.fn(),
@@ -325,7 +315,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -356,7 +345,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -381,7 +369,6 @@ describe("NotificationsService", () => {
       mockCreateTransport.mockImplementation(() => {
         throw stringError;
       });
-      mockAddedUserNotification.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendAddedUserNotification(
@@ -418,7 +405,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -434,18 +420,13 @@ describe("NotificationsService", () => {
       // Verify transport creation
       expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
 
-      // Verify email component rendering
-      expect(mockTransferRequestConfirmation).toHaveBeenCalledWith({
+      // Verify email render function was called
+      expect(mockRenderTransferRequestConfirmation).toHaveBeenCalledWith({
         host: "localhost:3000",
         projectIdOld: MOCK_PROJECT_ID_OLD,
         projectUrlOld: MOCK_PROJECT_URL_OLD,
         userEmail: MOCK_EMAIL,
       });
-
-      // Verify render was called for both HTML and text versions
-      expect(mockRender).toHaveBeenCalledTimes(2);
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", {});
-      expect(mockRender).toHaveBeenCalledWith("mocked-component", { plainText: true });
 
       // Verify sendMail was called with correct parameters
       expect(mockSendMail).toHaveBeenCalledWith({
@@ -474,7 +455,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -503,7 +483,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -536,7 +515,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -569,7 +547,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -590,7 +567,6 @@ describe("NotificationsService", () => {
       mockCreateTransport.mockImplementation(() => {
         throw transportError;
       });
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -608,8 +584,7 @@ describe("NotificationsService", () => {
     it("should handle email rendering errors", async () => {
       // Arrange
       const renderError = new Error("Failed to render email template");
-      mockRender.mockRejectedValue(renderError);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
+      mockRenderTransferRequestConfirmation.mockRejectedValue(renderError);
 
       const mockTransport = {
         sendMail: vi.fn(),
@@ -643,7 +618,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -672,7 +646,6 @@ describe("NotificationsService", () => {
       };
 
       mockCreateTransport.mockReturnValue(mockTransport);
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
@@ -695,7 +668,6 @@ describe("NotificationsService", () => {
       mockCreateTransport.mockImplementation(() => {
         throw stringError;
       });
-      mockTransferRequestConfirmation.mockReturnValue("mocked-component");
 
       // Act
       const result = await service.sendTransferRequestConfirmation(
