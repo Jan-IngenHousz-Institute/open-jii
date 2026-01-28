@@ -30,7 +30,8 @@ export function DashboardBanner({
           {title}
         </h2>
         <p className="text-[0.8125rem] font-normal leading-[1.3125rem] text-[#68737B]">
-          {description} <em>{descriptionItalic}</em>
+          {description}
+          <span className="italic">{descriptionItalic}</span>
         </p>
       </div>
       <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
