@@ -16,13 +16,24 @@ vi.mock("next/link", () => ({
     href,
     locale,
     className,
+    target,
+    rel,
   }: {
     children: React.ReactNode;
     href: string;
     locale?: string;
     className?: string;
+    target?: string;
+    rel?: string;
   }) => (
-    <a href={href} data-locale={locale} className={className} data-testid="next-link">
+    <a
+      href={href}
+      data-locale={locale}
+      className={className}
+      target={target}
+      rel={rel}
+      data-testid="next-link"
+    >
       {children}
     </a>
   ),
@@ -261,6 +272,65 @@ describe("<DashboardBanner />", () => {
         "href",
         "/en/platform/transfer-request",
       );
+    });
+  });
+
+  describe("Secondary Button", () => {
+    it("renders secondary button when props are provided", () => {
+      render(
+        <DashboardBanner
+          {...defaultProps}
+          secondaryButtonLabel="Report Bug"
+          secondaryButtonHref="https://docs.example.com"
+        />,
+      );
+
+      expect(screen.getByText("Report Bug")).toBeInTheDocument();
+    });
+
+    it("renders both buttons when both sets of props are provided", () => {
+      render(
+        <DashboardBanner
+          {...defaultProps}
+          secondaryButtonLabel="Report Bug"
+          secondaryButtonHref="https://docs.example.com"
+        />,
+      );
+
+      const links = screen.getAllByRole("link");
+      expect(links).toHaveLength(2);
+      expect(screen.getByText("Report Bug")).toBeInTheDocument();
+      expect(screen.getByText(defaultProps.buttonLabel)).toBeInTheDocument();
+    });
+
+    it("opens secondary button in new tab", () => {
+      render(
+        <DashboardBanner
+          {...defaultProps}
+          secondaryButtonLabel="Report Bug"
+          secondaryButtonHref="https://docs.example.com"
+        />,
+      );
+
+      const link = screen.getByRole("link", { name: "Report Bug" });
+
+      expect(link).toHaveAttribute("href", "https://docs.example.com");
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    });
+
+    it("does not render secondary button when label is missing", () => {
+      render(<DashboardBanner {...defaultProps} secondaryButtonHref="https://docs.example.com" />);
+
+      const links = screen.getAllByRole("link");
+      expect(links).toHaveLength(1); // Only primary button
+    });
+
+    it("does not render secondary button when href is missing", () => {
+      render(<DashboardBanner {...defaultProps} secondaryButtonLabel="Report Bug" />);
+
+      const links = screen.getAllByRole("link");
+      expect(links).toHaveLength(1); // Only primary button
     });
   });
 });
