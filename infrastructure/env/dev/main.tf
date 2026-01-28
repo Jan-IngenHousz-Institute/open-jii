@@ -697,13 +697,10 @@ module "aurora_db" {
 module "secrets_rotation_trigger" {
   source = "../../modules/secrets-manager-rotation/secrets-rotation-trigger"
 
-  ecs_cluster_name            = module.backend_ecs.ecs_cluster_name
-  ecs_service_name            = module.backend_ecs.ecs_service_name
-  region                      = var.aws_region
-  secret_name                 = module.aurora_db.master_user_secret_name
-  ecs_task_execution_role_arn = module.backend_ecs.ecs_execution_role_arn
-  ecs_task_role_arn           = module.backend_ecs.ecs_task_role_arn
-  ecs_task_definition_arn     = module.backend_ecs.ecs_task_definition_arn
+  ecs_cluster_name = module.backend_ecs.ecs_cluster_name
+  ecs_service_name = module.backend_ecs.ecs_service_name
+  region           = var.aws_region
+  secret_name      = module.aurora_db.master_user_secret_name
 }
 
 # Authentication secrets
