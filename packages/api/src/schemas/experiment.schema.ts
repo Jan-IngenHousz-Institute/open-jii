@@ -775,9 +775,8 @@ export const zExperimentDataQuery = z.object({
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
 });
 
-export const zExperimentDataTableInfo = z.object({
+export const zExperimentDataTable = z.object({
   name: z.string().describe("Technical name of the table used for queries and operations"),
-  displayName: z.string().describe("Human-readable display name of the table for UI"),
   catalog_name: z.string().describe("Catalog name"),
   schema_name: z.string().describe("Schema name"),
   data: zExperimentData.optional(),
@@ -795,15 +794,80 @@ export const zExperimentMemberPathParam = z.object({
   memberId: z.string().uuid().describe("ID of the member"),
 });
 
-export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
+export const zExperimentDataTableList = z.array(zExperimentDataTable);
 
 export const zExperimentDataResponse = zExperimentDataTableList;
 
 // --- Table Metadata Schemas (without data) ---
+
+// ============================================================================
+// Column Type System
+// Single source of truth for all data column types used across frontend and backend
+// ============================================================================
+
+// Primitive Types Zod Schema
+export const zColumnPrimitiveType = z.enum([
+  // String types
+  "STRING",
+  "VARCHAR",
+  "CHAR",
+  // Numeric types - Integer
+  "TINYINT",
+  "SMALLINT",
+  "INT",
+  "BIGINT",
+  "LONG", // Alias for BIGINT
+  // Numeric types - Floating point
+  "FLOAT",
+  "DOUBLE",
+  "REAL",
+  "DECIMAL",
+  "NUMERIC",
+  // Boolean
+  "BOOLEAN",
+  // Date/Time
+  "DATE",
+  "TIMESTAMP",
+  "TIMESTAMP_NTZ",
+  // Binary
+  "BINARY",
+  // Semi-structured
+  "VARIANT",
+]);
+
+export type ColumnPrimitiveType = z.infer<typeof zColumnPrimitiveType>;
+
+// Export constants object for convenient access (backwards compatible)
+export const ColumnPrimitiveType = zColumnPrimitiveType.enum;
+
+// Well-known Type Strings
+export const zAnnotationsColumnType = z.literal(
+  "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
+);
+
+export const zQuestionsColumnType = z.literal(
+  "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
+);
+
+export const zUserColumnType = z.literal("STRUCT<id: STRING, name: STRING, image: STRING>");
+
+export type AnnotationsColumnType = z.infer<typeof zAnnotationsColumnType>;
+export type QuestionsColumnType = z.infer<typeof zQuestionsColumnType>;
+export type UserColumnType = z.infer<typeof zUserColumnType>;
+
+// Export constants object for convenient access (backwards compatible)
+export const WellKnownColumnTypes = {
+  ANNOTATIONS: zAnnotationsColumnType.value,
+  QUESTIONS: zQuestionsColumnType.value,
+  USER: zUserColumnType.value,
+} as const;
+
 export const zColumnInfo = z.object({
   name: z.string().describe("Column name"),
-  type_text: z.string().describe("Full type string representation"),
-  type_name: z.string().describe("Base type name (e.g., STRING, INT, ARRAY)"),
+  type_text: z.string().describe("Full type definition string (e.g., 'ARRAY<STRUCT<...>>')"),
+  type_name: z
+    .string()
+    .describe("Base type category (e.g., primitive, array, map, struct types)"),
   position: z.number().int().describe("Column position in the table"),
   nullable: z.boolean().optional().describe("Whether the column can contain null values"),
   comment: z.string().optional().describe("Column description or comment"),

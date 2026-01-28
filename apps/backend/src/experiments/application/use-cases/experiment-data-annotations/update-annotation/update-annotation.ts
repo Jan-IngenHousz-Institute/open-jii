@@ -99,6 +99,7 @@ export class UpdateAnnotationUseCase {
 
         const result = await this.experimentDataAnnotationsRepository.updateAnnotation(
           experiment.schemaName,
+          experimentId,
           annotationId,
           updateAnnotation,
         );
@@ -107,25 +108,7 @@ export class UpdateAnnotationUseCase {
           return failure(AppError.internal(result.error.message));
         }
 
-        // Trigger silver data refresh to update enriched tables with updated annotations
-        if (experiment.schemaName && experiment.pipelineId) {
-          const refreshResult = await this.databricksPort.refreshSilverData(
-            experiment.schemaName,
-            experiment.pipelineId,
-          );
-
-          if (refreshResult.isFailure()) {
-            this.logger.warn({
-              msg: "Failed to trigger silver data refresh after updating annotation",
-              operation: "updateAnnotation",
-              experimentId,
-              annotationId,
-              schemaName: experiment.schemaName,
-              error: refreshResult.error.message,
-            });
-            // Don't fail the whole operation, just log the warning
-          }
-        }
+        // No manual refresh needed - materialized views auto-refresh
 
         return success(result.value);
       },

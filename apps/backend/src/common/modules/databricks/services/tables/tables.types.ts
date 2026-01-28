@@ -23,6 +23,7 @@ export interface Table {
     display_name?: string;
     downstream?: "true" | "false";
     quality?: "bronze" | "silver" | "gold";
+    variants?: string; // Comma-separated list of VARIANT column names
     [key: string]: string | undefined;
   };
 }

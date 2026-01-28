@@ -40,6 +40,10 @@ export function groupAnnotations(annotations: Annotation[]): Record<AnnotationTy
     flag: [],
   };
 
+  if (!annotations) {
+    return annotationsPerType;
+  }
+
   annotations.forEach((annotation) => {
     annotationsPerType[annotation.type].push(annotation);
   });
