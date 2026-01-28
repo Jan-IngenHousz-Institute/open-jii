@@ -695,6 +695,15 @@ module "aurora_db" {
   skip_final_snapshot      = false
 }
 
+module "secrets_rotation_trigger" {
+  source = "../../modules/secrets-manager-rotation/secrets-rotation-trigger"
+
+  ecs_cluster_name = module.backend_ecs.ecs_cluster_name
+  ecs_service_name = module.backend_ecs.ecs_service_name
+  region           = var.aws_region
+  secret_arn       = module.aurora_db.master_user_secret_arn
+}
+
 # Authentication secrets
 module "auth_secrets" {
   source = "../../modules/secrets-manager"
