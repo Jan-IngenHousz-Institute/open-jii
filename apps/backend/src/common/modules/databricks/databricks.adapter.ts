@@ -14,7 +14,7 @@ import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
 import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import type { DatabricksPipelineStartUpdateResponse } from "./services/pipelines/pipelines.types";
-import { QueryBuilderService } from "./services/sql/query-builder.service";
+import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
 import { DatabricksTablesService } from "./services/tables/tables.service";

@@ -18,7 +18,7 @@ describe("ExperimentDataTableUserCell", () => {
     expect(screen.getByText("JD")).toBeInTheDocument();
   });
 
-  it("renders user without image", () => {
+  it("renders user without avatar", () => {
     const userData = JSON.stringify({
       id: "user-456",
       name: "Jane Smith",
@@ -184,7 +184,7 @@ describe("ExperimentDataTableUserCell", () => {
     expect(unknownUserElements.length).toBeGreaterThan(0);
   });
 
-  it("renders user with image URL", () => {
+  it("renders user with avatar URL", () => {
     const userData = JSON.stringify({
       id: "user-with-image",
       name: "Alice Johnson",

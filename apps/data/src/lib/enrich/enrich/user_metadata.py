@@ -11,11 +11,11 @@ from pyspark.sql.types import StructType, StructField, StringType
 
 from .backend_client import BackendClient
 
-# Define user struct schema: STRUCT<id: STRING, name: STRING, image: STRING>
+# Define user struct schema: STRUCT<id: STRING, name: STRING, avatar: STRING>
 user_schema = StructType([
     StructField("id", StringType(), True),
     StructField("name", StringType(), True),
-    StructField("image", StringType(), True)
+    StructField("avatar", StringType(), True)
 ])
 
 
@@ -108,7 +108,7 @@ def add_user_column(df, environment: str, dbutils):
         
     Returns:
         DataFrame with additional columns: first_name, last_name, email, organization, avatar_url, user
-        The user column is a STRUCT<id: STRING, name: STRING, image: STRING>
+        The user column is a STRUCT<id: STRING, name: STRING, avatar: STRING>
     """
     from .backend_client import BackendClient
     from pyspark.sql import functions as F
@@ -161,7 +161,7 @@ def add_user_column(df, environment: str, dbutils):
         .drop("_profile")
     )
     
-    # Add user struct column: STRUCT<id: STRING, name: STRING, image: STRING>
+    # Add user struct column: STRUCT<id: STRING, name: STRING, avatar: STRING>
     result_df = result_df.withColumn(
         "user",
         F.struct(
