@@ -31,7 +31,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
           description={t("dashboard.transferBannerDescription")}
           descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
           secondaryButtonLabel={t("dashboard.reportBugButton")}
-          secondaryButtonHref={env.NEXT_PUBLIC_DOCS_URL}
+          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/report-issue`}
           buttonLabel={t("dashboard.transferBannerButton")}
           buttonHref={`/${locale}/platform/transfer-request`}
           locale={locale}
