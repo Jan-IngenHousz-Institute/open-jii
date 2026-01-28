@@ -40,7 +40,7 @@ macro_schema = StructType([
 user_schema = StructType([
     StructField("id", StringType(), True),
     StructField("name", StringType(), True),
-    StructField("image", StringType(), True)
+    StructField("avatar", StringType(), True)
 ])
 
 # Define annotation schema to match the database structure
@@ -679,7 +679,7 @@ def enriched_experiment_raw_data():
     """
     Enriched materialized table combining raw data with:
     - Expanded questions
-    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, image: STRING>
+    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, avatar: STRING>
     - Annotations (from experiment_annotations table + streaming annotations merged)
     
     Incrementally refreshed on serverless compute when source tables change.
@@ -741,7 +741,7 @@ def enriched_experiment_macro_data():
     """
     Enriched materialized table combining macro data with:
     - Expanded VARIANT fields (macro_output:*)
-    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, image: STRING>
+    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, avatar: STRING>
     - Annotations (from experiment_annotations table + streaming annotations merged)
     
     Incrementally refreshed on serverless compute when source tables change.

@@ -849,7 +849,7 @@ export const zQuestionsColumnType = z.literal(
   "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
 );
 
-export const zUserColumnType = z.literal("STRUCT<id: STRING, name: STRING, image: STRING>");
+export const zUserColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
 
 export type AnnotationsColumnType = z.infer<typeof zAnnotationsColumnType>;
 export type QuestionsColumnType = z.infer<typeof zQuestionsColumnType>;
@@ -865,9 +865,7 @@ export const WellKnownColumnTypes = {
 export const zColumnInfo = z.object({
   name: z.string().describe("Column name"),
   type_text: z.string().describe("Full type definition string (e.g., 'ARRAY<STRUCT<...>>')"),
-  type_name: z
-    .string()
-    .describe("Base type category (e.g., primitive, array, map, struct types)"),
+  type_name: z.string().describe("Base type category (e.g., primitive, array, map, struct types)"),
   position: z.number().int().describe("Column position in the table"),
   nullable: z.boolean().optional().describe("Whether the column can contain null values"),
   comment: z.string().optional().describe("Column description or comment"),

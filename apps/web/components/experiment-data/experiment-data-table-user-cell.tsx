@@ -12,7 +12,7 @@ interface ExperimentDataTableUserCellProps {
 interface UserData {
   id: string;
   name: string;
-  image: string | null;
+  avatar: string | null;
 }
 
 function parseUserData(data: string): UserData | null {
@@ -68,13 +68,13 @@ export function ExperimentDataTableUserCell({
     );
   }
 
-  const { name, image } = userData;
+  const { name, avatar } = userData;
   const initials = getInitials(name);
 
   return (
     <div className="flex items-center gap-2">
       <Avatar className="h-6 w-6 rounded-full">
-        <AvatarImage src={image ?? undefined} alt={name} />
+        <AvatarImage src={avatar ?? undefined} alt={name} />
         <AvatarFallback className="rounded-full text-xs">{initials}</AvatarFallback>
       </Avatar>
       <span className="max-w-[120px] truncate text-sm font-medium">{name || "Unknown User"}</span>

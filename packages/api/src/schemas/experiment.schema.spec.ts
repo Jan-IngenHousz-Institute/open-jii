@@ -16,7 +16,7 @@ import {
   zDataColumn,
   zExperimentData,
   zExperimentDataQuery,
-  zExperimentDataTableInfo,
+  zExperimentDataTable,
   zExperimentDataTableList,
   zExperimentDataResponse,
   // Annotations
@@ -689,7 +689,7 @@ describe("Experiment Schema", () => {
       expect(d3.orderDirection).toBe("DESC");
     });
 
-    it("zExperimentDataTableInfo valid", () => {
+    it("zExperimentDataTable valid", () => {
       const info = {
         name: "t1",
         displayName: "Table 1",
@@ -706,7 +706,7 @@ describe("Experiment Schema", () => {
         totalPages: 1,
         totalRows: 1,
       };
-      expect(zExperimentDataTableInfo.parse(info)).toEqual(info);
+      expect(zExperimentDataTable.parse(info)).toEqual(info);
     });
 
     it("zExperimentDataTableList / Response valid", () => {
