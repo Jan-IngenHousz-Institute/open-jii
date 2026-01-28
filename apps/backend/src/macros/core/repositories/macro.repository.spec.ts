@@ -172,55 +172,57 @@ describe("MacroRepository", () => {
       expect(rMacro?.createdByName).toBe(anotherUserName);
     });
 
-    it("should return macros in correct order (most recently updated first)", async () => {
-      // Arrange - create three macros
+    it("should return macros ordered by sortOrder first, then alphabetically", async () => {
+      // Arrange - create macros with different sortOrder values and names
       const createResult1 = await repository.create(
         {
-          name: "First Macro",
-          description: "First",
+          name: "Zebra Macro",
+          description: "No sort order",
           language: "python",
-          code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
+          code: "Zmlyc3QgbWFjcm8=",
         },
         testUserId,
       );
       assertSuccess(createResult1);
-      const macro1 = createResult1.value[0];
-
-      // Small delay to ensure distinct timestamps
-      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const createResult2 = await repository.create(
         {
-          name: "Second Macro",
-          description: "Second",
+          name: "Alpha Macro",
+          description: "No sort order",
           language: "r",
-          code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
+          code: "YWxwaGEgbWFjcm8=",
         },
         testUserId,
       );
       assertSuccess(createResult2);
-      const macro2 = createResult2.value[0];
-
-      // Small delay to ensure distinct timestamps
-      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const createResult3 = await repository.create(
         {
-          name: "Third Macro",
-          description: "Third",
+          name: "Featured Macro 2",
+          description: "Sort order 2",
           language: "javascript",
-          code: "dGhpcmQgbWFjcm8=", // base64 encoded "third macro"
+          code: "ZmVhdHVyZWQgbWFjcm8gMg==",
         },
         testUserId,
       );
       assertSuccess(createResult3);
-      const macro3 = createResult3.value[0];
+      const macroFeatured2 = createResult3.value[0];
 
-      // Small delay before update to ensure distinct timestamp
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      const createResult4 = await repository.create(
+        {
+          name: "Featured Macro 1",
+          description: "Sort order 1",
+          language: "python",
+          code: "ZmVhdHVyZWQgbWFjcm8gMQ==",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult4);
+      const macroFeatured1 = createResult4.value[0];
 
-      // Update the first macro to make it most recent
-      await repository.update(macro1.id, { description: "Updated First" });
+      // Set sortOrder values
+      await repository.update(macroFeatured1.id, { sortOrder: 1 });
+      await repository.update(macroFeatured2.id, { sortOrder: 2 });
 
       // Act
       const result = await repository.findAll();
@@ -230,17 +232,124 @@ describe("MacroRepository", () => {
       assertSuccess(result);
       const macros = result.value;
 
-      const macroIds = macros.map((m) => m.id);
-      const firstMacroIndex = macroIds.indexOf(macro1.id);
-      const secondMacroIndex = macroIds.indexOf(macro2.id);
-      const thirdMacroIndex = macroIds.indexOf(macro3.id);
+      const macroNames = macros.map((m) => m.name);
 
-      // First macro should be first (most recently updated)
-      expect(firstMacroIndex).toBe(0);
-      // Third macro should be second (second most recent)
-      expect(thirdMacroIndex).toBe(1);
-      // Second macro should be third (oldest)
-      expect(secondMacroIndex).toBe(2);
+      // Featured macros should come first, ordered by sortOrder (1, then 2)
+      expect(macroNames[0]).toBe("Featured Macro 1");
+      expect(macroNames[1]).toBe("Featured Macro 2");
+
+      // Then alphabetically: Alpha, then Zebra
+      const alphaIndex = macroNames.indexOf("Alpha Macro");
+      const zebraIndex = macroNames.indexOf("Zebra Macro");
+      expect(alphaIndex).toBeGreaterThan(1); // After featured macros
+      expect(zebraIndex).toBeGreaterThan(alphaIndex); // Zebra after Alpha
+    });
+
+    it("should handle all macros with sortOrder correctly", async () => {
+      // Arrange - create macros all with sortOrder
+      const createResult1 = await repository.create(
+        {
+          name: "Third Priority",
+          description: "Sort order 30",
+          language: "python",
+          code: "dGhpcmQgcHJpb3JpdHk=",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult1);
+      const macro3 = createResult1.value[0];
+
+      const createResult2 = await repository.create(
+        {
+          name: "First Priority",
+          description: "Sort order 10",
+          language: "r",
+          code: "Zmlyc3QgcHJpb3JpdHk=",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult2);
+      const macro1 = createResult2.value[0];
+
+      const createResult3 = await repository.create(
+        {
+          name: "Second Priority",
+          description: "Sort order 20",
+          language: "javascript",
+          code: "c2Vjb25kIHByaW9yaXR5",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult3);
+      const macro2 = createResult3.value[0];
+
+      // Set sortOrder values
+      await repository.update(macro1.id, { sortOrder: 10 });
+      await repository.update(macro2.id, { sortOrder: 20 });
+      await repository.update(macro3.id, { sortOrder: 30 });
+
+      // Act
+      const result = await repository.findAll();
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      const macroNames = macros.map((m) => m.name);
+
+      // Should be ordered by sortOrder value: 10, 20, 30
+      expect(macroNames[0]).toBe("First Priority");
+      expect(macroNames[1]).toBe("Second Priority");
+      expect(macroNames[2]).toBe("Third Priority");
+    });
+
+    it("should handle all macros without sortOrder alphabetically", async () => {
+      // Arrange - create macros all without sortOrder
+      await repository.create(
+        {
+          name: "Charlie",
+          description: "No sort order",
+          language: "python",
+          code: "Y2hhcmxpZQ==",
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "Alpha",
+          description: "No sort order",
+          language: "r",
+          code: "YWxwaGE=",
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "Bravo",
+          description: "No sort order",
+          language: "javascript",
+          code: "YnJhdm8=",
+        },
+        testUserId,
+      );
+
+      // Act
+      const result = await repository.findAll();
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      const macroNames = macros.map((m) => m.name);
+
+      // Should be ordered alphabetically: Alpha, Bravo, Charlie
+      expect(macroNames[0]).toBe("Alpha");
+      expect(macroNames[1]).toBe("Bravo");
+      expect(macroNames[2]).toBe("Charlie");
     });
 
     it("should filter macros by search term", async () => {

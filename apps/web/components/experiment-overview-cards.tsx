@@ -4,7 +4,7 @@ import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
 import type { Experiment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { RichTextRenderer } from "@repo/ui/components";
+import { RichTextRenderer, Skeleton } from "@repo/ui/components";
 
 export function ExperimentOverviewCards({
   experiments,
@@ -18,7 +18,13 @@ export function ExperimentOverviewCards({
   const { t } = useTranslation("experiments");
 
   if (!experiments) {
-    return <span>{t("experiments.loadingExperiments")}</span>;
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-48" />
+        ))}
+      </div>
+    );
   }
 
   if (experiments.length === 0) {
