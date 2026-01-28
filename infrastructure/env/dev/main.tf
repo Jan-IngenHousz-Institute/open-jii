@@ -703,6 +703,7 @@ module "secrets_rotation_trigger" {
   secret_name                 = module.aurora_db.master_user_secret_name
   ecs_task_execution_role_arn = module.backend_ecs.ecs_execution_role_arn
   ecs_task_role_arn           = module.backend_ecs.ecs_task_role_arn
+  ecs_task_definition_arn     = module.backend_ecs.ecs_task_definition_arn
 }
 
 # Authentication secrets
