@@ -349,7 +349,7 @@ module "cloudfront" {
   project_name               = var.project_name
   assets_bucket_name         = aws_s3_bucket.assets.bucket
   assets_bucket_domain_name  = aws_s3_bucket.assets.bucket_domain_name
-  server_function_url_domain = module.server_function.function_url_domain
+  server_function_url_domain = "${module.server_function.function_url_domain}/aliases/live"
   image_function_url_domain  = module.image_function.function_url_domain
   aliases                    = local.aliases
   acm_certificate_arn        = var.certificate_arn != "" ? var.certificate_arn : null
