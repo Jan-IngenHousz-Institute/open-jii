@@ -1,10 +1,11 @@
 "use client";
 
+import { Info } from "lucide-react";
 import * as z from "zod";
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { WizardStepButtons } from "@repo/ui/components";
+import { WizardStepButtons, Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 import type { WizardStepProps } from "@repo/ui/components";
 
 import {
@@ -57,6 +58,17 @@ export function ReviewStep({
         {/* Locations (right) */}
         <LocationsSection formData={formData} onEdit={() => goToStep(2)} />
       </div>
+
+      {/* Infrastructure Setup Info */}
+      <Card className="bg-highlight/20">
+        <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-3">
+          <Info className="text-muted-foreground h-5 w-5" />
+          <CardTitle className="text-base">Infrastructure Setup</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-sm">{t("experiments.infrastructureSetup")} </p>
+        </CardContent>
+      </Card>
 
       <WizardStepButtons
         onPrevious={onPrevious}

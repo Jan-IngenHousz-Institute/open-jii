@@ -20,9 +20,9 @@
     "cancelled": "Cancelled",
     "archived": "Archived",
     "stale": "Stale",
-    "provisioningFailed": "Provisioning Failed",
+    "provisioningFailed": "Preparing Failed",
     "published": "Published",
-    "provisioning": "Provisioning"
+    "provisioning": "Preparing"
   },
   "lastUpdate": "Last update",
   "visibility": {
@@ -97,8 +97,8 @@
     "uploadData": "Upload Data",
     "provisioning": {
       "title": "Experiment is Being Prepared",
-      "description": "The experiment infrastructure is currently being set up. Data access will be available once provisioning is complete.",
-      "tooltip": "During provisioning, the system is creating database schemas, setting up data pipelines, and configuring access permissions. This process usually takes a few minutes."
+      "description": "The experiment infrastructure is currently being set up and can take 10 to 40 minutes. Viewing data will be possible once the experiment is active. In the meanwhile data can already be added through the openJII mobile app.",
+      "tooltip": "During preparation, the system is creating database schemas, setting up data pipelines, and configuring access permissions."
     },
     "provisioningFailed": {
       "title": "Experiment Setup Failed",
