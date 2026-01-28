@@ -8,6 +8,7 @@
 ## Current Progress Summary
 
 ✅ **Completed:**
+
 - Core pipeline tables (experiment_raw_data, experiment_device_data, experiment_macro_data, experiment_macros)
 - VARIANT schema transformation and query building (VariantSchemaService)
 - Backend refactoring (port/adapter/service architecture)
@@ -16,6 +17,7 @@
 - Macro name display from metadata
 
 ⏳ **Remaining:**
+
 - Enrichment tables (experiment_contributors, experiment_annotations)
 - Enriched materialized views (enriched_experiment_raw_data, enriched_experiment_macro_data)
 - Contributor refresh task
@@ -204,6 +206,7 @@
 ## Next Steps After Phase 1
 
 Once all items above are complete:
+
 1. Commit changes to feature branch
 2. Open PR for team review
 3. Address feedback

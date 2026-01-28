@@ -2166,7 +2166,7 @@ The backend can retrieve this metadata:
 ```typescript
 const propertiesResult = await this.databricksPort.getTableProperties(schemaName, tableName);
 if (propertiesResult.isSuccess()) {
-  const variantColumns = propertiesResult.value.get('variants')?.split(',') || [];
+  const variantColumns = propertiesResult.value.get("variants")?.split(",") || [];
   // variantColumns = ['macro_output']
 }
 ```
@@ -2316,13 +2316,13 @@ The backend uses a two-step process to query VARIANT data:
 **Example Generated Query:**
 
 ```sql
-SELECT 
+SELECT
   id,
   experiment_id,
   macro_name,
   parsed_output.*
 FROM (
-  SELECT 
+  SELECT
     id,
     experiment_id,
     macro_name,
