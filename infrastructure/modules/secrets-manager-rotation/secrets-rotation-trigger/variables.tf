@@ -19,7 +19,7 @@ variable "ecs_service_name" {
   type        = string
 }
 
-variable "secret_name" {
+variable "secret_arn" {
   description = "Name of the Secrets Manager secret to monitor for rotation"
   type        = string
 }

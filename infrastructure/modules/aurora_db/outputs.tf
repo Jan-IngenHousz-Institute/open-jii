@@ -33,9 +33,3 @@ output "master_user_secret_arn" {
   description = "The ARN of the secret in AWS Secrets Manager containing master credentials"
   sensitive   = true
 }
-
-output "master_user_secret_name" {
-  value       = split(":", aws_rds_cluster.rds_cluster_aurora.master_user_secret[0].secret_arn)[6]
-  description = "The name of the secret in AWS Secrets Manager"
-  sensitive   = true
-}

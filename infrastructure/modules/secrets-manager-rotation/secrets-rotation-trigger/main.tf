@@ -3,24 +3,25 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_cloudwatch_event_rule" "secrets_rotation" {
   name        = "${var.environment}-secrets-manager-rotation-rule"
-  description = "Trigger ECS deployment when Secrets Manager rotates Aurora credentials"
+  description = "Trigger ECS deployment when Secrets Manager rotation succeeds for the specified secret"
 
   event_pattern = jsonencode({
     source      = ["aws.secretsmanager"]
-    detail-type = ["AWS API Call via CloudTrail"]
+    region      = [var.region]
+    detail-type = ["AWS Service Event via CloudTrail"]
     detail = {
       eventSource = ["secretsmanager.amazonaws.com"]
-      eventName   = ["RotateSecret"]
-      requestParameters = {
-        secretId = [var.secret_name]
+      eventName   = ["RotationSucceeded"]
+      additionalEventData = {
+        SecretId = [var.secret_arn]
       }
     }
   })
 
   tags = {
-    "Name"        = "Secrets Rotation Trigger Rule"
-    "Environment" = var.environment
-    "Project"     = "open-jii"
+    Name        = "Secrets Rotation Trigger Rule"
+    Environment = var.environment
+    Project     = "open-jii"
   }
 }
 

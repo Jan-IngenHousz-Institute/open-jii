@@ -700,7 +700,7 @@ module "secrets_rotation_trigger" {
   ecs_cluster_name = module.backend_ecs.ecs_cluster_name
   ecs_service_name = module.backend_ecs.ecs_service_name
   region           = var.aws_region
-  secret_name      = module.aurora_db.master_user_secret_name
+  secret_arn       = module.aurora_db.master_user_secret_arn
 }
 
 # Authentication secrets
