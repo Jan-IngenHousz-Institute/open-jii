@@ -1,11 +1,11 @@
 import nock from "nock";
 
-import { DatabricksAuthService } from "../../../../../common/modules/databricks/services/auth/auth.service";
-import { DatabricksSqlService } from "../../../../../common/modules/databricks/services/sql/sql.service";
-import { DatabricksTablesService } from "../../../../../common/modules/databricks/services/tables/tables.service";
-import { assertFailure, assertSuccess, success } from "../../../../../common/utils/fp-utils";
-import { TestHarness } from "../../../../../test/test-harness";
-import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
+import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
+import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
+import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
 const DATABRICKS_HOST = "https://test-databricks.example.com";
