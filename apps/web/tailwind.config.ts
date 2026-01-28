@@ -82,8 +82,9 @@ export default {
           featured: "#E2FCFC",
         },
         highlight: {
-          DEFAULT: "#fff381", // Yellow
-          light: "#fff9c0", // Lighter yellow (50%)
+          DEFAULT: "#FFF481", // Yellow
+          light: "#FBF8C1",
+          dark: "#FFEF4B",
           foreground: "#000000",
         },
         destructive: {
