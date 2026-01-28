@@ -29,6 +29,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
         <DashboardBanner
           title={t("dashboard.transferBannerTitle")}
           description={t("dashboard.transferBannerDescription")}
+          descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
           secondaryButtonLabel={t("dashboard.reportBugButton")}
           secondaryButtonHref={env.NEXT_PUBLIC_DOCS_URL}
           buttonLabel={t("dashboard.transferBannerButton")}
