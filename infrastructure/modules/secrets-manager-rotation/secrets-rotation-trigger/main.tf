@@ -24,23 +24,48 @@ resource "aws_cloudwatch_event_rule" "secrets_rotation" {
   }
 }
 
-resource "aws_cloudwatch_event_target" "ecs_deployment" {
-  rule      = aws_cloudwatch_event_rule.secrets_rotation.name
-  target_id = "ForceECSDeployment"
-  arn       = "arn:aws:ecs:${var.region}:${data.aws_caller_identity.current.account_id}:service/${var.ecs_cluster_name}/${var.ecs_service_name}"
-  role_arn  = aws_iam_role.eventbridge_ecs_role.arn
-
-  input = jsonencode({
-    cluster            = var.ecs_cluster_name
-    service            = var.ecs_service_name
-    forceNewDeployment = true
-  })
-
+# Create Lambda function code
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_file = "${path.module}/force_deploy.py"
+  output_path = "${path.module}/force_deploy.zip"
 }
 
-# IAM Role for EventBridge
-resource "aws_iam_role" "eventbridge_ecs_role" {
-  name = "eventbridge-ecs-role-${var.environment}"
+# Lambda Function
+resource "aws_lambda_function" "ecs_force_deployment" {
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  function_name    = "${var.environment}-ecs-force-deployment"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "force_deploy.handler"
+  runtime          = "python3.11"
+  timeout          = 60
+
+  environment {
+    variables = {
+      ECS_CLUSTER_NAME = var.ecs_cluster_name
+      ECS_SERVICE_NAME = var.ecs_service_name
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_target" "lambda_target" {
+  rule      = aws_cloudwatch_event_rule.secrets_rotation.name
+  target_id = "SecretsRotationLambda"
+  arn       = aws_lambda_function.ecs_force_deployment.arn
+}
+
+
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ecs_force_deployment.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.secrets_rotation.arn
+}
+
+resource "aws_iam_role" "lambda_role" {
+  name = "secrets-rotation-lambda-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -48,15 +73,15 @@ resource "aws_iam_role" "eventbridge_ecs_role" {
       Action = "sts:AssumeRole"
       Effect = "Allow"
       Principal = {
-        Service = "events.amazonaws.com"
+        Service = "lambda.amazonaws.com"
       }
     }]
   })
 }
 
-resource "aws_iam_role_policy" "eventbridge_ecs_policy" {
-  name = "eventbridge-ecs-policy-${var.environment}"
-  role = aws_iam_role.eventbridge_ecs_role.id
+resource "aws_iam_role_policy" "lambda_ecs_policy" {
+  name = "lambda-ecs-policy"
+  role = aws_iam_role.lambda_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -64,19 +89,29 @@ resource "aws_iam_role_policy" "eventbridge_ecs_policy" {
         Effect = "Allow"
         Action = [
           "ecs:UpdateService",
-          "ecs:DescribeServices"
+          "ecs:DescribeServices",
+          "ecs:DescribeTasks"
         ]
         Resource = "arn:aws:ecs:${var.region}:${data.aws_caller_identity.current.account_id}:service/${var.ecs_cluster_name}/${var.ecs_service_name}"
-      },
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_logs_policy" {
+  name = "lambda-logs-policy"
+  role = aws_iam_role.lambda_role.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       {
         Effect = "Allow"
         Action = [
-          "iam:PassRole"
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
         ]
-        Resource = [
-          var.ecs_task_execution_role_arn,
-          var.ecs_task_role_arn
-        ]
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.environment}-ecs-force-deployment:*"
       }
     ]
   })
