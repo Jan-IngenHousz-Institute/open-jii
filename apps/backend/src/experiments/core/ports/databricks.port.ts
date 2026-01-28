@@ -182,4 +182,85 @@ export interface DatabricksPort {
     schemaName: string,
     pipelineId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
+
+  /**
+   * Build a SQL query to parse VARIANT column using provided schema
+   *
+   * @param params - Query building parameters including schema, table, columns, and variant schema
+   * @returns Formatted SQL query string
+   */
+  buildVariantParseQuery(params: {
+    schema: string;
+    table: string;
+    selectColumns: string[];
+    variantColumn: string;
+    variantSchema: string;
+    whereClause?: string;
+    orderBy?: string;
+    limit?: number;
+    offset?: number;
+  }): string;
+
+  /**
+   * Build query to lookup schema from experiment_macros table
+   *
+   * @param params - Schema lookup parameters including schema path, experiment ID, and macro filename
+   * @returns SQL query string to retrieve the output schema
+   */
+  buildSchemaLookupQuery(params: {
+    schema: string;
+    experimentId: string;
+    macroFilename: string;
+  }): string;
+
+  /**
+   * Build a SQL query for experiment data with proper table mapping and WHERE clause
+   * Handles logical to physical table mapping (sample -> experiment_raw_data, etc.)
+   *
+   * @param params - Query parameters including logical table name, experiment ID, columns, ordering, pagination
+   * @returns SQL query string
+   */
+  buildExperimentDataQuery(params: {
+    tableName: string;
+    experimentId: string;
+    columns?: string[];
+    orderBy?: string;
+    orderDirection?: "ASC" | "DESC";
+    limit?: number;
+    offset?: number;
+  }): string;
+
+  /**
+   * Build a COUNT query for experiment data
+   * Handles logical to physical table mapping (sample -> experiment_raw_data, etc.)
+   *
+   * @param tableName - Logical table name (sample, device, or macro filename)
+   * @param experimentId - The experiment ID to filter by
+   * @returns SQL COUNT query string
+   */
+  buildExperimentCountQuery(tableName: string, experimentId: string): string;
+
+  /**
+   * Build query to get macro metadata from experiment_macros table
+   *
+   * @param experimentId - The experiment ID to filter by
+   * @returns SQL query string to retrieve macro metadata
+   */
+  buildMacrosMetadataQuery(experimentId: string): string;
+
+  /**
+   * Build query to count rows in experiment_raw_data
+   *
+   * @param experimentId - The experiment ID to filter by
+   * @returns SQL COUNT query string
+   */
+  buildRawDataCountQuery(experimentId: string): string;
+
+  /**
+   * Build query to count rows in experiment_device_data
+   *
+   * @param experimentId - The experiment ID to filter by
+   * @returns SQL COUNT query string
+   */
+  buildDeviceDataCountQuery(experimentId: string): string;
 }

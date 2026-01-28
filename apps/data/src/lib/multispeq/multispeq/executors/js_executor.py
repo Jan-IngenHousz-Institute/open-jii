@@ -21,12 +21,13 @@ except ImportError:
 
 def execute_javascript_macro(
     script_path: str, 
-    input_data: str, 
+    sample_data: str, 
     macro_name: str, 
     helpers_path: str = None
 ) -> Dict[str, Any]:
     """Execute a JavaScript macro script using PyMiniRacer (V8 engine)"""
     print(f"[JS_EXECUTOR] Executing JavaScript macro: {macro_name} at: {script_path}")
+    print(f"[JS_EXECUTOR] Sample data type: {type(sample_data).__name__}")
     
     if not JS_AVAILABLE:
         print(f"[JS_EXECUTOR] WARNING: PyMiniRacer not available, cannot execute JavaScript macro {macro_name}")
@@ -42,24 +43,20 @@ def execute_javascript_macro(
         # Create V8 context
         ctx = MiniRacer()
         
-        # Convert input_data string to object
-        try:
-            parsed_input_data = json.loads(input_data)
-            print(f"[JS_EXECUTOR] Successfully parsed input_data JSON")
-            
-            # If it's an array, take the first item
-            if isinstance(parsed_input_data, list) and len(parsed_input_data) > 0:
-                parsed_input_data = parsed_input_data[0]
-                print(f"[JS_EXECUTOR] Taking first item from array")
-            
-        except json.JSONDecodeError as e:
-            print(f"[JS_EXECUTOR] WARNING: Failed to parse input_data as JSON: {str(e)}")
-            # Fall back to treating it as a plain string
-            parsed_input_data = input_data
+        # sample_data is a JSON string from VariantVal.toJson()
+        # Parse it to get the actual data
+        parsed_sample_data = json.loads(sample_data)
         
-        # Add input data to context
-        ctx.eval(f"var input_data = {json.dumps(parsed_input_data)};")
-        ctx.eval(f"var json = {json.dumps(parsed_input_data)};")  # For compatibility
+        # If it's an array, take the first item
+        if isinstance(parsed_sample_data, list) and len(parsed_sample_data) > 0:
+            parsed_sample_data = parsed_sample_data[0]
+            print(f"[JS_EXECUTOR] Taking first item from array")
+        else:
+            print(f"[JS_EXECUTOR] Using sample_data as-is ({type(parsed_sample_data).__name__})")
+        
+        # Add sample data to context
+        ctx.eval(f"var input_data = {json.dumps(parsed_sample_data)};")
+        ctx.eval(f"var json = {json.dumps(parsed_sample_data)};")  # For compatibility
 
         # Add helper functions
         helpers = get_javascript_helpers(helpers_path)

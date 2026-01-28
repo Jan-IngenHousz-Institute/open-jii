@@ -1,12 +1,11 @@
 import nock from "nock";
 
-import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
-import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
-import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
-import { TestHarness } from "../../../../test/test-harness";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
+import { DatabricksAuthService } from "../../../../../common/modules/databricks/services/auth/auth.service";
+import { DatabricksSqlService } from "../../../../../common/modules/databricks/services/sql/sql.service";
+import { DatabricksTablesService } from "../../../../../common/modules/databricks/services/tables/tables.service";
+import { assertFailure, assertSuccess, success } from "../../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../../test/test-harness";
+import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
 const DATABRICKS_HOST = "https://test-databricks.example.com";
@@ -1189,43 +1188,16 @@ describe("GetExperimentDataUseCase", () => {
     // Mock data with user columns
     const mockTableData = {
       columns: [
-        { name: "user_id", type_name: "STRING", type_text: "STRING" },
-        { name: "user_name", type_name: "STRING", type_text: "STRING" },
+        { name: "user", type_name: "STRUCT<id: STRING, name: STRING, image: STRING>", type_text: "STRUCT<id: STRING, name: STRING, image: STRING>" },
         { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE" },
       ],
       rows: [
-        [testUserId, "Test User", "25.5"],
-        [testUserId, "Test User", "26.0"],
+        [JSON.stringify({ id: testUserId, name: "Test User", image: null }), "25.5"],
+        [JSON.stringify({ id: testUserId, name: "Test User", image: null }), "26.0"],
       ],
       totalRows: 2,
       truncated: false,
     };
-
-    // Mock the UserTransformationService to return transformed data
-    const userTransformationService = testApp.module.get(UserTransformationService);
-    const canTransformSpy = vi
-      .spyOn(userTransformationService, "canTransform")
-      .mockReturnValue(true);
-    const transformDataSpy = vi
-      .spyOn(userTransformationService, "transformData")
-      .mockResolvedValue({
-        columns: [
-          { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE" },
-          { name: "user", type_name: "USER", type_text: "USER" },
-        ],
-        rows: [
-          {
-            measurement: "25.5",
-            user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
-          },
-          {
-            measurement: "26.0",
-            user: JSON.stringify({ id: testUserId, name: "Test User", image: null }),
-          },
-        ],
-        totalRows: 2,
-        truncated: false,
-      });
 
     // Mock token request
     nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -1259,11 +1231,10 @@ describe("GetExperimentDataUseCase", () => {
         { name: "comment", type_name: "STRING", type_text: "STRING" },
       ],
       rows: [
-        ["user_id", "STRING", null],
-        ["user_name", "STRING", null],
+        ["user", "STRUCT<id: STRING, name: STRING, image: STRING>", null],
         ["measurement", "DOUBLE", null],
       ],
-      totalRows: 3,
+      totalRows: 2,
       truncated: false,
     };
     nock(DATABRICKS_HOST)
@@ -1372,11 +1343,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
-    // Verify transformation was called
-    expect(canTransformSpy).toHaveBeenCalled();
-    expect(transformDataSpy).toHaveBeenCalled();
-
-    // Verify response structure with transformed data
+    // Verify response structure with user struct from enriched table
     expect(Array.isArray(result.value)).toBe(true);
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({

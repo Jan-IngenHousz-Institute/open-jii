@@ -11,6 +11,14 @@ from pyspark.sql.window import Window
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, MapType, ArrayType, IntegerType
 from delta.tables import DeltaTable
 import requests
+import json
+import pandas as pd
+from datetime import datetime
+
+# Pipeline-specific imports
+from multispeq import execute_macro_script
+from enrich.user_metadata import add_user_column
+from enrich.annotations_metadata import add_annotation_column
 
 # COMMAND ----------
 
@@ -26,6 +34,13 @@ macro_schema = StructType([
     StructField("id", StringType(), True),
     StructField("name", StringType(), True),
     StructField("filename", StringType(), True)
+])
+
+# Define user struct schema
+user_schema = StructType([
+    StructField("id", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("image", StringType(), True)
 ])
 
 # Define annotation schema to match the database structure
@@ -70,6 +85,16 @@ ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
 
+# Gold layer table names (Phase 1)
+EXPERIMENT_STATUS_TABLE = "experiment_status"
+EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
+EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
+EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
+EXPERIMENT_MACROS_TABLE = "experiment_macros"
+EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
+ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
+ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
+
 # Kinesis configuration parameters
 KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
@@ -77,6 +102,9 @@ SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 
 # Slack notification configuration
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
+
+# Macro processing configuration
+MACROS_PATH = "/Workspace/Shared/macros"
 
 # COMMAND ----------
 
@@ -87,7 +115,8 @@ MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
     table_properties={
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
-        "delta.enableChangeDataFeed": "true"
+        "delta.enableChangeDataFeed": "true",
+        "pipelines.reset.allowed": "false"
     }
 )
 def raw_data():
@@ -286,7 +315,7 @@ def clean_data():
 
 # DBTITLE 1,Gold Layer - Experiment Status
 @dlt.table(
-    name="experiment_status",
+    name=EXPERIMENT_STATUS_TABLE,
     comment="Gold layer: Materialized view tracking experiment freshness status",
     table_properties={
         "quality": "gold",
@@ -352,6 +381,416 @@ def experiment_status():
 
 # COMMAND ----------
 
+# DBTITLE 1,Gold Layer - Experiment Raw Data (NEW - Phase 1)
+@dlt.table(
+    name=EXPERIMENT_RAW_DATA_TABLE,
+    comment="Gold layer: Per-experiment raw sample data partitioned by experiment_id with VARIANT sample",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.feature.variantType-preview": "supported",
+        "downstream": "true",
+        "variants": "sample"
+    }
+)
+def experiment_raw_data():
+    """
+    Extract and partition sample data per experiment from clean_data.
+    
+    This table replaces per-experiment 'sample' tables with a unified partitioned approach.
+    Reads FROM existing clean_data table (no changes to clean_data).
+    """
+    return (
+        dlt.read_stream(SILVER_TABLE)
+        .filter("experiment_id IS NOT NULL")
+        .withColumn("sample", F.expr("parse_json(sample)"))
+        .select(
+            "experiment_id",
+            "id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "questions",
+            "annotations",
+            "user_id",
+            "sample",
+            "macros",
+            "processed_timestamp",
+            "date"
+        )
+    )
+
+# COMMAND ----------
+# 
+
+# DBTITLE 1,Gold Layer - Experiment Device Data (NEW - Phase 1)
+@dlt.table(
+    name=EXPERIMENT_DEVICE_DATA_TABLE,
+    comment="Gold layer: Device metadata aggregated per experiment",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "downstream": "false"
+    }
+)
+def experiment_device_data():
+    """
+    Aggregate device stats per experiment from clean_data.
+    
+    This table replaces per-experiment 'device' tables.
+    Reads FROM existing clean_data table (no changes to clean_data).
+    """
+    silver_df = dlt.read(SILVER_TABLE)
+    
+    return (
+        silver_df
+        .filter("experiment_id IS NOT NULL")
+        .groupBy("experiment_id", "device_id", "device_firmware")
+        .agg(
+            F.max("device_name").alias("device_name"),
+            F.max("device_version").alias("device_version"),
+            F.max("device_battery").alias("device_battery"),
+            F.count("*").alias("total_measurements"),
+            F.max("processed_timestamp").alias("processed_timestamp")
+        )
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Macro Data with VARIANT (NEW - Phase 1)
+@dlt.table(
+    name=EXPERIMENT_MACRO_DATA_TABLE,
+    comment="Gold layer: Unified macro processing with VARIANT column for flexible schema",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.enableRowTracking": "true",
+        "delta.feature.variantType-preview": "supported",
+        "downstream": "true",
+        "variants": "macro_output"
+    }
+)
+def experiment_macro_data():
+    """
+    Process macros for all experiments with VARIANT column for flexible output storage.
+    
+    This replaces per-experiment columnarized macro tables (e.g., macro_photosynthesis)
+    with a single unified table using VARIANT for schema flexibility.
+    
+    Reads FROM experiment_raw_data (which reads from clean_data).
+    
+    Steps:
+    1. Read from experiment_raw_data
+    2. Explode macros array
+    3. Execute macro script on sample data
+    4. Store result in VARIANT column (handles any schema)
+    """
+    
+    # Read from experiment_raw_data and explode macros
+    base_df = (
+        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
+        .filter("macros IS NOT NULL")
+        .filter("size(macros) > 0")
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "user_id",
+            "sample",
+            "date",
+            "processed_timestamp",
+            "questions",
+            "annotations",
+            F.explode("macros").alias("macro")
+        )
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "user_id",
+            "sample",
+            "date",
+            "processed_timestamp",
+            "questions",
+            "annotations",
+            F.col("macro.id").alias("macro_id"),
+            F.col("macro.name").alias("macro_name"),
+            F.col("macro.filename").alias("macro_filename")
+        )
+    )
+    
+    # Define UDF to execute macro and return struct with result and error
+    @F.pandas_udf(returnType=StructType([
+        StructField("result", StringType(), True),
+        StructField("error", StringType(), True)
+    ]))
+    def execute_macro_udf(pdf: pd.DataFrame) -> pd.DataFrame:
+        """Execute macro and return struct with result (JSON string) and error (error message)."""
+        results = []
+        errors = []
+        
+        for _, row in pdf.iterrows():
+            sample = row.get("sample")
+            macro_filename = row.get("macro_filename")
+            macro_name = row.get("macro_name")
+            
+            if pd.isna(sample) or pd.isna(macro_filename):
+                results.append(None)
+                errors.append(f"NULL sample or macro_filename (macro: {macro_name})")
+                continue
+            
+            try:
+                # Convert VariantVal to JSON string directly
+                # Use toJson() to get JSON string with floats (not Decimals)
+                sample_json = sample.toJson()
+                
+                result = execute_macro_script(macro_filename, sample_json, MACROS_PATH)
+                
+                if result:
+                    results.append(json.dumps(result))
+                    errors.append(None)
+                else:
+                    results.append(None)
+                    errors.append(f"Macro returned empty result (macro: {macro_name})")
+            except Exception as e:
+                # Catch any errors from macro execution (script errors, file not found, etc.)
+                results.append(None)
+                errors.append(f"{str(e)} (macro: {macro_name})")
+        
+        return pd.DataFrame({"result": results, "error": errors})
+    
+    # Apply macro execution and convert to VARIANT
+    return (
+        base_df
+        .withColumn("macro_result", execute_macro_udf(F.struct("sample", "macro_filename", "macro_name")))
+        .withColumn(
+            "macro_output",
+            F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
+        )
+        .withColumn("macro_error", F.col("macro_result.error"))
+        .select(
+            "experiment_id",
+            "id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "user_id",
+            "macro_id",
+            "macro_name",
+            "macro_filename",
+            "macro_output",
+            "macro_error",
+            "processed_timestamp",
+            "date",
+            "questions",
+            "annotations"
+        )
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Macros Metadata (NEW - Phase 1)
+@dlt.table(
+    name=EXPERIMENT_MACROS_TABLE,
+    comment="Gold layer: Metadata tracking which macros exist per experiment with aggregated schema",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true"
+    }
+)
+def experiment_macros():
+    """
+    Track which macros exist per experiment for fast discovery.
+    Stores the aggregated VARIANT schema using schema_of_variant_agg() for efficient
+    schema discovery without scanning all data rows.
+    
+    This provides metadata for:
+    - UI table listing
+    - Schema preview (aggregated schema + sample output)
+    - Macro discovery without full table scans
+    
+    Updated automatically from experiment_macro_data stream.
+    """
+    macro_data_df = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
+    
+    return (
+        macro_data_df
+        .filter("macro_output IS NOT NULL")  # Exclude NULL outputs
+        .groupBy("experiment_id", "macro_id", "macro_name", "macro_filename")
+        .agg(
+            F.count("*").alias("sample_count"),
+            F.min("timestamp").alias("first_seen"),
+            F.max("timestamp").alias("last_seen"),
+            F.max("processed_timestamp").alias("last_processed"),
+            # Aggregate schema across all VARIANT rows for this macro
+            F.expr("schema_of_variant_agg(macro_output)").alias("output_schema")
+        )
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Contributors (NEW - Phase 1)
+@dlt.table(
+    name=EXPERIMENT_CONTRIBUTORS_TABLE,
+    comment="Gold layer: Cached user profiles for enrichment (full refresh on each pipeline run)",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true"
+    }
+)
+def experiment_contributors():
+    """
+    Cache user profiles for all contributors to each experiment.
+    """
+    
+    # Get unique users per experiment (batch read, not streaming)
+    unique_users = (
+        dlt.read(SILVER_TABLE)
+        .filter("experiment_id IS NOT NULL")
+        .filter("user_id IS NOT NULL")
+        .select("experiment_id", "user_id")
+        .distinct()
+    )
+    
+    # Fetch profiles and add columns (returns df with added profile columns)
+    return add_user_column(unique_users, ENVIRONMENT, dbutils)
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Enriched Experiment Raw Data (NEW - Phase 1)
+@dlt.table(
+    name=ENRICHED_RAW_DATA_VIEW,
+    comment="Enriched materialized view: Raw data with questions, user struct, and annotations. Incrementally refreshed.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.enableDeletionVectors": "true",
+        "pipelines.autoOptimize.managed": "true"
+    }
+)
+def enriched_experiment_raw_data():
+    """
+    Enriched materialized table combining raw data with:
+    - Expanded questions
+    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, image: STRING>
+    - Annotations (from experiment_annotations table + streaming annotations merged)
+    
+    Incrementally refreshed on serverless compute when source tables change.
+    Supports incremental refresh via row-tracking on all source tables.
+    """
+    raw_data = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
+    contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    
+    # Join with user profiles to get user struct
+    enriched = (
+        raw_data
+        .join(
+            contributors,
+            (raw_data.experiment_id == contributors.experiment_id) & 
+            (raw_data.user_id == contributors.user_id),
+            "left"
+        )
+        .select(
+            raw_data.experiment_id,
+            raw_data.id,
+            raw_data.device_id,
+            raw_data.device_name,
+            raw_data.timestamp,
+            raw_data.questions,
+            raw_data.annotations,
+            contributors.user,
+            raw_data.sample,
+            raw_data.macros,
+            raw_data.processed_timestamp,
+            raw_data.date
+        )
+    )
+    
+    # Use add_annotation_column to merge streaming annotations with database annotations
+    # This handles the merging logic automatically
+    return add_annotation_column(
+        enriched,
+        table_name="experiment_raw_data",  # Table name for filtering annotations
+        catalog_name="centrum",  # Annotations are in centrum schema now
+        experiment_schema="centrum",
+        spark=spark
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Enriched Experiment Macro Data (NEW - Phase 1)
+@dlt.table(
+    name=ENRICHED_MACRO_DATA_VIEW,
+    comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Incrementally refreshed.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.enableDeletionVectors": "true",
+        "pipelines.autoOptimize.managed": "true"
+    }
+)
+def enriched_experiment_macro_data():
+    """
+    Enriched materialized table combining macro data with:
+    - Expanded VARIANT fields (macro_output:*)
+    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, image: STRING>
+    - Annotations (from experiment_annotations table + streaming annotations merged)
+    
+    Incrementally refreshed on serverless compute when source tables change.
+    Supports incremental refresh via row-tracking on all source tables.
+    Backend queries this table directly for enriched macro data.
+    """
+    macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
+    contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    
+    # Join with user profiles to get user struct
+    enriched = (
+        macro_data
+        .join(
+            contributors,
+            (macro_data.experiment_id == contributors.experiment_id) & 
+            (macro_data.user_id == contributors.user_id),
+            "left"
+        )
+        .select(
+            macro_data.experiment_id,
+            macro_data.id,
+            macro_data.device_id,
+            macro_data.device_name,
+            macro_data.timestamp,
+            contributors.user,
+            macro_data.macro_id,
+            macro_data.macro_name,
+            macro_data.macro_filename,
+            macro_data.macro_output,
+            macro_data.macro_error,
+            macro_data.processed_timestamp,
+            macro_data.date,
+            macro_data.questions,
+            macro_data.annotations
+        )
+    )
+    
+    # Use add_annotation_column to merge streaming annotations with database annotations
+    # Table name uses macro filename for targeted annotation filtering
+    return add_annotation_column(
+        enriched,
+        table_name="experiment_macro_data",  # Generic macro data table name
+        catalog_name="centrum",
+        experiment_schema="centrum",
+        spark=spark
+    )
+
+# COMMAND ----------
+
 # DBTITLE 1,Event Hook - Slack Notifications
 @dlt.on_event_hook(max_allowable_consecutive_failures=3)
 def send_slack_notifications(event):
@@ -398,13 +837,9 @@ def send_slack_notifications(event):
         # Format timestamp if available
         timestamp = event.get('timestamp')
         if timestamp:
-            try:
-                from datetime import datetime
-                # Convert to readable format if it's a timestamp
-                if isinstance(timestamp, (int, float)):
-                    timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC')
-            except:
-                pass
+            # Convert to readable format if it's a timestamp
+            if isinstance(timestamp, (int, float)):
+                timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC')
         
         # Helper function to format Slack links
         def slack_link(url, text):

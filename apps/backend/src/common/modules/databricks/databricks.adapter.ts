@@ -14,6 +14,7 @@ import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
 import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import type { DatabricksPipelineStartUpdateResponse } from "./services/pipelines/pipelines.types";
+import { QueryBuilderService } from "./services/sql/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
 import { DatabricksTablesService } from "./services/tables/tables.service";
@@ -33,6 +34,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
   constructor(
     private readonly jobsService: DatabricksJobsService,
+    private readonly queryBuilder: QueryBuilderService,
     private readonly sqlService: DatabricksSqlService,
     private readonly tablesService: DatabricksTablesService,
     private readonly filesService: DatabricksFilesService,
@@ -604,6 +606,174 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     return this.workspaceService.deleteWorkspaceObject({
       path: `/Shared/macros/${filename}`,
       recursive: false,
+    });
+  }
+
+  /**
+   * Build a SQL query to parse VARIANT column using provided schema
+   * Domain-specific implementation for experiment macro data
+   */
+  buildVariantParseQuery(params: {
+    schema: string;
+    table: string;
+    selectColumns: string[];
+    variantColumn: string;
+    variantSchema: string;
+    whereClause?: string;
+    orderBy?: string;
+    limit?: number;
+    offset?: number;
+  }): string {
+    const catalog = this.configService.getCatalogName();
+    const fullTable = `${catalog}.${params.schema}.${params.table}`;
+
+    return this.queryBuilder.buildVariantParseQuery({
+      table: fullTable,
+      selectColumns: params.selectColumns,
+      variantColumn: params.variantColumn,
+      variantSchema: params.variantSchema,
+      whereClause: params.whereClause,
+      orderBy: params.orderBy,
+      limit: params.limit,
+      offset: params.offset,
+    });
+  }
+
+  /**
+   * Build query to lookup schema from experiment_macros table
+   */
+  buildSchemaLookupQuery(params: {
+    schema: string;
+    experimentId: string;
+    macroFilename: string;
+  }): string {
+    const catalog = this.configService.getCatalogName();
+    const table = `${catalog}.${params.schema}.experiment_macros`;
+
+    return this.queryBuilder
+      .query()
+      .select(["output_schema"])
+      .from(table)
+      .whereEquals("experiment_id", params.experimentId)
+      .whereEquals("macro_filename", params.macroFilename)
+      .limit(1)
+      .build();
+  }
+
+  /**
+   * Get the physical table name for a logical table
+   * Maps logical names (sample, device) to physical centrum tables
+   */
+  private getPhysicalTableName(tableName: string): string {
+    const catalog = this.configService.getCatalogName();
+    if (tableName === "sample") return `${catalog}.centrum.experiment_raw_data`;
+    if (tableName === "device") return `${catalog}.centrum.experiment_device_data`;
+    return `${catalog}.centrum.experiment_macro_data`;
+  }
+
+  /**
+   * Build a SQL query for experiment data with proper table mapping and WHERE clause
+   */
+  buildExperimentDataQuery(params: {
+    tableName: string;
+    experimentId: string;
+    columns?: string[];
+    orderBy?: string;
+    orderDirection?: "ASC" | "DESC";
+    limit?: number;
+    offset?: number;
+  }): string {
+    const { tableName, experimentId, columns, orderBy, orderDirection, limit, offset } = params;
+
+    const physicalTable = this.getPhysicalTableName(tableName);
+
+    // Construct WHERE conditions based on table type
+    const whereConditions: [string, string][] =
+      tableName === "sample" || tableName === "device"
+        ? [["experiment_id", experimentId]]
+        : [
+            ["experiment_id", experimentId],
+            ["macro_filename", tableName],
+          ];
+
+    return this.queryBuilder.buildSelectQuery({
+      table: physicalTable,
+      columns,
+      whereConditions,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    });
+  }
+
+  /**
+   * Build a COUNT query for experiment data
+   */
+  buildExperimentCountQuery(tableName: string, experimentId: string): string {
+    const physicalTable = this.getPhysicalTableName(tableName);
+
+    // Construct WHERE conditions based on table type
+    const whereConditions: [string, string][] =
+      tableName === "sample" || tableName === "device"
+        ? [["experiment_id", experimentId]]
+        : [
+            ["experiment_id", experimentId],
+            ["macro_filename", tableName],
+          ];
+
+    return this.queryBuilder.buildCountQuery({
+      table: physicalTable,
+      whereConditions,
+    });
+  }
+
+  /**
+   * Build query to get macro metadata from experiment_macros table
+   */
+  buildMacrosMetadataQuery(experimentId: string): string {
+    const catalog = this.configService.getCatalogName();
+    const table = `${catalog}.centrum.experiment_macros`;
+
+    // Note: Using manual query because builder doesn't support GROUP BY yet
+    return (
+      this.queryBuilder
+        .query()
+        .select([
+          "macro_filename",
+          "MAX(macro_name) as macro_name",
+          "MAX(sample_count) as total_rows",
+          "MAX(output_schema) as output_schema",
+        ])
+        .from(table)
+        .whereEquals("experiment_id", experimentId)
+        .build() + "\n      GROUP BY macro_filename"
+    );
+  }
+
+  /**
+   * Build query to count rows in experiment_raw_data
+   */
+  buildRawDataCountQuery(experimentId: string): string {
+    const catalog = this.configService.getCatalogName();
+    const table = `${catalog}.centrum.experiment_raw_data`;
+
+    return this.queryBuilder.buildCountQuery({
+      table,
+      whereConditions: [["experiment_id", experimentId]],
+    });
+  }
+
+  /**
+   * Build query to count rows in experiment_device_data
+   */
+  buildDeviceDataCountQuery(experimentId: string): string {
+    const catalog = this.configService.getCatalogName();
+    const table = `${catalog}.centrum.experiment_device_data`;
+
+    return this.queryBuilder.buildCountQuery({
+      table,
+      whereConditions: [["experiment_id", experimentId]],
     });
   }
 }

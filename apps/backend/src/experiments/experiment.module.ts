@@ -11,7 +11,6 @@ import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { UserModule } from "../users/user.module";
 // Services
-import { UserTransformationService } from "./application/services/data-transformation/user-metadata/user-transformation.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -20,7 +19,10 @@ import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-a
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
-import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
+import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
+import { DeviceDataQueryStrategy } from "./application/use-cases/experiment-data/get-experiment-data/strategies/device-data.strategy";
+import { MacroDataQueryStrategy } from "./application/use-cases/experiment-data/get-experiment-data/strategies/macro-data.strategy";
+import { RawDataQueryStrategy } from "./application/use-cases/experiment-data/get-experiment-data/strategies/raw-data.strategy";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
@@ -121,7 +123,6 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
 
     // Services
     EmbargoProcessorService,
-    UserTransformationService,
 
     // General experiment use cases
     CreateExperimentUseCase,
@@ -137,6 +138,11 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     GetExperimentTablesUseCase,
     UploadAmbyteDataUseCase,
     DownloadExperimentDataUseCase,
+
+    // Experiment data query strategies
+    RawDataQueryStrategy,
+    DeviceDataQueryStrategy,
+    MacroDataQueryStrategy,
 
     // Experiment member use cases
     ListExperimentMembersUseCase,
