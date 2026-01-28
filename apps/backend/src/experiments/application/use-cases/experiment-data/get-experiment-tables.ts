@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import type { ColumnInfo } from "../../../../common/modules/databricks/services/tables/tables.types";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -89,77 +90,117 @@ export class GetExperimentTablesUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        if (!experiment.schemaName) {
-          this.logger.error({
-            msg: "Experiment has no schema name",
-            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
-            operation: "getExperimentTables",
-            experimentId,
-          });
-          return failure(AppError.internal("Experiment schema not provisioned"));
-        }
-
-        const schemaName = experiment.schemaName;
-
-        // Get list of tables
-        const tablesResult = await this.databricksPort.listTables(schemaName);
-
-        if (tablesResult.isFailure()) {
-          return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-        }
-
-        // Filter tables to only include those with downstream: "false" (final/enriched tables for user consumption)
-        // and exclude annotations table.
-        const finalTables = tablesResult.value.tables.filter(
-          (table) => table.properties?.downstream === "false" && table.name !== "annotations",
-        );
-
+        // Query centrum schema for experiment tables
         const response: ExperimentTablesMetadataDto = [];
 
-        // Fetch row counts for each table
-        for (const table of finalTables) {
-          // Get total row count
-          const countResult = await this.databricksPort.executeSqlQuery(
-            schemaName,
-            `SELECT COUNT(*) as count FROM ${table.name}`,
-          );
+        // 1. Get macro tables from centrum.experiment_macros
+        const macrosQuery = this.databricksPort.buildMacrosMetadataQuery(experimentId);
 
-          let totalRows = 0;
-          if (countResult.isSuccess()) {
-            totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
-          } else {
-            this.logger.warn({
-              msg: "Failed to get row count for table",
-              operation: "getExperimentTables",
-              tableName: table.name,
-              error: countResult.error.message,
+        const macrosResult = await this.databricksPort.executeSqlQuery("centrum", macrosQuery);
+
+        if (macrosResult.isSuccess()) {
+          // Add each macro as a table
+          for (const row of macrosResult.value.rows) {
+            const macroFilename = row[0] ?? "";
+            const macroName = row[1] ?? macroFilename.replace(/\.[^/.]+$/, ""); // Use macro_name or fallback to filename without extension
+            const totalRows = parseInt((row[2] ?? "0") as string, 10);
+
+            // For macro tables, columns will be available when data is queried
+            // using buildVariantParseQuery which expands parsed_output.*
+            response.push({
+              name: macroFilename,
+              displayName: macroName as string,
+              totalRows,
+              columns: undefined, // Columns determined at query time via VARIANT expansion
             });
           }
-
-          response.push({
-            name: table.name,
-            displayName: table.properties?.display_name ?? table.name,
-            totalRows,
-            columns: table.columns?.map((col) => ({
-              name: col.name,
-              type_text: col.type_text,
-              type_name: col.type_name,
-              position: col.position,
-              nullable: col.nullable,
-              comment: col.comment,
-              type_json: col.type_json,
-              type_precision: col.type_precision,
-              type_scale: col.type_scale,
-              partition_index: col.partition_index,
-            })),
+        } else {
+          this.logger.warn({
+            msg: "Failed to query experiment_macros",
+            operation: "getExperimentTables",
+            experimentId,
+            error: macrosResult.error.message,
           });
         }
 
-        // Make sure 'device' table is last if it exists
+        // 2. Add sample data table (experiment_raw_data)
+        const sampleCountQuery = this.databricksPort.buildRawDataCountQuery(experimentId);
+
+        const sampleCountResult = await this.databricksPort.executeSqlQuery(
+          "centrum",
+          sampleCountQuery,
+        );
+
+        let sampleTotalRows = 0;
+        if (sampleCountResult.isSuccess()) {
+          sampleTotalRows = parseInt(sampleCountResult.value.rows[0]?.[0] ?? "0", 10);
+        }
+
+        // Get sample table schema
+        const sampleSchemaResult = await this.databricksPort.listTables("centrum");
+        const sampleTable = sampleSchemaResult.isSuccess()
+          ? sampleSchemaResult.value.tables.find((t) => t.name === "experiment_raw_data")
+          : null;
+
+        response.push({
+          name: "sample",
+          displayName: "Sample Data",
+          totalRows: sampleTotalRows,
+          columns: sampleTable?.columns?.map((col) => ({
+            name: col.name,
+            type_text: col.type_text,
+            type_name: col.type_name,
+            position: col.position,
+            nullable: col.nullable,
+            comment: col.comment,
+            type_json: col.type_json,
+            type_precision: col.type_precision,
+            type_scale: col.type_scale,
+            partition_index: col.partition_index,
+          })),
+        });
+
+        // 3. Add device data table (experiment_device_data)
+        const deviceCountQuery = this.databricksPort.buildDeviceDataCountQuery(experimentId);
+
+        const deviceCountResult = await this.databricksPort.executeSqlQuery(
+          "centrum",
+          deviceCountQuery,
+        );
+
+        let deviceTotalRows = 0;
+        if (deviceCountResult.isSuccess()) {
+          deviceTotalRows = parseInt(deviceCountResult.value.rows[0]?.[0] ?? "0", 10);
+        }
+
+        // Get device table schema
+        const deviceTable = sampleSchemaResult.isSuccess()
+          ? sampleSchemaResult.value.tables.find((t) => t.name === "experiment_device_data")
+          : null;
+
+        response.push({
+          name: "device",
+          displayName: "Device Data",
+          totalRows: deviceTotalRows,
+          columns: deviceTable?.columns?.map((col) => ({
+            name: col.name,
+            type_text: col.type_text,
+            type_name: col.type_name,
+            position: col.position,
+            nullable: col.nullable,
+            comment: col.comment,
+            type_json: col.type_json,
+            type_precision: col.type_precision,
+            type_scale: col.type_scale,
+            partition_index: col.partition_index,
+          })),
+        });
+
+        // Device table should be last
         const deviceTableIndex = response.findIndex((t) => t.name === "device");
         if (deviceTableIndex !== -1 && deviceTableIndex !== response.length - 1) {
-          const deviceTable = response.splice(deviceTableIndex, 1)[0];
-          response.push(deviceTable);
+          const deviceTableEntry = response.splice(deviceTableIndex, 1)[0];
+          response.push(deviceTableEntry);
         }
 
         return success(response);

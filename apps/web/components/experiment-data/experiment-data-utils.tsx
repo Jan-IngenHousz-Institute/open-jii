@@ -6,6 +6,7 @@ import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data
 import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { AnnotationType } from "@repo/api";
+import { WellKnownColumnTypes, ColumnPrimitiveType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
@@ -15,8 +16,63 @@ import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell
 import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
 import { ExperimentDataTableUserCell } from "./experiment-data-table-user-cell";
 
-const ANNOTATIONS_STRUCT_STRING =
-  "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>";
+// Local type utilities (UI-specific, not part of shared API)
+function isNumericType(type?: string): boolean {
+  if (!type) return false;
+  const numericTypes: string[] = [
+    ColumnPrimitiveType.TINYINT,
+    ColumnPrimitiveType.SMALLINT,
+    ColumnPrimitiveType.INT,
+    ColumnPrimitiveType.BIGINT,
+    ColumnPrimitiveType.LONG,
+    ColumnPrimitiveType.FLOAT,
+    ColumnPrimitiveType.DOUBLE,
+    ColumnPrimitiveType.REAL,
+  ];
+  return numericTypes.includes(type) || type.startsWith("DECIMAL") || type.startsWith("NUMERIC");
+}
+
+function isArrayType(type?: string): boolean {
+  return !!type && type.startsWith("ARRAY");
+}
+
+function isMapType(type?: string): boolean {
+  return !!type && type.startsWith("MAP");
+}
+
+function isStructType(type?: string): boolean {
+  return !!type && type.startsWith("STRUCT");
+}
+
+function isNumericArrayType(type?: string): boolean {
+  if (!type || !isArrayType(type)) return false;
+  const numericArrays = [
+    "ARRAY",
+    "ARRAY<TINYINT>",
+    "ARRAY<SMALLINT>",
+    "ARRAY<INT>",
+    "ARRAY<BIGINT>",
+    "ARRAY<FLOAT>",
+    "ARRAY<DOUBLE>",
+    "ARRAY<DECIMAL>",
+  ];
+  return (
+    numericArrays.includes(type) ||
+    (type.includes("ARRAY") &&
+      (type.includes("DOUBLE") ||
+        type.includes("REAL") ||
+        type.includes("FLOAT") ||
+        type.includes("NUMERIC")))
+  );
+}
+
+function isSortableType(type?: string): boolean {
+  if (!type) return false;
+  // Complex types cannot be sorted
+  if (isArrayType(type) || isMapType(type) || isStructType(type)) return false;
+  // All primitive types can be sorted
+  return true;
+}
 
 function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): string {
   return cn(
@@ -25,47 +81,10 @@ function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): s
   );
 }
 
-function isNumericType(type?: string): boolean {
-  return type === "DOUBLE" || type === "INT" || type === "LONG" || type === "BIGINT";
-}
-
-function isSortableColumnType(type?: string): boolean {
-  if (!type) return false;
-
-  // Primitive types that can be sorted
-  if (
-    type === "STRING" ||
-    type === "TIMESTAMP" ||
-    type === "DOUBLE" ||
-    type === "INT" ||
-    type === "LONG" ||
-    type === "BIGINT" ||
-    type === "BOOLEAN" ||
-    type === "DATE" ||
-    type === "USER"
-  ) {
-    return true;
-  }
-
-  // Complex types that cannot be sorted
-  if (
-    type.startsWith("MAP") ||
-    type.startsWith("ARRAY") ||
-    type.startsWith("STRUCT") ||
-    type === "ARRAY" ||
-    type === "MAP"
-  ) {
-    return false;
-  }
-
-  // Default to sortable for unknown types
-  return true;
-}
-
 function getSortColumnName(columnName: string, columnType?: string): string {
-  // For USER columns, sort by user_name instead of the column name
-  if (columnType === "USER") {
-    return "user_name";
+  // For USER struct columns, sort by name field instead of the column name
+  if (columnType === WellKnownColumnTypes.USER) {
+    return `${columnName}.name`;
   }
   return columnName;
 }
@@ -98,20 +117,20 @@ export function formatValue(
   onDeleteAnnotations?: (rowIds: string[], annotationType: AnnotationType) => void,
 ) {
   switch (type) {
-    case "DOUBLE":
-    case "INT":
-    case "LONG":
-    case "BIGINT":
+    case ColumnPrimitiveType.DOUBLE:
+    case ColumnPrimitiveType.INT:
+    case ColumnPrimitiveType.LONG:
+    case ColumnPrimitiveType.BIGINT:
       return <div className="text-right tabular-nums">{value as number}</div>;
-    case "TIMESTAMP":
+    case ColumnPrimitiveType.TIMESTAMP:
       return (value as string).substring(0, 19).replace("T", " ");
-    case "USER":
+    case ColumnPrimitiveType.STRING:
+      return value as string;
+    case WellKnownColumnTypes.USER:
       return (
         <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
       );
-    case "STRING":
-      return value as string;
-    case ANNOTATIONS_STRUCT_STRING:
+    case WellKnownColumnTypes.ANNOTATIONS:
       return (
         <ExperimentDataTableAnnotationsCell
           data={value as string}
@@ -120,41 +139,9 @@ export function formatValue(
           onDeleteAnnotations={onDeleteAnnotations}
         />
       );
-    case "ARRAY":
-    case "ARRAY<DOUBLE>":
-    case "ARRAY<REAL>":
-    case "ARRAY<FLOAT>":
-    case "ARRAY<NUMERIC>":
-      return (
-        <ExperimentDataTableChartCell
-          data={value as string} // Pass the raw string value to be parsed
-          columnName={columnName ?? "Chart"}
-          onClick={onChartClick}
-        />
-      );
     default: {
-      // Check if the type contains ARRAY<STRUCT<...>>
-      if (type.includes("ARRAY<STRUCT<")) {
-        return (
-          <ExperimentDataTableArrayCell data={value as string} columnName={columnName ?? "Array"} />
-        );
-      }
-
-      // Check if the type contains MAP
-      if (type.includes("MAP<STRING,") || type === "MAP") {
-        return (
-          <ExperimentDataTableMapCell data={value as string} _columnName={columnName ?? "Map"} />
-        );
-      }
-
-      // Check if the type contains ARRAY and appears to be numeric
-      if (
-        type.includes("ARRAY") &&
-        (type.includes("DOUBLE") ||
-          type.includes("REAL") ||
-          type.includes("FLOAT") ||
-          type.includes("NUMERIC"))
-      ) {
+      // Check for numeric arrays (for chart rendering)
+      if (isNumericArrayType(type)) {
         return (
           <ExperimentDataTableChartCell
             data={value as string}
@@ -163,6 +150,21 @@ export function formatValue(
           />
         );
       }
+
+      // Check if the type is ARRAY<STRUCT<...>>
+      if (isArrayType(type) && isStructType(type)) {
+        return (
+          <ExperimentDataTableArrayCell data={value as string} columnName={columnName ?? "Array"} />
+        );
+      }
+
+      // Check if the type is MAP
+      if (isMapType(type)) {
+        return (
+          <ExperimentDataTableMapCell data={value as string} _columnName={columnName ?? "Map"} />
+        );
+      }
+
       return value as string;
     }
   }
@@ -188,7 +190,7 @@ export function ExperimentTableHeader({
           const columnName = header.column.id;
 
           const isNumericColumn = isNumericType(meta?.type);
-          const canSort = isSortableColumnType(meta?.type);
+          const canSort = isSortableType(meta?.type);
           const isSortable = columnName !== "select" && !!onSort && canSort;
           const columnType = meta?.type;
           const actualSortColumn = getSortColumnName(columnName, columnType);
