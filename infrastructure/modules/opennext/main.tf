@@ -164,6 +164,7 @@ module "server_function" {
   architecture                    = var.lambda_architecture
   create_function_url             = true
   function_url_authorization_type = var.function_url_authorization_type
+  use_alias_url                   = true
 
   s3_permissions       = true
   s3_bucket_arns       = [aws_s3_bucket.assets.arn, aws_s3_bucket.cache.arn]
