@@ -66,7 +66,7 @@ export function ReviewStep({
           <CardTitle className="text-base">{t("experiments.infrastructureSetupTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm">{t("experiments.infrastructureSetupDescription")} </p>
+          <p className="text-sm">{t("experiments.infrastructureSetupDescription")}</p>
         </CardContent>
       </Card>
 
