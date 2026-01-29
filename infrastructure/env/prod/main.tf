@@ -842,7 +842,7 @@ module "opennext_waf" {
 
   service_name       = "opennext"
   environment        = var.environment
-  rate_limit         = 5000
+  rate_limit         = 2500
   log_retention_days = 30
 
   tags = {
