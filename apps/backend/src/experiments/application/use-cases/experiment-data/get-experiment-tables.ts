@@ -134,78 +134,62 @@ export class GetExperimentTablesUseCase {
           });
         }
 
-        // 2. Add sample data table (enriched_experiment_raw_data)
-        const sampleCountQuery = this.databricksPort.buildRawDataCountQuery(experimentId);
+        // 2. Get centrum tables metadata (includes sample and device tables with column info)
+        const tablesResult = await this.databricksPort.listTables("centrum");
 
-        const sampleCountResult = await this.databricksPort.executeSqlQuery(
-          "centrum",
-          sampleCountQuery,
-        );
-
-        let sampleTotalRows = 0;
-        if (sampleCountResult.isSuccess()) {
-          sampleTotalRows = parseInt(sampleCountResult.value.rows[0]?.[0] ?? "0", 10);
+        if (tablesResult.isFailure()) {
+          this.logger.error({
+            msg: "Failed to list centrum tables",
+            operation: "getExperimentTables",
+            experimentId,
+            error: tablesResult.error.message,
+          });
+          return failure(AppError.internal("Failed to retrieve table metadata"));
         }
 
-        // Get sample table schema
-        const sampleSchemaResult = await this.databricksPort.listTables("centrum");
-        const sampleTable = sampleSchemaResult.isSuccess()
-          ? sampleSchemaResult.value.tables.find((t) => t.name === "enriched_experiment_raw_data")
-          : null;
-
-        response.push({
-          name: "sample",
-          displayName: sampleTable?.properties?.display_name ?? "Raw Data",
-          totalRows: sampleTotalRows,
-          columns: sampleTable?.columns?.map((col) => ({
-            name: col.name,
-            type_text: col.type_text,
-            type_name: col.type_name,
-            position: col.position,
-            nullable: col.nullable,
-            comment: col.comment,
-            type_json: col.type_json,
-            type_precision: col.type_precision,
-            type_scale: col.type_scale,
-            partition_index: col.partition_index,
-          })),
-        });
-
-        // 3. Add device data table (experiment_device_data)
-        const deviceCountQuery = this.databricksPort.buildDeviceDataCountQuery(experimentId);
-
-        const deviceCountResult = await this.databricksPort.executeSqlQuery(
-          "centrum",
-          deviceCountQuery,
+        // Find enriched_experiment_raw_data table
+        const sampleTable = tablesResult.value.tables.find(
+          (t) => t.name === "enriched_experiment_raw_data",
         );
+        if (sampleTable) {
+          const sampleCountQuery = this.databricksPort.buildRawDataCountQuery(experimentId);
+          const sampleCountResult = await this.databricksPort.executeSqlQuery(
+            "centrum",
+            sampleCountQuery,
+          );
+          const sampleTotalRows = sampleCountResult.isSuccess()
+            ? parseInt(sampleCountResult.value.rows[0]?.[0] ?? "0", 10)
+            : 0;
 
-        let deviceTotalRows = 0;
-        if (deviceCountResult.isSuccess()) {
-          deviceTotalRows = parseInt(deviceCountResult.value.rows[0]?.[0] ?? "0", 10);
+          response.push({
+            name: "sample",
+            displayName: "Raw Data",
+            totalRows: sampleTotalRows,
+            columns: sampleTable.columns,
+          });
         }
 
-        // Get device table schema
-        const deviceTable = sampleSchemaResult.isSuccess()
-          ? sampleSchemaResult.value.tables.find((t) => t.name === "experiment_device_data")
-          : null;
+        // Find experiment_device_data table
+        const deviceTable = tablesResult.value.tables.find(
+          (t) => t.name === "experiment_device_data",
+        );
+        if (deviceTable) {
+          const deviceCountQuery = this.databricksPort.buildDeviceDataCountQuery(experimentId);
+          const deviceCountResult = await this.databricksPort.executeSqlQuery(
+            "centrum",
+            deviceCountQuery,
+          );
+          const deviceTotalRows = deviceCountResult.isSuccess()
+            ? parseInt(deviceCountResult.value.rows[0]?.[0] ?? "0", 10)
+            : 0;
 
-        response.push({
-          name: "device",
-          displayName: deviceTable?.properties?.display_name ?? "Device Data",
-          totalRows: deviceTotalRows,
-          columns: deviceTable?.columns?.map((col) => ({
-            name: col.name,
-            type_text: col.type_text,
-            type_name: col.type_name,
-            position: col.position,
-            nullable: col.nullable,
-            comment: col.comment,
-            type_json: col.type_json,
-            type_precision: col.type_precision,
-            type_scale: col.type_scale,
-            partition_index: col.partition_index,
-          })),
-        });
+          response.push({
+            name: "device",
+            displayName: "Device Data",
+            totalRows: deviceTotalRows,
+            columns: deviceTable.columns,
+          });
+        }
 
         // Device table should be last
         const deviceTableIndex = response.findIndex((t) => t.name === "device");

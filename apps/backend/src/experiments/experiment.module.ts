@@ -50,7 +50,6 @@ import { ListExperimentsUseCase } from "./application/use-cases/list-experiments
 import { CreateTransferRequestUseCase } from "./application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
-import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
@@ -73,7 +72,6 @@ import { ExperimentLocationsController } from "./presentation/experiment-locatio
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
-import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 
@@ -86,7 +84,6 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     ExperimentMembersController,
     ExperimentProtocolsController,
     ExperimentVisualizationsController,
-    ExperimentWebhookController,
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
     ProjectTransferRequestsController,
@@ -131,7 +128,6 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     ListExperimentsUseCase,
     UpdateExperimentUseCase,
     DeleteExperimentUseCase,
-    UpdateProvisioningStatusUseCase,
 
     // Experiment data use cases
     GetExperimentDataUseCase,

@@ -117,14 +117,8 @@ export const zAddExperimentProtocolsBody = z.object({
 });
 
 // Define Zod schemas for experiment models
-export const zExperimentStatus = z.enum([
-  "provisioning",
-  "provisioning_failed",
-  "active",
-  "stale",
-  "archived",
-  "published",
-]);
+// Provisioning statuses removed - with centrum consolidation, all experiments use single schema
+export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
 
 export const zExperimentVisibility = z.enum(["private", "public"]);
 
@@ -902,54 +896,6 @@ export const zUploadExperimentDataResponse = z.object({
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 
-// Webhook Schemas
-export const zExperimentWebhookAuthHeader = z.object({
-  "x-api-key-id": z.string(),
-  "x-databricks-signature": z.string(),
-  "x-databricks-timestamp": z.string(),
-});
-
-export const zExperimentProvisioningStatusWebhookPayload = z.object({
-  status: z.enum([
-    // Terminal statuses
-    "SUCCESS",
-    "FAILURE",
-    "CANCELED",
-    "TIMEOUT",
-    "FAILED",
-    // Non-terminal statuses
-    "RUNNING",
-    "PENDING",
-    "SKIPPED",
-    "DEPLOYING",
-    "DEPLOYED",
-    "COMPLETED",
-    "QUEUED",
-    "TERMINATED",
-    "WAITING",
-    "INITIALIZING",
-    "IDLE",
-    "SETTING_UP",
-    "RESETTING",
-  ]),
-  jobRunId: z.string(),
-  taskRunId: z.string(),
-  timestamp: z.string(),
-  pipelineId: z.string().optional(),
-  schemaName: z.string().optional(),
-});
-
-export const zExperimentWebhookSuccessResponse = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-
-export const zExperimentWebhookErrorResponse = z.object({
-  error: z.string(),
-  message: z.string(),
-  statusCode: z.number(),
-});
-
 // --- Download Data Schemas ---
 export const zDownloadExperimentDataQuery = z.object({
   tableName: z.string().describe("Name of the table to download"),
@@ -997,14 +943,6 @@ export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathPara
 export type DataSourceType = z.infer<typeof zDataSourceType>;
 export type UploadExperimentDataBody = z.infer<typeof zUploadExperimentDataBody>;
 export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataResponse>;
-
-// Webhook types
-export type ExperimentProvisioningStatusWebhookPayload = z.infer<
-  typeof zExperimentProvisioningStatusWebhookPayload
->;
-export type ExperimentProvisioningStatus = ExperimentProvisioningStatusWebhookPayload["status"];
-export type ExperimentWebhookSuccessResponse = z.infer<typeof zExperimentWebhookSuccessResponse>;
-export type ExperimentWebhookErrorResponse = z.infer<typeof zExperimentWebhookErrorResponse>;
 
 // Visualization types
 export type ChartFamily = z.infer<typeof zChartFamily>;

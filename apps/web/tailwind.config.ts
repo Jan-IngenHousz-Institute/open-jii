@@ -73,8 +73,7 @@ export default {
         },
         badge: {
           DEFAULT: "#FBF8C1",
-          provisioning: "#FFF3B0",
-          provisioningFailed: "#FFE0E0",
+
           active: "#CCFCD8",
           stale: "#FFE0B2",
           archived: "#E7EDF2",
