@@ -126,7 +126,7 @@ resource "aws_wafv2_web_acl" "main" {
     statement {
       rate_based_statement {
         limit              = var.rate_limit # Requests per 5-minute window per IP
-        aggregate_key_type = "IP"           # Rate limit per source IP
+        aggregate_key_type = "FORWARDED_IP" # Rate limit per source IP
         # Alternative: "FORWARDED_IP" for X-Forwarded-For header (behind proxy/CDN)
       }
     }

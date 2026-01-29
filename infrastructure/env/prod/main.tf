@@ -702,6 +702,7 @@ module "secrets_rotation_trigger" {
   ecs_service_name = module.backend_ecs.ecs_service_name
   region           = var.aws_region
   secret_arn       = module.aurora_db.master_user_secret_arn
+  environment      = var.environment
 }
 
 # Authentication secrets
@@ -842,7 +843,7 @@ module "opennext_waf" {
 
   service_name       = "opennext"
   environment        = var.environment
-  rate_limit         = 500
+  rate_limit         = 2500
   log_retention_days = 30
 
   tags = {
