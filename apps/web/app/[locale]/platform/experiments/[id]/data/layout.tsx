@@ -16,6 +16,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@repo/ui/components";
+import { cva } from "@repo/ui/lib/utils";
+
+const iconVariants = cva("h-4 w-4", {
+  variants: {
+    status: {
+      provisioning: "animate-spin",
+      provisioning_failed: "",
+      active: "",
+      stale: "",
+      archived: "",
+      published: "",
+    },
+  },
+});
 
 interface DataLayoutProps {
   children: React.ReactNode;
@@ -87,7 +101,7 @@ export default function DataLayout({ children, params }: DataLayoutProps) {
       </div>
 
       <Alert variant={message.variant}>
-        <message.icon className="h-4 w-4" />
+        <message.icon className={iconVariants({ status: experiment.status })} />
         <AlertTitle>{message.title}</AlertTitle>
         <AlertDescription>
           {message.description}
