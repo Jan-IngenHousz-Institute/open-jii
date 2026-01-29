@@ -127,10 +127,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
         }),
       );
 
-      const validateDataSourcesSpy = vi
-        .spyOn(databricksAdapter, "validateDataSources")
-        .mockResolvedValue(success(true));
-
       const createVisualizationSpy = vi
         .spyOn(experimentVisualizationRepository, "create")
         .mockResolvedValue(
@@ -169,10 +165,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
       });
 
       expect(checkAccessSpy).toHaveBeenCalledWith(experiment.id, testUserId);
-      expect(validateDataSourcesSpy).toHaveBeenCalledWith(
-        mockRequest.dataConfig,
-        expect.stringContaining("exp_test_experiment_"),
-      );
       expect(createVisualizationSpy).toHaveBeenCalledWith(experiment.id, mockRequest, testUserId);
     });
 
@@ -290,51 +282,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
       expect(result.error.message).toBe("You do not have access to this experiment");
     });
 
-    it("should fail when data source validation fails", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experiment.id,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            schemaName: experiment.schemaName,
-          },
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(
-        failure({
-          message: "Table test_table does not exist",
-          code: "INVALID_DATA_SOURCE",
-          statusCode: 400,
-          name: "",
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Table test_table does not exist");
-    });
-
     it("should fail when experiment has no schema name", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
@@ -435,8 +382,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
           isAdmin: true,
         }),
       );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
       vi.spyOn(experimentVisualizationRepository, "create").mockResolvedValue(
         success([]), // Empty array indicates creation failure

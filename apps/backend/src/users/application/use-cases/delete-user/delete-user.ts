@@ -74,34 +74,8 @@ export class DeleteUserUseCase {
           status: "success",
         });
 
-        // Trigger enriched tables refresh for user deletion
-        this.logger.log({
-          msg: "Triggering enriched tables refresh",
-          operation: "deleteUser",
-          userId: id,
-        });
-        const refreshResult = await this.databricksPort.triggerEnrichedTablesRefreshJob(
-          "user_id",
-          id,
-        );
-
-        if (refreshResult.isFailure()) {
-          this.logger.warn({
-            msg: "Failed to trigger enriched tables refresh",
-            errorCode: ErrorCodes.DATABRICKS_REFRESH_FAILED,
-            operation: "deleteUser",
-            userId: id,
-            error: refreshResult.error.message,
-          });
-          // Note: We don't fail the entire operation if the refresh trigger fails
-          // The user deletion was successful and should be returned
-        } else {
-          this.logger.log({
-            msg: "Enriched tables refresh triggered successfully",
-            operation: "deleteUser",
-            userId: id,
-          });
-        }
+        // Note: With centrum consolidation, materialized views auto-refresh when user data changes
+        // No manual refresh triggers needed
 
         this.logger.log({
           msg: "User deletion completed",

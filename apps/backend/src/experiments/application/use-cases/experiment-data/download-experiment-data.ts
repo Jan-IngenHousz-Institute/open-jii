@@ -1,10 +1,12 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import type { DownloadLinksData } from "../../../../common/modules/databricks/services/sql/sql.types";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataRepository } from "../../repositories/experiment-data.repository";
 
 /**
  * Query parameters for downloading experiment data
@@ -35,6 +37,7 @@ export class DownloadExperimentDataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
+    private readonly experimentDataRepository: ExperimentDataRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
@@ -86,57 +89,46 @@ export class DownloadExperimentDataUseCase {
         return failure(AppError.forbidden("Access denied to this experiment"));
       }
 
-      if (!experiment.schemaName) {
-        this.logger.error({
-          msg: "Experiment has no schema name",
-          errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
-          operation: "downloadExperimentData",
-          experimentId,
-        });
-        return failure(AppError.internal("Experiment schema not provisioned"));
-      }
-
-      const schemaName = experiment.schemaName;
-
+      // Build query using the same logic as get-experiment-data but for download
       this.logger.debug({
-        msg: "Using schema for data download",
+        msg: "Building download query for table",
         operation: "downloadExperimentData",
         experimentId,
-        schemaName,
+        tableName: query.tableName,
       });
 
-      // First, validate that the table exists by listing all tables
-      const tablesResult = await this.databricksPort.listTables(schemaName);
+      // Use experiment data repository to build the appropriate query
+      // This handles variant expansion for sample/macro data
+      const queryResult = await this.experimentDataRepository.buildQuery(
+        experimentId,
+        query.tableName,
+        undefined, // all columns
+        undefined, // no orderBy
+        undefined, // no orderDirection
+        undefined, // no limit
+        undefined, // no offset
+      );
 
-      if (tablesResult.isFailure()) {
-        return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
+      if (queryResult.isFailure()) {
+        return failure(queryResult.error);
       }
 
-      // Check if the specified table exists
-      const tableExists = tablesResult.value.tables.some((table) => table.name === query.tableName);
+      const sqlQuery = queryResult.value;
 
-      if (!tableExists) {
-        this.logger.warn({
-          msg: "Table not found in experiment",
-          operation: "downloadExperimentData",
-          experimentId,
-          tableName: query.tableName,
-        });
-        return failure(
-          AppError.notFound(`Table '${query.tableName}' not found in this experiment`),
-        );
-      }
-
-      // Execute SQL query to get all data from the table using EXTERNAL_LINKS
-      const sqlQuery = `SELECT * FROM ${query.tableName}`;
       this.logger.debug({
-        msg: "Executing download query",
+        msg: "Executing download query with EXTERNAL_LINKS",
         operation: "downloadExperimentData",
         experimentId,
+        tableName: query.tableName,
+      });
+
+      // Execute with EXTERNAL_LINKS disposition for efficient large dataset downloads
+      const dataResult = await this.databricksPort.executeSqlQuery(
+        "centrum",
         sqlQuery,
-      });
-
-      const dataResult = await this.databricksPort.downloadExperimentData(schemaName, sqlQuery);
+        "EXTERNAL_LINKS",
+        "CSV",
+      );
 
       if (dataResult.isFailure()) {
         return failure(
@@ -144,7 +136,8 @@ export class DownloadExperimentDataUseCase {
         );
       }
 
-      const data = dataResult.value;
+      // Type assertion: EXTERNAL_LINKS disposition returns DownloadLinksData
+      const data = dataResult.value as DownloadLinksData;
 
       // Transform the response to only include download links
       const response: DownloadExperimentDataDto = {

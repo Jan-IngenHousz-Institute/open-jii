@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { ExperimentVisualizationDto } from "../../../experiments/core/models/experiment-visualizations.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
@@ -12,8 +11,6 @@ import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
-import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
-import type { DatabricksPipelineStartUpdateResponse } from "./services/pipelines/pipelines.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
@@ -36,12 +33,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     private readonly jobsService: DatabricksJobsService,
     private readonly queryBuilder: QueryBuilderService,
     private readonly sqlService: DatabricksSqlService,
-    private readonly tablesService: DatabricksTablesService,
     private readonly filesService: DatabricksFilesService,
-    private readonly pipelinesService: DatabricksPipelinesService,
     private readonly volumesService: DatabricksVolumesService,
     private readonly configService: DatabricksConfigService,
     private readonly workspaceService: DatabricksWorkspaceService,
+    private readonly tablesService: DatabricksTablesService,
   ) {}
 
   /**
@@ -49,17 +45,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    */
   async healthCheck(): Promise<Result<DatabricksHealthCheck>> {
     return this.jobsService.healthCheck();
-  }
-
-  /**
-   * Trigger the experiment provisioning Databricks job with the specified parameters
-   */
-  async triggerExperimentProvisioningJob(
-    experimentId: string,
-    params: Record<string, string>,
-  ): Promise<Result<DatabricksJobRunResponse>> {
-    const jobId = this.configService.getExperimentProvisioningJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, params, experimentId);
   }
 
   /**
@@ -86,165 +71,51 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Trigger the enriched tables refresh Databricks job with the specified parameters
-   */
-  async triggerEnrichedTablesRefreshJob(
-    metadataKey: string,
-    metadataValue: string,
-  ): Promise<Result<DatabricksJobRunResponse>> {
-    this.logger.log(
-      `Triggering enriched tables refresh for metadata: ${metadataKey}=${metadataValue}`,
-    );
-
-    const jobParams = {
-      metadata_key: metadataKey,
-      metadata_value: metadataValue,
-    };
-
-    const jobId = this.configService.getEnrichedTablesRefreshJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, jobParams);
-  }
-
-  /**
-   * Execute a SQL query in a specific schema
+   * Execute a SQL query with INLINE disposition (returns data directly)
    */
   async executeSqlQuery(
     schemaName: string,
     sqlStatement: string,
-    tableName?: string,
-  ): Promise<Result<SchemaData>> {
-    // tableName parameter is available for future use (e.g., logging, validation)
-    if (tableName) {
-      this.logger.debug({
-        msg: "Executing SQL query",
-        operation: "executeSqlQuery",
-        schemaName,
-        tableName,
-      });
-    }
-    const result = await this.sqlService.executeSqlQuery(schemaName, sqlStatement, "INLINE");
-    return result as Result<SchemaData>;
-  }
+    disposition?: "INLINE",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<SchemaData>>;
 
   /**
-   * Download experiment data using EXTERNAL_LINKS disposition for large datasets
+   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
    */
-  async downloadExperimentData(
+  async executeSqlQuery(
     schemaName: string,
     sqlStatement: string,
-  ): Promise<Result<DownloadLinksData>> {
-    const result = await this.sqlService.executeSqlQuery(
+    disposition: "EXTERNAL_LINKS",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<DownloadLinksData>>;
+
+  /**
+   * Execute a SQL query in a specific schema with optional disposition and format.
+   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
+   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
+   */
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition: "INLINE" | "EXTERNAL_LINKS" = "INLINE",
+    format: "JSON_ARRAY" | "ARROW_STREAM" | "CSV" = "JSON_ARRAY",
+  ): Promise<Result<SchemaData | DownloadLinksData>> {
+    this.logger.debug({
+      msg: "Executing SQL query",
+      operation: "executeSqlQuery",
       schemaName,
-      sqlStatement,
-      "EXTERNAL_LINKS",
-      "CSV",
-    );
-    return result as Result<DownloadLinksData>;
+      disposition,
+      format,
+    });
+    return this.sqlService.executeSqlQuery(schemaName, sqlStatement, disposition, format);
   }
 
   /**
-   * List tables in the schema for a specific experiment
+   * List all tables in a schema with their column metadata
    */
   async listTables(schemaName: string): Promise<Result<ListTablesResponse>> {
     return this.tablesService.listTables(schemaName);
-  }
-
-  /**
-   * Validate that data sources (table and columns) exist in the experiment
-   */
-  async validateDataSources(
-    dataConfig: ExperimentVisualizationDto["dataConfig"],
-    schemaName: string,
-  ): Promise<Result<boolean>> {
-    this.logger.log({
-      msg: "Validating data sources",
-      operation: "validateDataSources",
-      schemaName,
-    });
-
-    // Check if table exists in Databricks
-    const tablesResult = await this.listTables(schemaName);
-
-    if (tablesResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to list tables",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "validateDataSources",
-        schemaName,
-        error: tablesResult.error,
-      });
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    const tableExists = tablesResult.value.tables.some(
-      (table) => table.name === dataConfig.tableName,
-    );
-
-    if (!tableExists) {
-      this.logger.warn({
-        msg: "Table does not exist in schema",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "validateDataSources",
-        schemaName,
-        tableName: dataConfig.tableName,
-      });
-      return failure(
-        AppError.badRequest(`Table '${dataConfig.tableName}' does not exist in this experiment`),
-      );
-    }
-
-    // Check if columns exist in the table by querying the table schema
-    const schemaQuery = `DESCRIBE ${dataConfig.tableName}`;
-
-    this.logger.debug({
-      msg: "Executing schema query",
-      operation: "validateDataSources",
-      schemaName,
-      schemaQuery,
-    });
-    const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
-
-    if (schemaResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to get table schema",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "validateDataSources",
-        schemaName,
-        error: schemaResult.error,
-      });
-      return failure(
-        AppError.internal(`Failed to get table schema: ${schemaResult.error.message}`),
-      );
-    }
-
-    // Extract column names from schema (first column contains column names)
-    const availableColumns = schemaResult.value.rows.map((row) => row[0]);
-
-    // Check columns for each data source
-    const allMissingColumns: string[] = [];
-
-    for (const dataSource of dataConfig.dataSources) {
-      if (!availableColumns.includes(dataSource.columnName)) {
-        allMissingColumns.push(dataSource.columnName);
-      }
-    }
-
-    if (allMissingColumns.length > 0) {
-      const uniqueMissingColumns = [...new Set(allMissingColumns)];
-      this.logger.warn(
-        `Missing columns in table '${dataConfig.tableName}': ${uniqueMissingColumns.join(", ")}`,
-      );
-      return failure(
-        AppError.badRequest(
-          `Columns do not exist in table '${dataConfig.tableName}': ${uniqueMissingColumns.join(", ")}`,
-        ),
-      );
-    }
-
-    this.logger.log(
-      `Data sources validation successful for table '${dataConfig.tableName}' with ${dataConfig.dataSources.length} data sources`,
-    );
-    return success(true);
   }
 
   /**
@@ -271,114 +142,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
 
     return this.filesService.upload(filePath, fileBuffer);
-  }
-
-  /**
-   * Trigger an experiment pipeline by ID
-   * Starts a pipeline update using the stored pipeline ID
-   *
-   * @param pipelineId - The Databricks pipeline ID
-   * @param experimentId - ID of the experiment for logging purposes
-   * @param options - Optional parameters for the pipeline update
-   * @returns Result containing the pipeline update response or an error
-   */
-  async triggerExperimentPipeline(
-    pipelineId: string,
-    experimentId: string,
-    options?: {
-      fullRefresh?: boolean;
-      fullRefreshSelection?: string[];
-      refreshSelection?: string[];
-    },
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log({
-      msg: "Triggering pipeline",
-      operation: "triggerExperimentPipeline",
-      pipelineId,
-      experimentId,
-    });
-
-    // Start the pipeline update using the stored pipeline ID
-    return this.pipelinesService.startPipelineUpdate({
-      pipelineId,
-      cause: "API_CALL",
-      fullRefresh: options?.fullRefresh,
-      fullRefreshSelection: options?.fullRefreshSelection,
-      refreshSelection: options?.refreshSelection,
-    });
-  }
-
-  /**
-   * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param pipelineId - The Databricks pipeline ID
-   * @returns Result containing the pipeline update response or an error
-   */
-  async triggerExperimentPipelineSilverRefresh(
-    schemaName: string,
-    pipelineId: string,
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    return this.refreshSilverData(schemaName, pipelineId);
-  }
-
-  /**
-   * Refresh all silver quality tables for an experiment with full refresh
-   * This is a convenience method that wraps triggerExperimentPipelineSilverRefresh
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param pipelineId - The Databricks pipeline ID
-   * @returns Result containing the pipeline update response or an error
-   */
-  async refreshSilverData(
-    schemaName: string,
-    pipelineId: string,
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log({
-      msg: "Refreshing silver data",
-      operation: "refreshSilverData",
-      schemaName,
-      pipelineId,
-    });
-
-    // First, get the list of tables in the experiment
-    const tablesResult = await this.listTables(schemaName);
-
-    if (tablesResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to list tables for silver data refresh",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "refreshSilverData",
-        schemaName,
-        error: tablesResult.error,
-      });
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    // Filter for tables with quality === "silver"
-    const silverTables = tablesResult.value.tables
-      .filter((table) => table.properties?.quality === "silver")
-      .map((table) => table.name);
-
-    if (silverTables.length === 0) {
-      this.logger.warn({
-        msg: "No silver quality tables found",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "refreshSilverData",
-        schemaName,
-      });
-      return failure(AppError.notFound(`No silver quality tables found for schema ${schemaName}`));
-    }
-
-    this.logger.log(
-      `Found ${silverTables.length} silver tables to refresh: ${silverTables.join(", ")}`,
-    );
-
-    // Trigger the pipeline with full refresh for silver tables
-    // Use schemaName for experimentId logging since we only have schemaName available
-    return this.triggerExperimentPipeline(pipelineId, schemaName, {
-      fullRefreshSelection: silverTables,
-    });
   }
 
   /**

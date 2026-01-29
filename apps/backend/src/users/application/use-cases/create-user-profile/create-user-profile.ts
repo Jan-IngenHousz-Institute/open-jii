@@ -62,51 +62,7 @@ export class CreateUserProfileUseCase {
           return failure(AppError.notFound(`Cannot update user with ID ${userId}`));
         }
 
-        // Check if there are changes that affect metadata-enriched tables
-        const hasChangesInMetadata =
-          existingProfile &&
-          [
-            existingProfile.firstName !== data.firstName,
-            existingProfile.lastName !== data.lastName,
-            data.activated !== undefined && existingProfile.activated !== data.activated,
-          ].some(Boolean);
-
-        if (hasChangesInMetadata) {
-          // Trigger enriched tables refresh for user metadata changes
-          this.logger.log({
-            msg: "Triggering enriched tables refresh for profile changes",
-            operation: "createUserProfile",
-            userId,
-          });
-          const refreshResult = await this.databricksPort.triggerEnrichedTablesRefreshJob(
-            "user_id",
-            userId,
-          );
-
-          if (refreshResult.isFailure()) {
-            this.logger.warn({
-              msg: "Failed to trigger enriched tables refresh",
-              errorCode: ErrorCodes.DATABRICKS_REFRESH_FAILED,
-              operation: "createUserProfile",
-              userId,
-              error: refreshResult.error.message,
-            });
-            // Note: We don't fail the entire operation if the refresh trigger fails
-            // The profile creation/update was successful and should be returned
-          } else {
-            this.logger.log({
-              msg: "Enriched tables refresh triggered successfully",
-              operation: "createUserProfile",
-              userId,
-            });
-          }
-        } else {
-          this.logger.debug({
-            msg: "No relevant changes detected, skipping refresh",
-            operation: "createUserProfile",
-            userId,
-          });
-        }
+        // With centrum consolidation, materialized views auto-refresh when user data changes
 
         return success(userProfile);
       });

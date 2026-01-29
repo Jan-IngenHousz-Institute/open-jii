@@ -221,7 +221,6 @@ export const useExperimentData = (
     isCellExpanded,
   ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
-  const displayName = tableData?.displayName;
 
-  return { tableMetadata, tableRows, displayName, isLoading, error };
+  return { tableMetadata, tableRows, isLoading, error };
 };
