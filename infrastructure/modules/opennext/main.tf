@@ -164,6 +164,7 @@ module "server_function" {
   architecture                    = var.lambda_architecture
   create_function_url             = true
   function_url_authorization_type = var.function_url_authorization_type
+  use_alias_url                   = true
 
   s3_permissions       = true
   s3_bucket_arns       = [aws_s3_bucket.assets.arn, aws_s3_bucket.cache.arn]
@@ -349,7 +350,7 @@ module "cloudfront" {
   project_name               = var.project_name
   assets_bucket_name         = aws_s3_bucket.assets.bucket
   assets_bucket_domain_name  = aws_s3_bucket.assets.bucket_domain_name
-  server_function_url_domain = "${module.server_function.function_url_domain}/aliases/live"
+  server_function_url_domain = module.server_function.function_url_domain
   image_function_url_domain  = module.image_function.function_url_domain
   aliases                    = local.aliases
   acm_certificate_arn        = var.certificate_arn != "" ? var.certificate_arn : null

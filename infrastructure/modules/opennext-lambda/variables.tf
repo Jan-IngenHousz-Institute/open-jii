@@ -137,3 +137,9 @@ variable "additional_iam_policies" {
   type        = map(string)
   default     = {}
 }
+
+variable "use_alias_url" {
+  description = "Whether to create a Lambda function alias for the specified environment"
+  type        = bool
+  default     = false
+}
