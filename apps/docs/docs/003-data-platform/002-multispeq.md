@@ -5,9 +5,11 @@ The MultispeQ sensor/device is a product of [PhotosynQ](https://www.photosynq.co
 Please refer to PhotosynQ for **support** on the device:  
 https://help.photosynq.com/instruments/multispeq-v2.0.html
 
-More documentation on **creating protocols** for the MultispeQ can be found on:  
+**Calibrating** the device or changing the **device settings** can be done via the PhotosynQ Deskop app.  
+https://help.photosynq.com/desktop-application/installation.htm
+
+The openJII platform has several protocols available for the MultispeQ. You can [choose one, or create one your self](./web-platform/protocol) in the openJII platform. More documentation on **formatting protocols** for the MultispeQ can be found on:  
 https://help.photosynq.com/protocols/protocol-basics.html
 
-**Calibrating** the device or changing the **device settings** can be done via the PhotosynQ Deskop app.  
-https://help.photosynq.com/desktop-application/installation.html
+
 

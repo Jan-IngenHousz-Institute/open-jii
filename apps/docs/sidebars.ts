@@ -107,6 +107,7 @@ const sidebars: SidebarsConfig = {
         "data-platform/web-platform/register",
         "data-platform/web-platform/create-add-experiment",
         "data-platform/web-platform/protocol",
+        "data-platform/web-platform/roles",
       ],
     },
     {
