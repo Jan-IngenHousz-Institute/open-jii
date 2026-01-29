@@ -2,7 +2,6 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { AnnotationRowsAffected, UpdateAnnotationBody } from "@repo/api";
 
-import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { UpdateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
@@ -77,17 +76,6 @@ export class UpdateAnnotationUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        if (!experiment.schemaName) {
-          this.logger.error({
-            msg: "Experiment has no schema name",
-            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
-            operation: "updateAnnotation",
-            experimentId,
-            error: "Experiment schema not provisioned",
-          });
-          return failure(AppError.internal("Experiment schema not provisioned"));
-        }
-
         const updateAnnotation: UpdateAnnotationDto = {};
         if ("text" in data.content) {
           updateAnnotation.contentText = data.content.text;
@@ -98,7 +86,6 @@ export class UpdateAnnotationUseCase {
         }
 
         const result = await this.experimentDataAnnotationsRepository.updateAnnotation(
-          experiment.schemaName,
           experimentId,
           annotationId,
           updateAnnotation,

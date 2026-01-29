@@ -101,6 +101,10 @@ export function ExperimentDataTable({
     isPinned: boolean;
   } | null>(null);
 
+  // Expandable cell state - tracks which row+column combination is expanded
+  // Key format: "rowId:columnName"
+  const [expandedCells, setExpandedCells] = useState<Record<string, boolean>>({});
+
   const { t } = useTranslation();
 
   // Remove hover functionality - chart only shows on click
@@ -121,6 +125,20 @@ export function ExperimentDataTable({
   const closePinnedChart = useCallback(() => {
     setChartDisplay(null);
   }, []);
+
+  // Expandable cell handlers
+  const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
+    const key = `${rowId}:${columnName}`;
+    setExpandedCells((prev) => (prev[key] ? { ...prev, [key]: false } : { [key]: true }));
+  }, []);
+
+  const isCellExpanded = useCallback(
+    (rowId: string, columnName: string) => {
+      const key = `${rowId}:${columnName}`;
+      return expandedCells[key] || false;
+    },
+    [expandedCells],
+  );
 
   // Annotation dialog handlers
   const openAddAnnotationDialog = useCallback(
@@ -169,6 +187,8 @@ export function ExperimentDataTable({
     toggleChartPin,
     openAddAnnotationDialog,
     openDeleteAnnotationsDialog,
+    toggleCellExpansion,
+    isCellExpanded,
   );
 
   const onPaginationChange = useCallback(
@@ -340,7 +360,13 @@ export function ExperimentDataTable({
                 <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
               )}
               {!isLoading && (
-                <ExperimentDataRows rows={table.getRowModel().rows} columnCount={columnCount} />
+                <ExperimentDataRows
+                  rows={table.getRowModel().rows}
+                  columnCount={columnCount}
+                  expandedCells={expandedCells}
+                  tableRows={tableRows}
+                  columns={persistedMetaData?.rawColumns ?? []}
+                />
               )}
             </TableBody>
           </Table>

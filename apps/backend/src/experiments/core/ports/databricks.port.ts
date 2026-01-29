@@ -193,8 +193,9 @@ export interface DatabricksPort {
     schema: string;
     table: string;
     selectColumns: string[];
-    variantColumn: string;
-    variantSchema: string;
+    variantColumn: string | string[];
+    variantSchema: string | string[];
+    exceptColumns?: string[];
     whereClause?: string;
     orderBy?: string;
     limit?: number;
@@ -212,6 +213,14 @@ export interface DatabricksPort {
     experimentId: string;
     macroFilename: string;
   }): string;
+
+  /**
+   * Build query to lookup questions schema from experiment_questions table
+   *
+   * @param params - Schema lookup parameters including schema path and experiment ID
+   * @returns SQL query string to retrieve the questions schema
+   */
+  buildQuestionsSchemaLookupQuery(params: { schema: string; experimentId: string }): string;
 
   /**
    * Build a SQL query for experiment data with proper table mapping and WHERE clause

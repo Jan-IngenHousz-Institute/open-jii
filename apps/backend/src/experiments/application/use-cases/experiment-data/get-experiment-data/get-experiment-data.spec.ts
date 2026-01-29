@@ -1190,14 +1190,14 @@ describe("GetExperimentDataUseCase", () => {
       columns: [
         {
           name: "user",
-          type_name: "STRUCT<id: STRING, name: STRING, image: STRING>",
-          type_text: "STRUCT<id: STRING, name: STRING, image: STRING>",
+          type_name: "STRUCT<id: STRING, name: STRING, avatar: STRING>",
+          type_text: "STRUCT<id: STRING, name: STRING, avatar: STRING>",
         },
         { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE" },
       ],
       rows: [
-        [JSON.stringify({ id: testUserId, name: "Test User", image: null }), "25.5"],
-        [JSON.stringify({ id: testUserId, name: "Test User", image: null }), "26.0"],
+        [JSON.stringify({ id: testUserId, name: "Test User", avatar: null }), "25.5"],
+        [JSON.stringify({ id: testUserId, name: "Test User", avatar: null }), "26.0"],
       ],
       totalRows: 2,
       truncated: false,
@@ -1235,7 +1235,7 @@ describe("GetExperimentDataUseCase", () => {
         { name: "comment", type_name: "STRING", type_text: "STRING" },
       ],
       rows: [
-        ["user", "STRUCT<id: STRING, name: STRING, image: STRING>", null],
+        ["user", "STRUCT<id: STRING, name: STRING, avatar: STRING>", null],
         ["measurement", "DOUBLE", null],
       ],
       totalRows: 2,

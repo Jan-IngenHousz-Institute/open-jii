@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { tsr } from "~/lib/tsr";
 
 import type { ExperimentData, AnnotationType } from "@repo/api";
+import { ColumnPrimitiveType, WellKnownColumnTypes } from "@repo/api";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
@@ -15,6 +16,8 @@ export type DataRenderFunction = (
   onChartClick?: (data: number[], columnName: string) => void,
   onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void,
   onDeleteAnnotations?: (rowIds: string[], type: AnnotationType) => void,
+  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
+  isCellExpanded?: (rowId: string, columnName: string) => boolean,
 ) => string | React.JSX.Element;
 
 // Time in ms before data is removed from the cache
@@ -22,13 +25,15 @@ const STALE_TIME = 2 * 60 * 1000;
 
 export function getColumnWidth(typeName: string): number | undefined {
   // Set medium width for user columns that contain avatar + name
-  if (typeName === "USER") return 180;
+  if (typeName === WellKnownColumnTypes.CONTRIBUTOR) return 180;
   // Set medium width for array of struct columns that contain collapsible content
   if (typeName.startsWith("ARRAY<STRUCT<")) return 180;
   // Set smaller width for array columns that contain charts
   if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 120;
   // Set medium width for map columns that contain collapsible content
   if (typeName === "MAP" || typeName.startsWith("MAP<")) return 180;
+  // Set medium width for VARIANT columns that contain collapsible JSON
+  if (typeName === ColumnPrimitiveType.VARIANT) return 180;
   return undefined;
 }
 
@@ -38,6 +43,8 @@ interface CreateTableColumnsParams {
   onChartClick?: (data: number[], columnName: string) => void;
   onAddAnnotation?: (rowIds: string[]) => void;
   onDeleteAnnotations?: (rowIds: string[]) => void;
+  onToggleCellExpansion?: (rowId: string, columnName: string) => void;
+  isCellExpanded?: (rowId: string, columnName: string) => boolean;
 }
 
 function createTableColumns({
@@ -46,6 +53,8 @@ function createTableColumns({
   onChartClick,
   onAddAnnotation,
   onDeleteAnnotations,
+  onToggleCellExpansion,
+  isCellExpanded,
 }: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataRow>();
 
@@ -55,17 +64,26 @@ function createTableColumns({
   // Define type precedence for sorting
   const getTypePrecedence = (typeName: string): number => {
     switch (typeName) {
-      case "TIMESTAMP":
+      case ColumnPrimitiveType.TIMESTAMP:
+      case ColumnPrimitiveType.TIMESTAMP_NTZ:
         return 1;
-      case "USER":
+      case WellKnownColumnTypes.CONTRIBUTOR:
         return 3;
-      case "STRING":
+      case ColumnPrimitiveType.STRING:
+      case ColumnPrimitiveType.VARCHAR:
+      case ColumnPrimitiveType.CHAR:
         return 4;
-      case "DOUBLE":
-      case "INT":
-      case "LONG":
-      case "BIGINT":
+      case ColumnPrimitiveType.DOUBLE:
+      case ColumnPrimitiveType.FLOAT:
+      case ColumnPrimitiveType.REAL:
+      case ColumnPrimitiveType.INT:
+      case ColumnPrimitiveType.LONG:
+      case ColumnPrimitiveType.BIGINT:
+      case ColumnPrimitiveType.TINYINT:
+      case ColumnPrimitiveType.SMALLINT:
         return 5;
+      case ColumnPrimitiveType.VARIANT:
+        return 2;
       default:
         if (
           typeName === "MAP" ||
@@ -103,6 +121,8 @@ function createTableColumns({
         onChartClick,
         onAddAnnotation,
         onDeleteAnnotations,
+        onToggleCellExpansion,
+        isCellExpanded,
       );
     }
     return value as string;
@@ -129,6 +149,7 @@ export interface TableMetadata {
   columns: AccessorKeyColumnDef<DataRow, unknown>[];
   totalRows: number;
   totalPages: number;
+  rawColumns?: { name: string; type: string }[];
 }
 
 /**
@@ -156,6 +177,8 @@ export const useExperimentData = (
   onChartClick?: (data: number[], columnName: string) => void,
   onAddAnnotation?: (rowIds: string[]) => void,
   onDeleteAnnotations?: (rowIds: string[]) => void,
+  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
+  isCellExpanded?: (rowId: string, columnName: string) => boolean,
 ) => {
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
@@ -177,12 +200,26 @@ export const useExperimentData = (
             onChartClick,
             onAddAnnotation,
             onDeleteAnnotations,
+            onToggleCellExpansion,
+            isCellExpanded,
           }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
+          rawColumns: tableData.data?.columns.map((col) => ({
+            name: col.name,
+            type: col.type_text,
+          })),
         }
       : undefined;
-  }, [tableData, formatFunction, onChartClick, onAddAnnotation, onDeleteAnnotations]);
+  }, [
+    tableData,
+    formatFunction,
+    onChartClick,
+    onAddAnnotation,
+    onDeleteAnnotations,
+    onToggleCellExpansion,
+    isCellExpanded,
+  ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
   const displayName = tableData?.displayName;
 

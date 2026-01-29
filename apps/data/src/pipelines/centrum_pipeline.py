@@ -81,6 +81,7 @@ sensor_schema = StructType([
 # DBTITLE 1,Configuration
 
 ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+CATALOG_NAME = "open_jii_dev"
 
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
@@ -92,6 +93,7 @@ EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
 EXPERIMENT_MACROS_TABLE = "experiment_macros"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
+EXPERIMENT_QUESTIONS_TABLE = "experiment_questions"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 
@@ -391,7 +393,7 @@ def experiment_status():
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported",
         "downstream": "true",
-        "variants": "sample"
+        "variants": "sample,questions_data"
     }
 )
 def experiment_raw_data():
@@ -401,23 +403,104 @@ def experiment_raw_data():
     This table replaces per-experiment 'sample' tables with a unified partitioned approach.
     Reads FROM existing clean_data table (no changes to clean_data).
     """
+    
+    # Define UDF for sanitizing question labels
+    @F.pandas_udf(ArrayType(StructType([
+        StructField("question_label", StringType(), True),
+        StructField("question_answer", StringType(), True)
+    ])))
+    def sanitize_questions_udf(questions: pd.Series) -> pd.Series:
+        """
+        Sanitize question labels in questions array.
+        Matches the logic in question_metadata.py
+        """
+        
+        def sanitize_label(label):
+            if not label:
+                return "question_empty"
+            
+            # Convert to lowercase
+            sanitized = label.lower()
+            
+            # Replace invalid characters with underscores
+            invalid_chars = ' ,;{}()\n\t='
+            for char in invalid_chars:
+                sanitized = sanitized.replace(char, '_')
+            
+            # Remove leading/trailing underscores
+            sanitized = sanitized.strip('_')
+            
+            # Collapse multiple underscores to single
+            while '__' in sanitized:
+                sanitized = sanitized.replace('__', '_')
+            
+            # Ensure it's not empty and doesn't start with a number
+            if not sanitized or sanitized[0].isdigit():
+                sanitized = f"question_{sanitized}"
+            
+            return sanitized
+        
+        def sanitize_questions_array(questions_array):
+            if questions_array is None or len(questions_array) == 0:
+                return []
+            
+            result = []
+            for q in questions_array:
+                if q:
+                    result.append({
+                        'question_label': sanitize_label(q.get('question_label')),
+                        'question_answer': q.get('question_answer')
+                    })
+            return result
+        
+        return questions.apply(sanitize_questions_array)
+    
     return (
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
-        .withColumn("sample", F.expr("parse_json(sample)"))
+        .withColumn("data", F.expr("parse_json(sample)"))
+        # Sanitize question labels using pandas UDF
+        .withColumn(
+            "questions_sanitized",
+            F.when(
+                F.col("questions").isNotNull() & (F.size("questions") > 0),
+                sanitize_questions_udf(F.col("questions"))
+            )
+        )
+        # Convert questions array to VARIANT map (question_label -> question_answer)
+        # Deduplicates by taking last answer for each distinct label
+        .withColumn(
+            "questions_data",
+            F.when(
+                F.col("questions_sanitized").isNotNull() & (F.size("questions_sanitized") > 0),
+                F.expr("""
+                    parse_json(
+                        to_json(
+                            map_from_arrays(
+                                array_distinct(transform(questions_sanitized, q -> q.question_label)),
+                                transform(
+                                    array_distinct(transform(questions_sanitized, q -> q.question_label)),
+                                    label -> element_at(filter(questions_sanitized, q -> q.question_label = label), -1).question_answer
+                                )
+                            )
+                        )
+                    )
+                """)
+            )
+        )
         .select(
-            "experiment_id",
             "id",
+            "experiment_id",
             "device_id",
             "device_name",
             "timestamp",
-            "questions",
+            "macros",
+            "questions_data",
             "annotations",
             "user_id",
-            "sample",
-            "macros",
-            "processed_timestamp",
-            "date"
+            "data",
+            "date",
+            "processed_timestamp"
         )
     )
 
@@ -431,7 +514,8 @@ def experiment_raw_data():
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
-        "downstream": "false"
+        "downstream": "false",
+        "display_name": "Device Metadata"
     }
 )
 def experiment_device_data():
@@ -500,10 +584,10 @@ def experiment_macro_data():
             "device_name",
             "timestamp",
             "user_id",
-            "sample",
+            "data",
             "date",
             "processed_timestamp",
-            "questions",
+            "questions_data",
             "annotations",
             F.explode("macros").alias("macro")
         )
@@ -514,10 +598,10 @@ def experiment_macro_data():
             "device_name",
             "timestamp",
             "user_id",
-            "sample",
+            "data",
             "date",
             "processed_timestamp",
-            "questions",
+            "questions_data",
             "annotations",
             F.col("macro.id").alias("macro_id"),
             F.col("macro.name").alias("macro_name"),
@@ -536,19 +620,19 @@ def experiment_macro_data():
         errors = []
         
         for _, row in pdf.iterrows():
-            sample = row.get("sample")
+            data = row.get("data")
             macro_filename = row.get("macro_filename")
             macro_name = row.get("macro_name")
             
-            if pd.isna(sample) or pd.isna(macro_filename):
+            if pd.isna(data) or pd.isna(macro_filename):
                 results.append(None)
-                errors.append(f"NULL sample or macro_filename (macro: {macro_name})")
+                errors.append(f"NULL data or macro_filename (macro: {macro_name})")
                 continue
             
             try:
                 # Convert VariantVal to JSON string directly
                 # Use toJson() to get JSON string with floats (not Decimals)
-                sample_json = sample.toJson()
+                sample_json = data.toJson()
                 
                 result = execute_macro_script(macro_filename, sample_json, MACROS_PATH)
                 
@@ -568,15 +652,29 @@ def experiment_macro_data():
     # Apply macro execution and convert to VARIANT
     return (
         base_df
-        .withColumn("macro_result", execute_macro_udf(F.struct("sample", "macro_filename", "macro_name")))
+        .withColumn("macro_result", execute_macro_udf(F.struct("data", "macro_filename", "macro_name")))
         .withColumn(
             "macro_output",
             F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
         )
         .withColumn("macro_error", F.col("macro_result.error"))
+        # Generate unique ID for each macro row
+        # Hash: raw data id + macro_filename + processed_timestamp
+        # This ensures each macro execution on a sample gets a unique ID
+        .withColumn(
+            "macro_row_id",
+            F.abs(
+                F.hash(
+                    F.col("id"),
+                    F.col("macro_filename"),
+                    F.col("processed_timestamp")
+                )
+            )
+        )
         .select(
             "experiment_id",
-            "id",
+            F.col("macro_row_id").alias("id"),  # Use unique macro row ID
+            F.col("id").alias("raw_id"),  # Keep reference to original raw data ID
             "device_id",
             "device_name",
             "timestamp",
@@ -588,7 +686,7 @@ def experiment_macro_data():
             "macro_error",
             "processed_timestamp",
             "date",
-            "questions",
+            "questions_data",
             "annotations"
         )
     )
@@ -601,7 +699,8 @@ def experiment_macro_data():
     comment="Gold layer: Metadata tracking which macros exist per experiment with aggregated schema",
     table_properties={
         "quality": "gold",
-        "pipelines.autoOptimize.managed": "true"
+        "pipelines.autoOptimize.managed": "true",
+        "delta.feature.variantType-preview": "supported",
     }
 )
 def experiment_macros():
@@ -622,14 +721,56 @@ def experiment_macros():
     return (
         macro_data_df
         .filter("macro_output IS NOT NULL")  # Exclude NULL outputs
-        .groupBy("experiment_id", "macro_id", "macro_name", "macro_filename")
+        .groupBy("experiment_id", "macro_id", "macro_filename")
         .agg(
+            F.max("macro_name").alias("macro_name"),  # Take the most recent macro_name (users can change this)
             F.count("*").alias("sample_count"),
             F.min("timestamp").alias("first_seen"),
             F.max("timestamp").alias("last_seen"),
             F.max("processed_timestamp").alias("last_processed"),
             # Aggregate schema across all VARIANT rows for this macro
             F.expr("schema_of_variant_agg(macro_output)").alias("output_schema")
+        )
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Questions Metadata (NEW - Phase 1)
+@dlt.table(
+    name=EXPERIMENT_QUESTIONS_TABLE,
+    comment="Gold layer: Metadata tracking which questions exist per experiment with aggregated schema",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.feature.variantType-preview": "supported",
+    }
+)
+def experiment_questions():
+    """
+    Track which questions exist per experiment for fast discovery.
+    Stores the aggregated VARIANT schema using schema_of_variant_agg() for efficient
+    schema discovery without scanning all data rows.
+    
+    This provides metadata for:
+    - UI table listing
+    - Schema preview (aggregated schema across all responses)
+    - Question discovery without full table scans
+    
+    Updated automatically from experiment_raw_data stream.
+    """
+    raw_data_df = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
+    
+    return (
+        raw_data_df
+        .filter("questions_data IS NOT NULL")  # Exclude NULL questions
+        .groupBy("experiment_id")
+        .agg(
+            F.count("*").alias("sample_count"),
+            F.min("timestamp").alias("first_seen"),
+            F.max("timestamp").alias("last_seen"),
+            F.max("processed_timestamp").alias("last_processed"),
+            # Aggregate schema across all VARIANT rows for questions
+            F.expr("schema_of_variant_agg(questions_data)").alias("questions_schema")
         )
     )
 
@@ -672,13 +813,16 @@ def experiment_contributors():
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.enableDeletionVectors": "true",
-        "pipelines.autoOptimize.managed": "true"
+        "pipelines.autoOptimize.managed": "true",
+        "delta.feature.variantType-preview": "supported",
+        "display_name": "Raw Data"
     }
 )
 def enriched_experiment_raw_data():
     """
     Enriched materialized table combining raw data with:
-    - Expanded questions
+    - Expanded questions array (original format)
+    - questions_data VARIANT (key-value map of question_label -> question_answer for columnar expansion)
     - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, avatar: STRING>
     - Annotations (from experiment_annotations table + streaming annotations merged)
     
@@ -703,13 +847,13 @@ def enriched_experiment_raw_data():
             raw_data.device_id,
             raw_data.device_name,
             raw_data.timestamp,
-            raw_data.questions,
-            raw_data.annotations,
-            contributors.user,
-            raw_data.sample,
+            raw_data.date,
             raw_data.macros,
-            raw_data.processed_timestamp,
-            raw_data.date
+            raw_data.questions_data,
+            raw_data.annotations,
+            contributors.user.alias("contributor"),
+            raw_data.data,
+            raw_data.processed_timestamp
         )
     )
     
@@ -718,7 +862,7 @@ def enriched_experiment_raw_data():
     return add_annotation_column(
         enriched,
         table_name="experiment_raw_data",  # Table name for filtering annotations
-        catalog_name="centrum",  # Annotations are in centrum schema now
+        catalog_name=CATALOG_NAME,  # Annotations are in centrum schema now
         experiment_schema="centrum",
         spark=spark
     )
@@ -731,10 +875,10 @@ def enriched_experiment_raw_data():
     comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Incrementally refreshed.",
     table_properties={
         "quality": "gold",
-        "delta.enableRowTracking": "true",
-        "delta.enableChangeDataFeed": "true",
         "delta.enableDeletionVectors": "true",
-        "pipelines.autoOptimize.managed": "true"
+        "pipelines.autoOptimize.managed": "true",
+        "delta.feature.variantType-preview": "supported",
+        "display_name": "Processed Macro Data"
     }
 )
 def enriched_experiment_macro_data():
@@ -763,18 +907,19 @@ def enriched_experiment_macro_data():
         .select(
             macro_data.experiment_id,
             macro_data.id,
+            macro_data.raw_id,
             macro_data.device_id,
             macro_data.device_name,
             macro_data.timestamp,
-            contributors.user,
+            macro_data.date,
+            contributors.user.alias("contributor"),
             macro_data.macro_id,
             macro_data.macro_name,
             macro_data.macro_filename,
             macro_data.macro_output,
             macro_data.macro_error,
             macro_data.processed_timestamp,
-            macro_data.date,
-            macro_data.questions,
+            macro_data.questions_data,
             macro_data.annotations
         )
     )
@@ -784,7 +929,7 @@ def enriched_experiment_macro_data():
     return add_annotation_column(
         enriched,
         table_name="experiment_macro_data",  # Generic macro data table name
-        catalog_name="centrum",
+        catalog_name=CATALOG_NAME,
         experiment_schema="centrum",
         spark=spark
     )

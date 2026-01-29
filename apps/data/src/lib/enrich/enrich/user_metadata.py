@@ -107,7 +107,7 @@ def add_user_column(df, environment: str, dbutils):
         dbutils: Databricks utilities instance for accessing secrets
         
     Returns:
-        DataFrame with additional columns: first_name, last_name, email, organization, avatar_url, user
+        DataFrame with additional columns: user
         The user column is a STRUCT<id: STRING, name: STRING, avatar: STRING>
     """
     from .backend_client import BackendClient
@@ -124,8 +124,6 @@ def add_user_column(df, environment: str, dbutils):
     profile_schema = StructType([
         StructField("first_name", StringType(), True),
         StructField("last_name", StringType(), True),
-        StructField("email", StringType(), True),
-        StructField("organization", StringType(), True),
         StructField("avatar_url", StringType(), True)
     ])
     
@@ -138,25 +136,21 @@ def add_user_column(df, environment: str, dbutils):
         
         def extract_profile(uid):
             if pd.isna(uid):
-                return pd.Series([None, None, None, None, None])
+                return pd.Series([None, None, None])
             user_info = user_metadata.get(uid, {})
             return pd.Series([
                 user_info.get('firstName'),
                 user_info.get('lastName'),
-                user_info.get('email'),
-                user_info.get('organization'),
                 user_info.get('avatarUrl')
             ])
         
         return user_ids.apply(extract_profile)
     
-    # Add profile struct column, then expand to individual columns
+    # Add profile struct column, then expand to individual columns (temporary)
     result_df = df.withColumn("_profile", get_user_profiles(F.col("user_id")))
     result_df = (result_df
         .withColumn("first_name", F.col("_profile.first_name"))
         .withColumn("last_name", F.col("_profile.last_name"))
-        .withColumn("email", F.col("_profile.email"))
-        .withColumn("organization", F.col("_profile.organization"))
         .withColumn("avatar_url", F.col("_profile.avatar_url"))
         .drop("_profile")
     )
@@ -167,8 +161,11 @@ def add_user_column(df, environment: str, dbutils):
         F.struct(
             F.col("user_id").alias("id"),
             F.concat_ws(" ", F.col("first_name"), F.col("last_name")).alias("name"),
-            F.col("avatar_url").alias("image")
+            F.col("avatar_url").alias("avatar")
         )
     )
+    
+    # Drop temporary columns, keep only user struct
+    result_df = result_df.drop("first_name", "last_name", "avatar_url")
     
     return result_df

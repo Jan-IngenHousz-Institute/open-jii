@@ -1,6 +1,5 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import type { ColumnInfo } from "../../../../common/modules/databricks/services/tables/tables.types";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -101,15 +100,27 @@ export class GetExperimentTablesUseCase {
         if (macrosResult.isSuccess()) {
           // Add each macro as a table
           for (const row of macrosResult.value.rows) {
-            const macroFilename = row[0] ?? "";
-            const macroName = row[1] ?? macroFilename.replace(/\.[^/.]+$/, ""); // Use macro_name or fallback to filename without extension
-            const totalRows = parseInt((row[2] ?? "0") as string, 10);
+            const macroFilename = row[0];
+            const macroName = row[1];
+            const totalRows = parseInt(row[2] ?? "0", 10);
+
+            // Skip rows with missing critical fields (indicates data quality issue)
+            if (!macroFilename || !macroName) {
+              this.logger.warn({
+                msg: "Skipping macro with missing filename or name",
+                operation: "getExperimentTables",
+                experimentId,
+                macroFilename,
+                macroName,
+              });
+              continue;
+            }
 
             // For macro tables, columns will be available when data is queried
             // using buildVariantParseQuery which expands parsed_output.*
             response.push({
               name: macroFilename,
-              displayName: macroName as string,
+              displayName: `Processed Data (${macroName})`,
               totalRows,
               columns: undefined, // Columns determined at query time via VARIANT expansion
             });
@@ -123,7 +134,7 @@ export class GetExperimentTablesUseCase {
           });
         }
 
-        // 2. Add sample data table (experiment_raw_data)
+        // 2. Add sample data table (enriched_experiment_raw_data)
         const sampleCountQuery = this.databricksPort.buildRawDataCountQuery(experimentId);
 
         const sampleCountResult = await this.databricksPort.executeSqlQuery(
@@ -139,12 +150,12 @@ export class GetExperimentTablesUseCase {
         // Get sample table schema
         const sampleSchemaResult = await this.databricksPort.listTables("centrum");
         const sampleTable = sampleSchemaResult.isSuccess()
-          ? sampleSchemaResult.value.tables.find((t) => t.name === "experiment_raw_data")
+          ? sampleSchemaResult.value.tables.find((t) => t.name === "enriched_experiment_raw_data")
           : null;
 
         response.push({
           name: "sample",
-          displayName: "Sample Data",
+          displayName: sampleTable?.properties?.display_name ?? "Raw Data",
           totalRows: sampleTotalRows,
           columns: sampleTable?.columns?.map((col) => ({
             name: col.name,
@@ -180,7 +191,7 @@ export class GetExperimentTablesUseCase {
 
         response.push({
           name: "device",
-          displayName: "Device Data",
+          displayName: deviceTable?.properties?.display_name ?? "Device Data",
           totalRows: deviceTotalRows,
           columns: deviceTable?.columns?.map((col) => ({
             name: col.name,

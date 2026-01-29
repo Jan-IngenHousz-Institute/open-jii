@@ -92,6 +92,6 @@ export const userContract = c.router({
     },
     summary: "Get user metadata for Databricks pipelines",
     description:
-      "Fetches user profile metadata (firstName, lastName) for multiple user IDs to populate Databricks pipeline tables",
+      "Fetches user profile metadata (firstName, lastName, avatarUrl) for multiple user IDs to populate Databricks pipeline tables",
   },
 });

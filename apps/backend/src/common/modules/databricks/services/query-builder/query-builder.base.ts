@@ -7,6 +7,7 @@ export class SqlQueryBuilder {
   private selectClause = "*";
   private fromClause = "";
   private whereConditions: string[] = [];
+  private groupByColumns: string[] = [];
   private orderByClause?: string;
   private limitValue?: number;
   private offsetValue?: number;
@@ -19,6 +20,15 @@ export class SqlQueryBuilder {
     } else {
       this.selectClause = "*";
     }
+    return this;
+  }
+
+  /**
+   * Set raw SQL expression for SELECT clause (without identifier escaping)
+   * Use this for aggregate functions, expressions, etc.
+   */
+  selectRaw(expression: string): this {
+    this.selectClause = expression;
     return this;
   }
 
@@ -35,6 +45,12 @@ export class SqlQueryBuilder {
   whereEquals(column: string, value: string): this {
     const condition = `${this.escaper.escapeIdentifier(column)} = ${this.escaper.escapeValue(value)}`;
     this.whereConditions.push(condition);
+    return this;
+  }
+
+  groupBy(columns: string | string[]): this {
+    const cols = Array.isArray(columns) ? columns : [columns];
+    this.groupByColumns = cols.map((c) => this.escaper.escapeIdentifier(c));
     return this;
   }
 
@@ -64,6 +80,10 @@ export class SqlQueryBuilder {
       query += ` WHERE ${this.whereConditions.join(" AND ")}`;
     }
 
+    if (this.groupByColumns.length > 0) {
+      query += ` GROUP BY ${this.groupByColumns.join(", ")}`;
+    }
+
     if (this.orderByClause) {
       query += ` ORDER BY ${this.orderByClause}`;
     }
@@ -85,12 +105,12 @@ export class SqlQueryBuilder {
 export class VariantQueryBuilder {
   private selectClause = "*";
   private fromClause = "";
-  private variantColumn = "";
-  private variantSchema = "";
+  private variantColumns: Array<{ column: string; schema: string; alias: string }> = [];
   private whereConditions: string[] = [];
   private orderByClause?: string;
   private limitValue?: number;
   private offsetValue?: number;
+  private exceptColumns: string[] = [];
 
   constructor(private readonly escaper: QueryBuilderService) {}
 
@@ -108,9 +128,12 @@ export class VariantQueryBuilder {
     return this;
   }
 
-  parseVariant(column: string, schema: string): this {
-    this.variantColumn = column;
-    this.variantSchema = schema;
+  parseVariant(column: string, schema: string, alias?: string): this {
+    this.variantColumns.push({
+      column,
+      schema,
+      alias: alias ?? `parsed_${column}`,
+    });
     return this;
   }
 
@@ -134,19 +157,32 @@ export class VariantQueryBuilder {
     return this;
   }
 
+  /**
+   * Exclude additional columns from the final SELECT
+   */
+  except(columns: string[]): this {
+    this.exceptColumns.push(...columns);
+    return this;
+  }
+
   build(): string {
     if (!this.fromClause) {
       throw new Error("FROM clause is required");
     }
-    if (!this.variantColumn || !this.variantSchema) {
-      throw new Error("VARIANT column and schema are required");
+    if (this.variantColumns.length === 0) {
+      throw new Error("At least one VARIANT column is required");
     }
 
     const innerSelect = this.selectClause;
+
+    // Generate EXCEPT clause for all variant columns, their parsed aliases, and additional except columns
+    const allExceptColumns = [
+      ...this.variantColumns.flatMap((v) => [v.column, v.alias]),
+      ...this.exceptColumns,
+    ].join(", ");
+
     const outerSelect =
-      this.selectClause === "*"
-        ? `* EXCEPT (${this.variantColumn}, parsed_output)`
-        : this.selectClause;
+      this.selectClause === "*" ? `* EXCEPT (${allExceptColumns})` : this.selectClause;
 
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
@@ -154,17 +190,25 @@ export class VariantQueryBuilder {
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
 
-    // Transform OBJECT → STRUCT
-    const transformedSchema = this.variantSchema.replace(/OBJECT</g, "STRUCT<");
+    // Generate from_json calls for each VARIANT column
+    const parsedColumns = this.variantColumns
+      .map((v) => {
+        const transformedSchema = v.schema.replace(/OBJECT</g, "STRUCT<");
+        return `from_json(${v.column}::string, '${transformedSchema}') as ${v.alias}`;
+      })
+      .join(",\n          ");
+
+    // Generate expansion for all parsed columns
+    const expandedColumns = this.variantColumns.map((v) => `${v.alias}.*`).join(",\n        ");
 
     return `
       SELECT 
         ${outerSelect},
-        parsed_output.*
+        ${expandedColumns}
       FROM (
         SELECT 
           ${innerSelect},
-          from_json(${this.variantColumn}::string, '${transformedSchema}') as parsed_output
+          ${parsedColumns}
         FROM ${this.fromClause}
         ${where}
       )

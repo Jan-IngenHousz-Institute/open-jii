@@ -1,13 +1,16 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef } from "react";
 
 import { Button, Collapsible, CollapsibleTrigger } from "@repo/ui/components";
 
 interface ExperimentDataTableArrayCellProps {
   data: string; // JSON string representation of the array
   columnName: string;
+  rowId: string;
+  isExpanded: boolean;
+  onToggleExpansion?: (rowId: string, columnName: string) => void;
 }
 
 type ParsedArrayData = Record<string, unknown>[];
@@ -44,9 +47,11 @@ function formatValue(value: unknown): string {
 
 export function ExperimentDataTableArrayCell({
   data,
-  columnName: _columnName,
+  columnName,
+  rowId,
+  isExpanded,
+  onToggleExpansion,
 }: ExperimentDataTableArrayCellProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const cellRef = useRef<HTMLDivElement>(null);
 
   const parsedData = parseArrayData(data);
@@ -79,110 +84,57 @@ export function ExperimentDataTableArrayCell({
 
   return (
     <div ref={cellRef} className="relative">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Collapsible open={isExpanded} onOpenChange={() => onToggleExpansion?.(rowId, columnName)}>
         <div className="flex items-center gap-1">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-              {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {isExpanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
             </Button>
           </CollapsibleTrigger>
           <span className="muted-foreground text-sm">
             {itemCount} {itemCount === 1 ? "item" : "items"}
           </span>
         </div>
-
-        {isOpen && <ArrayExpandedContent items={parsedData} cellRef={cellRef} />}
       </Collapsible>
     </div>
   );
 }
 
 interface ArrayExpandedContentProps {
-  items: Record<string, unknown>[];
-  cellRef: React.RefObject<HTMLDivElement | null>;
+  data: string;
 }
 
-export function ArrayExpandedContent({ items, cellRef }: ArrayExpandedContentProps) {
-  useEffect(() => {
-    const cellElement = cellRef.current;
-    if (!cellElement) return;
+// New: Simplified expanded content for table row rendering
+export function ArrayExpandedContent({ data }: ArrayExpandedContentProps) {
+  const items = parseArrayData(data);
 
-    // Find the table row that contains this cell
-    const tableRow = cellElement.closest("tr");
-    const table = cellElement.closest("table");
+  if (!items) {
+    return null;
+  }
 
-    if (!tableRow || !table) return;
-
-    // Create the expanded row element
-    const expandedRow = document.createElement("tr");
-    expandedRow.className = "array-expanded-row";
-
-    // Count the number of columns in the table
-    const columnCount = tableRow.children.length;
-
-    // Create a single cell that spans all columns
-    const expandedCell = document.createElement("td");
-    expandedCell.colSpan = columnCount;
-    expandedCell.className =
-      "p-0 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700";
-
-    // Create the content container
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "p-4";
-
-    // Create the main container for array items
-    const arrayDiv = document.createElement("div");
-    arrayDiv.className = "space-y-4";
-
-    // Add each item in the array
-    items.forEach((item, index) => {
-      const itemDiv = document.createElement("div");
-      itemDiv.className = "border border-gray-200 dark:border-gray-600 rounded-lg p-3";
-
-      // Add item header
-      const headerDiv = document.createElement("div");
-      headerDiv.className = "text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2";
-      headerDiv.textContent = `Item ${index + 1}`;
-      itemDiv.appendChild(headerDiv);
-
-      // Create the grid container for item properties
-      const gridDiv = document.createElement("div");
-      gridDiv.className = "grid gap-2";
-
-      // Add each property of the item
-      Object.entries(item).forEach(([key, value]) => {
-        const entryDiv = document.createElement("div");
-        entryDiv.className = "grid grid-cols-[auto_1fr] gap-3 text-sm";
-
-        const keySpan = document.createElement("span");
-        keySpan.className = "min-w-0 font-medium text-gray-900 dark:text-gray-100";
-        keySpan.textContent = `${key}:`;
-
-        const valueSpan = document.createElement("span");
-        valueSpan.className = "min-w-0 break-words text-gray-600 dark:text-gray-400";
-        valueSpan.textContent = formatValue(value);
-
-        entryDiv.appendChild(keySpan);
-        entryDiv.appendChild(valueSpan);
-        gridDiv.appendChild(entryDiv);
-      });
-
-      itemDiv.appendChild(gridDiv);
-      arrayDiv.appendChild(itemDiv);
-    });
-
-    contentDiv.appendChild(arrayDiv);
-    expandedCell.appendChild(contentDiv);
-    expandedRow.appendChild(expandedCell);
-
-    // Insert the expanded row after the current row
-    tableRow.parentNode?.insertBefore(expandedRow, tableRow.nextSibling);
-
-    // Cleanup function to remove the expanded row
-    return () => {
-      expandedRow.remove();
-    };
-  }, [items, cellRef]);
-
-  return null; // This component doesn't render anything directly
+  return (
+    <div className="w-full p-4">
+      <div className="w-full space-y-3">
+        {items.map((item, index) => (
+          <div
+            key={index}
+            className="rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
+          >
+            <div className="space-y-1">
+              {Object.entries(item).map(([key, value]) => (
+                <div key={key} className="flex gap-2 text-sm">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{key}:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{formatValue(value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
