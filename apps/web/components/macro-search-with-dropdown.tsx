@@ -1,11 +1,13 @@
 "use client";
 
-import { ChevronsUpDown } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { ChevronsUpDown, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
 import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components";
+import { Button } from "@repo/ui/components";
 import { Popover, PopoverTrigger } from "@repo/ui/components";
 
 import { MacroSearchPopover } from "./macro-search-popover";
@@ -34,6 +36,7 @@ export function MacroSearchWithDropdown({
   disabled = false,
 }: MacroSearchWithDropdownProps) {
   const [open, setOpen] = useState(false);
+  const locale = useLocale();
   const { t } = useTranslation("common");
 
   // Snapshot the selected macro when it's visible in the current list.
@@ -63,38 +66,37 @@ export function MacroSearchWithDropdown({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between p-0"
+          className="hover:bg-surface-light w-full justify-start py-6 text-left font-normal"
           disabled={disabled}
         >
-          <div className="flex w-full items-center gap-3 px-3 py-2.5">
+          <div className="flex w-full items-start gap-1">
             {selectedMacro ? (
-              <>
-                {selectedMacro.createdByName && (
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src="" alt={selectedMacro.createdByName} />
-                    <AvatarFallback className="text-xs">
-                      {selectedMacro.createdByName.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div className="flex flex-1 flex-col">
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
-                    {selectedMacro.name}
-                  </span>
-                  <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-                    {selectedMacro.language}
-                    {selectedMacro.createdByName && (
-                      <>
-                        • {t("common.by")} {selectedMacro.createdByName}
-                      </>
-                    )}
-                  </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-0 items-center gap-1">
+                  <span className="truncate text-sm font-medium">{selectedMacro.name}</span>
+                  <Link
+                    href={`/${locale}/platform/macros/${selectedMacro.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t("experiments.seeMacroDetails")}
+                    aria-label={t("experiments.seeMacroDetails")}
+                    className="group shrink-0 p-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
+                  </Link>
                 </div>
-              </>
+                <span className="text-muted-foreground truncate text-xs">
+                  {selectedMacro.language} • {t("common.by")} {selectedMacro.createdByName}
+                </span>
+              </div>
             ) : (
-              <div className="flex-1">{placeholder ?? t("experiments.searchMacros")}</div>
+              <div className="text-muted-foreground flex-1 italic">
+                {placeholder ?? t("experiments.searchMacros")}
+              </div>
             )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 self-center opacity-50" />
           </div>
         </Button>
       </PopoverTrigger>

@@ -4,7 +4,7 @@
     "protocolLabel": "Protokoll",
     "by": "von",
     "homepage": "Startseite",
-    "language": "Sprache",
+    "language": "Sprache:",
     "search": "Suchen",
     "notifications": "Benachrichtigungen",
     "menu": "Menü",
@@ -51,7 +51,8 @@
     "kilobytes": "KB",
     "megabytes": "MB",
     "comingSoon": "Demnächst",
-    "greeting": "Hallo, {{name}}"
+    "greeting": "Hallo, {{name}}",
+    "preferred": "Bevorzugt"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -101,7 +102,7 @@
     "noUsersFound": "Keine Benutzer gefunden für \"{{search}}\"",
     "searchExperiments": "Experimente suchen...",
     "startTypingToSearch": "Tippen Sie, um zu suchen",
-    "searchProtocols": "Protokolle suchen",
+    "searchProtocols": "Protokolle suchen...",
     "loadingProtocols": "Laden...",
     "noProtocolsFoundFor": "Keine Protokolle gefunden für \"{{search}}\"",
     "noProtocolsAvailable": "Keine Protokolle verfügbar.",

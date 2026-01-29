@@ -105,24 +105,57 @@ describe("ProtocolRepository", () => {
       expect(protocols.some((p) => p.name === protocol2.name)).toBe(true);
     });
 
-    it("should return protocols in the correct order", async () => {
-      // Arrange
-      const protocol1 = await testApp.createProtocol({
-        name: "Protocol 1",
-        createdBy: testUserId,
-      });
-      const protocol2 = await testApp.createProtocol({
-        name: "Protocol 2",
-        createdBy: testUserId,
-      });
-      const protocol3 = await testApp.createProtocol({
-        name: "Protocol 3",
-        createdBy: testUserId,
-      });
-      const updateData = {
-        description: "Test",
-      };
-      await repository.update(protocol2.id, updateData);
+    it("should return protocols ordered by sortOrder first, then alphabetically", async () => {
+      // Arrange - create protocols with different sortOrder values and names
+      const createResult1 = await repository.create(
+        {
+          name: "Zebra Protocol",
+          description: "No sort order",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult1);
+
+      const createResult2 = await repository.create(
+        {
+          name: "Alpha Protocol",
+          description: "No sort order",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult2);
+
+      const createResult3 = await repository.create(
+        {
+          name: "Featured Protocol 2",
+          description: "Sort order 2",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult3);
+      const protocolFeatured2 = createResult3.value[0];
+
+      const createResult4 = await repository.create(
+        {
+          name: "Featured Protocol 1",
+          description: "Sort order 1",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult4);
+      const protocolFeatured1 = createResult4.value[0];
+
+      // Set sortOrder values
+      await repository.update(protocolFeatured1.id, { sortOrder: 1 });
+      await repository.update(protocolFeatured2.id, { sortOrder: 2 });
 
       // Act
       const result = await repository.findAll();
@@ -132,29 +165,124 @@ describe("ProtocolRepository", () => {
       assertSuccess(result);
       const protocols = result.value;
 
-      expect(protocols.length).toBeGreaterThanOrEqual(3);
-      expect(protocols).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: protocol2.id,
-            name: "Protocol 2",
-            createdBy: testUserId,
-            createdByName: testUserName,
-          }),
-          expect.objectContaining({
-            id: protocol1.id,
-            name: "Protocol 1",
-            createdBy: testUserId,
-            createdByName: testUserName,
-          }),
-          expect.objectContaining({
-            id: protocol3.id,
-            name: "Protocol 3",
-            createdBy: testUserId,
-            createdByName: testUserName,
-          }),
-        ]),
+      const protocolNames = protocols.map((p) => p.name);
+
+      // Featured protocols should come first, ordered by sortOrder (1, then 2)
+      expect(protocolNames[0]).toBe("Featured Protocol 1");
+      expect(protocolNames[1]).toBe("Featured Protocol 2");
+
+      // Then alphabetically: Alpha, then Zebra
+      const alphaIndex = protocolNames.indexOf("Alpha Protocol");
+      const zebraIndex = protocolNames.indexOf("Zebra Protocol");
+      expect(alphaIndex).toBeGreaterThan(1); // After featured protocols
+      expect(zebraIndex).toBeGreaterThan(alphaIndex); // Zebra after Alpha
+    });
+
+    it("should handle all protocols with sortOrder correctly", async () => {
+      // Arrange - create protocols all with sortOrder
+      const createResult1 = await repository.create(
+        {
+          name: "Third Priority",
+          description: "Sort order 30",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
       );
+      assertSuccess(createResult1);
+      const protocol3 = createResult1.value[0];
+
+      const createResult2 = await repository.create(
+        {
+          name: "First Priority",
+          description: "Sort order 10",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult2);
+      const protocol1 = createResult2.value[0];
+
+      const createResult3 = await repository.create(
+        {
+          name: "Second Priority",
+          description: "Sort order 20",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult3);
+      const protocol2 = createResult3.value[0];
+
+      // Set sortOrder values
+      await repository.update(protocol1.id, { sortOrder: 10 });
+      await repository.update(protocol2.id, { sortOrder: 20 });
+      await repository.update(protocol3.id, { sortOrder: 30 });
+
+      // Act
+      const result = await repository.findAll();
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const protocols = result.value;
+
+      const protocolNames = protocols.map((p) => p.name);
+
+      // Should be ordered by sortOrder value: 10, 20, 30
+      expect(protocolNames[0]).toBe("First Priority");
+      expect(protocolNames[1]).toBe("Second Priority");
+      expect(protocolNames[2]).toBe("Third Priority");
+    });
+
+    it("should handle all protocols without sortOrder alphabetically", async () => {
+      // Arrange - create protocols all without sortOrder
+      await repository.create(
+        {
+          name: "Charlie",
+          description: "No sort order",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "Alpha",
+          description: "No sort order",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "Bravo",
+          description: "No sort order",
+          code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+          family: "multispeq",
+        },
+        testUserId,
+      );
+
+      // Act
+      const result = await repository.findAll();
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const protocols = result.value;
+
+      const protocolNames = protocols.map((p) => p.name);
+
+      // Should be ordered alphabetically: Alpha, Bravo, Charlie
+      expect(protocolNames[0]).toBe("Alpha");
+      expect(protocolNames[1]).toBe("Bravo");
+      expect(protocolNames[2]).toBe("Charlie");
     });
 
     it("should filter protocols by name search", async () => {
