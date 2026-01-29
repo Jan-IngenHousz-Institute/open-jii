@@ -133,9 +133,8 @@ export const sensors = pgTable("sensors", {
 
 // Experiments Table
 // Experiment Status Enum
+// Provisioning statuses removed - with centrum consolidation, all experiments use single schema
 export const experimentStatusEnum = pgEnum("experiment_status", [
-  "provisioning",
-  "provisioning_failed",
   "active",
   "stale",
   "archived",
@@ -149,7 +148,7 @@ export const experiments = pgTable("experiments", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
-  status: experimentStatusEnum("status").default("provisioning").notNull(),
+  status: experimentStatusEnum("status").default("active").notNull(),
   visibility: experimentVisibilityEnum("visibility").default("public").notNull(),
   embargoUntil: timestamp("embargo_until")
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)

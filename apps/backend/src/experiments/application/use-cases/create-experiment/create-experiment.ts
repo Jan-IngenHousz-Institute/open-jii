@@ -154,37 +154,8 @@ export class CreateExperimentUseCase {
             }
           }
 
-          this.logger.debug({
-            msg: "Triggering Databricks provisioning job",
-            operation: "createExperiment",
-            experimentId: experiment.id,
-          });
-          // Trigger Databricks job for the new experiment
-          const databricksResult = await this.databricksPort.triggerExperimentProvisioningJob(
-            experiment.id,
-            {
-              experiment_id: experiment.id,
-              experiment_name: experiment.name,
-            },
-          );
-
-          // Log Databricks job trigger result but don't fail experiment creation
-          if (databricksResult.isFailure()) {
-            this.logger.warn({
-              msg: "Failed to trigger Databricks provisioning job",
-              errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
-              operation: "createExperiment",
-              experimentId: experiment.id,
-              error: databricksResult.error,
-            });
-          } else {
-            this.logger.log({
-              msg: "Successfully triggered Databricks provisioning job",
-              operation: "createExperiment",
-              experimentId: experiment.id,
-              status: "success",
-            });
-          }
+          // Experiment provisioning removed - with centrum consolidation, all experiments
+          // use the single centrum schema and pipeline automatically
 
           this.logger.log({
             msg: "Experiment created successfully",

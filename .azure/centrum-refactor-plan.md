@@ -4917,7 +4917,126 @@ This refactor consolidates N experiment schemas into a single `centrum` schema u
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** January 26, 2026  
+**Document Version:** 1.1  
+**Last Updated:** January 28, 2026  
+**Status:** Implementation In Progress  
 **Authors:** Data Engineering Team  
 **Reviewers:** Architecture Review Board
+
+---
+
+## Implementation Progress
+
+### Completed Work (January 28, 2026)
+
+#### Backend Port Consolidation
+
+**Objective:** Simplify data retrieval operations by consolidating `downloadExperimentData` and `executeSqlQuery` into a single flexible method.
+
+**Changes Implemented:**
+
+1. **Removed `downloadExperimentData` Method**
+
+   - Deleted from [databricks.port.ts](apps/backend/src/experiments/core/ports/databricks.port.ts)
+   - Deleted from [databricks.adapter.ts](apps/backend/src/common/modules/databricks/databricks.adapter.ts)
+   - No longer needed - functionality merged into enhanced `executeSqlQuery`
+
+2. **Enhanced `executeSqlQuery` with Method Overloads**
+
+   - Added disposition parameter: `INLINE` (default) or `EXTERNAL_LINKS`
+   - Added format parameter: `CSV` or `JSON` (for downloads)
+   - Implemented TypeScript method overloads for automatic type narrowing:
+
+     ```typescript
+     // Overload 1: INLINE disposition returns SchemaData
+     executeSqlQuery(schema: string, sqlQuery: string): Promise<Result<SchemaData>>;
+
+     // Overload 2: EXTERNAL_LINKS disposition returns DownloadLinksData
+     executeSqlQuery(
+       schema: string,
+       sqlQuery: string,
+       disposition: "EXTERNAL_LINKS",
+       format?: "CSV" | "JSON"
+     ): Promise<Result<DownloadLinksData>>;
+
+     // Implementation signature
+     executeSqlQuery(
+       schema: string,
+       sqlQuery: string,
+       disposition?: "INLINE" | "EXTERNAL_LINKS",
+       format?: "CSV" | "JSON"
+     ): Promise<Result<SchemaData | DownloadLinksData>>;
+     ```
+
+3. **Restored `listTables` Method**
+
+   - Re-added to port interface for retrieving column metadata
+   - Implemented in adapter using DatabricksTablesService
+   - Queries Unity Catalog API for actual table column information
+   - Used by [get-experiment-tables.ts](apps/backend/src/experiments/application/use-cases/experiment-data/get-experiment-tables.ts) to get sample/device column metadata
+
+4. **Updated Use Cases**
+
+   - [download-experiment-data.ts](apps/backend/src/experiments/application/use-cases/experiment-data/download-experiment-data.ts):
+     - Changed from `downloadExperimentData()` to `executeSqlQuery(schema, query, "EXTERNAL_LINKS", "CSV")`
+     - Maintains same functionality with cleaner API
+   - [get-experiment-tables.ts](apps/backend/src/experiments/application/use-cases/experiment-data/get-experiment-tables.ts):
+     - Fixed syntax errors from incomplete refactoring
+     - Uses `listTables("centrum")` for enriched_experiment_raw_data and experiment_device_data column metadata
+     - Queries experiment_macros table for macro metadata
+
+5. **Module Configuration**
+   - Added DatabricksTablesService to [databricks.module.ts](apps/backend/src/common/modules/databricks/databricks.module.ts) providers
+   - Resolves dependency injection for DatabricksAdapter
+
+#### Frontend Type Updates
+
+**Changes Implemented:**
+
+1. **WellKnownColumnTypes Cleanup**
+
+   - Removed USER alias from [experiment.schema.ts](packages/api/src/schemas/experiment.schema.ts)
+   - Kept only: ANNOTATIONS, QUESTIONS, CONTRIBUTOR
+   - Updated [experiment-data-utils.tsx](apps/web/components/experiment-data/experiment-data-utils.tsx) to use CONTRIBUTOR
+
+2. **DataRow Type Handling**
+   - Maintained `DataRow = Record<string, unknown>` in [useExperimentData.ts](apps/web/hooks/experiment/useExperimentData/useExperimentData.ts)
+   - Used `String(row.original.id)` instead of type assertions for ESLint compliance
+   - Follows user preference: minimal type assertions, no module augmentation
+
+**Benefits Achieved:**
+
+- ✅ **Single Method API:** One `executeSqlQuery` method handles both inline data and download links
+- ✅ **Type Safety:** Method overloads provide automatic type inference without runtime overhead
+- ✅ **Cleaner Code:** Removed duplicate logic between downloadExperimentData and executeSqlQuery
+- ✅ **Better Column Metadata:** listTables provides accurate column information from Unity Catalog
+- ✅ **Consistent Patterns:** All data retrieval uses same underlying method with different parameters
+
+#### Infrastructure Cleanup (Phase 3)
+
+**Objective:** Remove obsolete provisioning infrastructure now that centrum consolidation eliminates per-experiment pipeline provisioning.
+
+**Changes Implemented:**
+
+1. **Removed Webhook Controller**
+   - Deleted [experiment-webhook.controller.ts](apps/backend/src/experiments/presentation/experiment-webhook.controller.ts)
+   - Deleted [experiment-webhook.controller.spec.ts](apps/backend/src/experiments/presentation/experiment-webhook.controller.spec.ts)
+   - No longer needed: Webhooks were used to receive Databricks pipeline provisioning status updates
+   - With centrum consolidation, experiments are created immediately without provisioning workflow
+
+**Benefits Achieved:**
+
+- ✅ **Simplified Architecture:** Removed async provisioning workflow and status updates
+- ✅ **Faster Experiment Creation:** No waiting for pipeline provisioning
+- ✅ **Reduced Attack Surface:** One less endpoint to secure and maintain
+- ✅ **Cleaner Codebase:** Removed provisioning-specific code paths
+
+**Next Steps:**
+
+- [ ] Remove additional provisioning infrastructure:
+  - [ ] Pipeline creation tasks in apps/data/src/tasks/
+  - [ ] Pipeline orchestrator tasks
+  - [ ] Schema provisioning logic
+- [ ] Update test files to reflect API changes (tests currently skipped per user request)
+- [ ] Create database migration to remove old experiment status enum values
+- [ ] Continue with centrum consolidation implementation per migration plan below

@@ -1,5 +1,5 @@
 import { flexRender } from "@tanstack/react-table";
-import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
+import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
 import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/experiment-data-table-annotations-cell";
@@ -97,8 +97,8 @@ function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): s
 }
 
 function getSortColumnName(columnName: string, columnType?: string): string {
-  // For USER struct columns, sort by name field instead of the column name
-  if (columnType === WellKnownColumnTypes.USER) {
+  // For CONTRIBUTOR struct columns, sort by name field instead of the column name
+  if (columnType === WellKnownColumnTypes.CONTRIBUTOR) {
     return `${columnName}.name`;
   }
   return columnName;
@@ -268,7 +268,7 @@ export function ExperimentDataRows({
   tableRows,
   columns = [],
 }: {
-  rows: Row<RowData>[];
+  rows: Row<DataRow>[];
   columnCount: number;
   expandedCells?: Record<string, boolean>;
   tableRows?: DataRow[];
@@ -287,7 +287,7 @@ export function ExperimentDataRows({
   }
 
   return rows.map((row) => {
-    const rowId = row.original.id as string;
+    const rowId = String(row.original.id);
 
     // Check if any cell in this row is expanded
     const expandedCell = Object.keys(expandedCells).find((key) => {

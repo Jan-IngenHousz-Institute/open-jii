@@ -88,8 +88,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         }),
       );
 
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
-
       const updatedVisualization: ExperimentVisualizationDto = {
         ...mockVisualization,
         name: mockUpdateRequest.name,
@@ -329,8 +327,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         }),
       );
 
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
-
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
         success([mockVisualization]),
       );
@@ -502,8 +498,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         }),
       );
 
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
-
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
         success([updatedVisualization]),
       );
@@ -562,8 +556,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           isAdmin: false,
         }),
       );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
       // Mock repository to return empty array (no visualization was updated)
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(success([]));
