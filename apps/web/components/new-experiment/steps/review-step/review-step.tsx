@@ -63,10 +63,10 @@ export function ReviewStep({
       <Card className="bg-highlight/20">
         <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-3">
           <Info className="text-muted-foreground h-5 w-5" />
-          <CardTitle className="text-base">Infrastructure Setup</CardTitle>
+          <CardTitle className="text-base">{t("experiments.infrastructureSetupTitle")}</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm">{t("experiments.infrastructureSetup")} </p>
+        <CardContent>
+          <p className="text-sm">{t("experiments.infrastructureSetupDescription")} </p>
         </CardContent>
       </Card>
 

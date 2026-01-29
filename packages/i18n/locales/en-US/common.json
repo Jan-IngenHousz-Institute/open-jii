@@ -162,7 +162,8 @@
     "noMacrosAvailable": "No macros available",
     "createFirstMacro": "Create your first macro to get started",
     "requestTransfer": "Request Project Transfer",
-    "infrastructureSetup": "After finishing this process the experiment infrastructure will be set up which can take 10 to 40 minutes. Viewing data will be possible once the experiment is active. In the meanwhile data can already be added through the openJII mobile app."
+    "infrastructureSetupTitle": "Infrastructure Setup",
+    "infrastructureSetupDescription": "After finishing this process the experiment infrastructure will be set up which can take 10 to 40 minutes. Viewing data will be possible once the experiment is active. In the meantime, data can already be added through the openJII mobile app."
   },
   "transferRequest": {
     "title": "Request Project Transfer",
