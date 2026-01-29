@@ -224,6 +224,7 @@ export const protocols = pgTable("protocols", {
   description: text("description"),
   code: jsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
+  sortOrder: integer("sort_order"),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -241,6 +242,7 @@ export const macros = pgTable("macros", {
   description: text("description"),
   language: macroLanguageEnum("language").notNull(),
   code: text("code").notNull(), // Base64 encoded content of the macro code
+  sortOrder: integer("sort_order"),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),

@@ -98,6 +98,7 @@ const mockMacroData = {
   createdAt: "2023-01-01T00:00:00Z",
   updatedAt: "2023-01-02T00:00:00Z",
   createdByName: "John Doe",
+  sortOrder: null,
 };
 
 describe("MacroOverviewPage", () => {
@@ -297,10 +298,10 @@ describe("MacroOverviewPage", () => {
 
   describe("Language Display and Colors", () => {
     it.each([
-      ["python", "Python", "bg-blue-100 text-blue-800 hover:bg-blue-200"],
-      ["r", "R", "bg-green-100 text-green-800 hover:bg-green-200"],
-      ["javascript", "JavaScript", "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"],
-      ["unknown", "unknown", "bg-gray-100 text-gray-800 hover:bg-gray-200"],
+      ["python", "Python", "bg-badge-published"],
+      ["r", "R", "bg-badge-stale"],
+      ["javascript", "JavaScript", "bg-badge-provisioningFailed"],
+      ["unknown", "unknown", "bg-badge-archived"],
     ])("should display correct language and color for %s", (language, displayName, colorClass) => {
       // Arrange
       const macroWithLanguage = {

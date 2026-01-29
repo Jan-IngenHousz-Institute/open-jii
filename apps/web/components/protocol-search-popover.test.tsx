@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Macro } from "@repo/api";
+import type { Protocol } from "@repo/api";
 
-import { MacroSearchPopover } from "../macro-search-popover";
+import { ProtocolSearchPopover } from "./protocol-search-popover";
 
 globalThis.React = React;
 
@@ -37,10 +37,6 @@ vi.mock("@repo/ui/components", () => {
     <div data-testid="command" data-should-filter={shouldFilter}>
       {children}
     </div>
-  );
-
-  const CommandEmpty = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="command-empty">{children}</div>
   );
 
   const CommandGroup = ({ children }: React.PropsWithChildren) => (
@@ -104,7 +100,6 @@ vi.mock("@repo/ui/components", () => {
   return {
     Badge,
     Command,
-    CommandEmpty,
     CommandGroup,
     CommandInput,
     CommandItem,
@@ -156,54 +151,57 @@ vi.mock("next/link", () => ({
 // --------------------
 // Test data & helpers
 // --------------------
-const macros: Macro[] = [
+const protocols: Protocol[] = [
   {
-    id: "m1",
-    name: "Plot Temperature",
-    description: "Visualize temperature data",
-    language: "python",
+    id: "p1",
+    name: "Fv/FM Baseline",
+    description: "Dark adaptation protocol",
+    code: [{ step: 1 }],
+    family: "multispeq",
+    sortOrder: null,
     createdBy: "user1",
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
     createdByName: "Ada Lovelace",
-    sortOrder: null,
-  } as Macro,
+  } as Protocol,
   {
-    id: "m2",
-    name: "Plot Humidity",
-    description: "Visualize humidity data",
-    language: "r",
+    id: "p2",
+    name: "Ambient Light",
+    description: "Measure ambient light",
+    code: [{ step: 2 }],
+    family: "ambit",
+    sortOrder: null,
     createdBy: "user2",
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
     createdByName: "Al Turing",
-    sortOrder: null,
-  } as Macro,
+  } as Protocol,
   {
-    id: "m3",
-    name: "Statistical Analysis",
-    description: "Perform statistical analysis",
-    language: "javascript",
+    id: "p3",
+    name: "PAM Fluorometry",
+    description: "Pulse amplitude modulation",
+    code: [{ step: 3 }],
+    family: "multispeq",
+    sortOrder: 1,
     createdBy: "user3",
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
-    sortOrder: 1,
-  } as Macro,
+  } as Protocol,
 ];
 
-function renderPopover(over: Partial<React.ComponentProps<typeof MacroSearchPopover>> = {}) {
-  const props: React.ComponentProps<typeof MacroSearchPopover> = {
-    availableMacros: macros,
+function renderPopover(over: Partial<React.ComponentProps<typeof ProtocolSearchPopover>> = {}) {
+  const props: React.ComponentProps<typeof ProtocolSearchPopover> = {
+    availableProtocols: protocols,
     searchValue: "",
     onSearchChange: vi.fn(),
-    onAddMacro: vi.fn(),
-    isAddingMacro: false,
+    onAddProtocol: vi.fn(),
+    isAddingProtocol: false,
     loading: false,
     setOpen: vi.fn(),
     ...over,
   };
   return {
-    ...render(<MacroSearchPopover {...props} />),
+    ...render(<ProtocolSearchPopover {...props} />),
     props,
   };
 }
@@ -211,7 +209,7 @@ function renderPopover(over: Partial<React.ComponentProps<typeof MacroSearchPopo
 // --------------------
 // Tests
 // --------------------
-describe("<MacroSearchPopover />", () => {
+describe("<ProtocolSearchPopover />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -230,129 +228,129 @@ describe("<MacroSearchPopover />", () => {
     renderPopover();
 
     const input = screen.getByTestId("command-input");
-    expect(input).toHaveAttribute("placeholder", "experiments.searchMacros");
+    expect(input).toHaveAttribute("placeholder", "experiments.searchProtocols");
   });
 
-  it("renders all available macros as command items", () => {
+  it("renders all available protocols as command items", () => {
     renderPopover();
 
     const items = screen.getAllByTestId("command-item");
     expect(items).toHaveLength(3);
 
-    // Check macro names
-    expect(screen.getByText("Plot Temperature")).toBeInTheDocument();
-    expect(screen.getByText("Plot Humidity")).toBeInTheDocument();
-    expect(screen.getByText("Statistical Analysis")).toBeInTheDocument();
+    // Check protocol names
+    expect(screen.getByText("Fv/FM Baseline")).toBeInTheDocument();
+    expect(screen.getByText("Ambient Light")).toBeInTheDocument();
+    expect(screen.getByText("PAM Fluorometry")).toBeInTheDocument();
 
-    // Check languages
-    expect(screen.getByText("python")).toBeInTheDocument();
-    expect(screen.getByText("r")).toBeInTheDocument();
-    expect(screen.getByText("javascript")).toBeInTheDocument();
+    // Check families
+    expect(screen.getAllByText("multispeq")).toHaveLength(2);
+    expect(screen.getByText("ambit")).toBeInTheDocument();
   });
 
-  it("displays macro details correctly with created by info", () => {
+  it("displays protocol details correctly with created by info", () => {
     renderPopover();
 
-    // Check that created by info is shown for macros that have it
+    // Check that created by info is shown for protocols that have it
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("Al Turing")).toBeInTheDocument();
 
-    // Check that language labels are shown
-    const languageLabels = screen.getAllByText("common.language");
-    expect(languageLabels).toHaveLength(3);
+    // Check that family labels are shown
+    const familyLabels = screen.getAllByText("experiments.family");
+    expect(familyLabels).toHaveLength(3);
 
-    // Check that created by labels are shown for macros that have creator
+    // Check that created by labels are shown for protocols that have creator
     const createdByLabels = screen.getAllByText("experiments.createdBy");
-    expect(createdByLabels).toHaveLength(2); // Only m1 and m2 have createdByName
+    expect(createdByLabels).toHaveLength(2); // Only p1 and p2 have createdByName
   });
 
-  it("renders external links for all macros", () => {
+  it("renders external links for all protocols", () => {
     renderPopover();
 
     const links = screen.getAllByTestId("link");
     expect(links).toHaveLength(3);
 
-    expect(links[0]).toHaveAttribute("href", "/en-US/platform/macros/m1");
-    expect(links[1]).toHaveAttribute("href", "/en-US/platform/macros/m2");
-    expect(links[2]).toHaveAttribute("href", "/en-US/platform/macros/m3");
+    expect(links[0]).toHaveAttribute("href", "/en-US/platform/protocols/p1");
+    expect(links[1]).toHaveAttribute("href", "/en-US/platform/protocols/p2");
+    expect(links[2]).toHaveAttribute("href", "/en-US/platform/protocols/p3");
 
     links.forEach((link) => {
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
-      expect(link).toHaveAttribute("title", "experiments.seeMacroDetails");
-      expect(link).toHaveAttribute("aria-label", "experiments.seeMacroDetails");
+      expect(link).toHaveAttribute("title", "experiments.seeProtocolDetails");
+      expect(link).toHaveAttribute("aria-label", "experiments.seeProtocolDetails");
     });
   });
 
-  it("calls onAddMacro when command item is clicked", async () => {
-    const onAddMacro = vi.fn();
+  it("calls onAddProtocol when command item is clicked", async () => {
+    const onAddProtocol = vi.fn();
     const setOpen = vi.fn();
     const onSearchChange = vi.fn();
-    renderPopover({ onAddMacro, setOpen, onSearchChange });
+    renderPopover({ onAddProtocol, setOpen, onSearchChange });
 
     const items = screen.getAllByTestId("command-item");
     await userEvent.click(items[0]);
 
-    expect(onAddMacro).toHaveBeenCalledWith("m1");
+    expect(onAddProtocol).toHaveBeenCalledWith("p1");
     expect(setOpen).toHaveBeenCalledWith(false);
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
-  it("handles async onAddMacro correctly", async () => {
-    const onAddMacro = vi.fn().mockResolvedValue(undefined);
+  it("handles async onAddProtocol correctly", async () => {
+    const onAddProtocol = vi.fn().mockResolvedValue(undefined);
     const setOpen = vi.fn();
     const onSearchChange = vi.fn();
-    renderPopover({ onAddMacro, setOpen, onSearchChange });
+    renderPopover({ onAddProtocol, setOpen, onSearchChange });
 
     const items = screen.getAllByTestId("command-item");
     await userEvent.click(items[1]);
 
     await waitFor(() => {
-      expect(onAddMacro).toHaveBeenCalledWith("m2");
+      expect(onAddProtocol).toHaveBeenCalledWith("p2");
       expect(setOpen).toHaveBeenCalledWith(false);
       expect(onSearchChange).toHaveBeenCalledWith("");
     });
   });
 
-  it("disables command items when isAddingMacro is true", () => {
-    const onAddMacro = vi.fn();
-    renderPopover({ isAddingMacro: true, onAddMacro });
+  it("disables command items when isAddingProtocol is true", () => {
+    const onAddProtocol = vi.fn();
+    renderPopover({ isAddingProtocol: true, onAddProtocol });
 
     const items = screen.getAllByTestId("command-item");
     expect(items).toHaveLength(3);
 
-    // Verify clicking disabled items doesn't trigger onAddMacro
+    // Verify clicking disabled items doesn't trigger onAddProtocol
     fireEvent.click(items[0]);
-    expect(onAddMacro).not.toHaveBeenCalled();
+    expect(onAddProtocol).not.toHaveBeenCalled();
   });
 
   it("shows loading state", () => {
-    renderPopover({ loading: true, availableMacros: [] });
+    renderPopover({ loading: true, availableProtocols: [] });
 
-    expect(screen.getByText("experiments.searchingMacros")).toBeInTheDocument();
+    expect(screen.getByText("experiments.searchingProtocols")).toBeInTheDocument();
   });
 
-  it("shows no macros found message when search has no results", () => {
+  it("shows no protocols found message when search has no results", () => {
     renderPopover({
-      availableMacros: [],
+      availableProtocols: [],
       searchValue: "nonexistent",
       loading: false,
     });
 
-    expect(screen.getByText("experiments.noMacrosFound")).toBeInTheDocument();
-    expect(screen.getByText("experiments.tryDifferentSearchMacros")).toBeInTheDocument();
-    expect(screen.getByTestId("search-x-icon")).toBeInTheDocument();
+    expect(screen.getByText("experiments.noProtocolsFound")).toBeInTheDocument();
+    expect(screen.getByText("experiments.tryDifferentSearchProtocols")).toBeInTheDocument();
+    const searchIcons = screen.getAllByTestId("search-x-icon");
+    expect(searchIcons.length).toBeGreaterThan(0);
   });
 
-  it("shows no macros available message when no search and no macros", () => {
+  it("shows no protocols available message when no search and no protocols", () => {
     renderPopover({
-      availableMacros: [],
+      availableProtocols: [],
       searchValue: "",
       loading: false,
     });
 
-    expect(screen.getByText("experiments.noMacrosAvailable")).toBeInTheDocument();
-    expect(screen.getByText("experiments.createFirstMacro")).toBeInTheDocument();
+    expect(screen.getByText("experiments.noProtocolsAvailable")).toBeInTheDocument();
+    expect(screen.getByText("experiments.createFirstProtocol")).toBeInTheDocument();
   });
 
   it("forwards search value and onSearchChange to input", () => {
@@ -362,47 +360,38 @@ describe("<MacroSearchPopover />", () => {
     const input = screen.getByTestId("command-input");
     expect(input).toHaveValue("test");
 
-    // Test the callback forwarding by triggering onChange event
-    // Our mock CommandInput calls onValueChange when onChange fires
     fireEvent.change(input, { target: { value: "new search" } });
 
     expect(onSearchChange).toHaveBeenCalledWith("new search");
   });
 
-  it("uses custom popoverClassName when provided", () => {
-    renderPopover({ popoverClassName: "w-96" });
-
-    const popoverContent = screen.getByTestId("popover-content");
-    expect(popoverContent).toHaveClass("w-96");
-  });
-
-  it("uses default popoverClassName when not provided", () => {
+  it("uses correct popover width", () => {
     renderPopover();
 
     const popoverContent = screen.getByTestId("popover-content");
-    expect(popoverContent).toHaveClass("w-80");
+    expect(popoverContent).toHaveClass("w-[var(--radix-popover-trigger-width)]");
   });
 
   it("sets correct data-value attributes on command items", () => {
     renderPopover();
 
     const items = screen.getAllByTestId("command-item");
-    expect(items[0]).toHaveAttribute("data-value", "m1");
-    expect(items[1]).toHaveAttribute("data-value", "m2");
-    expect(items[2]).toHaveAttribute("data-value", "m3");
+    expect(items[0]).toHaveAttribute("data-value", "p1");
+    expect(items[1]).toHaveAttribute("data-value", "p2");
+    expect(items[2]).toHaveAttribute("data-value", "p3");
   });
 
-  it("calls onAddMacro when command item is clicked (basic functionality)", async () => {
-    const onAddMacro = vi.fn();
-    renderPopover({ onAddMacro });
+  it("calls onAddProtocol when command item is clicked (basic functionality)", async () => {
+    const onAddProtocol = vi.fn();
+    renderPopover({ onAddProtocol });
 
     const items = screen.getAllByTestId("command-item");
     await userEvent.click(items[0]);
 
-    expect(onAddMacro).toHaveBeenCalledWith("m1");
+    expect(onAddProtocol).toHaveBeenCalledWith("p1");
   });
 
-  it("renders preferred badge for macros with sortOrder", () => {
+  it("renders preferred badge for protocols with sortOrder", () => {
     renderPopover();
 
     const badge = screen.getByText("common.preferred");

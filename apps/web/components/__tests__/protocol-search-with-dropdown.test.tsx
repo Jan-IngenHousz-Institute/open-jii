@@ -13,6 +13,10 @@ globalThis.React = React;
 // --------------------
 // Mocks
 // --------------------
+vi.mock("@/hooks/useLocale", () => ({
+  useLocale: () => "en",
+}));
+
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (k: string) =>
@@ -97,6 +101,9 @@ vi.mock("lucide-react", () => ({
   ChevronsUpDown: ({ className }: { className?: string }) => (
     <span data-testid="icon" className={className} />
   ),
+  ExternalLink: ({ className }: { className?: string }) => (
+    <span data-testid="external-link-icon" className={className} />
+  ),
 }));
 
 // --------------------
@@ -113,6 +120,7 @@ const protocols: Protocol[] = [
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
     createdByName: "Ada Lovelace",
+    sortOrder: null,
   } as Protocol,
   {
     id: "p2",
@@ -124,6 +132,7 @@ const protocols: Protocol[] = [
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
     createdByName: "Al Turing",
+    sortOrder: null,
   } as Protocol,
   {
     id: "p3",
@@ -134,6 +143,7 @@ const protocols: Protocol[] = [
     createdBy: "user3",
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
+    sortOrder: null,
   } as Protocol,
 ];
 

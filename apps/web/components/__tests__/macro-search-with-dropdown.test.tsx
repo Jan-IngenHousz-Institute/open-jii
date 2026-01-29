@@ -13,6 +13,10 @@ globalThis.React = React;
 // --------------------
 // Mocks
 // --------------------
+vi.mock("@/hooks/useLocale", () => ({
+  useLocale: () => "en",
+}));
+
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (k: string) => k,
@@ -102,6 +106,9 @@ vi.mock("@repo/ui/components", () => {
 vi.mock("lucide-react", () => ({
   ChevronsUpDown: ({ className }: { className?: string }) => (
     <span data-testid="icon" className={className} />
+  ),
+  ExternalLink: ({ className }: { className?: string }) => (
+    <span data-testid="external-link-icon" className={className} />
   ),
 }));
 
