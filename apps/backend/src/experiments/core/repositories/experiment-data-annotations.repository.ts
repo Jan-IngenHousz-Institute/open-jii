@@ -94,65 +94,6 @@ export class ExperimentDataAnnotationsRepository {
     },
   };
 
-  /*
-   * Ensure the centrum.experiment_annotations table exists
-   */
-  async ensureTableExists(
-    schemaName: string,
-    experimentId: string,
-  ): Promise<Result<SchemaData | null>> {
-    // Check if centrum.experiment_annotations table exists
-    const tablesResult = await this.databricksPort.listTables("centrum");
-    if (tablesResult.isFailure()) {
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    const annotationsTableExists = tablesResult.value.tables.some(
-      (table) => table.name === "experiment_annotations",
-    );
-
-    if (annotationsTableExists) {
-      return success(null);
-    }
-
-    this.logger.debug({
-      msg: "Creating centrum.experiment_annotations table",
-      operation: "ensureTableExists",
-      experimentId,
-    });
-
-    // Create the shared annotations table
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS experiment_annotations (
-        id STRING NOT NULL,
-        experiment_id STRING NOT NULL,
-        user_id STRING NOT NULL,
-        user_name STRING,
-        table_name STRING NOT NULL,
-        row_id STRING NOT NULL,
-        type STRING NOT NULL,
-        content_text STRING,
-        flag_type STRING,
-        created_at TIMESTAMP NOT NULL,
-        updated_at TIMESTAMP NOT NULL
-      )
-      USING DELTA
-      PARTITIONED BY (experiment_id)
-      TBLPROPERTIES (
-        'delta.enableChangeDataFeed' = 'true'
-      )
-    `;
-
-    const createResult = await this.databricksPort.executeSqlQuery("centrum", createTableQuery);
-    if (createResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to create annotations table: ${createResult.error.message}`),
-      );
-    }
-
-    return success(createResult.value);
-  }
-
   private getRowsAffectedFromResult(result: SchemaData): AnnotationRowsAffected {
     if (result.rows[0]) {
       const rowsAffectedIndex = result.columns.findIndex((col) => col.name === "num_affected_rows");
@@ -172,7 +113,6 @@ export class ExperimentDataAnnotationsRepository {
    * Store multiple annotations in centrum.experiment_annotations
    */
   async storeAnnotations(
-    schemaName: string,
     experimentId: string,
     annotations: CreateAnnotationDto[],
   ): Promise<Result<AnnotationRowsAffected>> {
@@ -257,7 +197,6 @@ export class ExperimentDataAnnotationsRepository {
    * Update an existing annotation
    */
   async updateAnnotation(
-    schemaName: string,
     experimentId: string,
     annotationId: string,
     updateData: UpdateAnnotationDto,
@@ -310,7 +249,6 @@ export class ExperimentDataAnnotationsRepository {
    * Delete a single annotation
    */
   async deleteAnnotation(
-    schemaName: string,
     experimentId: string,
     annotationId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
@@ -344,7 +282,6 @@ export class ExperimentDataAnnotationsRepository {
    * Delete multiple annotations by their IDs
    */
   async deleteAnnotationsBulk(
-    schemaName: string,
     experimentId: string,
     tableName: string,
     rowIds: string[],

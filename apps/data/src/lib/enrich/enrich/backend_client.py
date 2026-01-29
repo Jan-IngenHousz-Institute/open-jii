@@ -195,7 +195,8 @@ class BackendClient:
                 
             user_metadata[user['userId']] = {
                 'firstName': user.get('firstName'),
-                'lastName': user.get('lastName')
+                'lastName': user.get('lastName'),
+                'avatarUrl': user.get('avatarUrl')
             }
             
         return user_metadata

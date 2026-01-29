@@ -85,7 +85,7 @@ export class QueryBuilderService {
   buildCountQuery(params: CountQueryParams): string {
     const { table, whereClause, whereConditions } = params;
 
-    const builder = this.query().select(["COUNT(*)"]).from(table);
+    const builder = this.query().selectRaw("COUNT(*)").from(table);
 
     if (whereClause) {
       builder.where(whereClause);
@@ -93,6 +93,33 @@ export class QueryBuilderService {
       const clause = this.buildWhereClause(whereConditions);
       builder.where(clause);
     }
+
+    return builder.build();
+  }
+
+  /**
+   * Build an aggregate query with GROUP BY
+   * @param table - Fully qualified table name
+   * @param selectExpression - Raw SELECT expression (e.g., "col1, MAX(col2) as max_col2")
+   * @param groupByColumns - Column(s) to group by
+   * @param whereConditions - Optional WHERE conditions as [column, value] tuples
+   */
+  buildAggregateQuery(params: {
+    table: string;
+    selectExpression: string;
+    groupByColumns: string | string[];
+    whereConditions?: [string, string][];
+  }): string {
+    const { table, selectExpression, groupByColumns, whereConditions } = params;
+
+    const builder = this.query().selectRaw(selectExpression).from(table);
+
+    if (whereConditions) {
+      const clause = this.buildWhereClause(whereConditions);
+      builder.where(clause);
+    }
+
+    builder.groupBy(groupByColumns);
 
     return builder.build();
   }
@@ -148,16 +175,30 @@ export class QueryBuilderService {
       selectColumns,
       variantColumn,
       variantSchema,
+      exceptColumns,
       whereClause,
       orderBy,
       limit,
       offset,
     } = params;
 
-    const builder = this.variantQuery()
-      .from(table)
-      .select(selectColumns)
-      .parseVariant(variantColumn, variantSchema);
+    const builder = this.variantQuery().from(table).select(selectColumns);
+
+    // Handle both single and multiple VARIANT columns
+    const columns = Array.isArray(variantColumn) ? variantColumn : [variantColumn];
+    const schemas = Array.isArray(variantSchema) ? variantSchema : [variantSchema];
+
+    if (columns.length !== schemas.length) {
+      throw new Error("variantColumn and variantSchema arrays must have the same length");
+    }
+
+    columns.forEach((col, i) => {
+      builder.parseVariant(col, schemas[i], `parsed_${col}`);
+    });
+
+    if (exceptColumns && exceptColumns.length > 0) {
+      builder.except(exceptColumns);
+    }
 
     if (whereClause) {
       builder.where(whereClause);

@@ -18,8 +18,9 @@ export interface CountQueryParams {
 export interface VariantParseQueryParams {
   table: string;
   selectColumns: string[];
-  variantColumn: string;
-  variantSchema: string;
+  variantColumn: string | string[];
+  variantSchema: string | string[];
+  exceptColumns?: string[];
   whereClause?: string;
   orderBy?: string;
   limit?: number;
