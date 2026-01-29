@@ -6,6 +6,7 @@ interface DashboardBannerProps {
   title: string;
   description: string;
   descriptionItalic?: string;
+  descriptionItalicHref?: string;
   buttonLabel?: string;
   buttonHref?: string;
   secondaryButtonLabel?: string;
@@ -17,6 +18,7 @@ export function DashboardBanner({
   title,
   description,
   descriptionItalic,
+  descriptionItalicHref,
   buttonLabel,
   buttonHref,
   secondaryButtonLabel,
@@ -31,9 +33,9 @@ export function DashboardBanner({
         </h2>
         <p className="text-[0.8125rem] font-normal leading-[1.3125rem] text-[#68737B]">
           {description}
-          {descriptionItalic && (
+          {descriptionItalic && descriptionItalicHref && (
             <Link
-              href="https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
+              href={descriptionItalicHref}
               target="_blank"
               rel="noopener noreferrer"
               className="italic hover:underline"
