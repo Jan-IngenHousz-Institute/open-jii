@@ -1,12 +1,11 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { User } from "@repo/auth/types";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentProtocolsUseCase } from "../application/use-cases/experiment-protocols/add-experiment-protocols";
@@ -14,7 +13,6 @@ import { ListExperimentProtocolsUseCase } from "../application/use-cases/experim
 import { RemoveExperimentProtocolUseCase } from "../application/use-cases/experiment-protocols/remove-experiment-protocol";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentProtocolsController {
   private readonly logger = new Logger(ExperimentProtocolsController.name);
 
@@ -25,9 +23,9 @@ export class ExperimentProtocolsController {
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentProtocols)
-  listProtocols(@CurrentUser() user: User) {
+  listProtocols(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.listExperimentProtocols, async ({ params }) => {
-      const result = await this.listExperimentProtocolsUseCase.execute(params.id, user.id);
+      const result = await this.listExperimentProtocolsUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         const protocols = formatDatesList(result.value);
@@ -42,12 +40,12 @@ export class ExperimentProtocolsController {
   }
 
   @TsRestHandler(contract.experiments.addExperimentProtocols)
-  addProtocols(@CurrentUser() user: User) {
+  addProtocols(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.addExperimentProtocols, async ({ params, body }) => {
       const result = await this.addExperimentProtocolsUseCase.execute(
         params.id,
         body.protocols,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
@@ -63,12 +61,12 @@ export class ExperimentProtocolsController {
   }
 
   @TsRestHandler(contract.experiments.removeExperimentProtocol)
-  removeProtocol(@CurrentUser() user: User) {
+  removeProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.removeExperimentProtocol, async ({ params }) => {
       const result = await this.removeExperimentProtocolUseCase.execute(
         params.id,
         params.protocolId,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {

@@ -6,9 +6,10 @@ import { NavigationMobileNavItem } from "@/components/navigation/navigation-mobi
 import { Bell, Menu, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
+import { useSignOut } from "~/hooks/auth";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { User } from "@repo/auth/types";
@@ -35,9 +36,17 @@ interface NavigationTopbarProps {
 export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
   const { state } = useSidebar();
+  const signOut = useSignOut();
+
+  const handleSignOut = async () => {
+    setIsMobileMenuOpen(false);
+    await signOut.mutateAsync();
+    router.push("/");
+  };
 
   // Language options
   const allLocales = [
@@ -64,11 +73,11 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
 
           <Link href={`/${locale}/platform`} className="md:hidden">
             <Image
-              src="/logo-jii-yellow.svg"
+              src="/openJII_logo_RGB_horizontal_yellow.png"
               alt="JII Logo"
-              width={40}
-              height={40}
-              className="h-8 w-auto"
+              width={300}
+              height={300}
+              className="h-16 w-auto"
             />
           </Link>
 
@@ -92,7 +101,7 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
             <NavUser
               user={{
                 id: user.id,
-                email: user.email ?? "",
+                email: user.email,
                 avatar: user.image ?? "",
               }}
               locale={locale}
@@ -107,8 +116,9 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
               size="icon"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open menu"
+              className="text-primary"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="!h-6 !w-6" />
             </Button>
           </div>
         </div>
@@ -124,16 +134,23 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
           <ScrollArea className="h-screen w-full">
             <div className="bg-sidebar-mobile-bg flex min-h-screen flex-col">
               {/* Header */}
-              <SheetHeader className="flex flex-row items-center justify-end px-4 pb-2 pt-4">
+              <SheetHeader className="flex flex-row items-center justify-between px-4 pb-6 pt-4">
                 <SheetTitle className="sr-only">Navigation menu</SheetTitle>
                 <SheetDescription className="sr-only">Navigation menu</SheetDescription>
+                <Image
+                  src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
+                  alt="JII Logo"
+                  width={116}
+                  height={34}
+                  className="h-9 w-auto"
+                />
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="h-auto w-auto p-2 text-white hover:bg-white/10"
                 >
-                  <X className="h-12 w-12" />
+                  <X className="!h-6 !w-6" />
                 </Button>
               </SheetHeader>
 
@@ -179,16 +196,14 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
 
                   {/* Additional Navigation Links */}
                   <div className="space-y-1 py-2">
-                    {Object.values(userNavigation)
-                      .filter((item) => item.titleKey !== "navigation.logout")
-                      .map((item) => (
-                        <NavigationMobileNavItem
-                          key={item.titleKey}
-                          item={item}
-                          locale={locale}
-                          onItemClick={() => setIsMobileMenuOpen(false)}
-                        />
-                      ))}
+                    {Object.values(userNavigation).map((item) => (
+                      <NavigationMobileNavItem
+                        key={item.titleKey}
+                        item={item}
+                        locale={locale}
+                        onItemClick={() => setIsMobileMenuOpen(false)}
+                      />
+                    ))}
 
                     {/* Language */}
                     {availableLocales.length > 1 && (
@@ -213,17 +228,17 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
                     )}
 
                     {/* Sign Out */}
-                    <Link
-                      href={userNavigation.logout.url(locale)}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="mx-4 flex w-full items-center rounded-lg py-3 text-white/80 transition-colors"
+                    <button
+                      onClick={handleSignOut}
+                      disabled={signOut.isPending}
+                      className="mx-4 flex w-full items-center rounded-lg py-3 text-white/80 transition-colors disabled:opacity-50"
                     >
                       <span className="font-medium">
-                        {t(userNavigation.logout.titleKey, {
-                          ns: userNavigation.logout.namespace,
+                        {t("navigation.logout", {
+                          ns: "navigation",
                         })}
                       </span>
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>

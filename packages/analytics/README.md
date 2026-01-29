@@ -41,10 +41,20 @@ const isEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_A
 
 ```typescript
 import posthog from "posthog-js";
-
 import { createPostHogClientConfig } from "@repo/analytics";
 
-const config = createPostHogClientConfig(process.env.NEXT_PUBLIC_POSTHOG_HOST);
+// With reverse proxy (recommended to avoid ad blockers)
+const config = createPostHogClientConfig(
+  "/ingest",                    // API host - your reverse proxy path
+  "https://eu.posthog.com"      // UI host - PostHog domain for toolbar
+);
+posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, config);
+
+// Direct connection (no proxy)
+const config = createPostHogClientConfig(
+  "https://eu.i.posthog.com",   // API host - PostHog ingestion endpoint
+  "https://eu.posthog.com"      // UI host - PostHog domain for toolbar
+);
 posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, config);
 ```
 

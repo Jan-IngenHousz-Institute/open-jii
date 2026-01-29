@@ -98,18 +98,11 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend
-    needs:
-      [
-        deploy-infrastructure,
-        deploy-backend,
-        detect-changes,
-        database-migrations,
-      ]
+    needs: [deploy-infrastructure, deploy-backend, detect-changes]
     if: >-
       always() &&
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains('success,skipped', needs.database-migrations.result) &&
       contains('success,skipped', needs.deploy-backend.result) &&
       (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web'))
     permissions:

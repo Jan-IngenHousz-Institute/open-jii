@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, failure, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -105,7 +106,12 @@ export class DatabricksSqlService {
             ? this.formatDownloadLinksResponse(pollResult.value)
             : this.formatExperimentDataResponse(pollResult.value);
         } catch (error) {
-          this.logger.error(`Error executing SQL query: ${getAxiosErrorMessage(error)}`);
+          this.logger.error({
+            msg: "Error executing SQL query",
+            errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
+            operation: "executeSqlQuery",
+            error,
+          });
           throw error instanceof AppError
             ? error
             : AppError.internal(
@@ -114,7 +120,12 @@ export class DatabricksSqlService {
         }
       },
       (error) => {
-        this.logger.error(`Failed to execute SQL query: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to execute SQL query",
+          errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
+          operation: "executeSqlQuery",
+          error,
+        });
         return apiErrorMapper(`Databricks SQL query execution: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -169,7 +180,12 @@ export class DatabricksSqlService {
         // Still running or pending, wait and retry
         await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
       } catch (error) {
-        this.logger.error(`Error polling SQL statement execution: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Error polling SQL statement execution",
+          errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
+          operation: "pollStatementExecution",
+          error,
+        });
         return failure(
           AppError.internal(`Databricks SQL polling failed: ${getAxiosErrorMessage(error)}`),
         );

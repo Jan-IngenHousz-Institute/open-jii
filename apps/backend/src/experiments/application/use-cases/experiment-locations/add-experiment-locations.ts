@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type {
   CreateLocationDto,
@@ -23,9 +24,13 @@ export class AddExperimentLocationsUseCase {
     locationsData: CreateLocationDto[],
     userId: string,
   ): Promise<Result<LocationDto[]>> {
-    this.logger.log(
-      `Adding ${locationsData.length} locations to experiment ${experimentId} by user ${userId}`,
-    );
+    this.logger.log({
+      msg: "Adding locations to experiment",
+      operation: "addExperimentLocations",
+      experimentId,
+      userId,
+      locationCount: locationsData.length,
+    });
 
     // Check if experiment exists and user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -39,19 +44,32 @@ export class AddExperimentLocationsUseCase {
         hasArchiveAccess: boolean;
       }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            operation: "addExperimentLocations",
+            experimentId,
+            userId,
+          });
           return failure(AppError.notFound("Experiment not found"));
         }
 
         if (!hasArchiveAccess) {
-          this.logger.warn(
-            `User ${userId} attempted to add locations to experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to add locations without proper permissions",
+            operation: "addExperimentLocations",
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (locationsData.length === 0) {
-          this.logger.warn(`No locations provided for experiment ${experimentId}`);
+          this.logger.warn({
+            msg: "No locations provided for experiment",
+            operation: "addExperimentLocations",
+            experimentId,
+            userId,
+          });
           return success([]);
         }
 
@@ -65,18 +83,27 @@ export class AddExperimentLocationsUseCase {
         const createResult = await this.locationRepository.createMany(locationsWithExperimentId);
 
         if (createResult.isFailure()) {
-          this.logger.error(
-            `Failed to create locations for experiment ${experimentId}:`,
-            createResult.error.message,
-          );
+          this.logger.error({
+            msg: "Failed to create locations for experiment",
+            errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_CREATE_FAILED,
+            operation: "addExperimentLocations",
+            experimentId,
+            userId,
+            error: createResult.error.message,
+          });
           return failure(
             AppError.badRequest(`Failed to create locations: ${createResult.error.message}`),
           );
         }
 
-        this.logger.log(
-          `Successfully added ${createResult.value.length} locations to experiment ${experimentId}`,
-        );
+        this.logger.log({
+          msg: "Successfully added locations to experiment",
+          operation: "addExperimentLocations",
+          experimentId,
+          userId,
+          locationCount: createResult.value.length,
+          status: "success",
+        });
         return success(createResult.value);
       },
     );

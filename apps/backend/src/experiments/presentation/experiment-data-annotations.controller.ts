@@ -1,17 +1,16 @@
-import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Session } from "@thallesp/nestjs-better-auth";
+import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 
 import { AddAnnotationsBulkBody, contract } from "@repo/api";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AuthGuard } from "../../common/guards/auth.guard";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 
 @Controller()
-@UseGuards(AuthGuard)
 export class ExperimentDataAnnotationsController {
   private readonly logger = new Logger(ExperimentDataAnnotationsController.name);
 
@@ -22,18 +21,27 @@ export class ExperimentDataAnnotationsController {
   ) {}
 
   @TsRestHandler(contract.experiments.addAnnotation)
-  addAnnotation(@CurrentUser() user: { id: string }) {
+  addAnnotation(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.addAnnotation, async ({ params, body }) => {
       const { id: experimentId } = params;
 
-      this.logger.log(`Adding annotation to experiment ${experimentId} by user ${user.id}`);
+      this.logger.log({
+        msg: "Adding annotation to experiment",
+        operation: "addAnnotation",
+        experimentId,
+        userId: session.user.id,
+      });
 
       const addBody: AddAnnotationsBulkBody = {
         tableName: body.tableName,
         annotation: body.annotation,
         rowIds: [body.rowId],
       };
-      const result = await this.addAnnotationsUseCase.execute(experimentId, addBody, user.id);
+      const result = await this.addAnnotationsUseCase.execute(
+        experimentId,
+        addBody,
+        session.user.id,
+      );
 
       if (result.isSuccess()) {
         return {
@@ -47,13 +55,19 @@ export class ExperimentDataAnnotationsController {
   }
 
   @TsRestHandler(contract.experiments.addAnnotationsBulk)
-  addAnnotationsBulk(@CurrentUser() user: { id: string }) {
+  addAnnotationsBulk(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.addAnnotationsBulk, async ({ params, body }) => {
       const { id: experimentId } = params;
 
-      this.logger.log(`Adding ${body.rowIds.length} annotations to experiment ${experimentId}`);
+      this.logger.log({
+        msg: "Adding annotations to experiment",
+        operation: "addAnnotationsBulk",
+        experimentId,
+        userId: session.user.id,
+        count: body.rowIds.length,
+      });
 
-      const result = await this.addAnnotationsUseCase.execute(experimentId, body, user.id);
+      const result = await this.addAnnotationsUseCase.execute(experimentId, body, session.user.id);
 
       if (result.isSuccess()) {
         return {
@@ -67,19 +81,23 @@ export class ExperimentDataAnnotationsController {
   }
 
   @TsRestHandler(contract.experiments.updateAnnotation)
-  updateAnnotation(@CurrentUser() user: { id: string }) {
+  updateAnnotation(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.updateAnnotation, async ({ params, body }) => {
       const { id: experimentId, annotationId } = params;
 
-      this.logger.log(
-        `Updating annotation ${annotationId} for experiment ${experimentId} (user ${user.id})`,
-      );
+      this.logger.log({
+        msg: "Updating annotation for experiment",
+        operation: "updateAnnotation",
+        experimentId,
+        annotationId,
+        userId: session.user.id,
+      });
 
       const result = await this.updateAnnotationUseCase.execute(
         experimentId,
         annotationId,
         body,
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
@@ -94,18 +112,22 @@ export class ExperimentDataAnnotationsController {
   }
 
   @TsRestHandler(contract.experiments.deleteAnnotation)
-  deleteAnnotation(@CurrentUser() user: { id: string }) {
+  deleteAnnotation(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.deleteAnnotation, async ({ params }) => {
       const { id: experimentId, annotationId } = params;
 
-      this.logger.log(
-        `Deleting annotation ${annotationId} from experiment ${experimentId} (user ${user.id})`,
-      );
+      this.logger.log({
+        msg: "Deleting annotation from experiment",
+        operation: "deleteAnnotation",
+        experimentId,
+        annotationId,
+        userId: session.user.id,
+      });
 
       const result = await this.deleteAnnotationsUseCase.execute(
         experimentId,
         { annotationId },
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {
@@ -120,19 +142,24 @@ export class ExperimentDataAnnotationsController {
   }
 
   @TsRestHandler(contract.experiments.deleteAnnotationsBulk)
-  deleteAnnotationBulk(@CurrentUser() user: { id: string }) {
+  deleteAnnotationBulk(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.deleteAnnotationsBulk, async ({ params, body }) => {
       const { id: experimentId } = params;
       const { tableName, rowIds, type } = body;
 
-      this.logger.log(
-        `Deleting all annotations for ${rowIds.length} row(s) of type ${type} from experiment ${experimentId} and table ${tableName} (user ${user.id})`,
-      );
+      this.logger.log({
+        msg: "Deleting annotations from experiment",
+        operation: "deleteAnnotationsBulk",
+        experimentId,
+        userId: session.user.id,
+        count: rowIds.length,
+        type,
+      });
 
       const result = await this.deleteAnnotationsUseCase.execute(
         experimentId,
         { tableName, rowIds, type },
-        user.id,
+        session.user.id,
       );
 
       if (result.isSuccess()) {

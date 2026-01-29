@@ -197,6 +197,12 @@ resource "aws_cloudfront_distribution" "distribution" {
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingOptimized
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
 
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
+      include_body = true
+    }
+
     function_association {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.forward_host_header.arn
@@ -226,75 +232,6 @@ resource "aws_cloudfront_distribution" "distribution" {
 
     cache_policy_id          = aws_cloudfront_cache_policy.cache_policy.id
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/*/login"
-    target_origin_id       = "ServerLambda"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
-
-    lambda_function_association {
-      event_type   = "origin-request"
-      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
-      include_body = true
-    }
-
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.forward_host_header.arn
-    }
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/*/register"
-    target_origin_id       = "ServerLambda"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
-
-    lambda_function_association {
-      event_type   = "origin-request"
-      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
-      include_body = true
-    }
-
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.forward_host_header.arn
-    }
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/*/platform/signout"
-    target_origin_id       = "ServerLambda"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
-
-    lambda_function_association {
-      event_type   = "origin-request"
-      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
-      include_body = true
-    }
-
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.forward_host_header.arn
-    }
   }
 
   # Cache behavior for PostHog ingest routes (with edge body handling)
@@ -332,6 +269,12 @@ resource "aws_cloudfront_distribution" "distribution" {
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
+
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
+      include_body = true
+    }
 
     function_association {
       event_type   = "viewer-request"

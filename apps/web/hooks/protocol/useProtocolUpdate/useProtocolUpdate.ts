@@ -43,6 +43,10 @@ export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps
       await queryClient.invalidateQueries({
         queryKey: ["protocols"],
       });
+      // Invalidate breadcrumbs to update entity names
+      await queryClient.invalidateQueries({
+        queryKey: ["breadcrumbs"],
+      });
     },
     onSuccess: (data) => {
       // Call the provided onSuccess callback if it exists

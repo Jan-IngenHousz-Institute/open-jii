@@ -276,52 +276,16 @@ variable "tags" {
   default     = {}
 }
 
-# VPC Configuration (for server Lambda database access)
-variable "enable_server_vpc" {
-  description = "Whether to deploy the server Lambda function within a VPC for database access"
-  type        = bool
-  default     = false
-}
-
-variable "server_subnet_ids" {
-  description = "List of private subnet IDs where the server Lambda function should be placed (required if enable_server_vpc is true)"
-  type        = list(string)
-  default     = []
-}
-
-variable "server_lambda_security_group_id" {
-  description = "ID of the security group for the server Lambda function to access Aurora (required if enable_server_vpc is true)"
-  type        = string
-}
-
 variable "server_environment_variables" {
   description = "Environment variables for the server Lambda function"
   type        = map(string)
   default     = {}
 }
 
-variable "db_credentials_secret_arn" {
-  description = "ARN of the database credentials secret in AWS Secrets Manager."
-  type        = string
-  default     = "" # Or a specific default ARN if applicable
-}
-
-variable "oauth_secret_arn" {
-  description = "ARN of the OAuth client secret in AWS Secrets Manager."
-  type        = string
-  default     = "" # Or a specific default ARN if applicable
-}
-
 variable "contentful_secret_arn" {
   description = "ARN of the Contentful access token secret in AWS Secrets Manager."
   type        = string
   default     = "" # Or a specific default ARN if applicable
-}
-
-variable "ses_secret_arn" {
-  description = "ARN of the SES SMTP credentials secret in AWS Secrets Manager."
-  type        = string
-  default     = ""
 }
 
 variable "secrets_extension_layer_arn" {
@@ -331,3 +295,4 @@ variable "secrets_extension_layer_arn" {
   # You can find the latest ARNs here: https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html#ps-integration-lambda-extensions-add
   default = "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:17"
 }
+

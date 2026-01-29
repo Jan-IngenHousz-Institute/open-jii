@@ -1,8 +1,8 @@
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
+import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 
@@ -20,11 +20,9 @@ const getCallbackUrl = async () => {
 
 export default async function AppLayout({
   children,
-  pageTitle,
   params,
 }: Readonly<{
   children: React.ReactNode;
-  pageTitle?: string;
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
@@ -33,9 +31,8 @@ export default async function AppLayout({
   if (!session?.user) {
     const callbackUrl = await getCallbackUrl();
 
-    // The redirect() function throws an error to stop rendering and initiate the redirect,
-    // so no 'return' statement is needed after it.
-    redirect(`/api/auth/signin?callbackUrl=${callbackUrl}`);
+    // Redirect to login if no session
+    redirect(`/${locale}/login?callbackUrl=${callbackUrl}`);
   }
   if (!session.user.registered) {
     const callbackUrl = await getCallbackUrl();
@@ -49,9 +46,9 @@ export default async function AppLayout({
       <NavigationSidebarWrapper locale={locale} />
       <SidebarInset>
         <NavigationTopbar locale={locale} user={session.user} />
-        <div className="flex flex-1 flex-col gap-4 p-6 pt-4">
+        <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
           <div className="mx-auto w-full max-w-7xl">
-            <Breadcrumbs pageTitle={pageTitle} locale={locale} />
+            <Breadcrumbs locale={locale} />
             {children}
           </div>
         </div>

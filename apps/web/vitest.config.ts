@@ -23,6 +23,7 @@ const webConfig = defineConfig({
       NODE_ENV: "test",
       NEXT_PUBLIC_POSTHOG_KEY: "test-posthog-key",
       NEXT_PUBLIC_POSTHOG_HOST: "https://test.posthog.com",
+      NEXT_PUBLIC_POSTHOG_UI_HOST: "https://test.ui.posthog.com",
     },
     coverage: {
       exclude: [

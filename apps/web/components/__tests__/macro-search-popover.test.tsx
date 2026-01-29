@@ -24,21 +24,10 @@ vi.mock("@repo/i18n", () => ({
 }));
 
 vi.mock("@repo/ui/components", () => {
-  const Button = ({
-    children,
-    onClick,
-    disabled,
-    title,
-    "aria-label": ariaLabel,
-    ...rest
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    "aria-label"?: string;
-    variant?: string;
-    size?: string;
-  }) => (
-    <button onClick={onClick} disabled={disabled} title={title} aria-label={ariaLabel} {...rest}>
+  const Badge = ({ children, className }: React.PropsWithChildren & { className?: string }) => (
+    <div data-testid="badge" className={className}>
       {children}
-    </button>
+    </div>
   );
 
   const Command = ({
@@ -79,8 +68,21 @@ vi.mock("@repo/ui/components", () => {
     children,
     value,
     className,
-  }: React.PropsWithChildren & { value?: string; className?: string }) => (
-    <div data-testid="command-item" data-value={value} className={className}>
+    onSelect,
+    disabled,
+  }: React.PropsWithChildren & {
+    value?: string;
+    className?: string;
+    onSelect?: () => void;
+    disabled?: boolean;
+  }) => (
+    <div
+      data-testid="command-item"
+      data-value={value}
+      className={className}
+      onClick={disabled ? undefined : onSelect}
+      style={{ pointerEvents: disabled ? "none" : "auto" }}
+    >
       {children}
     </div>
   );
@@ -100,7 +102,7 @@ vi.mock("@repo/ui/components", () => {
   );
 
   return {
-    Button,
+    Badge,
     Command,
     CommandEmpty,
     CommandGroup,
@@ -114,9 +116,6 @@ vi.mock("@repo/ui/components", () => {
 vi.mock("lucide-react", () => ({
   SearchX: ({ className }: { className?: string }) => (
     <span data-testid="search-x-icon" className={className} />
-  ),
-  PlusSquare: ({ className }: { className?: string }) => (
-    <span data-testid="plus-square-icon" className={className} />
   ),
   ExternalLink: ({ className }: { className?: string }) => (
     <span data-testid="external-link-icon" className={className} />
@@ -167,6 +166,7 @@ const macros: Macro[] = [
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
     createdByName: "Ada Lovelace",
+    sortOrder: null,
   } as Macro,
   {
     id: "m2",
@@ -177,6 +177,7 @@ const macros: Macro[] = [
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
     createdByName: "Al Turing",
+    sortOrder: null,
   } as Macro,
   {
     id: "m3",
@@ -186,6 +187,7 @@ const macros: Macro[] = [
     createdBy: "user3",
     createdAt: "2025-09-04T00:00:00Z",
     updatedAt: "2025-09-04T00:00:00Z",
+    sortOrder: 1,
   } as Macro,
 ];
 
@@ -256,26 +258,12 @@ describe("<MacroSearchPopover />", () => {
     expect(screen.getByText("Al Turing")).toBeInTheDocument();
 
     // Check that language labels are shown
-    const languageLabels = screen.getAllByText("language");
+    const languageLabels = screen.getAllByText("common.language");
     expect(languageLabels).toHaveLength(3);
 
     // Check that created by labels are shown for macros that have creator
-    const createdByLabels = screen.getAllByText("createdBy");
+    const createdByLabels = screen.getAllByText("experiments.createdBy");
     expect(createdByLabels).toHaveLength(2); // Only m1 and m2 have createdByName
-  });
-
-  it("renders add buttons for all macros", () => {
-    renderPopover();
-
-    const addButtons = screen.getAllByLabelText("experiments.addMacro");
-    expect(addButtons).toHaveLength(3);
-
-    addButtons.forEach((button) => {
-      expect(button).toHaveAttribute("title", "experiments.addMacro");
-    });
-
-    // Check that plus icons are present (there should be 3)
-    expect(screen.getAllByTestId("plus-square-icon")).toHaveLength(3);
   });
 
   it("renders external links for all macros", () => {
@@ -296,14 +284,14 @@ describe("<MacroSearchPopover />", () => {
     });
   });
 
-  it("calls onAddMacro when add button is clicked", async () => {
+  it("calls onAddMacro when command item is clicked", async () => {
     const onAddMacro = vi.fn();
     const setOpen = vi.fn();
     const onSearchChange = vi.fn();
     renderPopover({ onAddMacro, setOpen, onSearchChange });
 
-    const addButtons = screen.getAllByLabelText("experiments.addMacro");
-    await userEvent.click(addButtons[0]);
+    const items = screen.getAllByTestId("command-item");
+    await userEvent.click(items[0]);
 
     expect(onAddMacro).toHaveBeenCalledWith("m1");
     expect(setOpen).toHaveBeenCalledWith(false);
@@ -316,8 +304,8 @@ describe("<MacroSearchPopover />", () => {
     const onSearchChange = vi.fn();
     renderPopover({ onAddMacro, setOpen, onSearchChange });
 
-    const addButtons = screen.getAllByLabelText("experiments.addMacro");
-    await userEvent.click(addButtons[1]);
+    const items = screen.getAllByTestId("command-item");
+    await userEvent.click(items[1]);
 
     await waitFor(() => {
       expect(onAddMacro).toHaveBeenCalledWith("m2");
@@ -326,13 +314,16 @@ describe("<MacroSearchPopover />", () => {
     });
   });
 
-  it("disables add buttons when isAddingMacro is true", () => {
-    renderPopover({ isAddingMacro: true });
+  it("disables command items when isAddingMacro is true", () => {
+    const onAddMacro = vi.fn();
+    renderPopover({ isAddingMacro: true, onAddMacro });
 
-    const addButtons = screen.getAllByLabelText("experiments.addMacro");
-    addButtons.forEach((button) => {
-      expect(button).toBeDisabled();
-    });
+    const items = screen.getAllByTestId("command-item");
+    expect(items).toHaveLength(3);
+
+    // Verify clicking disabled items doesn't trigger onAddMacro
+    fireEvent.click(items[0]);
+    expect(onAddMacro).not.toHaveBeenCalled();
   });
 
   it("shows loading state", () => {
@@ -401,13 +392,20 @@ describe("<MacroSearchPopover />", () => {
     expect(items[2]).toHaveAttribute("data-value", "m3");
   });
 
-  it("calls onAddMacro when add button is clicked (basic functionality)", async () => {
+  it("calls onAddMacro when command item is clicked (basic functionality)", async () => {
     const onAddMacro = vi.fn();
     renderPopover({ onAddMacro });
 
-    const addButtons = screen.getAllByLabelText("experiments.addMacro");
-    await userEvent.click(addButtons[0]);
+    const items = screen.getAllByTestId("command-item");
+    await userEvent.click(items[0]);
 
     expect(onAddMacro).toHaveBeenCalledWith("m1");
+  });
+
+  it("renders preferred badge for macros with sortOrder", () => {
+    renderPopover();
+
+    const badge = screen.getByText("common.preferred");
+    expect(badge).toBeInTheDocument();
   });
 });

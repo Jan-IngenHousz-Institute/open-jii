@@ -117,9 +117,12 @@ export class ExperimentDataAnnotationsRepository {
       return success(null);
     }
 
-    this.logger.debug(
-      `Annotation table not found, creating annotations table for experiment ${experimentId}`,
-    );
+    this.logger.debug({
+      msg: "Annotation table not found, creating annotations table",
+      operation: "ensureTableExists",
+      experimentId,
+      schemaName,
+    });
 
     // Create the table if it doesn't exist
     const createTableQuery = `
@@ -179,7 +182,12 @@ export class ExperimentDataAnnotationsRepository {
     schemaName: string,
     annotations: CreateAnnotationDto[],
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Storing ${annotations.length} annotations for schema ${schemaName}`);
+    this.logger.log({
+      msg: "Storing annotations",
+      operation: "storeAnnotations",
+      schemaName,
+      annotationCount: annotations.length,
+    });
 
     if (annotations.length === 0) {
       return success({ rowsAffected: 0 } as AnnotationRowsAffected);
@@ -257,7 +265,12 @@ export class ExperimentDataAnnotationsRepository {
     annotationId: string,
     updateData: UpdateAnnotationDto,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Updating annotation ${annotationId} for schema ${schemaName}`);
+    this.logger.log({
+      msg: "Updating annotation",
+      operation: "updateAnnotation",
+      schemaName,
+      annotationId,
+    });
 
     if (!this.validate.updateData(updateData)) {
       return failure(AppError.validationError("Invalid update data"));
@@ -305,7 +318,12 @@ export class ExperimentDataAnnotationsRepository {
     schemaName: string,
     annotationId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Deleting annotation ${annotationId} for schema ${schemaName}`);
+    this.logger.log({
+      msg: "Deleting annotation",
+      operation: "deleteAnnotation",
+      schemaName,
+      annotationId,
+    });
 
     // Validate input parameters
     const annotationIdValidation = this.validate.uuid(annotationId);
@@ -337,9 +355,14 @@ export class ExperimentDataAnnotationsRepository {
     rowIds: string[],
     type: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(
-      `Bulk deleting annotations on table ${tableName} for ${rowIds.length} rows of type ${type} in schema ${schemaName}`,
-    );
+    this.logger.log({
+      msg: "Bulk deleting annotations",
+      operation: "deleteAnnotationsBulk",
+      schemaName,
+      tableName,
+      type,
+      rowCount: rowIds.length,
+    });
 
     if (rowIds.length === 0) {
       return success({ rowsAffected: 0 } as AnnotationRowsAffected);

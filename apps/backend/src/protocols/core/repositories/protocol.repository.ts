@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { desc, eq, ilike, protocols, experimentProtocols, users } from "@repo/database";
+import { eq, ilike, protocols, experimentProtocols, users, asc } from "@repo/database";
 import { profiles } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -45,7 +45,7 @@ export class ProtocolRepository {
         })
         .from(protocols)
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
-        .orderBy(desc(protocols.updatedAt));
+        .orderBy(asc(protocols.sortOrder), asc(protocols.name));
 
       if (search) {
         query.where(ilike(protocols.name, `%${search}%`));
@@ -103,7 +103,7 @@ export class ProtocolRepository {
       }
 
       const augmentedResult = result[0].protocols as unknown as ProtocolDto;
-      augmentedResult.createdByName = result[0].users.name ?? undefined;
+      augmentedResult.createdByName = result[0].users.name || undefined;
       return augmentedResult;
     });
   }

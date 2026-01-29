@@ -1,6 +1,12 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
+import { AuthGuard, AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
+import { LoggerModule } from "nestjs-pino";
+
+import { pinoConfig } from "@repo/analytics";
+import { auth } from "@repo/auth/server";
 
 import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
@@ -21,7 +27,15 @@ import { UserModule } from "./users/user.module";
       isGlobal: true,
       load: [databaseConfig, databricksConfig, awsConfig, emailConfig, analyticsConfig],
     }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        ...pinoConfig,
+        name: "backend",
+        autoLogging: false,
+      },
+    }),
     ScheduleModule.forRoot(),
+    BetterAuthModule.forRoot({ auth }),
     AnalyticsModule,
     DatabaseModule,
     ExperimentModule,
@@ -29,6 +43,12 @@ import { UserModule } from "./users/user.module";
     ProtocolModule,
     UserModule,
     HealthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
   ],
 })
 export class AppModule {}

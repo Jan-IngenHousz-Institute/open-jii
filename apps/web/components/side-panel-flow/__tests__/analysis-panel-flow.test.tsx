@@ -116,8 +116,9 @@ describe("<AnalysisPanel />", () => {
     expect(screen.getByRole("heading", { name: /Plot Humidity/i })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /Plot Temperature/i })).not.toBeInTheDocument();
 
-    // Select it - click the add macro button
-    await userEvent.click(screen.getByRole("button", { name: /experiments\.addMacro/i }));
+    // Select it - click the macro item itself
+    const macroItem = screen.getByRole("option", { name: /Plot Humidity/i });
+    await userEvent.click(macroItem);
     expect(onChange).toHaveBeenCalledWith("macro-2");
 
     // Popover should be closed (search input disappears)

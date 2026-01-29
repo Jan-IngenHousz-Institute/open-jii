@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 
 import { createPostHogServerConfig } from "@repo/analytics";
 
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { AnalyticsConfig, analyticsConfigSchema } from "./config.types";
 
 @Injectable()
@@ -19,7 +20,10 @@ export class AnalyticsConfigService {
    * Loads analytics configuration from environment variables
    */
   private loadConfig(): AnalyticsConfig {
-    this.logger.debug("Loading analytics configuration");
+    this.logger.debug({
+      msg: "Loading analytics configuration",
+      operation: "loadConfig",
+    });
     return {
       posthogKey: this.configService.getOrThrow("analytics.posthogKey"),
       posthogHost: this.configService.getOrThrow("analytics.posthogHost"),
@@ -32,9 +36,18 @@ export class AnalyticsConfigService {
   private validateConfig(): void {
     try {
       analyticsConfigSchema.parse(this.config);
-      this.logger.debug("Analytics configuration validated successfully");
+      this.logger.debug({
+        msg: "Analytics configuration validated successfully",
+        operation: "validateConfig",
+        status: "success",
+      });
     } catch (error) {
-      this.logger.error("Invalid analytics configuration", error);
+      this.logger.error({
+        msg: "Invalid analytics configuration",
+        errorCode: ErrorCodes.ANALYTICS_CONFIG_INVALID,
+        operation: "validateConfig",
+        error,
+      });
       throw new Error(
         `Analytics configuration validation failed: ${error instanceof Error ? error.message : String(error)}`,
       );

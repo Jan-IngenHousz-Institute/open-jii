@@ -113,6 +113,27 @@
       "when": 1764757934315,
       "tag": "0015_vengeful_tomorrow_man",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1768242897313,
+      "tag": "0016_curved_bastion",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1769004845121,
+      "tag": "0017_petite_forge",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1769617317898,
+      "tag": "0018_loving_deathstrike",
+      "breakpoints": true
     }
   ]
 }

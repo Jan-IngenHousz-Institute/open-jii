@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
@@ -19,9 +20,13 @@ export class RemoveExperimentProtocolUseCase {
     protocolId: string,
     currentUserId: string,
   ): Promise<Result<void>> {
-    this.logger.log(
-      `Removing protocol ${protocolId} from experiment ${experimentId} by user ${currentUserId}`,
-    );
+    this.logger.log({
+      msg: "Removing protocol from experiment",
+      operation: "removeExperimentProtocol",
+      experimentId,
+      protocolId,
+      userId: currentUserId,
+    });
 
     // Check if experiment exists and if user is admin
     const accessResult = await this.experimentRepository.checkAccess(experimentId, currentUserId);
@@ -52,7 +57,12 @@ export class RemoveExperimentProtocolUseCase {
         // Check if protocol association exists before removing
         const protocolsResult = await this.experimentProtocolRepository.listProtocols(experimentId);
         if (protocolsResult.isFailure()) {
-          this.logger.error(`Failed to fetch protocols for experiment ${experimentId}`);
+          this.logger.error({
+            msg: "Failed to fetch protocols for experiment",
+            errorCode: ErrorCodes.EXPERIMENT_PROTOCOLS_REMOVE_FAILED,
+            operation: "removeExperimentProtocol",
+            experimentId,
+          });
           return failure(AppError.internal("Failed to fetch experiment protocols"));
         }
         const protocols = protocolsResult.value;
