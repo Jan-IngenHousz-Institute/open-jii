@@ -31,10 +31,19 @@ export function DashboardBanner({
         </h2>
         <p className="text-[0.8125rem] font-normal leading-[1.3125rem] text-[#68737B]">
           {description}
-          <span className="italic">{descriptionItalic}</span>
+          {descriptionItalic && (
+            <Link
+              href="https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="italic hover:underline"
+            >
+              {descriptionItalic}
+            </Link>
+          )}
         </p>
       </div>
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+      <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row">
         {secondaryButtonLabel && secondaryButtonHref && (
           <Link
             href={secondaryButtonHref}
