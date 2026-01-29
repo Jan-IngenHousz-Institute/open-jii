@@ -15,7 +15,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.pipelines import RefreshSelection, RefreshSelectionSelection
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -270,23 +269,12 @@ class EnrichedTablesRefreshOrchestrator:
                     'timestamp': datetime.now().isoformat()
                 }
             
-            # Create refresh selection for only enriched tables
-            table_selections = [
-                RefreshSelectionSelection(name=table_name)
-                for table_name in enriched_tables
-            ]
-            
-            refresh_selection = RefreshSelection(
-                selection=table_selections
-            )
-            
             logger.info(f"Starting full refresh of {len(enriched_tables)} enriched tables: {', '.join(enriched_tables)}")
             
             # Start update with full refresh and table selection
             response = self.client.pipelines.start_update(
                 pipeline_id=pipeline_id,
-                full_refresh=True,  # Full refresh to rebuild user metadata
-                refresh_selection=refresh_selection
+                full_refresh_selection=enriched_tables
             )
             
             result = {
