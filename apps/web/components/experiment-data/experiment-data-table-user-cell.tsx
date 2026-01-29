@@ -23,7 +23,7 @@ function parseUserData(data: string): UserData | null {
       parsed !== null &&
       "id" in parsed &&
       "name" in parsed &&
-      "image" in parsed
+      "avatar" in parsed
     ) {
       return parsed as UserData;
     }

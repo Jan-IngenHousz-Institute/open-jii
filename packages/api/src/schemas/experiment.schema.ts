@@ -849,17 +849,17 @@ export const zQuestionsColumnType = z.literal(
   "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
 );
 
-export const zUserColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
+export const zContributorColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
 
 export type AnnotationsColumnType = z.infer<typeof zAnnotationsColumnType>;
 export type QuestionsColumnType = z.infer<typeof zQuestionsColumnType>;
-export type UserColumnType = z.infer<typeof zUserColumnType>;
+export type ContributorColumnType = z.infer<typeof zContributorColumnType>;
 
 // Export constants object for convenient access (backwards compatible)
 export const WellKnownColumnTypes = {
   ANNOTATIONS: zAnnotationsColumnType.value,
   QUESTIONS: zQuestionsColumnType.value,
-  USER: zUserColumnType.value,
+  CONTRIBUTOR: zContributorColumnType.value,
 } as const;
 
 export const zColumnInfo = z.object({

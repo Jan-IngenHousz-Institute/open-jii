@@ -343,6 +343,18 @@ describe("experiment-data-utils", () => {
       expect(screen.getByText("1 item")).toBeInTheDocument();
     });
 
+    it("should render ExperimentDataTableVariantCell for VARIANT type", () => {
+      const variantData = JSON.stringify({ name: "John", age: 30, active: true });
+      const result = formatValue(variantData, "VARIANT", "row-1", "test-column");
+
+      // The result should be a React element (ExperimentDataTableVariantCell)
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render it to check the component
+      render(<div>{result}</div>);
+      expect(screen.getByText("JSON")).toBeInTheDocument();
+    });
+
     it("should render ExperimentDataTableChartCell for numeric ARRAY types", () => {
       const mockOnChartHover = vi.fn();
       const mockOnChartLeave = vi.fn();

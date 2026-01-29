@@ -583,7 +583,6 @@ describe("AddAnnotations", () => {
 
     // Mock the repository to return failure
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
-    vi.spyOn(repository, "ensureTableExists").mockResolvedValue(success(null));
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(
       failure({
         message: "Failed to store annotations in database",
@@ -894,7 +893,6 @@ describe("AddAnnotations", () => {
 
     // Mock the repository methods
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
-    vi.spyOn(repository, "ensureTableExists").mockResolvedValue(success(null));
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
     // Spy on refreshSilverData to ensure it's NOT called

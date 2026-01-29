@@ -617,8 +617,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     schema: string;
     table: string;
     selectColumns: string[];
-    variantColumn: string;
-    variantSchema: string;
+    variantColumn: string | string[];
+    variantSchema: string | string[];
+    exceptColumns?: string[];
     whereClause?: string;
     orderBy?: string;
     limit?: number;
@@ -632,6 +633,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       selectColumns: params.selectColumns,
       variantColumn: params.variantColumn,
       variantSchema: params.variantSchema,
+      exceptColumns: params.exceptColumns,
       whereClause: params.whereClause,
       orderBy: params.orderBy,
       limit: params.limit,
@@ -661,14 +663,30 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
+   * Build query to get questions schema from experiment_questions table
+   */
+  buildQuestionsSchemaLookupQuery(params: { schema: string; experimentId: string }): string {
+    const catalog = this.configService.getCatalogName();
+    const table = `${catalog}.${params.schema}.experiment_questions`;
+
+    return this.queryBuilder
+      .query()
+      .select(["questions_schema"])
+      .from(table)
+      .whereEquals("experiment_id", params.experimentId)
+      .limit(1)
+      .build();
+  }
+
+  /**
    * Get the physical table name for a logical table
    * Maps logical names (sample, device) to physical centrum tables
    */
   private getPhysicalTableName(tableName: string): string {
     const catalog = this.configService.getCatalogName();
-    if (tableName === "sample") return `${catalog}.centrum.experiment_raw_data`;
+    if (tableName === "sample") return `${catalog}.centrum.enriched_experiment_raw_data`;
     if (tableName === "device") return `${catalog}.centrum.experiment_device_data`;
-    return `${catalog}.centrum.experiment_macro_data`;
+    return `${catalog}.centrum.enriched_experiment_macro_data`;
   }
 
   /**
@@ -735,28 +753,21 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     const catalog = this.configService.getCatalogName();
     const table = `${catalog}.centrum.experiment_macros`;
 
-    // Note: Using manual query because builder doesn't support GROUP BY yet
-    return (
-      this.queryBuilder
-        .query()
-        .select([
-          "macro_filename",
-          "MAX(macro_name) as macro_name",
-          "MAX(sample_count) as total_rows",
-          "MAX(output_schema) as output_schema",
-        ])
-        .from(table)
-        .whereEquals("experiment_id", experimentId)
-        .build() + "\n      GROUP BY macro_filename"
-    );
+    return this.queryBuilder.buildAggregateQuery({
+      table,
+      selectExpression:
+        "macro_filename, MAX(macro_name) as macro_name, MAX(sample_count) as total_rows, MAX(output_schema) as output_schema",
+      groupByColumns: "macro_filename",
+      whereConditions: [["experiment_id", experimentId]],
+    });
   }
 
   /**
-   * Build query to count rows in experiment_raw_data
+   * Build query to count rows in enriched_experiment_raw_data
    */
   buildRawDataCountQuery(experimentId: string): string {
     const catalog = this.configService.getCatalogName();
-    const table = `${catalog}.centrum.experiment_raw_data`;
+    const table = `${catalog}.centrum.enriched_experiment_raw_data`;
 
     return this.queryBuilder.buildCountQuery({
       table,

@@ -2,7 +2,6 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { AnnotationRowsAffected } from "@repo/api";
 
-import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";
 import type { ExperimentDto } from "../../../../core/models/experiment.model";
@@ -74,20 +73,8 @@ export class DeleteAnnotationsUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        if (!experiment.schemaName) {
-          this.logger.error({
-            msg: "Experiment has no schema name",
-            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
-            operation: "deleteAnnotations",
-            experimentId,
-            error: "Experiment schema not provisioned",
-          });
-          return failure(AppError.internal("Experiment schema not provisioned"));
-        }
-
         if ("annotationId" in request) {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotation(
-            experiment.schemaName,
             experimentId,
             request.annotationId,
           );
@@ -101,7 +88,6 @@ export class DeleteAnnotationsUseCase {
           return success(result.value);
         } else {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
-            experiment.schemaName,
             experimentId,
             request.tableName,
             request.rowIds,
