@@ -88,7 +88,7 @@ function UserMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
+        <div className="flex items-center gap-3 py-1.5 text-sm">
           {session.user.image && (
             <Avatar className="h-8 w-8">
               <AvatarImage src={session.user.image} alt={displayName} />

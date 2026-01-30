@@ -7,8 +7,8 @@ describe("navigation-config", () => {
 
   describe("iconMap", () => {
     it("exports all required icons", () => {
-      expect(iconMap.Home).toBeDefined();
-      expect(iconMap.Microscope).toBeDefined();
+      expect(iconMap.LayoutDashboard).toBeDefined();
+      expect(iconMap.Leaf).toBeDefined();
       expect(iconMap.FileSliders).toBeDefined();
       expect(iconMap.Code).toBeDefined();
       expect(iconMap.Settings).toBeDefined();
