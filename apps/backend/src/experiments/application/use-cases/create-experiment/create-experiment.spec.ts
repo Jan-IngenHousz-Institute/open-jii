@@ -64,7 +64,7 @@ describe("CreateExperimentUseCase", () => {
     });
 
     // Verify Databricks job was triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
       createdExperiment.id,
       {
@@ -128,7 +128,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.value.name).toBe(experimentData.name);
 
     // Verify Databricks job was triggered but failed
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
       result.value.id,
       {
@@ -159,7 +159,7 @@ describe("CreateExperimentUseCase", () => {
     });
 
     // Verify Databricks job was triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
       createdExperiment.id,
       {
@@ -184,7 +184,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.message).toContain("Experiment name is required");
 
     // Verify Databricks job was not triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 
@@ -203,7 +203,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.message).toContain("User ID is required");
 
     // Verify Databricks job was not triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 
@@ -227,7 +227,7 @@ describe("CreateExperimentUseCase", () => {
     );
 
     // Verify Databricks job was not triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 });

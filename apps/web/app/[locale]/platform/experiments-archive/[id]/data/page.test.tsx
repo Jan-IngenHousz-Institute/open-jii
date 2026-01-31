@@ -6,6 +6,8 @@ import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
+import { ExperimentTableName } from "@repo/api";
+
 import ExperimentDataPage from "./page";
 
 globalThis.React = React;
@@ -111,7 +113,7 @@ vi.mock("next/navigation", () => ({
 
 const mockTablesData = [
   { name: "measurements", displayName: "Measurements", totalRows: 100 },
-  { name: "device", displayName: "Device", totalRows: 1 },
+  { name: ExperimentTableName.DEVICE, displayName: "Device", totalRows: 1 },
 ];
 
 beforeEach(() => {
@@ -309,7 +311,7 @@ describe("<ExperimentDataPage />", () => {
     expect(tabContent2).toBeInTheDocument();
     const dataTable2 = tabContent2.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable2).toHaveAttribute("data-experiment-id", "test-experiment-id");
-    expect(dataTable2).toHaveAttribute("data-table-name", "device");
+    expect(dataTable2).toHaveAttribute("data-table-name", ExperimentTableName.DEVICE);
   });
 
   it("shows no data message when tables array is empty", () => {

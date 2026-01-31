@@ -44,7 +44,8 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import { DataDownloadModal } from "./data-download-modal/data-download-modal";
-import { ExperimentDataTableChart } from "./experiment-data-table-chart";
+import { ExperimentDataTableErrorCell } from "./table-cells/error/experiment-data-table-error-cell";
+import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 // Helper function to map column names for sorting
 function getSortColumnName(columnName: string, columnType?: string): string {
@@ -63,18 +64,22 @@ export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 export function ExperimentDataTable({
   experimentId,
   tableName,
-  displayName,
   pageSize = 10,
+  displayName,
+  defaultSortColumn,
+  errorColumn,
 }: {
   experimentId: string;
   tableName: string;
-  displayName?: string;
   pageSize: number;
+  displayName?: string;
+  defaultSortColumn?: string;
+  errorColumn?: string;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  const [sortColumn, setSortColumn] = useState<string | undefined>("timestamp");
+  const [sortColumn, setSortColumn] = useState<string | undefined>(defaultSortColumn);
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
   // Annotation dialog states
@@ -189,6 +194,7 @@ export function ExperimentDataTable({
     openDeleteAnnotationsDialog,
     toggleCellExpansion,
     isCellExpanded,
+    errorColumn,
   );
 
   const onPaginationChange = useCallback(
@@ -347,8 +353,8 @@ export function ExperimentDataTable({
           onAddAnnotation={openAddAnnotationDialog}
           onDeleteAnnotations={openDeleteAnnotationsDialog}
         />
-        <div className="text-muted-foreground relative -mt-px overflow-visible rounded-b-lg border">
-          <Table>
+        <div className="text-muted-foreground relative -mt-px overflow-x-auto rounded-b-lg border">
+          <Table className="w-max min-w-full">
             <ExperimentTableHeader
               headerGroups={table.getHeaderGroups()}
               sortColumn={sortColumn}
@@ -366,6 +372,7 @@ export function ExperimentDataTable({
                   expandedCells={expandedCells}
                   tableRows={tableRows}
                   columns={persistedMetaData?.rawColumns ?? []}
+                  errorColumn={errorColumn}
                 />
               )}
             </TableBody>

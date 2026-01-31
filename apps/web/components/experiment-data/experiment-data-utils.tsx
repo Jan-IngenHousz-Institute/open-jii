@@ -2,92 +2,37 @@ import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
-import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/experiment-data-table-annotations-cell";
+import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell";
 import type {
   DataRow,
   TableMetadata,
 } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { AnnotationType } from "@repo/api";
-import { WellKnownColumnTypes, ColumnPrimitiveType } from "@repo/api";
+import {
+  WellKnownColumnTypes,
+  ColumnPrimitiveType,
+  isNumericType,
+  isMapType,
+  isStructType,
+  isVariantType,
+  isStructArrayType,
+  isNumericArrayType,
+  isSortableType,
+} from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
-import { ExperimentDataTableArrayCell } from "./experiment-data-table-array-cell";
 import { ExperimentDataTableCellCollapsible } from "./experiment-data-table-cell-collapsible";
-import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
-import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
-import { ExperimentDataTableTextCell } from "./experiment-data-table-text-cell";
-import { ExperimentDataTableUserCell } from "./experiment-data-table-user-cell";
-import { ExperimentDataTableVariantCell } from "./experiment-data-table-variant-cell";
-
-// Local type utilities (UI-specific, not part of shared API)
-function isNumericType(type?: string): boolean {
-  if (!type) return false;
-  const numericTypes: string[] = [
-    ColumnPrimitiveType.TINYINT,
-    ColumnPrimitiveType.SMALLINT,
-    ColumnPrimitiveType.INT,
-    ColumnPrimitiveType.BIGINT,
-    ColumnPrimitiveType.LONG,
-    ColumnPrimitiveType.FLOAT,
-    ColumnPrimitiveType.DOUBLE,
-    ColumnPrimitiveType.REAL,
-  ];
-  return numericTypes.includes(type) || type.startsWith("DECIMAL") || type.startsWith("NUMERIC");
-}
-
-function isArrayType(type?: string): boolean {
-  return !!type && type.startsWith("ARRAY");
-}
-
-function isMapType(type?: string): boolean {
-  return !!type && type.startsWith("MAP");
-}
-
-function isStructType(type?: string): boolean {
-  return !!type && type.startsWith("STRUCT");
-}
-
-function isVariantType(type?: string): boolean {
-  return !!type && type === "VARIANT";
-}
-
-function isStructArrayType(type?: string): boolean {
-  return !!type && type.startsWith("ARRAY") && type.includes("STRUCT");
-}
-
-function isNumericArrayType(type?: string): boolean {
-  if (!type || !isArrayType(type)) return false;
-  const numericArrays = [
-    "ARRAY",
-    "ARRAY<TINYINT>",
-    "ARRAY<SMALLINT>",
-    "ARRAY<INT>",
-    "ARRAY<BIGINT>",
-    "ARRAY<FLOAT>",
-    "ARRAY<DOUBLE>",
-    "ARRAY<DECIMAL>",
-  ];
-  return (
-    numericArrays.includes(type) ||
-    (type.includes("ARRAY") &&
-      (type.includes("DOUBLE") ||
-        type.includes("REAL") ||
-        type.includes("FLOAT") ||
-        type.includes("NUMERIC")))
-  );
-}
-
-function isSortableType(type?: string): boolean {
-  if (!type) return false;
-  // Complex types cannot be sorted
-  if (isArrayType(type) || isMapType(type) || isStructType(type) || isVariantType(type))
-    return false;
-  // All primitive types can be sorted
-  return true;
-}
+import { ExperimentDataTableArrayCell } from "./table-cells/array/experiment-data-table-array-cell";
+import { ExperimentDataTableChartCell } from "./table-cells/chart/experiment-data-table-chart-cell";
+import { ExperimentDataTableErrorCell } from "./table-cells/error/experiment-data-table-error-cell";
+import { ExperimentDataTableMapCell } from "./table-cells/map/experiment-data-table-map-cell";
+import { ExperimentDataTableStructCell } from "./table-cells/struct/experiment-data-table-struct-cell";
+import { ExperimentDataTableTextCell } from "./table-cells/text/experiment-data-table-text-cell";
+import { ExperimentDataTableUserCell } from "./table-cells/user/experiment-data-table-user-cell";
+import { ExperimentDataTableVariantCell } from "./table-cells/variant/experiment-data-table-variant-cell";
 
 function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): string {
   return cn(
@@ -132,84 +77,111 @@ export function formatValue(
   onDeleteAnnotations?: (rowIds: string[], annotationType: AnnotationType) => void,
   onToggleCellExpansion?: (rowId: string, columnName: string) => void,
   isCellExpanded?: (rowId: string, columnName: string) => boolean,
-) {
-  switch (type) {
-    case ColumnPrimitiveType.DOUBLE:
-    case ColumnPrimitiveType.INT:
-    case ColumnPrimitiveType.LONG:
-    case ColumnPrimitiveType.BIGINT:
-      return <div className="text-right tabular-nums">{value as number}</div>;
-    case ColumnPrimitiveType.TIMESTAMP:
-      return (value as string).substring(0, 19).replace("T", " ");
-    case ColumnPrimitiveType.STRING:
-      return <ExperimentDataTableTextCell text={value as string} />;
-    case WellKnownColumnTypes.CONTRIBUTOR:
-      return (
-        <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
-      );
-    case WellKnownColumnTypes.ANNOTATIONS:
-      return (
-        <ExperimentDataTableAnnotationsCell
-          data={value as string}
-          rowId={rowId}
-          onAddAnnotation={onAddAnnotation}
-          onDeleteAnnotations={onDeleteAnnotations}
-        />
-      );
-    default: {
-      // Check for numeric arrays (for chart rendering)
-      if (isNumericArrayType(type)) {
-        return (
-          <ExperimentDataTableChartCell
-            data={value as string}
-            columnName={columnName ?? "Chart"}
-            onClick={onChartClick}
-          />
-        );
-      }
-
-      // Check if the type is ARRAY<STRUCT<...>>
-      if (isStructArrayType(type)) {
-        return (
-          <ExperimentDataTableArrayCell
-            data={value as string}
-            columnName={columnName ?? "Array"}
-            rowId={rowId}
-            isExpanded={isCellExpanded?.(rowId, columnName ?? "Array") ?? false}
-            onToggleExpansion={onToggleCellExpansion}
-          />
-        );
-      }
-
-      // Check if the type is MAP
-      if (isMapType(type)) {
-        return (
-          <ExperimentDataTableMapCell
-            data={value as string}
-            columnName={columnName ?? "Map"}
-            rowId={rowId}
-            isExpanded={isCellExpanded?.(rowId, columnName ?? "Map") ?? false}
-            onToggleExpansion={onToggleCellExpansion}
-          />
-        );
-      }
-
-      // Check if the type is VARIANT
-      if (isVariantType(type)) {
-        return (
-          <ExperimentDataTableVariantCell
-            data={value as string}
-            columnName={columnName ?? "Variant"}
-            rowId={rowId}
-            isExpanded={isCellExpanded?.(rowId, columnName ?? "Variant") ?? false}
-            onToggleExpansion={onToggleCellExpansion}
-          />
-        );
-      }
-
-      return value as string;
-    }
+  errorColumn?: string,
+): string | React.JSX.Element {
+  // Check if this is the error column
+  if (errorColumn && columnName === errorColumn) {
+    return <ExperimentDataTableErrorCell error={value as string} />;
   }
+
+  // Exact type matches
+  const exactTypeFormatters: Record<string, () => string | React.JSX.Element> = {
+    [ColumnPrimitiveType.DOUBLE]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.INT]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.LONG]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.BIGINT]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.TIMESTAMP]: () => (value as string).substring(0, 19).replace("T", " "),
+    [ColumnPrimitiveType.STRING]: () => <ExperimentDataTableTextCell text={value as string} />,
+    [WellKnownColumnTypes.CONTRIBUTOR]: () => (
+      <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
+    ),
+    [WellKnownColumnTypes.ANNOTATIONS]: () => (
+      <ExperimentDataTableAnnotationsCell
+        data={value as string}
+        rowId={rowId}
+        onAddAnnotation={onAddAnnotation}
+        onDeleteAnnotations={onDeleteAnnotations}
+      />
+    ),
+  };
+
+  if (!value) {
+    return "";
+  }
+
+  // Check for exact type match
+  if (type in exactTypeFormatters) {
+    return exactTypeFormatters[type]();
+  }
+
+  // Pattern-based type checks
+  if (isNumericArrayType(type)) {
+    return (
+      <ExperimentDataTableChartCell
+        data={value as string}
+        columnName={columnName ?? "Chart"}
+        onClick={onChartClick}
+      />
+    );
+  }
+
+  if (isStructArrayType(type)) {
+    return (
+      <ExperimentDataTableArrayCell
+        data={value as string}
+        columnName={columnName ?? "Array"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Array") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  if (isMapType(type)) {
+    return (
+      <ExperimentDataTableMapCell
+        data={value as string}
+        columnName={columnName ?? "Map"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Map") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  if (isStructType(type)) {
+    return (
+      <ExperimentDataTableStructCell
+        data={value as string}
+        columnName={columnName ?? "Struct"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Struct") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  if (isVariantType(type)) {
+    return (
+      <ExperimentDataTableVariantCell
+        data={value as string}
+        columnName={columnName ?? "Variant"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Variant") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  return value as string;
 }
 
 export function ExperimentTableHeader({
@@ -267,12 +239,14 @@ export function ExperimentDataRows({
   expandedCells = {},
   tableRows,
   columns = [],
+  errorColumn,
 }: {
   rows: Row<DataRow>[];
   columnCount: number;
   expandedCells?: Record<string, boolean>;
   tableRows?: DataRow[];
   columns?: TableMetadata["rawColumns"];
+  errorColumn?: string;
 }) {
   const { t } = useTranslation();
 
@@ -289,6 +263,9 @@ export function ExperimentDataRows({
   return rows.map((row) => {
     const rowId = String(row.original.id);
 
+    // Check if this row has an error
+    const hasError = errorColumn && row.original[errorColumn];
+
     // Check if any cell in this row is expanded
     const expandedCell = Object.keys(expandedCells).find((key) => {
       return key.startsWith(`${rowId}:`) && expandedCells[key];
@@ -296,7 +273,10 @@ export function ExperimentDataRows({
 
     return (
       <React.Fragment key={row.id}>
-        <TableRow data-state={row.getIsSelected() && "selected"}>
+        <TableRow
+          data-state={row.getIsSelected() && "selected"}
+          className={cn(hasError && "border-l-destructive bg-destructive/5 border-l-2")}
+        >
           {row.getVisibleCells().map((cell, cellIndex) => (
             <TableCell
               key={`${cell.id}-${cellIndex}`}

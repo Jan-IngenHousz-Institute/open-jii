@@ -1,10 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ExperimentTableName } from "@repo/api";
+import type { ExperimentTableNameType } from "@repo/api";
+
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
 import { ErrorCodes } from "../../utils/error-codes";
-import { Result, success, failure, AppError } from "../../utils/fp-utils";
+import { Result } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import type { UploadFileResponse } from "./services/files/files.types";
@@ -17,7 +20,6 @@ import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
 import { DatabricksTablesService } from "./services/tables/tables.service";
 import type { ListTablesResponse } from "./services/tables/tables.types";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
-import type { CreateVolumeParams, VolumeResponse } from "./services/volumes/volumes.types";
 import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 import type {
   ImportWorkspaceObjectResponse,
@@ -29,6 +31,15 @@ import { WorkspaceObjectFormat } from "./services/workspace/workspace.types";
 export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
+  // Schema name exposed to repository
+  readonly CENTRUM_SCHEMA_NAME: string;
+
+  // Physical Databricks table names exposed to repository
+  readonly RAW_DATA_TABLE_NAME: string;
+  readonly DEVICE_DATA_TABLE_NAME: string;
+  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
+  readonly MACRO_DATA_TABLE_NAME: string;
+
   constructor(
     private readonly jobsService: DatabricksJobsService,
     private readonly queryBuilder: QueryBuilderService,
@@ -38,7 +49,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     private readonly configService: DatabricksConfigService,
     private readonly workspaceService: DatabricksWorkspaceService,
     private readonly tablesService: DatabricksTablesService,
-  ) {}
+  ) {
+    this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
+    this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
+    this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
+    this.RAW_AMBYTE_DATA_TABLE_NAME = this.configService.getRawAmbyteDataTableName();
+    this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
+  }
 
   /**
    * Check if the Databricks service is available and responding
@@ -51,19 +68,18 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Trigger the ambyte processing Databricks job with the specified parameters
    */
   async triggerAmbyteProcessingJob(
-    schemaName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>> {
     this.logger.log({
       msg: "Triggering ambyte processing job",
       operation: "triggerAmbyteProcessingJob",
-      schemaName,
+      experimentId: params.EXPERIMENT_ID,
     });
 
-    // Add experiment schema to params
+    // Add catalog name to params
     const jobParams = {
       ...params,
-      EXPERIMENT_SCHEMA: schemaName,
+      CATALOG_NAME: this.configService.getCatalogName(),
     };
 
     const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
@@ -131,6 +147,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    */
   async uploadExperimentData(
     schemaName: string,
+    experimentId: string,
     sourceType: string,
     directoryName: string,
     fileName: string,
@@ -138,132 +155,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   ): Promise<Result<UploadFileResponse>> {
     const catalogName = this.configService.getCatalogName();
 
-    // Construct the full path
-    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
+    // Construct the full path with experiment_id subdirectory
+    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
     return this.filesService.upload(filePath, fileBuffer);
-  }
-
-  /**
-   * Create a new volume in Databricks Unity Catalog
-   *
-   * @param params - Volume creation parameters
-   * @returns Result containing the created volume information
-   */
-  async createVolume(params: CreateVolumeParams): Promise<Result<VolumeResponse>> {
-    return this.volumesService.createVolume(params);
-  }
-
-  /**
-   * Create a new managed volume under an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to create
-   * @param comment - Optional comment for the volume
-   * @returns Result containing the created volume information
-   */
-  async createExperimentVolume(
-    schemaName: string,
-    volumeName: string,
-    comment?: string,
-  ): Promise<Result<VolumeResponse>> {
-    this.logger.log({
-      msg: "Creating managed volume",
-      operation: "createExperimentVolume",
-      schemaName,
-      volumeName,
-    });
-
-    const catalogName = this.configService.getCatalogName();
-
-    // Create volume parameters
-    const params: CreateVolumeParams = {
-      catalog_name: catalogName,
-      schema_name: schemaName,
-      name: volumeName,
-      volume_type: "MANAGED",
-    };
-
-    // Add comment if provided
-    if (comment) {
-      params.comment = comment;
-    }
-
-    return this.volumesService.createVolume(params);
-  }
-
-  /**
-   * Get a volume from an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to retrieve
-   * @returns Result containing the volume information
-   */
-  async getExperimentVolume(
-    schemaName: string,
-    volumeName: string,
-  ): Promise<Result<VolumeResponse>> {
-    this.logger.log({
-      msg: "Getting volume",
-      operation: "getExperimentVolume",
-      schemaName,
-      volumeName,
-    });
-
-    const catalogName = this.configService.getCatalogName();
-
-    // Construct the full volume name
-    const fullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
-
-    return await this.volumesService.getVolume({ name: fullVolumeName });
-  }
-
-  /**
-   * Returns table metadata for a specific table in an experiment
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param tableName - Name of the table
-   */
-  async getTableMetadata(
-    schemaName: string,
-    tableName: string,
-  ): Promise<Result<Map<string, string>>> {
-    this.logger.log({
-      msg: "Checking table metadata",
-      operation: "getTableMetadata",
-      schemaName,
-      tableName,
-    });
-
-    const schemaQuery = `DESCRIBE ${tableName}`;
-
-    this.logger.debug({
-      msg: "Executing schema query",
-      operation: "getTableMetadata",
-      schemaName,
-      schemaQuery,
-    });
-    const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
-
-    if (schemaResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to get metadata",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "getTableMetadata",
-        schemaName,
-        tableName,
-        error: schemaResult.error,
-      });
-      return failure(AppError.internal(`Failed to get metadata: ${schemaResult.error.message}`));
-    }
-
-    const availableColumns = new Map(
-      schemaResult.value.rows
-        .filter((row) => row[0] != null && row[1] != null)
-        .map((row) => [row[0] as unknown as string, row[1] as unknown as string] as const),
-    );
-
-    return success(availableColumns);
   }
 
   /**
@@ -373,113 +268,93 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Build a SQL query to parse VARIANT column using provided schema
-   * Domain-specific implementation for experiment macro data
+   * Build query to lookup schema from experiment metadata tables
+   * - macros: queries experiment_macros for output_schema
+   * - questions: queries experiment_questions for questions_schema
    */
-  buildVariantParseQuery(params: {
-    schema: string;
-    table: string;
-    selectColumns: string[];
-    variantColumn: string | string[];
-    variantSchema: string | string[];
-    exceptColumns?: string[];
-    whereClause?: string;
-    orderBy?: string;
-    limit?: number;
-    offset?: number;
-  }): string {
+  buildSchemaLookupQuery(
+    params:
+      | { schema: string; experimentId: string; schemaType: "questions" }
+      | { schema: string; experimentId: string; schemaType: "macros"; macroFilename: string },
+  ): string {
     const catalog = this.configService.getCatalogName();
-    const fullTable = `${catalog}.${params.schema}.${params.table}`;
+    const { schema, experimentId, schemaType } = params;
 
-    return this.queryBuilder.buildVariantParseQuery({
-      table: fullTable,
-      selectColumns: params.selectColumns,
-      variantColumn: params.variantColumn,
-      variantSchema: params.variantSchema,
-      exceptColumns: params.exceptColumns,
-      whereClause: params.whereClause,
-      orderBy: params.orderBy,
-      limit: params.limit,
-      offset: params.offset,
+    if (schemaType === "questions") {
+      return this.queryBuilder.buildQuery({
+        table: `${catalog}.${schema}.experiment_questions`,
+        columns: ["questions_schema"],
+        whereConditions: [["experiment_id", experimentId]],
+        limit: 1,
+      });
+    }
+
+    // schemaType === "macros"
+    return this.queryBuilder.buildQuery({
+      table: `${catalog}.${schema}.experiment_macros`,
+      columns: ["output_schema"],
+      whereConditions: [
+        ["experiment_id", experimentId],
+        ["macro_filename", params.macroFilename],
+      ],
+      limit: 1,
     });
   }
 
   /**
-   * Build query to lookup schema from experiment_macros table
+   * Build a SQL query for experiment data with optional VARIANT parsing
+   * Automatically handles both simple SELECT and VARIANT parsing based on variants parameter
    */
-  buildSchemaLookupQuery(params: {
-    schema: string;
-    experimentId: string;
-    macroFilename: string;
-  }): string {
-    const catalog = this.configService.getCatalogName();
-    const table = `${catalog}.${params.schema}.experiment_macros`;
-
-    return this.queryBuilder
-      .query()
-      .select(["output_schema"])
-      .from(table)
-      .whereEquals("experiment_id", params.experimentId)
-      .whereEquals("macro_filename", params.macroFilename)
-      .limit(1)
-      .build();
-  }
-
-  /**
-   * Build query to get questions schema from experiment_questions table
-   */
-  buildQuestionsSchemaLookupQuery(params: { schema: string; experimentId: string }): string {
-    const catalog = this.configService.getCatalogName();
-    const table = `${catalog}.${params.schema}.experiment_questions`;
-
-    return this.queryBuilder
-      .query()
-      .select(["questions_schema"])
-      .from(table)
-      .whereEquals("experiment_id", params.experimentId)
-      .limit(1)
-      .build();
-  }
-
-  /**
-   * Get the physical table name for a logical table
-   * Maps logical names (sample, device) to physical centrum tables
-   */
-  private getPhysicalTableName(tableName: string): string {
-    const catalog = this.configService.getCatalogName();
-    if (tableName === "sample") return `${catalog}.centrum.enriched_experiment_raw_data`;
-    if (tableName === "device") return `${catalog}.centrum.experiment_device_data`;
-    return `${catalog}.centrum.enriched_experiment_macro_data`;
-  }
-
-  /**
-   * Build a SQL query for experiment data with proper table mapping and WHERE clause
-   */
-  buildExperimentDataQuery(params: {
+  buildExperimentQuery(params: {
     tableName: string;
     experimentId: string;
     columns?: string[];
+    variants?: { columnName: string; schema: string }[];
+    exceptColumns?: string[];
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
     limit?: number;
     offset?: number;
   }): string {
-    const { tableName, experimentId, columns, orderBy, orderDirection, limit, offset } = params;
-
-    const physicalTable = this.getPhysicalTableName(tableName);
-
-    // Construct WHERE conditions based on table type
-    const whereConditions: [string, string][] =
-      tableName === "sample" || tableName === "device"
-        ? [["experiment_id", experimentId]]
-        : [
-            ["experiment_id", experimentId],
-            ["macro_filename", tableName],
-          ];
-
-    return this.queryBuilder.buildSelectQuery({
-      table: physicalTable,
+    const {
+      tableName,
+      experimentId,
       columns,
+      variants,
+      exceptColumns,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    } = params;
+
+    const catalog = this.configService.getCatalogName();
+    const schema = this.configService.getCentrumSchemaName();
+
+    // Map table names to their corresponding physical tables
+    const tableMapping: Record<string, string> = {
+      [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
+      [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
+      [ExperimentTableName.RAW_AMBYTE_DATA]: this.RAW_AMBYTE_DATA_TABLE_NAME,
+    };
+
+    const targetTable = tableMapping[tableName];
+    const table = targetTable
+      ? `${catalog}.${schema}.${targetTable}`
+      : `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
+
+    const whereConditions: [string, string][] = targetTable
+      ? [["experiment_id", experimentId]]
+      : [
+          ["experiment_id", experimentId],
+          ["macro_filename", tableName],
+        ];
+
+    return this.queryBuilder.buildQuery({
+      table,
+      columns,
+      variants,
+      exceptColumns,
       whereConditions,
       orderBy,
       orderDirection,
@@ -490,63 +365,34 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
   /**
    * Build a COUNT query for experiment data
+   * - Regular tables (raw_data, device, raw_ambyte_data): Uses buildCountQuery
+   * - All macros (macro_data): Uses buildAggregateQuery grouped by macro filename
    */
-  buildExperimentCountQuery(tableName: string, experimentId: string): string {
-    const physicalTable = this.getPhysicalTableName(tableName);
-
-    // Construct WHERE conditions based on table type
-    const whereConditions: [string, string][] =
-      tableName === "sample" || tableName === "device"
-        ? [["experiment_id", experimentId]]
-        : [
-            ["experiment_id", experimentId],
-            ["macro_filename", tableName],
-          ];
-
-    return this.queryBuilder.buildCountQuery({
-      table: physicalTable,
-      whereConditions,
-    });
-  }
-
-  /**
-   * Build query to get macro metadata from experiment_macros table
-   */
-  buildMacrosMetadataQuery(experimentId: string): string {
+  buildExperimentCountQuery(tableName: ExperimentTableNameType, experimentId: string): string {
     const catalog = this.configService.getCatalogName();
-    const table = `${catalog}.centrum.experiment_macros`;
+    const schema = this.configService.getCentrumSchemaName();
 
+    const tableMapping: Record<string, string> = {
+      [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
+      [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
+      [ExperimentTableName.RAW_AMBYTE_DATA]: this.RAW_AMBYTE_DATA_TABLE_NAME,
+    };
+
+    const targetTable = tableMapping[tableName];
+
+    if (targetTable) {
+      return this.queryBuilder.buildCountQuery({
+        table: `${catalog}.${schema}.${targetTable}`,
+        whereConditions: [["experiment_id", experimentId]],
+      });
+    }
+
+    // MACRO_DATA: get all macros grouped by filename
     return this.queryBuilder.buildAggregateQuery({
-      table,
+      table: `${catalog}.${schema}.experiment_macros`,
       selectExpression:
         "macro_filename, MAX(macro_name) as macro_name, MAX(sample_count) as total_rows, MAX(output_schema) as output_schema",
       groupByColumns: "macro_filename",
-      whereConditions: [["experiment_id", experimentId]],
-    });
-  }
-
-  /**
-   * Build query to count rows in enriched_experiment_raw_data
-   */
-  buildRawDataCountQuery(experimentId: string): string {
-    const catalog = this.configService.getCatalogName();
-    const table = `${catalog}.centrum.enriched_experiment_raw_data`;
-
-    return this.queryBuilder.buildCountQuery({
-      table,
-      whereConditions: [["experiment_id", experimentId]],
-    });
-  }
-
-  /**
-   * Build query to count rows in experiment_device_data
-   */
-  buildDeviceDataCountQuery(experimentId: string): string {
-    const catalog = this.configService.getCatalogName();
-    const table = `${catalog}.centrum.experiment_device_data`;
-
-    return this.queryBuilder.buildCountQuery({
-      table,
       whereConditions: [["experiment_id", experimentId]],
     });
   }

@@ -1,5 +1,7 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
+import { ExperimentTableName, ExperimentTableNameType, zExperimentTableName } from "@repo/api";
+
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../core/models/experiment.model";
@@ -51,7 +53,7 @@ export class ExperimentDataRepository {
     offset?: number,
   ): Promise<Result<string>> {
     // Select strategy based on table name
-    if (tableName === "sample") {
+    if (tableName === ExperimentTableName.RAW_DATA) {
       return await this.buildRawDataQuery(
         experimentId,
         tableName,
@@ -61,8 +63,18 @@ export class ExperimentDataRepository {
         limit,
         offset,
       );
-    } else if (tableName === "device") {
+    } else if (tableName === ExperimentTableName.DEVICE) {
       return this.buildDeviceDataQuery(
+        experimentId,
+        tableName,
+        columns,
+        orderBy,
+        orderDirection,
+        limit,
+        offset,
+      );
+    } else if (tableName === ExperimentTableName.RAW_AMBYTE_DATA) {
+      return this.buildAmbyteDataQuery(
         experimentId,
         tableName,
         columns,
@@ -105,7 +117,7 @@ export class ExperimentDataRepository {
         msg: "No questions schema found, building query without questions expansion",
         experimentId,
       });
-      const query = this.databricksPort.buildExperimentDataQuery({
+      const query = this.databricksPort.buildExperimentQuery({
         tableName,
         experimentId,
         columns,
@@ -118,15 +130,14 @@ export class ExperimentDataRepository {
     }
 
     // Build query with questions_data VARIANT expansion
-    const query = this.databricksPort.buildVariantParseQuery({
-      schema: "centrum",
-      table: "enriched_experiment_raw_data",
-      selectColumns: columns ?? ["*"],
-      variantColumn: "questions_data",
-      variantSchema: questionsSchemaResult.value,
+    const query = this.databricksPort.buildExperimentQuery({
+      tableName,
+      experimentId,
+      columns,
+      variants: [{ columnName: "questions_data", schema: questionsSchemaResult.value }],
       exceptColumns: ["experiment_id"],
-      whereClause: `experiment_id = '${experimentId}'`,
-      orderBy: orderBy ? `${orderBy} ${orderDirection ?? "ASC"}` : undefined,
+      orderBy,
+      orderDirection,
       limit,
       offset,
     });
@@ -146,7 +157,32 @@ export class ExperimentDataRepository {
     limit?: number,
     offset?: number,
   ): Result<string> {
-    const query = this.databricksPort.buildExperimentDataQuery({
+    const query = this.databricksPort.buildExperimentQuery({
+      tableName,
+      experimentId,
+      columns,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    });
+
+    return success(query);
+  }
+
+  /**
+   * Build query for ambyte trace data
+   */
+  private buildAmbyteDataQuery(
+    experimentId: string,
+    tableName: string,
+    columns?: string[],
+    orderBy?: string,
+    orderDirection?: "ASC" | "DESC",
+    limit?: number,
+    offset?: number,
+  ): Result<string> {
+    const query = this.databricksPort.buildExperimentQuery({
       tableName,
       experimentId,
       columns,
@@ -177,21 +213,19 @@ export class ExperimentDataRepository {
     // Get questions schema for this experiment
     const questionsSchemaResult = await this.getQuestionsSchema(experimentId);
 
-    // Build query expanding macro_output and optionally questions_data
-    const variantColumns = ["macro_output"];
-    const variantSchemas = [macroSchemaResult.value];
+    // Hardcoded VARIANT columns for macro data table
+    const variants = [{ columnName: "macro_output", schema: macroSchemaResult.value }];
 
+    // Add questions_data if we have the schema
     if (questionsSchemaResult.isSuccess()) {
-      variantColumns.push("questions_data");
-      variantSchemas.push(questionsSchemaResult.value);
+      variants.push({ columnName: "questions_data", schema: questionsSchemaResult.value });
     }
 
-    const query = this.databricksPort.buildVariantParseQuery({
-      schema: "centrum",
-      table: "enriched_experiment_macro_data",
-      selectColumns: columns ?? ["*"],
-      variantColumn: variantColumns,
-      variantSchema: variantSchemas,
+    const query = this.databricksPort.buildExperimentQuery({
+      tableName,
+      experimentId,
+      columns,
+      variants,
       exceptColumns: [
         "experiment_id",
         "raw_id",
@@ -200,8 +234,8 @@ export class ExperimentDataRepository {
         "macro_filename",
         "date",
       ],
-      whereClause: `experiment_id = '${experimentId}' AND macro_filename = '${tableName}'`,
-      orderBy: orderBy ? `${orderBy} ${orderDirection ?? "ASC"}` : undefined,
+      orderBy,
+      orderDirection,
       limit,
       offset,
     });
@@ -213,12 +247,16 @@ export class ExperimentDataRepository {
    * Get VARIANT schema for questions in an experiment
    */
   async getQuestionsSchema(experimentId: string): Promise<Result<string>> {
-    const schemaQuery = this.databricksPort.buildQuestionsSchemaLookupQuery({
-      schema: "centrum",
+    const schemaQuery = this.databricksPort.buildSchemaLookupQuery({
+      schema: this.databricksPort.CENTRUM_SCHEMA_NAME,
       experimentId,
+      schemaType: "questions",
     });
 
-    const result = await this.databricksPort.executeSqlQuery("centrum", schemaQuery);
+    const result = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      schemaQuery,
+    );
 
     if (result.isFailure() || result.value.rows.length === 0) {
       this.logger.debug({
@@ -248,12 +286,16 @@ export class ExperimentDataRepository {
    */
   async getMacroSchema(experimentId: string, macroFilename: string): Promise<Result<string>> {
     const schemaQuery = this.databricksPort.buildSchemaLookupQuery({
-      schema: "centrum",
+      schema: this.databricksPort.CENTRUM_SCHEMA_NAME,
       experimentId,
+      schemaType: "macros",
       macroFilename,
     });
 
-    const result = await this.databricksPort.executeSqlQuery("centrum", schemaQuery);
+    const result = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      schemaQuery,
+    );
 
     if (result.isFailure() || result.value.rows.length === 0) {
       this.logger.warn({
@@ -296,7 +338,10 @@ export class ExperimentDataRepository {
       sqlQuery: query,
     });
 
-    const dataResult = await this.databricksPort.executeSqlQuery("centrum", query);
+    const dataResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      query,
+    );
     if (dataResult.isFailure()) {
       return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
     }
@@ -307,7 +352,7 @@ export class ExperimentDataRepository {
       {
         name: tableName,
         catalog_name: experiment.name,
-        schema_name: "centrum",
+        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
         data: this.transformSchemaData(dataResult.value),
         page: 1,
         pageSize: totalRows,
@@ -331,8 +376,16 @@ export class ExperimentDataRepository {
     const { tableName, experiment, experimentId, page, pageSize, query } = params;
 
     // Get total row count
-    const countQuery = this.databricksPort.buildExperimentCountQuery(tableName, experimentId);
-    const countResult = await this.databricksPort.executeSqlQuery("centrum", countQuery);
+    const countQuery = this.databricksPort.buildExperimentCountQuery(
+      zExperimentTableName.safeParse(tableName).success
+        ? (tableName as ExperimentTableNameType)
+        : ExperimentTableName.MACRO_DATA,
+      experimentId,
+    );
+    const countResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      countQuery,
+    );
     if (countResult.isFailure()) {
       return failure(AppError.internal(`Failed to get row count: ${countResult.error.message}`));
     }
@@ -340,7 +393,10 @@ export class ExperimentDataRepository {
     const totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
     const totalPages = Math.ceil(totalRows / pageSize);
 
-    const dataResult = await this.databricksPort.executeSqlQuery("centrum", query);
+    const dataResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      query,
+    );
     if (dataResult.isFailure()) {
       return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
     }
@@ -349,7 +405,7 @@ export class ExperimentDataRepository {
       {
         name: tableName,
         catalog_name: experiment.name,
-        schema_name: "centrum",
+        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
         data: this.transformSchemaData(dataResult.value),
         page,
         pageSize,

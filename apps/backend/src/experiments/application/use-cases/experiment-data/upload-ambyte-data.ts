@@ -71,8 +71,8 @@ export class UploadAmbyteDataUseCase {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    if (!experiment.schemaName) {
-      return failure(AppError.internal("Experiment schema not provisioned"));
+    if (experiment.status === "archived") {
+      return failure(AppError.forbidden("Cannot upload data to archived experiments"));
     }
 
     // Generate unique directory name
@@ -88,76 +88,16 @@ export class UploadAmbyteDataUseCase {
       directoryName,
     });
 
-    // Construct the volume name
+    // Volume assumed to exist - uploads go to /Volumes/{catalog}/centrum/data-uploads/
     const volumeName = UploadAmbyteDataUseCase.UPLOADS_VOLUME_NAME;
 
-    // Check if volume already exists
-    const getVolumeResult = await this.databricksPort.getExperimentVolume(
-      experiment.schemaName,
+    return success({
+      experiment,
       volumeName,
-    );
-
-    // If volume exists, return success
-    if (getVolumeResult.isSuccess()) {
-      this.logger.log({
-        msg: "Upload volume already exists",
-        operation: "prepareUploadEnvironment",
-        experimentId,
-        volumeName,
-        status: "success",
-      });
-      return success({
-        experiment,
-        volumeName,
-        volumeExists: true,
-        volumeCreated: false,
-        directoryName,
-      });
-    }
-
-    // Volume doesn't exist, create it
-    this.logger.log({
-      msg: "Volume doesn't exist, creating it",
-      operation: "prepareUploadEnvironment",
-      experimentId,
-      volumeName,
-      schemaName: experiment.schemaName,
+      volumeExists: true,
+      volumeCreated: false,
+      directoryName,
     });
-
-    const createVolumeResult = await this.databricksPort.createExperimentVolume(
-      experiment.schemaName,
-      volumeName,
-      `Ambyte data uploads volume for experiment ${experimentId}`,
-    );
-
-    if (createVolumeResult.isSuccess()) {
-      this.logger.log({
-        msg: "Successfully created volume",
-        operation: "prepareUploadEnvironment",
-        experimentId,
-        volumeName,
-        schemaName: experiment.schemaName,
-        status: "success",
-      });
-      return success({
-        experiment,
-        volumeName,
-        volumeExists: false,
-        volumeCreated: true,
-        directoryName,
-      });
-    } else {
-      this.logger.error({
-        msg: "Failed to create volume",
-        errorCode: ErrorCodes.EXPERIMENT_DATA_UPLOAD_FAILED,
-        operation: "prepareUploadEnvironment",
-        experimentId,
-        volumeName,
-        schemaName: experiment.schemaName,
-        error: createVolumeResult.error.message,
-      });
-      return failure(createVolumeResult.error);
-    }
   }
 
   /**
@@ -222,21 +162,6 @@ export class UploadAmbyteDataUseCase {
       return;
     }
 
-    if (!experiment.schemaName) {
-      this.logger.error({
-        msg: "Experiment has no schema name",
-        errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
-        operation: "processFileUpload",
-        experimentId: experiment.id,
-      });
-      errors.push({
-        fileName: file.filename,
-        error: "Experiment schema not provisioned",
-      });
-      file.stream.resume();
-      return;
-    }
-
     // Convert stream to buffer and upload the file to Databricks
     const buffer = await streamToBuffer(file.stream, {
       maxSize: UploadAmbyteDataUseCase.MAX_FILE_SIZE,
@@ -259,7 +184,8 @@ export class UploadAmbyteDataUseCase {
       fileSize: buffer.length,
     });
     const uploadResult = await this.databricksPort.uploadExperimentData(
-      experiment.schemaName,
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      experiment.id,
       sourceType,
       directoryName,
       trimmedFileName,
@@ -336,15 +262,7 @@ export class UploadAmbyteDataUseCase {
       experimentId: experiment.id,
     });
 
-    if (!experiment.schemaName) {
-      return failure(
-        AppError.internal(
-          `Experiment ${experiment.id} does not have a schema name. The experiment may not be fully provisioned.`,
-        ),
-      );
-    }
-
-    const jobResult = await this.databricksPort.triggerAmbyteProcessingJob(experiment.schemaName, {
+    const jobResult = await this.databricksPort.triggerAmbyteProcessingJob({
       EXPERIMENT_ID: experiment.id,
       EXPERIMENT_NAME: experiment.name,
       YEAR_PREFIX: "2025",

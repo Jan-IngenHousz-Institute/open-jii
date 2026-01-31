@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { ExperimentTableName } from "@repo/api";
+
 import ExperimentDataPage from "./page";
 
 globalThis.React = React;
@@ -135,7 +137,7 @@ describe("ExperimentDataPage", () => {
   const mockTablesData = {
     tables: [
       { name: "measurements", displayName: "Measurements", totalRows: 100 },
-      { name: "device", displayName: "Device Data", totalRows: 50 },
+      { name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 },
     ],
     isLoading: false,
     error: null,

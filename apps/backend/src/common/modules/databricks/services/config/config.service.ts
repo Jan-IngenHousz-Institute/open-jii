@@ -42,6 +42,13 @@ export class DatabricksConfigService {
       ),
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
+      centrumSchemaName: this.configService.getOrThrow<string>("databricks.centrumSchemaName"),
+      rawDataTableName: this.configService.getOrThrow<string>("databricks.rawDataTableName"),
+      deviceDataTableName: this.configService.getOrThrow<string>("databricks.deviceDataTableName"),
+      rawAmbyteDataTableName: this.configService.getOrThrow<string>(
+        "databricks.rawAmbyteDataTableName",
+      ),
+      macroDataTableName: this.configService.getOrThrow<string>("databricks.macroDataTableName"),
     };
   }
 
@@ -148,5 +155,40 @@ export class DatabricksConfigService {
    */
   getCatalogName(): string {
     return this.config.catalogName;
+  }
+
+  /**
+   * Returns the centrum schema name
+   */
+  getCentrumSchemaName(): string {
+    return this.config.centrumSchemaName;
+  }
+
+  /**
+   * Returns the raw data table name
+   */
+  getRawDataTableName(): string {
+    return this.config.rawDataTableName;
+  }
+
+  /**
+   * Returns the device data table name
+   */
+  getDeviceDataTableName(): string {
+    return this.config.deviceDataTableName;
+  }
+
+  /**
+   * Returns the raw ambyte data table name
+   */
+  getRawAmbyteDataTableName(): string {
+    return this.config.rawAmbyteDataTableName;
+  }
+
+  /**
+   * Returns the macro data table name
+   */
+  getMacroDataTableName(): string {
+    return this.config.macroDataTableName;
   }
 }

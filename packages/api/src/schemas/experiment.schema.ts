@@ -1,5 +1,29 @@
 import { z } from "zod";
 
+// --- Table Name Types ---
+/**
+ * Core table names that are always present in the centrum schema
+ */
+export const ExperimentTableName = {
+  RAW_DATA: "raw_data",
+  DEVICE: "device",
+  RAW_AMBYTE_DATA: "raw_ambyte_data",
+  MACRO_DATA: "macro_data",
+} as const;
+
+export type ExperimentTableNameType =
+  (typeof ExperimentTableName)[keyof typeof ExperimentTableName];
+
+/**
+ * Zod enum for core table names
+ */
+export const zExperimentTableName = z.enum(["raw_data", "device", "raw_ambyte_data", "macro_data"]);
+
+/**
+ * Union type: core table names OR string (for dynamic macro tables)
+ */
+export const zTableNameInput = z.union([zExperimentTableName, z.string().min(1).max(256)]);
+
 // --- Location Schemas ---
 export const zLocation = z.object({
   id: z.string().uuid(),
@@ -754,11 +778,9 @@ export const zExperimentFilterQuery = z.object({
 export const zExperimentDataQuery = z.object({
   page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
   pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
-  tableName: z
-    .string()
-    .min(1)
-    .max(256)
-    .describe("Optional table name to filter results to a specific table"),
+  tableName: zTableNameInput.describe(
+    "Table name: 'raw_data', 'device', 'raw_ambyte_data', or macro filename",
+  ),
   columns: z
     .string()
     .optional()
@@ -874,6 +896,9 @@ export const zExperimentTableMetadata = z.object({
   displayName: z.string().describe("Human-readable display name of the table for UI"),
   totalRows: z.number().int().describe("Total number of rows in the table"),
   columns: z.array(zColumnInfo).optional().describe("Column information for the table"),
+  defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
+  variants: z.array(z.string()).optional().describe("List of VARIANT column names in the table"),
+  errorColumn: z.string().optional().describe("Column name that contains error information if any"),
 });
 
 export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);

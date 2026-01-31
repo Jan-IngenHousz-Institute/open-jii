@@ -1,6 +1,8 @@
-export interface SelectQueryParams {
+export interface QueryParams {
   table: string;
   columns?: string[];
+  variants?: { columnName: string; schema: string }[];
+  exceptColumns?: string[];
   whereClause?: string;
   whereConditions?: [string, string][];
   orderBy?: string;
@@ -13,16 +15,4 @@ export interface CountQueryParams {
   table: string;
   whereClause?: string;
   whereConditions?: [string, string][];
-}
-
-export interface VariantParseQueryParams {
-  table: string;
-  selectColumns: string[];
-  variantColumn: string | string[];
-  variantSchema: string | string[];
-  exceptColumns?: string[];
-  whereClause?: string;
-  orderBy?: string;
-  limit?: number;
-  offset?: number;
 }

@@ -1,3 +1,5 @@
+import type { ExperimentTableNameType } from "@repo/api";
+
 import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
@@ -8,10 +10,6 @@ import type {
   DownloadLinksData,
 } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { ListTablesResponse } from "../../../common/modules/databricks/services/tables/tables.types";
-import type {
-  CreateVolumeParams,
-  VolumeResponse,
-} from "../../../common/modules/databricks/services/volumes/volumes.types";
 import type { Result } from "../../../common/utils/fp-utils";
 
 /**
@@ -24,6 +22,15 @@ export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
  * This interface defines the contract for external Databricks services
  */
 export interface DatabricksPort {
+  // Schema name
+  readonly CENTRUM_SCHEMA_NAME: string;
+
+  // Physical Databricks table names (only those consumed by repository)
+  readonly RAW_DATA_TABLE_NAME: string;
+  readonly DEVICE_DATA_TABLE_NAME: string;
+  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
+  readonly MACRO_DATA_TABLE_NAME: string;
+
   /**
    * Check if the Databricks service is available and responding
    */
@@ -33,7 +40,6 @@ export interface DatabricksPort {
    * Trigger the ambyte processing Databricks job with the specified parameters
    */
   triggerAmbyteProcessingJob(
-    schemaName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>>;
 
@@ -76,9 +82,10 @@ export interface DatabricksPort {
 
   /**
    * Upload data to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
+   * Constructs the path: /Volumes/{catalogName}/centrum/data-uploads/{experimentId}/{sourceType}/{directoryName}/{fileName}
    *
-   * @param schemaName - Schema name of the experiment
+   * @param schemaName - Schema name (should be "centrum")
+   * @param experimentId - ID of the experiment (used for subdirectory)
    * @param sourceType - Type of data source (e.g., 'ambyte')
    * @param directoryName - Unique directory name for this upload session
    * @param fileName - Name of the file
@@ -87,6 +94,7 @@ export interface DatabricksPort {
    */
   uploadExperimentData(
     schemaName: string,
+    experimentId: string,
     sourceType: string,
     directoryName: string,
     fileName: string,
@@ -94,86 +102,32 @@ export interface DatabricksPort {
   ): Promise<Result<UploadFileResponse>>;
 
   /**
-   * Create a new volume in Databricks Unity Catalog
+   * Build query to lookup schema from experiment metadata tables
+   * - macros: queries experiment_macros for output_schema (requires macroFilename)
+   * - questions: queries experiment_questions for questions_schema
    *
-   * @param params - Volume creation parameters
-   * @returns Result containing the created volume information
-   */
-  createVolume(params: CreateVolumeParams): Promise<Result<VolumeResponse>>;
-
-  /**
-   * Create a new managed volume under an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to create
-   * @param comment - Optional comment for the volume
-   * @returns Result containing the created volume information
-   */
-  createExperimentVolume(
-    schemaName: string,
-    volumeName: string,
-    comment?: string,
-  ): Promise<Result<VolumeResponse>>;
-
-  /**
-   * Get a volume from an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to retrieve
-   * @returns Result containing the volume information
-   */
-  getExperimentVolume(schemaName: string, volumeName: string): Promise<Result<VolumeResponse>>;
-
-  /**
-   * Build a SQL query to parse VARIANT column using provided schema
-   *
-   * @param params - Query building parameters including schema, table, columns, and variant schema
-   * @returns Formatted SQL query string
-   */
-  buildVariantParseQuery(params: {
-    schema: string;
-    table: string;
-    selectColumns: string[];
-    variantColumn: string | string[];
-    variantSchema: string | string[];
-    exceptColumns?: string[];
-    whereClause?: string;
-    orderBy?: string;
-    limit?: number;
-    offset?: number;
-  }): string;
-
-  /**
-   * Build query to lookup schema from experiment_macros table
-   *
-   * @param params - Schema lookup parameters including schema path, experiment ID, and macro filename
-   * @returns SQL query string to retrieve the output schema
-   */
-  buildSchemaLookupQuery(params: {
-    schema: string;
-    experimentId: string;
-    macroFilename: string;
-  }): string;
-
-  /**
-   * Build query to lookup questions schema from experiment_questions table
-   *
-   * @param params - Schema lookup parameters including schema path and experiment ID
-   * @returns SQL query string to retrieve the questions schema
-   */
-  buildQuestionsSchemaLookupQuery(params: { schema: string; experimentId: string }): string;
-
-  /**
-   * Build a SQL query for experiment data with proper table mapping and WHERE clause
-   * Handles logical to physical table mapping (sample -> experiment_raw_data, etc.)
-   *
-   * @param params - Query parameters including logical table name, experiment ID, columns, ordering, pagination
+   * @param params - Query parameters including schema type and conditional macro filename
    * @returns SQL query string
    */
-  buildExperimentDataQuery(params: {
+  buildSchemaLookupQuery(
+    params:
+      | { schema: string; experimentId: string; schemaType: "questions" }
+      | { schema: string; experimentId: string; schemaType: "macros"; macroFilename: string },
+  ): string;
+
+  /**
+   * Build a SQL query for experiment data with optional VARIANT parsing
+   * Consolidates simple queries and VARIANT parsing into one method
+   *
+   * @param params - Query parameters including table name, experiment ID, columns, variants, ordering, pagination
+   * @returns SQL query string
+   */
+  buildExperimentQuery(params: {
     tableName: string;
     experimentId: string;
     columns?: string[];
+    variants?: { columnName: string; schema: string }[];
+    exceptColumns?: string[];
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
     limit?: number;
@@ -182,35 +136,11 @@ export interface DatabricksPort {
 
   /**
    * Build a COUNT query for experiment data
-   * Handles logical to physical table mapping (sample -> experiment_raw_data, etc.)
+   * Handles logical to physical table mapping (raw_data -> experiment_raw_data, etc.)
    *
-   * @param tableName - Logical table name (sample, device, or macro filename)
+   * @param tableName - Logical table name (raw_data, device, or macro filename)
    * @param experimentId - The experiment ID to filter by
    * @returns SQL COUNT query string
    */
-  buildExperimentCountQuery(tableName: string, experimentId: string): string;
-
-  /**
-   * Build query to get macro metadata from experiment_macros table
-   *
-   * @param experimentId - The experiment ID to filter by
-   * @returns SQL query string to retrieve macro metadata
-   */
-  buildMacrosMetadataQuery(experimentId: string): string;
-
-  /**
-   * Build query to count rows in experiment_raw_data
-   *
-   * @param experimentId - The experiment ID to filter by
-   * @returns SQL COUNT query string
-   */
-  buildRawDataCountQuery(experimentId: string): string;
-
-  /**
-   * Build query to count rows in experiment_device_data
-   *
-   * @param experimentId - The experiment ID to filter by
-   * @returns SQL COUNT query string
-   */
-  buildDeviceDataCountQuery(experimentId: string): string;
+  buildExperimentCountQuery(tableName: ExperimentTableNameType, experimentId: string): string;
 }

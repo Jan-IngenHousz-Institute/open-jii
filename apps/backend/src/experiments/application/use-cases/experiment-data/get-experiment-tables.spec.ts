@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import { ExperimentTableName } from "@repo/api";
+
 import type { ListTablesResponse } from "../../../../common/modules/databricks/services/tables/tables.types";
 import {
   success,
@@ -64,12 +66,12 @@ describe("GetExperimentTablesUseCase", () => {
             properties: { downstream: "false", display_name: "Measurements" },
           },
           {
-            name: "device",
+            name: ExperimentTableName.DEVICE,
             catalog_name: experiment.name,
             schema_name: schemaName,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
-            properties: { downstream: "false", display_name: "Device Data" },
+            properties: { downstream: "false", display_name: "Device Metadata" },
           },
           {
             name: "annotations",
@@ -119,8 +121,8 @@ describe("GetExperimentTablesUseCase", () => {
           totalRows: 100,
         },
         {
-          name: "device",
-          displayName: "Device Data",
+          name: ExperimentTableName.DEVICE,
+          displayName: "Device Metadata",
           totalRows: 50,
         },
       ]);
@@ -165,7 +167,7 @@ describe("GetExperimentTablesUseCase", () => {
             properties: { downstream: "false", display_name: "Measurements" },
           },
           {
-            name: "raw_data",
+            name: ExperimentTableName.RAW_DATA,
             catalog_name: experiment.name,
             schema_name: schemaName,
             table_type: "MANAGED" as const,
@@ -529,12 +531,12 @@ describe("GetExperimentTablesUseCase", () => {
       const mockTablesResponse: ListTablesResponse = {
         tables: [
           {
-            name: "device",
+            name: ExperimentTableName.DEVICE,
             catalog_name: experiment.name,
             schema_name: schemaName,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
-            properties: { downstream: "false", display_name: "Device Data" },
+            properties: { downstream: "false", display_name: "Device Metadata" },
           },
           {
             name: "measurements",
@@ -593,7 +595,7 @@ describe("GetExperimentTablesUseCase", () => {
       // Device should be last
       expect(result.value[0]?.name).toBe("measurements");
       expect(result.value[1]?.name).toBe("events");
-      expect(result.value[2]?.name).toBe("device");
+      expect(result.value[2]?.name).toBe(ExperimentTableName.DEVICE);
     });
 
     it("should handle experiment without schemaName", async () => {

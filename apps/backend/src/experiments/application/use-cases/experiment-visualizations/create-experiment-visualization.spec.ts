@@ -1,7 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
@@ -14,7 +13,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
   let useCase: CreateExperimentVisualizationUseCase;
   let experimentRepository: ExperimentRepository;
   let experimentVisualizationRepository: ExperimentVisualizationRepository;
-  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -26,7 +24,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
     useCase = testApp.module.get(CreateExperimentVisualizationUseCase);
     experimentRepository = testApp.module.get(ExperimentRepository);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
-    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     vi.restoreAllMocks();
   });
