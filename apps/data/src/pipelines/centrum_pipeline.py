@@ -96,6 +96,7 @@ EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_QUESTIONS_TABLE = "experiment_questions"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
+RAW_AMBYTE_TABLE = "raw_ambyte_data"
 
 # Kinesis configuration parameters
 KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
@@ -393,7 +394,7 @@ def experiment_status():
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported",
         "downstream": "true",
-        "variants": "sample,questions_data"
+        "default_sort_column": "timestamp"
     }
 )
 def experiment_raw_data():
@@ -515,7 +516,8 @@ def experiment_raw_data():
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "downstream": "false",
-        "display_name": "Device Metadata"
+        "display_name": "Device Metadata",
+        "default_sort_column": "processed_timestamp"
     }
 )
 def experiment_device_data():
@@ -701,6 +703,7 @@ def experiment_macro_data():
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
+        "variants": "output_schema"
     }
 )
 def experiment_macros():
@@ -743,6 +746,7 @@ def experiment_macros():
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
+        "variants": "questions_schema"
     }
 )
 def experiment_questions():
@@ -815,7 +819,8 @@ def experiment_contributors():
         "delta.enableDeletionVectors": "true",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
-        "display_name": "Raw Data"
+        "display_name": "Raw Data",
+        "variants": "data,questions_data"
     }
 )
 def enriched_experiment_raw_data():
@@ -878,7 +883,9 @@ def enriched_experiment_raw_data():
         "delta.enableDeletionVectors": "true",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
-        "display_name": "Processed Macro Data"
+        "display_name": "Processed Macro Data",
+        "variants": "macro_output,questions_data",
+        "error_column": "macro_error"
     }
 )
 def enriched_experiment_macro_data():
@@ -932,6 +939,54 @@ def enriched_experiment_macro_data():
         catalog_name=CATALOG_NAME,
         experiment_schema="centrum",
         spark=spark
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Raw Ambyte Data - Streaming Table
+@dlt.table(
+    name=RAW_AMBYTE_TABLE,
+    comment="Streaming table: Pre-processed Ambyte trace data from parquet files, partitioned by experiment_id",
+    table_properties={
+        "quality": "bronze",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true",
+        "display_name": "Raw Ambyte Data",
+        "default_sort_column": "processed_at"
+    },
+    partition_cols=["experiment_id"]
+)
+def raw_ambyte_data():
+    """
+    Streaming table that reads pre-processed Ambyte trace data from parquet files.
+    
+    The ambyte_processing_task processes uploaded ambyte trace files and saves them
+    as parquet files organized by experiment_id. This table provides queryable access
+    to that processed data with experiment_id as the partition key.
+    
+    Path structure: /Volumes/{catalog}/centrum/data-uploads/{experiment_id}/processed-ambyte/*.parquet
+    
+    Uses Auto Loader (cloudFiles) to automatically detect and ingest new parquet files
+    as they are created by the ambyte processing task. Extracts experiment_id from the file path.
+    """
+    # Base path for all processed ambyte data across all experiments
+    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads"
+    
+    # Schema location for Auto Loader metadata (schema inference and checkpointing)
+    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/_schemas/ambyte_schema"
+    
+    # Read all parquet files recursively using cloudFiles for Auto Loader (streaming)
+    # This will automatically detect new files as they are added by the ambyte_processing_task
+    # The path pattern will match: /Volumes/{catalog}/centrum/data-uploads/*/processed-ambyte/*.parquet
+    # The experiment_id column is included in the parquet files by the ambyte_processing_task
+    return (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "parquet")
+        .option("cloudFiles.schemaLocation", schema_location)
+        .option("recursiveFileLookup", "true")
+        .option("pathGlobFilter", "*/processed-ambyte/*.parquet")  # Filter for processed ambyte files only
+        .load(processed_path)
     )
 
 # COMMAND ----------

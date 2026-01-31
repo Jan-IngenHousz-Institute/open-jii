@@ -24,84 +24,23 @@ from pyspark.dbutils import DBUtils
 # Import the ambyte processing utilities
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files, parse_upload_time
 
-# Pipeline management imports
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.pipelines import StartUpdateResponse
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # COMMAND ----------
 
-# DBTITLE 1,Configuration and Pipeline Management Classes
-
-@dataclass(frozen=True)
-class PipelineConfig:
-    """Configuration for finding and triggering experiment pipelines."""
-    experiment_id: str
-    experiment_name: str
-    environment: str = "DEV"
-    
-    @property
-    def pipeline_name(self) -> str:
-        """Standardized pipeline name matching the creation logic."""
-        clean_name = self.experiment_name.lower().strip().replace(' ', '_')
-        return f"exp-{clean_name}-DLT-Pipeline-{self.environment.upper()}"
-
-class ExperimentPipelineManager:
-    """Manages Delta Live Tables pipeline triggering for experiments."""
-    
-    def __init__(self, workspace_client: Optional[WorkspaceClient] = None):
-        self.client = workspace_client or WorkspaceClient()
-    
-    def find_existing_pipeline(self, config: PipelineConfig) -> Optional[str]:
-        """Find existing pipeline for the experiment."""
-        try:
-            pipelines = list(self.client.pipelines.list_pipelines())
-            
-            for pipeline in pipelines:
-                if pipeline.name == config.pipeline_name:
-                    logger.info(f"Found existing pipeline: {pipeline.pipeline_id}")
-                    return pipeline.pipeline_id
-                    
-            logger.warning(f"No existing pipeline found for experiment {config.experiment_id}")
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error searching for existing pipelines: {e}")
-            raise
-    
-    def trigger_execution(self, pipeline_id: str, experiment_id: str) -> str:
-        """Trigger pipeline execution."""
-        try:
-            logger.info(f"Triggering execution for pipeline {pipeline_id} (experiment {experiment_id})")
-            
-            response: StartUpdateResponse = self.client.pipelines.start_update(
-                pipeline_id=pipeline_id
-            )
-            
-            logger.info(f"Pipeline execution started with update ID: {response.update_id}")
-            return response.update_id
-            
-        except Exception as e:
-            logger.error(f"Failed to trigger pipeline execution: {e}")
-            raise
-
-# COMMAND ----------
-
 # DBTITLE 1,Task Configuration
 EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 EXPERIMENT_NAME = dbutils.widgets.get("EXPERIMENT_NAME")
-EXPERIMENT_SCHEMA = dbutils.widgets.get("EXPERIMENT_SCHEMA")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
 UPLOAD_DIRECTORY = dbutils.widgets.get("UPLOAD_DIRECTORY")
 YEAR_PREFIX = dbutils.widgets.get("YEAR_PREFIX")
 ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT") if dbutils.widgets.get("ENVIRONMENT") else "DEV"
 
-# Paths
-AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte/{UPLOAD_DIRECTORY}"
-PROCESSED_OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
+# Paths - all experiments use centrum schema
+AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/{EXPERIMENT_ID}/ambyte/{UPLOAD_DIRECTORY}"
+PROCESSED_OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/{EXPERIMENT_ID}/processed-ambyte"
 
 spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)
@@ -109,13 +48,6 @@ dbutils = DBUtils(spark)
 logger.info(f"Processing ambyte data for experiment: {EXPERIMENT_ID}")
 logger.info(f"Input path: {AMBYTE_BASE_PATH}")
 logger.info(f"Output path: {PROCESSED_OUTPUT_PATH}")
-
-# Pipeline configuration for triggering
-pipeline_config = PipelineConfig(
-    experiment_id=EXPERIMENT_ID,
-    experiment_name=EXPERIMENT_NAME,
-    environment=ENVIRONMENT
-)
 
 # COMMAND ----------
 
@@ -178,6 +110,9 @@ def process_and_save_ambyte_data():
                 
                 # Add Ambyte folder information as a column
                 df['ambyte_folder'] = ambyte_folder_name
+                
+                # Add experiment_id as a column for partitioning in centrum pipeline
+                df['experiment_id'] = EXPERIMENT_ID
                 
                 # Extract attributes and add as columns
                 # The attrs dict contains metadata like 'Actinic' and 'Dark'
@@ -270,64 +205,12 @@ def process_and_save_ambyte_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Pipeline Triggering Function
-def trigger_experiment_pipeline(config: PipelineConfig) -> Optional[str]:
-    """
-    Trigger the experiment's Delta Live Tables pipeline after successful data processing.
-    
-    Args:
-        config: Pipeline configuration
-        
-    Returns:
-        Update ID if pipeline was triggered, None if no pipeline found
-    """
-    try:
-        manager = ExperimentPipelineManager()
-        
-        # Find existing pipeline
-        pipeline_id = manager.find_existing_pipeline(config)
-        
-        if pipeline_id:
-            # Trigger pipeline execution
-            update_id = manager.trigger_execution(pipeline_id, config.experiment_id)
-            
-            logger.info(f"\n{'='*80}")
-            logger.info(f"Pipeline Triggered Successfully")
-            logger.info(f"{'='*80}")
-            logger.info(f"Pipeline Name: {config.pipeline_name}")
-            logger.info(f"Pipeline ID: {pipeline_id}")
-            logger.info(f"Update ID: {update_id}")
-            logger.info(f"Experiment ID: {config.experiment_id}")
-            logger.info(f"{'='*80}")
-            
-            return update_id
-        else:
-            logger.warning(f"\nWarning: No pipeline found with name '{config.pipeline_name}'")
-            logger.warning(f"   The experiment pipeline may not have been created yet.")
-            logger.warning(f"   Data processing completed but pipeline was not triggered.")
-            return None
-            
-    except Exception as e:
-        logger.error(f"\nError triggering pipeline: {e}")
-        logger.error(f"Pipeline trigger failed: {e}")
-        # Don't raise - data processing was successful, pipeline trigger is additional
-        return None
-
-# COMMAND ----------
-
-# DBTITLE 1,Execute Processing and Pipeline Trigger
+# DBTITLE 1,Execute Processing
 def main():
-    """Main execution function with data processing and pipeline triggering."""
+    """Main execution function with data processing."""
     try:
         # Process ambyte data
         processed, errors, data_saved = process_and_save_ambyte_data()
-        
-        pipeline_update_id = None
-        
-        # If data was successfully processed and saved, trigger the pipeline
-        if data_saved and processed > 0:
-            logger.info(f"\nTriggering experiment pipeline...")
-            pipeline_update_id = trigger_experiment_pipeline(pipeline_config)
         
         # Return comprehensive status
         status = {
@@ -335,8 +218,6 @@ def main():
             "processed_count": processed,
             "error_count": errors,
             "data_saved": data_saved,
-            "pipeline_triggered": pipeline_update_id is not None,
-            "pipeline_update_id": pipeline_update_id
         }
         
         return status
@@ -349,7 +230,6 @@ def main():
             "processed_count": 0,
             "error_count": 1,
             "data_saved": False,
-            "pipeline_triggered": False
         }
         return status
 
@@ -361,9 +241,8 @@ logger.info(f"{'='*80}")
 logger.info(f"Status: {result['status']}")
 logger.info(f"Data Processing: {result['processed_count']} processed, {result['error_count']} errors")
 logger.info(f"Data Saved: {result['data_saved']}")
-logger.info(f"Pipeline Triggered: {result['pipeline_triggered']}")
-if result.get('pipeline_update_id'):
-    logger.info(f"Pipeline Update ID: {result['pipeline_update_id']}")
+logger.info(f"{'='*80}")
+logger.info(f"Note: Processed data will be automatically ingested by centrum pipeline")
 logger.info(f"{'='*80}")
 
 dbutils.notebook.exit(result)

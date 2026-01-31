@@ -48,8 +48,6 @@ export class CreateUserProfileUseCase {
         return existingProfileResult;
       }
 
-      const existingProfile = existingProfileResult.value;
-
       // Create or update the profile
       const userProfileResult = await this.userRepository.createOrUpdateUserProfile(userId, data);
       return userProfileResult.chain(async (userProfile: UserProfileDto) => {

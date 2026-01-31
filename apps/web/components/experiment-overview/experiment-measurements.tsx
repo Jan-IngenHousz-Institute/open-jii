@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 import { useLocale } from "~/hooks/useLocale";
 
+import { ExperimentTableName } from "@repo/api";
 import {
   Button,
   Card,
@@ -33,7 +34,7 @@ export function ExperimentMeasurements({
     experimentId,
     1,
     4,
-    "device",
+    ExperimentTableName.DEVICE,
     "processed_timestamp",
     "DESC",
   );

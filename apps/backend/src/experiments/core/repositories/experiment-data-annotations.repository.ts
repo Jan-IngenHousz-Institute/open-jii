@@ -184,7 +184,10 @@ export class ExperimentDataAnnotationsRepository {
       ) VALUES ${valuesClauses.join(", ")}
     `;
 
-    const insertResult = await this.databricksPort.executeSqlQuery("centrum", insertQuery);
+    const insertResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      insertQuery,
+    );
     if (insertResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to insert annotations: ${insertResult.error.message}`),
@@ -236,7 +239,10 @@ export class ExperimentDataAnnotationsRepository {
       WHERE id = '${annotationId}' AND experiment_id = '${experimentId}'
     `;
 
-    const updateResult = await this.databricksPort.executeSqlQuery("centrum", updateQuery);
+    const updateResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      updateQuery,
+    );
     if (updateResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to update annotation: ${updateResult.error.message}`),
@@ -269,7 +275,10 @@ export class ExperimentDataAnnotationsRepository {
       WHERE id = '${annotationId}' AND experiment_id = '${experimentId}'
     `;
 
-    const deleteResult = await this.databricksPort.executeSqlQuery("centrum", deleteQuery);
+    const deleteResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      deleteQuery,
+    );
     if (deleteResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to delete annotation: ${deleteResult.error.message}`),
@@ -310,7 +319,10 @@ export class ExperimentDataAnnotationsRepository {
       AND row_id IN (${rowIdList})
     `;
 
-    const deleteResult = await this.databricksPort.executeSqlQuery("centrum", deleteQuery);
+    const deleteResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      deleteQuery,
+    );
     if (deleteResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to delete annotations: ${deleteResult.error.message}`),

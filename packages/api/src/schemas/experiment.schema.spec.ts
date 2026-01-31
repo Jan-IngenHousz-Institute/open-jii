@@ -732,7 +732,4 @@ describe("Experiment Schema", () => {
       expect(zCreateExperimentResponse.parse({ id: uuidA })).toEqual({ id: uuidA });
     });
   });
-
-  // ----- Webhooks -----
-  describe("Webhooks", () => {});
 });
