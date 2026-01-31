@@ -1,6 +1,5 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import type { DownloadLinksData } from "../../../../common/modules/databricks/services/sql/sql.types";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -124,7 +123,7 @@ export class DownloadExperimentDataUseCase {
 
       // Execute with EXTERNAL_LINKS disposition for efficient large dataset downloads
       const dataResult = await this.databricksPort.executeSqlQuery(
-        "centrum",
+        this.databricksPort.CENTRUM_SCHEMA_NAME,
         sqlQuery,
         "EXTERNAL_LINKS",
         "CSV",
@@ -136,12 +135,9 @@ export class DownloadExperimentDataUseCase {
         );
       }
 
-      // Type assertion: EXTERNAL_LINKS disposition returns DownloadLinksData
-      const data = dataResult.value as DownloadLinksData;
-
       // Transform the response to only include download links
       const response: DownloadExperimentDataDto = {
-        externalLinks: data.external_links.map((link) => ({
+        externalLinks: dataResult.value.external_links.map((link) => ({
           externalLink: link.external_link,
           expiration: link.expiration,
           totalSize: link.byte_count,
@@ -154,7 +150,7 @@ export class DownloadExperimentDataUseCase {
         operation: "downloadExperimentData",
         experimentId,
         tableName: query.tableName,
-        totalRows: data.totalRows,
+        totalRows: dataResult.value.totalRows,
         totalChunks: response.externalLinks.length,
         status: "success",
       });

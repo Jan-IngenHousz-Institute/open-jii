@@ -132,6 +132,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
               experimentId={id}
               tableName={table.name}
               displayName={table.displayName}
+              defaultSortColumn={table.defaultSortColumn}
+              errorColumn={table.errorColumn}
               pageSize={10}
             />
           </NavTabsContent>

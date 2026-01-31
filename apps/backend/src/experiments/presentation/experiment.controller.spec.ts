@@ -73,7 +73,7 @@ describe("ExperimentController", () => {
       const responseBody = response.body as { id: string };
 
       // Verify that Databricks job was triggered
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
         responseBody.id,
         {
@@ -113,7 +113,7 @@ describe("ExperimentController", () => {
       const responseBody = response.body as { id: string };
 
       // Verify that Databricks job was attempted
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
         responseBody.id,
         {
@@ -135,7 +135,7 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.BAD_REQUEST);
 
       // Verify that Databricks was not called for invalid requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
@@ -152,7 +152,7 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.UNAUTHORIZED);
 
       // Verify that Databricks was not called for unauthenticated requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
@@ -171,7 +171,7 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.BAD_REQUEST);
 
       // Verify that Databricks was not called for invalid requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
@@ -204,7 +204,7 @@ describe("ExperimentController", () => {
       expect(responseBody.embargoUntil).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
 
       // Verify that Databricks job was triggered
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
         responseBody.id,
         {
@@ -228,7 +228,7 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.BAD_REQUEST);
 
       // Verify that Databricks was not called for invalid requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
   });

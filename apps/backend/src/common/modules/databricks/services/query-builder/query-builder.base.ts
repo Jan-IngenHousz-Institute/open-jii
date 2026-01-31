@@ -1,9 +1,60 @@
-import type { QueryBuilderService } from "./query-builder.service";
+export abstract class BaseQueryBuilder {
+  abstract select(columns?: string[]): this;
+  abstract from(table: string): this;
+  abstract where(condition: string): this;
+  abstract limit(value: number): this;
+  abstract offset(value: number): this;
+  abstract build(): string;
+
+  /**
+   * Escape a SQL identifier (table name, column name, etc.)
+   * Wraps identifier in backticks to handle special characters and reserved words
+   */
+  escapeIdentifier(identifier: string): string {
+    return `\`${identifier.replace(/`/g, "``")}\``;
+  }
+
+  /**
+   * Escape a string value for SQL
+   * Escapes single quotes to prevent SQL injection
+   */
+  escapeValue(value: string): string {
+    return `'${value.replace(/'/g, "''")}'`;
+  }
+
+  /**
+   * Build a simple WHERE clause with AND conditions
+   * Each condition should be a tuple of [column, value]
+   */
+  buildWhereClause(conditions: [string, string][]): string {
+    return conditions
+      .map(([column, value]) => `${this.escapeIdentifier(column)} = ${this.escapeValue(value)}`)
+      .join(" AND ");
+  }
+
+  /**
+   * Transform VARIANT schema from schema_of_variant_agg() to from_json() compatible schema.
+   * Replaces OBJECT<...> with STRUCT<...> for DDL compatibility.
+   *
+   * Example:
+   * Input:  "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>>"
+   * Output: "STRUCT<phi2: DOUBLE, messages: STRUCT<text: STRING>>"
+   */
+  transformSchemaForFromJson(variantSchema: string): string {
+    if (!variantSchema) {
+      return "";
+    }
+
+    // Replace all occurrences of OBJECT with STRUCT
+    // This handles nested OBJECT types as well
+    return variantSchema.replace(/OBJECT</g, "STRUCT<");
+  }
+}
 
 /**
  * SQL Query Builder using fluent interface pattern
  */
-export class SqlQueryBuilder {
+export class SqlQueryBuilder extends BaseQueryBuilder {
   private selectClause = "*";
   private fromClause = "";
   private whereConditions: string[] = [];
@@ -12,11 +63,9 @@ export class SqlQueryBuilder {
   private limitValue?: number;
   private offsetValue?: number;
 
-  constructor(private readonly escaper: QueryBuilderService) {}
-
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
-      this.selectClause = columns.map((c) => this.escaper.escapeIdentifier(c)).join(", ");
+      this.selectClause = columns.map((c) => this.escapeIdentifier(c)).join(", ");
     } else {
       this.selectClause = "*";
     }
@@ -43,19 +92,19 @@ export class SqlQueryBuilder {
   }
 
   whereEquals(column: string, value: string): this {
-    const condition = `${this.escaper.escapeIdentifier(column)} = ${this.escaper.escapeValue(value)}`;
+    const condition = `${this.escapeIdentifier(column)} = ${this.escapeValue(value)}`;
     this.whereConditions.push(condition);
     return this;
   }
 
   groupBy(columns: string | string[]): this {
     const cols = Array.isArray(columns) ? columns : [columns];
-    this.groupByColumns = cols.map((c) => this.escaper.escapeIdentifier(c));
+    this.groupByColumns = cols.map((c) => this.escapeIdentifier(c));
     return this;
   }
 
   orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    this.orderByClause = `${this.escaper.escapeIdentifier(column)} ${direction}`;
+    this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
     return this;
   }
 
@@ -102,17 +151,15 @@ export class SqlQueryBuilder {
 /**
  * VARIANT Query Builder for parsing VARIANT columns
  */
-export class VariantQueryBuilder {
+export class VariantQueryBuilder extends BaseQueryBuilder {
   private selectClause = "*";
   private fromClause = "";
-  private variantColumns: Array<{ column: string; schema: string; alias: string }> = [];
+  private variantColumns: { column: string; schema: string; alias: string }[] = [];
   private whereConditions: string[] = [];
   private orderByClause?: string;
   private limitValue?: number;
   private offsetValue?: number;
   private exceptColumns: string[] = [];
-
-  constructor(private readonly escaper: QueryBuilderService) {}
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
@@ -193,7 +240,7 @@ export class VariantQueryBuilder {
     // Generate from_json calls for each VARIANT column
     const parsedColumns = this.variantColumns
       .map((v) => {
-        const transformedSchema = v.schema.replace(/OBJECT</g, "STRUCT<");
+        const transformedSchema = this.transformSchemaForFromJson(v.schema);
         return `from_json(${v.column}::string, '${transformedSchema}') as ${v.alias}`;
       })
       .join(",\n          ");

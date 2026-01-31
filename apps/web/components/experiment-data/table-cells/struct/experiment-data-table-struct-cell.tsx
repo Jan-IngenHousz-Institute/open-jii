@@ -5,44 +5,24 @@ import React, { useRef } from "react";
 
 import { Button, Collapsible, CollapsibleTrigger } from "@repo/ui/components";
 
-interface ExperimentDataTableMapCellProps {
-  data: string; // JSON string representation of the map
+interface ExperimentDataTableStructCellProps {
+  data: string; // JSON string representation of the struct
   columnName: string;
   rowId: string;
   isExpanded: boolean;
   onToggleExpansion?: (rowId: string, columnName: string) => void;
 }
 
-type ParsedMapData = Record<string, unknown>;
+type ParsedStructData = Record<string, unknown>;
 
-function parseMapData(data: string): ParsedMapData | null {
+function parseStructData(data: string): ParsedStructData | null {
   try {
-    // Try to parse as JSON first
     const parsed = JSON.parse(data) as unknown;
     if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as ParsedMapData;
+      return parsed as ParsedStructData;
     }
   } catch {
-    // If JSON parsing fails, try to parse simple key-value format
-    // Example: "key1=value1,key2=value2" or "{key1: value1, key2: value2}"
-    try {
-      // Remove surrounding braces if present
-      const cleaned = data.trim().replace(/^{|}$/g, "");
-      const pairs = cleaned.split(",");
-      const result: ParsedMapData = {};
-
-      for (const pair of pairs) {
-        const [key, ...valueParts] = pair.split(/[:=]/);
-        if (key && valueParts.length > 0) {
-          const value = valueParts.join(":").trim();
-          result[key.trim()] = value;
-        }
-      }
-
-      return Object.keys(result).length > 0 ? result : null;
-    } catch {
-      return null;
-    }
+    return null;
   }
   return null;
 }
@@ -60,40 +40,27 @@ function formatValue(value: unknown): string {
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
-  return "[objecet]";
+  return "[object]";
 }
 
-export function ExperimentDataTableMapCell({
+export function ExperimentDataTableStructCell({
   data,
   columnName,
   rowId,
   isExpanded,
   onToggleExpansion,
-}: ExperimentDataTableMapCellProps) {
+}: ExperimentDataTableStructCellProps) {
   const cellRef = useRef<HTMLDivElement>(null);
 
-  const parsedData = parseMapData(data);
+  const parsedData = parseStructData(data);
 
-  // If we can't parse the data as a map, just display it as text
+  // If we can't parse the data as a struct, just display it as text
   if (!parsedData) {
     return <span className="text-sm">{data}</span>;
   }
 
-  const entries = Object.entries(parsedData);
-  const entryCount = entries.length;
-
-  // If there's only one entry or it's empty, don't make it collapsible
-  if (entryCount <= 1) {
-    if (entryCount === 0) {
-      return <span className="muted-foreground text-sm">Empty map</span>;
-    }
-    const [key, value] = entries[0];
-    return (
-      <div className="text-sm">
-        <span className="font-medium">{key}:</span> {formatValue(value)}
-      </div>
-    );
-  }
+  const fields = Object.entries(parsedData);
+  const fieldCount = fields.length;
 
   return (
     <div ref={cellRef} className="relative">
@@ -109,7 +76,7 @@ export function ExperimentDataTableMapCell({
             </Button>
           </CollapsibleTrigger>
           <span className="muted-foreground text-sm">
-            {entryCount} {entryCount === 1 ? "entry" : "entries"}
+            {fieldCount} {fieldCount === 1 ? "field" : "fields"}
           </span>
         </div>
       </Collapsible>
@@ -117,25 +84,25 @@ export function ExperimentDataTableMapCell({
   );
 }
 
-interface MapExpandedContentProps {
+interface StructExpandedContentProps {
   data: string;
 }
 
-// New: Simplified expanded content for table row rendering
-export function MapExpandedContent({ data }: MapExpandedContentProps) {
-  const parsed = parseMapData(data);
+// Simplified expanded content for table row rendering
+export function StructExpandedContent({ data }: StructExpandedContentProps) {
+  const parsed = parseStructData(data);
 
   if (!parsed) {
     return null;
   }
 
-  const entries = Object.entries(parsed);
+  const fields = Object.entries(parsed);
 
   return (
     <div className="w-full p-4">
       <div className="w-full rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
         <div className="space-y-1">
-          {entries.map(([key, value]) => (
+          {fields.map(([key, value]) => (
             <div key={key} className="flex gap-2 text-sm">
               <span className="font-medium text-gray-700 dark:text-gray-300">{key}:</span>
               <span className="text-gray-600 dark:text-gray-400">{formatValue(value)}</span>

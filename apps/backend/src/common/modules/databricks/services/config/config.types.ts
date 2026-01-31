@@ -9,6 +9,11 @@ export interface DatabricksConfig {
   enrichedTablesRefreshJobId: string;
   warehouseId: string;
   catalogName: string;
+  centrumSchemaName: string;
+  rawDataTableName: string;
+  deviceDataTableName: string;
+  rawAmbyteDataTableName: string;
+  macroDataTableName: string;
 }
 
 export const databricksConfigSchema = z.object({
@@ -35,4 +40,9 @@ export const databricksConfigSchema = z.object({
     }),
   warehouseId: z.string().min(1),
   catalogName: z.string().min(1),
+  centrumSchemaName: z.string().min(1),
+  rawDataTableName: z.string().min(1),
+  deviceDataTableName: z.string().min(1),
+  rawAmbyteDataTableName: z.string().min(1),
+  macroDataTableName: z.string().min(1),
 });

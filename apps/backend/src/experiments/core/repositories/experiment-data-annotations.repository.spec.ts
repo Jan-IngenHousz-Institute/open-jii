@@ -25,9 +25,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
   let repository: ExperimentDataAnnotationsRepository;
   let databricksPort: DatabricksPort;
 
-  const mockExperimentName = "test_experiment";
   const mockExperimentId = faker.string.uuid();
-  const mockSchemaName = `exp_${mockExperimentName}_${mockExperimentId}`;
   const mockUserId = faker.string.uuid();
   const mockAnnotationId = faker.string.uuid();
   const mockRowId = faker.string.uuid();

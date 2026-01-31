@@ -13,3 +13,6 @@ export * from "./schemas/macro.schema";
 export * from "./schemas/user.schema";
 export * from "./schemas/protocol.schema";
 export * from "./schemas/protocol-validator";
+
+// Utility exports
+export * from "./utils/column-type-utils";

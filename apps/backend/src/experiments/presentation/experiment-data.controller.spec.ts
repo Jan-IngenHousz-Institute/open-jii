@@ -1099,7 +1099,7 @@ describe("ExperimentDataController", () => {
       // Verify the DatabricksAdapter was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.schemaName);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(databricksAdapter.downloadExperimentData).toHaveBeenCalledWith(
         experiment.schemaName,
         "SELECT * FROM bronze_data",
@@ -1275,7 +1275,7 @@ describe("ExperimentDataController", () => {
             schema_name: schemaName,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
-            properties: { downstream: "false", display_name: "Device Data" },
+            properties: { downstream: "false", display_name: "Device Metadata" },
           },
         ],
       };
@@ -1316,7 +1316,7 @@ describe("ExperimentDataController", () => {
         },
         {
           name: "device",
-          displayName: "Device Data",
+          displayName: "Device Metadata",
           totalRows: 50,
         },
       ]);
