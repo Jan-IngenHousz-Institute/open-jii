@@ -1,10 +1,10 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
+import { getAuthClient } from "~/services/auth";
 import { getEnvVar } from "~/stores/environment-store";
 
 import { contract } from "@repo/api";
-import { authClient } from "@repo/auth/client.native";
 
 function removeTrailingSlashes(value: string) {
   return value.replace(/\/+$/, "");
@@ -16,6 +16,7 @@ function removeLeadingSlashes(value: string) {
 
 const customApiFetcher = async (args: ApiFetcherArgs) => {
   // Get cookies from Better Auth client
+  const authClient = getAuthClient();
   const cookies = authClient.getCookie();
 
   const enhancedHeaders = {
