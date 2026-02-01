@@ -1,9 +1,7 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
-import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { Result, failure, AppError, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { ExperimentDataRepository } from "../../repositories/experiment-data.repository";
 
@@ -37,7 +35,6 @@ export class DownloadExperimentDataUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDataRepository: ExperimentDataRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
   async execute(
@@ -45,129 +42,79 @@ export class DownloadExperimentDataUseCase {
     userId: string,
     query: DownloadExperimentDataQuery,
   ): Promise<Result<DownloadExperimentDataDto>> {
-    try {
-      this.logger.debug({
-        msg: "Starting data download",
+    this.logger.debug({
+      msg: "Starting data download",
+      operation: "downloadExperimentData",
+      experimentId,
+      tableName: query.tableName,
+    });
+
+    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+
+    if (accessResult.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to check access for experiment",
         operation: "downloadExperimentData",
         experimentId,
-        tableName: query.tableName,
       });
-
-      // Validate experiment exists and user has access
-      const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
-
-      if (accessResult.isFailure()) {
-        this.logger.warn({
-          msg: "Failed to check access for experiment",
-          operation: "downloadExperimentData",
-          experimentId,
-        });
-        return failure(AppError.internal("Failed to verify experiment access"));
-      }
-
-      const { experiment, hasAccess } = accessResult.value;
-
-      if (!experiment) {
-        this.logger.warn({
-          msg: "Experiment not found",
-          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-          operation: "downloadExperimentData",
-          experimentId,
-        });
-        return failure(AppError.notFound("Experiment not found"));
-      }
-
-      if (!hasAccess && experiment.visibility !== "public") {
-        this.logger.warn({
-          msg: "Access denied to experiment",
-          errorCode: ErrorCodes.FORBIDDEN,
-          operation: "downloadExperimentData",
-          experimentId,
-          userId,
-        });
-        return failure(AppError.forbidden("Access denied to this experiment"));
-      }
-
-      // Build query using the same logic as get-experiment-data but for download
-      this.logger.debug({
-        msg: "Building download query for table",
-        operation: "downloadExperimentData",
-        experimentId,
-        tableName: query.tableName,
-      });
-
-      // Use experiment data repository to build the appropriate query
-      // This handles variant expansion for sample/macro data
-      const queryResult = await this.experimentDataRepository.buildQuery(
-        experimentId,
-        query.tableName,
-        undefined, // all columns
-        undefined, // no orderBy
-        undefined, // no orderDirection
-        undefined, // no limit
-        undefined, // no offset
-      );
-
-      if (queryResult.isFailure()) {
-        return failure(queryResult.error);
-      }
-
-      const sqlQuery = queryResult.value;
-
-      this.logger.debug({
-        msg: "Executing download query with EXTERNAL_LINKS",
-        operation: "downloadExperimentData",
-        experimentId,
-        tableName: query.tableName,
-      });
-
-      // Execute with EXTERNAL_LINKS disposition for efficient large dataset downloads
-      const dataResult = await this.databricksPort.executeSqlQuery(
-        this.databricksPort.CENTRUM_SCHEMA_NAME,
-        sqlQuery,
-        "EXTERNAL_LINKS",
-        "CSV",
-      );
-
-      if (dataResult.isFailure()) {
-        return failure(
-          AppError.internal(`Failed to execute download query: ${dataResult.error.message}`),
-        );
-      }
-
-      // Transform the response to only include download links
-      const response: DownloadExperimentDataDto = {
-        externalLinks: dataResult.value.external_links.map((link) => ({
-          externalLink: link.external_link,
-          expiration: link.expiration,
-          totalSize: link.byte_count,
-          rowCount: link.row_count,
-        })),
-      };
-
-      this.logger.log({
-        msg: "Successfully prepared download",
-        operation: "downloadExperimentData",
-        experimentId,
-        tableName: query.tableName,
-        totalRows: dataResult.value.totalRows,
-        totalChunks: response.externalLinks.length,
-        status: "success",
-      });
-
-      return success(response);
-    } catch (error) {
-      this.logger.error({
-        msg: "Unexpected error in download experiment data use case",
-        errorCode: ErrorCodes.EXPERIMENT_DATA_DOWNLOAD_FAILED,
-        operation: "downloadExperimentData",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-      return failure(
-        AppError.internal(
-          `Failed to prepare data download: ${error instanceof Error ? error.message : "Unknown error"}`,
-        ),
-      );
+      return failure(AppError.internal("Failed to verify experiment access"));
     }
+
+    const { experiment, hasAccess } = accessResult.value;
+
+    if (!experiment) {
+      this.logger.warn({
+        msg: "Experiment not found",
+        errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
+        operation: "downloadExperimentData",
+        experimentId,
+      });
+      return failure(AppError.notFound("Experiment not found"));
+    }
+
+    if (!hasAccess && experiment.visibility !== "public") {
+      this.logger.warn({
+        msg: "Access denied to experiment",
+        errorCode: ErrorCodes.FORBIDDEN,
+        operation: "downloadExperimentData",
+        experimentId,
+        userId,
+      });
+      return failure(AppError.forbidden("Access denied to this experiment"));
+    }
+
+    const downloadResult = await this.experimentDataRepository.getTableDataForDownload({
+      experimentId,
+      tableName: query.tableName,
+    });
+
+    if (downloadResult.isFailure()) {
+      this.logger.error({
+        msg: "Failed to get download links for experiment data",
+        operation: "downloadExperimentData",
+        experimentId,
+        tableName: query.tableName,
+        error: downloadResult.error.message,
+      });
+      return failure(AppError.internal("Failed to prepare data download"));
+    }
+
+    return success(downloadResult.value).map(
+      (downloadData: DownloadExperimentDataDto & { totalRows: number }) => {
+        this.logger.log({
+          msg: "Successfully prepared download",
+          operation: "downloadExperimentData",
+          experimentId,
+          tableName: query.tableName,
+          totalRows: downloadData.totalRows,
+          totalChunks: downloadData.externalLinks.length,
+          status: "success",
+        });
+
+        return {
+          externalLinks: downloadData.externalLinks,
+        };
+      },
+    );
   }
 }

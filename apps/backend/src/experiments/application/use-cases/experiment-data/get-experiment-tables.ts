@@ -105,10 +105,10 @@ export class GetExperimentTablesUseCase {
         }
 
         const tables = metadataResult.value.map(({ tableName, rowCount }) => {
+          const isKnownTable = tableName in this.tableProperties;
           const properties = this.tableProperties[tableName];
 
-          // Known physical table - use predefined properties
-          if (properties) {
+          if (isKnownTable) {
             return {
               name: tableName,
               displayName: properties.displayName,
@@ -118,7 +118,6 @@ export class GetExperimentTablesUseCase {
             };
           }
 
-          // Macro table - use tableName as macro name
           return {
             name: tableName,
             displayName: `Processed Data (${tableName})`,
