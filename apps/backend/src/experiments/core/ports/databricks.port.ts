@@ -1,5 +1,3 @@
-import type { ExperimentTableNameType } from "@repo/api";
-
 import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
@@ -102,18 +100,38 @@ export interface DatabricksPort {
   ): Promise<Result<UploadFileResponse>>;
 
   /**
-   * Build query to lookup schema from experiment metadata tables
-   * - macros: queries experiment_macros for output_schema (requires macroFilename)
-   * - questions: queries experiment_questions for questions_schema
+   * Get consolidated experiment table metadata (row counts and schemas) from the
+   * experiment_table_metadata cache table. This is a single-query optimization
+   * that replaces multiple separate queries.
    *
-   * @param params - Query parameters including schema type and conditional macro filename
-   * @returns SQL query string
+   * Returns metadata for all tables in an experiment:
+   * - Raw data table
+   * - Device data table
+   * - Ambyte data table
+   * - All macro tables
+   *
+   * @param experimentId - The experiment identifier
+   * @param options - Optional configuration
+   * @param options.tableName - If provided, only return metadata for this specific table
+   * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
+   * @returns Result containing array of table metadata with schemas and row counts
    */
-  buildSchemaLookupQuery(
-    params:
-      | { schema: string; experimentId: string; schemaType: "questions" }
-      | { schema: string; experimentId: string; schemaType: "macros"; macroFilename: string },
-  ): string;
+  getExperimentTableMetadata(
+    experimentId: string,
+    options?: {
+      tableName?: string;
+      includeSchemas?: boolean;
+    },
+  ): Promise<
+    Result<
+      {
+        tableName: string;
+        rowCount: number;
+        macroSchema?: string | null;
+        questionsSchema?: string | null;
+      }[]
+    >
+  >;
 
   /**
    * Build a SQL query for experiment data with optional VARIANT parsing
@@ -133,14 +151,4 @@ export interface DatabricksPort {
     limit?: number;
     offset?: number;
   }): string;
-
-  /**
-   * Build a COUNT query for experiment data
-   * Handles logical to physical table mapping (raw_data -> experiment_raw_data, etc.)
-   *
-   * @param tableName - Logical table name (raw_data, device, or macro filename)
-   * @param experimentId - The experiment ID to filter by
-   * @returns SQL COUNT query string
-   */
-  buildExperimentCountQuery(tableName: ExperimentTableNameType, experimentId: string): string;
 }

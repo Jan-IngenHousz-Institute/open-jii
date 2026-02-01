@@ -3,7 +3,7 @@
 import React from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { ExperimentTableMetadata } from "@repo/api";
+import type { DataColumn } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Badge,
@@ -25,7 +25,7 @@ import type { ChartFormValues } from "../../chart-configurator-util";
 
 interface ColorDimensionConfigurationProps {
   form: UseFormReturn<ChartFormValues>;
-  table: ExperimentTableMetadata;
+  columns: DataColumn[];
   colorAxisDataSources: { field: { columnName: string; role: string }; index: number }[];
   appendDataSource: (dataSource: {
     tableName: string;
@@ -38,7 +38,7 @@ interface ColorDimensionConfigurationProps {
 
 export default function ColorDimensionConfiguration({
   form,
-  table,
+  columns,
   colorAxisDataSources,
   appendDataSource,
   removeDataSource,
@@ -214,12 +214,12 @@ export default function ColorDimensionConfiguration({
                   {t("configuration.columns.noColorMapping")}
                 </span>
               </SelectItem>
-              {table.columns?.map((column) => (
+              {columns.map((column) => (
                 <SelectItem key={column.name} value={column.name}>
                   <div className="flex items-center gap-2">
                     <span>{column.name}</span>
                     <Badge variant="secondary" className="text-xs">
-                      {column.type_name}
+                      {column.type_text}
                     </Badge>
                   </div>
                 </SelectItem>

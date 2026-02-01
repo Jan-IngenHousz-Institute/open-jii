@@ -219,7 +219,7 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment tables metadata",
     description:
-      "Retrieves metadata for all tables in the experiment (names, display names, row counts) without data",
+      "Retrieves metadata for all tables in the experiment (names, display names, row counts)",
   },
 
   listExperimentProtocols: {

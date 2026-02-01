@@ -106,9 +106,10 @@ export function ExperimentDataTable({
     isPinned: boolean;
   } | null>(null);
 
-  // Expandable cell state - tracks which row+column combination is expanded
-  // Key format: "rowId:columnName"
-  const [expandedCells, setExpandedCells] = useState<Record<string, boolean>>({});
+  // Expandable cell state - only one cell can be expanded at a time
+  const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
+    null,
+  );
 
   const { t } = useTranslation();
 
@@ -133,16 +134,16 @@ export function ExperimentDataTable({
 
   // Expandable cell handlers
   const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
-    const key = `${rowId}:${columnName}`;
-    setExpandedCells((prev) => (prev[key] ? { ...prev, [key]: false } : { [key]: true }));
+    setExpandedCell((prev) =>
+      prev?.rowId === rowId && prev?.columnName === columnName ? null : { rowId, columnName },
+    );
   }, []);
 
   const isCellExpanded = useCallback(
     (rowId: string, columnName: string) => {
-      const key = `${rowId}:${columnName}`;
-      return expandedCells[key] || false;
+      return expandedCell?.rowId === rowId && expandedCell?.columnName === columnName;
     },
-    [expandedCells],
+    [expandedCell],
   );
 
   // Annotation dialog handlers
@@ -181,21 +182,21 @@ export function ExperimentDataTable({
   );
 
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
-    pagination.pageIndex + 1,
-    pagination.pageSize,
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
     tableName,
-    sortColumn,
-    sortDirection,
-    formatValue,
-    toggleChartPin,
-    openAddAnnotationDialog,
-    openDeleteAnnotationsDialog,
-    toggleCellExpansion,
+    orderBy: sortColumn,
+    orderDirection: sortDirection,
+    formatFunction: formatValue,
+    onChartClick: toggleChartPin,
+    onAddAnnotation: openAddAnnotationDialog,
+    onDeleteAnnotations: openDeleteAnnotationsDialog,
+    onToggleCellExpansion: toggleCellExpansion,
     isCellExpanded,
     errorColumn,
-  );
+  });
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
@@ -369,7 +370,7 @@ export function ExperimentDataTable({
                 <ExperimentDataRows
                   rows={table.getRowModel().rows}
                   columnCount={columnCount}
-                  expandedCells={expandedCells}
+                  expandedCell={expandedCell}
                   tableRows={tableRows}
                   columns={persistedMetaData?.rawColumns ?? []}
                   errorColumn={errorColumn}

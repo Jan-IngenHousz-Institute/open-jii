@@ -1,12 +1,10 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import type { ExperimentDataQuery } from "@repo/api";
 
 import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 import type { TableDataDto } from "../../../repositories/experiment-data.repository";
 import { ExperimentDataRepository } from "../../../repositories/experiment-data.repository";
@@ -26,7 +24,6 @@ export class GetExperimentDataUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDataRepository: ExperimentDataRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
   /**
@@ -94,37 +91,18 @@ export class GetExperimentDataUseCase {
           return failure(AppError.badRequest("tableName parameter is required"));
         }
 
-        // Build query with appropriate parameters
         const parsedColumns = columns?.split(",").map((c) => c.trim());
-        const offset = columns ? undefined : (page - 1) * pageSize;
-        const limit = columns ? undefined : pageSize;
 
-        const queryResult = await this.experimentDataRepository.buildQuery(
+        return this.experimentDataRepository.getTableData({
           experimentId,
+          experiment,
           tableName,
-          parsedColumns,
+          columns: parsedColumns,
           orderBy,
           orderDirection,
-          limit,
-          offset,
-        );
-        if (queryResult.isFailure()) return queryResult;
-
-        // Fetch based on whether specific columns were requested
-        return columns
-          ? this.experimentDataRepository.getFullTableData({
-              tableName,
-              experiment,
-              query: queryResult.value,
-            })
-          : this.experimentDataRepository.getTableDataPage({
-              tableName,
-              experiment,
-              experimentId,
-              page,
-              pageSize,
-              query: queryResult.value,
-            });
+          page,
+          pageSize,
+        });
       },
     );
   }

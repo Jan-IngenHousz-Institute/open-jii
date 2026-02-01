@@ -31,7 +31,7 @@ export class QueryBuilderService {
    * Automatically handles both simple SELECT and VARIANT parsing based on variants parameter.
    *
    * @param params.table - Fully qualified table name
-   * @param params.columns - Columns to select (e.g., ["id", "timestamp"] or ["*"])
+   * @param params.columns - Columns to select (e.g., ["id", "timestamp"])
    * @param params.variants - Optional VARIANT columns with schemas for parsing
    * @param params.exceptColumns - Optional columns to exclude from result
    * @param params.whereClause - Optional WHERE clause string
@@ -45,18 +45,20 @@ export class QueryBuilderService {
     if (params.variants && params.variants.length > 0) {
       return this.buildVariantSelectQuery({
         table: params.table,
-        columns: params.columns ?? ["*"],
+        columns: params.columns,
         variants: params.variants,
         exceptColumns: params.exceptColumns,
         whereClause: params.whereClause,
+        whereConditions: params.whereConditions,
         orderBy: params.orderBy,
+        orderDirection: params.orderDirection,
         limit: params.limit,
         offset: params.offset,
       });
     } else {
       return this.buildSelectQuery({
         table: params.table,
-        columns: params.columns ?? ["*"],
+        columns: params.columns,
         whereClause: params.whereClause,
         whereConditions: params.whereConditions,
         orderBy: params.orderBy,
@@ -82,33 +84,6 @@ export class QueryBuilderService {
       const clause = builder.buildWhereClause(whereConditions);
       builder.where(clause);
     }
-
-    return builder.build();
-  }
-
-  /**
-   * Build an aggregate query with GROUP BY
-   * @param table - Fully qualified table name
-   * @param selectExpression - Raw SELECT expression (e.g., "col1, MAX(col2) as max_col2")
-   * @param groupByColumns - Column(s) to group by
-   * @param whereConditions - Optional WHERE conditions as [column, value] tuples
-   */
-  buildAggregateQuery(params: {
-    table: string;
-    selectExpression: string;
-    groupByColumns: string | string[];
-    whereConditions?: [string, string][];
-  }): string {
-    const { table, selectExpression, groupByColumns, whereConditions } = params;
-
-    const builder = this.query().selectRaw(selectExpression).from(table);
-
-    if (whereConditions) {
-      const clause = builder.buildWhereClause(whereConditions);
-      builder.where(clause);
-    }
-
-    builder.groupBy(groupByColumns);
 
     return builder.build();
   }
@@ -162,11 +137,13 @@ export class QueryBuilderService {
   private buildVariantSelectQuery(params: QueryParams): string {
     const {
       table,
-      columns = ["*"],
+      columns,
       variants = [],
       exceptColumns,
       whereClause,
+      whereConditions,
       orderBy,
+      orderDirection,
       limit,
       offset,
     } = params;
@@ -184,10 +161,13 @@ export class QueryBuilderService {
 
     if (whereClause) {
       builder.where(whereClause);
+    } else if (whereConditions) {
+      const clause = builder.buildWhereClause(whereConditions);
+      builder.where(clause);
     }
 
     if (orderBy) {
-      builder.orderBy(orderBy);
+      builder.orderBy(orderBy, orderDirection);
     }
 
     if (limit !== undefined) {

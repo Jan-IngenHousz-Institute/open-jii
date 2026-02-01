@@ -30,14 +30,14 @@ export function ExperimentMeasurements({
   isArchived = false,
 }: ExperimentMeasurementsProps) {
   const locale = useLocale();
-  const { tableRows, isLoading, error } = useExperimentData(
+  const { tableRows, isLoading, error } = useExperimentData({
     experimentId,
-    1,
-    4,
-    ExperimentTableName.DEVICE,
-    "processed_timestamp",
-    "DESC",
-  );
+    page: 1,
+    pageSize: 4,
+    tableName: ExperimentTableName.DEVICE,
+    orderBy: "processed_timestamp",
+    orderDirection: "DESC",
+  });
   const { t } = useTranslation("experiments");
   if (isLoading) {
     return (

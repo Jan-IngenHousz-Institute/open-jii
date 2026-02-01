@@ -38,7 +38,9 @@
       "title": "Gegevensbron",
       "help": "Kies welke tabel te visualiseren",
       "selectTable": "Selecteer tabel",
-      "tableInfo": "{{name}} ({{totalRows}} rijen)"
+      "tableInfo": "{{name}}",
+      "noTablesAvailable": "Geen tabellen beschikbaar",
+      "loadingColumns": "Kolommen laden..."
     }
   },
 

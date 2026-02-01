@@ -1,6 +1,5 @@
 "use client";
 
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api";
@@ -24,13 +23,13 @@ import type { ChartFormValues } from "../../chart-configurator-util";
 
 interface XAxisConfigurationProps {
   form: UseFormReturn<ChartFormValues>;
-  table: ExperimentTableWithColumns;
+  columns: DataColumn[];
   xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
 }
 
 export default function XAxisConfiguration({
   form,
-  table,
+  columns,
   xAxisDataSources,
 }: XAxisConfigurationProps) {
   const { t } = useTranslation("experimentVisualizations");
@@ -73,7 +72,7 @@ export default function XAxisConfiguration({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {table.columns.map((column: DataColumn) => (
+                  {columns.map((column) => (
                     <SelectItem key={column.name} value={column.name}>
                       <div className="flex items-center gap-2">
                         <span>{column.name}</span>

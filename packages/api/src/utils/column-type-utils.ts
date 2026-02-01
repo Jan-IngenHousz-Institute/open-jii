@@ -131,3 +131,16 @@ export function isWellKnownType(type?: string): boolean {
   if (!type) return false;
   return (Object.values(WellKnownColumnTypes) as string[]).includes(type);
 }
+
+/**
+ * Check if a column type is valid for use as a graph axis source
+ * Valid types include: numeric types and timestamps
+ */
+export function isValidAxisSource(type?: string): boolean {
+  if (!type) return false;
+  // Numeric types can be plotted on either axis
+  if (isNumericType(type)) return true;
+  // Timestamps are common for time-series x-axis
+  if (isTimestampType(type)) return true;
+  return false;
+}

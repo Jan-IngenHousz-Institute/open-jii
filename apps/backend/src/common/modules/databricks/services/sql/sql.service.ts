@@ -216,6 +216,7 @@ export class DatabricksSqlService {
       name: column.name,
       type_name: column.type_name,
       type_text: column.type_text,
+      position: column.position,
     }));
 
     return {

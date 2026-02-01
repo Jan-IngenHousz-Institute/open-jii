@@ -236,14 +236,14 @@ export function ExperimentTableHeader({
 export function ExperimentDataRows({
   rows,
   columnCount,
-  expandedCells = {},
+  expandedCell,
   tableRows,
   columns = [],
   errorColumn,
 }: {
   rows: Row<DataRow>[];
   columnCount: number;
-  expandedCells?: Record<string, boolean>;
+  expandedCell?: { rowId: string; columnName: string } | null;
   tableRows?: DataRow[];
   columns?: TableMetadata["rawColumns"];
   errorColumn?: string;
@@ -266,10 +266,11 @@ export function ExperimentDataRows({
     // Check if this row has an error
     const hasError = errorColumn && row.original[errorColumn];
 
-    // Check if any cell in this row is expanded
-    const expandedCell = Object.keys(expandedCells).find((key) => {
-      return key.startsWith(`${rowId}:`) && expandedCells[key];
-    });
+    // Check if this row has an expanded cell
+    const expandedColumn =
+      expandedCell?.rowId === rowId
+        ? columns.find((col) => col.name === expandedCell.columnName)
+        : undefined;
 
     return (
       <React.Fragment key={row.id}>
@@ -291,13 +292,13 @@ export function ExperimentDataRows({
         </TableRow>
 
         {/* Render expanded row if any cell is expanded */}
-        {expandedCell && tableRows && (
+        {expandedColumn && tableRows && (
           <ExperimentDataTableCellCollapsible
             key={`${row.id}-expanded`}
             columnCount={columnCount}
-            columnName={expandedCell.split(":")[1]}
-            columnType={columns.find((col) => col.name === expandedCell.split(":")[1])?.type ?? ""}
-            cellData={row.original[expandedCell.split(":")[1]] as string}
+            columnName={expandedColumn.name}
+            columnType={expandedColumn.type_text}
+            cellData={row.original[expandedColumn.name]}
           />
         )}
       </React.Fragment>

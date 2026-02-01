@@ -1,6 +1,5 @@
 "use client";
 
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { Plus, Trash2, Layers } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -32,7 +31,7 @@ import { getDefaultSeriesColor } from "../../chart-configurator-util";
 
 interface YAxisConfigurationProps {
   form: UseFormReturn<ChartFormValues>;
-  table: ExperimentTableWithColumns;
+  columns: DataColumn[];
   yAxisDataSources: { field: { id: string; columnName: string; role: string }; index: number }[];
   addYAxisSeries: () => void;
   removeDataSource: (index: number) => void;
@@ -41,7 +40,7 @@ interface YAxisConfigurationProps {
 
 export default function YAxisConfiguration({
   form,
-  table,
+  columns,
   yAxisDataSources,
   addYAxisSeries,
   removeDataSource,
@@ -151,7 +150,7 @@ export default function YAxisConfiguration({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {table.columns.map((column: DataColumn) => (
+                            {columns.map((column) => (
                               <SelectItem key={column.name} value={column.name}>
                                 <div className="flex items-center gap-2">
                                   <span>{column.name}</span>

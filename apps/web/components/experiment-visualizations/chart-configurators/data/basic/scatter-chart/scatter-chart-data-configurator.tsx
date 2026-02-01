@@ -1,8 +1,9 @@
 "use client";
 
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useFieldArray } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
+
+import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import ColorDimensionConfiguration from "../../shared/color-dimension-configuration";
@@ -11,12 +12,12 @@ import YAxisConfiguration from "../../shared/y-axis-configuration";
 
 interface ScatterChartDataConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
-  table: ExperimentTableWithColumns;
+  columns: DataColumn[];
 }
 
 export default function ScatterChartDataConfigurator({
   form,
-  table,
+  columns,
 }: ScatterChartDataConfiguratorProps) {
   const {
     fields: dataSourceFields,
@@ -51,12 +52,12 @@ export default function ScatterChartDataConfigurator({
   return (
     <div className="space-y-6">
       {/* X-Axis Configuration */}
-      <XAxisConfiguration form={form} table={table} xAxisDataSources={xAxisDataSources} />
+      <XAxisConfiguration form={form} columns={columns} xAxisDataSources={xAxisDataSources} />
 
       {/* Y-Axes Series Configuration */}
       <YAxisConfiguration
         form={form}
-        table={table}
+        columns={columns}
         yAxisDataSources={yAxisDataSources}
         addYAxisSeries={addYAxisSeries}
         removeDataSource={removeDataSource}
@@ -68,7 +69,7 @@ export default function ScatterChartDataConfigurator({
       {/* Color Dimension Configuration */}
       <ColorDimensionConfiguration
         form={form}
-        table={table}
+        columns={columns}
         colorAxisDataSources={colorAxisDataSources}
         appendDataSource={appendDataSource}
         removeDataSource={removeDataSource}

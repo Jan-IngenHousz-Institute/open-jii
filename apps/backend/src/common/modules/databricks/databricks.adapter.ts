@@ -1,13 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api";
-import type { ExperimentTableNameType } from "@repo/api";
 
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
 import { ErrorCodes } from "../../utils/error-codes";
-import { Result } from "../../utils/fp-utils";
+import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import type { UploadFileResponse } from "./services/files/files.types";
@@ -31,7 +30,8 @@ import { WorkspaceObjectFormat } from "./services/workspace/workspace.types";
 export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
-  // Schema name exposed to repository
+  // Schema and catalog names exposed to repository
+  readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
 
   // Physical Databricks table names exposed to repository
@@ -50,6 +50,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     private readonly workspaceService: DatabricksWorkspaceService,
     private readonly tablesService: DatabricksTablesService,
   ) {
+    this.CATALOG_NAME = this.configService.getCatalogName();
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
     this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
     this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
@@ -268,37 +269,94 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Build query to lookup schema from experiment metadata tables
-   * - macros: queries experiment_macros for output_schema
-   * - questions: queries experiment_questions for questions_schema
+   * Get consolidated experiment table metadata (row counts and schemas) from the
+   * experiment_table_metadata cache table. This is a single-query optimization
+   * that replaces multiple separate queries.
+   *
+   * Returns metadata for all tables in an experiment:
+   * - Raw data table (logical name: 'raw_data')
+   * - Device data table (logical name: 'device')
+   * - Ambyte data table (logical name: 'raw_ambyte_data')
+   * - All macro tables (one per macro_filename, uses macro_name as display name)
+   *
+   * @param experimentId - The experiment identifier
+   * @param options - Optional configuration
+   * @param options.tableName - If provided, only return metadata for this specific table (logical name or macro name)
+   * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
+   * @returns Result containing array of table metadata with schemas and row counts
    */
-  buildSchemaLookupQuery(
-    params:
-      | { schema: string; experimentId: string; schemaType: "questions" }
-      | { schema: string; experimentId: string; schemaType: "macros"; macroFilename: string },
-  ): string {
+  async getExperimentTableMetadata(
+    experimentId: string,
+    options?: {
+      tableName?: string;
+      includeSchemas?: boolean;
+    },
+  ): Promise<
+    Result<
+      {
+        tableName: string;
+        rowCount: number;
+        macroSchema?: string | null;
+        questionsSchema?: string | null;
+      }[]
+    >
+  > {
     const catalog = this.configService.getCatalogName();
-    const { schema, experimentId, schemaType } = params;
+    const schema = this.configService.getCentrumSchemaName();
 
-    if (schemaType === "questions") {
-      return this.queryBuilder.buildQuery({
-        table: `${catalog}.${schema}.experiment_questions`,
-        columns: ["questions_schema"],
-        whereConditions: [["experiment_id", experimentId]],
-        limit: 1,
-      });
+    const includeSchemas = options?.includeSchemas !== false; // Default to true
+    const columns = includeSchemas
+      ? ["table_name", "row_count", "macro_schema", "questions_schema"]
+      : ["table_name", "row_count"];
+
+    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
+    if (options?.tableName) {
+      whereConditions.push(["table_name", options.tableName]);
     }
 
-    // schemaType === "macros"
-    return this.queryBuilder.buildQuery({
-      table: `${catalog}.${schema}.experiment_macros`,
-      columns: ["output_schema"],
-      whereConditions: [
-        ["experiment_id", experimentId],
-        ["macro_filename", params.macroFilename],
-      ],
-      limit: 1,
+    const query = this.queryBuilder.buildQuery({
+      table: `${catalog}.${schema}.experiment_table_metadata`,
+      columns,
+      whereConditions,
     });
+
+    this.logger.debug({
+      msg: "Querying experiment table metadata",
+      operation: "getExperimentTableMetadata",
+      experimentId,
+      tableName: options?.tableName,
+      includeSchemas,
+    });
+
+    const result = await this.sqlService.executeSqlQuery(schema, query);
+
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    // Transform rows into structured data
+    if (!("rows" in result.value)) {
+      return failure(AppError.internal("Invalid query result format", "INVALID_QUERY_RESULT"));
+    }
+
+    const metadata = result.value.rows.map((row) => {
+      const base = {
+        tableName: row[0]!,
+        rowCount: row[1] ? parseInt(row[1], 10) : 0,
+      };
+
+      if (includeSchemas) {
+        return {
+          ...base,
+          macroSchema: row[2],
+          questionsSchema: row[3],
+        };
+      }
+
+      return base;
+    });
+
+    return success(metadata);
   }
 
   /**
@@ -343,6 +401,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       ? `${catalog}.${schema}.${targetTable}`
       : `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
 
+    // For known physical tables, filter by experiment_id only
+    // For macros, filter by experiment_id AND macro_filename
     const whereConditions: [string, string][] = targetTable
       ? [["experiment_id", experimentId]]
       : [
@@ -360,40 +420,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       orderDirection,
       limit,
       offset,
-    });
-  }
-
-  /**
-   * Build a COUNT query for experiment data
-   * - Regular tables (raw_data, device, raw_ambyte_data): Uses buildCountQuery
-   * - All macros (macro_data): Uses buildAggregateQuery grouped by macro filename
-   */
-  buildExperimentCountQuery(tableName: ExperimentTableNameType, experimentId: string): string {
-    const catalog = this.configService.getCatalogName();
-    const schema = this.configService.getCentrumSchemaName();
-
-    const tableMapping: Record<string, string> = {
-      [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
-      [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
-      [ExperimentTableName.RAW_AMBYTE_DATA]: this.RAW_AMBYTE_DATA_TABLE_NAME,
-    };
-
-    const targetTable = tableMapping[tableName];
-
-    if (targetTable) {
-      return this.queryBuilder.buildCountQuery({
-        table: `${catalog}.${schema}.${targetTable}`,
-        whereConditions: [["experiment_id", experimentId]],
-      });
-    }
-
-    // MACRO_DATA: get all macros grouped by filename
-    return this.queryBuilder.buildAggregateQuery({
-      table: `${catalog}.${schema}.experiment_macros`,
-      selectExpression:
-        "macro_filename, MAX(macro_name) as macro_name, MAX(sample_count) as total_rows, MAX(output_schema) as output_schema",
-      groupByColumns: "macro_filename",
-      whereConditions: [["experiment_id", experimentId]],
     });
   }
 }
