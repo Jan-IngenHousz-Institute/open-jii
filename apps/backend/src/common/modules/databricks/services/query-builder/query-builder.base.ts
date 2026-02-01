@@ -66,8 +66,6 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
       this.selectClause = columns.map((c) => this.escapeIdentifier(c)).join(", ");
-    } else {
-      this.selectClause = "*";
     }
     return this;
   }
@@ -164,8 +162,6 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
       this.selectClause = columns.join(",\n    ");
-    } else {
-      this.selectClause = "*";
     }
     return this;
   }
@@ -189,8 +185,8 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  orderBy(orderBy: string): this {
-    this.orderByClause = orderBy;
+  orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
+    this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
     return this;
   }
 
@@ -220,24 +216,20 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       throw new Error("At least one VARIANT column is required");
     }
 
-    const innerSelect = this.selectClause;
-
-    // Generate EXCEPT clause for all variant columns, their parsed aliases, and additional except columns
-    const allExceptColumns = [
-      ...this.variantColumns.flatMap((v) => [v.column, v.alias]),
-      ...this.exceptColumns,
-    ].join(", ");
-
-    const outerSelect =
-      this.selectClause === "*" ? `* EXCEPT (${allExceptColumns})` : this.selectClause;
-
+    // Build WHERE, ORDER BY, LIMIT, OFFSET clauses
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
     const order = this.orderByClause ? `ORDER BY ${this.orderByClause}` : "";
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
 
-    // Generate from_json calls for each VARIANT column
+    // Columns to exclude from final result (raw VARIANTs, parsed aliases, and user-specified)
+    const allExceptColumns = [
+      ...this.variantColumns.flatMap((v) => [v.column, v.alias]),
+      ...this.exceptColumns,
+    ].join(", ");
+
+    // Generate from_json() calls to parse each VARIANT column
     const parsedColumns = this.variantColumns
       .map((v) => {
         const transformedSchema = this.transformSchemaForFromJson(v.schema);
@@ -245,20 +237,42 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       })
       .join(",\n          ");
 
-    // Generate expansion for all parsed columns
+    // Generate expansion expressions (parsed_alias.*) to flatten VARIANT fields
     const expandedColumns = this.variantColumns.map((v) => `${v.alias}.*`).join(",\n        ");
 
-    return `
+    // Three-level query structure:
+    // Level 1 (innermost): Get all base columns + parse VARIANTs with from_json()
+    // Level 2 (middle): Flatten VARIANT fields to same level as base columns
+    // Level 3 (outermost, conditional): Filter to specific columns if requested
+    const flattenedView = `
       SELECT 
-        ${outerSelect},
+        * EXCEPT (${allExceptColumns}),
         ${expandedColumns}
       FROM (
         SELECT 
-          ${innerSelect},
+          *,
           ${parsedColumns}
         FROM ${this.fromClause}
         ${where}
       )
+    `.trim();
+
+    // Add outer SELECT for column filtering if specific columns requested
+    if (this.selectClause !== "*") {
+      return `
+        SELECT ${this.selectClause}
+        FROM (
+          ${flattenedView}
+        )
+        ${order}
+        ${limitClause}
+        ${offsetClause}
+      `.trim();
+    }
+
+    // Return flattened view with ordering/limiting
+    return `
+      ${flattenedView}
       ${order}
       ${limitClause}
       ${offsetClause}

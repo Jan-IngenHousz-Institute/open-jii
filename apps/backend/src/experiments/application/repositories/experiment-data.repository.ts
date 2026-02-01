@@ -1,7 +1,5 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
-import { ExperimentTableName, ExperimentTableNameType, zExperimentTableName } from "@repo/api";
-
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../core/models/experiment.model";
@@ -41,285 +39,152 @@ export class ExperimentDataRepository {
   constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
 
   /**
-   * Build query for experiment data based on table name
+   * Get table data with automatic metadata fetching for schemas and pagination
    */
-  async buildQuery(
-    experimentId: string,
-    tableName: string,
-    columns?: string[],
-    orderBy?: string,
-    orderDirection?: "ASC" | "DESC",
-    limit?: number,
-    offset?: number,
-  ): Promise<Result<string>> {
-    // Select strategy based on table name
-    if (tableName === ExperimentTableName.RAW_DATA) {
-      return await this.buildRawDataQuery(
-        experimentId,
-        tableName,
-        columns,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      );
-    } else if (tableName === ExperimentTableName.DEVICE) {
-      return this.buildDeviceDataQuery(
-        experimentId,
-        tableName,
-        columns,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      );
-    } else if (tableName === ExperimentTableName.RAW_AMBYTE_DATA) {
-      return this.buildAmbyteDataQuery(
-        experimentId,
-        tableName,
-        columns,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      );
-    } else {
-      return await this.buildMacroDataQuery(
-        experimentId,
-        tableName,
-        columns,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      );
-    }
-  }
-
-  /**
-   * Build query for raw data (sample table)
-   */
-  private async buildRawDataQuery(
-    experimentId: string,
-    tableName: string,
-    columns?: string[],
-    orderBy?: string,
-    orderDirection?: "ASC" | "DESC",
-    limit?: number,
-    offset?: number,
-  ): Promise<Result<string>> {
-    // Get questions schema for this experiment
-    const questionsSchemaResult = await this.getQuestionsSchema(experimentId);
-
-    if (questionsSchemaResult.isFailure()) {
-      // If no questions schema, build query without questions expansion
-      this.logger.debug({
-        msg: "No questions schema found, building query without questions expansion",
-        experimentId,
-      });
-      const query = this.databricksPort.buildExperimentQuery({
-        tableName,
-        experimentId,
-        columns,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      });
-      return success(query);
-    }
-
-    // Build query with questions_data VARIANT expansion
-    const query = this.databricksPort.buildExperimentQuery({
-      tableName,
+  async getTableData(params: {
+    experimentId: string;
+    experiment: ExperimentDto;
+    tableName: string;
+    columns?: string[];
+    orderBy?: string;
+    orderDirection?: "ASC" | "DESC";
+    page?: number;
+    pageSize?: number;
+  }): Promise<Result<TableDataDto[]>> {
+    const {
       experimentId,
-      columns,
-      variants: [{ columnName: "questions_data", schema: questionsSchemaResult.value }],
-      exceptColumns: ["experiment_id"],
-      orderBy,
-      orderDirection,
-      limit,
-      offset,
-    });
-
-    return success(query);
-  }
-
-  /**
-   * Build query for device data
-   */
-  private buildDeviceDataQuery(
-    experimentId: string,
-    tableName: string,
-    columns?: string[],
-    orderBy?: string,
-    orderDirection?: "ASC" | "DESC",
-    limit?: number,
-    offset?: number,
-  ): Result<string> {
-    const query = this.databricksPort.buildExperimentQuery({
+      experiment,
       tableName,
-      experimentId,
       columns,
       orderBy,
-      orderDirection,
-      limit,
-      offset,
-    });
+      orderDirection = "ASC",
+      page = 1,
+      pageSize = 5,
+    } = params;
 
-    return success(query);
-  }
-
-  /**
-   * Build query for ambyte trace data
-   */
-  private buildAmbyteDataQuery(
-    experimentId: string,
-    tableName: string,
-    columns?: string[],
-    orderBy?: string,
-    orderDirection?: "ASC" | "DESC",
-    limit?: number,
-    offset?: number,
-  ): Result<string> {
-    const query = this.databricksPort.buildExperimentQuery({
+    // Fetch metadata to get row count and schemas
+    // Required for: pagination (rowCount) and VARIANT expansion (schemas)
+    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
       tableName,
-      experimentId,
-      columns,
-      orderBy,
-      orderDirection,
-      limit,
-      offset,
+      includeSchemas: true,
     });
 
-    return success(query);
-  }
-
-  /**
-   * Build query for macro data
-   */
-  private async buildMacroDataQuery(
-    experimentId: string,
-    tableName: string,
-    columns?: string[],
-    orderBy?: string,
-    orderDirection?: "ASC" | "DESC",
-    limit?: number,
-    offset?: number,
-  ): Promise<Result<string>> {
-    const macroSchemaResult = await this.getMacroSchema(experimentId, tableName);
-    if (macroSchemaResult.isFailure()) return macroSchemaResult;
-
-    // Get questions schema for this experiment
-    const questionsSchemaResult = await this.getQuestionsSchema(experimentId);
-
-    // Hardcoded VARIANT columns for macro data table
-    const variants = [{ columnName: "macro_output", schema: macroSchemaResult.value }];
-
-    // Add questions_data if we have the schema
-    if (questionsSchemaResult.isSuccess()) {
-      variants.push({ columnName: "questions_data", schema: questionsSchemaResult.value });
-    }
-
-    const query = this.databricksPort.buildExperimentQuery({
-      tableName,
-      experimentId,
-      columns,
-      variants,
-      exceptColumns: [
-        "experiment_id",
-        "raw_id",
-        "macro_id",
-        "macro_name",
-        "macro_filename",
-        "date",
-      ],
-      orderBy,
-      orderDirection,
-      limit,
-      offset,
-    });
-
-    return success(query);
-  }
-
-  /**
-   * Get VARIANT schema for questions in an experiment
-   */
-  async getQuestionsSchema(experimentId: string): Promise<Result<string>> {
-    const schemaQuery = this.databricksPort.buildSchemaLookupQuery({
-      schema: this.databricksPort.CENTRUM_SCHEMA_NAME,
-      experimentId,
-      schemaType: "questions",
-    });
-
-    const result = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      schemaQuery,
-    );
-
-    if (result.isFailure() || result.value.rows.length === 0) {
-      this.logger.debug({
-        msg: "No questions found in experiment",
-        operation: "getQuestionsSchema",
-        experimentId,
-      });
-      return failure(AppError.notFound(`No questions found in this experiment`));
-    }
-
-    const schemaValue = result.value.rows[0]?.[0];
-    if (typeof schemaValue !== "string" || !schemaValue) {
+    if (metadataResult.isFailure()) {
       this.logger.error({
-        msg: "Invalid schema value returned from database",
-        operation: "getQuestionsSchema",
+        msg: "Failed to get table metadata",
+        operation: "getTableData",
         experimentId,
-        schemaValue,
+        tableName,
+        error: metadataResult.error.message,
       });
-      return failure(AppError.internal("Invalid questions schema format"));
+      return failure(AppError.internal("Failed to retrieve table metadata"));
     }
 
-    return success(schemaValue);
-  }
-
-  /**
-   * Get VARIANT schema for a macro in an experiment
-   */
-  async getMacroSchema(experimentId: string, macroFilename: string): Promise<Result<string>> {
-    const schemaQuery = this.databricksPort.buildSchemaLookupQuery({
-      schema: this.databricksPort.CENTRUM_SCHEMA_NAME,
-      experimentId,
-      schemaType: "macros",
-      macroFilename,
-    });
-
-    const result = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      schemaQuery,
-    );
-
-    if (result.isFailure() || result.value.rows.length === 0) {
+    if (metadataResult.value.length === 0) {
       this.logger.warn({
-        msg: "Macro not found in experiment",
-        operation: "getMacroSchema",
-        macroFilename,
+        msg: "Table not found in metadata",
+        operation: "getTableData",
         experimentId,
+        tableName,
       });
-      return failure(AppError.notFound(`Macro '${macroFilename}' not found in this experiment`));
+      return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
     }
 
-    const schemaValue = result.value.rows[0]?.[0];
-    if (typeof schemaValue !== "string" || !schemaValue) {
-      this.logger.error({
-        msg: "Invalid schema value returned from database",
-        operation: "getMacroSchema",
-        macroFilename,
-        experimentId,
-        schemaValue,
-      });
-      return failure(AppError.internal("Invalid macro schema format"));
+    const metadata = metadataResult.value[0];
+
+    // Build query with appropriate parameters
+    const offset = columns ? undefined : (page - 1) * pageSize;
+    const limit = columns ? undefined : pageSize;
+
+    const queryResult = this.buildQuery(
+      experimentId,
+      tableName,
+      {
+        macroSchema: metadata.macroSchema ?? undefined,
+        questionsSchema: metadata.questionsSchema ?? undefined,
+      },
+      columns,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    );
+    if (queryResult.isFailure()) return queryResult;
+
+    // Fetch based on whether specific columns were requested
+    return columns
+      ? this.getFullTableData({
+          tableName,
+          experiment,
+          query: queryResult.value,
+        })
+      : this.getTableDataPage({
+          tableName,
+          experiment,
+          page,
+          pageSize,
+          rowCount: metadata.rowCount,
+          query: queryResult.value,
+        });
+  }
+
+  /**
+   * Build query for experiment data based on table name
+   * @param tableName - Logical table name from ExperimentTableName enum or macro name
+   * @param schemas - Optional schemas from metadata table (macroSchema, questionsSchema)
+   */
+  buildQuery(
+    experimentId: string,
+    tableName: string,
+    schemas?: { macroSchema?: string; questionsSchema?: string },
+    columns?: string[],
+    orderBy?: string,
+    orderDirection?: "ASC" | "DESC",
+    limit?: number,
+    offset?: number,
+  ): Result<string> {
+    // Define exceptColumns based on table type
+    const MACRO_EXCEPT_COLUMNS = [
+      "experiment_id",
+      "raw_id",
+      "macro_id",
+      "macro_name",
+      "macro_filename",
+      "date",
+    ];
+
+    const exceptColumnsMap: Record<string, string[]> = {
+      raw_data: ["experiment_id"],
+      device: [],
+      raw_ambyte_data: [],
+    };
+
+    const exceptColumns = exceptColumnsMap[tableName] ?? MACRO_EXCEPT_COLUMNS;
+
+    // Build variants array based on available schemas
+    const variants: { columnName: string; schema: string }[] = [];
+
+    if (schemas?.macroSchema) {
+      variants.push({ columnName: "macro_output", schema: schemas.macroSchema });
     }
 
-    return success(schemaValue);
+    if (schemas?.questionsSchema) {
+      variants.push({ columnName: "questions_data", schema: schemas.questionsSchema });
+    }
+
+    const query = this.databricksPort.buildExperimentQuery({
+      tableName,
+      experimentId,
+      columns,
+      variants: variants.length > 0 ? variants : undefined,
+      exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    });
+
+    return success(query);
   }
 
   /**
@@ -364,34 +229,19 @@ export class ExperimentDataRepository {
 
   /**
    * Get table data for a specific page
+   * @param rowCount - Total row count from metadata table (avoids separate count query)
    */
   async getTableDataPage(params: {
     tableName: string;
     experiment: ExperimentDto;
-    experimentId: string;
     page: number;
     pageSize: number;
+    rowCount: number;
     query: string;
   }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, experimentId, page, pageSize, query } = params;
+    const { tableName, experiment, page, pageSize, rowCount, query } = params;
 
-    // Get total row count
-    const countQuery = this.databricksPort.buildExperimentCountQuery(
-      zExperimentTableName.safeParse(tableName).success
-        ? (tableName as ExperimentTableNameType)
-        : ExperimentTableName.MACRO_DATA,
-      experimentId,
-    );
-    const countResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      countQuery,
-    );
-    if (countResult.isFailure()) {
-      return failure(AppError.internal(`Failed to get row count: ${countResult.error.message}`));
-    }
-
-    const totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
-    const totalPages = Math.ceil(totalRows / pageSize);
+    const totalPages = Math.ceil(rowCount / pageSize);
 
     const dataResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
@@ -409,7 +259,7 @@ export class ExperimentDataRepository {
         data: this.transformSchemaData(dataResult.value),
         page,
         pageSize,
-        totalRows,
+        totalRows: rowCount,
         totalPages,
       },
     ]);

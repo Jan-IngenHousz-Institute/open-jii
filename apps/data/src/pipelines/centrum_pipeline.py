@@ -91,9 +91,8 @@ EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
-EXPERIMENT_MACROS_TABLE = "experiment_macros"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
-EXPERIMENT_QUESTIONS_TABLE = "experiment_questions"
+EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
@@ -695,87 +694,105 @@ def experiment_macro_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Experiment Macros Metadata (NEW - Phase 1)
+# DBTITLE 1,Gold Layer - Experiment Table Metadata (NEW - Optimization)
 @dlt.table(
-    name=EXPERIMENT_MACROS_TABLE,
-    comment="Gold layer: Metadata tracking which macros exist per experiment with aggregated schema",
+    name=EXPERIMENT_TABLE_METADATA,
+    comment="Gold layer: Consolidated metadata cache for all experiment tables (row counts, schemas). Single query optimization. Replaces EXPERIMENT_MACROS_TABLE and EXPERIMENT_QUESTIONS_TABLE.",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported",
-        "variants": "output_schema"
+        "variants": "macro_schema,questions_schema"
     }
 )
-def experiment_macros():
+def experiment_table_metadata():
     """
-    Track which macros exist per experiment for fast discovery.
-    Stores the aggregated VARIANT schema using schema_of_variant_agg() for efficient
-    schema discovery without scanning all data rows.
-    
-    This provides metadata for:
-    - UI table listing
-    - Schema preview (aggregated schema + sample output)
-    - Macro discovery without full table scans
-    
-    Updated automatically from experiment_macro_data stream.
+    Consolidated metadata table for all experiment tables.
     """
-    macro_data_df = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
     
-    return (
-        macro_data_df
-        .filter("macro_output IS NOT NULL")  # Exclude NULL outputs
-        .groupBy("experiment_id", "macro_id", "macro_filename")
+    # 1. Macro tables metadata (one row per macro_filename per experiment)
+    # One macro file = one table, even if macro_name changes over time
+    # Compute row counts, macro schema, and questions schema directly from macro data
+    macro_metadata = (
+        dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
+        .filter("macro_output IS NOT NULL")  # Only count successful macro executions
+        .groupBy("experiment_id", "macro_filename")
         .agg(
-            F.max("macro_name").alias("macro_name"),  # Take the most recent macro_name (users can change this)
-            F.count("*").alias("sample_count"),
-            F.min("timestamp").alias("first_seen"),
-            F.max("timestamp").alias("last_seen"),
-            F.max("processed_timestamp").alias("last_processed"),
-            # Aggregate schema across all VARIANT rows for this macro
-            F.expr("schema_of_variant_agg(macro_output)").alias("output_schema")
+            F.max("macro_name").alias("table_name"),  # Use latest macro_name as display name
+            F.count("*").alias("row_count"),
+            # Aggregate macro_output schema for this specific macro (NULLIF converts VOID to NULL)
+            F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
+            # Aggregate questions_schema from the actual questions_data in macro rows (NULLIF converts VOID to NULL)
+            # This correctly handles cases where different samples have different questions
+            F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
+        )
+        .select(
+            F.col("experiment_id"),
+            F.col("table_name"),
+            F.col("macro_filename"),  # Already grouped by this, no need for F.max()
+            F.col("row_count"),
+            F.col("macro_schema"),
+            F.col("questions_schema")
         )
     )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Experiment Questions Metadata (NEW - Phase 1)
-@dlt.table(
-    name=EXPERIMENT_QUESTIONS_TABLE,
-    comment="Gold layer: Metadata tracking which questions exist per experiment with aggregated schema",
-    table_properties={
-        "quality": "gold",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.feature.variantType-preview": "supported",
-        "variants": "questions_schema"
-    }
-)
-def experiment_questions():
-    """
-    Track which questions exist per experiment for fast discovery.
-    Stores the aggregated VARIANT schema using schema_of_variant_agg() for efficient
-    schema discovery without scanning all data rows.
     
-    This provides metadata for:
-    - UI table listing
-    - Schema preview (aggregated schema across all responses)
-    - Question discovery without full table scans
-    
-    Updated automatically from experiment_raw_data stream.
-    """
-    raw_data_df = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
-    
-    return (
-        raw_data_df
-        .filter("questions_data IS NOT NULL")  # Exclude NULL questions
+    # 2. Raw data table metadata (one row per experiment)
+    # Compute row count and questions schema directly from raw data
+    raw_data_metadata = (
+        dlt.read(EXPERIMENT_RAW_DATA_TABLE)
         .groupBy("experiment_id")
         .agg(
-            F.count("*").alias("sample_count"),
-            F.min("timestamp").alias("first_seen"),
-            F.max("timestamp").alias("last_seen"),
-            F.max("processed_timestamp").alias("last_processed"),
-            # Aggregate schema across all VARIANT rows for questions
-            F.expr("schema_of_variant_agg(questions_data)").alias("questions_schema")
+            F.count("*").alias("row_count"),
+            # Aggregate questions_schema across all raw data samples (schema_of_variant_agg ignores NULLs, NULLIF converts VOID to NULL)
+            F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
+        .select(
+            F.col("experiment_id"),
+            F.lit("raw_data").alias("table_name"),
+            F.lit(None).cast("string").alias("macro_filename"),
+            F.col("row_count"),
+            F.lit(None).cast("string").alias("macro_schema"),
+            F.col("questions_schema")
+        )
+    )
+    
+    # 3. Device data table metadata (one row per experiment)
+    device_metadata = (
+        dlt.read(EXPERIMENT_DEVICE_DATA_TABLE)
+        .groupBy("experiment_id")
+        .agg(F.count("*").alias("row_count"))
+        .select(
+            F.col("experiment_id"),
+            F.lit("device").alias("table_name"),
+            F.lit(None).cast("string").alias("macro_filename"),
+            F.col("row_count"),
+            F.lit(None).cast("string").alias("macro_schema"),
+            F.lit(None).cast("string").alias("questions_schema")
+        )
+    )
+    
+    # 4. Ambyte data table metadata (one row per experiment)
+    ambyte_metadata = (
+        dlt.read(RAW_AMBYTE_TABLE)
+        .groupBy("experiment_id")
+        .agg(F.count("*").alias("row_count"))
+        .select(
+            F.col("experiment_id"),
+            F.lit("raw_ambyte_data").alias("table_name"),
+            F.lit(None).cast("string").alias("macro_filename"),
+            F.col("row_count"),
+            F.lit(None).cast("string").alias("macro_schema"),
+            F.lit(None).cast("string").alias("questions_schema")
+        )
+    )
+    
+    # Union all metadata sources
+    return (
+        macro_metadata
+        .unionByName(raw_data_metadata)
+        .unionByName(device_metadata)
+        .unionByName(ambyte_metadata)
     )
 
 # COMMAND ----------

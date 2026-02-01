@@ -895,9 +895,7 @@ export const zExperimentTableMetadata = z.object({
   name: z.string().describe("Technical name of the table used for queries and operations"),
   displayName: z.string().describe("Human-readable display name of the table for UI"),
   totalRows: z.number().int().describe("Total number of rows in the table"),
-  columns: z.array(zColumnInfo).optional().describe("Column information for the table"),
   defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
-  variants: z.array(z.string()).optional().describe("List of VARIANT column names in the table"),
   errorColumn: z.string().optional().describe("Column name that contains error information if any"),
 });
 
