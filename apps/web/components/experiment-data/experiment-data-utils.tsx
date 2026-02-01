@@ -264,7 +264,7 @@ export function ExperimentDataRows({
     const rowId = String(row.original.id);
 
     // Check if this row has an error
-    const hasError = errorColumn && row.original[errorColumn];
+    const hasError = errorColumn && !!row.original[errorColumn];
 
     // Check if this row has an expanded cell
     const expandedColumn =
@@ -276,7 +276,7 @@ export function ExperimentDataRows({
       <React.Fragment key={row.id}>
         <TableRow
           data-state={row.getIsSelected() && "selected"}
-          className={cn(hasError && "border-l-destructive bg-destructive/5 border-l-2")}
+          className={cn("", hasError && "border-l-destructive bg-destructive/5 border-l-2")}
         >
           {row.getVisibleCells().map((cell, cellIndex) => (
             <TableCell

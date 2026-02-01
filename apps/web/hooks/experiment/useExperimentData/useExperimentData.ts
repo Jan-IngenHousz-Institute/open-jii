@@ -222,6 +222,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     onToggleCellExpansion,
     isCellExpanded,
     errorColumn,
+    enabled = true,
   } = params;
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
@@ -230,7 +231,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     },
     queryKey: ["experiment", experimentId, page, pageSize, tableName, orderBy, orderDirection],
     staleTime: STALE_TIME,
-    enabled: !!tableName,
+    enabled,
   });
 
   const tableData = data?.body[0];

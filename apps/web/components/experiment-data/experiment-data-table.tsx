@@ -44,7 +44,6 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import { DataDownloadModal } from "./data-download-modal/data-download-modal";
-import { ExperimentDataTableErrorCell } from "./table-cells/error/experiment-data-table-error-cell";
 import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 // Helper function to map column names for sorting
@@ -135,13 +134,13 @@ export function ExperimentDataTable({
   // Expandable cell handlers
   const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
     setExpandedCell((prev) =>
-      prev?.rowId === rowId && prev?.columnName === columnName ? null : { rowId, columnName },
+      prev?.rowId === rowId && prev.columnName === columnName ? null : { rowId, columnName },
     );
   }, []);
 
   const isCellExpanded = useCallback(
     (rowId: string, columnName: string) => {
-      return expandedCell?.rowId === rowId && expandedCell?.columnName === columnName;
+      return expandedCell?.rowId === rowId && expandedCell.columnName === columnName;
     },
     [expandedCell],
   );
