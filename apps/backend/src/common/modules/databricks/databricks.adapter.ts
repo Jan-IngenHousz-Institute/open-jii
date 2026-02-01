@@ -16,8 +16,6 @@ import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
-import { DatabricksTablesService } from "./services/tables/tables.service";
-import type { ListTablesResponse } from "./services/tables/tables.types";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
 import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 import type {
@@ -48,7 +46,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     private readonly volumesService: DatabricksVolumesService,
     private readonly configService: DatabricksConfigService,
     private readonly workspaceService: DatabricksWorkspaceService,
-    private readonly tablesService: DatabricksTablesService,
   ) {
     this.CATALOG_NAME = this.configService.getCatalogName();
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
@@ -85,81 +82,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
     return this.jobsService.triggerJob(jobId, jobParams);
-  }
-
-  /**
-   * Execute a SQL query with INLINE disposition (returns data directly)
-   */
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition?: "INLINE",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<SchemaData>>;
-
-  /**
-   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
-   */
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition: "EXTERNAL_LINKS",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<DownloadLinksData>>;
-
-  /**
-   * Execute a SQL query in a specific schema with optional disposition and format.
-   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
-   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
-   */
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition: "INLINE" | "EXTERNAL_LINKS" = "INLINE",
-    format: "JSON_ARRAY" | "ARROW_STREAM" | "CSV" = "JSON_ARRAY",
-  ): Promise<Result<SchemaData | DownloadLinksData>> {
-    this.logger.debug({
-      msg: "Executing SQL query",
-      operation: "executeSqlQuery",
-      schemaName,
-      disposition,
-      format,
-    });
-    return this.sqlService.executeSqlQuery(schemaName, sqlStatement, disposition, format);
-  }
-
-  /**
-   * List all tables in a schema with their column metadata
-   */
-  async listTables(schemaName: string): Promise<Result<ListTablesResponse>> {
-    return this.tablesService.listTables(schemaName);
-  }
-
-  /**
-   * Upload a file to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param sourceType - Type of data source (e.g., 'ambyte')
-   * @param directoryName - Unique directory name for this upload session
-   * @param fileName - Name of the file
-   * @param fileBuffer - File contents as a buffer
-   * @returns Result containing the upload response
-   */
-  async uploadExperimentData(
-    schemaName: string,
-    experimentId: string,
-    sourceType: string,
-    directoryName: string,
-    fileName: string,
-    fileBuffer: Buffer,
-  ): Promise<Result<UploadFileResponse>> {
-    const catalogName = this.configService.getCatalogName();
-
-    // Construct the full path with experiment_id subdirectory
-    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
-
-    return this.filesService.upload(filePath, fileBuffer);
   }
 
   /**
@@ -341,7 +263,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     const metadata = result.value.rows.map((row) => {
       const base = {
-        tableName: row[0]!,
+        // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+        tableName: row[0] as string,
         rowCount: row[1] ? parseInt(row[1], 10) : 0,
       };
 
@@ -421,5 +344,73 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       limit,
       offset,
     });
+  }
+
+  /**
+   * Execute a SQL query with INLINE disposition (returns data directly)
+   */
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition?: "INLINE",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<SchemaData>>;
+
+  /**
+   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
+   */
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition: "EXTERNAL_LINKS",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<DownloadLinksData>>;
+
+  /**
+   * Execute a SQL query in a specific schema with optional disposition and format.
+   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
+   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
+   */
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition: "INLINE" | "EXTERNAL_LINKS" = "INLINE",
+    format: "JSON_ARRAY" | "ARROW_STREAM" | "CSV" = "JSON_ARRAY",
+  ): Promise<Result<SchemaData | DownloadLinksData>> {
+    this.logger.debug({
+      msg: "Executing SQL query",
+      operation: "executeSqlQuery",
+      schemaName,
+      disposition,
+      format,
+    });
+    return this.sqlService.executeSqlQuery(schemaName, sqlStatement, disposition, format);
+  }
+
+  /**
+   * Upload a file to Databricks for a specific experiment.
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
+   *
+   * @param schemaName - Schema name of the experiment
+   * @param sourceType - Type of data source (e.g., 'ambyte')
+   * @param directoryName - Unique directory name for this upload session
+   * @param fileName - Name of the file
+   * @param fileBuffer - File contents as a buffer
+   * @returns Result containing the upload response
+   */
+  async uploadExperimentData(
+    schemaName: string,
+    experimentId: string,
+    sourceType: string,
+    directoryName: string,
+    fileName: string,
+    fileBuffer: Buffer,
+  ): Promise<Result<UploadFileResponse>> {
+    const catalogName = this.configService.getCatalogName();
+
+    // Construct the full path with experiment_id subdirectory
+    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
+
+    return this.filesService.upload(filePath, fileBuffer);
   }
 }

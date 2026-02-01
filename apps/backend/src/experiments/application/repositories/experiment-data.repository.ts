@@ -62,31 +62,13 @@ export class ExperimentDataRepository {
       pageSize = 5,
     } = params;
 
-    // Fetch metadata to get row count and schemas
-    // Required for: pagination (rowCount) and VARIANT expansion (schemas)
     const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
       tableName,
       includeSchemas: true,
     });
 
-    if (metadataResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to get table metadata",
-        operation: "getTableData",
-        experimentId,
-        tableName,
-        error: metadataResult.error.message,
-      });
-      return failure(AppError.internal("Failed to retrieve table metadata"));
-    }
-
+    if (metadataResult.isFailure()) return metadataResult;
     if (metadataResult.value.length === 0) {
-      this.logger.warn({
-        msg: "Table not found in metadata",
-        operation: "getTableData",
-        experimentId,
-        tableName,
-      });
       return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
     }
 
@@ -129,11 +111,65 @@ export class ExperimentDataRepository {
   }
 
   /**
+   * Get table data download links for efficient large dataset downloads
+   */
+  async getTableDataForDownload(params: { experimentId: string; tableName: string }): Promise<
+    Result<{
+      externalLinks: {
+        externalLink: string;
+        expiration: string;
+        totalSize: number;
+        rowCount: number;
+      }[];
+      totalRows: number;
+    }>
+  > {
+    const { experimentId, tableName } = params;
+
+    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+      tableName,
+      includeSchemas: true,
+    });
+
+    if (metadataResult.isFailure()) return metadataResult;
+    if (metadataResult.value.length === 0) {
+      return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
+    }
+
+    const metadata = metadataResult.value[0];
+
+    const queryResult = this.buildQuery(experimentId, tableName, {
+      macroSchema: metadata.macroSchema ?? undefined,
+      questionsSchema: metadata.questionsSchema ?? undefined,
+    });
+    if (queryResult.isFailure()) return queryResult;
+
+    const dataResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      queryResult.value,
+      "EXTERNAL_LINKS",
+      "CSV",
+    );
+
+    if (dataResult.isFailure()) return dataResult;
+
+    return success({
+      externalLinks: dataResult.value.external_links.map((link) => ({
+        externalLink: link.external_link,
+        expiration: link.expiration,
+        totalSize: link.byte_count,
+        rowCount: link.row_count,
+      })),
+      totalRows: dataResult.value.totalRows,
+    });
+  }
+
+  /**
    * Build query for experiment data based on table name
    * @param tableName - Logical table name from ExperimentTableName enum or macro name
    * @param schemas - Optional schemas from metadata table (macroSchema, questionsSchema)
    */
-  buildQuery(
+  private buildQuery(
     experimentId: string,
     tableName: string,
     schemas?: { macroSchema?: string; questionsSchema?: string },
@@ -190,26 +226,18 @@ export class ExperimentDataRepository {
   /**
    * Get full table data with specific columns (no pagination)
    */
-  async getFullTableData(params: {
+  private async getFullTableData(params: {
     tableName: string;
     experiment: ExperimentDto;
     query: string;
   }): Promise<Result<TableDataDto[]>> {
     const { tableName, experiment, query } = params;
 
-    this.logger.debug({
-      msg: "Executing SQL query",
-      operation: "getFullTableData",
-      sqlQuery: query,
-    });
-
     const dataResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       query,
     );
-    if (dataResult.isFailure()) {
-      return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
-    }
+    if (dataResult.isFailure()) return dataResult;
 
     const totalRows = dataResult.value.totalRows;
 
@@ -231,7 +259,7 @@ export class ExperimentDataRepository {
    * Get table data for a specific page
    * @param rowCount - Total row count from metadata table (avoids separate count query)
    */
-  async getTableDataPage(params: {
+  private async getTableDataPage(params: {
     tableName: string;
     experiment: ExperimentDto;
     page: number;
@@ -247,9 +275,7 @@ export class ExperimentDataRepository {
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       query,
     );
-    if (dataResult.isFailure()) {
-      return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
-    }
+    if (dataResult.isFailure()) return dataResult;
 
     return success([
       {
