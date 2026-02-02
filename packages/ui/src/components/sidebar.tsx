@@ -268,7 +268,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("hover:bg-surface group !h-8 !w-8 [&_svg]:group-hover:!text-white", className)}
+      className={cn("!h-8 !w-8 [&_svg]:group-hover:text-white", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -320,7 +320,7 @@ const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"
       <div
         ref={ref}
         className={cn(
-          "bg-background relative flex min-w-0 w-full flex-1 flex-col",
+          "bg-background relative flex w-full min-w-0 flex-1 flex-col",
           "md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
           className,
         )}

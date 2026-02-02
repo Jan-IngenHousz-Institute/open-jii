@@ -84,7 +84,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
           sideOffset={4}
         >
           <DropdownMenuLabel className="p-0 font-normal">
-            <div className="flex items-center gap-2 py-1.5 text-left text-sm">
+            <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={displayName} />
                 <AvatarFallback className="rounded-lg">
@@ -185,7 +185,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
             sideOffset={4}
           >
             <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 py-1.5 text-left text-sm">
+              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:ml-2">
                   <AvatarImage src={user.avatar} alt={displayName} />
                   <AvatarFallback className="rounded-lg">
