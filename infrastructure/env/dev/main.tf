@@ -304,7 +304,8 @@ module "centrum_pipeline" {
   catalog_name = module.databricks_catalog.catalog_name
 
   notebook_paths = [
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum_pipeline"
+    "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
+    # "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum_pipeline"
   ]
 
   configuration = {
@@ -375,7 +376,8 @@ module "pipeline_scheduler" {
       key           = "trigger_experiment_pipelines"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipelines_orchestrator_task"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipelines_orchestrator_task"
 
       parameters = {
         "catalog_name"            = module.databricks_catalog.catalog_name,
@@ -443,7 +445,8 @@ module "centrum_backup_job" {
       key           = "backup_centrum_raw_data"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/centrum_backup_task"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/centrum_backup_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/centrum_backup_task"
 
       parameters = {
         "CATALOG_NAME"    = module.databricks_catalog.catalog_name
@@ -511,7 +514,8 @@ module "ambyte_processing_job" {
       key           = "process_ambyte_data"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/ambyte_processing_task"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/ambyte_processing_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/ambyte_processing_task"
 
       parameters = {
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
@@ -576,12 +580,14 @@ module "experiment_provisioning_job" {
       key           = "experiment_pipeline_create"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipeline_create_task"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipeline_create_task"
 
       parameters = {
         "experiment_id"            = "{{experiment_id}}"
         "experiment_name"          = "{{experiment_name}}"
-        "experiment_pipeline_path" = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/experiment_pipeline"
+        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
+        # "experiment_pipeline_path" = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/experiment_pipeline"
         "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
         "environment"              = upper(var.environment)
@@ -592,7 +598,8 @@ module "experiment_provisioning_job" {
       key           = "experiment_status_update"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_status_update_task"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_status_update_task"
 
       parameters = {
         "experiment_id"       = "{{experiment_id}}"
@@ -660,7 +667,8 @@ module "enriched_tables_refresh_job" {
       key           = "refresh_enriched_tables"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/enriched_tables_refresh_task"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/enriched_tables_refresh_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/enriched_tables_refresh_task"
 
       parameters = {
         metadata_key         = "{{metadata_key}}"
