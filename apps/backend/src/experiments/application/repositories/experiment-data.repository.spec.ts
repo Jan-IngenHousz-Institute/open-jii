@@ -121,7 +121,7 @@ describe("ExperimentDataRepository", () => {
         experimentId,
         columns: undefined,
         variants: undefined,
-        exceptColumns: ["experiment_id"],
+        exceptColumns: ["experiment_id", "macro_output", "questions_data"],
         orderBy: undefined,
         orderDirection: "ASC",
         limit: 5,
@@ -198,7 +198,8 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue("SELECT * FROM table");
+      const mockQuery = "SELECT * FROM table";
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(mockQuery);
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockDownloadData));
 
       const result = await repository.getTableDataForDownload({
@@ -219,7 +220,7 @@ describe("ExperimentDataRepository", () => {
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         "centrum",
-        "SELECT * FROM table",
+        mockQuery,
         "EXTERNAL_LINKS",
         "CSV",
       );
