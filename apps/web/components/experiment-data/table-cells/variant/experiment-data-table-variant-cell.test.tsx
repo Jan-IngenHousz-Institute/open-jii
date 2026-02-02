@@ -244,11 +244,14 @@ describe("VariantExpandedContent", () => {
     const copyButton = screen.getByText("copy").closest("button");
     expect(copyButton).toBeInTheDocument();
 
-    fireEvent.click(copyButton!);
+    if (copyButton) {
+      fireEvent.click(copyButton);
+    }
 
     // Check that clipboard.writeText was called
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(jsonData);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(vi.mocked(navigator.clipboard.writeText)).toHaveBeenCalledWith(jsonData);
     });
   });
 
@@ -257,7 +260,9 @@ describe("VariantExpandedContent", () => {
     render(<VariantExpandedContent data={jsonData} />);
 
     const copyButton = screen.getByText("copy").closest("button");
-    fireEvent.click(copyButton!);
+    if (copyButton) {
+      fireEvent.click(copyButton);
+    }
 
     // Should show "copied" text
     await waitFor(() => {
@@ -304,7 +309,7 @@ describe("VariantExpandedContent", () => {
 
   it("should position copy button absolutely over content", () => {
     const jsonData = '{"key": "value"}';
-    const { container } = render(<VariantExpandedContent data={jsonData} />);
+    render(<VariantExpandedContent data={jsonData} />);
 
     const copyButton = screen.getByText("copy").closest("button");
     expect(copyButton?.className).toContain("absolute");
