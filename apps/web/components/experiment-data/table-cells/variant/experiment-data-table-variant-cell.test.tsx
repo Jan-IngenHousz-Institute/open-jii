@@ -234,14 +234,14 @@ describe("VariantExpandedContent", () => {
     // Check for copy button
     const copyButtons = screen.getAllByRole("button");
     expect(copyButtons.length).toBeGreaterThan(0);
-    expect(screen.getByText("copy")).toBeInTheDocument();
+    expect(screen.getByText("common.copy")).toBeInTheDocument();
   });
 
   it("should copy JSON to clipboard when copy button is clicked", async () => {
     const jsonData = '{"name": "John", "age": 30}';
     render(<VariantExpandedContent data={jsonData} />);
 
-    const copyButton = screen.getByText("copy").closest("button");
+    const copyButton = screen.getByText("common.copy").closest("button");
     expect(copyButton).toBeInTheDocument();
 
     if (copyButton) {
@@ -259,14 +259,14 @@ describe("VariantExpandedContent", () => {
     const jsonData = '{"name": "John"}';
     render(<VariantExpandedContent data={jsonData} />);
 
-    const copyButton = screen.getByText("copy").closest("button");
+    const copyButton = screen.getByText("common.copy").closest("button");
     if (copyButton) {
       fireEvent.click(copyButton);
     }
 
     // Should show "copied" text
     await waitFor(() => {
-      expect(screen.getByText("copied")).toBeInTheDocument();
+      expect(screen.getByText("common.copied")).toBeInTheDocument();
     });
 
     // Check icon should be visible
@@ -311,7 +311,7 @@ describe("VariantExpandedContent", () => {
     const jsonData = '{"key": "value"}';
     render(<VariantExpandedContent data={jsonData} />);
 
-    const copyButton = screen.getByText("copy").closest("button");
+    const copyButton = screen.getByText("common.copy").closest("button");
     expect(copyButton?.className).toContain("absolute");
     expect(copyButton?.className).toContain("right-6");
     expect(copyButton?.className).toContain("top-6");
