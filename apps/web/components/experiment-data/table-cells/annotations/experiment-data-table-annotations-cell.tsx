@@ -45,7 +45,9 @@ export function groupAnnotations(annotations: Annotation[]): Record<AnnotationTy
   // }
 
   annotations.forEach((annotation) => {
-    annotationsPerType[annotation.type].push(annotation);
+    if (annotation.type in annotationsPerType) {
+      annotationsPerType[annotation.type].push(annotation);
+    }
   });
 
   return annotationsPerType;

@@ -313,8 +313,8 @@ describe("VariantExpandedContent", () => {
 
     const copyButton = screen.getByText("common.copy").closest("button");
     expect(copyButton?.className).toContain("absolute");
-    expect(copyButton?.className).toContain("right-6");
-    expect(copyButton?.className).toContain("top-6");
-    expect(copyButton?.className).toContain("z-10");
+    expect(copyButton?.className).toContain("right-12");
+    expect(copyButton?.className).toContain("top-8");
+    expect(copyButton?.className).toContain("z-1");
   });
 });
