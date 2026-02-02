@@ -154,7 +154,7 @@ module "github_cicd_service_principal" {
   source = "../../modules/databricks/service_principal"
 
   display_name  = "github-cicd-service-principal-${var.environment}"
-  create_secret = true
+  create_secret = false
 
   providers = {
     databricks.mws = databricks.mws
