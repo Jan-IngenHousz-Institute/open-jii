@@ -490,7 +490,7 @@ module "experiment_provisioning_job" {
   name        = "Experiment-Provisioning-Job-PROD"
   description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
 
-  max_concurrent_runs           = 1
+  max_concurrent_runs           = 5
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"
