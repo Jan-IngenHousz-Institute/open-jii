@@ -165,8 +165,8 @@ def find_byte_folders(dbfs_path: str, recursive: bool = True, max_depth: int = 6
         if depth > max_depth:
             return
         try:
-            entries = dbutils.fs.ls(path)  # type: ignore
-        except Exception as e:  # pragma: no cover
+            entries = dbutils.fs.ls(path)
+        except Exception as e:
             print(f"Cannot list {path}: {e}")
             return
         dir_names = {os.path.basename(e.path.rstrip('/')) for e in entries if e.isDir()}
@@ -193,10 +193,10 @@ def load_files_per_byte(byte_folder_path: str, year_prefix: str = "2025") -> Tup
 
     # Check if this is an unknown_ambit folder structure
     try:
-        entries = dbutils.fs.ls(byte_folder_path)  # type: ignore
+        entries = dbutils.fs.ls(byte_folder_path)
         dir_names = {os.path.basename(e.path.rstrip('/')) for e in entries if e.isDir()}
         has_unknown_ambit = 'unknown_ambit' in dir_names
-    except Exception as e:  # pragma: no cover
+    except Exception as e:
         print(f"Error accessing folder {byte_folder_path}: {e}")
         has_unknown_ambit = False
 
@@ -204,28 +204,28 @@ def load_files_per_byte(byte_folder_path: str, year_prefix: str = "2025") -> Tup
         # Load files from unknown_ambit folder and put them all in the first slot
         unknown_ambit_dir = f"{byte_folder_path.rstrip('/')}/unknown_ambit"
         try:
-            listing = dbutils.fs.ls(unknown_ambit_dir)  # type: ignore
+            listing = dbutils.fs.ls(unknown_ambit_dir)
             for fi in listing:
                 name = os.path.basename(fi.path)
                 if not (name.endswith('_.txt') and name.startswith(year_prefix)):
                     continue
                 try:
-                    content = dbutils.fs.head(fi.path, max_bytes=10485760)  # 10MB limit  # type: ignore
+                    content = dbutils.fs.head(fi.path, max_bytes=10485760)
                     lines = content.split('\n')
                     lines.append("EOF")
                     if len(lines) > 7:
                         files_per_byte[0].append(lines)  # Put all unknown_ambit files in first slot
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     print(f"Error reading file {fi.path}: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error accessing unknown_ambit directory {unknown_ambit_dir}: {e}")
     else:
         # Standard byte folder processing (1-4)
         for byte_index in range(1, 5):
             byte_dir = f"{byte_folder_path.rstrip('/')}/{byte_index}"
             try:
-                listing = dbutils.fs.ls(byte_dir)  # type: ignore
-            except Exception as e:  # pragma: no cover
+                listing = dbutils.fs.ls(byte_dir)
+            except Exception as e:
                 print(f"Error accessing byte directory {byte_dir}: {e}")
                 continue
 
@@ -234,12 +234,12 @@ def load_files_per_byte(byte_folder_path: str, year_prefix: str = "2025") -> Tup
                 if not (name.endswith('_.txt') and name.startswith(year_prefix)):
                     continue
                 try:
-                    content = dbutils.fs.head(fi.path, max_bytes=10485760)  # 10MB limit  # type: ignore
+                    content = dbutils.fs.head(fi.path, max_bytes=10485760)
                     lines = content.split('\n')
                     lines.append("EOF")
                     if len(lines) > 7:
                         files_per_byte[byte_index - 1].append(lines)
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     print(f"Error reading file {fi.path}: {e}")
 
     return files_per_byte, byte_folder_path
@@ -460,7 +460,7 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
             df_ambit['ambit_index'] = df_ambit['ambit_index'].astype('int32')  # Ensure int32 type
             all_dfs.append(df_ambit)
 
-        except Exception as e:  # pragma: no cover - defensive
+        except Exception as e:
             print(f"Error processing ambit {ambit_index}: {e}")
 
     if not all_dfs:
