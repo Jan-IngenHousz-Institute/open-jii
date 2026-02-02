@@ -60,8 +60,6 @@ export class CreateUserProfileUseCase {
           return failure(AppError.notFound(`Cannot update user with ID ${userId}`));
         }
 
-        // With centrum consolidation, materialized views auto-refresh when user data changes
-
         return success(userProfile);
       });
     });

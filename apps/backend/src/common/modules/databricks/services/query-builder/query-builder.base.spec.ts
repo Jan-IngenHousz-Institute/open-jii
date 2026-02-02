@@ -43,6 +43,21 @@ describe("QueryBuilder Base", () => {
       expect(query).toBe("SELECT * FROM t ORDER BY `created_at` DESC");
     });
 
+    it("should order by nested struct field", () => {
+      const query = builder.from("t").orderBy("contributor.name", "ASC").build();
+      expect(query).toBe("SELECT * FROM t ORDER BY `contributor`.`name` ASC");
+    });
+
+    it("should order by deeply nested struct field", () => {
+      const query = builder.from("t").orderBy("user.profile.name", "DESC").build();
+      expect(query).toBe("SELECT * FROM t ORDER BY `user`.`profile`.`name` DESC");
+    });
+
+    it("should allow disabling case-insensitive sorting", () => {
+      const query = builder.from("t").orderBy("created_at", "ASC", false).build();
+      expect(query).toBe("SELECT * FROM t ORDER BY `created_at` ASC");
+    });
+
     it("should add limit and offset", () => {
       const query = builder.from("t").limit(10).offset(5).build();
       expect(query).toBe("SELECT * FROM t LIMIT 10 OFFSET 5");
@@ -55,6 +70,34 @@ describe("QueryBuilder Base", () => {
     it("should support selectRaw", () => {
       const query = builder.from("t").selectRaw("COUNT(*) as cnt").build();
       expect(query).toBe("SELECT COUNT(*) as cnt FROM t");
+    });
+
+    it("should support except clause with SELECT *", () => {
+      const query = builder.from("t").except(["col1", "col2"]).build();
+      expect(query).toBe("SELECT * EXCEPT (`col1`, `col2`) FROM t");
+    });
+
+    it("should support except clause with specific columns", () => {
+      const query = builder.select(["a", "b", "c"]).from("t").except(["secret"]).build();
+      expect(query).toBe("SELECT `a`, `b`, `c` EXCEPT (`secret`) FROM t");
+    });
+
+    it("should escape identifiers in except clause", () => {
+      const query = builder.from("t").except(["user.id", "select"]).build();
+      expect(query).toBe("SELECT * EXCEPT (`user.id`, `select`) FROM t");
+    });
+
+    it("should work with except and other clauses", () => {
+      const query = builder
+        .from("users")
+        .except(["password", "token"])
+        .where("active = true")
+        .orderBy("created_at", "DESC")
+        .limit(10)
+        .build();
+      expect(query).toBe(
+        "SELECT * EXCEPT (`password`, `token`) FROM users WHERE active = true ORDER BY `created_at` DESC LIMIT 10",
+      );
     });
   });
 

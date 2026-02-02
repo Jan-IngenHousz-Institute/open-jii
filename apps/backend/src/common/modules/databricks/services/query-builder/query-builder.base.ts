@@ -62,6 +62,7 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   private orderByClause?: string;
   private limitValue?: number;
   private offsetValue?: number;
+  private exceptColumns: string[] = [];
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
@@ -102,7 +103,15 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   }
 
   orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
+    // Handle nested struct field access (e.g., "contributor.name")
+    // Split by dot and escape each part separately
+    if (column.includes(".")) {
+      const parts = column.split(".");
+      const escapedParts = parts.map((part) => this.escapeIdentifier(part));
+      this.orderByClause = `${escapedParts.join(".")} ${direction}`;
+    } else {
+      this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
+    }
     return this;
   }
 
@@ -116,12 +125,26 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
+  /**
+   * Exclude columns from the final SELECT
+   */
+  except(columns: string[]): this {
+    this.exceptColumns.push(...columns);
+    return this;
+  }
+
   build(): string {
     if (!this.fromClause) {
       throw new Error("FROM clause is required");
     }
 
-    let query = `SELECT ${this.selectClause} FROM ${this.fromClause}`;
+    let selectPart = this.selectClause;
+    if (this.exceptColumns.length > 0) {
+      const exceptList = this.exceptColumns.map((c) => this.escapeIdentifier(c)).join(", ");
+      selectPart = `${this.selectClause} EXCEPT (${exceptList})`;
+    }
+
+    let query = `SELECT ${selectPart} FROM ${this.fromClause}`;
 
     if (this.whereConditions.length > 0) {
       query += ` WHERE ${this.whereConditions.join(" AND ")}`;
@@ -186,7 +209,15 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
   }
 
   orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
+    // Handle nested struct field access (e.g., "contributor.name")
+    // Split by dot and escape each part separately
+    if (column.includes(".")) {
+      const parts = column.split(".");
+      const escapedParts = parts.map((part) => this.escapeIdentifier(part));
+      this.orderByClause = `${escapedParts.join(".")} ${direction}`;
+    } else {
+      this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
+    }
     return this;
   }
 

@@ -281,7 +281,7 @@ export function ExperimentDataTable({
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     enableRowSelection: true,
-    getRowId: (row, index) => `${pagination.pageIndex}-${index}`,
+    getRowId: (row) => String(row.id),
     onRowSelectionChange: setRowSelection,
     onPaginationChange,
     state: {
@@ -344,7 +344,7 @@ export function ExperimentDataTable({
 
   return (
     <Form {...selectionForm}>
-      <form>
+      <form className="grid max-w-full">
         <h5 className="mb-3 text-base font-medium">{displayName}</h5>
         <BulkActionsBar
           rowIds={selectedRowIds}

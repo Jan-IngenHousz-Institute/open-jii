@@ -246,13 +246,15 @@ export class UploadAmbyteDataUseCase {
     });
 
     if (successfulUploads.length === 0) {
-      return failure(
-        AppError.badRequest(
-          `Failed to upload Ambyte data files: ${errors
-            .map((e) => `${e.fileName}: ${e.error}`)
-            .join(", ")}`,
-        ),
-      );
+      this.logger.error({
+        msg: "Failed to upload all Ambyte data files",
+        errorCode: ErrorCodes.EXPERIMENT_DATA_UPLOAD_FAILED,
+        operation: "postExecute",
+        experimentId: experiment.id,
+        failedFiles: errors.map((e) => ({ fileName: e.fileName, error: e.error })),
+      });
+
+      return failure(AppError.badRequest(`Failed to upload Ambyte data files`));
     }
 
     // Trigger ambyte processing job after successful file upload

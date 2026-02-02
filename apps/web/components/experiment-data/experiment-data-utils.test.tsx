@@ -1302,6 +1302,86 @@ describe("experiment-data-utils", () => {
       expect(screen.getByTestId("arrow-up")).toBeInTheDocument();
     });
 
+    it("should show sort icons for CONTRIBUTOR type when sortColumn is just the column name", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "created_by",
+                columnDef: {
+                  header: "Created By",
+                  size: 150,
+                  meta: { type: WellKnownColumnTypes.CONTRIBUTOR },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="created_by"
+            sortDirection="DESC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const userHeader = screen.getByText("Created By").closest("th");
+      expect(userHeader).toHaveClass("cursor-pointer");
+      expect(screen.getByTestId("arrow-down")).toBeInTheDocument();
+    });
+
+    it("should show sort icons for CONTRIBUTOR type when sortColumn includes the nested field", () => {
+      const mockOnSort = vi.fn();
+      const mockHeaderGroups = [
+        {
+          id: "headerGroup1",
+          depth: 0,
+          headers: [
+            {
+              id: "header1",
+              column: {
+                id: "created_by",
+                columnDef: {
+                  header: "Created By",
+                  size: 150,
+                  meta: { type: WellKnownColumnTypes.CONTRIBUTOR },
+                },
+              },
+              isPlaceholder: false,
+              getContext: () => ({}),
+            },
+          ],
+        },
+      ] as any;
+
+      render(
+        <table>
+          <ExperimentTableHeader
+            headerGroups={mockHeaderGroups}
+            sortColumn="created_by.name"
+            sortDirection="ASC"
+            onSort={mockOnSort}
+          />
+        </table>,
+      );
+
+      const userHeader = screen.getByText("Created By").closest("th");
+      expect(userHeader).toHaveClass("cursor-pointer");
+      expect(screen.getByTestId("arrow-up")).toBeInTheDocument();
+    });
+
     it("should call onSort with column name and type when header is clicked", () => {
       const mockOnSort = vi.fn();
       const mockHeaderGroups = [

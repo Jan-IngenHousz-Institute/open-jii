@@ -61,10 +61,10 @@ export function ExperimentDataTableCellCollapsible({
   return (
     <TableRow className="min-w-full bg-gray-50 dark:bg-gray-800">
       <TableCell
-        colSpan={columnCount}
-        className="sticky left-0 border-t border-gray-200 p-0 dark:border-gray-700"
+        colSpan={columnCount + 1}
+        className="border-t border-gray-200 p-0 dark:border-gray-700"
       >
-        {content}
+        <div className="sticky left-0 w-[74vw]">{content}</div>
       </TableCell>
     </TableRow>
   );

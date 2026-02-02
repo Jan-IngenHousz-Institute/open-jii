@@ -58,23 +58,24 @@ describe("ExperimentDataTableUserCell", () => {
     expect(textElements.length).toBe(2);
   });
 
-  it("renders fallback for empty name", () => {
+  it("renders nothing for empty name", () => {
     const userData = JSON.stringify({
       id: "user-empty",
       name: "",
       avatar: null,
     });
 
-    render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
+    const { container } = render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
-    expect(screen.getByText("U")).toBeInTheDocument(); // Default fallback
+    expect(container.textContent).toBe("");
   });
 
   it("handles invalid JSON gracefully", () => {
-    render(<ExperimentDataTableUserCell data="invalid-json" columnName="User" />);
+    const { container } = render(
+      <ExperimentDataTableUserCell data="invalid-json" columnName="User" />,
+    );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
   it("handles invalid user object gracefully", () => {
@@ -82,23 +83,23 @@ describe("ExperimentDataTableUserCell", () => {
       someOtherField: "value",
     });
 
-    render(<ExperimentDataTableUserCell data={invalidData} columnName="User" />);
+    const { container } = render(
+      <ExperimentDataTableUserCell data={invalidData} columnName="User" />,
+    );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
-  it("renders user with whitespace name", () => {
+  it("renders nothing for whitespace name", () => {
     const userData = JSON.stringify({
       id: "user-whitespace",
       name: "   ",
       avatar: null,
     });
 
-    render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
+    const { container } = render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
 
-    // The component renders the whitespace but getInitials returns "U" for empty trimmed string
-    expect(screen.getByText("U")).toBeInTheDocument(); // Default fallback for empty/whitespace
-    // The name span will contain whitespace, not "Unknown User" text
+    expect(container.textContent).toBe("");
   });
 
   it("renders user with multiple name parts", () => {
@@ -117,27 +118,29 @@ describe("ExperimentDataTableUserCell", () => {
   it("handles parsed data that is not an object", () => {
     const notAnObject = JSON.stringify("just a string");
 
-    render(<ExperimentDataTableUserCell data={notAnObject} columnName="User" />);
+    const { container } = render(
+      <ExperimentDataTableUserCell data={notAnObject} columnName="User" />,
+    );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
-    expect(screen.getByText("U")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
   it("handles null parsed data", () => {
     const nullData = JSON.stringify(null);
 
-    render(<ExperimentDataTableUserCell data={nullData} columnName="User" />);
+    const { container } = render(<ExperimentDataTableUserCell data={nullData} columnName="User" />);
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
-    expect(screen.getByText("U")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
   it("handles parsed data that is an array", () => {
     const arrayData = JSON.stringify([{ id: "1", name: "Test", avatar: null }]);
 
-    render(<ExperimentDataTableUserCell data={arrayData} columnName="User" />);
+    const { container } = render(
+      <ExperimentDataTableUserCell data={arrayData} columnName="User" />,
+    );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
   it("handles parsed data missing required fields", () => {
@@ -146,9 +149,11 @@ describe("ExperimentDataTableUserCell", () => {
       avatar: null,
     });
 
-    render(<ExperimentDataTableUserCell data={missingId} columnName="User" />);
+    const { container } = render(
+      <ExperimentDataTableUserCell data={missingId} columnName="User" />,
+    );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
   it("handles user with null name", () => {
@@ -158,30 +163,29 @@ describe("ExperimentDataTableUserCell", () => {
       avatar: null,
     });
 
-    render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
+    const { container } = render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
 
-    // Should show "Unknown User" when name is null
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
   it("handles exception during JSON parsing", () => {
     // Create a string that will cause JSON.parse to throw
     const malformedJSON = "{invalid json structure";
 
-    render(<ExperimentDataTableUserCell data={malformedJSON} columnName="User" />);
+    const { container } = render(
+      <ExperimentDataTableUserCell data={malformedJSON} columnName="User" />,
+    );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
-    expect(screen.getByText("U")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
   });
 
   it("handles JSON parsing exception with nested try-catch", () => {
     // Another malformed JSON to ensure catch block is covered
     const badJSON = "{ unclosed object";
 
-    render(<ExperimentDataTableUserCell data={badJSON} columnName="User" />);
+    const { container } = render(<ExperimentDataTableUserCell data={badJSON} columnName="User" />);
 
-    const unknownUserElements = screen.getAllByText("Unknown User");
-    expect(unknownUserElements.length).toBeGreaterThan(0);
+    expect(container.textContent).toBe("");
   });
 
   it("renders user with avatar URL", () => {

@@ -54,21 +54,18 @@ export function ExperimentDataTableUserCell({
 }: ExperimentDataTableUserCellProps) {
   const userData = parseUserData(data);
 
-  // If we can't parse the data as a user object, display unknown user fallback
+  // If we can't parse the data as a user object, return empty
   if (!userData) {
-    return (
-      <div className="flex items-center gap-2">
-        <Avatar className="h-6 w-6 rounded-full">
-          <AvatarFallback className="rounded-full text-xs">U</AvatarFallback>
-        </Avatar>
-        <span className="text-muted-foreground max-w-[120px] truncate text-sm font-medium">
-          Unknown User
-        </span>
-      </div>
-    );
+    return "";
   }
 
   const { name, avatar } = userData;
+
+  // If no name is provided, return empty
+  if (!name || name.trim().length === 0) {
+    return "";
+  }
+
   const initials = getInitials(name);
 
   return (
@@ -77,7 +74,7 @@ export function ExperimentDataTableUserCell({
         <AvatarImage src={avatar ?? undefined} alt={name} />
         <AvatarFallback className="rounded-full text-xs">{initials}</AvatarFallback>
       </Avatar>
-      <span className="max-w-[120px] truncate text-sm font-medium">{name || "Unknown User"}</span>
+      <span className="max-w-[120px] truncate text-sm font-medium">{name}</span>
     </div>
   );
 }

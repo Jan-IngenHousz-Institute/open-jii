@@ -59,6 +59,7 @@ export class QueryBuilderService {
       return this.buildSelectQuery({
         table: params.table,
         columns: params.columns,
+        exceptColumns: params.exceptColumns,
         whereClause: params.whereClause,
         whereConditions: params.whereConditions,
         orderBy: params.orderBy,
@@ -92,10 +93,23 @@ export class QueryBuilderService {
    * Build a SELECT query with optional WHERE, ORDER BY, LIMIT, and OFFSET
    */
   private buildSelectQuery(params: QueryParams): string {
-    const { table, columns, whereClause, whereConditions, orderBy, orderDirection, limit, offset } =
-      params;
+    const {
+      table,
+      columns,
+      exceptColumns,
+      whereClause,
+      whereConditions,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    } = params;
 
     const builder = this.query().from(table).select(columns);
+
+    if (exceptColumns && exceptColumns.length > 0) {
+      builder.except(exceptColumns);
+    }
 
     if (whereClause) {
       builder.where(whereClause);

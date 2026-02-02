@@ -152,7 +152,7 @@ export function AddAnnotationDialog({
                             {t("experimentDataAnnotations.flagTypes.outlier")}
                           </SelectItem>
                           <SelectItem value="needs_review">
-                            {t("experimentDataAnnotations.flagTypes.needsReview")}
+                            {t("experimentDataAnnotations.flagTypes.needs_review")}
                           </SelectItem>
                         </SelectContent>
                       </Select>

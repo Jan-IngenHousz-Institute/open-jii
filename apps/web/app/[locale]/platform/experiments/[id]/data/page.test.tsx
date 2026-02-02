@@ -242,7 +242,7 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("renders tab triggers for each table with row counts", async () => {
+  it("renders tab triggers for each table with row counts, excluding device table", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
@@ -250,18 +250,19 @@ describe("ExperimentDataPage", () => {
       expect(measurementsTab).toBeInTheDocument();
       expect(measurementsTab).toHaveTextContent("Measurements (100)");
 
-      const deviceTab = screen.getByTestId("nav-tab-trigger-device");
-      expect(deviceTab).toBeInTheDocument();
-      expect(deviceTab).toHaveTextContent("Device Metadata (50)");
+      // Device table should be filtered out
+      const deviceTab = screen.queryByTestId("nav-tab-trigger-device");
+      expect(deviceTab).not.toBeInTheDocument();
     });
   });
 
-  it("renders table content for each tab", async () => {
+  it("renders table content for each tab, excluding device table", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("nav-tab-content-measurements")).toBeInTheDocument();
-      expect(screen.getByTestId("nav-tab-content-device")).toBeInTheDocument();
+      // Device table content should not be rendered
+      expect(screen.queryByTestId("nav-tab-content-device")).not.toBeInTheDocument();
     });
   });
 
@@ -276,6 +277,22 @@ describe("ExperimentDataPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
+    });
+  });
+
+  it("displays no data message when only device table exists", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [{ name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 }],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
+      // Device table should not be shown
+      expect(screen.queryByTestId("nav-tab-trigger-device")).not.toBeInTheDocument();
     });
   });
 

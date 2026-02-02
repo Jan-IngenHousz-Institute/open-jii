@@ -133,6 +133,31 @@ export function isWellKnownType(type?: string): boolean {
 }
 
 /**
+ * Check if a well-known type is sortable
+ * Only CONTRIBUTOR type is sortable (ANNOTATIONS and QUESTIONS are arrays)
+ */
+export function isWellKnownSortableType(type?: string): boolean {
+  if (!type) return false;
+  return type === WellKnownColumnTypes.CONTRIBUTOR;
+}
+
+/**
+ * Get the sort field for a well-known sortable type
+ * Returns the field path to use for sorting (e.g., "name" for CONTRIBUTOR)
+ * Returns undefined if the type is not a well-known sortable type
+ */
+export function getWellKnownSortField(type?: string): string | undefined {
+  if (!type) return undefined;
+
+  switch (type) {
+    case WellKnownColumnTypes.CONTRIBUTOR:
+      return "name";
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Check if a column type is valid for use as a graph axis source
  * Valid types include: numeric types and timestamps
  */

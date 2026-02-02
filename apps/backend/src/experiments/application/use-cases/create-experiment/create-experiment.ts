@@ -154,9 +154,6 @@ export class CreateExperimentUseCase {
             }
           }
 
-          // Experiment provisioning removed - with centrum consolidation, all experiments
-          // use the single centrum schema and pipeline automatically
-
           this.logger.log({
             msg: "Experiment created successfully",
             operation: "createExperiment",

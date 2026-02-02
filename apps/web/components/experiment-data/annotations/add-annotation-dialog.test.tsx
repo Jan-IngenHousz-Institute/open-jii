@@ -413,7 +413,9 @@ describe("AddAnnotationDialog", () => {
 
     // Check that both flag type options are available
     expect(screen.getByText("experimentDataAnnotations.flagTypes.outlier")).toBeInTheDocument();
-    expect(screen.getByText("experimentDataAnnotations.flagTypes.needsReview")).toBeInTheDocument();
+    expect(
+      screen.getByText("experimentDataAnnotations.flagTypes.needs_review"),
+    ).toBeInTheDocument();
   });
 
   it("should have correct textarea rows for different types", () => {
