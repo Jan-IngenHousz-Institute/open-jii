@@ -74,24 +74,19 @@ sensor_schema = StructType([
 
 # DBTITLE 1,Configuration
 
-
 ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 CATALOG_NAME = "open_jii_dev"
 
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
 
-# Kinesis configuration parameters
 KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
-
-# Slack notification configuration
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 MACROS_PATH = "/Workspace/Shared/macros"
 
-# Gold layer table names (Phase 1)
 EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
@@ -101,32 +96,7 @@ EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
-ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
-CATALOG_NAME = "open_jii_dev"
-
-BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
-SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
-
-# Kinesis configuration parameters
-KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
-CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
-SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
-
-# Slack notification configuration
-MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
-
-MACROS_PATH = "/Workspace/Shared/macros"
-
-# Gold layer table names (Phase 1)
-EXPERIMENT_STATUS_TABLE = "experiment_status"
-EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
-EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
-EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
-EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
-EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
-ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
-ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
-RAW_AMBYTE_TABLE = "raw_ambyte_data"
+ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
 
 # COMMAND ----------
 
@@ -144,19 +114,8 @@ RAW_AMBYTE_TABLE = "raw_ambyte_data"
     }
 )
 def raw_data():
-    """
-    Directly ingests raw Kinesis sensor data streams into structured bronze layer tables.
+    """Bronze layer: Ingest raw Kinesis sensor data."""
     
-    This function:
-    - Reads directly from Kinesis stream
-    - Extracts device metadata and measurements from JSON payloads
-    - Normalizes device readings across different sensor types
-    - Performs initial deduplication using watermarking
-    - Extracts plant metadata when available
-    - Preserves the original raw payload for auditing and reprocessing
-    """
-    
-    # Read directly from Kinesis stream - keep as raw as possible for bronze layer
     return (
         spark.readStream
         .format("kinesis")
@@ -209,16 +168,9 @@ def raw_data():
 @dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
 @dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
-    """
-    Transforms Bronze data into a cleaned Silver table with standardized values,
-    quality checks, and enriched metadata.
-    
-    This Silver layer serves as the handoff point for experiment-specific schemas.
-    """
-    # Read from bronze and extract/transform the data
+    """Silver layer: Clean and standardize sensor data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
     
-    # Extract and transform the data
     df = (
         bronze_df
         .withColumn("device_id", F.col("parsed_data.device_id"))
@@ -233,15 +185,13 @@ def clean_data():
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
-    )
-        
-    # Calculate data latency (time between reading and ingestion)
-    df = df.withColumn(
-        "ingest_latency_ms", 
-        F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
+        .withColumn(
+            "ingest_latency_ms", 
+            F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
+        )
     )
 
-    # Extract macros from parsed_data or fall back to legacy behaviour
+
     df = df.withColumn(
         "macros",
         F.when(
@@ -269,21 +219,8 @@ def clean_data():
         )
     )
 
-    # Extract questions from the parsed_data and keep in original array structure
-    df = df.withColumn(
-        "questions",
-        F.col("parsed_data.questions")
-    )
-    
-    # Extract annotations from the parsed_data
-    df = df.withColumn(
-        "annotations",
-        F.coalesce(F.col("parsed_data.annotations"), F.array())
-    )
-    
-    # Create a unique id for each row
-    # Hash based on experiment_id, device_id, timestamp, sample, and ingestion_timestamp
-    # This ensures each ingestion gets a unique ID, even for duplicate measurements
+    df = df.withColumn("questions", F.col("parsed_data.questions"))
+    df = df.withColumn("annotations", F.coalesce(F.col("parsed_data.annotations"), F.array()))
     df = df.withColumn(
         "id",
         F.abs(
@@ -297,8 +234,6 @@ def clean_data():
         )
     )
     
-    # Populate missing annotation IDs and rowIds
-    # If annotations come from payload without IDs, generate them here
     df = df.withColumn(
         "annotations",
         F.expr("""
@@ -351,19 +286,8 @@ def clean_data():
     }
 )
 def experiment_status():
-    """
-    Gold layer materialized view that tracks experiment freshness status.
-    
-    This function:
-    - Queries the clean data (silver) table
-    - Gets the latest timestamp for each experiment ID
-    - Determines the status (fresh/stale) based on configurable freshness criteria
-    - Structured for efficient incremental refreshes
-    """
-    
-    # Configuration for freshness threshold (in minutes)
-    # Data older than this threshold will be marked as "stale"
-    FRESHNESS_THRESHOLD_MINUTES = 60  # Can be parameterized via spark.conf
+    """Track experiment data freshness."""
+    FRESHNESS_THRESHOLD_MINUTES = 60
     
     # Read from silver table
     silver_df = dlt.read(SILVER_TABLE)
@@ -379,11 +303,9 @@ def experiment_status():
             F.max("timestamp").alias("latest_timestamp"),
             F.max("processed_timestamp").alias("latest_processed_timestamp")
         )
-        .filter("experiment_id IS NOT NULL")  # Filter out records with null experiment_id
+        .filter("experiment_id IS NOT NULL")
     )
     
-    # Calculate freshness status
-    # Compare timestamp difference in seconds against threshold converted to seconds
     freshness_threshold_seconds = FRESHNESS_THRESHOLD_MINUTES * 60
     status_df = (
         experiment_status_df
@@ -397,7 +319,6 @@ def experiment_status():
         .withColumn("status_updated_at", current_timestamp)
     )
     
-    # Select final columns for the gold layer
     return status_df.select(
         "experiment_id",
         "latest_timestamp",
@@ -422,9 +343,7 @@ def experiment_status():
     }
 )
 def experiment_raw_data():
-    """
-    Extract and partition sample data per experiment from clean_data.
-    """
+    """Per-experiment raw sample data with VARIANT support."""
     
     # Define UDF for sanitizing question labels
     @F.pandas_udf(ArrayType(StructType([
@@ -432,10 +351,6 @@ def experiment_raw_data():
         StructField("question_answer", StringType(), True)
     ])))
     def sanitize_questions_udf(questions: pd.Series) -> pd.Series:
-        """
-        Sanitize question labels in questions array.
-        Matches the logic in question_metadata.py
-        """
         
         def sanitize_label(label):
             if not label:
@@ -481,7 +396,6 @@ def experiment_raw_data():
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
         .withColumn("data", F.expr("parse_json(sample)"))
-        # Sanitize question labels using pandas UDF
         .withColumn(
             "questions_sanitized",
             F.when(
@@ -489,8 +403,6 @@ def experiment_raw_data():
                 sanitize_questions_udf(F.col("questions"))
             )
         )
-        # Convert questions array to VARIANT map (question_label -> question_answer)
-        # Deduplicates by taking last answer for each distinct label
         .withColumn(
             "questions_data",
             F.when(
@@ -540,9 +452,7 @@ def experiment_raw_data():
     }
 )
 def experiment_device_data():
-    """
-    Aggregate device stats per experiment from clean_data.
-    """
+    """Device metadata aggregated per experiment."""
     silver_df = dlt.read(SILVER_TABLE)
     
     return (
@@ -555,6 +465,27 @@ def experiment_device_data():
             F.max("device_battery").alias("device_battery"),
             F.count("*").alias("total_measurements"),
             F.max("processed_timestamp").alias("processed_timestamp")
+        )
+        .withColumn(
+            "id",
+            F.abs(
+                F.hash(
+                    F.col("experiment_id"),
+                    F.col("device_id"),
+                    F.col("device_firmware")
+                )
+            )
+        )
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_firmware",
+            "device_name",
+            "device_version",
+            "device_battery",
+            "total_measurements",
+            "processed_timestamp"
         )
     )
 
@@ -575,15 +506,7 @@ def experiment_device_data():
     }
 )
 def experiment_macro_data():
-    """
-    Process macros for all experiments with VARIANT column for flexible output storage.
-    
-    Steps:
-    1. Read from experiment_raw_data
-    2. Explode macros array
-    3. Execute macro script on sample data
-    4. Store result in VARIANT column (handles any schema)
-    """
+    """Process macros with VARIANT output column."""
     
     # Read from experiment_raw_data and explode macros
     base_df = (
@@ -628,7 +551,6 @@ def experiment_macro_data():
         StructField("error", StringType(), True)
     ]))
     def execute_macro_udf(pdf: pd.DataFrame) -> pd.DataFrame:
-        """Execute macro and return struct with result (JSON string) and error (error message)."""
         results = []
         errors = []
         
@@ -643,8 +565,6 @@ def experiment_macro_data():
                 continue
             
             try:
-                # Convert VariantVal to JSON string directly
-                # Use toJson() to get JSON string with floats (not Decimals)
                 sample_json = data.toJson()
                 
                 result = execute_macro_script(macro_filename, sample_json, MACROS_PATH)
@@ -656,13 +576,11 @@ def experiment_macro_data():
                     results.append(None)
                     errors.append(f"Macro returned empty result (macro: {macro_name})")
             except Exception as e:
-                # Catch any errors from macro execution (script errors, file not found, etc.)
                 results.append(None)
                 errors.append(f"{str(e)} (macro: {macro_name})")
         
         return pd.DataFrame({"result": results, "error": errors})
     
-    # Apply macro execution and convert to VARIANT
     return (
         base_df
         .withColumn("macro_result", execute_macro_udf(F.struct("data", "macro_filename", "macro_name")))
@@ -671,9 +589,6 @@ def experiment_macro_data():
             F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
         )
         .withColumn("macro_error", F.col("macro_result.error"))
-        # Generate unique ID for each macro row
-        # Hash: raw data id + macro_filename + processed_timestamp
-        # This ensures each macro execution on a sample gets a unique ID
         .withColumn(
             "macro_row_id",
             F.abs(
@@ -686,8 +601,8 @@ def experiment_macro_data():
         )
         .select(
             "experiment_id",
-            F.col("macro_row_id").alias("id"),  # Use unique macro row ID
-            F.col("id").alias("raw_id"),  # Keep reference to original raw data ID
+            F.col("macro_row_id").alias("id"),
+            F.col("id").alias("raw_id"),
             "device_id",
             "device_name",
             "timestamp",
@@ -719,9 +634,7 @@ def experiment_macro_data():
     }
 )
 def experiment_table_metadata():
-    """
-    Consolidated metadata table for all experiment tables.
-    """
+    """Metadata for all experiment tables."""
     
     # 1. Macro tables metadata (one row per macro_filename per experiment)
     # One macro file = one table, even if macro_name changes over time
@@ -742,21 +655,18 @@ def experiment_table_metadata():
         .select(
             F.col("experiment_id"),
             F.col("table_name"),
-            F.col("macro_filename"),  # Already grouped by this, no need for F.max()
+            F.col("macro_filename"),
             F.col("row_count"),
             F.col("macro_schema"),
             F.col("questions_schema")
         )
     )
     
-    # 2. Raw data table metadata (one row per experiment)
-    # Compute row count and questions schema directly from raw data
     raw_data_metadata = (
         dlt.read(EXPERIMENT_RAW_DATA_TABLE)
         .groupBy("experiment_id")
         .agg(
             F.count("*").alias("row_count"),
-            # Aggregate questions_schema across all raw data samples (schema_of_variant_agg ignores NULLs, NULLIF converts VOID to NULL)
             F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
         .select(
@@ -769,7 +679,6 @@ def experiment_table_metadata():
         )
     )
     
-    # 3. Device data table metadata (one row per experiment)
     device_metadata = (
         dlt.read(EXPERIMENT_DEVICE_DATA_TABLE)
         .groupBy("experiment_id")
@@ -784,7 +693,6 @@ def experiment_table_metadata():
         )
     )
     
-    # 4. Ambyte data table metadata (one row per experiment)
     ambyte_metadata = (
         dlt.read(RAW_AMBYTE_TABLE)
         .groupBy("experiment_id")
@@ -799,7 +707,6 @@ def experiment_table_metadata():
         )
     )
     
-    # Union all metadata sources
     return (
         macro_metadata
         .unionByName(raw_data_metadata)
@@ -821,9 +728,7 @@ def experiment_table_metadata():
     }
 )
 def experiment_contributors():
-    """
-    Cache user profiles for all contributors to each experiment.
-    """
+    """Cached user profiles per experiment."""
     
     # Get unique users per experiment (batch read, not streaming)
     unique_users = (
@@ -834,7 +739,6 @@ def experiment_contributors():
         .distinct()
     )
     
-    # Fetch profiles and add columns (returns df with added profile columns)
     return add_user_column(unique_users, ENVIRONMENT, dbutils)
 
 # COMMAND ----------
@@ -855,20 +759,10 @@ def experiment_contributors():
     }
 )
 def enriched_experiment_raw_data():
-    """
-    Enriched materialized table combining raw data with:
-    - Expanded questions array (original format)
-    - questions_data VARIANT (key-value map of question_label -> question_answer for columnar expansion)
-    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, avatar: STRING>
-    - Annotations (from experiment_annotations table + streaming annotations merged)
-    
-    Incrementally refreshed on serverless compute when source tables change.
-    Supports incremental refresh via row-tracking on all source tables.
-    """
+    """Enriched raw data with user profiles and annotations."""
     raw_data = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
     
-    # Join with user profiles to get user struct
     enriched = (
         raw_data
         .join(
@@ -893,11 +787,37 @@ def enriched_experiment_raw_data():
         )
     )
     
-    # Use add_annotation_column to merge streaming annotations with database annotations
-    # This handles the merging logic automatically
     return add_annotation_column(
         enriched,
         table_name="experiment_raw_data",
+        catalog_name=CATALOG_NAME,
+        experiment_schema="centrum",
+        spark=spark
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Enriched Raw Ambyte Data
+@dlt.table(
+    name=ENRICHED_RAW_AMBYTE_DATA_VIEW,
+    comment="Enriched materialized view: Raw ambyte data with annotations. Incrementally refreshed.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.enableDeletionVectors": "true",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
+    }
+)
+def enriched_raw_ambyte_data():
+    """Enriched ambyte data with annotations."""
+    raw_ambyte = dlt.read(RAW_AMBYTE_TABLE).drop("_rescued_data")
+    
+    return add_annotation_column(
+        raw_ambyte,
+        table_name="raw_ambyte_data",
         catalog_name=CATALOG_NAME,
         experiment_schema="centrum",
         spark=spark
@@ -919,16 +839,10 @@ def enriched_experiment_raw_data():
     }
 )
 def enriched_experiment_macro_data():
-    """
-    Enriched materialized table combining macro data with:
-    - Expanded VARIANT fields (macro_output:*)
-    - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, avatar: STRING>
-    - Annotations (from experiment_annotations table + streaming annotations merged)
-    """
+    """Enriched macro data with user profiles and annotations."""
     macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
     
-    # Join with user profiles to get user struct
     enriched = (
         macro_data
         .join(
@@ -957,8 +871,6 @@ def enriched_experiment_macro_data():
         )
     )
     
-    # Use add_annotation_column to merge streaming annotations with database annotations
-    # Table name uses macro filename for targeted annotation filtering
     return add_annotation_column(
         enriched,
         table_name="experiment_macro_data",  # Generic macro data table name
@@ -982,20 +894,10 @@ def enriched_experiment_macro_data():
     partition_cols=["experiment_id"]
 )
 def raw_ambyte_data():
-    """
-    Streaming table that reads pre-processed Ambyte trace data from parquet files.
-    
-    The ambyte_processing_task processes uploaded ambyte trace files and saves them
-    as parquet files organized by experiment_id. This table provides queryable access
-    to that processed data with experiment_id as the partition key.
-    
-    Path structure: /Volumes/{catalog}/centrum/data-uploads/{experiment_id}/processed-ambyte/*.parquet
-    
-    Uses Auto Loader (cloudFiles) to automatically detect and ingest new parquet files
-    as they are created by the ambyte processing task. Extracts experiment_id from the file path.
-    """
+    """Streaming ingestion of pre-processed Ambyte trace data."""
     # Base path for all processed ambyte data across all experiments
-    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads"
+    # Point directly to the processed-ambyte subdirectories using wildcards
+    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/*/processed-ambyte"
     
     # Schema location for Auto Loader metadata (schema inference and checkpointing)
     schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/_schemas/ambyte_schema"
@@ -1004,14 +906,21 @@ def raw_ambyte_data():
     # This will automatically detect new files as they are added by the ambyte_processing_task
     # The path pattern will match: /Volumes/{catalog}/centrum/data-uploads/*/processed-ambyte/*.parquet
     # The experiment_id column is included in the parquet files by the ambyte_processing_task
-    return (
+    df = (
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
         .option("recursiveFileLookup", "true")
-        .option("pathGlobFilter", "*/processed-ambyte/*.parquet")  # Filter for processed ambyte files only
         .load(processed_path)
+    )
+    
+    return (
+        df
+        .withColumn(
+            "id",
+            F.abs(F.hash(*[F.col(c) for c in df.columns]))
+        )
     )
 
 # COMMAND ----------
@@ -1019,7 +928,6 @@ def raw_ambyte_data():
 # DBTITLE 1,Event Hook - Slack Notifications
 @dlt.on_event_hook(max_allowable_consecutive_failures=3)
 def send_slack_notifications(event):
-    """Send Slack notifications for pipeline failures and stops."""
 
     # Get the webhook URL from the secret scope
     SLACK_WEBHOOK_URL = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="slack-webhook-url")
@@ -1027,46 +935,36 @@ def send_slack_notifications(event):
         'Content-Type': 'application/json'
     }
 
-    # Check for failure/stop events in progress updates
     if (
         event['event_type'] in ['update_progress', 'flow_progress', 'operation_progress']
         and event['details'].get(event['event_type'], {}).get('state') in ['FAILED', 'STOPPED']
     ):
-        # Send structured Slack notification
         event_type = event['event_type']
         state = event['details'].get(event['event_type'], {}).get('state')
         pipeline_id = event['origin'].get('pipeline_id')
         pipeline_name = event['origin'].get('pipeline_name')
         update_id = event['origin'].get('update_id')
         
-        # Color coding for visual distinction
-        color = "#FF0000" if state == 'FAILED' else "#FFA500"  # Red for failed, orange for stopped
+        color = "#FF0000" if state == 'FAILED' else "#FFA500"
         
-        # Get Databricks host from secret scope
         try:
             databricks_host = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="databricks-host")
         except Exception:
             databricks_host = None
         
-        # Construct URLs once
         if databricks_host:
             workspace_url = databricks_host
             pipeline_url = f"{databricks_host}/pipelines/{pipeline_id}"
             update_url = f"{databricks_host}/pipelines/{pipeline_id}/updates/{update_id}"
         else:
-            # Fallback when databricks host is not available
             workspace_url = None
             pipeline_url = None
             update_url = None
         
-        # Format timestamp if available
         timestamp = event.get('timestamp')
-        if timestamp:
-            # Convert to readable format if it's a timestamp
-            if isinstance(timestamp, (int, float)):
-                timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC')
+        if timestamp and isinstance(timestamp, (int, float)):
+            timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC')
         
-        # Helper function to format Slack links
         def slack_link(url, text):
             return f"<{url}|{text}>" if url else text
         

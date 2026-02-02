@@ -20,7 +20,7 @@ export default registerAs("databricks", () => ({
   // Table names with defaults (can be overridden via environment variables)
   rawDataTableName: process.env.DATABRICKS_RAW_DATA_TABLE_NAME ?? "enriched_experiment_raw_data",
   deviceDataTableName: process.env.DATABRICKS_DEVICE_DATA_TABLE_NAME ?? "experiment_device_data",
-  rawAmbyteDataTableName: process.env.DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME ?? "raw_ambyte_data",
+  rawAmbyteDataTableName: process.env.DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME ?? "enriched_raw_ambyte_data",
   macroDataTableName:
     process.env.DATABRICKS_MACRO_DATA_TABLE_NAME ?? "enriched_experiment_macro_data",
 }));

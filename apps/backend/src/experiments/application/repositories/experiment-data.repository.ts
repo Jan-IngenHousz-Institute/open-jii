@@ -189,27 +189,46 @@ export class ExperimentDataRepository {
       "date",
     ];
 
-    const exceptColumnsMap: Record<string, string[]> = {
-      raw_data: ["experiment_id"],
-      device: ["experiment_id"],
-      raw_ambyte_data: ["experiment_id"],
+    // Table configuration: defines which columns to exclude and whether table supports variant columns
+    const tableConfig: Record<string, { exceptColumns: string[]; supportsVariants: boolean }> = {
+      raw_data: {
+        exceptColumns: ["experiment_id"],
+        supportsVariants: true,
+      },
+      device: {
+        exceptColumns: ["experiment_id"],
+        supportsVariants: false,
+      },
+      raw_ambyte_data: {
+        exceptColumns: ["experiment_id"],
+        supportsVariants: false,
+      },
     };
 
-    const exceptColumns = [...(exceptColumnsMap[tableName] ?? MACRO_EXCEPT_COLUMNS)];
+    // Default for macro tables (any table not in the map above)
+    const config = tableConfig[tableName] ?? {
+      exceptColumns: MACRO_EXCEPT_COLUMNS,
+      supportsVariants: true,
+    };
+
+    const exceptColumns = [...config.exceptColumns];
 
     // Build variants array based on available schemas
     const variants: { columnName: string; schema: string }[] = [];
 
-    if (schemas?.macroSchema) {
-      variants.push({ columnName: "macro_output", schema: schemas.macroSchema });
-    } else {
-      exceptColumns.push("macro_output");
-    }
+    // Only handle macro_output and questions_data for tables that support variant columns
+    if (config.supportsVariants) {
+      if (schemas?.macroSchema) {
+        variants.push({ columnName: "macro_output", schema: schemas.macroSchema });
+      } else {
+        exceptColumns.push("macro_output");
+      }
 
-    if (schemas?.questionsSchema) {
-      variants.push({ columnName: "questions_data", schema: schemas.questionsSchema });
-    } else {
-      exceptColumns.push("questions_data");
+      if (schemas?.questionsSchema) {
+        variants.push({ columnName: "questions_data", schema: schemas.questionsSchema });
+      } else {
+        exceptColumns.push("questions_data");
+      }
     }
 
     const query = this.databricksPort.buildExperimentQuery({

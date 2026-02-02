@@ -42,7 +42,7 @@ export class GetExperimentTablesUseCase {
         defaultSortColumn: "processed_timestamp",
       },
       raw_ambyte_data: {
-        displayName: "Ambyte Trace Data",
+        displayName: "Ambyte Raw Data",
         defaultSortColumn: "processed_at",
       },
     };
