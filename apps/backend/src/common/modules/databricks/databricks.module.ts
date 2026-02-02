@@ -24,7 +24,7 @@ import { DatabricksWorkspaceService } from "./services/workspace/workspace.servi
     DatabricksConfigService,
     DatabricksAuthService,
     DatabricksJobsService,
-    DatabricksPipcoelinesService,
+    DatabricksPipelinesService,
     DatabricksSqlService,
     DatabricksTablesService,
     QueryBuilderService,
