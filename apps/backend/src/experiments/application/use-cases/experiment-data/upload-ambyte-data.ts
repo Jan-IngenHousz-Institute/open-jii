@@ -254,7 +254,8 @@ export class UploadAmbyteDataUseCase {
         failedFiles: errors.map((e) => ({ fileName: e.fileName, error: e.error })),
       });
 
-      return failure(AppError.badRequest(`Failed to upload Ambyte data files`));
+      const errorDetails = errors.map((e) => `${e.fileName}: ${e.error}`).join(", ");
+      return failure(AppError.badRequest(`Failed to upload Ambyte data files. ${errorDetails}`));
     }
 
     // Trigger ambyte processing job after successful file upload
