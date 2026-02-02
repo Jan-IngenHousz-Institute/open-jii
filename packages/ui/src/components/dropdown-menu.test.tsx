@@ -311,10 +311,8 @@ describe("DropdownMenu", () => {
       // Hover to open submenu
       await user.hover(subTrigger);
 
-      // Wait a bit for submenu to appear
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      expect(screen.getByText("Submenu Item")).toBeInTheDocument();
+      const submenuItem = await screen.findByText("Submenu Item");
+      expect(submenuItem).toBeInTheDocument();
     });
 
     it("applies inset class to SubTrigger when inset prop is true", async () => {
