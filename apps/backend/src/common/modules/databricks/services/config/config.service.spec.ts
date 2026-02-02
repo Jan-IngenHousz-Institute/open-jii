@@ -116,7 +116,7 @@ describe("DatabricksConfigService", () => {
 
     it("should return the correct raw ambyte data table name", () => {
       const rawAmbyteDataTableName = configService.getRawAmbyteDataTableName();
-      expect(rawAmbyteDataTableName).toBe("raw_ambyte_data");
+      expect(rawAmbyteDataTableName).toBe("enriched_raw_ambyte_data");
     });
 
     it("should return the correct macro data table name", () => {
