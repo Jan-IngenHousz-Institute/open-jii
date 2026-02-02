@@ -97,10 +97,11 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         
         
         # Group by row_id and collect all annotations into an array
+        # Use a different alias to avoid ambiguous reference during join
         annotations_grouped = (
             annotations_df
             .groupBy("row_id")
-            .agg(F.collect_list("annotation").alias("annotations"))
+            .agg(F.collect_list("annotation").alias("db_annotations"))
         )
         
         grouped_count = annotations_grouped.count()
@@ -131,16 +132,16 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
                 "annotations",
                 F.concat(
                     F.coalesce(F.col("upstream_annotations"), F.array()),
-                    F.coalesce(F.col("annotations"), F.array())
+                    F.coalesce(F.col("db_annotations"), F.array())
                 )
-            ).drop("upstream_annotations")
+            ).drop("upstream_annotations", "db_annotations")
             print("Merged upstream annotations with database annotations")
         else:
             # No existing annotations, just use database annotations or empty array
             enriched_df = enriched_df.withColumn(
                 "annotations",
-                F.when(F.col("annotations").isNull(), F.array()).otherwise(F.col("annotations"))
-            )
+                F.when(F.col("db_annotations").isNull(), F.array()).otherwise(F.col("db_annotations"))
+            ).drop("db_annotations")
         
         print(f"Join completed successfully")
         

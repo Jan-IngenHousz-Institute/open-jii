@@ -131,7 +131,10 @@ module "databricks_workspace" {
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
 
-  principal_ids = [module.node_service_principal.service_principal_id]
+  principal_ids = [
+    module.node_service_principal.service_principal_id,
+    module.github_cicd_service_principal.service_principal_id
+  ]
 
   providers = {
     databricks.mws       = databricks.mws
@@ -144,6 +147,17 @@ module "node_service_principal" {
 
   display_name  = "node-service-principal-${var.environment}"
   create_secret = true
+
+  providers = {
+    databricks.mws = databricks.mws
+  }
+}
+
+module "github_cicd_service_principal" {
+  source = "../../modules/databricks/service_principal"
+
+  display_name  = "github-cicd-service-principal-${var.environment}"
+  create_secret = false
 
   providers = {
     databricks.mws = databricks.mws
@@ -294,6 +308,7 @@ module "centrum_pipeline" {
 
   notebook_paths = [
     "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
+    # "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum_pipeline"
   ]
 
   configuration = {
@@ -365,6 +380,7 @@ module "pipeline_scheduler" {
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/experiment_pipelines_orchestrator_task"
 
       parameters = {
         "catalog_name"            = module.databricks_catalog.catalog_name,
@@ -432,6 +448,7 @@ module "centrum_backup_job" {
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/centrum_backup_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/centrum_backup_task"
 
       parameters = {
         "CATALOG_NAME"    = module.databricks_catalog.catalog_name
@@ -473,7 +490,7 @@ module "experiment_provisioning_job" {
   name        = "Experiment-Provisioning-Job-PROD"
   description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
 
-  max_concurrent_runs           = 1
+  max_concurrent_runs           = 5
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"
@@ -499,15 +516,17 @@ module "experiment_provisioning_job" {
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/experiment_pipeline_create_task"
 
       parameters = {
         "experiment_id"            = "{{experiment_id}}"
         "experiment_name"          = "{{experiment_name}}"
         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
-        "catalog_name"             = module.databricks_catalog.catalog_name
-        "central_schema"           = "centrum"
-        "environment"              = upper(var.environment)
-        "slack_channel"            = var.slack_channel
+        # "experiment_pipeline_path" = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/experiment_pipeline"
+        "catalog_name"   = module.databricks_catalog.catalog_name
+        "central_schema" = "centrum"
+        "environment"    = upper(var.environment)
+        "slack_channel"  = var.slack_channel
       }
     },
     {
@@ -515,6 +534,7 @@ module "experiment_provisioning_job" {
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/experiment_status_update_task"
 
       parameters = {
         "experiment_id"       = "{{experiment_id}}"
@@ -583,6 +603,7 @@ module "enriched_tables_refresh_job" {
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/enriched_tables_refresh_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/enriched_tables_refresh_task"
 
       parameters = {
         metadata_key         = "{{metadata_key}}"
@@ -647,6 +668,7 @@ module "ambyte_processing_job" {
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/ambyte_processing_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/ambyte_processing_task"
 
       parameters = {
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
@@ -702,6 +724,7 @@ module "secrets_rotation_trigger" {
   ecs_service_name = module.backend_ecs.ecs_service_name
   region           = var.aws_region
   secret_arn       = module.aurora_db.master_user_secret_arn
+  environment      = var.environment
 }
 
 # Authentication secrets
@@ -842,7 +865,7 @@ module "opennext_waf" {
 
   service_name       = "opennext"
   environment        = var.environment
-  rate_limit         = 500
+  rate_limit         = 2500
   log_retention_days = 30
 
   tags = {
