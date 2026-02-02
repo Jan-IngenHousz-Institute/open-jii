@@ -26,11 +26,6 @@ describe("ExperimentStatusBadge", () => {
     expect(screen.getByTestId("badge")).toHaveTextContent("status.active");
   });
 
-  it("renders provisioning status", () => {
-    render(<ExperimentStatusBadge status="provisioning" />);
-    expect(screen.getByTestId("badge")).toHaveTextContent("status.provisioning");
-  });
-
   it("renders archived status", () => {
     render(<ExperimentStatusBadge status="archived" />);
     expect(screen.getByTestId("badge")).toHaveTextContent("status.archived");
@@ -39,11 +34,6 @@ describe("ExperimentStatusBadge", () => {
   it("renders stale status", () => {
     render(<ExperimentStatusBadge status="stale" />);
     expect(screen.getByTestId("badge")).toHaveTextContent("status.stale");
-  });
-
-  it("renders provisioning_failed status", () => {
-    render(<ExperimentStatusBadge status="provisioning_failed" />);
-    expect(screen.getByTestId("badge")).toHaveTextContent("status.provisioningFailed");
   });
 
   it("renders unknown status with fallback", () => {

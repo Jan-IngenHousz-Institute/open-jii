@@ -117,6 +117,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: true,
           hasArchiveAccess: true,
@@ -228,6 +229,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: false,
           hasArchiveAccess: false,
@@ -263,6 +265,8 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: true,
           hasArchiveAccess: false,
@@ -277,80 +281,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe("You do not have access to this experiment");
-    });
-
-    it("should fail when experiment has no schema name", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experiment.id,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            schemaName: null,
-          },
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toBe("Experiment schema not provisioned");
-    });
-
-    it("should fail when experiment has no schema name", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experiment.id,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            schemaName: null,
-          },
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toBe("Experiment schema not provisioned");
     });
 
     it("should fail when repository create operation fails", async () => {
@@ -373,6 +303,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: true,
           hasArchiveAccess: true,
@@ -403,7 +334,12 @@ describe("CreateExperimentVisualizationUseCase", () => {
       // Mock experimentRepository.checkAccess to return archived experiment
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { ...experiment, status: "archived" },
+          experiment: {
+            ...experiment,
+            status: "archived" as const,
+            schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
+          },
           hasAccess: true,
           hasArchiveAccess: false,
           isAdmin: true,

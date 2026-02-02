@@ -680,7 +680,6 @@ describe("Experiment Schema", () => {
     it("zExperimentDataTable valid", () => {
       const info = {
         name: "t1",
-        displayName: "Table 1",
         catalog_name: "cat",
         schema_name: "sch",
         data: {
@@ -701,7 +700,6 @@ describe("Experiment Schema", () => {
       const list = [
         {
           name: "t1",
-          displayName: "Table 1",
           catalog_name: "cat",
           schema_name: "sch",
           page: 1,

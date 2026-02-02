@@ -8,7 +8,6 @@ import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
-import { DatabricksTablesService } from "./services/tables/tables.service";
 import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 
 // Constants for testing
@@ -72,7 +71,6 @@ describe("DatabricksAdapter", () => {
 
   describe("triggerAmbyteProcessingJob", () => {
     it("should successfully trigger ambyte processing job", async () => {
-      const schemaName = "exp_test_experiment_exp-123";
       const mockParams = {
         EXPERIMENT_ID: "exp-123",
         YEAR_PREFIX: "2025",
@@ -83,6 +81,10 @@ describe("DatabricksAdapter", () => {
         number_in_job: 1,
       };
 
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue("main");
+
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -90,18 +92,22 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock job run-now request - expect the schema in the params
+      // Mock job run-now request - expect CATALOG_NAME to be added to params
       nock(databricksHost)
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
           (body: { job_parameters?: Record<string, string> }) => {
-            return body.job_parameters?.EXPERIMENT_SCHEMA === schemaName;
+            return (
+              body.job_parameters?.CATALOG_NAME === "main" &&
+              body.job_parameters.EXPERIMENT_ID === "exp-123" &&
+              body.job_parameters.YEAR_PREFIX === "2025"
+            );
           },
         )
         .reply(200, mockResponse);
 
       // Execute trigger ambyte processing job
-      const result = await databricksAdapter.triggerAmbyteProcessingJob(schemaName, mockParams);
+      const result = await databricksAdapter.triggerAmbyteProcessingJob(mockParams);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -117,8 +123,8 @@ describe("DatabricksAdapter", () => {
     it("should successfully execute a SQL query and return results", async () => {
       const mockTableData = {
         columns: [
-          { name: "column1", type_name: "string", type_text: "string" },
-          { name: "column2", type_name: "number", type_text: "number" },
+          { name: "column1", type_name: "string", type_text: "string", position: 0 },
+          { name: "column2", type_name: "number", type_text: "number", position: 1 },
         ],
         rows: [
           ["value1", "1"],
@@ -170,30 +176,24 @@ describe("DatabricksAdapter", () => {
     });
   });
 
-  describe("listTables", () => {
-    const schemaName = "exp_test_experiment_123";
+  describe("getExperimentTableMetadata", () => {
+    const experimentId = "exp-123";
 
-    it("should successfully list tables", async () => {
-      const mockTablesResponse = {
-        tables: [
-          {
-            name: "bronze_data",
-            catalog_name: "test_catalog",
-            schema_name: schemaName,
-            table_type: "MANAGED",
-            comment: "Bronze data table",
-            created_at: 1620000000000,
-          },
-          {
-            name: "silver_data",
-            catalog_name: "test_catalog",
-            schema_name: schemaName,
-            table_type: "MANAGED",
-            comment: "Silver data table",
-            created_at: 1620000000001,
-          },
+    it("should successfully retrieve table metadata with schemas", async () => {
+      const mockMetadata = {
+        columns: [
+          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "row_count", type_name: "bigint", type_text: "bigint" },
+          { name: "macro_schema", type_name: "string", type_text: "string" },
+          { name: "questions_schema", type_name: "string", type_text: "string" },
         ],
-        next_page_token: null,
+        rows: [
+          ["raw_data", "100", null, null],
+          ["device", "50", null, null],
+          ["some_macro", "25", '{"col1":"int"}', '{"q1":"text"}'],
+        ],
+        totalRows: 3,
+        truncated: false,
       };
 
       // Mock token request
@@ -203,19 +203,211 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock tables list API call
+      // Mock SQL statement execution
       nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, mockTablesResponse);
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({
+                ...col,
+                position: i,
+              })),
+            },
+            total_row_count: mockMetadata.totalRows,
+            truncated: mockMetadata.truncated,
+          },
+          result: {
+            data_array: mockMetadata.rows,
+          },
+        });
 
-      // Execute list tables
-      const result = await databricksAdapter.listTables(schemaName);
+      // Execute getExperimentTableMetadata
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value.tables).toEqual(mockTablesResponse.tables);
+      expect(result.value).toEqual([
+        { tableName: "raw_data", rowCount: 100, macroSchema: null, questionsSchema: null },
+        { tableName: "device", rowCount: 50, macroSchema: null, questionsSchema: null },
+        {
+          tableName: "some_macro",
+          rowCount: 25,
+          macroSchema: '{"col1":"int"}',
+          questionsSchema: '{"q1":"text"}',
+        },
+      ]);
+    });
+
+    it("should retrieve metadata for specific table only", async () => {
+      const mockMetadata = {
+        columns: [
+          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "row_count", type_name: "bigint", type_text: "bigint" },
+          { name: "macro_schema", type_name: "string", type_text: "string" },
+          { name: "questions_schema", type_name: "string", type_text: "string" },
+        ],
+        rows: [["device", "50", null, null]],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({
+                ...col,
+                position: i,
+              })),
+            },
+            total_row_count: mockMetadata.totalRows,
+            truncated: mockMetadata.truncated,
+          },
+          result: {
+            data_array: mockMetadata.rows,
+          },
+        });
+
+      // Execute getExperimentTableMetadata with specific table
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
+        tableName: "device",
+      });
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { tableName: "device", rowCount: 50, macroSchema: null, questionsSchema: null },
+      ]);
+    });
+
+    it("should exclude schemas when includeSchemas is false", async () => {
+      const mockMetadata = {
+        columns: [
+          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "row_count", type_name: "bigint", type_text: "bigint" },
+        ],
+        rows: [
+          ["raw_data", "100"],
+          ["device", "50"],
+        ],
+        totalRows: 2,
+        truncated: false,
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({
+                ...col,
+                position: i,
+              })),
+            },
+            total_row_count: mockMetadata.totalRows,
+            truncated: mockMetadata.truncated,
+          },
+          result: {
+            data_array: mockMetadata.rows,
+          },
+        });
+
+      // Execute getExperimentTableMetadata without schemas
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
+        includeSchemas: false,
+      });
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { tableName: "raw_data", rowCount: 100 },
+        { tableName: "device", rowCount: 50 },
+      ]);
+    });
+  });
+
+  describe("buildExperimentQuery", () => {
+    it("should build query for standard tables (raw_data, device, raw_ambyte_data)", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        experimentId: "exp-123",
+        columns: ["id", "timestamp"],
+      });
+
+      expect(query).toContain("SELECT `id`, `timestamp`");
+      expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
+      expect(query).toContain("enriched_experiment_raw_data"); // physical table name
+    });
+
+    it("should build query for macro tables with macro_filename filter", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "some_macro_name",
+        experimentId: "exp-123",
+        columns: ["id", "data"],
+      });
+
+      expect(query).toContain("SELECT `id`, `data`");
+      expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
+      expect(query).toContain("`macro_filename` = 'some_macro_name'");
+      expect(query).toContain("enriched_experiment_macro_data"); // physical table name
+    });
+
+    it("should handle VARIANT columns parsing", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "device",
+        experimentId: "exp-123",
+        variants: [{ columnName: "data", schema: '{"field1":"int"}' }],
+      });
+
+      expect(query).toContain(
+        'SELECT \n        * EXCEPT (data, parsed_data),\n        parsed_data.*\n      FROM (\n        SELECT \n          *,\n          from_json(data::string, \'{"field1":"int"}\') as parsed_data',
+      );
+    });
+
+    it("should handle all query options (limit, offset, orderBy)", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        experimentId: "exp-123",
+        columns: ["id", "timestamp"],
+        orderBy: "timestamp",
+        orderDirection: "DESC",
+        limit: 100,
+        offset: 50,
+      });
+
+      expect(query).toContain("ORDER BY `timestamp` DESC");
+      expect(query).toContain("LIMIT 100");
+      expect(query).toContain("OFFSET 50");
     });
   });
 

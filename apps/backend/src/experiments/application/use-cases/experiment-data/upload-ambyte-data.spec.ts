@@ -9,7 +9,6 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { ExperimentDto } from "../../../core/models/experiment.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -46,33 +45,13 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("preexecute", () => {
-    it("should return success when volume already exists", async () => {
-      // Create test experiment with schemaName
+    it("should return success - volume assumed to exist", async () => {
+      // Create test experiment
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
         userId: testUserId,
         status: "active",
       });
-
-      // Mock volume exists
-      const mockVolumeResponse = {
-        name: "data-uploads",
-        volume_id: faker.string.uuid(),
-        catalog_name: "main",
-        schema_name: experiment.schemaName ?? "exp_test_experiment",
-        volume_type: "MANAGED" as const,
-        full_name: `main.${experiment.schemaName ?? "exp_test_experiment"}.data-uploads`,
-        created_at: Date.now(),
-        created_by: faker.string.uuid(),
-        updated_at: Date.now(),
-        updated_by: faker.string.uuid(),
-        metastore_id: faker.string.uuid(),
-        owner: faker.string.uuid(),
-      };
-
-      vi.spyOn(databricksPort, "getExperimentVolume").mockResolvedValue(
-        success(mockVolumeResponse),
-      );
 
       const result = await useCase.preexecute(experiment.id, testUserId);
 
@@ -85,85 +64,6 @@ describe("UploadAmbyteDataUseCase", () => {
       expect(result.value.volumeCreated).toBe(false);
       // Verify directoryName has the correct format: upload_YYYYMMDD_HHMMSS
       expect(result.value.directoryName).toMatch(/^upload_\d{8}_\d{6}$/);
-
-      expect(databricksPort.getExperimentVolume).toHaveBeenCalledWith(
-        experiment.schemaName,
-        "data-uploads",
-      );
-    });
-
-    it("should create volume when it doesn't exist", async () => {
-      // Create test experiment
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-        status: "active",
-      });
-
-      // Mock volume doesn't exist
-      vi.spyOn(databricksPort, "getExperimentVolume").mockResolvedValue(
-        failure(AppError.notFound("Volume not found")),
-      );
-
-      // Mock successful volume creation
-      const mockVolumeResponse = {
-        name: "data-uploads",
-        volume_id: faker.string.uuid(),
-        catalog_name: "main",
-        schema_name: experiment.schemaName ?? "exp_test_experiment",
-        volume_type: "MANAGED" as const,
-        full_name: `main.${experiment.schemaName ?? "exp_test_experiment"}.data-uploads`,
-        created_at: Date.now(),
-        created_by: faker.string.uuid(),
-        updated_at: Date.now(),
-        updated_by: faker.string.uuid(),
-        metastore_id: faker.string.uuid(),
-        owner: faker.string.uuid(),
-      };
-
-      vi.spyOn(databricksPort, "createExperimentVolume").mockResolvedValue(
-        success(mockVolumeResponse),
-      );
-
-      const result = await useCase.preexecute(experiment.id, testUserId);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-
-      expect(result.value.experiment.id).toBe(experiment.id);
-      expect(result.value.volumeName).toBe("data-uploads");
-      expect(result.value.volumeExists).toBe(false);
-      expect(result.value.volumeCreated).toBe(true);
-
-      expect(databricksPort.createExperimentVolume).toHaveBeenCalledWith(
-        experiment.schemaName,
-        "data-uploads",
-        `Ambyte data uploads volume for experiment ${experiment.id}`,
-      );
-    });
-
-    it("should return failure when volume creation fails", async () => {
-      // Create test experiment
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-        status: "active",
-      });
-
-      // Mock volume doesn't exist
-      vi.spyOn(databricksPort, "getExperimentVolume").mockResolvedValue(
-        failure(AppError.notFound("Volume not found")),
-      );
-
-      // Mock failed volume creation
-      const createError = AppError.internal("Failed to create volume");
-      vi.spyOn(databricksPort, "createExperimentVolume").mockResolvedValue(failure(createError));
-
-      const result = await useCase.preexecute(experiment.id, testUserId);
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error).toBe(createError);
     });
   });
 
@@ -225,7 +125,8 @@ describe("UploadAmbyteDataUseCase", () => {
       expect(errors).toHaveLength(0);
 
       expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-        experiment.schemaName ?? "exp_test_experiment",
+        databricksPort.CENTRUM_SCHEMA_NAME,
+        experiment.id,
         sourceType,
         directoryName,
         fileName,
@@ -278,7 +179,8 @@ describe("UploadAmbyteDataUseCase", () => {
       expect(errors).toHaveLength(0);
 
       expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-        experiment.schemaName ?? "exp_test_experiment",
+        databricksPort.CENTRUM_SCHEMA_NAME,
+        experiment.id,
         sourceType,
         directoryName,
         expectedTrimmedName,
@@ -334,7 +236,8 @@ describe("UploadAmbyteDataUseCase", () => {
         expect(errors).toHaveLength(0);
 
         expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-          experiment.schemaName ?? "exp_test_experiment",
+          databricksPort.CENTRUM_SCHEMA_NAME,
+          experiment.id,
           sourceType,
           directoryName,
           testCase.expectedPath,
@@ -485,7 +388,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
       // Verify the buffer size matches expected content
       const uploadCall = vi.mocked(databricksPort.uploadExperimentData).mock.calls[0];
-      const buffer = uploadCall[4];
+      const buffer = uploadCall[5];
       expect(buffer.length).toBe(largeContent.length);
     });
   });
@@ -530,15 +433,12 @@ describe("UploadAmbyteDataUseCase", () => {
         files: successfulUploads,
       });
 
-      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(
-        experiment.schemaName ?? "exp_test_experiment",
-        {
-          EXPERIMENT_ID: experiment.id,
-          EXPERIMENT_NAME: experiment.name,
-          YEAR_PREFIX: "2025",
-          UPLOAD_DIRECTORY: directoryName,
-        },
-      );
+      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith({
+        EXPERIMENT_ID: experiment.id,
+        EXPERIMENT_NAME: experiment.name,
+        YEAR_PREFIX: "2025",
+        UPLOAD_DIRECTORY: directoryName,
+      });
     });
 
     it("should return success even when ambyte processing job trigger fails", async () => {
@@ -643,15 +543,12 @@ describe("UploadAmbyteDataUseCase", () => {
         files: successfulUploads,
       });
 
-      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(
-        experiment.schemaName ?? "exp_test_experiment",
-        {
-          EXPERIMENT_ID: experiment.id,
-          EXPERIMENT_NAME: experiment.name,
-          YEAR_PREFIX: "2025",
-          UPLOAD_DIRECTORY: directoryName,
-        },
-      );
+      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith({
+        EXPERIMENT_ID: experiment.id,
+        EXPERIMENT_NAME: experiment.name,
+        YEAR_PREFIX: "2025",
+        UPLOAD_DIRECTORY: directoryName,
+      });
     });
   });
 
@@ -862,7 +759,8 @@ describe("UploadAmbyteDataUseCase", () => {
 
         // Verify the databricks call used the trimmed name
         expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-          experiment.schemaName ?? "exp_test_experiment",
+          databricksPort.CENTRUM_SCHEMA_NAME,
+          experiment.id,
           expect.any(String),
           expect.any(String),
           testCase.expected,
@@ -926,7 +824,8 @@ describe("UploadAmbyteDataUseCase", () => {
 
         // Verify the databricks call used the constructed path
         expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
-          experiment.schemaName ?? "exp_test_experiment",
+          databricksPort.CENTRUM_SCHEMA_NAME,
+          experiment.id,
           expect.any(String),
           expect.any(String),
           testCase.expected,
@@ -936,18 +835,18 @@ describe("UploadAmbyteDataUseCase", () => {
     });
   });
 
-  describe("execute - schemaName null handling", () => {
-    let successfulUploads: { fileName: string; filePath: string }[];
-    let errors: { fileName: string; error: string }[];
-    const sourceType = "ambyte";
-    const directoryName = "upload_20250910_143000";
+  describe("execute - error handling", () => {
+    let _successfulUploads: { fileName: string; filePath: string }[];
+    let _errors: { fileName: string; error: string }[];
+    const _sourceType = "ambyte";
+    const _directoryName = "upload_20250910_143000";
 
     beforeEach(() => {
-      successfulUploads = [];
-      errors = [];
+      _successfulUploads = [];
+      _errors = [];
     });
 
-    const createMockFile = (filename: string, content = "test file content") => {
+    const _createMockFile = (filename: string, content = "test file content") => {
       const stream = new Readable({
         read() {
           this.push(content);
@@ -980,113 +879,6 @@ describe("UploadAmbyteDataUseCase", () => {
       assertFailure(result);
       expect(result.error.code).toBe("INTERNAL_ERROR");
       expect(result.error.message).toBe("Failed to verify experiment access");
-    });
-
-    it("should handle experiment without schemaName in preexecute", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      const experimentRepository = testApp.module.get(ExperimentRepository);
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: { ...experiment, schemaName: null },
-          hasAccess: false,
-          isAdmin: false,
-          hasArchiveAccess: true,
-        }),
-      );
-
-      const result = await useCase.preexecute(experiment.id, testUserId);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toBe("Experiment schema not provisioned");
-    });
-
-    it("should handle experiment without schemaName in execute", async () => {
-      // Create a real experiment and mock it to have null schemaName
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      const experimentRepository = testApp.module.get(ExperimentRepository);
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: { ...experiment, schemaName: null },
-          hasAccess: true,
-          isAdmin: false,
-          hasArchiveAccess: false,
-        }),
-      );
-
-      const fileName = "Ambyte_1/data.txt";
-      const file = createMockFile(fileName);
-
-      // Add spy to ensure upload is not called
-      const uploadSpy = vi.spyOn(databricksPort, "uploadExperimentData");
-
-      await useCase.execute(
-        file,
-        { ...experiment, schemaName: null },
-        sourceType,
-        directoryName,
-        successfulUploads,
-        errors,
-      );
-
-      expect(successfulUploads).toHaveLength(0);
-      expect(errors).toHaveLength(1);
-      expect(errors[0]).toEqual({
-        fileName,
-        error: "Experiment schema not provisioned",
-      });
-
-      expect(uploadSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("postexecute - schemaName null handling", () => {
-    const directoryName = "upload_20250910_143000";
-
-    it("should handle experiment without schemaName in postexecute", async () => {
-      // Create experiment without schemaName
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-        status: "active",
-      });
-
-      const experimentWithNullSchema: ExperimentDto = {
-        ...experiment,
-        schemaName: null,
-        pipelineId: null,
-      };
-
-      const successfulUploads = [
-        { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
-      ];
-      const errors: { fileName: string; error: string }[] = [];
-
-      // Add spy to ensure job is not triggered
-      const jobSpy = vi.spyOn(databricksPort, "triggerAmbyteProcessingJob");
-
-      const result = await useCase.postexecute(
-        successfulUploads,
-        errors,
-        experimentWithNullSchema,
-        directoryName,
-      );
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("does not have a schema name");
-      expect(result.error.message).toContain("not be fully provisioned");
-
-      expect(jobSpy).not.toHaveBeenCalled();
     });
   });
 

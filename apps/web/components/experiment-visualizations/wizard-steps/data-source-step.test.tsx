@@ -1,3 +1,5 @@
+import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -49,16 +51,16 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
 });
 
 vi.mock("../chart-configurators/data", () => ({
-  LineChartDataConfigurator: ({ table }: { table: { name: string } }) => (
+  LineChartDataConfigurator: ({ columns }: { columns: DataColumn[] }) => (
     <div data-testid="line-chart-configurator">
       <div>Line Chart Configurator</div>
-      <div>Table: {table.name}</div>
+      <div>Columns: {columns.length}</div>
     </div>
   ),
-  ScatterChartDataConfigurator: ({ table }: { table: { name: string } }) => (
+  ScatterChartDataConfigurator: ({ columns }: { columns: DataColumn[] }) => (
     <div data-testid="scatter-chart-configurator">
       <div>Scatter Chart Configurator</div>
-      <div>Table: {table.name}</div>
+      <div>Columns: {columns.length}</div>
     </div>
   ),
 }));
@@ -84,46 +86,40 @@ vi.mock("../chart-preview/chart-preview-modal", () => ({
   ),
 }));
 
-// Helper to create mock sample tables for testing
-const createMockExperimentTableMetadata = (
-  name: string,
-  displayName: string,
-  columns: DataColumn[],
-  totalRows: number,
-): ExperimentTableMetadata => ({
-  name,
-  displayName,
-  totalRows,
-  columns: columns.map((col, index) => ({
-    name: col.name,
-    type_name: col.type_name,
-    type_text: col.type_text,
-    position: index,
-  })),
-});
+vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
+  useExperimentData: vi.fn(),
+}));
 
-// Sample tables for testing
+// Sample tables for testing - tables don't contain columns
 const mockTables: ExperimentTableMetadata[] = [
-  createMockExperimentTableMetadata(
-    "measurements",
-    "Measurements",
-    [
-      { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
-      { name: "temperature", type_name: "double", type_text: "double" },
-      { name: "humidity", type_name: "double", type_text: "double" },
-    ],
-    100,
-  ),
-  createMockExperimentTableMetadata(
-    "sensors",
-    "Sensors",
-    [
-      { name: "id", type_name: "varchar", type_text: "varchar" },
-      { name: "value", type_name: "double", type_text: "double" },
-    ],
-    50,
-  ),
+  {
+    name: "measurements",
+    displayName: "Measurements",
+    totalRows: 100,
+  },
+  {
+    name: "sensors",
+    displayName: "Sensors",
+    totalRows: 50,
+  },
 ];
+
+// Mock table metadata with columns (returned by useExperimentData)
+const mockTableMetadataWithColumns: Record<string, { rawColumns: DataColumn[] }> = {
+  measurements: {
+    rawColumns: [
+      { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+      { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+      { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },
+    ],
+  },
+  sensors: {
+    rawColumns: [
+      { name: "id", type_name: "VARCHAR", type_text: "VARCHAR" },
+      { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+    ],
+  },
+};
 
 describe("DataSourceStep", () => {
   const mockOnNext = vi.fn();
@@ -168,24 +164,58 @@ describe("DataSourceStep", () => {
       },
     });
 
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
     return (
-      <Form {...form}>
-        <DataSourceStep
-          {...stepProps}
-          form={form}
-          step={{
-            title: "Data Source",
-            description: "Select data source",
-            validationSchema: {} as never,
-            component: () => null,
-          }}
-        />
-      </Form>
+      <QueryClientProvider client={queryClient}>
+        <Form {...form}>
+          <DataSourceStep
+            {...stepProps}
+            form={form}
+            step={{
+              title: "Data Source",
+              description: "Select data source",
+              validationSchema: {} as never,
+              component: () => null,
+            }}
+          />
+        </Form>
+      </QueryClientProvider>
     );
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Mock useExperimentData to return table metadata with rawColumns
+    vi.mocked(useExperimentData).mockImplementation(({ tableName }: { tableName?: string }) => {
+      // If no table is selected, return loading state
+      if (!tableName) {
+        return {
+          tableMetadata: undefined,
+          isLoading: false,
+          columns: [],
+          data: [],
+        } as never;
+      }
+
+      // Find the matching table and add its columns
+      const tableInfo = mockTables.find((t) => t.name === tableName);
+      const columnsData = mockTableMetadataWithColumns[tableName];
+
+      return {
+        tableMetadata: tableInfo && { ...tableInfo, ...columnsData },
+        isLoading: false,
+        columns: [],
+        data: [],
+      } as never;
+    });
   });
 
   describe("Rendering", () => {
@@ -268,7 +298,6 @@ describe("DataSourceStep", () => {
       );
 
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
-      expect(screen.getByText("Table: measurements")).toBeInTheDocument();
     });
 
     it("should render configurator for sensors table when selected", () => {
@@ -286,7 +315,6 @@ describe("DataSourceStep", () => {
       );
 
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
-      expect(screen.getByText("Table: sensors")).toBeInTheDocument();
     });
 
     it("should handle table selection with existing data sources", () => {
@@ -311,7 +339,6 @@ describe("DataSourceStep", () => {
       );
 
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
-      expect(screen.getByText("Table: measurements")).toBeInTheDocument();
     });
 
     it("should reset data sources when changing table selection", () => {
@@ -388,7 +415,6 @@ describe("DataSourceStep", () => {
       );
 
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
-      expect(screen.queryByTestId("scatter-chart-configurator")).not.toBeInTheDocument();
     });
 
     it("should render scatter chart configurator for scatter charts", () => {
@@ -424,7 +450,7 @@ describe("DataSourceStep", () => {
       );
 
       const configurator = screen.getByTestId("line-chart-configurator");
-      expect(within(configurator).getByText("Table: measurements")).toBeInTheDocument();
+      expect(configurator).toBeInTheDocument();
     });
   });
 
@@ -560,7 +586,6 @@ describe("DataSourceStep", () => {
       );
 
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
-      expect(screen.getByText("Table: sensors")).toBeInTheDocument();
     });
 
     it("should handle empty tables array gracefully", () => {
@@ -628,7 +653,6 @@ describe("DataSourceStep", () => {
       );
 
       expect(screen.getByTestId("scatter-chart-configurator")).toBeInTheDocument();
-      expect(screen.getByText("Table: measurements")).toBeInTheDocument();
     });
 
     it("should render line chart configurator for line chart type", () => {
@@ -646,7 +670,6 @@ describe("DataSourceStep", () => {
       );
 
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
-      expect(screen.getByText("Table: sensors")).toBeInTheDocument();
     });
 
     it("should not render any configurator when no tables are available", () => {
@@ -727,72 +750,38 @@ describe("DataSourceStep", () => {
   });
 
   describe("Table Selection Interaction", () => {
-    it("should properly handle table selection by triggering handleTableChange", async () => {
-      const user = userEvent.setup();
-
+    it("should properly handle table selection by triggering handleTableChange", () => {
       const TestComponent = () => {
         const form = useForm<ChartFormValues>({
           defaultValues: {
             chartType: "line",
             dataConfig: {
-              tableName: "",
-              dataSources: [
-                { tableName: "", columnName: "", role: "x", alias: "" },
-                { tableName: "", columnName: "", role: "y", alias: "" },
-              ],
+              tableName: "measurements",
+              dataSources: [],
             },
             config: {},
           },
         });
 
-        const [tableName, setTableName] = React.useState("");
-
-        React.useEffect(() => {
-          if (tableName) {
-            // Simulate handleTableChange logic
-            form.setValue("dataConfig.tableName", tableName);
-
-            const currentDataSources = form.getValues("dataConfig.dataSources");
-            const resetDataSources = currentDataSources.map((ds) => ({
-              tableName,
-              columnName: "",
-              role: ds.role,
-              alias: "",
-            }));
-
-            form.setValue("dataConfig.dataSources", resetDataSources);
-            form.setValue("config.xAxisTitle", "");
-            form.setValue("config.yAxisTitle", "");
-          }
-        }, [tableName, form]);
-
         return (
           <Form {...form}>
-            <div>
-              <button type="button" onClick={() => setTableName("measurements")}>
-                Select Measurements Table
-              </button>
-              <DataSourceStep
-                {...defaultProps}
-                form={form}
-                step={{
-                  title: "Data Source",
-                  description: "Select data source",
-                  validationSchema: {} as never,
-                  component: () => null,
-                }}
-              />
-            </div>
+            <DataSourceStep
+              {...defaultProps}
+              form={form}
+              step={{
+                title: "Data Source",
+                description: "Select data source",
+                validationSchema: {} as never,
+                component: () => null,
+              }}
+            />
           </Form>
         );
       };
 
       render(<TestComponent />);
 
-      const button = screen.getByRole("button", { name: "Select Measurements Table" });
-      await user.click(button);
-
-      // Should render the configurator after table selection
+      // Should render the configurator when table is pre-selected
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
     });
   });

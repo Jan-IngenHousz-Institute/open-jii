@@ -47,16 +47,19 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
     experimentId,
     tableName,
     displayName,
+    defaultSortColumn,
   }: {
     experimentId: string;
     tableName: string;
     displayName?: string;
+    defaultSortColumn?: unknown;
   }) => (
     <div
       data-testid="experiment-data-table"
       data-experiment-id={experimentId}
       data-table-name={tableName}
       data-display-name={displayName}
+      data-default-sort-column={JSON.stringify(defaultSortColumn)}
     >
       Table: {displayName ?? tableName}
     </div>
@@ -112,7 +115,12 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockTablesData = [
-  { name: "measurements", displayName: "Measurements", totalRows: 100 },
+  {
+    name: "measurements",
+    displayName: "Measurements",
+    totalRows: 100,
+    defaultSortColumn: { column: "timestamp", direction: "desc" },
+  },
   { name: ExperimentTableName.DEVICE, displayName: "Device", totalRows: 1 },
 ];
 
@@ -306,6 +314,10 @@ describe("<ExperimentDataPage />", () => {
     const dataTable1 = tabContent1.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable1).toHaveAttribute("data-experiment-id", "test-experiment-id");
     expect(dataTable1).toHaveAttribute("data-table-name", "measurements");
+    expect(dataTable1).toHaveAttribute(
+      "data-default-sort-column",
+      JSON.stringify({ column: "timestamp", direction: "desc" }),
+    );
 
     const tabContent2 = screen.getByTestId("nav-tab-content-device");
     expect(tabContent2).toBeInTheDocument();

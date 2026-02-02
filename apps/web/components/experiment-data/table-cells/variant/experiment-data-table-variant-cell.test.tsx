@@ -25,7 +25,7 @@ vi.mock("@repo/ui/components", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-testid="collapsible" data-open={open}>
+    <div data-testid="collapsible" data-open={String(open)}>
       {children}
     </div>
   ),
@@ -57,29 +57,64 @@ vi.mock("@repo/ui/components", () => ({
 
 describe("ExperimentDataTableVariantCell", () => {
   it("should render simple text for non-JSON data", () => {
-    render(<ExperimentDataTableVariantCell data="simple text" columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data="simple text"
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
     expect(screen.getByText("simple text")).toBeInTheDocument();
   });
 
   it("should render simple text for invalid JSON data", () => {
-    render(<ExperimentDataTableVariantCell data="{invalid json}" columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data="{invalid json}"
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
     expect(screen.getByText("{invalid json}")).toBeInTheDocument();
   });
 
   it("should render collapsible trigger for valid JSON", () => {
-    render(<ExperimentDataTableVariantCell data='{"key": "value"}' columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data='{"key": "value"}'
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
 
     expect(screen.getByText("JSON")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
   it("should render empty string as simple text", () => {
-    render(<ExperimentDataTableVariantCell data="" columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data=""
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
     expect(screen.queryByText("JSON")).not.toBeInTheDocument();
   });
 
   it("should expand when triggered", () => {
-    render(<ExperimentDataTableVariantCell data='{"name": "John", "age": 30}' columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data='{"name": "John", "age": 30}'
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
 
     // Initially collapsed
     expect(screen.getByText("JSON")).toBeInTheDocument();
@@ -105,7 +140,14 @@ describe("ExperimentDataTableVariantCell", () => {
       items: [1, 2, 3],
     });
 
-    render(<ExperimentDataTableVariantCell data={complexData} columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data={complexData}
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
     expect(screen.getByText("JSON")).toBeInTheDocument();
   });
 
@@ -115,19 +157,40 @@ describe("ExperimentDataTableVariantCell", () => {
       { id: 2, name: "Item 2" },
     ]);
 
-    render(<ExperimentDataTableVariantCell data={arrayData} columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data={arrayData}
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
     expect(screen.getByText("JSON")).toBeInTheDocument();
   });
 
   it("should handle JSON with null and undefined values", () => {
     const dataWithNulls = JSON.stringify({ name: "John", age: null, active: undefined });
 
-    render(<ExperimentDataTableVariantCell data={dataWithNulls} columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data={dataWithNulls}
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
     expect(screen.getByText("JSON")).toBeInTheDocument();
   });
 
   it("should show correct button states", () => {
-    render(<ExperimentDataTableVariantCell data='{"key": "value"}' columnName="test" />);
+    render(
+      <ExperimentDataTableVariantCell
+        data='{"key": "value"}'
+        columnName="test"
+        rowId="row-1"
+        isExpanded={false}
+      />,
+    );
 
     // Should start with collapsible closed
     const collapsible = screen.getByTestId("collapsible");
@@ -140,118 +203,45 @@ describe("ExperimentDataTableVariantCell", () => {
 });
 
 describe("VariantExpandedContent", () => {
-  it("should return null as it doesn't render anything directly", () => {
-    const mockCellRef = { current: null };
-    const { container } = render(
-      <VariantExpandedContent formatted='{\n  "key": "value"\n}' cellRef={mockCellRef} />,
-    );
+  it("should render formatted JSON content", () => {
+    const { container } = render(<VariantExpandedContent data='{\n  "key": "value"\n}' />);
 
-    // Component returns null, so container should be empty
-    expect(container.firstChild).toBeNull();
+    // Component should render the formatted JSON
+    expect(container.firstChild).not.toBeNull();
+    expect(screen.getByText(/"key": "value"/)).toBeInTheDocument();
   });
 
-  it("should create DOM elements when mounted with valid table structure", () => {
-    // Create a proper table structure
-    const table = document.createElement("table");
-    const tbody = document.createElement("tbody");
-    const row = document.createElement("tr");
-    const cell1 = document.createElement("td");
-    const cell2 = document.createElement("td");
-    const cell3 = document.createElement("td");
+  it("should render formatted JSON with proper styling", () => {
+    const jsonData = '{\n  "name": "John",\n  "age": 30\n}';
+    render(<VariantExpandedContent data={jsonData} />);
 
-    row.appendChild(cell1);
-    row.appendChild(cell2);
-    row.appendChild(cell3);
-    tbody.appendChild(row);
-    table.appendChild(tbody);
-    document.body.appendChild(table);
-
-    const mockCellRef = { current: cell2 }; // Middle cell
-    const formatted = '{\n  "name": "John",\n  "age": 30\n}';
-
-    render(<VariantExpandedContent formatted={formatted} cellRef={mockCellRef} />);
-
-    // Check that an expanded row was created
-    const expandedRows = document.querySelectorAll(".variant-expanded-row");
-    expect(expandedRows.length).toBe(1);
-
-    const expandedRow = expandedRows[0] as HTMLTableRowElement;
-
-    // Check that the expanded cell spans all 3 columns
-    const expandedCell = expandedRow.querySelector("td");
-    expect(expandedCell?.colSpan).toBe(3);
-
-    // Verify the code block was created
-    const codeBlock = expandedCell?.querySelector("pre");
-    expect(codeBlock).toBeTruthy();
-
-    const code = codeBlock?.querySelector("code");
-    expect(code?.textContent).toBe(formatted);
-
-    // Cleanup
-    document.body.removeChild(table);
+    // Check that the code block was created
+    const codeBlock = screen.getByText(/"name": "John"/);
+    expect(codeBlock).toBeInTheDocument();
+    expect(screen.getByText(/"age": 30/)).toBeInTheDocument();
   });
 
-  it("should cleanup expanded row on unmount", () => {
-    const table = document.createElement("table");
-    const tbody = document.createElement("tbody");
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
+  it("should handle invalid JSON gracefully", () => {
+    const invalidJson = "not valid json";
+    render(<VariantExpandedContent data={invalidJson} />);
 
-    row.appendChild(cell);
-    tbody.appendChild(row);
-    table.appendChild(tbody);
-    document.body.appendChild(table);
-
-    const mockCellRef = { current: cell };
-    const formatted = '{\n  "key": "value"\n}';
-
-    const { unmount } = render(
-      <VariantExpandedContent formatted={formatted} cellRef={mockCellRef} />,
-    );
-
-    // Verify expanded row was created
-    expect(document.querySelectorAll(".variant-expanded-row").length).toBe(1);
-
-    // Unmount component
-    unmount();
-
-    // Verify expanded row was removed
-    expect(document.querySelectorAll(".variant-expanded-row").length).toBe(0);
-
-    // Cleanup
-    document.body.removeChild(table);
+    // Should still render the content
+    expect(screen.getByText("not valid json")).toBeInTheDocument();
   });
 
-  it("should handle large JSON with scrolling", () => {
-    const table = document.createElement("table");
-    const tbody = document.createElement("tbody");
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-
-    row.appendChild(cell);
-    tbody.appendChild(row);
-    table.appendChild(tbody);
-    document.body.appendChild(table);
-
-    // Create a large object
+  it("should apply scrolling classes for overflow", () => {
     const largeObject: Record<string, string> = {};
     for (let i = 0; i < 100; i++) {
       largeObject[`key${i}`] = `value${i}`;
     }
     const formatted = JSON.stringify(largeObject, null, 2);
 
-    const mockCellRef = { current: cell };
+    const { container } = render(<VariantExpandedContent data={formatted} />);
 
-    render(<VariantExpandedContent formatted={formatted} cellRef={mockCellRef} />);
-
-    const codeBlock = document.querySelector("pre");
+    const codeBlock = container.querySelector("pre");
     expect(codeBlock).toBeTruthy();
     expect(codeBlock?.classList.contains("overflow-x-auto")).toBe(true);
     expect(codeBlock?.classList.contains("overflow-y-auto")).toBe(true);
     expect(codeBlock?.classList.contains("max-h-96")).toBe(true);
-
-    // Cleanup
-    document.body.removeChild(table);
   });
 });

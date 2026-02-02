@@ -45,24 +45,10 @@ describe("useExperimentTables", () => {
     const mockTables = [
       {
         name: "table1",
-        full_name: "catalog.schema.table1",
-        display_name: "Table 1",
-        row_count: 100,
-        columns: [
-          {
-            name: "id",
-            type_text: "INT",
-            type_json: '{"type":"integer"}',
-            type_name: "INT",
-            type_precision: 0,
-            type_scale: 0,
-            type_interval_type: null,
-            position: 0,
-            comment: "Primary key",
-            nullable: false,
-            partition_index: null,
-          },
-        ],
+        displayName: "Table 1",
+        totalRows: 100,
+        defaultSortColumn: "id",
+        errorColumn: undefined,
       },
     ];
 
@@ -152,46 +138,19 @@ describe("useExperimentTables", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("should include column information in tables", () => {
-    const mockTablesWithColumns = [
+  it("should include table metadata in tables", () => {
+    const mockTablesWithMetadata = [
       {
         name: "measurements",
-        full_name: "catalog.schema.measurements",
-        display_name: "Measurements",
-        row_count: 500,
-        columns: [
-          {
-            name: "timestamp",
-            type_text: "TIMESTAMP",
-            type_json: '{"type":"timestamp"}',
-            type_name: "TIMESTAMP",
-            type_precision: 0,
-            type_scale: 0,
-            type_interval_type: null,
-            position: 0,
-            comment: "Measurement timestamp",
-            nullable: false,
-            partition_index: null,
-          },
-          {
-            name: "value",
-            type_text: "DOUBLE",
-            type_json: '{"type":"double"}',
-            type_name: "DOUBLE",
-            type_precision: 0,
-            type_scale: 0,
-            type_interval_type: null,
-            position: 1,
-            comment: "Measurement value",
-            nullable: true,
-            partition_index: null,
-          },
-        ],
+        displayName: "Measurements",
+        totalRows: 500,
+        defaultSortColumn: "timestamp",
+        errorColumn: "error_info",
       },
     ];
 
     const mockReturnValue = {
-      data: { body: mockTablesWithColumns },
+      data: { body: mockTablesWithMetadata },
       isLoading: false,
       error: null,
     };
@@ -201,9 +160,11 @@ describe("useExperimentTables", () => {
 
     const { result } = renderHook(() => useExperimentTables(mockExperimentId));
 
-    expect(result.current.tables).toEqual(mockTablesWithColumns);
-    expect(result.current.tables?.[0].columns).toHaveLength(2);
-    expect(result.current.tables?.[0].columns[0].name).toBe("timestamp");
-    expect(result.current.tables?.[0].columns[1].name).toBe("value");
+    expect(result.current.tables).toEqual(mockTablesWithMetadata);
+    expect(result.current.tables?.[0].name).toBe("measurements");
+    expect(result.current.tables?.[0].displayName).toBe("Measurements");
+    expect(result.current.tables?.[0].totalRows).toBe(500);
+    expect(result.current.tables?.[0].defaultSortColumn).toBe("timestamp");
+    expect(result.current.tables?.[0].errorColumn).toBe("error_info");
   });
 });

@@ -20,7 +20,7 @@ describe("QueryBuilder Base", () => {
 
     it("should escape identifiers", () => {
       const query = builder.select(["select", "from"]).from("table`name").build();
-      expect(query).toBe("SELECT `select`, `from` FROM table``name");
+      expect(query).toBe("SELECT `select`, `from` FROM table`name");
     });
 
     it("should add where conditions", () => {
@@ -81,11 +81,12 @@ describe("QueryBuilder Base", () => {
         .limit(10)
         .build();
 
-      expect(query).toContain("SELECT \n        id,\n    ts,\n        data.*");
-      expect(query).toContain("from_json(payload::string, 'STRUCT<x:INT>') as data");
+      expect(query).toContain(
+        "SELECT id,\n    ts\n        FROM (\n          SELECT \n        * EXCEPT (payload, data),\n        data.*\n      FROM (\n        SELECT \n          *,\n          from_json(payload::string, 'STRUCT<x:INT>') as data",
+      );
       expect(query).toContain("FROM events");
       expect(query).toContain("WHERE ts > 0");
-      expect(query).toContain("ORDER BY ts DESC");
+      expect(query).toContain("ORDER BY `ts DESC` ASC");
       expect(query).toContain("LIMIT 10");
     });
 

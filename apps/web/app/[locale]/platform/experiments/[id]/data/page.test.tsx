@@ -71,16 +71,22 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
     experimentId,
     tableName,
     displayName,
+    defaultSortColumn,
+    errorColumn,
   }: {
     experimentId: string;
     tableName: string;
     displayName?: string;
+    defaultSortColumn?: unknown;
+    errorColumn?: string;
   }) => (
     <div
       data-testid="experiment-data-table"
       data-experiment-id={experimentId}
       data-table-name={tableName}
       data-display-name={displayName}
+      data-default-sort-column={JSON.stringify(defaultSortColumn)}
+      data-error-column={errorColumn}
     >
       Table: {displayName ?? tableName}
     </div>
@@ -136,7 +142,13 @@ describe("ExperimentDataPage", () => {
 
   const mockTablesData = {
     tables: [
-      { name: "measurements", displayName: "Measurements", totalRows: 100 },
+      {
+        name: "measurements",
+        displayName: "Measurements",
+        totalRows: 100,
+        defaultSortColumn: { column: "timestamp", direction: "desc" },
+        errorColumn: "error_code",
+      },
       { name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 },
     ],
     isLoading: false,
@@ -242,7 +254,7 @@ describe("ExperimentDataPage", () => {
 
       const deviceTab = screen.getByTestId("nav-tab-trigger-device");
       expect(deviceTab).toBeInTheDocument();
-      expect(deviceTab).toHaveTextContent("Device Data (50)");
+      expect(deviceTab).toHaveTextContent("Device Metadata (50)");
     });
   });
 
@@ -289,13 +301,18 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("passes correct experiment ID and table name to ExperimentDataTable", async () => {
+  it("passes correct properties to ExperimentDataTable", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
       const measurementsTable = screen.getAllByTestId("experiment-data-table")[0];
       expect(measurementsTable).toHaveAttribute("data-experiment-id", "exp-123");
       expect(measurementsTable).toHaveAttribute("data-table-name", "measurements");
+      expect(measurementsTable).toHaveAttribute("data-error-column", "error_code");
+      expect(measurementsTable).toHaveAttribute(
+        "data-default-sort-column",
+        JSON.stringify({ column: "timestamp", direction: "desc" }),
+      );
     });
   });
 

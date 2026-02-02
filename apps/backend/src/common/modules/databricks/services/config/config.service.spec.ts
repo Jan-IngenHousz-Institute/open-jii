@@ -114,5 +114,30 @@ describe("DatabricksConfigService", () => {
       const catalogName = configService.getCatalogName();
       expect(catalogName).toBe(process.env.DATABRICKS_CATALOG_NAME);
     });
+
+    it("should return the correct centrum schema name", () => {
+      const centrumSchemaName = configService.getCentrumSchemaName();
+      expect(centrumSchemaName).toBe("centrum");
+    });
+
+    it("should return the correct raw data table name", () => {
+      const rawDataTableName = configService.getRawDataTableName();
+      expect(rawDataTableName).toBe("enriched_experiment_raw_data");
+    });
+
+    it("should return the correct device data table name", () => {
+      const deviceDataTableName = configService.getDeviceDataTableName();
+      expect(deviceDataTableName).toBe("experiment_device_data");
+    });
+
+    it("should return the correct raw ambyte data table name", () => {
+      const rawAmbyteDataTableName = configService.getRawAmbyteDataTableName();
+      expect(rawAmbyteDataTableName).toBe("raw_ambyte_data");
+    });
+
+    it("should return the correct macro data table name", () => {
+      const macroDataTableName = configService.getMacroDataTableName();
+      expect(macroDataTableName).toBe("enriched_experiment_macro_data");
+    });
   });
 });
