@@ -1034,6 +1034,14 @@ module "migration_runner_ecs" {
       value = module.aurora_db.cluster_endpoint
     },
     {
+      name  = "DB_WRITER_HOST"
+      value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_READER_HOST"
+      value = module.aurora_db.reader_endpoint
+    },
+    {
       name  = "DB_NAME"
       value = module.aurora_db.database_name
     },

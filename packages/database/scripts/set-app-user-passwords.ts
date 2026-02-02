@@ -17,12 +17,32 @@ import postgres from "postgres";
 // Generate a cryptographically secure random password
 function generateSecurePassword(length = 32): string {
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    const values = crypto.randomBytes(length);
+    const charsetLength = charset.length;
+    // Largest multiple of charsetLength less than or equal to 256
+    const maxMultiple = Math.floor(256 / charsetLength) * charsetLength;
+
     let password = "";
-    for (let i = 0; i < length; i++) {
-        password += charset[values[i]! % charset.length];
+    while (password.length < length) {
+        // Generate a batch of random bytes; batch size can be tuned as needed
+        const values = crypto.randomBytes(length);
+        for (let i = 0; i < values.length && password.length < length; i++) {
+            const byte = values[i]!;
+            // Use rejection sampling to avoid modulo bias
+            if (byte < maxMultiple) {
+                const index = byte % charsetLength;
+                password += charset[index];
+            }
+        }
     }
     return password;
+}
+
+// Validate password contains only expected characters to prevent SQL injection
+function validatePassword(password: string): void {
+    const validChars = /^[a-zA-Z0-9!@#$%^&*]+$/;
+    if (!validChars.test(password)) {
+        throw new Error("Generated password contains invalid characters");
+    }
 }
 
 // Check if a user can authenticate with given credentials
@@ -130,6 +150,10 @@ async function setApplicationUserPasswords() {
         const writerPassword = generateSecurePassword(32);
         const readerPassword = generateSecurePassword(32);
 
+        // Validate passwords before using in SQL (defense in depth)
+        validatePassword(writerPassword);
+        validatePassword(readerPassword);
+
         // Create writer role and user
         console.log("Creating openjii_writer user...");
         await sql.unsafe(`
@@ -157,11 +181,11 @@ async function setApplicationUserPasswords() {
         -- Grant privileges on all sequences
         GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO openjii_writer;
         
-        -- Grant default privileges for future tables
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO openjii_writer;
+        -- Grant default privileges for future tables created by the current user (master)
+        ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO openjii_writer;
         
-        -- Grant default privileges for future sequences
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO openjii_writer;
+        -- Grant default privileges for future sequences created by the current user (master)
+        ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO openjii_writer;
         
         RAISE NOTICE 'Granted writer privileges to openjii_writer';
       END $$;
@@ -205,8 +229,8 @@ async function setApplicationUserPasswords() {
         -- Grant SELECT privilege on all existing tables
         GRANT SELECT ON ALL TABLES IN SCHEMA public TO openjii_reader;
         
-        -- Grant default privileges for future tables
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO openjii_reader;
+        -- Grant default privileges for future tables created by the current user (master)
+        ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA public GRANT SELECT ON TABLES TO openjii_reader;
         
         RAISE NOTICE 'Granted reader privileges to openjii_reader';
       END $$;

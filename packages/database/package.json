@@ -51,7 +51,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.710.0",
+    "@aws-sdk/client-secrets-manager": "^3.980.0",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.41.0",
     "postgres": "^3.4.5",

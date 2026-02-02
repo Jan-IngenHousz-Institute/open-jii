@@ -19,8 +19,8 @@ const getDatabaseUrl = (
   // Use appropriate host/endpoint based on connection type
   const host =
     connectionType === "reader"
-      ? process.env.DB_READER_HOST || process.env.DB_HOST
-      : process.env.DB_WRITER_HOST || process.env.DB_HOST;
+      ? (process.env.DB_READER_HOST ?? process.env.DB_HOST)
+      : (process.env.DB_WRITER_HOST ?? process.env.DB_HOST);
 
   const credentials = getCredentials(secrets, connectionType);
 
@@ -53,10 +53,7 @@ const getCredentials = (
   // Try connection-specific credentials
   if (process.env[credentialsEnvVar]) {
     try {
-      const credentials = JSON.parse(process.env[credentialsEnvVar] as string) as Record<
-        string,
-        string
-      >;
+      const credentials = JSON.parse(process.env[credentialsEnvVar]) as Record<string, string>;
 
       if (credentials.username && credentials.password) {
         return {
@@ -94,7 +91,7 @@ export const getClient = (secrets?: Record<string, unknown>) =>
   postgres(getDatabaseUrl(secrets, "writer"), { max: 1 });
 
 export const getReaderClient = (secrets?: Record<string, unknown>) =>
-  postgres(getDatabaseUrl(secrets, "reader"), { max: 10 });
+  postgres(getDatabaseUrl(secrets, "reader"), { max: 5 });
 
 export const getWriterClient = (secrets?: Record<string, unknown>) =>
   postgres(getDatabaseUrl(secrets, "writer"), { max: 1 });
