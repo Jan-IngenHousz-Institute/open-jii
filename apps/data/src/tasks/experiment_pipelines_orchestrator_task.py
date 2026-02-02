@@ -108,8 +108,10 @@ class ExperimentPipelineOrchestrator:
             experiment_pipelines = []
             
             for pipeline in pipelines:
-                # Filter for experiment pipelines
-                if pipeline.name and pipeline.name.startswith('exp-') and pipeline.name.endswith(self.pipeline_suffix):
+                caseOne = pipeline.name and pipeline.name.startswith('exp-') and pipeline.name.endswith(self.pipeline_suffix)
+                caseTwo = pipeline.name and pipeline.name.startswith(f'Experiment-DLT-{self.environment}')
+
+                if caseOne or caseTwo:
                     # Get pipeline configuration to extract experiment_id
                     pipeline_id = pipeline.pipeline_id
                     try:
