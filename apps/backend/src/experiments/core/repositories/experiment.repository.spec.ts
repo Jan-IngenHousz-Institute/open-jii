@@ -33,7 +33,7 @@ describe("ExperimentRepository", () => {
       const createExperimentDto = {
         name: "Test Experiment",
         description: "Test Description",
-        status: "provisioning" as const,
+        status: "active" as const,
         visibility: "private" as const,
       };
 

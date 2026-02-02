@@ -33,7 +33,6 @@ describe("DatabricksConfigService", () => {
       expect(config.host).toBeDefined();
       expect(config.clientId).toBeDefined();
       expect(config.clientSecret).toBeDefined();
-      expect(config.experimentProvisioningJobId).toBeDefined();
       expect(config.ambyteProcessingJobId).toBeDefined();
       expect(config.warehouseId).toBeDefined();
       expect(config.catalogName).toBeDefined();
@@ -47,7 +46,7 @@ describe("DatabricksConfigService", () => {
       const getOrThrowSpy = vi
         .spyOn(configService, "getOrThrow")
         .mockImplementation((key: string) => {
-          if (key === "databricks.experimentProvisioningJobId") {
+          if (key === "databricks.ambyteProcessingJobId") {
             return "";
           }
 
@@ -76,21 +75,6 @@ describe("DatabricksConfigService", () => {
     it("should return the correct client secret", () => {
       const clientSecret = configService.getClientSecret();
       expect(clientSecret).toBe(process.env.DATABRICKS_CLIENT_SECRET);
-    });
-
-    it("should return the correct experiment provisioning job ID", () => {
-      const experimentProvisioningJobId = configService.getExperimentProvisioningJobId();
-      expect(experimentProvisioningJobId).toBe(
-        process.env.DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID,
-      );
-    });
-
-    it("should return the correct experiment provisioning job ID as a number", () => {
-      const experimentProvisioningJobIdAsNumber =
-        configService.getExperimentProvisioningJobIdAsNumber();
-      expect(experimentProvisioningJobIdAsNumber).toBe(
-        Number(process.env.DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID),
-      );
     });
 
     it("should return the correct ambyte processing job ID", () => {

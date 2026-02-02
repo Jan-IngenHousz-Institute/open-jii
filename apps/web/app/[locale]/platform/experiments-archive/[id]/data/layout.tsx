@@ -17,8 +17,6 @@ export default function DataLayout({ children, params }: DataLayoutProps) {
   const { data, isLoading, error } = useExperiment(id);
   const { t } = useTranslation("experiments");
 
-  // Provisioning state checks removed - with centrum consolidation, all experiments
-  // use the single centrum schema without per-experiment provisioning
   const experiment = data?.body;
 
   if (isLoading) {
