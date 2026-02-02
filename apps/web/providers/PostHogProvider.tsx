@@ -25,13 +25,23 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const posthogKey = env.NEXT_PUBLIC_POSTHOG_KEY;
 
-    // Skip initialization if no valid key or already initialized
-    if (!posthogKey || posthogKey.startsWith("phc_0000") || posthog.__loaded) {
+    // Skip if no valid key
+    if (!posthogKey || posthogKey.startsWith("phc_0000")) {
       return;
     }
 
     // Get consent status from cookie
     const consentStatus = getConsentStatus();
+
+    // If already initialized, sync consent status and return
+    if (posthog.__loaded) {
+      if (consentStatus === "accepted") {
+        posthog.opt_in_capturing();
+      } else {
+        posthog.opt_out_capturing();
+      }
+      return;
+    }
 
     // Initialize PostHog with cookieless mode enabled by default
     // This ensures no cookies are set until user consents
