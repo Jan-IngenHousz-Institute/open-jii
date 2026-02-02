@@ -195,17 +195,21 @@ export class ExperimentDataRepository {
       raw_ambyte_data: ["experiment_id"],
     };
 
-    const exceptColumns = exceptColumnsMap[tableName] ?? MACRO_EXCEPT_COLUMNS;
+    const exceptColumns = [...(exceptColumnsMap[tableName] ?? MACRO_EXCEPT_COLUMNS)];
 
     // Build variants array based on available schemas
     const variants: { columnName: string; schema: string }[] = [];
 
     if (schemas?.macroSchema) {
       variants.push({ columnName: "macro_output", schema: schemas.macroSchema });
+    } else {
+      exceptColumns.push("macro_output");
     }
 
     if (schemas?.questionsSchema) {
       variants.push({ columnName: "questions_data", schema: schemas.questionsSchema });
+    } else {
+      exceptColumns.push("questions_data");
     }
 
     const query = this.databricksPort.buildExperimentQuery({
