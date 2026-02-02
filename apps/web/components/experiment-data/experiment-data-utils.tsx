@@ -181,7 +181,7 @@ export function formatValue(
     );
   }
 
-  return value as string;
+  return <ExperimentDataTableTextCell text={value as string} />;
 }
 
 export function ExperimentTableHeader({
@@ -204,7 +204,8 @@ export function ExperimentTableHeader({
           const columnName = header.column.id;
 
           const isNumericColumn = isNumericType(meta?.type);
-          const canSort = isSortableType(meta?.type);
+          const canSort =
+            isSortableType(meta?.type) || meta?.type === WellKnownColumnTypes.CONTRIBUTOR;
           const isSortable = columnName !== "select" && !!onSort && canSort;
           const columnType = meta?.type;
           const actualSortColumn = getSortColumnName(columnName, columnType);

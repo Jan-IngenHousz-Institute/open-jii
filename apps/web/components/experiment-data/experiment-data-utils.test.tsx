@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
+import { WellKnownColumnTypes } from "@repo/api";
+
 import {
   formatValue,
   LoadingRows,
@@ -136,7 +138,7 @@ vi.mock("@repo/ui/components", () => ({
 }));
 
 // Mock experiment data table components
-vi.mock("./experiment-data-table-array-cell", () => ({
+vi.mock("./table-cells/array/experiment-data-table-array-cell", () => ({
   ExperimentDataTableArrayCell: ({ data }: { data: string }) => {
     try {
       const parsed = JSON.parse(data) as unknown;
@@ -155,13 +157,13 @@ vi.mock("./experiment-data-table-array-cell", () => ({
   },
 }));
 
-vi.mock("./experiment-data-table-chart-cell", () => ({
+vi.mock("./table-cells/chart/experiment-data-table-chart-cell", () => ({
   ExperimentDataTableChartCell: ({ data }: { data: string }) => (
     <div data-testid="chart-cell">{data}</div>
   ),
 }));
 
-vi.mock("./experiment-data-table-map-cell", () => ({
+vi.mock("./table-cells/map/experiment-data-table-map-cell", () => ({
   ExperimentDataTableMapCell: ({ data }: { data: string }) => {
     try {
       const parsed = JSON.parse(data) as unknown;
@@ -184,7 +186,7 @@ vi.mock("./experiment-data-table-map-cell", () => ({
   },
 }));
 
-vi.mock("./experiment-data-table-annotations-cell", () => ({
+vi.mock("./table-cells/annotations/experiment-data-table-annotations-cell", () => ({
   ExperimentDataTableAnnotationsCell: ({
     data,
     rowId,
@@ -205,6 +207,52 @@ vi.mock("./experiment-data-table-annotations-cell", () => ({
       return <div data-testid="annotations-cell">Invalid annotations data</div>;
     }
   },
+}));
+
+vi.mock("./table-cells/user/experiment-data-table-user-cell", () => ({
+  ExperimentDataTableUserCell: ({ data }: { data: string }) => {
+    try {
+      const parsed = JSON.parse(data) as { name?: string };
+      return (
+        <div data-testid="user-cell">
+          <div>{parsed.name ?? "Unknown User"}</div>
+          <div>{parsed.name?.match(/\b(\w)/g)?.join("") ?? "??"}</div>
+        </div>
+      );
+    } catch {
+      return <div data-testid="user-cell">{data}</div>;
+    }
+  },
+}));
+
+vi.mock("./table-cells/text/experiment-data-table-text-cell", () => ({
+  ExperimentDataTableTextCell: ({ text }: { text: string }) => (
+    <div data-testid="text-cell">{text}</div>
+  ),
+}));
+
+vi.mock("./table-cells/struct/experiment-data-table-struct-cell", () => ({
+  ExperimentDataTableStructCell: ({ data }: { data: string }) => (
+    <div data-testid="struct-cell">{data}</div>
+  ),
+}));
+
+vi.mock("./table-cells/variant/experiment-data-table-variant-cell", () => ({
+  ExperimentDataTableVariantCell: ({ data: _data }: { data: string }) => (
+    <div data-testid="variant-cell">JSON</div>
+  ),
+}));
+
+vi.mock("./table-cells/error/experiment-data-table-error-cell", () => ({
+  ExperimentDataTableErrorCell: ({ error }: { error: string }) => (
+    <div data-testid="error-cell">{error}</div>
+  ),
+}));
+
+vi.mock("./experiment-data-table-cell-collapsible", () => ({
+  ExperimentDataTableCellCollapsible: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="collapsible-cell">{children}</div>
+  ),
 }));
 
 describe("experiment-data-utils", () => {
@@ -240,7 +288,12 @@ describe("experiment-data-utils", () => {
         name: "John Doe",
         image: "https://example.com/avatar.jpg",
       });
-      const result = formatValue(userData, "USER", "row-1", "test-column");
+      const result = formatValue(
+        userData,
+        WellKnownColumnTypes.CONTRIBUTOR,
+        "row-1",
+        "test-column",
+      );
 
       // The result should be a React element (ExperimentDataTableUserCell)
       expect(React.isValidElement(result)).toBe(true);
@@ -254,12 +307,12 @@ describe("experiment-data-utils", () => {
 
     it("should return string values as-is for other types", () => {
       const result = formatValue("test string", "STRING", "row-1");
-      expect(result).toBe("test string");
+      expect(React.isValidElement(result)).toBe(true);
     });
 
     it("should handle null values", () => {
       const result = formatValue(null, "STRING", "row-1");
-      expect(result).toBeNull();
+      expect(result).toBe("");
     });
 
     it("should render ExperimentDataTableMapCell for MAP type", () => {
@@ -484,7 +537,10 @@ describe("experiment-data-utils", () => {
 
     it("should return string for unknown types in default case", () => {
       const result = formatValue("some value", "UNKNOWN_TYPE", "row-1");
-      expect(result).toBe("some value");
+      // Fallback is ExperimentDataTableTextCell
+      expect(React.isValidElement(result)).toBe(true);
+      const { getByTestId } = render(<div>{result}</div>);
+      expect(getByTestId("text-cell")).toHaveTextContent("some value");
     });
 
     it("should handle MAP type without STRING prefix", () => {
@@ -559,7 +615,10 @@ describe("experiment-data-utils", () => {
 
     it("should handle unknown type and return as string", () => {
       const result = formatValue("test value", "UNKNOWN_CUSTOM_TYPE", "row-1");
-      expect(result).toBe("test value");
+      // Fallback is ExperimentDataTableTextCell
+      expect(React.isValidElement(result)).toBe(true);
+      const { getByTestId } = render(<div>{result}</div>);
+      expect(getByTestId("text-cell")).toHaveTextContent("test value");
     });
   });
 
@@ -1217,7 +1276,7 @@ describe("experiment-data-utils", () => {
                 columnDef: {
                   header: "User",
                   size: 150,
-                  meta: { type: "USER" },
+                  meta: { type: WellKnownColumnTypes.CONTRIBUTOR },
                 },
               },
               isPlaceholder: false,
@@ -1231,7 +1290,7 @@ describe("experiment-data-utils", () => {
         <table>
           <ExperimentTableHeader
             headerGroups={mockHeaderGroups}
-            sortColumn="user_name"
+            sortColumn="userColumn.name"
             sortDirection="ASC"
             onSort={mockOnSort}
           />
@@ -1351,6 +1410,7 @@ describe("experiment-data-utils", () => {
       const mockRows = [
         {
           id: "row1",
+          original: { id: "row1" },
           getIsSelected: () => false,
           getVisibleCells: () => [
             {
@@ -1367,6 +1427,7 @@ describe("experiment-data-utils", () => {
         },
         {
           id: "row2",
+          original: { id: "row2" },
           getIsSelected: () => true,
           getVisibleCells: () => [
             {
@@ -1424,6 +1485,7 @@ describe("experiment-data-utils", () => {
       const mockRows = [
         {
           id: "row1",
+          original: { id: "row1" },
           getIsSelected: () => false,
           getVisibleCells: () => [
             {
@@ -1435,6 +1497,7 @@ describe("experiment-data-utils", () => {
         },
         {
           id: "row2",
+          original: { id: "row2" },
           getIsSelected: () => true,
           getVisibleCells: () => [
             {

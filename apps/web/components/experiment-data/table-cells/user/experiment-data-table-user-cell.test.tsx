@@ -8,7 +8,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-123",
       name: "John Doe",
-      image: "https://example.com/avatar.jpg",
+      avatar: "https://example.com/avatar.jpg",
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -22,7 +22,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-456",
       name: "Jane Smith",
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -35,7 +35,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-789",
       name: "Madonna",
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -48,7 +48,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-short",
       name: "X",
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -62,7 +62,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-empty",
       name: "",
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -91,7 +91,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-whitespace",
       name: "   ",
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -105,7 +105,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-multiple",
       name: "John Michael Smith Jr",
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -133,7 +133,7 @@ describe("ExperimentDataTableUserCell", () => {
   });
 
   it("handles parsed data that is an array", () => {
-    const arrayData = JSON.stringify([{ id: "1", name: "Test", image: null }]);
+    const arrayData = JSON.stringify([{ id: "1", name: "Test", avatar: null }]);
 
     render(<ExperimentDataTableUserCell data={arrayData} columnName="User" />);
 
@@ -143,7 +143,7 @@ describe("ExperimentDataTableUserCell", () => {
   it("handles parsed data missing required fields", () => {
     const missingId = JSON.stringify({
       name: "John Doe",
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={missingId} columnName="User" />);
@@ -155,7 +155,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-null-name",
       name: null,
-      image: null,
+      avatar: null,
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
@@ -188,7 +188,7 @@ describe("ExperimentDataTableUserCell", () => {
     const userData = JSON.stringify({
       id: "user-with-image",
       name: "Alice Johnson",
-      image: "https://example.com/alice.jpg",
+      avatar: "https://example.com/alice.jpg",
     });
 
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);

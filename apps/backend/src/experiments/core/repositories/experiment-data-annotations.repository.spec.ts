@@ -64,8 +64,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
     });
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -199,8 +199,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
     };
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_updated_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_updated_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -299,8 +299,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
   describe("deleteAnnotation", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -345,8 +345,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
   describe("deleteAnnotationsBulk", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -378,12 +378,12 @@ describe("ExperimentDataAnnotationsRepository", () => {
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[1];
 
-      expect(sqlQuery).toContain(`table_name='${mockTableName}'`);
-      expect(sqlQuery).toContain("id IN (");
+      expect(sqlQuery).toContain(`table_name = '${mockTableName}'`);
+      expect(sqlQuery).toContain("row_id IN (");
       rowIds.forEach((id) => {
         expect(sqlQuery).toContain(`'${id}'`);
       });
-      expect(sqlQuery).toContain(`type='comment`);
+      expect(sqlQuery).toContain(`type = 'comment'`);
       expect(sqlQuery).not.toContain("user_id =");
     });
 
@@ -402,8 +402,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
   describe("SQL injection protection", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,

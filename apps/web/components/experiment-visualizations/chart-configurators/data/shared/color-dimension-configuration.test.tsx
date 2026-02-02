@@ -1,8 +1,9 @@
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+
+import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import ColorDimensionConfiguration from "./color-dimension-configuration";
@@ -33,32 +34,23 @@ beforeAll(() => {
 });
 
 // Sample table data
-const mockTable: ExperimentTableWithColumns = {
-  name: "test-table",
-  tableMetadata: {
-    columns: [],
-    totalRows: 0,
-    totalPages: 0,
-  },
-  tableRows: [],
-  columns: [
-    { name: "temperature", type_name: "DOUBLE", type_text: "double" },
-    { name: "humidity", type_name: "DOUBLE", type_text: "double" },
-    { name: "pressure", type_name: "DOUBLE", type_text: "double" },
-    { name: "location", type_name: "VARCHAR", type_text: "varchar" },
-  ],
-};
+const mockColumns = [
+  { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "pressure", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "location", type_name: "VARCHAR", type_text: "VARCHAR" },
+];
 
 // Test wrapper component
 function TestWrapper({
   defaultValues,
-  table = mockTable,
+  columns = mockColumns,
   colorAxisDataSources = [],
   onAppendDataSource = vi.fn(),
   onRemoveDataSource = vi.fn(),
 }: {
   defaultValues?: Partial<ChartFormValues>;
-  table?: ExperimentTableWithColumns;
+  columns?: DataColumn[];
   colorAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
   onAppendDataSource?: (dataSource: {
     tableName: string;
@@ -99,7 +91,7 @@ function TestWrapper({
     <FormProvider {...methods}>
       <ColorDimensionConfiguration
         form={methods}
-        table={table}
+        columns={columns}
         colorAxisDataSources={colorAxisDataSources}
         appendDataSource={onAppendDataSource}
         removeDataSource={onRemoveDataSource}

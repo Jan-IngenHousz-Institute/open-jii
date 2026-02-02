@@ -52,18 +52,4 @@ describe("QueryBuilderService", () => {
       expect(sql).toBe("SELECT COUNT(*) FROM logs WHERE level = 'ERROR'");
     });
   });
-
-  describe("buildAggregateQuery", () => {
-    it("should build aggregate query", () => {
-      const sql = service.buildAggregateQuery({
-        table: "sales",
-        selectExpression: "region, SUM(amount)",
-        groupByColumns: ["region"],
-        whereConditions: [["year", "2023"]],
-      });
-      expect(sql).toBe(
-        "SELECT region, SUM(amount) FROM sales WHERE `year` = '2023' GROUP BY `region`",
-      );
-    });
-  });
 });

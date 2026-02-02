@@ -1,8 +1,9 @@
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+
+import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import YAxisConfiguration from "./y-axis-configuration";
@@ -24,33 +25,24 @@ beforeAll(() => {
 });
 
 // Mock table data
-const mockTable: ExperimentTableWithColumns = {
-  name: "test-table",
-  tableMetadata: {
-    columns: [],
-    totalRows: 0,
-    totalPages: 0,
-  },
-  tableRows: [],
-  columns: [
-    { name: "time", type_name: "timestamp", type_text: "timestamp" },
-    { name: "temperature", type_name: "double", type_text: "double" },
-    { name: "humidity", type_name: "double", type_text: "double" },
-    { name: "pressure", type_name: "integer", type_text: "integer" },
-  ],
-};
+const mockColumns: DataColumn[] = [
+  { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+  { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "pressure", type_name: "INT", type_text: "INT" },
+];
 
 // Test wrapper component with form context
 function TestWrapper({
   defaultValues,
-  table = mockTable,
+  columns = mockColumns,
   yAxisDataSources = [],
   onAddSeries = vi.fn(),
   onRemoveSeries = vi.fn(),
   isColorColumnSelected = false,
 }: {
   defaultValues?: Partial<ChartFormValues>;
-  table?: ExperimentTableWithColumns;
+  columns?: DataColumn[];
   yAxisDataSources?: { field: { id: string; columnName: string; role: string }; index: number }[];
   onAddSeries?: () => void;
   onRemoveSeries?: (index: number) => void;
@@ -77,7 +69,7 @@ function TestWrapper({
     <FormProvider {...methods}>
       <YAxisConfiguration
         form={methods}
-        table={table}
+        columns={columns}
         yAxisDataSources={yAxisDataSources}
         addYAxisSeries={onAddSeries}
         removeDataSource={onRemoveSeries}
@@ -408,9 +400,9 @@ describe("YAxisConfiguration", () => {
 
       await user.click(columnSelect);
 
-      expect(screen.getByText("timestamp")).toBeInTheDocument();
-      expect(screen.getAllByText("double").length).toBeGreaterThanOrEqual(2);
-      expect(screen.getByText("integer")).toBeInTheDocument();
+      expect(screen.getByText("TIMESTAMP")).toBeInTheDocument();
+      expect(screen.getAllByText("DOUBLE").length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText("INT")).toBeInTheDocument();
     });
 
     it("should auto-fill Y-axis title when first series column is selected", async () => {
