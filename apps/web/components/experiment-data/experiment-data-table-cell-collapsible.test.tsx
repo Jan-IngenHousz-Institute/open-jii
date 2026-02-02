@@ -81,7 +81,7 @@ describe("ExperimentDataTableCellCollapsible", () => {
 
     expect(screen.getByTestId("variant-content")).toHaveTextContent("some data");
     expect(screen.getByTestId("table-row")).toBeInTheDocument();
-    expect(screen.getByTestId("table-cell")).toHaveAttribute("colSpan", "5");
+    expect(screen.getByTestId("table-cell")).toHaveAttribute("colSpan", "6");
   });
 
   it("renders ArrayExpandedContent for ARRAY<STRUCT<...>> type", () => {
