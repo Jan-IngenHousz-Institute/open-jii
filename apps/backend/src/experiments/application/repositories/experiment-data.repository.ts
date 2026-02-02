@@ -189,41 +189,47 @@ export class ExperimentDataRepository {
       "date",
     ];
 
-    // Table configuration: defines which columns to exclude and whether table supports variant columns
-    const tableConfig: Record<string, { exceptColumns: string[]; supportsVariants: boolean }> = {
+    // Table configuration: defines which columns to exclude and which variant columns exist
+    const tableConfig: Record<
+      string,
+      { exceptColumns: string[]; variantColumns: ("macro_output" | "questions_data")[] }
+    > = {
       raw_data: {
         exceptColumns: ["experiment_id"],
-        supportsVariants: true,
+        variantColumns: ["questions_data"], // raw_data only has questions_data, not macro_output
       },
       device: {
         exceptColumns: ["experiment_id"],
-        supportsVariants: false,
+        variantColumns: [],
       },
       raw_ambyte_data: {
         exceptColumns: ["experiment_id"],
-        supportsVariants: false,
+        variantColumns: [],
       },
     };
 
     // Default for macro tables (any table not in the map above)
     const config = tableConfig[tableName] ?? {
       exceptColumns: MACRO_EXCEPT_COLUMNS,
-      supportsVariants: true,
+      variantColumns: ["macro_output", "questions_data"],
     };
 
     const exceptColumns = [...config.exceptColumns];
 
-    // Build variants array based on available schemas
+    // Build variants array based on available schemas and table's variant columns
     const variants: { columnName: string; schema: string }[] = [];
 
-    // Only handle macro_output and questions_data for tables that support variant columns
-    if (config.supportsVariants) {
+    // Handle macro_output if this table supports it
+    if (config.variantColumns.includes("macro_output")) {
       if (schemas?.macroSchema) {
         variants.push({ columnName: "macro_output", schema: schemas.macroSchema });
       } else {
         exceptColumns.push("macro_output");
       }
+    }
 
+    // Handle questions_data if this table supports it
+    if (config.variantColumns.includes("questions_data")) {
       if (schemas?.questionsSchema) {
         variants.push({ columnName: "questions_data", schema: schemas.questionsSchema });
       } else {

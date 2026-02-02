@@ -1,5 +1,7 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import { ExperimentTableName } from "@repo/api";
+
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -33,15 +35,15 @@ export class GetExperimentTablesUseCase {
   ) {
     // Initialize table properties using logical table names from ExperimentTableName
     this.tableProperties = {
-      raw_data: {
+      [ExperimentTableName.RAW_DATA]: {
         displayName: "Raw Data",
         defaultSortColumn: "timestamp",
       },
-      device: {
+      [ExperimentTableName.DEVICE]: {
         displayName: "Device Metadata",
         defaultSortColumn: "processed_timestamp",
       },
-      raw_ambyte_data: {
+      [ExperimentTableName.RAW_AMBYTE_DATA]: {
         displayName: "Ambyte Raw Data",
         defaultSortColumn: "processed_at",
       },

@@ -270,4 +270,31 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
   });
+
+  it("should skip annotations with invalid types", () => {
+    const mixedAnnotations = [
+      ...sampleAnnotations,
+      { id: "4", type: "note", content: { type: "note", text: "Invalid note" } },
+    ];
+
+    render(
+      <ExperimentDataTableAnnotationsCell {...mockProps} data={JSON.stringify(mixedAnnotations)} />,
+    );
+
+    // Should still show 1 comment and 2 flags, skipping the invalid "note"
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("should show empty state when all annotations have invalid types", () => {
+    const invalidAnnotations = [{ id: "1", type: "note", content: { type: "note", text: "Note" } }];
+
+    render(
+      <ExperimentDataTableAnnotationsCell
+        {...mockProps}
+        data={JSON.stringify(invalidAnnotations)}
+      />,
+    );
+    expect(screen.getByText(/common.add/)).toBeInTheDocument();
+  });
 });

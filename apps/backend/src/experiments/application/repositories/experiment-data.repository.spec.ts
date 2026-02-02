@@ -121,7 +121,7 @@ describe("ExperimentDataRepository", () => {
         experimentId,
         columns: undefined,
         variants: undefined,
-        exceptColumns: ["experiment_id", "macro_output", "questions_data"],
+        exceptColumns: ["experiment_id", "questions_data"],
         orderBy: undefined,
         orderDirection: "ASC",
         limit: 5,
