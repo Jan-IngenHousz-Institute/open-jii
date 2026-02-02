@@ -4,7 +4,6 @@ export interface DatabricksConfig {
   host: string;
   clientId: string;
   clientSecret: string;
-  experimentProvisioningJobId: string;
   ambyteProcessingJobId: string;
   enrichedTablesRefreshJobId: string;
   warehouseId: string;
@@ -20,12 +19,6 @@ export const databricksConfigSchema = z.object({
   host: z.string().url(),
   clientId: z.string().min(1),
   clientSecret: z.string().min(1),
-  experimentProvisioningJobId: z
-    .string()
-    .min(1)
-    .refine((val) => !isNaN(Number(val)), {
-      message: "Experiment Provisioning Job ID must be numeric",
-    }),
   ambyteProcessingJobId: z
     .string()
     .min(1)

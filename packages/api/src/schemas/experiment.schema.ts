@@ -141,7 +141,6 @@ export const zAddExperimentProtocolsBody = z.object({
 });
 
 // Define Zod schemas for experiment models
-// Provisioning statuses removed - with centrum consolidation, all experiments use single schema
 export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
 
 export const zExperimentVisibility = z.enum(["private", "public"]);

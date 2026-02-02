@@ -31,9 +31,6 @@ export class DatabricksConfigService {
       host: this.configService.getOrThrow<string>("databricks.host"),
       clientId: this.configService.getOrThrow<string>("databricks.clientId"),
       clientSecret: this.configService.getOrThrow<string>("databricks.clientSecret"),
-      experimentProvisioningJobId: this.configService.getOrThrow<string>(
-        "databricks.experimentProvisioningJobId",
-      ),
       ambyteProcessingJobId: this.configService.getOrThrow<string>(
         "databricks.ambyteProcessingJobId",
       ),
@@ -99,20 +96,6 @@ export class DatabricksConfigService {
    */
   getClientSecret(): string {
     return this.config.clientSecret;
-  }
-
-  /**
-   * Returns the Databricks experiment provisioning job ID
-   */
-  getExperimentProvisioningJobId(): string {
-    return this.config.experimentProvisioningJobId;
-  }
-
-  /**
-   * Returns the Databricks experiment provisioning job ID as a number
-   */
-  getExperimentProvisioningJobIdAsNumber(): number {
-    return parseInt(this.config.experimentProvisioningJobId, 10);
   }
 
   /**

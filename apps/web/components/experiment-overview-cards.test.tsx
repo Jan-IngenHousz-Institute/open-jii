@@ -131,12 +131,6 @@ describe("ExperimentOverviewCards", () => {
   });
 
   describe("different experiment statuses", () => {
-    it("renders experiment with provisioning status", () => {
-      const experiment = { ...mockExperiment, status: "provisioning" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} />);
-      expect(screen.getByTestId("status-badge")).toHaveTextContent("provisioning");
-    });
-
     it("renders experiment with archived status", () => {
       const experiment = { ...mockExperiment, status: "archived" as const };
       render(<ExperimentOverviewCards experiments={[experiment]} />);
