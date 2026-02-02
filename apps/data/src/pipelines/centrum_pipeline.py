@@ -3,8 +3,11 @@
 # This notebook implements the complete medallion architecture (Bronze-Silver-Gold)
 # for openJII IoT sensor data processing following the dual medallion pattern
 
-# COMMAND ----------
+%pip install -q mini-racer==0.12.4
+%pip install -q /Workspace/Shared/wheels/multispeq-0.2.0-py3-none-any.whl
+%pip install -q /Workspace/Shared/wheels/enrich-0.2.0-py3-none-any.whl
 
+# COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
@@ -14,8 +17,6 @@ import requests
 import json
 import pandas as pd
 from datetime import datetime
-
-# Pipeline-specific imports
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
@@ -34,13 +35,6 @@ macro_schema = StructType([
     StructField("id", StringType(), True),
     StructField("name", StringType(), True),
     StructField("filename", StringType(), True)
-])
-
-# Define user struct schema
-user_schema = StructType([
-    StructField("id", StringType(), True),
-    StructField("name", StringType(), True),
-    StructField("avatar", StringType(), True)
 ])
 
 # Define annotation schema to match the database structure
@@ -80,11 +74,48 @@ sensor_schema = StructType([
 
 # DBTITLE 1,Configuration
 
+
 ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 CATALOG_NAME = "open_jii_dev"
 
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
+
+# Kinesis configuration parameters
+KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
+CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
+SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
+
+# Slack notification configuration
+MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
+
+MACROS_PATH = "/Workspace/Shared/macros"
+
+# Gold layer table names (Phase 1)
+EXPERIMENT_STATUS_TABLE = "experiment_status"
+EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
+EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
+EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
+EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
+EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
+ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
+ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
+RAW_AMBYTE_TABLE = "raw_ambyte_data"
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+CATALOG_NAME = "open_jii_dev"
+
+BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
+SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
+
+# Kinesis configuration parameters
+KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
+CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
+SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
+
+# Slack notification configuration
+MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
+
+MACROS_PATH = "/Workspace/Shared/macros"
 
 # Gold layer table names (Phase 1)
 EXPERIMENT_STATUS_TABLE = "experiment_status"
@@ -97,17 +128,6 @@ ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
 
-# Kinesis configuration parameters
-KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
-CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
-SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
-
-# Slack notification configuration
-MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
-
-# Macro processing configuration
-MACROS_PATH = "/Workspace/Shared/macros"
-
 # COMMAND ----------
 
 # DBTITLE 1,Bronze Layer - Raw Data Processing
@@ -117,6 +137,8 @@ MACROS_PATH = "/Workspace/Shared/macros"
     table_properties={
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true",
         "pipelines.reset.allowed": "false"
     }
@@ -179,6 +201,8 @@ def raw_data():
     table_properties={
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true"
     }
 )
@@ -322,7 +346,8 @@ def clean_data():
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
-        "delta.enableChangeDataFeed": "true"
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true"
     }
 )
 def experiment_status():
@@ -383,25 +408,22 @@ def experiment_status():
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Experiment Raw Data (NEW - Phase 1)
+# DBTITLE 1,Gold Layer - Experiment Raw Data
 @dlt.table(
     name=EXPERIMENT_RAW_DATA_TABLE,
     comment="Gold layer: Per-experiment raw sample data partitioned by experiment_id with VARIANT sample",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true",
-        "delta.feature.variantType-preview": "supported",
-        "downstream": "true",
-        "default_sort_column": "timestamp"
+        "delta.feature.variantType-preview": "supported"
     }
 )
 def experiment_raw_data():
     """
     Extract and partition sample data per experiment from clean_data.
-    
-    This table replaces per-experiment 'sample' tables with a unified partitioned approach.
-    Reads FROM existing clean_data table (no changes to clean_data).
     """
     
     # Define UDF for sanitizing question labels
@@ -505,26 +527,21 @@ def experiment_raw_data():
     )
 
 # COMMAND ----------
-# 
 
-# DBTITLE 1,Gold Layer - Experiment Device Data (NEW - Phase 1)
+# DBTITLE 1,Gold Layer - Experiment Device Data
 @dlt.table(
     name=EXPERIMENT_DEVICE_DATA_TABLE,
     comment="Gold layer: Device metadata aggregated per experiment",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
-        "downstream": "false",
-        "display_name": "Device Metadata",
-        "default_sort_column": "processed_timestamp"
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
     }
 )
 def experiment_device_data():
     """
     Aggregate device stats per experiment from clean_data.
-    
-    This table replaces per-experiment 'device' tables.
-    Reads FROM existing clean_data table (no changes to clean_data).
     """
     silver_df = dlt.read(SILVER_TABLE)
     
@@ -543,28 +560,23 @@ def experiment_device_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Experiment Macro Data with VARIANT (NEW - Phase 1)
+# DBTITLE 1,Gold Layer - Experiment Macro Data
 @dlt.table(
     name=EXPERIMENT_MACRO_DATA_TABLE,
     comment="Gold layer: Unified macro processing with VARIANT column for flexible schema",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.enableRowTracking": "true",
         "delta.feature.variantType-preview": "supported",
-        "downstream": "true",
-        "variants": "macro_output"
     }
 )
 def experiment_macro_data():
     """
     Process macros for all experiments with VARIANT column for flexible output storage.
-    
-    This replaces per-experiment columnarized macro tables (e.g., macro_photosynthesis)
-    with a single unified table using VARIANT for schema flexibility.
-    
-    Reads FROM experiment_raw_data (which reads from clean_data).
     
     Steps:
     1. Read from experiment_raw_data
@@ -694,16 +706,16 @@ def experiment_macro_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Experiment Table Metadata (NEW - Optimization)
+# DBTITLE 1,Gold Layer - Experiment Table Metadata
 @dlt.table(
     name=EXPERIMENT_TABLE_METADATA,
-    comment="Gold layer: Consolidated metadata cache for all experiment tables (row counts, schemas). Single query optimization. Replaces EXPERIMENT_MACROS_TABLE and EXPERIMENT_QUESTIONS_TABLE.",
+    comment="Gold layer: Consolidated metadata cache for all experiment tables (row counts, schemas).",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
-        "delta.enableChangeDataFeed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
         "delta.feature.variantType-preview": "supported",
-        "variants": "macro_schema,questions_schema"
     }
 )
 def experiment_table_metadata():
@@ -797,13 +809,15 @@ def experiment_table_metadata():
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Experiment Contributors (NEW - Phase 1)
+# DBTITLE 1,Gold Layer - Experiment Contributors
 @dlt.table(
     name=EXPERIMENT_CONTRIBUTORS_TABLE,
     comment="Gold layer: Cached user profiles for enrichment (full refresh on each pipeline run)",
     table_properties={
         "quality": "gold",
-        "pipelines.autoOptimize.managed": "true"
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true"
     }
 )
 def experiment_contributors():
@@ -825,7 +839,7 @@ def experiment_contributors():
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Enriched Experiment Raw Data (NEW - Phase 1)
+# DBTITLE 1,Gold Layer - Enriched Experiment Raw Data
 @dlt.table(
     name=ENRICHED_RAW_DATA_VIEW,
     comment="Enriched materialized view: Raw data with questions, user struct, and annotations. Incrementally refreshed.",
@@ -835,9 +849,9 @@ def experiment_contributors():
         "delta.enableChangeDataFeed": "true",
         "delta.enableDeletionVectors": "true",
         "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
         "delta.feature.variantType-preview": "supported",
-        "display_name": "Raw Data",
-        "variants": "data,questions_data"
     }
 )
 def enriched_experiment_raw_data():
@@ -883,15 +897,15 @@ def enriched_experiment_raw_data():
     # This handles the merging logic automatically
     return add_annotation_column(
         enriched,
-        table_name="experiment_raw_data",  # Table name for filtering annotations
-        catalog_name=CATALOG_NAME,  # Annotations are in centrum schema now
+        table_name="experiment_raw_data",
+        catalog_name=CATALOG_NAME,
         experiment_schema="centrum",
         spark=spark
     )
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Enriched Experiment Macro Data (NEW - Phase 1)
+# DBTITLE 1,Gold Layer - Enriched Experiment Macro Data
 @dlt.table(
     name=ENRICHED_MACRO_DATA_VIEW,
     comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Incrementally refreshed.",
@@ -899,10 +913,9 @@ def enriched_experiment_raw_data():
         "quality": "gold",
         "delta.enableDeletionVectors": "true",
         "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
         "delta.feature.variantType-preview": "supported",
-        "display_name": "Processed Macro Data",
-        "variants": "macro_output,questions_data",
-        "error_column": "macro_error"
     }
 )
 def enriched_experiment_macro_data():
@@ -911,10 +924,6 @@ def enriched_experiment_macro_data():
     - Expanded VARIANT fields (macro_output:*)
     - User struct (from cached contributors table): STRUCT<id: STRING, name: STRING, avatar: STRING>
     - Annotations (from experiment_annotations table + streaming annotations merged)
-    
-    Incrementally refreshed on serverless compute when source tables change.
-    Supports incremental refresh via row-tracking on all source tables.
-    Backend queries this table directly for enriched macro data.
     """
     macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
@@ -967,9 +976,8 @@ def enriched_experiment_macro_data():
     table_properties={
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
-        "delta.enableChangeDataFeed": "true",
-        "display_name": "Raw Ambyte Data",
-        "default_sort_column": "processed_at"
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true"
     },
     partition_cols=["experiment_id"]
 )

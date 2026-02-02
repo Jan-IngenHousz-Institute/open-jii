@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
-import React from "react";
+import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import React, { useState } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Button, Collapsible, CollapsibleTrigger } from "@repo/ui/components";
 
 interface ExperimentDataTableVariantCellProps {
@@ -69,6 +70,8 @@ export function ExperimentDataTableVariantCell({
 
 // Expanded content component for rendering in table rows
 export function VariantExpandedContent({ data }: { data: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
   let formatted: string;
   try {
     const parsed: unknown = JSON.parse(data);
@@ -77,8 +80,39 @@ export function VariantExpandedContent({ data }: { data: string }) {
     formatted = data;
   }
 
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(data);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
-    <div className="w-full p-4">
+    <div className="relative w-full p-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="absolute right-6 top-6 z-10 h-7 bg-white/90 px-2 shadow-sm backdrop-blur-sm hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
+        onClick={handleCopy}
+        title={t("common.copy")}
+      >
+        {copied ? (
+          <>
+            <Check className="mr-1 h-3 w-3 text-green-600" />
+            <span className="text-xs text-green-600">{t("common.copied")}</span>
+          </>
+        ) : (
+          <>
+            <Copy className="mr-1 h-3 w-3" />
+            <span className="text-xs">{t("common.copy")}</span>
+          </>
+        )}
+      </Button>
       <pre className="max-h-96 w-full overflow-x-auto overflow-y-auto rounded border border-gray-200 bg-white p-3 font-mono text-xs dark:border-gray-700 dark:bg-gray-900">
         <code className="text-gray-800 dark:text-gray-200">{formatted}</code>
       </pre>

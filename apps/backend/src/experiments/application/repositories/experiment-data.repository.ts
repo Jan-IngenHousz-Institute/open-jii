@@ -191,8 +191,8 @@ export class ExperimentDataRepository {
 
     const exceptColumnsMap: Record<string, string[]> = {
       raw_data: ["experiment_id"],
-      device: [],
-      raw_ambyte_data: [],
+      device: ["experiment_id"],
+      raw_ambyte_data: ["experiment_id"],
     };
 
     const exceptColumns = exceptColumnsMap[tableName] ?? MACRO_EXCEPT_COLUMNS;

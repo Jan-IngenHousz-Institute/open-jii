@@ -74,9 +74,6 @@ export class DeleteUserUseCase {
           status: "success",
         });
 
-        // Note: With centrum consolidation, materialized views auto-refresh when user data changes
-        // No manual refresh triggers needed
-
         this.logger.log({
           msg: "User deletion completed",
           operation: "deleteUser",

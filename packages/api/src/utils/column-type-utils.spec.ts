@@ -14,6 +14,8 @@ import {
   isStringType,
   isDecimalType,
   isWellKnownType,
+  isWellKnownSortableType,
+  getWellKnownSortField,
   isValidAxisSource,
 } from "./column-type-utils";
 
@@ -201,6 +203,40 @@ describe("column-type-utils", () => {
       expect(isWellKnownType("INT")).toBe(false);
       expect(isWellKnownType("STRING")).toBe(false);
       expect(isWellKnownType(undefined)).toBe(false);
+    });
+  });
+
+  describe("isWellKnownSortableType", () => {
+    it("should return true only for CONTRIBUTOR type", () => {
+      expect(isWellKnownSortableType(WellKnownColumnTypes.CONTRIBUTOR)).toBe(true);
+    });
+
+    it("should return false for non-sortable well-known types", () => {
+      expect(isWellKnownSortableType(WellKnownColumnTypes.ANNOTATIONS)).toBe(false);
+      expect(isWellKnownSortableType(WellKnownColumnTypes.QUESTIONS)).toBe(false);
+    });
+
+    it("should return false for other types", () => {
+      expect(isWellKnownSortableType("INT")).toBe(false);
+      expect(isWellKnownSortableType("STRING")).toBe(false);
+      expect(isWellKnownSortableType(undefined)).toBe(false);
+    });
+  });
+
+  describe("getWellKnownSortField", () => {
+    it("should return 'name' for CONTRIBUTOR type", () => {
+      expect(getWellKnownSortField(WellKnownColumnTypes.CONTRIBUTOR)).toBe("name");
+    });
+
+    it("should return undefined for non-sortable well-known types", () => {
+      expect(getWellKnownSortField(WellKnownColumnTypes.ANNOTATIONS)).toBeUndefined();
+      expect(getWellKnownSortField(WellKnownColumnTypes.QUESTIONS)).toBeUndefined();
+    });
+
+    it("should return undefined for other types", () => {
+      expect(getWellKnownSortField("INT")).toBeUndefined();
+      expect(getWellKnownSortField("STRING")).toBeUndefined();
+      expect(getWellKnownSortField(undefined)).toBeUndefined();
     });
   });
 

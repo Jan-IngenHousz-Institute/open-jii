@@ -10,6 +10,7 @@ import { ExperimentDataTable } from "~/components/experiment-data/experiment-dat
 import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
+import { ExperimentTableName } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
 import {
   Button,
@@ -79,7 +80,10 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     notFound();
   }
 
-  if (!tables || tables.length === 0) {
+  // Filter out device table
+  const filteredTables = tables?.filter((table) => table.name !== ExperimentTableName.DEVICE) ?? [];
+
+  if (!tables || filteredTables.length === 0) {
     return (
       <div className="space-y-8">
         <div className="flex items-start justify-between">
@@ -117,9 +121,9 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </Button>
       </div>
 
-      <NavTabs defaultValue={tables[0].name} className="w-full">
-        <NavTabsList>
-          {tables.map((table) => (
+      <NavTabs defaultValue={filteredTables[0].name} className="max-w-full">
+        <NavTabsList className="max-w-full flex-wrap">
+          {filteredTables.map((table) => (
             <NavTabsTrigger key={table.name} value={table.name}>
               <span className="truncate">
                 {table.displayName} ({table.totalRows})
@@ -127,7 +131,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             </NavTabsTrigger>
           ))}
         </NavTabsList>
-        {tables.map((table) => (
+        {filteredTables.map((table) => (
           <NavTabsContent key={table.name} value={table.name} className="mt-6">
             <ExperimentDataTable
               experimentId={id}

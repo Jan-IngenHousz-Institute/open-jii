@@ -19,6 +19,8 @@ import {
   isStructArrayType,
   isNumericArrayType,
   isSortableType,
+  isWellKnownSortableType,
+  getWellKnownSortField,
 } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
@@ -42,9 +44,10 @@ function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): s
 }
 
 function getSortColumnName(columnName: string, columnType?: string): string {
-  // For CONTRIBUTOR struct columns, sort by name field instead of the column name
-  if (columnType === WellKnownColumnTypes.CONTRIBUTOR) {
-    return `${columnName}.name`;
+  // For well-known sortable types (e.g., CONTRIBUTOR), sort by a specific field in their struct
+  const sortField = getWellKnownSortField(columnType);
+  if (sortField) {
+    return `${columnName}.${sortField}`;
   }
   return columnName;
 }
@@ -204,12 +207,17 @@ export function ExperimentTableHeader({
           const columnName = header.column.id;
 
           const isNumericColumn = isNumericType(meta?.type);
-          const canSort =
-            isSortableType(meta?.type) || meta?.type === WellKnownColumnTypes.CONTRIBUTOR;
+          const canSort = isSortableType(meta?.type) || isWellKnownSortableType(meta?.type);
           const isSortable = columnName !== "select" && !!onSort && canSort;
           const columnType = meta?.type;
           const actualSortColumn = getSortColumnName(columnName, columnType);
-          const isCurrentlySorted = sortColumn === actualSortColumn;
+          // Check if this column is currently sorted - handle both exact match and nested field match
+          // For well-known types like CONTRIBUTOR, sortColumn might be "created_by.name" while columnName is "created_by"
+          const isCurrentlySorted = !!(
+            sortColumn === actualSortColumn ||
+            sortColumn === columnName ||
+            sortColumn?.startsWith(`${columnName}.`)
+          );
 
           return (
             <TableHead
@@ -218,7 +226,7 @@ export function ExperimentTableHeader({
               style={{
                 minWidth: header.column.columnDef.size,
               }}
-              onClick={() => isSortable && onSort(columnName, columnType)}
+              onClick={() => isSortable && onSort(actualSortColumn, columnType)}
             >
               {header.isPlaceholder ? null : (
                 <div className="flex items-center justify-between">

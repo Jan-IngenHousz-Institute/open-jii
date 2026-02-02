@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -12,7 +12,23 @@ import {
 vi.mock("lucide-react", () => ({
   ChevronDown: () => <div data-testid="chevron-down">▼</div>,
   ChevronRight: () => <div data-testid="chevron-right">▶</div>,
+  Copy: () => <div data-testid="copy-icon">📋</div>,
+  Check: () => <div data-testid="check-icon">✓</div>,
 }));
+
+// Mock i18n
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+// Mock clipboard API
+Object.assign(navigator, {
+  clipboard: {
+    writeText: vi.fn(() => Promise.resolve()),
+  },
+});
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
@@ -211,6 +227,47 @@ describe("VariantExpandedContent", () => {
     expect(screen.getByText(/"key": "value"/)).toBeInTheDocument();
   });
 
+  it("should render copy button", () => {
+    const jsonData = '{\n  "name": "John",\n  "age": 30\n}';
+    render(<VariantExpandedContent data={jsonData} />);
+
+    // Check for copy button
+    const copyButtons = screen.getAllByRole("button");
+    expect(copyButtons.length).toBeGreaterThan(0);
+    expect(screen.getByText("copy")).toBeInTheDocument();
+  });
+
+  it("should copy JSON to clipboard when copy button is clicked", async () => {
+    const jsonData = '{"name": "John", "age": 30}';
+    render(<VariantExpandedContent data={jsonData} />);
+
+    const copyButton = screen.getByText("copy").closest("button");
+    expect(copyButton).toBeInTheDocument();
+
+    fireEvent.click(copyButton!);
+
+    // Check that clipboard.writeText was called
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(jsonData);
+    });
+  });
+
+  it("should show 'Copied' confirmation after copying", async () => {
+    const jsonData = '{"name": "John"}';
+    render(<VariantExpandedContent data={jsonData} />);
+
+    const copyButton = screen.getByText("copy").closest("button");
+    fireEvent.click(copyButton!);
+
+    // Should show "copied" text
+    await waitFor(() => {
+      expect(screen.getByText("copied")).toBeInTheDocument();
+    });
+
+    // Check icon should be visible
+    expect(screen.getByTestId("check-icon")).toBeInTheDocument();
+  });
+
   it("should render formatted JSON with proper styling", () => {
     const jsonData = '{\n  "name": "John",\n  "age": 30\n}';
     render(<VariantExpandedContent data={jsonData} />);
@@ -243,5 +300,16 @@ describe("VariantExpandedContent", () => {
     expect(codeBlock?.classList.contains("overflow-x-auto")).toBe(true);
     expect(codeBlock?.classList.contains("overflow-y-auto")).toBe(true);
     expect(codeBlock?.classList.contains("max-h-96")).toBe(true);
+  });
+
+  it("should position copy button absolutely over content", () => {
+    const jsonData = '{"key": "value"}';
+    const { container } = render(<VariantExpandedContent data={jsonData} />);
+
+    const copyButton = screen.getByText("copy").closest("button");
+    expect(copyButton?.className).toContain("absolute");
+    expect(copyButton?.className).toContain("right-6");
+    expect(copyButton?.className).toContain("top-6");
+    expect(copyButton?.className).toContain("z-10");
   });
 });
