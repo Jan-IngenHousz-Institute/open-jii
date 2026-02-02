@@ -127,6 +127,12 @@
   "loading": "Laden...",
   "failedToLoad": "Experiment konnte nicht geladen werden",
   "notFound": "Experiment nicht gefunden",
+  "archivedRedirect": {
+    "title": "Experiment archiviert",
+    "description": "Dieses Experiment wurde archiviert und in den Archivbereich verschoben.",
+    "redirectingIn": "Weiterleitung in {{seconds}} Sekunden...",
+    "goToArchive": "Zum archivierten Experiment"
+  },
   "noPermissionToAccess": "Sie haben keine Berechtigung, auf dieses Experiment zuzugreifen",
   "errorLoadingExperiment": "Beim Laden des Experiments ist ein Fehler aufgetreten",
   "experimentNotFound": "Das gesuchte Experiment konnte nicht gefunden werden",

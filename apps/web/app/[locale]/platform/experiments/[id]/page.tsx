@@ -1,12 +1,12 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { ExperimentArchivedRedirect } from "@/components/experiment-archived-redirect/experiment-archived-redirect";
 import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
 import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
@@ -58,7 +58,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   initialStatusRef.current ??= experiment.status;
 
   if (initialStatusRef.current === "archived") {
-    notFound();
+    return <ExperimentArchivedRedirect experimentId={id} />;
   }
 
   return (

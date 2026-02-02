@@ -138,7 +138,7 @@ describe("<ExperimentArchive />", () => {
     expect(toastMock).toHaveBeenCalledWith({
       description: "experimentSettings.experimentArchivedSuccess",
     });
-    expect(routerPushMock).toHaveBeenCalledWith("/en/platform/experiments-archive");
+    expect(routerPushMock).toHaveBeenCalledWith(`/en/platform/experiments-archive/${experimentId}`);
   });
 
   it("calls updateExperiment with active status and redirects on unarchive", async () => {
@@ -177,7 +177,7 @@ describe("<ExperimentArchive />", () => {
     expect(toastMock).toHaveBeenCalledWith({
       description: "experimentSettings.experimentUnarchivedSuccess",
     });
-    expect(routerPushMock).toHaveBeenCalledWith("/en/platform/experiments");
+    expect(routerPushMock).toHaveBeenCalledWith(`/en/platform/experiments/${experimentId}`);
   });
 
   it("displays error toast when archive fails", async () => {

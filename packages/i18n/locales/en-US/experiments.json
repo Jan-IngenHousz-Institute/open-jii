@@ -152,6 +152,12 @@
   "loading": "Loading...",
   "failedToLoad": "Failed to load experiment",
   "notFound": "Experiment not found",
+  "archivedRedirect": {
+    "title": "Experiment Archived",
+    "description": "This experiment has been archived and moved to the archive section.",
+    "redirectingIn": "Redirecting in {{seconds}} seconds...",
+    "goToArchive": "Go to archived experiment"
+  },
   "noPermissionToAccess": "You do not have permission to access this experiment",
   "errorLoadingExperiment": "An error occurred while loading the experiment",
   "experimentNotFound": "The experiment you're looking for could not be found",

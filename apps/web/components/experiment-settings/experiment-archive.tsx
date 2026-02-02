@@ -41,8 +41,8 @@ export function ExperimentArchive({ experimentId, isArchived }: ExperimentArchiv
       ? t("experimentSettings.experimentUnarchivedError")
       : t("experimentSettings.experimentArchivedError");
     const redirectPath = isArchived
-      ? `/${locale}/platform/experiments`
-      : `/${locale}/platform/experiments-archive`;
+      ? `/${locale}/platform/experiments/${experimentId}`
+      : `/${locale}/platform/experiments-archive/${experimentId}`;
 
     await updateExperiment(
       {

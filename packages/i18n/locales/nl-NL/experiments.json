@@ -124,6 +124,12 @@
   "loading": "Laden...",
   "failedToLoad": "Experiment laden mislukt",
   "notFound": "Experiment niet gevonden",
+  "archivedRedirect": {
+    "title": "Experiment gearchiveerd",
+    "description": "Dit experiment is gearchiveerd en verplaatst naar het archief.",
+    "redirectingIn": "Doorsturen in {{seconds}} seconden...",
+    "goToArchive": "Ga naar gearchiveerd experiment"
+  },
   "noPermissionToAccess": "U heeft geen toestemming om dit experiment te bekijken",
   "errorLoadingExperiment": "Er is een fout opgetreden bij het laden van het experiment",
   "experimentNotFound": "Het experiment dat u zoekt kon niet worden gevonden",
