@@ -32,25 +32,21 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
 
     // Get consent status from cookie
     const consentStatus = getConsentStatus();
+    const hasConsent = consentStatus === "accepted";
 
-    // If already initialized, sync consent status and return
-    if (posthog.__loaded) {
-      if (consentStatus === "accepted") {
-        posthog.opt_in_capturing();
-      } else {
-        posthog.opt_out_capturing();
-      }
-      return;
-    }
-
-    // Initialize PostHog with cookieless mode enabled by default
-    // This ensures no cookies are set until user consents
+    // Always initialize/reinitialize PostHog with current consent status
+    // PostHog.init() is safe to call multiple times - it updates config
     posthog.init(posthogKey, {
       ...POSTHOG_CLIENT_CONFIG,
-      cookieless_mode: "on_reject", // Don't set cookies until opt-in
-      persistence: consentStatus === "accepted" ? "localStorage+cookie" : "memory", // Use memory-only persistence until consent
-      opt_out_capturing_by_default: consentStatus !== "accepted", // Don't capture events until consent
+      cookieless_mode: "on_reject",
+      persistence: hasConsent ? "localStorage+cookie" : "memory",
+      opt_out_capturing_by_default: !hasConsent,
     });
+
+    // Explicitly sync opt-in/out status after init
+    if (hasConsent) {
+      posthog.opt_in_capturing();
+    }
   }, []);
 
   return <PostHogProviderBase client={posthog}>{children}</PostHogProviderBase>;
