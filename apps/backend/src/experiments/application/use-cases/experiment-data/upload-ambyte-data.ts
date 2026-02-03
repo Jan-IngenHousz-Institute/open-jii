@@ -61,13 +61,13 @@ export class UploadAmbyteDataUseCase {
       return failure(AppError.internal("Failed to verify experiment access"));
     }
 
-    const { experiment, hasAccess } = accessResult.value;
+    const { experiment, hasArchiveAccess } = accessResult.value;
 
     if (!experiment) {
       return failure(AppError.notFound("Experiment not found"));
     }
 
-    if (!hasAccess) {
+    if (!hasArchiveAccess) {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
