@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
@@ -48,7 +49,10 @@ export class DatabricksPipelinesService {
         const host = this.configService.getHost();
         const pipelinesUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}`;
 
-        this.logger.debug("Listing Databricks pipelines");
+        this.logger.debug({
+          msg: "Listing Databricks pipelines",
+          operation: "listPipelines",
+        });
 
         // Prepare request parameters
         const requestParams: Record<string, string | number> = {};
@@ -82,7 +86,12 @@ export class DatabricksPipelinesService {
             return listResponse;
           },
           (error) => {
-            this.logger.error(`Error listing pipelines: ${getAxiosErrorMessage(error)}`);
+            this.logger.error({
+              msg: "Error listing pipelines",
+              errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+              operation: "listPipelines",
+              error,
+            });
             return apiErrorMapper(`Databricks pipeline list: ${getAxiosErrorMessage(error)}`);
           },
         );
@@ -94,7 +103,12 @@ export class DatabricksPipelinesService {
         return listResult.value;
       },
       (error) => {
-        this.logger.error(`Failed to list Databricks pipelines: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to list Databricks pipelines",
+          errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+          operation: "listPipelines",
+          error,
+        });
         return apiErrorMapper(`Databricks pipelines list: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -121,7 +135,10 @@ export class DatabricksPipelinesService {
         const host = this.configService.getHost();
         const pipelinesUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}`;
 
-        this.logger.debug("Listing Databricks pipelines");
+        this.logger.debug({
+          msg: "Listing Databricks pipelines",
+          operation: "getPipelineByName",
+        });
 
         const listResult = await tryCatch(
           async () => {
@@ -145,7 +162,12 @@ export class DatabricksPipelinesService {
             return listResponse;
           },
           (error) => {
-            this.logger.error(`Error listing pipelines: ${getAxiosErrorMessage(error)}`);
+            this.logger.error({
+              msg: "Error listing pipelines (internal)",
+              errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+              operation: "getPipelineByName",
+              error,
+            });
             return apiErrorMapper(`Databricks pipeline list: ${getAxiosErrorMessage(error)}`);
           },
         );
@@ -162,14 +184,23 @@ export class DatabricksPipelinesService {
         );
 
         if (!targetPipeline) {
-          this.logger.warn(`Pipeline with name '${params.pipelineName}' not found`);
+          this.logger.warn({
+            msg: "Pipeline not found",
+            errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+            operation: "getPipelineByName",
+            pipelineName: params.pipelineName,
+          });
           throw AppError.notFound(`Pipeline with name '${params.pipelineName}' not found`);
         }
 
         // Get the details of the found pipeline
         const pipelineUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${targetPipeline.pipeline_id}`;
 
-        this.logger.debug(`Getting Databricks pipeline: ${targetPipeline.pipeline_id}`);
+        this.logger.debug({
+          msg: "Getting Databricks pipeline",
+          operation: "getPipelineByName",
+          pipelineId: targetPipeline.pipeline_id,
+        });
 
         const getResult = await tryCatch(
           async () => {
@@ -195,7 +226,12 @@ export class DatabricksPipelinesService {
             return pipelineResponse;
           },
           (error) => {
-            this.logger.error(`Error getting pipeline: ${getAxiosErrorMessage(error)}`);
+            this.logger.error({
+              msg: "Error getting pipeline",
+              errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+              operation: "getPipelineByName",
+              error,
+            });
             return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
           },
         );
@@ -235,7 +271,11 @@ export class DatabricksPipelinesService {
         const host = this.configService.getHost();
         const pipelineUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${params.pipelineId}`;
 
-        this.logger.debug(`Getting Databricks pipeline: ${params.pipelineId}`);
+        this.logger.debug({
+          msg: "Getting Databricks pipeline",
+          operation: "getPipelineById",
+          pipelineId: params.pipelineId,
+        });
 
         const result = await tryCatch(
           async () => {
@@ -261,7 +301,12 @@ export class DatabricksPipelinesService {
             return pipelineResponse;
           },
           (error) => {
-            this.logger.error(`Error getting pipeline: ${getAxiosErrorMessage(error)}`);
+            this.logger.error({
+              msg: "Error getting pipeline",
+              errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+              operation: "getPipelineById",
+              error,
+            });
             return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
           },
         );
@@ -273,7 +318,12 @@ export class DatabricksPipelinesService {
         return result.value;
       },
       (error) => {
-        this.logger.error(`Failed to get Databricks pipeline: ${getAxiosErrorMessage(error)}`);
+        this.logger.error({
+          msg: "Failed to get Databricks pipeline",
+          errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+          operation: "getPipelineById",
+          error,
+        });
         return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -299,7 +349,11 @@ export class DatabricksPipelinesService {
         const host = this.configService.getHost();
         const updateUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${params.pipelineId}/updates`;
 
-        this.logger.debug(`Starting update for Databricks pipeline: ${params.pipelineId}`);
+        this.logger.debug({
+          msg: "Starting update for Databricks pipeline",
+          operation: "startPipelineUpdate",
+          pipelineId: params.pipelineId,
+        });
 
         // Prepare request body based on provided parameters
         const requestBody: Record<string, unknown> = {};
@@ -348,7 +402,12 @@ export class DatabricksPipelinesService {
             return updateResponse;
           },
           (error) => {
-            this.logger.error(`Error starting pipeline update: ${getAxiosErrorMessage(error)}`);
+            this.logger.error({
+              msg: "Error starting pipeline update",
+              errorCode: ErrorCodes.DATABRICKS_PIPELINE_FAILED,
+              operation: "startPipelineUpdate",
+              error,
+            });
             return apiErrorMapper(
               `Databricks pipeline start update: ${getAxiosErrorMessage(error)}`,
             );

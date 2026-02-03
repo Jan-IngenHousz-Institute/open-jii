@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   CreateExperimentVisualizationDto,
@@ -26,13 +27,21 @@ export class CreateExperimentVisualizationUseCase {
     data: CreateExperimentVisualizationDto,
     userId: string,
   ): Promise<Result<ExperimentVisualizationDto>> {
-    this.logger.log(
-      `Creating visualization "${data.name}" for experiment ${experimentId} by user ${userId}`,
-    );
+    this.logger.log({
+      msg: "Creating visualization for experiment",
+      operation: "createExperimentVisualization",
+      experimentId,
+      userId,
+    });
 
     // Validate that name is provided
     if (!data.name || data.name.trim() === "") {
-      this.logger.warn(`Invalid visualization name provided by user ${userId}`);
+      this.logger.warn({
+        msg: "Invalid visualization name provided",
+        operation: "createExperimentVisualization",
+        experimentId,
+        userId,
+      });
       return failure(AppError.badRequest("Visualization name is required"));
     }
 
@@ -50,21 +59,33 @@ export class CreateExperimentVisualizationUseCase {
         isAdmin: boolean;
       }) => {
         if (!experiment) {
-          this.logger.warn(
-            `Attempt to create visualization in non-existent experiment with ID ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "Attempt to create visualization in non-existent experiment",
+            operation: "createExperimentVisualization",
+            experimentId,
+            userId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (!hasArchiveAccess) {
-          this.logger.warn(
-            `User ${userId} does not have access to create visualization in experiment ${experimentId}`,
-          );
+          this.logger.warn({
+            msg: "User does not have access to create visualization in experiment",
+            operation: "createExperimentVisualization",
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (!experiment.schemaName) {
-          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          this.logger.error({
+            msg: "Experiment has no schema name",
+            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
+            operation: "createExperimentVisualization",
+            experimentId,
+            userId,
+          });
           return failure(AppError.internal("Experiment schema not provisioned"));
         }
 
@@ -75,11 +96,22 @@ export class CreateExperimentVisualizationUseCase {
         );
 
         if (dataSourceValidation.isFailure()) {
-          this.logger.warn(`Data source validation failed: ${dataSourceValidation.error.message}`);
+          this.logger.warn({
+            msg: "Data source validation failed",
+            operation: "createExperimentVisualization",
+            experimentId,
+            userId,
+            error: dataSourceValidation.error.message,
+          });
           return failure(dataSourceValidation.error);
         }
 
-        this.logger.debug(`Creating visualization in repository: "${data.name}"`);
+        this.logger.debug({
+          msg: "Creating visualization in repository",
+          operation: "createExperimentVisualization",
+          experimentId,
+          userId,
+        });
         // Create the visualization
         const visualizationResult = await this.experimentVisualizationRepository.create(
           experimentId,
@@ -89,16 +121,25 @@ export class CreateExperimentVisualizationUseCase {
 
         return visualizationResult.chain((visualizations: ExperimentVisualizationDto[]) => {
           if (visualizations.length === 0) {
-            this.logger.error(
-              `Failed to create visualization "${data.name}" for experiment ${experimentId} by user ${userId}`,
-            );
+            this.logger.error({
+              msg: "Failed to create visualization",
+              errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_CREATE_FAILED,
+              operation: "createExperimentVisualization",
+              experimentId,
+              userId,
+            });
             return failure(AppError.internal("Failed to create visualization"));
           }
 
           const visualization = visualizations[0];
-          this.logger.log(
-            `Successfully created visualization ${visualization.id} for experiment ${experimentId}`,
-          );
+          this.logger.log({
+            msg: "Successfully created visualization for experiment",
+            operation: "createExperimentVisualization",
+            experimentId,
+            visualizationId: visualization.id,
+            userId,
+            status: "success",
+          });
           return success(visualization);
         });
       },

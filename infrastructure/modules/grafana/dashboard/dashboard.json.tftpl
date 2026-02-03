@@ -1470,6 +1470,251 @@
         "type": "cloudwatch",
         "uid": "${logs_datasource_uid}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "barAlignment": 0,
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": true,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisColorMode": "text",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BAD_REQUEST"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CONFLICT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF6B6B",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UNPROCESSABLE_ENTITY"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#C92A2A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "INTERNAL_SERVER_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#7C3AED",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SERVICE_UNAVAILABLE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#DB2777",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 305,
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${logs_datasource_uid}"
+          },
+          "expression": "stats count() as BAD_REQUEST by bin(5m) | filter errorCode = \"BAD_REQUEST\"",
+          "logGroups": [
+            {
+              "accountId": "${account_id}",
+              "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${ecs_log_group_name}:*",
+              "name": "${ecs_log_group_name}"
+            }
+          ],
+          "queryMode": "Logs",
+          "refId": "A",
+          "region": "${aws_region}"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${logs_datasource_uid}"
+          },
+          "expression": "stats count() as CONFLICT by bin(5m) | filter errorCode = \"CONFLICT\"",
+          "logGroups": [
+            {
+              "accountId": "${account_id}",
+              "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${ecs_log_group_name}:*",
+              "name": "${ecs_log_group_name}"
+            }
+          ],
+          "queryMode": "Logs",
+          "refId": "B",
+          "region": "${aws_region}"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${logs_datasource_uid}"
+          },
+          "expression": "stats count() as UNPROCESSABLE_ENTITY by bin(5m) | filter errorCode = \"UNPROCESSABLE_ENTITY\"",
+          "logGroups": [
+            {
+              "accountId": "${account_id}",
+              "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${ecs_log_group_name}:*",
+              "name": "${ecs_log_group_name}"
+            }
+          ],
+          "queryMode": "Logs",
+          "refId": "C",
+          "region": "${aws_region}"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${logs_datasource_uid}"
+          },
+          "expression": "stats count() as INTERNAL_SERVER_ERROR by bin(5m) | filter errorCode = \"INTERNAL_SERVER_ERROR\"",
+          "logGroups": [
+            {
+              "accountId": "${account_id}",
+              "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${ecs_log_group_name}:*",
+              "name": "${ecs_log_group_name}"
+            }
+          ],
+          "queryMode": "Logs",
+          "refId": "D",
+          "region": "${aws_region}"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${logs_datasource_uid}"
+          },
+          "expression": "stats count() as SERVICE_UNAVAILABLE by bin(5m) | filter errorCode = \"SERVICE_UNAVAILABLE\"",
+          "logGroups": [
+            {
+              "accountId": "${account_id}",
+              "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${ecs_log_group_name}:*",
+              "name": "${ecs_log_group_name}"
+            }
+          ],
+          "queryMode": "Logs",
+          "refId": "E",
+          "region": "${aws_region}"
+        }
+      ],
+      "title": "Backend Errors by errorCode (BAD_REQUEST, CONFLICT, UNPROCESSABLE_ENTITY, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${logs_datasource_uid}"
+      },
       "gridPos": {
         "h": 12,
         "w": 24,
@@ -1480,7 +1725,7 @@
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": true,
+        "prettifyLogMessage": false,
         "showCommonLabels": false,
         "showLabels": false,
         "showTime": true,
@@ -3485,7 +3730,16 @@
       "description": "Total number of deployments across all services in the last 24 hours",
       "fieldConfig": {
         "defaults": {
-          "mappings": [],
+          "mappings": [
+            {
+              "type": 1,
+              "options": {
+                "null": {
+                  "text": "0"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3552,6 +3806,7 @@
           "statistic": "Sum"
         }
       ],
+      "timeFrom": "7d",
       "title": "Deployment Frequency (Weekly)",
       "type": "stat"
     },
@@ -3631,6 +3886,7 @@
           "statistic": "Average"
         }
       ],
+      "timeFrom": "7d",
       "title": "Average Lead Time (Weekly)",
       "type": "stat"
     },
@@ -3639,34 +3895,37 @@
         "type": "cloudwatch",
         "uid": "${datasource_uid}"
       },
-      "description": "Percentage of deployments that failed",
+      "description": "Number of failed deployments (weekly)",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "max": 100,
-          "min": 0,
+          "mappings": [
+            {
+              "type": 1,
+              "options": {
+                "null": {
+                  "text": "0"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 15
+                "value": 1
               },
               {
-                "color": "red",
-                "value": 30
+                "color": "green",
+                "value": 5
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -3676,32 +3935,26 @@
         "x": 12,
         "y": 115
       },
-      "id": 603,
+      "id": 811,
       "options": {
-        "displayMode": "gradient",
-        "maxVizHeight": 300,
-        "minVizHeight": 16,
-        "minVizWidth": 8,
-        "namePlacement": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
         },
-        "showUnfilled": true,
-        "sizing": "auto",
-        "valueMode": "color"
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
       },
       "pluginVersion": "10.4.1",
       "targets": [
         {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
           "dimensions": {
             "Environment": "${environment}"
           },
@@ -3715,76 +3968,34 @@
           "namespace": "DORA/Metrics",
           "period": "604800",
           "queryMode": "Metrics",
-          "refId": "Failed",
+          "refId": "A",
           "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {
-            "Environment": "${environment}"
-          },
-          "expression": "",
-          "id": "",
-          "label": "",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "DeploymentSuccess",
-          "metricQueryType": 0,
-          "namespace": "DORA/Metrics",
-          "period": "604800",
-          "queryMode": "Metrics",
-          "refId": "Success",
-          "region": "${aws_region}",
-          "sqlExpression": "",
-          "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {},
-          "expression": "(Failed / (Success + Failed)) * 100",
-          "id": "",
-          "label": "Failure Rate %",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "",
-          "metricQueryType": 1,
-          "namespace": "",
-          "period": "",
-          "queryMode": "Metrics",
-          "refId": "CFR",
-          "region": "${aws_region}",
-          "sql": {
-            "select": {
-              "name": "AVG",
-              "type": "function"
-            }
-          },
-          "statistic": ""
         }
       ],
-      "title": "Change Failure Rate (Weekly)",
-      "type": "bargauge"
+      "timeFrom": "7d",
+      "title": "Change Failure Count (Weekly)",
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "cloudwatch",
         "uid": "${datasource_uid}"
       },
-      "description": "Percentage of successful deployments",
+      "description": "Number of successful deployments (weekly)",
       "fieldConfig": {
         "defaults": {
-          "decimals": 1,
-          "mappings": [],
-          "max": 100,
-          "min": 0,
+          "mappings": [
+            {
+              "type": 1,
+              "options": {
+                "null": {
+                  "text": "0"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3794,15 +4005,15 @@
               },
               {
                 "color": "yellow",
-                "value": 70
+                "value": 1
               },
               {
                 "color": "green",
-                "value": 85
+                "value": 5
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -3820,7 +4031,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -3832,33 +4043,6 @@
       "pluginVersion": "10.4.1",
       "targets": [
         {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {
-            "Environment": "${environment}"
-          },
-          "expression": "",
-          "id": "",
-          "label": "",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "DeploymentFailed",
-          "metricQueryType": 0,
-          "namespace": "DORA/Metrics",
-          "period": "604800",
-          "queryMode": "Metrics",
-          "refId": "Failed",
-          "region": "${aws_region}",
-          "sqlExpression": "",
-          "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
           "dimensions": {
             "Environment": "${environment}"
           },
@@ -3872,39 +4056,14 @@
           "namespace": "DORA/Metrics",
           "period": "604800",
           "queryMode": "Metrics",
-          "refId": "Success",
+          "refId": "A",
           "region": "${aws_region}",
           "sqlExpression": "",
           "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${datasource_uid}"
-          },
-          "dimensions": {},
-          "expression": "(Success / (Success + Failed)) * 100",
-          "id": "",
-          "label": "Success Rate %",
-          "matchExact": false,
-          "metricEditorMode": 0,
-          "metricName": "",
-          "metricQueryType": 1,
-          "namespace": "",
-          "period": "",
-          "queryMode": "Metrics",
-          "refId": "SR",
-          "region": "${aws_region}",
-          "sql": {
-            "select": {
-              "name": "AVG",
-              "type": "function"
-            }
-          },
-          "statistic": ""
         }
       ],
-      "title": "Deployment Success Rate (Weekly)",
+      "timeFrom": "7d",
+      "title": "Deployment Success Count (Weekly)",
       "type": "stat"
     },
     {
@@ -4069,6 +4228,7 @@
           "statistic": "Sum"
         }
       ],
+      "timeFrom": "7d",
       "title": "Deployment Frequency by Service (7d)",
       "type": "timeseries"
     },
@@ -4234,6 +4394,7 @@
           "statistic": "Average"
         }
       ],
+      "timeFrom": "7d",
       "title": "Lead Time Trend by Service (7d)",
       "type": "timeseries"
     }

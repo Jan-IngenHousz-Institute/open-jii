@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { AddAnnotationsBulkBody, AnnotationRowsAffected } from "@repo/api";
 
+import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../../common/utils/fp-utils";
@@ -33,11 +34,20 @@ export class AddAnnotationsUseCase {
     data: AddAnnotationsBulkBody,
     userId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
-    this.logger.log(`Adding annotation(s) to experiment data for user ${userId}`);
+    this.logger.log({
+      msg: "Adding annotation(s) to experiment data",
+      operation: "addAnnotations",
+      experimentId,
+      userId,
+    });
 
     // Validate that the user ID is provided
     if (!userId) {
-      this.logger.warn("Attempt to add annotation(s) to experiment without user ID");
+      this.logger.warn({
+        msg: "Attempt to add annotation(s) to experiment without user ID",
+        operation: "addAnnotations",
+        experimentId,
+      });
       return failure(
         AppError.badRequest("User ID is required to add annotation(s) to an experiment"),
       );
@@ -55,18 +65,31 @@ export class AddAnnotationsUseCase {
         experiment: ExperimentDto | null;
       }) => {
         if (!experiment) {
-          this.logger.warn(`Experiment with ID ${experimentId} not found`);
+          this.logger.warn({
+            msg: "Experiment not found",
+            operation: "addAnnotations",
+            experimentId,
+          });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
         if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn(
-            `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
-          );
+          this.logger.warn({
+            msg: "User attempted to access experiment data without proper permissions",
+            operation: "addAnnotations",
+            experimentId,
+            userId,
+          });
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (!experiment.schemaName) {
-          this.logger.error(`Experiment ${experimentId} has no schema name`);
+          this.logger.error({
+            msg: "Experiment has no schema name",
+            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
+            operation: "addAnnotations",
+            experimentId,
+            error: "Experiment schema not provisioned",
+          });
           return failure(AppError.internal("Experiment schema not provisioned"));
         }
 
@@ -81,7 +104,12 @@ export class AddAnnotationsUseCase {
         // Fetch user profile to get full name
         const userProfilesResult = await this.userRepository.findUsersByIds([userId]);
         if (userProfilesResult.isFailure()) {
-          this.logger.warn(`Failed to fetch user profile for userId ${userId}`);
+          this.logger.warn({
+            msg: "Failed to fetch user profile",
+            operation: "addAnnotations",
+            userId,
+            experimentId,
+          });
         }
         const userProfile = userProfilesResult.isSuccess() ? userProfilesResult.value[0] : null;
         const userName = userProfile
@@ -129,9 +157,13 @@ export class AddAnnotationsUseCase {
           );
 
           if (refreshResult.isFailure()) {
-            this.logger.warn(
-              `Failed to trigger silver data refresh after adding annotations: ${refreshResult.error.message}`,
-            );
+            this.logger.warn({
+              msg: "Failed to trigger silver data refresh after adding annotations",
+              operation: "addAnnotations",
+              experimentId,
+              schemaName: experiment.schemaName,
+              error: refreshResult.error.message,
+            });
             // Don't fail the whole operation, just log the warning
           }
         }

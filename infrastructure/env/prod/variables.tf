@@ -179,9 +179,3 @@ variable "posthog_host" {
   type        = string
   default     = "https://eu.i.posthog.com"
 }
-
-variable "posthog_ui_host" {
-  description = "PostHog UI host URL for toolbar and links"
-  type        = string
-  default     = "https://eu.posthog.com"
-}

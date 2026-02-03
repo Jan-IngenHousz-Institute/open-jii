@@ -41,6 +41,7 @@ describe("Protocol Schema", () => {
         description: "Dark adaptation",
         code: validCodeArray,
         family: "multispeq",
+        sortOrder: 1,
         createdBy: uuidB,
         createdByName: "Alice",
         createdAt: iso,
@@ -56,6 +57,7 @@ describe("Protocol Schema", () => {
         description: null,
         code: validCodeArray,
         family: "ambit",
+        sortOrder: 2,
         createdBy: uuidB,
         createdAt: iso,
         updatedAt: iso2,
@@ -112,6 +114,7 @@ describe("Protocol Schema", () => {
         description: null,
         code: validCodeArray,
         family: "ambit",
+        sortOrder: 1,
         createdBy: uuidB,
         createdAt: iso,
         updatedAt: iso2,
@@ -120,6 +123,7 @@ describe("Protocol Schema", () => {
         ...p1,
         id: "33333333-3333-3333-3333-333333333333",
         name: "P2",
+        sortOrder: 2,
         family: "multispeq" as const,
       };
       expect(zProtocolList.parse([p1, p2])).toEqual([p1, p2]);

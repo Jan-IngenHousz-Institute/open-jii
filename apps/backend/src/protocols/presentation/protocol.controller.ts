@@ -8,6 +8,7 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract, validateProtocolJson } from "@repo/api";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
+import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
@@ -38,7 +39,12 @@ function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknow
     try {
       return JSON.parse(code) as Record<string, unknown>[];
     } catch (error) {
-      logger.error("Error parsing protocol code:", error);
+      logger.error({
+        msg: "Failed to parse protocol code",
+        errorCode: ErrorCodes.BAD_REQUEST,
+        operation: "parseProtocolCode",
+        error,
+      });
       return [{}];
     }
   }
@@ -67,7 +73,12 @@ function validateJsonStructure(code: unknown, logger: Logger) {
     JSON.stringify(code);
     return success(code);
   } catch (error) {
-    logger.warn("Protocol JSON structure validation failed", error);
+    logger.warn({
+      msg: "Protocol JSON structure validation failed",
+      errorCode: ErrorCodes.BAD_REQUEST,
+      operation: "validateJsonStructure",
+      error,
+    });
     return failure(AppError.badRequest("Invalid JSON structure"));
   }
 }
@@ -98,7 +109,12 @@ async function validateProtocolCode(
   // Otherwise, perform full protocol validation
   const validationResult = validateProtocolJson(code);
   if (!validationResult.success) {
-    logger.warn("Protocol validation failed", validationResult.error);
+    logger.warn({
+      msg: "Protocol validation failed",
+      errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
+      operation: "validateProtocolCode",
+      validationError: validationResult.error,
+    });
     return failure(AppError.badRequest("Protocol validation failed"));
   }
   return success(validationResult.data);
@@ -190,7 +206,13 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        this.logger.log(`Protocol created: ${protocol.id} by user ${session.user.id}`);
+        this.logger.log({
+          msg: "Protocol created",
+          operation: "createProtocol",
+          protocolId: protocol.id,
+          userId: session.user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.CREATED,
           body: formatDates(protocol),
@@ -212,9 +234,14 @@ export class ProtocolController {
       }
 
       if (protocolResult.value.createdBy !== session.user.id) {
-        this.logger.warn(
-          `User ${session.user.id} attempted to update protocol ${params.id} without permission`,
-        );
+        this.logger.warn({
+          msg: "Unauthorized protocol update attempt",
+          errorCode: ErrorCodes.FORBIDDEN,
+          operation: "updateProtocol",
+          protocolId: params.id,
+          userId: session.user.id,
+          ownerId: protocolResult.value.createdBy,
+        });
         return {
           status: StatusCodes.FORBIDDEN,
           body: { message: "Only the protocol creator can update this protocol" },
@@ -248,7 +275,13 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        this.logger.log(`Protocol updated: ${protocol.id} by user ${session.user.id}`);
+        this.logger.log({
+          msg: "Protocol updated",
+          operation: "updateProtocol",
+          protocolId: protocol.id,
+          userId: session.user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.OK,
           body: formatDates(protocol),
@@ -282,9 +315,14 @@ export class ProtocolController {
       }
 
       if (protocolResult.value.createdBy !== session.user.id) {
-        this.logger.warn(
-          `User ${session.user.id} attempted to delete protocol ${params.id} without permission`,
-        );
+        this.logger.warn({
+          msg: "Unauthorized protocol delete attempt",
+          errorCode: ErrorCodes.FORBIDDEN,
+          operation: "deleteProtocol",
+          protocolId: params.id,
+          userId: session.user.id,
+          ownerId: protocolResult.value.createdBy,
+        });
         return {
           status: StatusCodes.FORBIDDEN,
           body: { message: "Only the protocol creator can delete this protocol" },
@@ -294,7 +332,13 @@ export class ProtocolController {
       const result = await this.deleteProtocolUseCase.execute(params.id);
 
       if (result.isSuccess()) {
-        this.logger.log(`Protocol deleted: ${params.id} by user ${session.user.id}`);
+        this.logger.log({
+          msg: "Protocol deleted",
+          operation: "deleteProtocol",
+          protocolId: params.id,
+          userId: session.user.id,
+          status: "success",
+        });
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,

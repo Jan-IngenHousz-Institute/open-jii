@@ -14,7 +14,12 @@ export class GeocodeLocationUseCase {
   ) {}
 
   async execute(request: GeocodeLocationRequest): Promise<Result<GeocodeResult[]>> {
-    this.logger.log(`Geocoding location: lat=${request.latitude}, lon=${request.longitude}`);
+    this.logger.log({
+      msg: "Geocoding location",
+      operation: "geocodeLocation",
+      latitude: request.latitude,
+      longitude: request.longitude,
+    });
 
     return this.AwsPort.geocodeLocation(request);
   }

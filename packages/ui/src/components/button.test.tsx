@@ -64,7 +64,7 @@ describe("Button", () => {
     render(<Button variant="ghost">Ghost Button</Button>);
 
     const button = screen.getByRole("button");
-    expect(button.className).toContain("hover:bg-accent");
+    expect(button.className).toContain("hover:bg-surface");
     expect(button.className).toContain("hover:text-accent-foreground");
   });
 

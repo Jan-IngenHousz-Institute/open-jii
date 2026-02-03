@@ -3,6 +3,7 @@ import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
+import { env } from "~/env";
 
 import initTranslations from "@repo/i18n/server";
 
@@ -28,6 +29,12 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
         <DashboardBanner
           title={t("dashboard.transferBannerTitle")}
           description={t("dashboard.transferBannerDescription")}
+          descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
+          descriptionItalicHref={
+            "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
+          }
+          secondaryButtonLabel={t("dashboard.reportBugButton")}
+          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/report-issue`}
           buttonLabel={t("dashboard.transferBannerButton")}
           buttonHref={`/${locale}/platform/transfer-request`}
           locale={locale}

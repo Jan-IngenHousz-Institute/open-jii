@@ -7,3 +7,4 @@ export {
   type PostHogEnvConfig,
   type PostHogServerConfig,
 } from "./posthog-config";
+export { logger, pinoConfig } from "./logger";

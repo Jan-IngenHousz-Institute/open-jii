@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { DatabricksConfig, databricksConfigSchema } from "./config.types";
 
 @Injectable()
@@ -22,7 +23,10 @@ export class DatabricksConfigService {
    * Loads Databricks configuration from environment variables
    */
   private loadConfig(): DatabricksConfig {
-    this.logger.debug("Loading Databricks configuration");
+    this.logger.debug({
+      msg: "Loading Databricks configuration",
+      operation: "loadConfig",
+    });
     return {
       host: this.configService.getOrThrow<string>("databricks.host"),
       clientId: this.configService.getOrThrow<string>("databricks.clientId"),
@@ -47,9 +51,17 @@ export class DatabricksConfigService {
   private validateConfig(): void {
     try {
       databricksConfigSchema.parse(this.config);
-      this.logger.debug("Databricks configuration validated successfully");
+      this.logger.debug({
+        msg: "Databricks configuration validated successfully",
+        operation: "validateConfig",
+        status: "success",
+      });
     } catch {
-      this.logger.error("Invalid Databricks configuration");
+      this.logger.error({
+        msg: "Invalid Databricks configuration",
+        errorCode: ErrorCodes.DATABRICKS_CONFIG_INVALID,
+        operation: "validateConfig",
+      });
       throw new Error("Invalid Databricks configuration: all fields must be non-empty strings");
     }
   }

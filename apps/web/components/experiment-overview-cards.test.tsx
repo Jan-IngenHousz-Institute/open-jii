@@ -28,11 +28,15 @@ vi.mock("~/components/ExperimentStatusBadge", () => ({
 }));
 
 // Mock RichTextRenderer
-vi.mock("@repo/ui/components", () => ({
-  RichTextRenderer: ({ content }: { content: string }) => (
-    <div data-testid="rich-text">{content}</div>
-  ),
-}));
+vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    RichTextRenderer: ({ content }: { content: string }) => (
+      <div data-testid="rich-text">{content}</div>
+    ),
+  };
+});
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -51,18 +55,21 @@ const mockExperiment: Experiment = {
   name: "Test Experiment",
   description: "Test description",
   status: "active",
+  visibility: "private",
+  createdBy: "user-1",
   createdAt: "2025-01-01T00:00:00.000Z",
   updatedAt: "2025-01-15T00:00:00.000Z",
-  metadata: {},
-  members: [],
-  organizationId: "org-1",
+  embargoUntil: "2025-12-31T23:59:59.999Z",
+  ownerFirstName: "John",
+  ownerLastName: "Doe",
 };
 
 describe("ExperimentOverviewCards", () => {
   describe("loading state", () => {
-    it("renders loading message when experiments is undefined", () => {
-      render(<ExperimentOverviewCards experiments={undefined} />);
-      expect(screen.getByText("Loading experiments...")).toBeInTheDocument();
+    it("renders skeleton loaders when experiments is undefined", () => {
+      const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
+      const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
+      expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 
@@ -73,72 +80,12 @@ describe("ExperimentOverviewCards", () => {
     });
   });
 
-  describe("horizontal layout", () => {
-    it("renders experiments in horizontal layout", () => {
-      render(<ExperimentOverviewCards experiments={[mockExperiment]} horizontal />);
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-      expect(screen.getByText("Test description")).toBeInTheDocument();
-      expect(screen.getByTestId("status-badge")).toHaveTextContent("active");
-    });
-
-    it("uses correct path for regular experiments", () => {
-      const { container } = render(
-        <ExperimentOverviewCards experiments={[mockExperiment]} horizontal />,
-      );
-      const link = container.querySelector('a[href="/platform/experiments/1"]');
-      expect(link).toBeInTheDocument();
-    });
-
-    it("uses correct path for archived experiments", () => {
-      const { container } = render(
-        <ExperimentOverviewCards experiments={[mockExperiment]} horizontal archived />,
-      );
-      const link = container.querySelector('a[href="/platform/experiments-archive/1"]');
-      expect(link).toBeInTheDocument();
-    });
-
-    it("renders multiple experiments", () => {
-      const experiments: Experiment[] = [
-        mockExperiment,
-        { ...mockExperiment, id: "2", name: "Second Experiment" },
-        { ...mockExperiment, id: "3", name: "Third Experiment" },
-      ];
-      render(<ExperimentOverviewCards experiments={experiments} horizontal />);
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-      expect(screen.getByText("Second Experiment")).toBeInTheDocument();
-      expect(screen.getByText("Third Experiment")).toBeInTheDocument();
-    });
-
-    it("displays formatted last update date", () => {
-      render(<ExperimentOverviewCards experiments={[mockExperiment]} horizontal />);
-      expect(screen.getByText(/Last update:/)).toBeInTheDocument();
-    });
-
-    it("renders ChevronRight icon", () => {
-      render(<ExperimentOverviewCards experiments={[mockExperiment]} horizontal />);
-      expect(screen.getByTestId("chevron-right")).toBeInTheDocument();
-    });
-
-    it("handles experiment with null description", () => {
-      const experimentWithoutDesc = { ...mockExperiment, description: null };
-      render(<ExperimentOverviewCards experiments={[experimentWithoutDesc]} horizontal />);
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-      expect(screen.getByTestId("rich-text")).toBeInTheDocument();
-    });
-  });
-
   describe("vertical layout (default)", () => {
     it("renders experiments in vertical layout by default", () => {
       render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
       expect(screen.getByText("Test Experiment")).toBeInTheDocument();
       expect(screen.getByText("Test description")).toBeInTheDocument();
       expect(screen.getByTestId("status-badge")).toHaveTextContent("active");
-    });
-
-    it("renders experiments in vertical layout when horizontal is false", () => {
-      render(<ExperimentOverviewCards experiments={[mockExperiment]} horizontal={false} />);
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-      expect(screen.getByText("Test description")).toBeInTheDocument();
     });
 
     it("uses correct path for regular experiments", () => {
@@ -186,19 +133,19 @@ describe("ExperimentOverviewCards", () => {
   describe("different experiment statuses", () => {
     it("renders experiment with provisioning status", () => {
       const experiment = { ...mockExperiment, status: "provisioning" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} horizontal />);
+      render(<ExperimentOverviewCards experiments={[experiment]} />);
       expect(screen.getByTestId("status-badge")).toHaveTextContent("provisioning");
     });
 
     it("renders experiment with archived status", () => {
       const experiment = { ...mockExperiment, status: "archived" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} horizontal />);
+      render(<ExperimentOverviewCards experiments={[experiment]} />);
       expect(screen.getByTestId("status-badge")).toHaveTextContent("archived");
     });
 
     it("renders experiment with stale status", () => {
       const experiment = { ...mockExperiment, status: "stale" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} horizontal />);
+      render(<ExperimentOverviewCards experiments={[experiment]} />);
       expect(screen.getByTestId("status-badge")).toHaveTextContent("stale");
     });
   });

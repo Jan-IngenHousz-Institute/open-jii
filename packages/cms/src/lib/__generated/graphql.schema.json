@@ -2378,7 +2378,7 @@
       {
         "kind": "OBJECT",
         "name": "ComponentAuthor",
-        "description": "To have author-related properties [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor)",
+        "description": "[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor)",
         "isOneOf": null,
         "fields": [
           {
@@ -3452,7 +3452,7 @@
       {
         "kind": "OBJECT",
         "name": "ComponentButton",
-        "description": "CTA button for Hero section [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentButton)",
+        "description": "[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentButton)",
         "isOneOf": null,
         "fields": [
           {
@@ -8193,7 +8193,7 @@
       {
         "kind": "OBJECT",
         "name": "ComponentRichImage",
-        "description": "To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)",
+        "description": "[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)",
         "isOneOf": null,
         "fields": [
           {
@@ -9014,7 +9014,7 @@
       {
         "kind": "OBJECT",
         "name": "ComponentSeo",
-        "description": "To have SEO-related properties to the pages we render [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentSeo)",
+        "description": "[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentSeo)",
         "isOneOf": null,
         "fields": [
           {
@@ -13606,7 +13606,7 @@
       {
         "kind": "OBJECT",
         "name": "LandingMetadata",
-        "description": "This component contains the metadata for the pages found outside the platform. [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/landingMetadata)",
+        "description": "[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/landingMetadata)",
         "isOneOf": null,
         "fields": [
           {
@@ -15927,7 +15927,7 @@
       {
         "kind": "OBJECT",
         "name": "PageBlogPost",
-        "description": "To create individual blog posts [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageBlogPost)",
+        "description": "[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageBlogPost)",
         "isOneOf": null,
         "fields": [
           {
@@ -26892,7 +26892,7 @@
       {
         "kind": "OBJECT",
         "name": "PageLanding",
-        "description": "To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)",
+        "description": "[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)",
         "isOneOf": null,
         "fields": [
           {
@@ -38985,6 +38985,63 @@
         "args": []
       },
       {
+        "name": "contentfulSchemaMetadata",
+        "description": null,
+        "isRepeatable": false,
+        "locations": [
+          "SCHEMA"
+        ],
+        "args": [
+          {
+            "name": "contentTypePublishedCounters",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "JSON",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ]
+      },
+      {
+        "name": "delegatedResourceLink",
+        "description": null,
+        "isRepeatable": false,
+        "locations": [
+          "FIELD_DEFINITION",
+          "OBJECT"
+        ],
+        "args": [
+          {
+            "name": "contentTypeId",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "field",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "JSON",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ]
+      },
+      {
         "name": "deprecated",
         "description": "Marks an element of a GraphQL schema as no longer supported.",
         "isRepeatable": false,
@@ -39004,6 +39061,84 @@
               "ofType": null
             },
             "defaultValue": "\"No longer supported\"",
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ]
+      },
+      {
+        "name": "enumMapper",
+        "description": null,
+        "isRepeatable": false,
+        "locations": [
+          "ENUM_VALUE"
+        ],
+        "args": [
+          {
+            "name": "value",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "JSON",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ]
+      },
+      {
+        "name": "featureFlag",
+        "description": null,
+        "isRepeatable": false,
+        "locations": [
+          "FIELD"
+        ],
+        "args": [
+          {
+            "name": "featureName",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ]
+      },
+      {
+        "name": "fieldResolver",
+        "description": null,
+        "isRepeatable": false,
+        "locations": [
+          "FIELD_DEFINITION"
+        ],
+        "args": [
+          {
+            "name": "data",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "JSON",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "kind",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -39119,6 +39254,28 @@
                 "name": "TimelineFilterInput",
                 "ofType": null
               }
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ]
+      },
+      {
+        "name": "typeIdentifier",
+        "description": null,
+        "isRepeatable": false,
+        "locations": [
+          "OBJECT"
+        ],
+        "args": [
+          {
+            "name": "contentTypeId",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
             },
             "defaultValue": null,
             "isDeprecated": false,

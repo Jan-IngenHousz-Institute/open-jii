@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { DATABRICKS_PORT, DatabricksPort } from "../../../core/ports/databricks.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -14,7 +15,12 @@ export class DeleteMacroUseCase {
   ) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
-    this.logger.log(`Deleting macro with id: ${id}`);
+    this.logger.log({
+      msg: "Deleting macro",
+      operation: "deleteMacro",
+      macroId: id,
+      userId,
+    });
 
     // First, check if the macro exists
     const macroResult = await this.macroRepository.findById(id);
@@ -24,7 +30,13 @@ export class DeleteMacroUseCase {
     }
 
     if (!macroResult.value) {
-      this.logger.warn(`Macro with id ${id} not found for deletion`);
+      this.logger.warn({
+        msg: "Macro not found for deletion",
+        errorCode: ErrorCodes.MACRO_NOT_FOUND,
+        operation: "deleteMacro",
+        macroId: id,
+        userId,
+      });
       return failure(AppError.notFound("Macro not found"));
     }
 
@@ -32,7 +44,13 @@ export class DeleteMacroUseCase {
 
     // Check if user is the creator
     if (macro.createdBy !== userId) {
-      this.logger.warn(`User ${userId} attempted to delete macro ${id} without permission`);
+      this.logger.warn({
+        msg: "Unauthorized macro deletion attempt",
+        errorCode: ErrorCodes.FORBIDDEN,
+        operation: "deleteMacro",
+        macroId: id,
+        userId,
+      });
       return failure(AppError.forbidden("Only the macro creator can delete this macro"));
     }
 
@@ -40,10 +58,13 @@ export class DeleteMacroUseCase {
     const databricksResult = await this.databricksPort.deleteMacroCode(macro.filename);
 
     if (databricksResult.isFailure()) {
-      this.logger.warn(
-        `Failed to delete macro code from Databricks for macro ${id}`,
-        databricksResult.error.message,
-      );
+      this.logger.warn({
+        msg: "Failed to delete macro from Databricks",
+        errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
+        operation: "deleteMacro",
+        macroId: id,
+        error: databricksResult.error.message,
+      });
       // Continue with database deletion even if Databricks fails
       // as we don't want to leave orphaned database records
     }
@@ -56,7 +77,13 @@ export class DeleteMacroUseCase {
     }
 
     // The macro was successfully deleted
-    this.logger.log(`Successfully deleted macro with id: ${id}`);
+    this.logger.log({
+      msg: "Macro deleted successfully",
+      operation: "deleteMacro",
+      macroId: id,
+      userId,
+      status: "success",
+    });
     return success(undefined);
   }
 }
