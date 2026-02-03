@@ -4,9 +4,17 @@ import { listSerialPortDevices } from "~/services/multispeq-communication/androi
 import { listMockDevices } from "~/services/multispeq-communication/mock-device/list-mock-devices";
 import { Device, DeviceType } from "~/types/device";
 
-function getSerialDeviceName({ vendorId, productId }: { vendorId: number; productId: number }) {
+function getSerialDeviceName({
+  vendorId,
+  productId,
+  deviceId,
+}: {
+  vendorId: number;
+  productId: number;
+  deviceId: number;
+}) {
   if (vendorId === 5824 && productId == 1155) {
-    return "MultispeQ";
+    return `MultispeQ (${deviceId.toString().slice(-11)})`;
   }
 
   return `${vendorId}:${productId}`;
@@ -28,7 +36,11 @@ async function getDevices(type: DeviceType) {
     return devices.map((device) => ({
       id: device.deviceId.toString(),
       type: "usb",
-      name: getSerialDeviceName(device),
+      name: getSerialDeviceName({
+        vendorId: device.vendorId,
+        productId: device.productId,
+        deviceId: device.deviceId,
+      }),
     })) satisfies Device[];
   }
 

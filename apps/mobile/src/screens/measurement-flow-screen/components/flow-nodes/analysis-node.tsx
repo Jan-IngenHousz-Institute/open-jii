@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
@@ -11,6 +11,8 @@ import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
+
+import { RecentMeasurementsInFlow } from "../recent-measurements-in-flow";
 
 interface AnalysisNodeProps {
   content: {
@@ -30,9 +32,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     finishFlow,
     iterationCount,
     flowNodes,
+    resetFlow,
+    nextStep,
   } = useMeasurementFlowStore();
   const { experiments } = useExperiments();
   const { session } = useSession();
+  const [showRecentMeasurements, setShowRecentMeasurements] = useState(false);
 
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";
@@ -128,11 +133,26 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       questions,
     });
     finishFlow();
+    setShowRecentMeasurements(true);
   };
 
   const handleRetry = () => {
     previousStep();
   };
+
+  const handleStartNextMeasurement = () => {
+    resetFlow();
+    setShowRecentMeasurements(false);
+    nextStep();
+  };
+
+  if (showRecentMeasurements) {
+    return (
+      <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
+        <RecentMeasurementsInFlow onStartNextMeasurement={handleStartNextMeasurement} />
+      </View>
+    );
+  }
 
   return (
     <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>

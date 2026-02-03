@@ -1,8 +1,11 @@
 import { clsx } from "clsx";
-import { X } from "lucide-react-native";
-import React from "react";
+import { MessageSquare, X } from "lucide-react-native";
+import React, { useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Button } from "~/components/Button";
+import { CommentModal } from "~/components/comment-modal";
+import { useAllMeasurements } from "~/hooks/use-all-measurements";
 import type { MeasurementItem } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import type { AnswerData } from "~/utils/convert-cycle-answers-to-array";
@@ -20,6 +23,8 @@ export function MeasurementQuestionsModal({
 }: MeasurementQuestionsModalProps) {
   const { colors, classes } = useTheme();
   const insets = useSafeAreaInsets();
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const { invalidate } = useAllMeasurements("all");
 
   // Extract questions from measurementResult
   const measurementResult = measurement.data.measurementResult as any;
@@ -56,6 +61,28 @@ export function MeasurementQuestionsModal({
 
         {/* Content */}
         <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+          {measurement.status === "unsynced" && (
+            <View className="mb-4">
+              <Button
+                title={measurement.comment ? "Edit Comment" : "Add Comment"}
+                variant="outline"
+                icon={<MessageSquare size={16} color={colors.primary.dark} />}
+                onPress={() => setShowCommentModal(true)}
+                style={{ width: "100%" }}
+              />
+              {measurement.comment && (
+                <View
+                  className="mt-3 rounded-md px-3 py-2"
+                  style={{ backgroundColor: colors.primary.dark + "15" }}
+                >
+                  <Text className="text-sm" style={{ color: colors.primary.dark }}>
+                    {measurement.comment}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {questions.length === 0 ? (
             <View className="items-center justify-center py-8">
               <Text className={clsx("text-center", classes.textSecondary)}>
@@ -89,6 +116,17 @@ export function MeasurementQuestionsModal({
           )}
         </ScrollView>
       </View>
+
+      {showCommentModal && (
+        <CommentModal
+          visible={showCommentModal}
+          measurementKey={measurement.key}
+          onClose={() => setShowCommentModal(false)}
+          onSave={() => {
+            invalidate();
+          }}
+        />
+      )}
     </Modal>
   );
 }
