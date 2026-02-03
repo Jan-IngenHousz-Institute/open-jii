@@ -30,8 +30,10 @@ import {
 @Injectable()
 export class ExperimentRepository {
   constructor(
-    @Inject("DATABASE")
-    private readonly database: DatabaseInstance,
+    @Inject("DATABASE_READER")
+    private readonly reader: DatabaseInstance,
+    @Inject("DATABASE_WRITER")
+    private readonly writer: DatabaseInstance,
   ) {}
 
   async create(
@@ -39,7 +41,7 @@ export class ExperimentRepository {
     userId: string,
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(() =>
-      this.database
+      this.writer
         .insert(experiments)
         .values({
           ...createExperimentDto,
@@ -81,7 +83,7 @@ export class ExperimentRepository {
       if (filter === "member") {
         conditions.push(
           exists(
-            this.database
+            this.reader
               .select()
               .from(experimentMembers)
               .where(
@@ -98,7 +100,7 @@ export class ExperimentRepository {
           or(
             eq(experiments.visibility, "public"),
             exists(
-              this.database
+              this.reader
                 .select()
                 .from(experimentMembers)
                 .where(
@@ -122,7 +124,7 @@ export class ExperimentRepository {
 
       const where = and(...conditions);
 
-      const query = this.database
+      const query = this.reader
         .select(experimentFields)
         .from(experiments)
         .orderBy(desc(experiments.updatedAt));
@@ -133,7 +135,7 @@ export class ExperimentRepository {
 
   async findOne(id: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select()
         .from(experiments)
         .where(eq(experiments.id, id))
@@ -149,7 +151,7 @@ export class ExperimentRepository {
 
   async findByName(name: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select()
         .from(experiments)
         .where(eq(experiments.name, name))
@@ -168,7 +170,7 @@ export class ExperimentRepository {
     updateExperimentDto: UpdateExperimentDto,
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(() =>
-      this.database
+      this.writer
         .update(experiments)
         .set(updateExperimentDto)
         .where(eq(experiments.id, id))
@@ -179,10 +181,10 @@ export class ExperimentRepository {
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       // First delete experiment members to maintain referential integrity
-      await this.database.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
+      await this.writer.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
       // Then delete the experiment
-      await this.database.delete(experiments).where(eq(experiments.id, id));
+      await this.writer.delete(experiments).where(eq(experiments.id, id));
     });
   }
 
@@ -214,7 +216,7 @@ export class ExperimentRepository {
         ownerLastName: getAnonymizedLastName(),
       };
 
-      const result = await this.database
+      const result = await this.reader
         .select({
           experiment: experimentFields,
           memberRole: experimentMembers.role,
@@ -254,7 +256,7 @@ export class ExperimentRepository {
    */
   async findExpiredEmbargoes(): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select()
         .from(experiments)
         .where(

@@ -1261,6 +1261,14 @@ module "backend_ecs" {
       valueFrom = module.aurora_db.master_user_secret_arn
     },
     {
+      name      = "DB_WRITER_CREDENTIALS"
+      valueFrom = module.aurora_db.writer_credentials_secret_arn
+    },
+    {
+      name      = "DB_READER_CREDENTIALS"
+      valueFrom = module.aurora_db.reader_credentials_secret_arn
+    },
+    {
       name      = "EMAIL_SERVER"
       valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_SERVER::"
     },
@@ -1279,6 +1287,14 @@ module "backend_ecs" {
     {
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_WRITER_HOST"
+      value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_READER_HOST"
+      value = module.aurora_db.cluster_reader_endpoint
     },
     {
       name  = "DB_NAME"

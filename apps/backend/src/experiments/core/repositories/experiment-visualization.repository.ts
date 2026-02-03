@@ -17,13 +17,15 @@ import type {
 @Injectable()
 export class ExperimentVisualizationRepository {
   constructor(
-    @Inject("DATABASE")
-    private readonly database: DatabaseInstance,
+    @Inject("DATABASE_READER")
+    private readonly reader: DatabaseInstance,
+    @Inject("DATABASE_WRITER")
+    private readonly writer: DatabaseInstance,
   ) {}
 
   async listVisualizations(experimentId: string): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
+      const results = await this.reader
         .select({
           experiment_visualizations: experimentVisualizations,
           firstName: getAnonymizedFirstName(),
@@ -51,7 +53,7 @@ export class ExperimentVisualizationRepository {
     createdBy: string,
   ): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
-      const insertResults = await this.database
+      const insertResults = await this.writer
         .insert(experimentVisualizations)
         .values({
           experimentId,
@@ -66,7 +68,7 @@ export class ExperimentVisualizationRepository {
         .returning();
 
       // Fetch the created record with profile information
-      const results = await this.database
+      const results = await this.reader
         .select({
           experiment_visualizations: experimentVisualizations,
           firstName: getAnonymizedFirstName(),
@@ -89,7 +91,7 @@ export class ExperimentVisualizationRepository {
 
   async findById(id: string): Promise<Result<ExperimentVisualizationDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select({
           experiment_visualizations: experimentVisualizations,
           firstName: getAnonymizedFirstName(),
@@ -118,13 +120,13 @@ export class ExperimentVisualizationRepository {
     dto: UpdateExperimentVisualizationDto,
   ): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
-      await this.database
+      await this.writer
         .update(experimentVisualizations)
         .set(dto)
         .where(eq(experimentVisualizations.id, id));
 
       // Fetch the updated record with profile information
-      const results = await this.database
+      const results = await this.reader
         .select({
           experiment_visualizations: experimentVisualizations,
           firstName: getAnonymizedFirstName(),
@@ -147,7 +149,7 @@ export class ExperimentVisualizationRepository {
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      await this.database
+      await this.writer
         .delete(experimentVisualizations)
         .where(eq(experimentVisualizations.id, id));
     });

@@ -14,13 +14,15 @@ import { ExperimentMemberRole, ExperimentMemberDto } from "../models/experiment-
 @Injectable()
 export class ExperimentMemberRepository {
   constructor(
-    @Inject("DATABASE")
-    private readonly database: DatabaseInstance,
+    @Inject("DATABASE_READER")
+    private readonly reader: DatabaseInstance,
+    @Inject("DATABASE_WRITER")
+    private readonly writer: DatabaseInstance,
   ) {}
 
   async getMembers(experimentId: string): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      return this.database
+      return this.reader
         .select({
           experimentId: experimentMembers.experimentId,
           role: experimentMembers.role,
@@ -46,7 +48,7 @@ export class ExperimentMemberRepository {
     return tryCatch(async () => {
       if (!members.length) return [];
 
-      await this.database.insert(experimentMembers).values(
+      await this.writer.insert(experimentMembers).values(
         members.map((m) => ({
           experimentId,
           userId: m.userId,
@@ -56,7 +58,7 @@ export class ExperimentMemberRepository {
 
       const userIds = members.map((m) => m.userId);
 
-      const result = await this.database
+      const result = await this.reader
         .select({
           experimentId: experimentMembers.experimentId,
           role: experimentMembers.role,
@@ -86,7 +88,7 @@ export class ExperimentMemberRepository {
     userId: string,
   ): Promise<Result<{ firstName: string; lastName: string } | null>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select({
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
@@ -108,7 +110,7 @@ export class ExperimentMemberRepository {
 
   async removeMember(experimentId: string, userId: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      await this.database
+      await this.writer
         .delete(experimentMembers)
         .where(
           and(
@@ -127,7 +129,7 @@ export class ExperimentMemberRepository {
     userId: string,
   ): Promise<Result<ExperimentMemberRole | null>> {
     return tryCatch(async () => {
-      const membership = await this.database
+      const membership = await this.reader
         .select()
         .from(experimentMembers)
         .where(
@@ -148,7 +150,7 @@ export class ExperimentMemberRepository {
 
   async getAdminCount(experimentId: string): Promise<Result<number>> {
     return tryCatch(async () => {
-      const admins = await this.database
+      const admins = await this.reader
         .select()
         .from(experimentMembers)
         .where(
@@ -168,7 +170,7 @@ export class ExperimentMemberRepository {
     role: ExperimentMemberRole,
   ): Promise<Result<ExperimentMemberDto>> {
     return tryCatch(async () => {
-      await this.database
+      await this.writer
         .update(experimentMembers)
         .set({ role })
         .where(
@@ -178,7 +180,7 @@ export class ExperimentMemberRepository {
           ),
         );
 
-      const result = await this.database
+      const result = await this.reader
         .select({
           experimentId: experimentMembers.experimentId,
           role: experimentMembers.role,

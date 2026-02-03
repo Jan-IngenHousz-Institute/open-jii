@@ -9,13 +9,15 @@ import type { FlowDto, FlowGraphDto } from "../models/flow.model";
 @Injectable()
 export class FlowRepository {
   constructor(
-    @Inject("DATABASE")
-    private readonly database: DatabaseInstance,
+    @Inject("DATABASE_READER")
+    private readonly reader: DatabaseInstance,
+    @Inject("DATABASE_WRITER")
+    private readonly writer: DatabaseInstance,
   ) {}
 
   async getByExperimentId(experimentId: string): Promise<Result<FlowDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select()
         .from(flows)
         .where(eq(flows.experimentId, experimentId))
@@ -28,7 +30,7 @@ export class FlowRepository {
 
   async create(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
     return tryCatch(async () => {
-      const inserted = await this.database
+      const inserted = await this.writer
         .insert(flows)
         .values({ experimentId, graph })
         .returning();
@@ -39,7 +41,7 @@ export class FlowRepository {
 
   async update(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
     return tryCatch(async () => {
-      const updated = await this.database
+      const updated = await this.writer
         .update(flows)
         .set({ graph })
         .where(eq(flows.experimentId, experimentId))

@@ -40,17 +40,19 @@ import {
 @Injectable()
 export class UserRepository {
   constructor(
-    @Inject("DATABASE")
-    private readonly database: DatabaseInstance,
+    @Inject("DATABASE_READER")
+    private readonly reader: DatabaseInstance,
+    @Inject("DATABASE_WRITER")
+    private readonly writer: DatabaseInstance,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Result<UserDto[]>> {
-    return tryCatch(() => this.database.insert(users).values(createUserDto).returning());
+    return tryCatch(() => this.writer.insert(users).values(createUserDto).returning());
   }
 
   async findOne(id: string): Promise<Result<UserDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database.select().from(users).where(eq(users.id, id)).limit(1);
+      const result = await this.reader.select().from(users).where(eq(users.id, id)).limit(1);
 
       return result.length > 0 ? result[0] : null;
     });
@@ -58,7 +60,7 @@ export class UserRepository {
 
   async findByEmail(email: string): Promise<Result<UserDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select()
         .from(users)
         .where(eq(users.email, email))
@@ -74,7 +76,7 @@ export class UserRepository {
         return [];
       }
 
-      const result = await this.database
+      const result = await this.reader
         .select({
           userId: users.id,
           firstName: profiles.firstName,
@@ -92,7 +94,7 @@ export class UserRepository {
   async search(params: SearchUsersParams): Promise<Result<UserProfileDto[]>> {
     return tryCatch(() => {
       // Select profiles and join users to get email
-      let query = this.database
+      let query = this.reader
         .select({
           userId: profiles.userId,
           firstName: getAnonymizedFirstName(),
@@ -143,14 +145,14 @@ export class UserRepository {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<Result<UserDto[]>> {
     return tryCatch(() =>
-      this.database.update(users).set(updateUserDto).where(eq(users.id, id)).returning(),
+      this.writer.update(users).set(updateUserDto).where(eq(users.id, id)).returning(),
     );
   }
 
   async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
     return tryCatch(async () => {
       // Find all experiments where this user is an admin
-      const adminRows = await this.database
+      const adminRows = await this.reader
         .select({ experimentId: experimentMembers.experimentId })
         .from(experimentMembers)
         .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
@@ -161,7 +163,7 @@ export class UserRepository {
 
       // For each experiment, check how many admins exist. If any has exactly 1 admin, return true.
       for (const row of adminRows) {
-        const admins = await this.database
+        const admins = await this.reader
           .select()
           .from(experimentMembers)
           .where(
@@ -182,7 +184,7 @@ export class UserRepository {
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      await this.database.transaction(async (tx) => {
+      await this.writer.transaction(async (tx) => {
         // 1. Delete OAuth accounts and sessions
         await tx.delete(accounts).where(eq(accounts.userId, id));
         await tx.delete(sessions).where(eq(sessions.userId, id));
@@ -220,7 +222,7 @@ export class UserRepository {
   private async createOrReturnOrganization(organization?: string): Promise<string | null> {
     if (organization) {
       // Check if organization already exists with this name
-      const organizationResult = await this.database
+      const organizationResult = await this.reader
         .select()
         .from(organizations)
         .where(eq(organizations.name, organization));
@@ -229,7 +231,7 @@ export class UserRepository {
         return organizationResult[0].id;
       } else {
         // Create organization
-        const newOrganization = await this.database
+        const newOrganization = await this.writer
           .insert(organizations)
           .values({
             name: organization,
@@ -246,7 +248,7 @@ export class UserRepository {
     createUserProfileDto: CreateUserProfileDto,
   ): Promise<Result<UserProfileDto>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select()
         .from(profiles)
         .where(eq(profiles.userId, userId))
@@ -257,7 +259,7 @@ export class UserRepository {
       );
       if (result.length > 0) {
         // Update profile
-        await this.database
+        await this.writer
           .update(profiles)
           .set({
             ...createUserProfileDto,
@@ -266,7 +268,7 @@ export class UserRepository {
           .where(eq(profiles.userId, userId));
       } else {
         // Create profile
-        await this.database.insert(profiles).values({
+        await this.writer.insert(profiles).values({
           ...createUserProfileDto,
           organizationId,
           userId,
@@ -284,7 +286,7 @@ export class UserRepository {
 
   async findUserProfile(userId: string): Promise<Result<UserProfileDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database
+      const result = await this.reader
         .select({
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),

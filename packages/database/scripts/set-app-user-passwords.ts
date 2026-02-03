@@ -87,7 +87,7 @@ async function setApplicationUserPasswords() {
     }
 
     // Initialize AWS Secrets Manager client
-    const secretsClient = new SecretsManagerClient({ region: region || "us-east-1" });
+    const secretsClient = new SecretsManagerClient({ region: region || "eu-central-1" });
 
     // Check if passwords are already set by trying to get and use them
     console.log("Checking if users are already configured...");
