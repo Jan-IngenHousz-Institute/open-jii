@@ -1297,7 +1297,7 @@ module "backend_ecs" {
     },
     {
       name  = "DB_READER_HOST"
-      value = module.aurora_db.cluster_reader_endpoint
+      value = module.aurora_db.reader_endpoint
     },
     {
       name  = "DB_NAME"
