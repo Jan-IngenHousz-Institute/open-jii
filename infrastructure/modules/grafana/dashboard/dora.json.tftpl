@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 21,
+  "id": null,
   "links": [],
   "time": {
     "from": "now-7d",
@@ -31,7 +31,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 114
+        "y": 0
       },
       "id": 600,
       "panels": [],
@@ -43,7 +43,7 @@
         "type": "cloudwatch",
         "uid": "${datasource_uid}"
       },
-      "description": "Total number of deployments across all services in the last 24 hours",
+      "description": "Total number of deployments across all services in the last 7 days",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -228,7 +228,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
@@ -236,7 +236,7 @@
                 "value": 1
               },
               {
-                "color": "green",
+                "color": "red",
                 "value": 5
               }
             ]
@@ -726,14 +726,10 @@
   "templating": {
     "list": []
   },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
   "timepicker": {},
   "timezone": "browser",
-  "title": "${project} - Platform Monitoring Dashboard",
-  "uid": "${environment}-platform-overview",
+  "title": "${project} - DORA Metrics Dashboard",
+  "uid": "${environment}-dora-overview",
   "version": 17,
   "weekStart": ""
 }
