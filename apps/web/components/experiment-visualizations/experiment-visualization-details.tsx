@@ -44,7 +44,7 @@ export default function ExperimentVisualizationDetails({
   const { data: accessData } = useExperimentAccess(experimentId);
   const experiment = accessData?.body;
   const isArchived = experiment?.experiment.status === "archived";
-
+  const hasAccess = accessData?.body.isAdmin;
   // Redirect archived experiments to 404 when accessed via non-archive routes
   if (isArchived && !isArchiveContext) {
     notFound();
@@ -143,10 +143,10 @@ export default function ExperimentVisualizationDetails({
             </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2" disabled={isArchived}>
+                <DropdownMenuTrigger asChild disabled={isArchived || !hasAccess}>
+                  <Button variant="outline" size="sm" className="gap-2">
                     <Settings className="h-4 w-4" />
-                    Actions
+                    {t("ui.actions.title")}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
