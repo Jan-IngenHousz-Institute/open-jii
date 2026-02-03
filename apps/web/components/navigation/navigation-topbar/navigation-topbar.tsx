@@ -83,13 +83,13 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
 
           {/* Desktop: Full navigation */}
           <div className="ml-auto hidden items-center gap-2 md:flex">
-            {/* Notifications */}
+            {/* Notifications - hidden for now due to lack of functionality */}
             <Button
               variant="ghost"
               size="icon"
               aria-label={t("common.notifications")}
               disabled
-              className="cursor-default hover:bg-transparent"
+              className="hidden cursor-default hover:bg-transparent"
             >
               <Bell className="h-5 w-5" />
             </Button>
