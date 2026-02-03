@@ -15,7 +15,10 @@ const NavTabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn("bg-surface inline-flex gap-1 rounded-md p-1", className)}
+    className={cn(
+      "bg-surface scrollbar-thin inline-flex max-w-full gap-1 overflow-x-auto rounded-md p-1",
+      className,
+    )}
     {...props}
   />
 ));
