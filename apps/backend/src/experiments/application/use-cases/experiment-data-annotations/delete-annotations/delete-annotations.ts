@@ -83,8 +83,6 @@ export class DeleteAnnotationsUseCase {
             return failure(AppError.internal(result.error.message));
           }
 
-          // No manual refresh needed - materialized views auto-refresh
-
           return success(result.value);
         } else {
           const result = await this.experimentDataAnnotationsRepository.deleteAnnotationsBulk(
@@ -97,8 +95,6 @@ export class DeleteAnnotationsUseCase {
           if (result.isFailure()) {
             return failure(AppError.internal(result.error.message));
           }
-
-          // No manual refresh needed - materialized views auto-refresh
 
           return success(result.value);
         }
