@@ -10,7 +10,6 @@ import { ExperimentDataTable } from "~/components/experiment-data/experiment-dat
 import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
-import { ExperimentTableName } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
 import {
   Button,
