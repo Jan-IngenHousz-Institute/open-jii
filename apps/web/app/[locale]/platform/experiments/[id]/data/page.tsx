@@ -10,7 +10,6 @@ import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
-import { ExperimentTableName } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
 import {
   Button,
