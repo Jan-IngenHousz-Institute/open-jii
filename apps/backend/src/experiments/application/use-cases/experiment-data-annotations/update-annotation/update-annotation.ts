@@ -95,8 +95,6 @@ export class UpdateAnnotationUseCase {
           return failure(AppError.internal(result.error.message));
         }
 
-        // No manual refresh needed - materialized views auto-refresh
-
         return success(result.value);
       },
     );
