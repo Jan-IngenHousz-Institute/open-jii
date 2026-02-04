@@ -52,16 +52,15 @@ describe("CreateFlowUseCase", () => {
     expect(result.error.statusCode).toBe(403);
   });
 
-  it("creates flow when user is a member and no existing flow", async () => {
+  it("returns 403 when user is a member and tries to create flow", async () => {
     const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
     await testApp.addExperimentMember(experiment.id, memberId, "member");
 
     const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
     const result = await useCase.execute(experiment.id, memberId, graph);
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    const created = result.value;
-    expect(created.graph).toEqual(graph);
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
   });
 
   it("returns 403 when any user attempts to create flow for archived experiments", async () => {
