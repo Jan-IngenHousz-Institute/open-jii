@@ -8,7 +8,6 @@ export default registerAs("databricks", () => ({
   clientId: process.env.DATABRICKS_CLIENT_ID,
   clientSecret: process.env.DATABRICKS_CLIENT_SECRET,
   ambyteProcessingJobId: process.env.DATABRICKS_AMBYTE_PROCESSING_JOB_ID,
-  enrichedTablesRefreshJobId: process.env.DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID,
   warehouseId: process.env.DATABRICKS_WAREHOUSE_ID,
   catalogName: process.env.DATABRICKS_CATALOG_NAME,
   webhookApiKeys: {

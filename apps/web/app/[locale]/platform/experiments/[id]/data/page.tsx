@@ -80,10 +80,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     notFound();
   }
 
-  // Filter out device table
-  const filteredTables = tables?.filter((table) => table.name !== ExperimentTableName.DEVICE) ?? [];
-
-  if (!tables || filteredTables.length === 0) {
+  if (!tables || tables.length === 0) {
     return (
       <div className="space-y-8">
         <div className="flex items-start justify-between">
@@ -121,9 +118,9 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </Button>
       </div>
 
-      <NavTabs defaultValue={filteredTables[0].name} className="max-w-full">
+      <NavTabs defaultValue={tables[0].name} className="max-w-full">
         <NavTabsList className="max-w-full flex-wrap">
-          {filteredTables.map((table) => (
+          {tables.map((table) => (
             <NavTabsTrigger key={table.name} value={table.name}>
               <span className="truncate">
                 {table.displayName} ({table.totalRows})
@@ -131,7 +128,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             </NavTabsTrigger>
           ))}
         </NavTabsList>
-        {filteredTables.map((table) => (
+        {tables.map((table) => (
           <NavTabsContent key={table.name} value={table.name} className="mt-6">
             <ExperimentDataTable
               experimentId={id}

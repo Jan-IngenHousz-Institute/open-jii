@@ -77,7 +77,7 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
     experimentId: string;
     tableName: string;
     displayName?: string;
-    defaultSortColumn?: unknown;
+    defaultSortColumn?: string;
     errorColumn?: string;
   }) => (
     <div
@@ -85,7 +85,7 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
       data-experiment-id={experimentId}
       data-table-name={tableName}
       data-display-name={displayName}
-      data-default-sort-column={JSON.stringify(defaultSortColumn)}
+      data-default-sort-column={defaultSortColumn}
       data-error-column={errorColumn}
     >
       Table: {displayName ?? tableName}
@@ -146,7 +146,7 @@ describe("ExperimentDataPage", () => {
         name: "measurements",
         displayName: "Measurements",
         totalRows: 100,
-        defaultSortColumn: { column: "timestamp", direction: "desc" },
+        defaultSortColumn: "timestamp",
         errorColumn: "error_code",
       },
       { name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 },
@@ -244,7 +244,7 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("renders tab triggers for each table with row counts, excluding device table", async () => {
+  it("renders tab triggers for each table with row counts, including device table", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
@@ -252,19 +252,20 @@ describe("ExperimentDataPage", () => {
       expect(measurementsTab).toBeInTheDocument();
       expect(measurementsTab).toHaveTextContent("Measurements (100)");
 
-      // Device table should be filtered out
-      const deviceTab = screen.queryByTestId("nav-tab-trigger-device");
-      expect(deviceTab).not.toBeInTheDocument();
+      // Device table should be present
+      const deviceTab = screen.getByTestId("nav-tab-trigger-device");
+      expect(deviceTab).toBeInTheDocument();
+      expect(deviceTab).toHaveTextContent("Device Metadata (50)");
     });
   });
 
-  it("renders table content for each tab, excluding device table", async () => {
+  it("renders table content for each tab, including device table", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("nav-tab-content-measurements")).toBeInTheDocument();
-      // Device table content should not be rendered
-      expect(screen.queryByTestId("nav-tab-content-device")).not.toBeInTheDocument();
+      // Device table content should be rendered
+      expect(screen.getByTestId("nav-tab-content-device")).toBeInTheDocument();
     });
   });
 
@@ -282,7 +283,7 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("displays no data message when only device table exists", async () => {
+  it("displays device table when it's the only table", async () => {
     mockUseExperimentTables.mockReturnValue({
       tables: [{ name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 }],
       isLoading: false,
@@ -292,9 +293,10 @@ describe("ExperimentDataPage", () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
-      // Device table should not be shown
-      expect(screen.queryByTestId("nav-tab-trigger-device")).not.toBeInTheDocument();
+      // Device table should be shown
+      const deviceTab = screen.getByTestId("nav-tab-trigger-device");
+      expect(deviceTab).toBeInTheDocument();
+      expect(deviceTab).toHaveTextContent("Device Metadata (50)");
     });
   });
 
@@ -326,10 +328,7 @@ describe("ExperimentDataPage", () => {
       expect(measurementsTable).toHaveAttribute("data-experiment-id", "exp-123");
       expect(measurementsTable).toHaveAttribute("data-table-name", "measurements");
       expect(measurementsTable).toHaveAttribute("data-error-column", "error_code");
-      expect(measurementsTable).toHaveAttribute(
-        "data-default-sort-column",
-        JSON.stringify({ column: "timestamp", direction: "desc" }),
-      );
+      expect(measurementsTable).toHaveAttribute("data-default-sort-column", "timestamp");
     });
   });
 

@@ -148,16 +148,12 @@ export class ExperimentDataController {
         return handleFailure(prepResult, this.logger);
       }
 
-      const { experiment, volumeName, volumeCreated, volumeExists, directoryName } =
-        prepResult.value;
+      const { experiment, directoryName } = prepResult.value;
 
       this.logger.log({
         msg: "Upload environment prepared successfully",
         operation: "uploadData",
         experimentId,
-        volumeName,
-        volumeCreated,
-        volumeExists,
         directoryName,
         status: "success",
       });

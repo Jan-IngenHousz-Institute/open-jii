@@ -59,9 +59,6 @@ describe("UploadAmbyteDataUseCase", () => {
       assertSuccess(result);
 
       expect(result.value.experiment.id).toBe(experiment.id);
-      expect(result.value.volumeName).toBe("data-uploads");
-      expect(result.value.volumeExists).toBe(true);
-      expect(result.value.volumeCreated).toBe(false);
       // Verify directoryName has the correct format: upload_YYYYMMDD_HHMMSS
       expect(result.value.directoryName).toMatch(/^upload_\d{8}_\d{6}$/);
     });
