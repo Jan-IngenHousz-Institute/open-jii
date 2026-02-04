@@ -110,7 +110,7 @@ export class ExperimentDataAnnotationsRepository {
   }
 
   /**
-   * Store multiple annotations in centrum.experiment_annotations
+   * Store multiple annotations in the experiment annotations table
    */
   async storeAnnotations(
     experimentId: string,

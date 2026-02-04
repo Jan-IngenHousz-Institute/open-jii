@@ -41,9 +41,6 @@ export class UploadAmbyteDataUseCase {
   ): Promise<
     Result<{
       experiment: ExperimentDto;
-      volumeName: string;
-      volumeExists: boolean;
-      volumeCreated: boolean;
       directoryName: string;
     }>
   > {
@@ -88,14 +85,8 @@ export class UploadAmbyteDataUseCase {
       directoryName,
     });
 
-    // Volume assumed to exist - uploads go to /Volumes/{catalog}/centrum/data-uploads/
-    const volumeName = UploadAmbyteDataUseCase.UPLOADS_VOLUME_NAME;
-
     return success({
       experiment,
-      volumeName,
-      volumeExists: true,
-      volumeCreated: false,
       directoryName,
     });
   }

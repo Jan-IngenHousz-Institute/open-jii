@@ -5,7 +5,6 @@ export interface DatabricksConfig {
   clientId: string;
   clientSecret: string;
   ambyteProcessingJobId: string;
-  enrichedTablesRefreshJobId: string;
   warehouseId: string;
   catalogName: string;
   centrumSchemaName: string;
@@ -24,12 +23,6 @@ export const databricksConfigSchema = z.object({
     .min(1)
     .refine((val) => !isNaN(Number(val)), {
       message: "Ambyte Processing Job ID must be numeric",
-    }),
-  enrichedTablesRefreshJobId: z
-    .string()
-    .min(1)
-    .refine((val) => !isNaN(Number(val)), {
-      message: "Enriched Tables Refresh Job ID must be numeric",
     }),
   warehouseId: z.string().min(1),
   catalogName: z.string().min(1),

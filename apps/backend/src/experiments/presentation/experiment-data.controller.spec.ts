@@ -248,9 +248,6 @@ describe("ExperimentDataController", () => {
       vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
         success({
           experiment: mockExperiment,
-          volumeName: "vol",
-          volumeCreated: false,
-          volumeExists: true,
           directoryName: "dir",
         }),
       );

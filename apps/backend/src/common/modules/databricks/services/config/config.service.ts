@@ -34,9 +34,6 @@ export class DatabricksConfigService {
       ambyteProcessingJobId: this.configService.getOrThrow<string>(
         "databricks.ambyteProcessingJobId",
       ),
-      enrichedTablesRefreshJobId: this.configService.getOrThrow<string>(
-        "databricks.enrichedTablesRefreshJobId",
-      ),
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
       centrumSchemaName: this.configService.getOrThrow<string>("databricks.centrumSchemaName"),
@@ -110,20 +107,6 @@ export class DatabricksConfigService {
    */
   getAmbyteProcessingJobIdAsNumber(): number {
     return parseInt(this.config.ambyteProcessingJobId, 10);
-  }
-
-  /**
-   * Returns the Databricks enriched tables refresh job ID
-   */
-  getEnrichedTablesRefreshJobId(): string {
-    return this.config.enrichedTablesRefreshJobId;
-  }
-
-  /**
-   * Returns the Databricks enriched tables refresh job ID as a number
-   */
-  getEnrichedTablesRefreshJobIdAsNumber(): number {
-    return parseInt(this.config.enrichedTablesRefreshJobId, 10);
   }
 
   /**

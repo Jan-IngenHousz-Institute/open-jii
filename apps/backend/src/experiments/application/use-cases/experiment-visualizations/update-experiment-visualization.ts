@@ -104,16 +104,6 @@ export class UpdateExperimentVisualizationUseCase {
             );
           }
 
-          // Data source validation removed - queries will fail at execution time if tables/columns don't exist
-
-          this.logger.debug({
-            msg: "Schema validation skipped - will validate at query time",
-            operation: "updateExperimentVisualization",
-            experimentId: visualization.experimentId,
-            visualizationId,
-            userId,
-          });
-
           this.logger.debug({
             msg: "Updating visualization in repository",
             operation: "updateExperimentVisualization",

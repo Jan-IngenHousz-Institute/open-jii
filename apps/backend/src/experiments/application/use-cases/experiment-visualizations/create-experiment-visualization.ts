@@ -78,15 +78,6 @@ export class CreateExperimentVisualizationUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        // Data source validation removed - queries will fail at execution time if tables/columns don't exist
-
-        this.logger.debug({
-          msg: "Schema validation skipped - will validate at query time",
-          operation: "createExperimentVisualization",
-          experimentId,
-          userId,
-        });
-
         this.logger.debug({
           msg: "Creating visualization in repository",
           operation: "createExperimentVisualization",

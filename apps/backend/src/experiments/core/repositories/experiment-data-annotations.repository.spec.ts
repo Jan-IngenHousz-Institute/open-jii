@@ -340,6 +340,22 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(result.error.message).toContain("Invalid annotation ID");
       // Method is not called on validation error
     });
+
+    it("should handle databricks port failure in delete", async () => {
+      // Arrange
+      const databricksError = AppError.internal("Databricks connection failed");
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(databricksError));
+
+      // Act
+      const result = await repository.deleteAnnotation(mockExperimentId, mockAnnotationId);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toBe(
+        "Failed to delete annotation: Databricks connection failed",
+      );
+    });
   });
 
   describe("deleteAnnotationsBulk", () => {
@@ -388,14 +404,23 @@ describe("ExperimentDataAnnotationsRepository", () => {
     });
 
     it("should return success with empty result when no annotation IDs provided", async () => {
+      // Arrange
+      const executeSqlSpy = vi.spyOn(databricksPort, "executeSqlQuery");
+
       // Act
-      const result = await repository.storeAnnotations(mockExperimentId, []);
+      const result = await repository.deleteAnnotationsBulk(
+        mockExperimentId,
+        mockTableName,
+        [],
+        "comment",
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual({ rowsAffected: 0 });
-      // Method is not called for empty arrays
+      // executeSqlQuery should not be called for empty arrays
+      expect(executeSqlSpy).not.toHaveBeenCalled();
     });
   });
 
