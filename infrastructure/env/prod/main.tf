@@ -976,7 +976,6 @@ resource "aws_iam_policy" "migration_runner_secrets_policy" {
         ]
         Resource = [
           module.aurora_db.writer_credentials_secret_arn,
-          module.aurora_db.reader_credentials_secret_arn
         ]
       }
     ]
