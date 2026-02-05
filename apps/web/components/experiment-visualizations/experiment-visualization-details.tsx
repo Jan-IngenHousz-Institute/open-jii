@@ -144,7 +144,11 @@ export default function ExperimentVisualizationDetails({
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild disabled={isArchived || !hasAccess}>
-                  <Button variant="outline" size="sm" className="hover:bg-surface gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hover:bg-surface gap-2 disabled:hover:bg-transparent"
+                  >
                     <Settings className="h-4 w-4" />
                     {t("ui.actions.title")}
                   </Button>
