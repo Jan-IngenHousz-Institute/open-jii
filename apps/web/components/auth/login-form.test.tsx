@@ -117,12 +117,6 @@ describe("LoginForm", () => {
     expect(screen.getByText("Terms and Conditions")).toBeInTheDocument();
   });
 
-  it("renders beta notice", () => {
-    render(<LoginForm callbackUrl="/platform" locale="en-US" termsData={mockTermsData} />);
-
-    expect(screen.getByText(/openJII is still under development/i)).toBeInTheDocument();
-  });
-
   it("passes callbackUrl to EmailLoginForm", () => {
     render(<LoginForm callbackUrl="/custom-callback" locale="en-US" termsData={mockTermsData} />);
 
