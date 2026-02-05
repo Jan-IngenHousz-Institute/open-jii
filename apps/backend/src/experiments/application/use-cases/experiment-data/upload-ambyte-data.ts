@@ -71,10 +71,6 @@ export class UploadAmbyteDataUseCase {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    if (experiment.status === "archived") {
-      return failure(AppError.forbidden("Cannot upload data to archived experiments"));
-    }
-
     if (!experiment.schemaName) {
       return failure(AppError.internal("Experiment schema not provisioned"));
     }
