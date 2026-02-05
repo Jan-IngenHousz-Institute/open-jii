@@ -63,7 +63,7 @@ describe("ExperimentVisualizationsList", () => {
       );
 
       // Check for skeleton
-      const skeletons = container.querySelectorAll(".animate-pulse");
+      const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
       expect(skeletons.length).toBeGreaterThan(0);
     });
   });
