@@ -118,7 +118,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
       </div>
 
       <NavTabs defaultValue={tables[0].name} className="max-w-full">
-        <NavTabsList className="max-w-full flex-wrap">
+        <NavTabsList>
           {tables.map((table) => (
             <NavTabsTrigger key={table.name} value={table.name}>
               <span className="truncate">

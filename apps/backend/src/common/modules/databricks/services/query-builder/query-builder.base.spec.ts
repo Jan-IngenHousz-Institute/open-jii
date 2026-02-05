@@ -54,7 +54,7 @@ describe("QueryBuilder Base", () => {
     });
 
     it("should allow disabling case-insensitive sorting", () => {
-      const query = builder.from("t").orderBy("created_at", "ASC", false).build();
+      const query = builder.from("t").orderBy("created_at", "ASC").build();
       expect(query).toBe("SELECT * FROM t ORDER BY `created_at` ASC");
     });
 
@@ -120,7 +120,7 @@ describe("QueryBuilder Base", () => {
         .select(["id", "ts"])
         .parseVariant("payload", "STRUCT<x:INT>", "data")
         .where("ts > 0")
-        .orderBy("ts DESC")
+        .orderBy("ts", "DESC")
         .limit(10)
         .build();
 
@@ -129,7 +129,7 @@ describe("QueryBuilder Base", () => {
       );
       expect(query).toContain("FROM events");
       expect(query).toContain("WHERE ts > 0");
-      expect(query).toContain("ORDER BY `ts DESC` ASC");
+      expect(query).toContain("ORDER BY `ts` DESC");
       expect(query).toContain("LIMIT 10");
     });
 
