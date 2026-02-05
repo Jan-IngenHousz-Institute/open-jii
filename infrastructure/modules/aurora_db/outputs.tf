@@ -40,18 +40,7 @@ output "writer_credentials_secret_arn" {
   sensitive   = true
 }
 
-output "reader_credentials_secret_arn" {
-  value       = aws_secretsmanager_secret.reader_credentials.arn
-  description = "The ARN of the secret in AWS Secrets Manager containing reader user credentials"
-  sensitive   = true
-}
-
 output "writer_username" {
   value       = "openjii_writer"
-  description = "Username for the writer application user"
-}
-
-output "reader_username" {
-  value       = "openjii_reader"
-  description = "Username for the reader application user"
+  description = "Username for the writer application user (has full CRUD permissions)"
 }

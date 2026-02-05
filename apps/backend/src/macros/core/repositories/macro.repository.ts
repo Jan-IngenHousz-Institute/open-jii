@@ -23,10 +23,8 @@ export interface MacroFilter {
 @Injectable()
 export class MacroRepository {
   constructor(
-    @Inject("DATABASE_READER")
-    private readonly reader: DatabaseInstance,
-    @Inject("DATABASE_WRITER")
-    private readonly writer: DatabaseInstance,
+    @Inject("DATABASE")
+    private readonly database: DatabaseInstance,
   ) {}
 
   async create(data: CreateMacroDto, userId: string): Promise<Result<MacroDto[]>> {
@@ -34,7 +32,7 @@ export class MacroRepository {
       // Generate UUID for the macro to create a consistent hashed filename
       const macroId = crypto.randomUUID();
 
-      const results = await this.writer
+      const results = await this.database
         .insert(macros)
         .values({
           ...data,
@@ -49,7 +47,7 @@ export class MacroRepository {
 
   async findAll(filter?: MacroFilter): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      let query = this.reader
+      let query = this.database
         .select({
           macros,
           firstName: getAnonymizedFirstName(),
@@ -91,7 +89,7 @@ export class MacroRepository {
 
   async findById(id: string): Promise<Result<MacroDto | null>> {
     return tryCatch(async () => {
-      const result = await this.reader
+      const result = await this.database
         .select({
           macros,
           firstName: getAnonymizedFirstName(),
@@ -118,7 +116,7 @@ export class MacroRepository {
   async update(id: string, data: UpdateMacroDto): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       // The filename is based on the macro ID hash and should not change during updates
-      const results = await this.writer
+      const results = await this.database
         .update(macros)
         .set({
           ...data,
@@ -133,7 +131,7 @@ export class MacroRepository {
 
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      const results = await this.writer.delete(macros).where(eq(macros.id, id)).returning();
+      const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
 
       return results as unknown as MacroDto[];
     });

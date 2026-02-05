@@ -9,15 +9,13 @@ import { CreateLocationDto, LocationDto } from "../models/experiment-locations.m
 @Injectable()
 export class LocationRepository {
   constructor(
-    @Inject("DATABASE_READER")
-    private readonly reader: DatabaseInstance,
-    @Inject("DATABASE_WRITER")
-    private readonly writer: DatabaseInstance,
+    @Inject("DATABASE")
+    private readonly database: DatabaseInstance,
   ) {}
 
   async findByExperimentId(experimentId: string): Promise<Result<LocationDto[]>> {
     return tryCatch(async () => {
-      const result = await this.reader
+      const result = await this.database
         .select()
         .from(experimentLocations)
         .where(eq(experimentLocations.experimentId, experimentId));
@@ -28,7 +26,7 @@ export class LocationRepository {
 
   async create(createLocationDto: CreateLocationDto): Promise<Result<LocationDto[]>> {
     return tryCatch(() =>
-      this.writer
+      this.database
         .insert(experimentLocations)
         .values({
           experimentId: createLocationDto.experimentId,
@@ -62,12 +60,12 @@ export class LocationRepository {
       addressLabel: dto.addressLabel,
     }));
 
-    return tryCatch(() => this.writer.insert(experimentLocations).values(values).returning());
+    return tryCatch(() => this.database.insert(experimentLocations).values(values).returning());
   }
 
   async removeAllFromExperiment(experimentId: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      await this.writer
+      await this.database
         .delete(experimentLocations)
         .where(eq(experimentLocations.experimentId, experimentId));
     });
@@ -79,7 +77,7 @@ export class LocationRepository {
   ): Promise<Result<LocationDto[]>> {
     return tryCatch(async () => {
       // Remove existing locations
-      await this.writer
+      await this.database
         .delete(experimentLocations)
         .where(eq(experimentLocations.experimentId, experimentId));
 
@@ -88,7 +86,7 @@ export class LocationRepository {
       }
 
       // Create new locations
-      const newLocations = await this.writer
+      const newLocations = await this.database
         .insert(experimentLocations)
         .values(
           createLocationDtos.map((dto) => ({

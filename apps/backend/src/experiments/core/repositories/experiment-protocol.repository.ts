@@ -9,15 +9,13 @@ import { ExperimentProtocolDto } from "../models/experiment-protocols.model";
 @Injectable()
 export class ExperimentProtocolRepository {
   constructor(
-    @Inject("DATABASE_READER")
-    private readonly reader: DatabaseInstance,
-    @Inject("DATABASE_WRITER")
-    private readonly writer: DatabaseInstance,
+    @Inject("DATABASE")
+    private readonly database: DatabaseInstance,
   ) {}
 
   async listProtocols(experimentId: string): Promise<Result<ExperimentProtocolDto[]>> {
     return tryCatch(async () => {
-      return this.reader
+      return this.database
         .select({
           experimentId: experimentProtocols.experimentId,
           order: experimentProtocols.order,
@@ -42,7 +40,7 @@ export class ExperimentProtocolRepository {
   ): Promise<Result<ExperimentProtocolDto[]>> {
     return tryCatch(async () => {
       if (!protocolsToAdd.length) return [];
-      await this.writer.insert(experimentProtocols).values(
+      await this.database.insert(experimentProtocols).values(
         protocolsToAdd.map((p, idx) => ({
           experimentId,
           protocolId: p.protocolId,
@@ -50,7 +48,7 @@ export class ExperimentProtocolRepository {
         })),
       );
       const protocolIds = protocolsToAdd.map((p) => p.protocolId);
-      return this.reader
+      return this.database
         .select({
           experimentId: experimentProtocols.experimentId,
           order: experimentProtocols.order,
@@ -76,7 +74,7 @@ export class ExperimentProtocolRepository {
 
   async removeProtocols(experimentId: string, protocolIds: string[]): Promise<Result<void>> {
     return tryCatch(async () => {
-      await this.writer
+      await this.database
         .delete(experimentProtocols)
         .where(
           and(
@@ -94,7 +92,7 @@ export class ExperimentProtocolRepository {
     order: number,
   ): Promise<Result<void>> {
     return tryCatch(async () => {
-      await this.writer
+      await this.database
         .update(experimentProtocols)
         .set({ order })
         .where(

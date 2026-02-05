@@ -972,8 +972,7 @@ resource "aws_iam_policy" "migration_runner_secrets_policy" {
           "secretsmanager:PutSecretValue"
         ]
         Resource = [
-          module.aurora_db.writer_credentials_secret_arn,
-          module.aurora_db.reader_credentials_secret_arn
+          module.aurora_db.writer_credentials_secret_arn
         ]
       }
     ]
@@ -1034,14 +1033,6 @@ module "migration_runner_ecs" {
       value = module.aurora_db.cluster_endpoint
     },
     {
-      name  = "DB_WRITER_HOST"
-      value = module.aurora_db.cluster_endpoint
-    },
-    {
-      name  = "DB_READER_HOST"
-      value = module.aurora_db.reader_endpoint
-    },
-    {
       name  = "DB_NAME"
       value = module.aurora_db.database_name
     },
@@ -1050,21 +1041,17 @@ module "migration_runner_ecs" {
       value = module.aurora_db.cluster_port
     },
     {
-      name  = "LOG_LEVEL"
-      value = "debug"
-    },
-    {
       name  = "DB_WRITER_SECRET_ARN"
       value = module.aurora_db.writer_credentials_secret_arn
-    },
-    {
-      name  = "DB_READER_SECRET_ARN"
-      value = module.aurora_db.reader_credentials_secret_arn
     },
     {
       name  = "AWS_REGION"
       value = var.aws_region
     },
+    {
+      name  = "LOG_LEVEL"
+      value = "debug"
+    }
   ]
 
   tags = {
@@ -1265,10 +1252,6 @@ module "backend_ecs" {
       valueFrom = module.aurora_db.writer_credentials_secret_arn
     },
     {
-      name      = "DB_READER_CREDENTIALS"
-      valueFrom = module.aurora_db.reader_credentials_secret_arn
-    },
-    {
       name      = "EMAIL_SERVER"
       valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_SERVER::"
     },
@@ -1287,14 +1270,6 @@ module "backend_ecs" {
     {
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
-    },
-    {
-      name  = "DB_WRITER_HOST"
-      value = module.aurora_db.cluster_endpoint
-    },
-    {
-      name  = "DB_READER_HOST"
-      value = module.aurora_db.reader_endpoint
     },
     {
       name  = "DB_NAME"

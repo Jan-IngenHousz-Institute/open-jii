@@ -1,5 +1,5 @@
 #!/bin/bash
-# One-time setup script for database application users in AWS
+# One-time setup script for database application writer user in AWS
 
 set -e
 
@@ -9,7 +9,8 @@ SUBNET_IDS="subnet-xxxxx,subnet-yyyyy"   # Will update from AWS Console
 SECURITY_GROUP="sg-xxxxx"                # Will update from AWS Console
 
 echo "🔐 Running one-time database user setup..."
-echo "This will create passwords for openjii_writer and openjii_reader"
+echo "This will create password for openjii_writer user"
+echo "Writer user will have full CRUD permissions but cannot manage users/databases"
 echo ""
 echo "Cluster: $CLUSTER_NAME"
 echo "Task: $TASK_DEFINITION"
@@ -31,12 +32,11 @@ aws ecs run-task \
   --overrides '{
     "containerOverrides": [{
       "name": "db-migration-runner",
-      "command": ["node", "dist/scripts/set-app-user-passwords.js"]
+      "command": ["node", "dist/scripts/set-app-user-password.js"]
     }]
   }'
 
 echo ""
 echo "✅ Task started! Check ECS console for logs."
-echo "Once complete, the passwords will be in Secrets Manager:"
-echo "  - open-jii-prod-db-cluster-writer-credentials"
-echo "  - open-jii-prod-db-cluster-reader-credentials"
+echo "Once complete, the password will be in Secrets Manager:"
+echo "  - open-jii-${ENVIRONMENT}-db-cluster-writer-credentials"

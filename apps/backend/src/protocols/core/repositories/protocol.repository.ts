@@ -15,10 +15,8 @@ import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/pro
 @Injectable()
 export class ProtocolRepository {
   constructor(
-    @Inject("DATABASE_READER")
-    private readonly reader: DatabaseInstance,
-    @Inject("DATABASE_WRITER")
-    private readonly writer: DatabaseInstance,
+    @Inject("DATABASE")
+    private readonly database: DatabaseInstance,
   ) {}
 
   async create(
@@ -26,7 +24,7 @@ export class ProtocolRepository {
     userId: string,
   ): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const results = await this.writer
+      const results = await this.database
         .insert(protocols)
         .values({
           ...createProtocolDto,
@@ -39,7 +37,7 @@ export class ProtocolRepository {
 
   async findAll(search?: ProtocolFilter): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const query = this.reader
+      const query = this.database
         .select({
           protocols,
           firstName: getAnonymizedFirstName(),
@@ -67,7 +65,7 @@ export class ProtocolRepository {
 
   async findOne(id: string): Promise<Result<ProtocolDto | null>> {
     return tryCatch(async () => {
-      const result = await this.reader
+      const result = await this.database
         .select({
           protocols,
           firstName: getAnonymizedFirstName(),
@@ -93,7 +91,7 @@ export class ProtocolRepository {
 
   async findByName(name: string): Promise<Result<ProtocolDto | null>> {
     return tryCatch(async () => {
-      const result = await this.reader
+      const result = await this.database
         .select()
         .from(protocols)
         .innerJoin(users, eq(protocols.createdBy, users.id))
@@ -112,7 +110,7 @@ export class ProtocolRepository {
 
   async update(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const results = await this.writer
+      const results = await this.database
         .update(protocols)
         .set({
           ...updateProtocolDto,
@@ -127,7 +125,7 @@ export class ProtocolRepository {
 
   async delete(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const results = await this.writer.delete(protocols).where(eq(protocols.id, id)).returning();
+      const results = await this.database.delete(protocols).where(eq(protocols.id, id)).returning();
 
       return results as unknown as ProtocolDto[];
     });
@@ -135,7 +133,7 @@ export class ProtocolRepository {
 
   async isAssignedToAnyExperiment(protocolId: string): Promise<Result<boolean>> {
     return tryCatch(async () => {
-      const result = await this.reader
+      const result = await this.database
         .select()
         .from(experimentProtocols)
         .where(eq(experimentProtocols.protocolId, protocolId))

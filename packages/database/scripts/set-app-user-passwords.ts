@@ -8,10 +8,11 @@ import crypto from "crypto";
 import postgres from "postgres";
 
 /**
- * AWS setup script to create application users with passwords
- * Creates users, sets permissions, and stores credentials in Secrets Manager
+ * Creates writer user, sets permissions, and stores credentials in Secrets Manager
  *
- * IDEMPOTENT: Safe to run multiple times - will skip if users already exist and work
+ * Security Model:
+ * - Runtime (Backend): Uses DB_CREDENTIALS → openjii_writer (CRUD only)
+ * - Migrations: Uses DB_ADMIN_CREDENTIALS → master/admin (full DDL)
  */
 
 // Generate a cryptographically secure random password
@@ -68,7 +69,7 @@ async function canAuthenticate(
 }
 
 async function setApplicationUserPasswords() {
-    console.log("🔐 Setting up application database users...");
+    console.log("🔐 Setting up application database writer user...");
 
     const { DB_HOST: host, DB_PORT: port, DB_NAME: name, AWS_REGION: region } = process.env;
 
@@ -77,55 +78,53 @@ async function setApplicationUserPasswords() {
         process.exit(1);
     }
 
-    // Get secret ARNs from environment (these are set by Terraform)
-    const writerSecretArn = process.env.DB_WRITER_SECRET_ARN;
-    const readerSecretArn = process.env.DB_READER_SECRET_ARN;
+    // Get secret ARN from environment (set by Terraform)
+    const writerSecretArn = process.env.DB_SECRET_ARN || process.env.DB_WRITER_SECRET_ARN;
 
-    if (!writerSecretArn || !readerSecretArn) {
-        console.error("❌ Secret ARNs not found in environment");
+    if (!writerSecretArn) {
+        console.error("❌ DB_SECRET_ARN not found in environment");
         process.exit(1);
     }
 
     // Initialize AWS Secrets Manager client
     const secretsClient = new SecretsManagerClient({ region: region || "eu-central-1" });
 
-    // Check if passwords are already set by trying to get and use them
-    console.log("Checking if users are already configured...");
+    // Check if password is already set by trying to get and use it
+    console.log("Checking if writer user is already configured...");
 
     try {
         // Try to get existing credentials from Secrets Manager
-        const [writerSecretResponse, readerSecretResponse] = await Promise.all([
-            secretsClient.send(new GetSecretValueCommand({ SecretId: writerSecretArn })),
-            secretsClient.send(new GetSecretValueCommand({ SecretId: readerSecretArn })),
-        ]);
+        const writerSecretResponse = await secretsClient.send(
+            new GetSecretValueCommand({ SecretId: writerSecretArn }),
+        );
 
         const writerCreds = JSON.parse(writerSecretResponse.SecretString || "{}");
-        const readerCreds = JSON.parse(readerSecretResponse.SecretString || "{}");
 
         // Check if these credentials actually work (and aren't placeholders)
         if (
             writerCreds.password &&
-            writerCreds.password !== "PLACEHOLDER_WILL_BE_SET_BY_MIGRATION_SCRIPT" &&
-            readerCreds.password &&
-            readerCreds.password !== "PLACEHOLDER_WILL_BE_SET_BY_MIGRATION_SCRIPT"
+            writerCreds.password !== "PLACEHOLDER_WILL_BE_SET_BY_MIGRATION_SCRIPT"
         ) {
             console.log("Testing existing credentials...");
 
-            const [writerWorks, readerWorks] = await Promise.all([
-                canAuthenticate(host, port, name, writerCreds.username, writerCreds.password),
-                canAuthenticate(host, port, name, readerCreds.username, readerCreds.password),
-            ]);
+            const writerWorks = await canAuthenticate(
+                host,
+                port,
+                name,
+                writerCreds.username,
+                writerCreds.password,
+            );
 
-            if (writerWorks && readerWorks) {
-                console.log("✅ Application users are already configured and working");
+            if (writerWorks) {
+                console.log("✅ Writer user is already configured and working");
                 console.log("✅ Nothing to do - skipping user setup");
                 return;
             }
 
-            console.log("⚠️  Existing passwords found but not working - will recreate users");
+            console.log("⚠️  Existing password found but not working - will recreate user");
         }
     } catch (error) {
-        console.log("ℹ️  No valid credentials found in Secrets Manager - will create new users");
+        console.log("ℹ️  No valid credentials found in Secrets Manager - will create new user");
     }
 
     // Get master credentials for setting up users
@@ -145,14 +144,12 @@ async function setApplicationUserPasswords() {
     const sql = postgres(masterUrl, { max: 1 });
 
     try {
-        // Generate secure passwords
-        console.log("Generating secure passwords...");
+        // Generate secure password
+        console.log("Generating secure password...");
         const writerPassword = generateSecurePassword(32);
-        const readerPassword = generateSecurePassword(32);
 
-        // Validate passwords before using in SQL (defense in depth)
+        // Validate password before using in SQL (defense in depth)
         validatePassword(writerPassword);
-        validatePassword(readerPassword);
 
         // Create writer role and user
         console.log("Creating openjii_writer user...");
@@ -205,65 +202,20 @@ async function setApplicationUserPasswords() {
         );
         console.log("✅ Writer credentials updated in Secrets Manager");
 
-        // Create reader role and user
-        console.log("Creating openjii_reader user...");
-        await sql.unsafe(`
-      DO $$
-      BEGIN
-        -- Create reader role if it doesn't exist
-        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'openjii_reader') THEN
-          CREATE ROLE openjii_reader WITH LOGIN PASSWORD '${readerPassword.replace(/'/g, "''")}';
-          RAISE NOTICE 'Created openjii_reader role';
-        ELSE
-          -- Update password if user exists
-          EXECUTE 'ALTER USER openjii_reader WITH PASSWORD ''' || '${readerPassword.replace(/'/g, "''")}' || '''';
-          RAISE NOTICE 'Updated openjii_reader password';
-        END IF;
-
-        -- Grant connect privilege
-        EXECUTE 'GRANT CONNECT ON DATABASE ' || current_database() || ' TO openjii_reader';
-        
-        -- Grant usage on public schema
-        GRANT USAGE ON SCHEMA public TO openjii_reader;
-        
-        -- Grant SELECT privilege on all existing tables
-        GRANT SELECT ON ALL TABLES IN SCHEMA public TO openjii_reader;
-        
-        -- Grant default privileges for future tables created by the current user (master)
-        ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA public GRANT SELECT ON TABLES TO openjii_reader;
-        
-        RAISE NOTICE 'Granted reader privileges to openjii_reader';
-      END $$;
-    `);
-        console.log("✅ openjii_reader user created in database");
-
-        // Update Secrets Manager with reader credentials
-        console.log("Updating Secrets Manager with reader credentials...");
-        await secretsClient.send(
-            new UpdateSecretCommand({
-                SecretId: readerSecretArn,
-                SecretString: JSON.stringify({
-                    username: "openjii_reader",
-                    password: readerPassword,
-                }),
-            }),
-        );
-        console.log("✅ Reader credentials updated in Secrets Manager");
-
         // Grant privileges on drizzle schema for migration tracking
         await sql.unsafe(`
       DO $$
       BEGIN
-        IF EXISTS (SELECT FROM pg_catalog.pg_namespace WHERE nspname = 'drizzle') THEN
-          GRANT USAGE ON SCHEMA drizzle TO openjii_writer, openjii_reader;
-          GRANT SELECT ON ALL TABLES IN SCHEMA drizzle TO openjii_writer, openjii_reader;
-          RAISE NOTICE 'Granted drizzle schema access to application users';
+        IF EXISTS(SELECT FROM pg_catalog.pg_namespace WHERE nspname = 'drizzle') THEN
+          GRANT USAGE ON SCHEMA drizzle TO openjii_writer;
+          GRANT SELECT ON ALL TABLES IN SCHEMA drizzle TO openjii_writer;
+          RAISE NOTICE 'Granted drizzle schema access to openjii_writer';
         END IF;
       END $$;
-    `);
+        `);
 
-        console.log("✅ All application users have been set up successfully!");
-        console.log("🔒 Passwords are securely stored in AWS Secrets Manager only");
+        console.log("✅ Writer user has been set up successfully!");
+        console.log("🔒 Password is securely stored in AWS Secrets Manager only");
     } catch (error) {
         console.error("❌ Error setting up users:", error);
         throw error;

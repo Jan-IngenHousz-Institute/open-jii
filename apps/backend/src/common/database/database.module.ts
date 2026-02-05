@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 
-import { db, dbReader, dbWriter } from "@repo/database";
+import { db } from "@repo/database";
 
 @Global()
 @Module({
@@ -9,15 +9,7 @@ import { db, dbReader, dbWriter } from "@repo/database";
       provide: "DATABASE",
       useValue: db,
     },
-    {
-      provide: "DATABASE_READER",
-      useValue: dbReader,
-    },
-    {
-      provide: "DATABASE_WRITER",
-      useValue: dbWriter,
-    },
   ],
-  exports: ["DATABASE", "DATABASE_READER", "DATABASE_WRITER"],
+  exports: ["DATABASE"],
 })
 export class DatabaseModule {}
