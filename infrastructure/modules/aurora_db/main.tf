@@ -208,6 +208,30 @@ resource "aws_rds_cluster_instance" "rds_cluster_instance_aurora" {
   }
 }
 
+# Store writer credentials in AWS Secrets Manager (password will be set by migration script)
+resource "aws_secretsmanager_secret" "writer_credentials" {
+  name        = "${var.cluster_identifier}-writer-credentials"
+  description = "Credentials for Aurora DB writer user (openjii_writer). Has full CRUD permissions but cannot manage users/databases. Password managed by migration script."
+
+  tags = {
+    Name        = "${var.cluster_identifier}-writer-credentials"
+    Environment = var.environment
+    Project     = "open-jii"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "writer_credentials" {
+  secret_id = aws_secretsmanager_secret.writer_credentials.id
+  secret_string = jsonencode({
+    username = "openjii_writer"
+    password = "PLACEHOLDER_WILL_BE_SET_BY_MIGRATION_SCRIPT"
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
 # IAM role for RDS Enhanced Monitoring (conditional)
 resource "aws_iam_role" "rds_enhanced_monitoring" {
   count = var.enable_enhanced_monitoring ? 1 : 0

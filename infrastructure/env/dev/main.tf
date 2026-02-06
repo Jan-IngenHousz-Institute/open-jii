@@ -956,6 +956,35 @@ module "migration_runner_ecr" {
   }
 }
 
+# IAM policy for migration runner to update Secrets Manager
+resource "aws_iam_policy" "migration_runner_secrets_policy" {
+  name        = "openjii-migration-runner-secrets-${var.environment}"
+  description = "Allows migration runner to update database user credentials in Secrets Manager"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:PutSecretValue"
+        ]
+        Resource = [
+          module.aurora_db.writer_credentials_secret_arn
+        ]
+      }
+    ]
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    Component   = "database-migrations"
+  }
+}
+
 module "migration_runner_ecs" {
   source = "../../modules/ecs"
 
@@ -984,6 +1013,10 @@ module "migration_runner_ecs" {
   log_group_name     = "/aws/ecs/db-migration-runner-${var.environment}"
   log_retention_days = 30
 
+  # Attach IAM policy for Secrets Manager access
+  additional_task_role_policy_arns = [
+    aws_iam_policy.migration_runner_secrets_policy.arn
+  ]
 
   # Secrets configuration
   secrets = [
@@ -1008,9 +1041,17 @@ module "migration_runner_ecs" {
       value = module.aurora_db.cluster_port
     },
     {
+      name  = "DB_WRITER_SECRET_ARN"
+      value = module.aurora_db.writer_credentials_secret_arn
+    },
+    {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    },
+    {
       name  = "LOG_LEVEL"
       value = "debug"
-    },
+    }
   ]
 
   tags = {
@@ -1205,6 +1246,10 @@ module "backend_ecs" {
     {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
+    },
+    {
+      name      = "DB_WRITER_CREDENTIALS"
+      valueFrom = module.aurora_db.writer_credentials_secret_arn
     },
     {
       name      = "EMAIL_SERVER"

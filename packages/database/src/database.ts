@@ -33,12 +33,14 @@ const getCredentials = (
     };
   }
 
-  if (!process.env.DB_CREDENTIALS) {
+  const credsEnv = process.env.DB_WRITER_CREDENTIALS ?? process.env.DB_CREDENTIALS;
+
+  if (!credsEnv) {
     return { user: "", pass: "" };
   }
 
   try {
-    const credentials = JSON.parse(process.env.DB_CREDENTIALS) as Record<string, string>;
+    const credentials = JSON.parse(credsEnv) as Record<string, string>;
 
     if (credentials.username && credentials.password) {
       return {
