@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getFailedUploadsWithKeys } from "~/services/failed-uploads-storage";
+import { getAllMeasurementComments } from "~/services/measurement-comments-storage";
 import { getSuccessfulUploadsWithKeys } from "~/services/successful-uploads-storage";
 
 export type MeasurementStatus = "synced" | "unsynced";
@@ -9,6 +10,7 @@ export interface MeasurementItem {
   timestamp: string;
   experimentName: string;
   status: MeasurementStatus;
+  comment?: string;
   data: {
     topic: string;
     measurementResult: object;
@@ -28,9 +30,10 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   const { data: allMeasurements = [] } = useQuery({
     queryKey: ["allMeasurements"],
     queryFn: async () => {
-      const [failedEntries, successfulEntries] = await Promise.all([
+      const [failedEntries, successfulEntries, commentsMap] = await Promise.all([
         getFailedUploadsWithKeys(),
         getSuccessfulUploadsWithKeys(),
+        getAllMeasurementComments(),
       ]);
 
       const unsynced: MeasurementItem[] = failedEntries.map(([key, data]) => ({
@@ -38,6 +41,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         timestamp: data.metadata.timestamp,
         experimentName: data.metadata.experimentName,
         status: "unsynced" as MeasurementStatus,
+        comment: commentsMap.get(key),
         data,
       }));
 
@@ -46,6 +50,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         timestamp: data.metadata.timestamp,
         experimentName: data.metadata.experimentName,
         status: "synced" as MeasurementStatus,
+        comment: commentsMap.get(key),
         data,
       }));
 
