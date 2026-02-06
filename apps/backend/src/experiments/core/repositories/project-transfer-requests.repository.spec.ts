@@ -111,11 +111,11 @@ describe("ProjectTransferRequestsRepository", () => {
       expect(result.error.message).toContain("Validation failed for transfer request");
     });
 
-    it("should return validation error for invalid email", async () => {
+    it("should return validation error for empty email", async () => {
       // Arrange
       const invalidRequest: CreateTransferRequestDto = {
         ...createValidTransferRequest(),
-        userEmail: "not-an-email",
+        userEmail: "",
       };
 
       // Act

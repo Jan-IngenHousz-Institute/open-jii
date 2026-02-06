@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
+import { z } from "zod";
 
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../../common/utils/fp-utils";
@@ -11,6 +12,8 @@ interface CreateTransferRequestInput {
   projectIdOld: string;
   projectUrlOld: string;
 }
+
+const emailSchema = z.string().email();
 
 @Injectable()
 export class CreateTransferRequestUseCase {
@@ -82,22 +85,32 @@ export class CreateTransferRequestUseCase {
       return failure(createResult.error);
     }
 
-    // Send confirmation email
-    const emailResult = await this.emailPort.sendTransferRequestConfirmation(
-      userEmail,
-      input.projectIdOld,
-      input.projectUrlOld,
-    );
+    // Send confirmation email only if the email is valid
+    const emailValidation = emailSchema.safeParse(userEmail);
 
-    if (emailResult.isFailure()) {
+    if (!emailValidation.success) {
       this.logger.warn({
-        msg: "Failed to send transfer request confirmation email",
+        msg: "User email is not a valid email address, skipping confirmation email",
         operation: "create_transfer_request",
         userId,
-        projectIdOld: input.projectIdOld,
-        error: emailResult.error,
+        userEmail,
       });
-      // Don't fail the whole operation, just log the warning
+    } else {
+      const emailResult = await this.emailPort.sendTransferRequestConfirmation(
+        userEmail,
+        input.projectIdOld,
+        input.projectUrlOld,
+      );
+
+      if (emailResult.isFailure()) {
+        this.logger.warn({
+          msg: "Failed to send transfer request confirmation email",
+          operation: "create_transfer_request",
+          userId,
+          projectIdOld: input.projectIdOld,
+          error: emailResult.error,
+        });
+      }
     }
 
     return success(createResult.value);

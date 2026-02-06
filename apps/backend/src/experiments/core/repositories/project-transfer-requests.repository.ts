@@ -65,7 +65,7 @@ export class ProjectTransferRequestsRepository {
   // Zod validation schemas
   private readonly schemas = {
     uuid: z.string().uuid(),
-    email: z.string().email(),
+    email: z.string().min(1).max(100),
     url: z.string().url(),
     projectId: z.string().min(1).max(255),
     sourcePlatform: z.string().min(1).max(100),
