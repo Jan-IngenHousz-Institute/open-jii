@@ -45,6 +45,8 @@ describe("AwsConfigService", () => {
         getOrThrow: vi.fn((key: string) => {
           if (key === "aws.region") return ""; // Invalid empty region
           if (key === "aws.location.placeIndexName") return "test-index";
+          if (key === "aws.cognito.identityPoolId") return "test-pool-id";
+          if (key === "aws.cognito.developerProviderName") return "test-provider";
           throw new Error(`Unknown config key: ${key}`);
         }),
       } as unknown as ConfigService;

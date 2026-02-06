@@ -1,12 +1,18 @@
+locals {
+  developer_provider_name_full = "${var.environment}.login.openjii.com"
+}
+
 data "aws_caller_identity" "current" {}
 
 resource "aws_cognito_identity_pool" "this" {
   identity_pool_name               = var.identity_pool_name
-  allow_unauthenticated_identities = true
+  allow_unauthenticated_identities = var.allow_unauthenticated_identities
+
+  developer_provider_name = local.developer_provider_name_full
 }
 
-resource "aws_iam_role" "unauth" {
-  name = "${var.identity_pool_name}-unauth-role"
+resource "aws_iam_role" "auth" {
+  name = "${var.identity_pool_name}-auth-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -19,7 +25,7 @@ resource "aws_iam_role" "unauth" {
           "cognito-identity.amazonaws.com:aud" = aws_cognito_identity_pool.this.id
         }
         "ForAnyValue:StringLike" = {
-          "cognito-identity.amazonaws.com:amr" = "unauthenticated"
+          "cognito-identity.amazonaws.com:amr" = "authenticated"
         }
       }
     }]
@@ -30,13 +36,13 @@ resource "aws_cognito_identity_pool_roles_attachment" "this" {
   identity_pool_id = aws_cognito_identity_pool.this.id
 
   roles = {
-    unauthenticated = aws_iam_role.unauth.arn
+    authenticated = aws_iam_role.auth.arn
   }
 }
 
-resource "aws_iam_policy" "unauth_iot" {
-  name        = "${var.identity_pool_name}-unauth-iot"
-  description = "Allow unauthenticated identities to connect and publish to experiment/data_ingest/v1"
+resource "aws_iam_policy" "auth_iot" {
+  name        = "${var.identity_pool_name}-auth-iot"
+  description = "Allow authenticated identities to connect and publish to experiment/data_ingest/v1"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -55,7 +61,7 @@ resource "aws_iam_policy" "unauth_iot" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "unauth_iot_attach" {
-  role       = aws_iam_role.unauth.name
-  policy_arn = aws_iam_policy.unauth_iot.arn
+resource "aws_iam_role_policy_attachment" "auth_iot_attach" {
+  role       = aws_iam_role.auth.name
+  policy_arn = aws_iam_policy.auth_iot.arn
 }
