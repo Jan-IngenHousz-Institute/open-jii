@@ -2,7 +2,7 @@
 
 import { ViewVerticalIcon } from "@radix-ui/react-icons";
 import { VariantProps, cva } from "class-variance-authority";
-import { PanelLeft, PanelLeftClose } from "lucide-react";
+import { PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { Slot as SlotPrimitive } from "radix-ui";
 import * as React from "react";
 
@@ -276,7 +276,7 @@ const SidebarTrigger = React.forwardRef<
       {...props}
     >
       {state === "collapsed" ? (
-        <PanelLeft className="!h-6 !w-6" />
+        <PanelLeftOpen className="text-primary !h-6 !w-6" />
       ) : (
         <PanelLeftClose className="!h-6 !w-6" />
       )}
