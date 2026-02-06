@@ -22,21 +22,11 @@ vi.mock("../../shared/y-axis-configuration", () => ({
 }));
 
 describe("LineChartDataConfigurator", () => {
-  const mockTable = {
-    name: "test_table",
-    tableMetadata: {
-      columns: [],
-      totalRows: 0,
-      totalPages: 0,
-    },
-    tableRows: [],
-    columns: [
-      { name: "time", type_name: "number", type_text: "number" },
-      { name: "value", type_name: "number", type_text: "number" },
-      { name: "category", type_name: "string", type_text: "string" },
-    ],
-    totalRows: 0,
-  };
+  const mockColumns = [
+    { name: "time", type_name: "number", type_text: "number" },
+    { name: "value", type_name: "number", type_text: "number" },
+    { name: "category", type_name: "string", type_text: "string" },
+  ];
 
   it("should render X-axis configuration component", () => {
     function TestComponent() {
@@ -49,7 +39,7 @@ describe("LineChartDataConfigurator", () => {
         },
       });
 
-      return <LineChartDataConfigurator form={form} table={mockTable} />;
+      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
     render(<TestComponent />);
@@ -71,7 +61,7 @@ describe("LineChartDataConfigurator", () => {
         },
       });
 
-      return <LineChartDataConfigurator form={form} table={mockTable} />;
+      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
     render(<TestComponent />);
@@ -93,7 +83,7 @@ describe("LineChartDataConfigurator", () => {
         },
       });
 
-      return <LineChartDataConfigurator form={form} table={mockTable} />;
+      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
     render(<TestComponent />);
@@ -116,7 +106,7 @@ describe("LineChartDataConfigurator", () => {
         },
       });
 
-      return <LineChartDataConfigurator form={form} table={mockTable} />;
+      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
     render(<TestComponent />);
@@ -141,7 +131,7 @@ describe("LineChartDataConfigurator", () => {
         },
       });
 
-      return <LineChartDataConfigurator form={form} table={mockTable} />;
+      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
     render(<TestComponent />);
@@ -164,7 +154,7 @@ describe("LineChartDataConfigurator", () => {
         },
       });
 
-      return <LineChartDataConfigurator form={form} table={mockTable} />;
+      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
     render(<TestComponent />);

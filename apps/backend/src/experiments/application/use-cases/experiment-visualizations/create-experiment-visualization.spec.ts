@@ -1,7 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
@@ -14,7 +13,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
   let useCase: CreateExperimentVisualizationUseCase;
   let experimentRepository: ExperimentRepository;
   let experimentVisualizationRepository: ExperimentVisualizationRepository;
-  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -26,7 +24,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
     useCase = testApp.module.get(CreateExperimentVisualizationUseCase);
     experimentRepository = testApp.module.get(ExperimentRepository);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
-    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     vi.restoreAllMocks();
   });
@@ -120,16 +117,13 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: true,
         }),
       );
-
-      const validateDataSourcesSpy = vi
-        .spyOn(databricksAdapter, "validateDataSources")
-        .mockResolvedValue(success(true));
 
       const createVisualizationSpy = vi
         .spyOn(experimentVisualizationRepository, "create")
@@ -169,10 +163,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
       });
 
       expect(checkAccessSpy).toHaveBeenCalledWith(experiment.id, testUserId);
-      expect(validateDataSourcesSpy).toHaveBeenCalledWith(
-        mockRequest.dataConfig,
-        expect.stringContaining("exp_test_experiment_"),
-      );
       expect(createVisualizationSpy).toHaveBeenCalledWith(experiment.id, mockRequest, testUserId);
     });
 
@@ -239,6 +229,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: false,
           hasArchiveAccess: false,
@@ -274,6 +265,8 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
+            schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: true,
           hasArchiveAccess: false,
@@ -288,125 +281,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe("You do not have access to this experiment");
-    });
-
-    it("should fail when data source validation fails", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experiment.id,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            schemaName: experiment.schemaName,
-          },
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(
-        failure({
-          message: "Table test_table does not exist",
-          code: "INVALID_DATA_SOURCE",
-          statusCode: 400,
-          name: "",
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Table test_table does not exist");
-    });
-
-    it("should fail when experiment has no schema name", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experiment.id,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            schemaName: null,
-          },
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toBe("Experiment schema not provisioned");
-    });
-
-    it("should fail when experiment has no schema name", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experiment.id,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            schemaName: null,
-          },
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toBe("Experiment schema not provisioned");
     });
 
     it("should fail when repository create operation fails", async () => {
@@ -429,14 +303,13 @@ describe("CreateExperimentVisualizationUseCase", () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
           },
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: true,
         }),
       );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
       vi.spyOn(experimentVisualizationRepository, "create").mockResolvedValue(
         success([]), // Empty array indicates creation failure
@@ -461,7 +334,12 @@ describe("CreateExperimentVisualizationUseCase", () => {
       // Mock experimentRepository.checkAccess to return archived experiment
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { ...experiment, status: "archived" },
+          experiment: {
+            ...experiment,
+            status: "archived" as const,
+            schemaName: experiment.schemaName,
+            pipelineId: faker.string.uuid(),
+          },
           hasAccess: true,
           hasArchiveAccess: false,
           isAdmin: true,

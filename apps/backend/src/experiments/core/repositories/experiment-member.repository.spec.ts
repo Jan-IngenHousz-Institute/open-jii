@@ -110,7 +110,7 @@ describe("ExperimentMemberRepository", () => {
         .values({
           name: "Empty Experiment",
           description: "No members",
-          status: "provisioning",
+          status: "active",
           visibility: "private",
           createdBy: testUserId,
         })

@@ -20,9 +20,7 @@ export interface Table {
   created_at: number;
   columns?: ColumnInfo[];
   properties?: {
-    display_name?: string;
-    downstream?: "true" | "false";
-    quality?: "bronze" | "silver" | "gold";
+    error_column?: string;
     [key: string]: string | undefined;
   };
 }

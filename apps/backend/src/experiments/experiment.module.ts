@@ -10,8 +10,9 @@ import { DatabricksModule } from "../common/modules/databricks/databricks.module
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { UserModule } from "../users/user.module";
+// Repositories
+import { ExperimentDataRepository } from "./application/repositories/experiment-data.repository";
 // Services
-import { UserTransformationService } from "./application/services/data-transformation/user-metadata/user-transformation.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -20,7 +21,7 @@ import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-a
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
-import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
+import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
@@ -49,7 +50,6 @@ import { ListExperimentsUseCase } from "./application/use-cases/list-experiments
 import { CreateTransferRequestUseCase } from "./application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
-import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
@@ -72,7 +72,6 @@ import { ExperimentLocationsController } from "./presentation/experiment-locatio
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
-import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 
@@ -85,7 +84,6 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     ExperimentMembersController,
     ExperimentProtocolsController,
     ExperimentVisualizationsController,
-    ExperimentWebhookController,
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
     ProjectTransferRequestsController,
@@ -115,13 +113,13 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     ExperimentProtocolRepository,
     ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
+    ExperimentDataRepository,
     FlowRepository,
     LocationRepository,
     ProjectTransferRequestsRepository,
 
     // Services
     EmbargoProcessorService,
-    UserTransformationService,
 
     // General experiment use cases
     CreateExperimentUseCase,
@@ -130,7 +128,6 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     ListExperimentsUseCase,
     UpdateExperimentUseCase,
     DeleteExperimentUseCase,
-    UpdateProvisioningStatusUseCase,
 
     // Experiment data use cases
     GetExperimentDataUseCase,

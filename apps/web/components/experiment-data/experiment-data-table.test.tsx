@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
+import "../../vitest.setup";
 import { ExperimentDataTable } from "./experiment-data-table";
 
 // Mock the tsr module
@@ -341,7 +342,7 @@ vi.mock("./experiment-data-table-chart-cell", () => ({
   ),
 }));
 
-vi.mock("./experiment-data-table-chart", () => ({
+vi.mock("./table-chart/experiment-data-table-chart", () => ({
   ExperimentDataTableChart: ({
     data,
     columnName,
@@ -431,6 +432,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -454,6 +456,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -475,6 +478,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -496,6 +500,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table Display Name"
@@ -521,6 +526,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -557,6 +563,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -601,6 +608,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -629,6 +637,7 @@ describe("ExperimentDataTable", () => {
     // First render with data
     const { rerender } = render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -643,6 +652,7 @@ describe("ExperimentDataTable", () => {
     isLoading = true;
     rerender(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -665,6 +675,7 @@ describe("ExperimentDataTable", () => {
 
     render(
       <ExperimentDataTable
+        defaultSortColumn="timestamp"
         experimentId="experiment-123"
         tableName="test_table"
         displayName="Test Table"
@@ -674,6 +685,7 @@ describe("ExperimentDataTable", () => {
     );
 
     expect(mockUseQuery).toHaveBeenCalledWith({
+      enabled: true,
       queryData: {
         params: { id: "experiment-123" },
         query: {
@@ -700,6 +712,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -760,6 +773,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -784,6 +798,7 @@ describe("ExperimentDataTable", () => {
 
       const { rerender } = render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -802,6 +817,7 @@ describe("ExperimentDataTable", () => {
       // Re-render to ensure state management is working
       rerender(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -844,6 +860,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -867,6 +884,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -901,6 +919,7 @@ describe("ExperimentDataTable", () => {
 
       const { unmount } = render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -929,6 +948,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -959,6 +979,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -992,6 +1013,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1028,6 +1050,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1055,6 +1078,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1086,6 +1110,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1108,6 +1133,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1134,6 +1160,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1162,6 +1189,7 @@ describe("ExperimentDataTable", () => {
 
       render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1198,6 +1226,7 @@ describe("ExperimentDataTable", () => {
 
       const { rerender } = render(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"
@@ -1209,6 +1238,7 @@ describe("ExperimentDataTable", () => {
       // Re-render to simulate state update
       rerender(
         <ExperimentDataTable
+          defaultSortColumn="timestamp"
           experimentId="experiment-123"
           tableName="test_table"
           displayName="Test Table"

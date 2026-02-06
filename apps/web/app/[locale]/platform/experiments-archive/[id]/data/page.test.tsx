@@ -6,6 +6,8 @@ import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
+import { ExperimentTableName } from "@repo/api";
+
 import ExperimentDataPage from "./page";
 
 globalThis.React = React;
@@ -45,16 +47,19 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
     experimentId,
     tableName,
     displayName,
+    defaultSortColumn,
   }: {
     experimentId: string;
     tableName: string;
     displayName?: string;
+    defaultSortColumn?: string;
   }) => (
     <div
       data-testid="experiment-data-table"
       data-experiment-id={experimentId}
       data-table-name={tableName}
       data-display-name={displayName}
+      data-default-sort-column={defaultSortColumn}
     >
       Table: {displayName ?? tableName}
     </div>
@@ -110,8 +115,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockTablesData = [
-  { name: "measurements", displayName: "Measurements", totalRows: 100 },
-  { name: "device", displayName: "Device", totalRows: 1 },
+  {
+    name: "measurements",
+    displayName: "Measurements",
+    totalRows: 100,
+    defaultSortColumn: "timestamp",
+  },
+  { name: ExperimentTableName.DEVICE, displayName: "Device", totalRows: 1 },
 ];
 
 beforeEach(() => {
@@ -304,12 +314,13 @@ describe("<ExperimentDataPage />", () => {
     const dataTable1 = tabContent1.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable1).toHaveAttribute("data-experiment-id", "test-experiment-id");
     expect(dataTable1).toHaveAttribute("data-table-name", "measurements");
+    expect(dataTable1).toHaveAttribute("data-default-sort-column", "timestamp");
 
     const tabContent2 = screen.getByTestId("nav-tab-content-device");
     expect(tabContent2).toBeInTheDocument();
     const dataTable2 = tabContent2.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable2).toHaveAttribute("data-experiment-id", "test-experiment-id");
-    expect(dataTable2).toHaveAttribute("data-table-name", "device");
+    expect(dataTable2).toHaveAttribute("data-table-name", ExperimentTableName.DEVICE);
   });
 
   it("shows no data message when tables array is empty", () => {

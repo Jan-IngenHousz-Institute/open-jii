@@ -31,17 +31,18 @@ export class DatabricksConfigService {
       host: this.configService.getOrThrow<string>("databricks.host"),
       clientId: this.configService.getOrThrow<string>("databricks.clientId"),
       clientSecret: this.configService.getOrThrow<string>("databricks.clientSecret"),
-      experimentProvisioningJobId: this.configService.getOrThrow<string>(
-        "databricks.experimentProvisioningJobId",
-      ),
       ambyteProcessingJobId: this.configService.getOrThrow<string>(
         "databricks.ambyteProcessingJobId",
       ),
-      enrichedTablesRefreshJobId: this.configService.getOrThrow<string>(
-        "databricks.enrichedTablesRefreshJobId",
-      ),
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
+      centrumSchemaName: this.configService.getOrThrow<string>("databricks.centrumSchemaName"),
+      rawDataTableName: this.configService.getOrThrow<string>("databricks.rawDataTableName"),
+      deviceDataTableName: this.configService.getOrThrow<string>("databricks.deviceDataTableName"),
+      rawAmbyteDataTableName: this.configService.getOrThrow<string>(
+        "databricks.rawAmbyteDataTableName",
+      ),
+      macroDataTableName: this.configService.getOrThrow<string>("databricks.macroDataTableName"),
     };
   }
 
@@ -95,20 +96,6 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the Databricks experiment provisioning job ID
-   */
-  getExperimentProvisioningJobId(): string {
-    return this.config.experimentProvisioningJobId;
-  }
-
-  /**
-   * Returns the Databricks experiment provisioning job ID as a number
-   */
-  getExperimentProvisioningJobIdAsNumber(): number {
-    return parseInt(this.config.experimentProvisioningJobId, 10);
-  }
-
-  /**
    * Returns the Databricks ambyte processing job ID
    */
   getAmbyteProcessingJobId(): string {
@@ -123,20 +110,6 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the Databricks enriched tables refresh job ID
-   */
-  getEnrichedTablesRefreshJobId(): string {
-    return this.config.enrichedTablesRefreshJobId;
-  }
-
-  /**
-   * Returns the Databricks enriched tables refresh job ID as a number
-   */
-  getEnrichedTablesRefreshJobIdAsNumber(): number {
-    return parseInt(this.config.enrichedTablesRefreshJobId, 10);
-  }
-
-  /**
    * Returns the Databricks warehouse ID
    */
   getWarehouseId(): string {
@@ -148,5 +121,40 @@ export class DatabricksConfigService {
    */
   getCatalogName(): string {
     return this.config.catalogName;
+  }
+
+  /**
+   * Returns the centrum schema name
+   */
+  getCentrumSchemaName(): string {
+    return this.config.centrumSchemaName;
+  }
+
+  /**
+   * Returns the raw data table name
+   */
+  getRawDataTableName(): string {
+    return this.config.rawDataTableName;
+  }
+
+  /**
+   * Returns the device data table name
+   */
+  getDeviceDataTableName(): string {
+    return this.config.deviceDataTableName;
+  }
+
+  /**
+   * Returns the raw ambyte data table name
+   */
+  getRawAmbyteDataTableName(): string {
+    return this.config.rawAmbyteDataTableName;
+  }
+
+  /**
+   * Returns the macro data table name
+   */
+  getMacroDataTableName(): string {
+    return this.config.macroDataTableName;
   }
 }

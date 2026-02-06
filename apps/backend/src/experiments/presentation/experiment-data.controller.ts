@@ -12,7 +12,7 @@ import { AsyncQueue } from "../../common/utils/async-queue";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
-import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
+import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
@@ -148,16 +148,12 @@ export class ExperimentDataController {
         return handleFailure(prepResult, this.logger);
       }
 
-      const { experiment, volumeName, volumeCreated, volumeExists, directoryName } =
-        prepResult.value;
+      const { experiment, directoryName } = prepResult.value;
 
       this.logger.log({
         msg: "Upload environment prepared successfully",
         operation: "uploadData",
         experimentId,
-        volumeName,
-        volumeCreated,
-        volumeExists,
         directoryName,
         status: "success",
       });

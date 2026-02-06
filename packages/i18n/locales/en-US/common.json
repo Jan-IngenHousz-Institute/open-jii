@@ -23,6 +23,8 @@
     "confirm": "Confirm",
     "confirmDelete": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
     "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
     "yes": "Yes",
     "no": "No",
     "search": "Search",

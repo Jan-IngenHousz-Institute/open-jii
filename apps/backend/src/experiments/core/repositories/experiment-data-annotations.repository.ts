@@ -94,72 +94,6 @@ export class ExperimentDataAnnotationsRepository {
     },
   };
 
-  /*
-   * Ensure the annotations table exists
-   */
-  async ensureTableExists(
-    schemaName: string,
-    experimentId: string,
-  ): Promise<Result<SchemaData | null>> {
-    // First check if the annotations table already exists
-    const tablesResult = await this.databricksPort.listTables(schemaName);
-    if (tablesResult.isFailure()) {
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    // Check if annotations table exists
-    const annotationsTableExists = tablesResult.value.tables.some(
-      (table) => table.name === "annotations",
-    );
-
-    // If table already exists, return success without creating
-    if (annotationsTableExists) {
-      return success(null);
-    }
-
-    this.logger.debug({
-      msg: "Annotation table not found, creating annotations table",
-      operation: "ensureTableExists",
-      experimentId,
-      schemaName,
-    });
-
-    // Create the table if it doesn't exist
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS annotations (
-        id STRING NOT NULL PRIMARY KEY,
-        user_id STRING NOT NULL,
-        user_name STRING,
-        table_name STRING NOT NULL,
-        row_id STRING NOT NULL,
-        type STRING NOT NULL,
-        content_text STRING,
-        flag_type STRING,
-        created_at TIMESTAMP NOT NULL,
-        updated_at TIMESTAMP NOT NULL
-      )
-      USING DELTA
-    `;
-
-    const createResult = await this.databricksPort.executeSqlQuery(schemaName, createTableQuery);
-    if (createResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to create annotations table: ${createResult.error.message}`),
-      );
-    }
-
-    const alterTableQuery = `
-      ALTER TABLE annotations SET TBLPROPERTIES(downstream = "false")
-    `;
-    const alterTableResult = await this.databricksPort.executeSqlQuery(schemaName, alterTableQuery);
-    if (alterTableResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to alter annotations table: ${alterTableResult.error.message}`),
-      );
-    }
-    return success(alterTableResult.value);
-  }
-
   private getRowsAffectedFromResult(result: SchemaData): AnnotationRowsAffected {
     if (result.rows[0]) {
       const rowsAffectedIndex = result.columns.findIndex((col) => col.name === "num_affected_rows");
@@ -179,13 +113,13 @@ export class ExperimentDataAnnotationsRepository {
    * Store multiple annotations in the experiment annotations table
    */
   async storeAnnotations(
-    schemaName: string,
+    experimentId: string,
     annotations: CreateAnnotationDto[],
   ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log({
       msg: "Storing annotations",
       operation: "storeAnnotations",
-      schemaName,
+      experimentId,
       annotationCount: annotations.length,
     });
 
@@ -221,6 +155,7 @@ export class ExperimentDataAnnotationsRepository {
       (annotation) =>
         `(
           '${annotation.id}',
+          '${experimentId}',
           '${annotation.userId}',
           ${this.formatSqlValue(annotation.userName)},
           '${annotation.tableName}',
@@ -234,8 +169,9 @@ export class ExperimentDataAnnotationsRepository {
     );
 
     const insertQuery = `
-      INSERT INTO annotations (
+      INSERT INTO experiment_annotations (
         id,
+        experiment_id,
         user_id,
         user_name,
         table_name,
@@ -248,7 +184,10 @@ export class ExperimentDataAnnotationsRepository {
       ) VALUES ${valuesClauses.join(", ")}
     `;
 
-    const insertResult = await this.databricksPort.executeSqlQuery(schemaName, insertQuery);
+    const insertResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      insertQuery,
+    );
     if (insertResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to insert annotations: ${insertResult.error.message}`),
@@ -261,14 +200,14 @@ export class ExperimentDataAnnotationsRepository {
    * Update an existing annotation
    */
   async updateAnnotation(
-    schemaName: string,
+    experimentId: string,
     annotationId: string,
     updateData: UpdateAnnotationDto,
   ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log({
       msg: "Updating annotation",
       operation: "updateAnnotation",
-      schemaName,
+      experimentId,
       annotationId,
     });
 
@@ -283,7 +222,6 @@ export class ExperimentDataAnnotationsRepository {
 
     const now = new Date();
 
-    // Build SET clause dynamically based on provided update data
     const setClauses: string[] = [];
 
     if (updateData.contentText !== undefined) {
@@ -295,14 +233,16 @@ export class ExperimentDataAnnotationsRepository {
 
     setClauses.push(`updated_at = '${now.toISOString()}'`);
 
-    // Build raw SQL string for update
     const updateQuery = `
-      UPDATE annotations 
+      UPDATE experiment_annotations
       SET ${setClauses.join(", ")}
-      WHERE id = '${annotationId}'
+      WHERE id = '${annotationId}' AND experiment_id = '${experimentId}'
     `;
 
-    const updateResult = await this.databricksPort.executeSqlQuery(schemaName, updateQuery);
+    const updateResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      updateQuery,
+    );
     if (updateResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to update annotation: ${updateResult.error.message}`),
@@ -315,29 +255,30 @@ export class ExperimentDataAnnotationsRepository {
    * Delete a single annotation
    */
   async deleteAnnotation(
-    schemaName: string,
+    experimentId: string,
     annotationId: string,
   ): Promise<Result<AnnotationRowsAffected>> {
     this.logger.log({
       msg: "Deleting annotation",
       operation: "deleteAnnotation",
-      schemaName,
+      experimentId,
       annotationId,
     });
 
-    // Validate input parameters
     const annotationIdValidation = this.validate.uuid(annotationId);
     if (!annotationIdValidation.success) {
       return failure(AppError.validationError("Invalid annotation ID"));
     }
 
-    // Build raw SQL string for delete
     const deleteQuery = `
-      DELETE FROM annotations
-      WHERE id = '${annotationId}'
+      DELETE FROM experiment_annotations
+      WHERE id = '${annotationId}' AND experiment_id = '${experimentId}'
     `;
 
-    const deleteResult = await this.databricksPort.executeSqlQuery(schemaName, deleteQuery);
+    const deleteResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      deleteQuery,
+    );
     if (deleteResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to delete annotation: ${deleteResult.error.message}`),
@@ -350,7 +291,7 @@ export class ExperimentDataAnnotationsRepository {
    * Delete multiple annotations by their IDs
    */
   async deleteAnnotationsBulk(
-    schemaName: string,
+    experimentId: string,
     tableName: string,
     rowIds: string[],
     type: string,
@@ -358,7 +299,7 @@ export class ExperimentDataAnnotationsRepository {
     this.logger.log({
       msg: "Bulk deleting annotations",
       operation: "deleteAnnotationsBulk",
-      schemaName,
+      experimentId,
       tableName,
       type,
       rowCount: rowIds.length,
@@ -368,18 +309,20 @@ export class ExperimentDataAnnotationsRepository {
       return success({ rowsAffected: 0 } as AnnotationRowsAffected);
     }
 
-    // Build IN clause for annotation IDs
     const rowIdList = rowIds.map((id) => `'${id}'`).join(", ");
 
-    // Build raw SQL string for bulk delete
     const deleteQuery = `
-      DELETE FROM annotations
-      WHERE table_name=${this.formatSqlValue(tableName)}
-      AND type=${this.formatSqlValue(type)}
+      DELETE FROM experiment_annotations
+      WHERE experiment_id = '${experimentId}'
+      AND table_name = ${this.formatSqlValue(tableName)}
+      AND type = ${this.formatSqlValue(type)}
       AND row_id IN (${rowIdList})
     `;
 
-    const deleteResult = await this.databricksPort.executeSqlQuery(schemaName, deleteQuery);
+    const deleteResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      deleteQuery,
+    );
     if (deleteResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to delete annotations: ${deleteResult.error.message}`),

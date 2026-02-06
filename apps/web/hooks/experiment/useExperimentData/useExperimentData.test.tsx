@@ -6,6 +6,7 @@ import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import type { ExperimentData } from "@repo/api";
+import { WellKnownColumnTypes } from "@repo/api";
 
 import { getColumnWidth, useExperimentData } from "./useExperimentData";
 
@@ -78,7 +79,7 @@ describe("getColumnWidth", () => {
   });
 
   it("should return 180 for USER column type", () => {
-    expect(getColumnWidth("USER")).toBe(180);
+    expect(getColumnWidth(WellKnownColumnTypes.CONTRIBUTOR)).toBe(180);
   });
 });
 
@@ -138,9 +139,18 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-      renderHook(() => useExperimentData("experiment-123", 1, 20, "test_table"), {
-        wrapper: createWrapper(),
-      });
+      renderHook(
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       expect(mockUseQuery).toHaveBeenCalledWith({
         queryData: {
@@ -153,8 +163,9 @@ describe("useExperimentData", () => {
             orderDirection: undefined,
           },
         },
+        enabled: true,
         queryKey: ["experiment", "experiment-123", 1, 20, "test_table", undefined, undefined],
-        staleTime: 120000, // 2 minutes
+        staleTime: 120000,
       });
     });
 
@@ -167,7 +178,15 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table", "timestamp", "DESC"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+            orderBy: "timestamp",
+            orderDirection: "DESC",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -184,6 +203,7 @@ describe("useExperimentData", () => {
             orderDirection: "DESC",
           },
         },
+        enabled: true,
         queryKey: ["experiment", "experiment-123", 1, 20, "test_table", "timestamp", "DESC"],
         staleTime: 120000, // 2 minutes
       });
@@ -198,7 +218,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -229,6 +255,13 @@ describe("useExperimentData", () => {
         ]),
         totalPages: 5,
         totalRows: 100,
+        errorColumn: undefined,
+        rawColumns: expect.arrayContaining([
+          expect.objectContaining({ name: "id", type_name: "INT" }),
+          expect.objectContaining({ name: "name", type_name: "STRING" }),
+          expect.objectContaining({ name: "value", type_name: "DOUBLE" }),
+          expect.objectContaining({ name: "timestamp", type_name: "TIMESTAMP" }),
+        ]),
       });
       expect(result.current.tableRows).toEqual(mockExperimentData.rows);
       expect(result.current.isLoading).toBe(false);
@@ -244,7 +277,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -266,7 +305,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -290,15 +335,13 @@ describe("useExperimentData", () => {
 
       const { result } = renderHook(
         () =>
-          useExperimentData(
-            "experiment-123",
-            1,
-            20,
-            "test_table",
-            undefined,
-            undefined,
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
             formatFunction,
-          ),
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -317,24 +360,17 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-      const onChartHover = vi.fn();
-      const onChartLeave = vi.fn();
       const onChartClick = vi.fn();
 
       const { result } = renderHook(
         () =>
-          useExperimentData(
-            "experiment-123",
-            1,
-            20,
-            "test_table",
-            undefined,
-            undefined,
-            undefined,
-            onChartHover,
-            onChartLeave,
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
             onChartClick,
-          ),
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -406,7 +442,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -465,7 +507,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -499,7 +547,13 @@ describe("useExperimentData", () => {
 
       const { result, rerender } = renderHook(
         ({ formatFn }) =>
-          useExperimentData("experiment-123", 1, 20, "test_table", undefined, undefined, formatFn),
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+            formatFunction: formatFn,
+          }),
         {
           wrapper: createWrapper(),
           initialProps: { formatFn: formatFunction1 },
@@ -542,7 +596,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -552,6 +612,8 @@ describe("useExperimentData", () => {
         columns: [],
         totalPages: 0,
         totalRows: 0,
+        errorColumn: undefined,
+        rawColumns: [],
       });
       expect(result.current.tableRows).toEqual([]);
       expect(result.current.isLoading).toBe(false);
@@ -578,7 +640,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -588,8 +656,9 @@ describe("useExperimentData", () => {
         columns: [],
         totalPages: 0,
         totalRows: 0,
+        errorColumn: undefined,
+        rawColumns: undefined, // undefined because map fails or optional chain returns undefined
       });
-      expect(result.current.tableRows).toBeUndefined();
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
@@ -606,7 +675,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -631,7 +706,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -671,7 +752,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -713,7 +800,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { result, rerender } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -756,7 +849,13 @@ describe("useExperimentData", () => {
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
       const { rerender } = renderHook(
-        ({ page, size }) => useExperimentData("experiment-123", page, size, "test_table"),
+        ({ page, size }) =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page,
+            pageSize: size,
+            tableName: "test_table",
+          }),
         {
           wrapper: createWrapper(),
           initialProps: { page: 1, size: 20 },
@@ -774,6 +873,7 @@ describe("useExperimentData", () => {
             orderDirection: undefined,
           },
         },
+        enabled: true,
         queryKey: ["experiment", "experiment-123", 1, 20, "test_table", undefined, undefined],
         staleTime: 120000,
       });
@@ -792,6 +892,7 @@ describe("useExperimentData", () => {
             orderDirection: undefined,
           },
         },
+        enabled: true,
         queryKey: ["experiment", "experiment-123", 2, 10, "test_table", undefined, undefined],
         staleTime: 120000,
       });

@@ -348,7 +348,7 @@ export class TestHarness {
     name: string;
     userId: string;
     description?: string;
-    status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
+    status?: "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
     embargoUntil?: Date;
     schemaName?: string;
@@ -362,7 +362,7 @@ export class TestHarness {
       .values({
         name: data.name,
         description: data.description ?? "Test description",
-        status: data.status ?? "provisioning",
+        status: data.status ?? "active",
         visibility: data.visibility ?? "private",
         embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         createdBy: data.userId,

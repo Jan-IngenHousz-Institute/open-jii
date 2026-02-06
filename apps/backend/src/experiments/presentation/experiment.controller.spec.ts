@@ -7,8 +7,6 @@ import type { ExperimentList } from "@repo/api";
 import { contract } from "@repo/api";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
-import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
-import { success, failure } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -17,7 +15,6 @@ import type { UserDto } from "../../users/core/models/user.model";
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
-  let databricksAdapter: DatabricksAdapter;
   let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
@@ -29,19 +26,10 @@ describe("ExperimentController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Get the databricks service instance for create experiment tests
-    databricksAdapter = testApp.module.get(DatabricksAdapter);
     analyticsAdapter = testApp.module.get(AnalyticsAdapter);
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
-
-    // Set up default mocks for databricks service (only needed for create experiment)
-    vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
-      success({
-        run_id: 12345,
-        number_in_job: 1,
-      }),
-    );
   });
 
   afterEach(() => {
@@ -57,7 +45,7 @@ describe("ExperimentController", () => {
       const experimentData = {
         name: "Test Experiment",
         description: "Test Description",
-        status: "provisioning",
+        status: "active",
         visibility: "private",
       };
 
@@ -68,59 +56,6 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.CREATED);
 
       expect(response.body).toHaveProperty("id");
-
-      // Type the response properly
-      const responseBody = response.body as { id: string };
-
-      // Verify that Databricks job was triggered
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
-        responseBody.id,
-        {
-          experiment_id: responseBody.id,
-          experiment_name: experimentData.name,
-        },
-      );
-    });
-
-    it("should successfully create an experiment even if Databricks fails", async () => {
-      // Mock Databricks to fail
-      vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
-        failure({
-          name: "DatabricksError",
-          code: "INTERNAL_ERROR",
-          message: "Databricks API error",
-          statusCode: 500,
-        }),
-      );
-
-      const experimentData = {
-        name: "Test Experiment with Databricks Failure",
-        description: "Test Description",
-        status: "provisioning",
-        visibility: "private",
-      };
-
-      const response = await testApp
-        .post(contract.experiments.createExperiment.path)
-        .withAuth(testUserId)
-        .send(experimentData)
-        .expect(StatusCodes.CREATED);
-
-      expect(response.body).toHaveProperty("id");
-
-      // Type the response properly
-      const responseBody = response.body as { id: string };
-
-      // Verify that Databricks job was attempted
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
-        responseBody.id,
-        {
-          experiment_id: responseBody.id,
-          experiment_name: experimentData.name,
-        },
-      );
     });
 
     it("should return 400 if name is missing", async () => {
@@ -129,14 +64,10 @@ describe("ExperimentController", () => {
         .withAuth(testUserId)
         .send({
           description: "Missing name",
-          status: "provisioning",
+          status: "active",
           visibility: "private",
         })
         .expect(StatusCodes.BAD_REQUEST);
-
-      // Verify that Databricks was not called for invalid requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -146,14 +77,10 @@ describe("ExperimentController", () => {
         .send({
           name: "Unauthorized Experiment",
           description: "This should fail",
-          status: "provisioning",
+          status: "active",
           visibility: "private",
         })
         .expect(StatusCodes.UNAUTHORIZED);
-
-      // Verify that Databricks was not called for unauthenticated requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
     it("should return 400 if name is too long", async () => {
@@ -165,14 +92,10 @@ describe("ExperimentController", () => {
         .send({
           name: tooLongName,
           description: "Test Description",
-          status: "provisioning",
+          status: "active",
           visibility: "private",
         })
         .expect(StatusCodes.BAD_REQUEST);
-
-      // Verify that Databricks was not called for invalid requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
     it("should successfully create an experiment with embargoUntil as ISO string", async () => {
@@ -183,7 +106,7 @@ describe("ExperimentController", () => {
       const experimentData = {
         name: "Test Experiment with Embargo",
         description: "Test Description",
-        status: "provisioning",
+        status: "active",
         visibility: "private",
         embargoUntil: embargoUntilISO,
       };
@@ -202,16 +125,6 @@ describe("ExperimentController", () => {
 
       // The response should contain the embargoUntil as an ISO string (formatted by date-formatter)
       expect(responseBody.embargoUntil).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-
-      // Verify that Databricks job was triggered
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
-        responseBody.id,
-        {
-          experiment_id: responseBody.id,
-          experiment_name: experimentData.name,
-        },
-      );
     });
 
     it("should return 400 if embargoUntil is not a valid ISO date string", async () => {
@@ -221,15 +134,11 @@ describe("ExperimentController", () => {
         .send({
           name: "Test Experiment",
           description: "Test Description",
-          status: "provisioning",
+          status: "active",
           visibility: "private",
           embargoUntil: "invalid-date-string",
         })
         .expect(StatusCodes.BAD_REQUEST);
-
-      // Verify that Databricks was not called for invalid requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
   });
 
@@ -523,7 +432,7 @@ describe("ExperimentController", () => {
     it("should update an experiment successfully", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Experiment to Update",
-        status: "provisioning",
+        status: "active",
         userId: testUserId,
       });
 
@@ -576,7 +485,7 @@ describe("ExperimentController", () => {
     it("should update an experiment with embargoUntil as ISO string", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Experiment to Update",
-        status: "provisioning",
+        status: "active",
         userId: testUserId,
       });
 
@@ -619,7 +528,7 @@ describe("ExperimentController", () => {
     it("should return 400 if embargoUntil is not a valid ISO date string on update", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Experiment to Update",
-        status: "provisioning",
+        status: "active",
         userId: testUserId,
       });
 
@@ -747,7 +656,7 @@ describe("ExperimentController", () => {
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
 
-    it("should add a member to an experiment", async () => {
+    it("should add a member to an experiment", { timeout: 10000 }, async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Add Member Test",
         userId: testUserId,

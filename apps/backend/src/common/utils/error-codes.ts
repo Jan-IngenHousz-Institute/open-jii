@@ -89,7 +89,6 @@ export enum ErrorCodes {
   // Location: src/experiments/application/use-cases/
   EXPERIMENT_DATA_UPLOAD_FAILED = "EXPERIMENT_DATA_UPLOAD_FAILED", // Data upload failed
   EXPERIMENT_DATA_DOWNLOAD_FAILED = "EXPERIMENT_DATA_DOWNLOAD_FAILED", // Data download failed
-  EXPERIMENT_SCHEMA_NOT_READY = "EXPERIMENT_SCHEMA_NOT_READY", // Schema not provisioned
 
   // ==================== Domain Operations - Experiments Protocols ====================
   // Location: src/experiments/application/use-cases/

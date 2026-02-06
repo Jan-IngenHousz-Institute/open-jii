@@ -14,12 +14,6 @@ export const ExperimentStatusBadge = ({ status }: { status: string }) => {
           {t("status.active")}
         </Badge>
       );
-    case "provisioning":
-      return (
-        <Badge className={`${baseClasses} bg-[#FEF8BE] [--bg-color:#FEF8BE]`}>
-          {t("status.provisioning")}
-        </Badge>
-      );
     case "archived":
       return (
         <Badge className={`${baseClasses} bg-[#E7EDF2] [--bg-color:#E7EDF2]`}>
@@ -30,12 +24,6 @@ export const ExperimentStatusBadge = ({ status }: { status: string }) => {
       return (
         <Badge className={`${baseClasses} bg-[#FFE0B2] [--bg-color:#FFE0B2]`}>
           {t("status.stale")}
-        </Badge>
-      );
-    case "provisioning_failed":
-      return (
-        <Badge className={`${baseClasses} bg-[#FFD2D3] [--bg-color:#FFD2D3]`}>
-          {t("status.provisioningFailed")}
         </Badge>
       );
     default:

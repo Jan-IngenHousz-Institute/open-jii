@@ -1,8 +1,9 @@
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
+
+import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import ScatterChartDataConfigurator from "./scatter-chart-data-configurator";
@@ -75,23 +76,14 @@ function TestWrapper({ initialValues }: { initialValues: Partial<ChartFormValues
     } as ChartFormValues,
   });
 
-  const mockTable: ExperimentTableWithColumns = {
-    name: "test_table",
-    tableMetadata: {
-      columns: [],
-      totalRows: 0,
-      totalPages: 0,
-    },
-    tableRows: [],
-    columns: [
-      { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
-      { name: "temperature", type_name: "float", type_text: "float" },
-      { name: "humidity", type_name: "float", type_text: "float" },
-      { name: "sensor_id", type_name: "string", type_text: "string" },
-    ],
-  };
+  const mockColumns: DataColumn[] = [
+    { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
+    { name: "temperature", type_name: "float", type_text: "float" },
+    { name: "humidity", type_name: "float", type_text: "float" },
+    { name: "sensor_id", type_name: "string", type_text: "string" },
+  ];
 
-  return <ScatterChartDataConfigurator form={form} table={mockTable} />;
+  return <ScatterChartDataConfigurator form={form} columns={mockColumns} />;
 }
 
 describe("ScatterChartDataConfigurator", () => {
@@ -288,24 +280,15 @@ describe("ScatterChartDataConfigurator", () => {
           } as ChartFormValues,
         });
 
-        const mockTable: ExperimentTableWithColumns = {
-          name: "test_table",
-          tableMetadata: {
-            columns: [],
-            totalRows: 0,
-            totalPages: 0,
-          },
-          tableRows: [],
-          columns: [
-            { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
-            { name: "temperature", type_name: "float", type_text: "float" },
-            { name: "humidity", type_name: "float", type_text: "float" },
-          ],
-        };
+        const mockColumns: DataColumn[] = [
+          { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+          { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },
+        ];
 
         return (
           <>
-            <ScatterChartDataConfigurator form={form} table={mockTable} />
+            <ScatterChartDataConfigurator form={form} columns={mockColumns} />
             <div data-testid="data-sources-count">
               {form.watch("dataConfig.dataSources").length}
             </div>
@@ -347,20 +330,13 @@ describe("ScatterChartDataConfigurator", () => {
           } as ChartFormValues,
         });
 
-        const mockTable: ExperimentTableWithColumns = {
-          name: "experiment_data",
-          tableMetadata: {
-            columns: [],
-            totalRows: 0,
-            totalPages: 0,
-          },
-          tableRows: [],
-          columns: [{ name: "timestamp", type_name: "timestamp", type_text: "timestamp" }],
-        };
+        const mockColumns: DataColumn[] = [
+          { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        ];
 
         return (
           <>
-            <ScatterChartDataConfigurator form={form} table={mockTable} />
+            <ScatterChartDataConfigurator form={form} columns={mockColumns} />
             <div data-testid="last-data-source-table">
               {form.watch("dataConfig.dataSources").at(-1)?.tableName ?? "none"}
             </div>

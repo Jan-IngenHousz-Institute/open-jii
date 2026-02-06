@@ -16,7 +16,7 @@ import {
   zDataColumn,
   zExperimentData,
   zExperimentDataQuery,
-  zExperimentDataTableInfo,
+  zExperimentDataTable,
   zExperimentDataTableList,
   zExperimentDataResponse,
   // Annotations
@@ -62,11 +62,6 @@ import {
   zIdPathParam,
   zExperimentMemberPathParam,
   zCreateExperimentResponse,
-  // Webhooks
-  zExperimentWebhookAuthHeader,
-  zExperimentProvisioningStatusWebhookPayload,
-  zExperimentWebhookSuccessResponse,
-  zExperimentWebhookErrorResponse,
 } from "./experiment.schema";
 
 // -------- Helpers --------
@@ -80,14 +75,7 @@ describe("Experiment Schema", () => {
   // ----- Enums -----
   describe("Enums", () => {
     it("zExperimentStatus accepts valid values", () => {
-      const all = [
-        "provisioning",
-        "provisioning_failed",
-        "active",
-        "stale",
-        "archived",
-        "published",
-      ] as const;
+      const all = ["active", "stale", "archived", "published"] as const;
       for (const v of all) expect(zExperimentStatus.parse(v)).toBe(v);
     });
 
@@ -689,10 +677,9 @@ describe("Experiment Schema", () => {
       expect(d3.orderDirection).toBe("DESC");
     });
 
-    it("zExperimentDataTableInfo valid", () => {
+    it("zExperimentDataTable valid", () => {
       const info = {
         name: "t1",
-        displayName: "Table 1",
         catalog_name: "cat",
         schema_name: "sch",
         data: {
@@ -706,14 +693,13 @@ describe("Experiment Schema", () => {
         totalPages: 1,
         totalRows: 1,
       };
-      expect(zExperimentDataTableInfo.parse(info)).toEqual(info);
+      expect(zExperimentDataTable.parse(info)).toEqual(info);
     });
 
     it("zExperimentDataTableList / Response valid", () => {
       const list = [
         {
           name: "t1",
-          displayName: "Table 1",
           catalog_name: "cat",
           schema_name: "sch",
           page: 1,
@@ -742,38 +728,6 @@ describe("Experiment Schema", () => {
 
     it("zCreateExperimentResponse valid", () => {
       expect(zCreateExperimentResponse.parse({ id: uuidA })).toEqual({ id: uuidA });
-    });
-  });
-
-  // ----- Webhooks -----
-  describe("Webhooks", () => {
-    it("zExperimentWebhookAuthHeader valid", () => {
-      const hdr = {
-        "x-api-key-id": "key123",
-        "x-databricks-signature": "sig",
-        "x-databricks-timestamp": "1234567890",
-      };
-      expect(zExperimentWebhookAuthHeader.parse(hdr)).toEqual(hdr);
-    });
-
-    it("zExperimentProvisioningStatusWebhookPayload accepts allowed statuses", () => {
-      const payload = {
-        status: "RUNNING",
-        jobRunId: "jr1",
-        taskRunId: "tr1",
-        timestamp: isoTime,
-      };
-      expect(zExperimentProvisioningStatusWebhookPayload.parse(payload)).toEqual(payload);
-    });
-
-    it("zExperimentWebhookSuccessResponse valid", () => {
-      const ok = { success: true, message: "ok" };
-      expect(zExperimentWebhookSuccessResponse.parse(ok)).toEqual(ok);
-    });
-
-    it("zExperimentWebhookErrorResponse valid", () => {
-      const err = { error: "E", message: "nope", statusCode: 400 };
-      expect(zExperimentWebhookErrorResponse.parse(err)).toEqual(err);
     });
   });
 });

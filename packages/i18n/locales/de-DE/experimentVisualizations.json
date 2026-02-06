@@ -38,7 +38,9 @@
       "title": "Datenquelle",
       "help": "Wählen Sie aus, welche Tabelle visualisiert werden soll",
       "selectTable": "Tabelle auswählen",
-      "tableInfo": "{{name}} ({{totalRows}} Zeilen)"
+      "tableInfo": "{{name}}",
+      "noTablesAvailable": "Keine Tabellen verfügbar",
+      "loadingColumns": "Spalten werden geladen..."
     }
   },
 

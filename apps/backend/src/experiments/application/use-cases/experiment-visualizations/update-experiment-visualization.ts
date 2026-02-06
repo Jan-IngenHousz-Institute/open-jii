@@ -104,36 +104,6 @@ export class UpdateExperimentVisualizationUseCase {
             );
           }
 
-          if (!experiment.schemaName) {
-            this.logger.error({
-              msg: "Experiment has no schema name",
-              errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
-              operation: "updateExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-            });
-            return failure(AppError.internal("Experiment schema not provisioned"));
-          }
-
-          // Validate data sources if provided
-          const dataSourceValidation = await this.databricksPort.validateDataSources(
-            data.dataConfig,
-            experiment.schemaName,
-          );
-
-          if (dataSourceValidation.isFailure()) {
-            this.logger.warn({
-              msg: "Data source validation failed",
-              operation: "updateExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-              error: dataSourceValidation.error.message,
-            });
-            return failure(dataSourceValidation.error);
-          }
-
           this.logger.debug({
             msg: "Updating visualization in repository",
             operation: "updateExperimentVisualization",
