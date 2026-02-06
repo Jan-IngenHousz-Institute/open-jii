@@ -1,13 +1,13 @@
 "use client";
 
 import { formatDate } from "@/util/date";
-import { ArrowRight, Calendar, User } from "lucide-react";
+import { Calendar, ChevronRight, User } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
+import { Skeleton } from "@repo/ui/components";
 
 interface ExperimentVisualizationsListProps {
   visualizations: ExperimentVisualization[];
@@ -33,12 +33,12 @@ const getChartTypeColor = (chartType: string) => {
   switch (chartType.toLowerCase()) {
     case "line":
     case "lineplot":
-      return "bg-blue-100 text-blue-800";
+      return "bg-badge-published";
     case "scatter":
     case "scatterplot":
-      return "bg-green-100 text-green-800";
+      return "bg-badge-stale";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-badge-archived";
   }
 };
 
@@ -55,7 +55,13 @@ export default function ExperimentVisualizationsList({
   const basePath = isArchived ? "experiments-archive" : "experiments";
 
   if (isLoading) {
-    return <div className="py-8 text-center">{tCommon("loading")}</div>;
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-48" />
+        ))}
+      </div>
+    );
   }
 
   if (visualizations.length === 0) {
@@ -71,25 +77,21 @@ export default function ExperimentVisualizationsList({
             key={visualization.id}
             href={`/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`}
           >
-            <Card className="flex h-full flex-col bg-white transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="mb-2 overflow-hidden truncate whitespace-nowrap font-semibold text-gray-900">
-                      {visualization.name}
-                    </h3>
-                    <span
-                      className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getChartTypeColor(
-                        visualization.chartType,
-                      )}`}
-                    >
-                      {getChartTypeDisplay(visualization.chartType, t)}
-                    </span>
-                  </div>
+            <div className="relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
+              <div className="mb-auto">
+                <div className="mb-2 flex items-start gap-2">
+                  <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
+                    {visualization.name}
+                  </h3>
                 </div>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col space-y-4">
-                <div className="space-y-2 text-sm text-gray-500">
+                <span
+                  className={`text-muted-dark mb-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${getChartTypeColor(
+                    visualization.chartType,
+                  )}`}
+                >
+                  {getChartTypeDisplay(visualization.chartType, t)}
+                </span>
+                <div className="mt-2 space-y-2 text-sm text-gray-500">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
                     <span>
@@ -104,26 +106,16 @@ export default function ExperimentVisualizationsList({
                     </span>
                   </div>
                 </div>
-
-                <div className="flex-1">
-                  {visualization.description && (
-                    <p className="line-clamp-2 text-sm text-gray-600">
-                      {visualization.description.length > 120
-                        ? `${visualization.description.substring(0, 120)}...`
-                        : visualization.description}
-                    </p>
-                  )}
-                </div>
-
-                <Button
-                  variant="ghost"
-                  className="mt-auto h-auto w-full justify-between p-0 font-normal text-gray-700 hover:text-gray-900"
-                >
-                  {tCommon("experiments.viewDetails")}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
+                {visualization.description && (
+                  <p className="mt-2 line-clamp-2 text-sm text-gray-600">
+                    {visualization.description.length > 120
+                      ? `${visualization.description.substring(0, 120)}...`
+                      : visualization.description}
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+            </div>
           </Link>
         ))}
       </div>

@@ -2,6 +2,7 @@
   "ui": {
     "title": "Visualizations",
     "actions": {
+      "title": "Actions",
       "edit": "Edit Visualization",
       "delete": "Delete",
       "deleting": "Deleting...",

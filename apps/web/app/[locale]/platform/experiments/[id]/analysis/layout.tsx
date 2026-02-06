@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
-import { Tabs, TabsList, TabsTrigger } from "@repo/ui/components";
+import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components";
 
 interface AnalysisLayoutProps {
   children: React.ReactNode;
@@ -49,20 +49,19 @@ export default function AnalysisLayout({ children }: AnalysisLayoutProps) {
         <p className="text-muted-foreground text-sm">{t("analysis.description")}</p>
       </div>
 
-      <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-96 grid-cols-2">
-          <TabsTrigger value="visualizations" asChild>
+      <NavTabs value={activeTab}>
+        <NavTabsList>
+          <NavTabsTrigger value="visualizations" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/analysis/visualizations`}>
               {t("analysis.visualizations")}
             </Link>
-          </TabsTrigger>
-          <TabsTrigger value="notebooks" disabled>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="notebooks" disabled>
             <span className="cursor-not-allowed opacity-50">{t("analysis.notebooks")}</span>
-          </TabsTrigger>
-        </TabsList>
-
+          </NavTabsTrigger>
+        </NavTabsList>
         <div className="mt-6">{children}</div>
-      </Tabs>
+      </NavTabs>
     </div>
   );
 }

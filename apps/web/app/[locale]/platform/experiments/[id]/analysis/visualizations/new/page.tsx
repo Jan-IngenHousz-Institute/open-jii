@@ -21,8 +21,8 @@ export default function NewVisualizationPage() {
   // Check if experiment is archived - redirect to 404 if so
   const { data: accessData } = useExperimentAccess(experimentId);
   const experimentData = accessData?.body.experiment;
-
-  if (experimentData?.status === "archived") {
+  const hasAccess = accessData?.body.isAdmin;
+  if (experimentData?.status === "archived" || !hasAccess) {
     notFound();
   }
 

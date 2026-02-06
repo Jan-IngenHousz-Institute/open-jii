@@ -27,15 +27,7 @@ export class UpdateExperimentUseCase {
     const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
     return accessCheckResult.chain(
-      async ({
-        experiment,
-        hasAccess,
-        isAdmin,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        isAdmin: boolean;
-      }) => {
+      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
         if (!experiment) {
           this.logger.warn({
             msg: "Attempt to update non-existent experiment",
@@ -46,19 +38,7 @@ export class UpdateExperimentUseCase {
           return failure(AppError.notFound(`Experiment with ID ${id} not found`));
         }
 
-        // Check if user is trying to change status to archived - only admins can do this
-        if (data.status === "archived" && experiment.status !== "archived" && !isAdmin) {
-          this.logger.warn({
-            msg: "Non-admin cannot archive experiment",
-            errorCode: ErrorCodes.FORBIDDEN,
-            operation: "updateExperiment",
-            experimentId: id,
-            userId,
-          });
-          return failure(AppError.forbidden("Only admins can archive experiments"));
-        }
-
-        if (!hasAccess) {
+        if (!isAdmin) {
           this.logger.warn({
             msg: "User does not have access to experiment",
             errorCode: ErrorCodes.FORBIDDEN,
@@ -71,17 +51,6 @@ export class UpdateExperimentUseCase {
 
         // Handling for archived experiments
         if (experiment.status === "archived") {
-          if (!isAdmin) {
-            this.logger.warn({
-              msg: "Non-admin attempted to update archived experiment",
-              errorCode: ErrorCodes.FORBIDDEN,
-              operation: "updateExperiment",
-              experimentId: id,
-              userId,
-            });
-            return failure(AppError.forbidden("You do not have access to this experiment"));
-          }
-
           // Admins can only update the status field when experiment is archived
           const updateFields = Object.keys(data).filter((key) => data[key] !== undefined);
           if (updateFields.length !== 1 || updateFields[0] !== "status") {

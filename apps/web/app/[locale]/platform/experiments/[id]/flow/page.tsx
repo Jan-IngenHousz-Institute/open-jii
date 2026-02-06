@@ -34,7 +34,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   const { data: existingFlow, refetch } = useExperimentFlow(id);
 
   // Determine if user has access to edit
-  const hasAccess = accessData?.body.hasAccess ?? false;
+  const hasAccess = accessData?.body.isAdmin ?? false;
 
   // Flow state / editor ref
   const flowEditorRef = useRef<FlowEditorHandle | null>(null);

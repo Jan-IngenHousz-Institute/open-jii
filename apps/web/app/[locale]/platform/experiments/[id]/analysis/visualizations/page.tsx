@@ -19,6 +19,7 @@ export default function ExperimentVisualizationsPage() {
   // Check if experiment is archived - if so, redirect to not found (should use archive route)
   const { data: accessData } = useExperimentAccess(id);
   const experimentData = accessData?.body.experiment;
+  const hasAccess = accessData?.body.isAdmin;
 
   if (experimentData?.status === "archived") {
     notFound();
@@ -37,6 +38,7 @@ export default function ExperimentVisualizationsPage() {
           onClick={() =>
             router.push(`/${locale}/platform/experiments/${id}/analysis/visualizations/new`)
           }
+          disabled={!hasAccess}
         >
           <PlusCircle className="mr-2 h-4 w-4" />
           {t("ui.actions.create")}

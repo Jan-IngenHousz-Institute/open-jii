@@ -27,7 +27,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   // Experiment with access info
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
   const experiment = accessData?.body.experiment;
-  const hasAccess = accessData?.body.hasAccess;
 
   // Locations
   const { data: locationsData } = useExperimentLocations(id);
@@ -79,11 +78,10 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         <ExperimentDescription
           experimentId={id}
           description={experiment.description ?? ""}
-          hasAccess={hasAccess}
           isArchived
         />
 
-        <ExperimentLinkedProtocols experimentId={id} hasAccess={hasAccess} isArchived />
+        <ExperimentLinkedProtocols experimentId={id} isArchived />
 
         <ExperimentMeasurements experimentId={id} isArchived />
 
@@ -91,7 +89,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           experimentId={id}
           visualizations={visualizationsData?.body ?? []}
           isLoading={visualizationsLoading}
-          hasAccess={hasAccess}
           isArchived
         />
       </div>

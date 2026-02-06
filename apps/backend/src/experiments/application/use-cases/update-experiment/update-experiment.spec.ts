@@ -142,7 +142,7 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("Only admins can archive experiments");
+    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should allow admin to archive an experiment", async () => {

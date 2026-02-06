@@ -22,9 +22,9 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(),
 }));
 
-const mockUseExperiment = vi.fn();
-vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
-  useExperiment: (): unknown => mockUseExperiment(),
+const mockUseExperimentAccess = vi.fn();
+vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
+  useExperimentAccess: (): unknown => mockUseExperimentAccess(),
 }));
 
 const mockUseLocale = vi.fn();
@@ -121,9 +121,11 @@ describe("ExperimentDataPage", () => {
   const mockExperimentData = {
     data: {
       body: {
-        id: "exp-123",
-        name: "Test Experiment",
-        status: "active",
+        experiment: {
+          id: "exp-123",
+          name: "Test Experiment",
+          status: "active",
+        },
       },
     },
     isLoading: false,
@@ -141,7 +143,7 @@ describe("ExperimentDataPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseExperiment.mockReturnValue(mockExperimentData);
+    mockUseExperimentAccess.mockReturnValue(mockExperimentData);
     mockUseExperimentTables.mockReturnValue(mockTablesData);
     mockUseLocale.mockReturnValue("en-US");
     mockUseTranslation.mockReturnValue({
@@ -161,7 +163,7 @@ describe("ExperimentDataPage", () => {
     });
   });
   it("displays loading state when experiment is loading", async () => {
-    mockUseExperiment.mockReturnValue({
+    mockUseExperimentAccess.mockReturnValue({
       ...mockExperimentData,
       isLoading: true,
       data: null,
@@ -192,7 +194,7 @@ describe("ExperimentDataPage", () => {
 
   it("displays error state for experiment error", async () => {
     const error = new Error("Test error");
-    mockUseExperiment.mockReturnValue({
+    mockUseExperimentAccess.mockReturnValue({
       ...mockExperimentData,
       isLoading: false,
       data: null,
@@ -266,12 +268,14 @@ describe("ExperimentDataPage", () => {
   });
 
   it("calls notFound when experiment is archived", async () => {
-    mockUseExperiment.mockReturnValue({
+    mockUseExperimentAccess.mockReturnValue({
       ...mockExperimentData,
       data: {
         body: {
-          ...mockExperimentData.data.body,
-          status: "archived",
+          experiment: {
+            ...mockExperimentData.data.body.experiment,
+            status: "archived",
+          },
         },
       },
     });
@@ -332,7 +336,7 @@ describe("ExperimentDataPage", () => {
   });
 
   it("displays skeleton while experiment is loading", async () => {
-    mockUseExperiment.mockReturnValue({
+    mockUseExperimentAccess.mockReturnValue({
       ...mockExperimentData,
       isLoading: true,
       data: null,
