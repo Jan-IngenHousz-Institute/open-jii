@@ -74,6 +74,22 @@ resource "grafana_dashboard" "dashboard" {
   config_json = templatefile("${path.module}/dashboard.json.tftpl", local.dashboard_vars)
 }
 
+resource "grafana_dashboard" "dora_dashboard" {
+  provider  = grafana.amg
+  folder    = grafana_folder.folder.id
+  overwrite = true
+
+  config_json = templatefile("${path.module}/dora.json.tftpl",
+    {
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+      project        = var.project
+      environment    = var.environment
+      aws_region     = var.aws_region
+      account_id     = data.aws_caller_identity.current.account_id
+    }
+  )
+}
+
 ### Alerting rules 
 
 resource "grafana_contact_point" "slack" {

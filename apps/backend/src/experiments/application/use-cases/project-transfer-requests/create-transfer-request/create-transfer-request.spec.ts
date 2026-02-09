@@ -259,4 +259,55 @@ describe("CreateTransferRequest", () => {
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
   });
+
+  it("should create transfer request and skip email when user has non-email identifier", async () => {
+    const orcidId = "0000-0002-1825-0097"; // Example ORCID ID (not an email)
+
+    // Mock Databricks calls
+    vi.spyOn(databricksAdapter, "executeSqlQuery")
+      .mockResolvedValueOnce(
+        // findExistingRequest - no existing request
+        success({
+          columns: [],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      )
+      .mockResolvedValueOnce(
+        // createTransferRequest - successful insert
+        success({
+          columns: [],
+          rows: [],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+    // Mock email adapter - should noy be called for invalid email
+    const emailSpy = vi.spyOn(emailAdapter, "sendTransferRequestConfirmation");
+
+    const input = {
+      projectIdOld: "12345",
+      projectUrlOld: "https://photosynq.org/projects/12345",
+    };
+
+    // Act
+    const result = await useCase.execute(testUserId, orcidId, input);
+
+    // Assert - request should still be created successfully
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      userId: testUserId,
+      userEmail: orcidId,
+      sourcePlatform: "photosynq",
+      projectIdOld: input.projectIdOld,
+      projectUrlOld: input.projectUrlOld,
+      status: "pending",
+    });
+
+    // Email should not have been sent
+    expect(emailSpy).not.toHaveBeenCalled();
+  });
 });
