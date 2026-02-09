@@ -26,11 +26,9 @@ export class AwsConfigService {
       region: this.configService.getOrThrow<string>("aws.region"),
       placeIndexName: this.configService.getOrThrow<string>("aws.location.placeIndexName"),
       cognitoIdentityPoolId:
-        this.configService.get<string>("aws.cognito.identityPoolId") ??
-        "local-development-pool-id",
+        this.configService.get<string>("aws.cognito.identityPoolId") ?? "local-development-pool-id",
       cognitoDeveloperProviderName:
-        this.configService.get<string>("aws.cognito.developerProviderName") ??
-        "local.development",
+        this.configService.get<string>("aws.cognito.developerProviderName") ?? "local.development",
     };
   }
 
