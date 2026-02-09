@@ -62,11 +62,12 @@ WORKDIR /app/packages/${PROJECT}
 
 # Copy necessary files for migrations
 COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/drizzle ./drizzle
+COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/scripts ./scripts
 COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/packages/${PROJECT}/package.json ./package.json
 # Copy only the production dependencies from the dedicated directory
 COPY --from=dependencies --chown=nodejs:nodejs /dependencies/node_modules ./node_modules
 
-# Command to run migrations
+# Command to run migrations and set up writer user password
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/migrate.js"]
+CMD ["sh", "-c", "node dist/migrate.js && node dist/scripts/set-app-user-passwords.js"]
