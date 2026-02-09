@@ -127,6 +127,7 @@ describe("NewVisualizationPage", () => {
           experiment: {
             status: "active",
           },
+          isAdmin: true,
         },
       },
     });

@@ -853,7 +853,7 @@ describe("ExperimentDataController", () => {
         .attach("files", fileBuffer, "Ambyte_1/data.txt")
         .expect(StatusCodes.FORBIDDEN)
         .expect(({ body }: { body: { message: string } }) => {
-          expect(body.message).toBe("Cannot upload data to archived experiments");
+          expect(body.message).toBe("Access denied to this experiment");
         });
     });
 

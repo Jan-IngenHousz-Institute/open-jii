@@ -992,9 +992,9 @@ describe("UploadAmbyteDataUseCase", () => {
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: { ...experiment, schemaName: null },
-          hasAccess: true,
+          hasAccess: false,
           isAdmin: false,
-          hasArchiveAccess: false,
+          hasArchiveAccess: true,
         }),
       );
 
