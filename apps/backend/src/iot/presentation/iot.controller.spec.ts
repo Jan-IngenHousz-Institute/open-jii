@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { CognitoService } from "../../common/modules/aws/services/cognito/cognito.service";
 import { ErrorCodes } from "../../common/utils/error-codes";
-import { success, failure } from "../../common/utils/fp-utils";
+import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 
 describe("IoTController", () => {
@@ -62,7 +62,7 @@ describe("IoTController", () => {
     it("should return 500 when Cognito service fails", async () => {
       const cognitoService = testApp.module.get(CognitoService);
       vi.spyOn(cognitoService, "getIoTCredentials").mockResolvedValue(
-        failure(ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED, "Cognito error"),
+        failure(new AppError("Cognito error", ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED)),
       );
 
       await testApp
@@ -72,7 +72,7 @@ describe("IoTController", () => {
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
 
-    it("should log user ID when getting credentials", async () => {
+    it("should call Cognito service with authenticated user ID", async () => {
       const mockCredentials = {
         accessKeyId: "test-key",
         secretAccessKey: "test-secret",

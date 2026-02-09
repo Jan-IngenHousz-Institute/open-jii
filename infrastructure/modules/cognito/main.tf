@@ -1,5 +1,5 @@
 locals {
-  developer_provider_name_full = "${var.environment}.login.openjii.com"
+  developer_provider_name_full = "${var.environment}.${var.developer_provider_name}"
 }
 
 data "aws_caller_identity" "current" {}

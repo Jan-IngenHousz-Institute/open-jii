@@ -118,7 +118,7 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
           "cognito-identity:GetOpenIdTokenForDeveloperIdentity",
           "cognito-identity:GetCredentialsForIdentity"
         ]
-        Resource = "*"
+        Resource = "arn:aws:cognito-identity:${var.region}:${data.aws_caller_identity.current.account_id}:identitypool/${var.cognito_identity_pool_id}"
       }
     ]
   })

@@ -65,7 +65,10 @@ export class CognitoService {
             userId,
             errorCode: ErrorCodes.AWS_COGNITO_TOKEN_FAILED,
           });
-          throw new Error("Failed to obtain OpenID token from Cognito");
+          throw new AppError(
+            "Failed to obtain OpenID token from Cognito",
+            ErrorCodes.AWS_COGNITO_TOKEN_FAILED,
+          );
         }
 
         this.logger.debug({
@@ -96,7 +99,10 @@ export class CognitoService {
             userId,
             errorCode: ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED,
           });
-          throw new Error("Failed to obtain AWS credentials from Cognito");
+          throw new AppError(
+            "Failed to obtain AWS credentials from Cognito",
+            ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED,
+          );
         }
 
         const credentials: IoTCredentials = {
@@ -117,6 +123,11 @@ export class CognitoService {
         return credentials;
       },
       (error) => {
+        // If already an AppError with specific code, preserve it
+        if (error instanceof AppError) {
+          return error;
+        }
+        // Otherwise, wrap unknown errors with generic credentials failure code
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         return new AppError(errorMessage, ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED);
       },
