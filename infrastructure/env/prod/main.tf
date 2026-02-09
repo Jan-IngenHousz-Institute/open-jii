@@ -1137,6 +1137,8 @@ module "backend_ecs" {
   log_group_name     = "/aws/ecs/backend-service-${var.environment}"
   log_retention_days = 30
 
+  cognito_identity_pool_arn = module.cognito.identity_pool_arn
+
   # Secrets configuration
   secrets = [
     {
