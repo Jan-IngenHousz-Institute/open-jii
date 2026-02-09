@@ -54,7 +54,7 @@ describe("ExperimentVisualizationsList", () => {
 
   describe("Loading State", () => {
     it("should render loading state when isLoading is true", () => {
-      render(
+      const { container } = render(
         <ExperimentVisualizationsList
           visualizations={[]}
           experimentId={mockExperimentId}
@@ -62,7 +62,9 @@ describe("ExperimentVisualizationsList", () => {
         />,
       );
 
-      expect(screen.getByText("loading")).toBeInTheDocument();
+      // Check for skeleton
+      const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
+      expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 
@@ -202,7 +204,7 @@ describe("ExperimentVisualizationsList", () => {
   });
 
   describe("Chart Type Styling", () => {
-    it("should apply blue styling for line charts", () => {
+    it("should apply published badge styling for line charts", () => {
       const visualization = createMockVisualization({ chartType: "line" });
 
       render(
@@ -213,10 +215,10 @@ describe("ExperimentVisualizationsList", () => {
       );
 
       const badge = screen.getByText("charts.types.line");
-      expect(badge).toHaveClass("bg-blue-100", "text-blue-800");
+      expect(badge).toHaveClass("bg-badge-published");
     });
 
-    it("should apply green styling for scatter charts", () => {
+    it("should apply stale badge styling for scatter charts", () => {
       const visualization = createMockVisualization({ chartType: "scatter" });
 
       render(
@@ -227,10 +229,10 @@ describe("ExperimentVisualizationsList", () => {
       );
 
       const badge = screen.getByText("charts.types.scatter");
-      expect(badge).toHaveClass("bg-green-100", "text-green-800");
+      expect(badge).toHaveClass("bg-badge-stale");
     });
 
-    it("should apply gray styling for unknown chart types", () => {
+    it("should apply archived badge styling for unknown chart types", () => {
       const visualization = createMockVisualization({ chartType: "unknown" as "line" });
 
       render(
@@ -241,7 +243,7 @@ describe("ExperimentVisualizationsList", () => {
       );
 
       const badge = screen.getByText("unknown");
-      expect(badge).toHaveClass("bg-gray-100", "text-gray-800");
+      expect(badge).toHaveClass("bg-badge-archived");
     });
   });
 
@@ -343,8 +345,8 @@ describe("ExperimentVisualizationsList", () => {
         />,
       );
 
-      // Check that there's no description text rendered
-      const descriptionElement = container.querySelector(".line-clamp-2");
+      // Check that there's no description paragraph rendered
+      const descriptionElement = container.querySelector("p.text-gray-600");
       expect(descriptionElement).not.toBeInTheDocument();
     });
 
@@ -360,28 +362,28 @@ describe("ExperimentVisualizationsList", () => {
         />,
       );
 
-      // Check that there's no description text rendered
-      const descriptionElement = container.querySelector(".line-clamp-2");
+      // Check that there's no description paragraph rendered
+      const descriptionElement = container.querySelector("p.text-gray-600");
       expect(descriptionElement).not.toBeInTheDocument();
     });
   });
 
-  describe("View Details Button", () => {
-    it("should render view details button for each visualization", () => {
+  describe("Navigation", () => {
+    it("should render chevron icon for navigation hint", () => {
       const visualizations = [
         createMockVisualization({ id: "viz-1" }),
         createMockVisualization({ id: "viz-2" }),
       ];
 
-      render(
+      const { container } = render(
         <ExperimentVisualizationsList
           visualizations={visualizations}
           experimentId={mockExperimentId}
         />,
       );
 
-      const buttons = screen.getAllByText("experiments.viewDetails");
-      expect(buttons).toHaveLength(2);
+      const chevrons = container.querySelectorAll(".lucide-chevron-right");
+      expect(chevrons.length).toBe(2);
     });
   });
 

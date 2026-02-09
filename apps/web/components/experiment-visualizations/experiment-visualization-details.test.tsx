@@ -107,7 +107,7 @@ describe("ExperimentVisualizationDetails", () => {
             status: "active",
           },
           hasAccess: true,
-          isAdmin: false,
+          isAdmin: true,
         },
       },
       isLoading: false,
@@ -307,7 +307,7 @@ describe("ExperimentVisualizationDetails", () => {
     );
 
     // Open the dropdown menu
-    const actionsButton = screen.getByText("Actions");
+    const actionsButton = screen.getByText("ui.actions.title");
     await user.click(actionsButton);
 
     // Click the edit button
@@ -346,7 +346,7 @@ describe("ExperimentVisualizationDetails", () => {
     );
 
     // Open the dropdown menu
-    const actionsButton = screen.getByText("Actions");
+    const actionsButton = screen.getByText("ui.actions.title");
     await user.click(actionsButton);
 
     // Click the delete button
@@ -387,7 +387,7 @@ describe("ExperimentVisualizationDetails", () => {
     );
 
     // Open the dropdown menu
-    const actionsButton = screen.getByText("Actions");
+    const actionsButton = screen.getByText("ui.actions.title");
     await user.click(actionsButton);
 
     expect(screen.getByText("ui.actions.deleting")).toBeInTheDocument();
@@ -661,7 +661,7 @@ describe("ExperimentVisualizationDetails", () => {
         />,
       );
 
-      const actionsButton = screen.getByText("Actions");
+      const actionsButton = screen.getByText("ui.actions.title");
       expect(actionsButton).toBeDisabled();
     });
 
@@ -689,7 +689,7 @@ describe("ExperimentVisualizationDetails", () => {
         />,
       );
 
-      const actionsButton = screen.getByText("Actions");
+      const actionsButton = screen.getByText("ui.actions.title");
 
       // Button should be disabled for archived experiments
       expect(actionsButton).toBeDisabled();

@@ -123,6 +123,7 @@ describe("ExperimentFlowPage", () => {
     data: {
       body: {
         hasAccess: true,
+        isAdmin: true,
         experiment: {
           id: "exp-123",
           name: "Test Experiment",
