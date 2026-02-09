@@ -68,10 +68,6 @@ export class UploadAmbyteDataUseCase {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    if (experiment.status === "archived") {
-      return failure(AppError.forbidden("Cannot upload data to archived experiments"));
-    }
-
     // Generate unique directory name
     // Format: upload_YYYYMMDD_HHMMSS
     const now = new Date();
