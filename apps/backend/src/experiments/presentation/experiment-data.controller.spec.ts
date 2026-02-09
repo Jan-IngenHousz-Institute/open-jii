@@ -186,6 +186,38 @@ describe("ExperimentDataController", () => {
 
       expect(result.status).toBe(403);
     });
+
+    it("should return 403 if user doesn't have access to the experiment", async () => {
+      const experimentId = faker.string.uuid();
+      const error = AppError.forbidden("Access denied to this experiment");
+
+      vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(failure(error));
+
+      const handler = controller.getExperimentData(mockSession);
+      const result = await handler({
+        params: { id: experimentId },
+        query: { tableName: "test_table", page: 1, pageSize: 5 },
+        headers: {},
+      });
+
+      expect(result.status).toBe(403);
+    });
+
+    it("should return 400 for invalid experiment UUID", async () => {
+      const invalidId = "not-a-uuid";
+      const error = AppError.badRequest("Invalid experiment ID");
+
+      vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(failure(error));
+
+      const handler = controller.getExperimentData(mockSession);
+      const result = await handler({
+        params: { id: invalidId },
+        query: { tableName: "test_table" },
+        headers: {},
+      });
+
+      expect(result.status).toBe(400);
+    });
   });
 
   describe("downloadExperimentData", () => {
@@ -325,6 +357,122 @@ describe("ExperimentDataController", () => {
         params: { id: experimentId },
         body: {} as never,
         headers: {},
+      });
+
+      expect(result.status).toBe(400);
+    });
+
+    it("should return 404 when experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+      const error = AppError.notFound("Experiment not found");
+
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(failure(error));
+
+      const requestMock = {
+        headers: { "content-type": "multipart/form-data; boundary=boundary" },
+        pipe: vi.fn(),
+      } as unknown as Request;
+
+      const handler = controller.uploadExperimentData(mockSession, requestMock);
+      const result = await handler({
+        params: { id: nonExistentId },
+        body: {} as never,
+        headers: {},
+      });
+
+      expect(result.status).toBe(404);
+    });
+
+    it("should return 403 when user does not have access to the experiment", async () => {
+      const error = AppError.forbidden("User does not have access to experiment");
+
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(failure(error));
+
+      const requestMock = {
+        headers: { "content-type": "multipart/form-data; boundary=boundary" },
+        pipe: vi.fn(),
+      } as unknown as Request;
+
+      const handler = controller.uploadExperimentData(mockSession, requestMock);
+      const result = await handler({
+        params: { id: experimentId },
+        body: {} as never,
+        headers: {},
+      });
+
+      expect(result.status).toBe(403);
+    });
+
+    it("should return 403 when uploading to an archived experiment", async () => {
+      const error = AppError.forbidden("Cannot upload data to archived experiments");
+
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(failure(error));
+
+      const requestMock = {
+        headers: { "content-type": "multipart/form-data; boundary=boundary" },
+        pipe: vi.fn(),
+      } as unknown as Request;
+
+      const handler = controller.uploadExperimentData(mockSession, requestMock);
+      const result = await handler({
+        params: { id: experimentId },
+        body: {} as never,
+        headers: {},
+      });
+
+      expect(result.status).toBe(403);
+      expect((result.body as { message: string }).message).toBe(
+        "Cannot upload data to archived experiments",
+      );
+    });
+
+    it("should return 400 when no files are uploaded", async () => {
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        success({
+          experiment: mockExperiment,
+          directoryName: "dir",
+        }),
+      );
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockResolvedValue(undefined);
+      vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
+        failure(AppError.badRequest("No files were uploaded")),
+      );
+
+      const result = await runTest((handlers) => {
+        // No file uploaded, just close
+        if (handlers.field) handlers.field("sourceType", "ambyte");
+        if (handlers.close) handlers.close();
+      });
+
+      expect(result.status).toBe(400);
+    });
+
+    it("should reject invalid file formats", async () => {
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        success({
+          experiment: mockExperiment,
+          directoryName: "dir",
+        }),
+      );
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockResolvedValue(undefined);
+      vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
+        failure(AppError.badRequest("Invalid file format: only .txt files are allowed")),
+      );
+
+      const result = await runTest((handlers) => {
+        if (handlers.field) handlers.field("sourceType", "ambyte");
+        if (handlers.file) {
+          handlers.file(
+            "files",
+            { resume: vi.fn() },
+            {
+              filename: "invalid.pdf",
+              encoding: "7bit",
+              mimeType: "application/pdf",
+            },
+          );
+        }
+        if (handlers.close) handlers.close();
       });
 
       expect(result.status).toBe(400);
