@@ -69,7 +69,11 @@ async function canAuthenticate(
         return true;
     } catch (error) {
         return false;
-    }Updating writer user password...");
+    }
+}
+
+async function setApplicationUserPasswords() {
+    console.log("🔐 Updating writer user password...");
 
     const { DB_HOST: host, DB_PORT: port, DB_NAME: name, AWS_REGION: region } = process.env;
 
@@ -194,11 +198,7 @@ async function canAuthenticate(
         console.log("\n✅ Writer user password has been set successfully!");
         console.log("🔒 Password is securely stored in AWS Secrets Manager only");
     } catch (error) {
-        console.error("❌ Error updating password
-        console.log("✅ Writer user has been set up successfully!");
-        console.log("🔒 Password is securely stored in AWS Secrets Manager only");
-    } catch (error) {
-        console.error("❌ Error setting up users:", error);
+        console.error("❌ Error updating password:", error);
         throw error;
     } finally {
         await sql.end();
