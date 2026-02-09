@@ -67,7 +67,7 @@ describe("ExperimentFlowsController", () => {
       expect(getResBody.graph).toEqual(body);
     });
 
-    it("allows non-admin members to create", async () => {
+    it("returns 403 when non-admin members try to create", async () => {
       const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
       const path = testApp.resolvePath(contract.experiments.createFlow.path, { id: experiment.id });
@@ -75,7 +75,7 @@ describe("ExperimentFlowsController", () => {
         .post(path)
         .withAuth(memberId)
         .send(testApp.sampleFlowGraph({ includeInstruction: true }))
-        .expect(StatusCodes.CREATED);
+        .expect(StatusCodes.FORBIDDEN);
     });
 
     it("requires auth", async () => {

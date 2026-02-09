@@ -25,7 +25,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const { data: accessData, error, isLoading } = useExperimentAccess(id);
   const apiBody = accessData?.body;
   const experiment = apiBody?.experiment;
-  const hasAccess = apiBody?.hasAccess;
 
   // Loading
   if (isLoading) {
@@ -102,7 +101,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
         name={experiment.name}
         status={experiment.status}
         visibility={experiment.visibility}
-        hasAccess={hasAccess}
         isArchived
       />
 

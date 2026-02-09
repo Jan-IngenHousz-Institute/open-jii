@@ -34,15 +34,15 @@ vi.mock("@repo/i18n", () => ({
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
-  Tabs: ({ children, value }: { children: React.ReactNode; value: string }) => (
+  NavTabs: ({ children, value }: { children: React.ReactNode; value: string }) => (
     <div data-testid="tabs" data-value={value}>
       {children}
     </div>
   ),
-  TabsList: ({ children }: { children: React.ReactNode }) => (
+  NavTabsList: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="tabs-list">{children}</div>
   ),
-  TabsTrigger: ({
+  NavTabsTrigger: ({
     children,
     value,
     asChild,

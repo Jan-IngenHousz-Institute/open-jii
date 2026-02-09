@@ -27,7 +27,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   // Experiment with access info
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
   const experiment = accessData?.body.experiment;
-  const hasAccess = accessData?.body.hasAccess;
+  const hasAccess = accessData?.body.isAdmin;
 
   // Locations
   const { data: locationsData } = useExperimentLocations(id);
