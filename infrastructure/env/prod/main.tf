@@ -729,6 +729,16 @@ module "secrets_rotation_trigger" {
   environment      = var.environment
 }
 
+module "cloud_trail" {
+  source = "../../modules/cloudtrail"
+
+  project_name = "open-jii"
+  environment  = var.environment
+  region       = var.aws_region
+
+}
+
+
 # Authentication secrets
 module "auth_secrets" {
   source = "../../modules/secrets-manager"
