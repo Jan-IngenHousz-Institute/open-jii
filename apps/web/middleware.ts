@@ -27,6 +27,11 @@ function handleI18nRouting(request: NextRequest) {
 
 // New middleware function that only handles i18n routing
 export function middleware(request: NextRequest) {
+  // Skip PostHog ingest routes to preserve binary gzip data
+  if (request.nextUrl.pathname.includes("/ingest")) {
+    return NextResponse.next();
+  }
+
   // Handle i18n routing
   const i18nResponse = handleI18nRouting(request);
   if (i18nResponse) {
@@ -43,7 +48,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match i18n routes, but exclude ingest (PostHog proxy) to preserve binary gzip data
-    "/((?!api|static|.*\\..*|_next|ingest|.*/ingest).*)",
+    // Match i18n routes
+    "/((?!api|static|.*\\..*|_next).*)",
   ],
 };
