@@ -43,7 +43,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match i18n routes
-    "/((?!api|static|.*\\..*|_next).*)",
+    // Match i18n routes, but exclude ingest (PostHog proxy) to preserve binary gzip data
+    "/((?!api|static|.*\\..*|_next|ingest|.*/ingest).*)",
   ],
 };
