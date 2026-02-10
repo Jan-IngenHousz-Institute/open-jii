@@ -374,7 +374,7 @@ module "centrum_pipeline" {
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_RUN"
+      permission_level         = "CAN_MANAGE_RUN"
     }
   ]
 
