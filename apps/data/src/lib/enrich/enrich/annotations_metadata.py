@@ -64,17 +64,16 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         the function will preserve existing annotations or add an empty array column.
     """
     try:
-        annotation_table_name = f"{catalog_name}.`{experiment_schema}`.annotations"
+        annotation_table_name = f"{catalog_name}.centrum.experiment_annotations"
         print(f"Reading annotations from: {annotation_table_name}")
-        print(f"Filtering by table_name: {table_name}")
         
         # Read annotations table with all fields
         # Build content struct from individual columns
         # Note: content_text is reused for both comment text and flag reason
         annotations_df = (
             spark.read.table(annotation_table_name)
-            .filter(F.col("table_name") == table_name)
             .select(
+                F.col("experiment_id"),
                 F.col("row_id"),
                 F.struct(
                     F.col("id"),
@@ -93,14 +92,14 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         )
         
         annotation_count = annotations_df.count()
-        print(f"Found {annotation_count} annotations for table '{table_name}'")
+        print(f"Found {annotation_count} annotations total")
         
         
-        # Group by row_id and collect all annotations into an array
+        # Group by experiment_id and row_id and collect all annotations into an array
         # Use a different alias to avoid ambiguous reference during join
         annotations_grouped = (
             annotations_df
-            .groupBy("row_id")
+            .groupBy("experiment_id", "row_id")
             .agg(F.collect_list("annotation").alias("db_annotations"))
         )
         
@@ -116,13 +115,16 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
             df = df.withColumnRenamed("annotations", "upstream_annotations")
         
         # Left join with annotations from database
+        # IMPORTANT: Cast id to string for join since row_id is STRING but id is BIGINT
         enriched_df = (
             df.join(
                 annotations_grouped,
-                df.id == annotations_grouped.row_id,
+                (df.id.cast("string") == annotations_grouped.row_id) & 
+                (df.experiment_id == annotations_grouped.experiment_id),
                 "left"
             )
-            .drop("row_id")
+            .drop(annotations_grouped.row_id)
+            .drop(annotations_grouped.experiment_id)
         )
         
         if has_existing_annotations:

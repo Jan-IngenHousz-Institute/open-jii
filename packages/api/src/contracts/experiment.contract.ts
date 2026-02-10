@@ -17,10 +17,6 @@ import {
   zExperimentDataQuery,
   zExperimentDataResponse,
   zExperimentTablesMetadataList,
-  zExperimentProvisioningStatusWebhookPayload,
-  zExperimentWebhookAuthHeader,
-  zExperimentWebhookSuccessResponse,
-  zExperimentWebhookErrorResponse,
   zExperimentAccess,
   zUploadExperimentDataBody,
   zUploadExperimentDataResponse,
@@ -223,23 +219,7 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment tables metadata",
     description:
-      "Retrieves metadata for all tables in the experiment (names, display names, row counts) without data",
-  },
-
-  updateProvisioningStatus: {
-    method: "POST",
-    path: "/api/v1/experiments/:id/provisioning-status",
-    pathParams: zIdPathParam,
-    body: zExperimentProvisioningStatusWebhookPayload,
-    headers: zExperimentWebhookAuthHeader,
-    responses: {
-      200: zExperimentWebhookSuccessResponse,
-      400: zExperimentWebhookErrorResponse,
-      401: zExperimentWebhookErrorResponse,
-    },
-    summary: "Handle experiment provisioning status updates",
-    description:
-      "Receives status updates from Databricks workflows and updates the corresponding experiment status",
+      "Retrieves metadata for all tables in the experiment (names, display names, row counts)",
   },
 
   listExperimentProtocols: {

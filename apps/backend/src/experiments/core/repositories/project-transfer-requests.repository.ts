@@ -10,8 +10,6 @@ import {
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
-const SCHEMA_NAME = "centrum";
-
 @Injectable()
 export class ProjectTransferRequestsRepository {
   private readonly logger = new Logger(ProjectTransferRequestsRepository.name);
@@ -150,7 +148,10 @@ export class ProjectTransferRequestsRepository {
       )
     `;
 
-    const insertResult = await this.databricksPort.executeSqlQuery(SCHEMA_NAME, insertQuery);
+    const insertResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      insertQuery,
+    );
     if (insertResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to insert transfer request: ${insertResult.error.message}`),
@@ -197,7 +198,10 @@ export class ProjectTransferRequestsRepository {
       ORDER BY requested_at DESC
     `;
 
-    const selectResult = await this.databricksPort.executeSqlQuery(SCHEMA_NAME, selectQuery);
+    const selectResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      selectQuery,
+    );
     if (selectResult.isFailure()) {
       return failure(
         AppError.internal(`Failed to list transfer requests: ${selectResult.error.message}`),
@@ -253,7 +257,10 @@ export class ProjectTransferRequestsRepository {
       LIMIT 1
     `;
 
-    const selectResult = await this.databricksPort.executeSqlQuery(SCHEMA_NAME, selectQuery);
+    const selectResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      selectQuery,
+    );
     if (selectResult.isFailure()) {
       return failure(
         AppError.internal(

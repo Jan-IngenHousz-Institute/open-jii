@@ -1,6 +1,451 @@
 {
   "openapi": "3.0.2",
   "paths": {
+    "/api/v1/auth/email-otp/send-email-otp": {
+      "post": {
+        "description": "Sends a one-time password to the provided email address",
+        "summary": "Send sign-in OTP to email",
+        "tags": ["auth"],
+        "parameters": [],
+        "operationId": "auth.signInEmail",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "type": {
+                    "default": "sign-in",
+                    "type": "string",
+                    "enum": ["sign-in", "email-verification"]
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sign-in/email-otp": {
+      "post": {
+        "description": "Verifies the OTP and creates a session",
+        "summary": "Verify email OTP",
+        "tags": ["auth"],
+        "parameters": [],
+        "operationId": "auth.verifyEmail",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "otp": {
+                    "type": "string"
+                  }
+                },
+                "required": ["email", "otp"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "image": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "registered": {
+                          "type": "boolean"
+                        },
+                        "emailVerified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["id", "email", "name", "image", "registered", "emailVerified"]
+                    },
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "token": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["token", "expiresAt"]
+                    }
+                  },
+                  "required": ["user", "session"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "description": "Returns the current user session if authenticated",
+        "summary": "Get current session",
+        "tags": ["auth"],
+        "parameters": [],
+        "operationId": "auth.getSession",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "image": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "registered": {
+                          "type": "boolean"
+                        },
+                        "emailVerified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["id", "email", "name", "image", "registered", "emailVerified"]
+                    },
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "token": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["token", "expiresAt"]
+                    }
+                  },
+                  "required": ["user", "session"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signout": {
+      "post": {
+        "description": "Ends the current user session",
+        "summary": "Sign out",
+        "tags": ["auth"],
+        "parameters": [],
+        "operationId": "auth.signOut",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/user": {
+      "patch": {
+        "description": "Updates the current authenticated user's information",
+        "summary": "Update current user",
+        "tags": ["auth"],
+        "parameters": [],
+        "operationId": "auth.updateUser",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "registered": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "image": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "registered": {
+                          "type": "boolean"
+                        },
+                        "emailVerified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["id", "email", "name", "image", "registered", "emailVerified"]
+                    }
+                  },
+                  "required": ["user"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/callback/{provider}": {
+      "get": {
+        "description": "Handles OAuth provider callbacks (redirects)",
+        "summary": "OAuth callback",
+        "tags": ["auth"],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["github", "orcid"]
+            }
+          }
+        ],
+        "operationId": "auth.oauthCallback",
+        "responses": {
+          "302": {
+            "description": "302",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/experiments": {
       "post": {
         "description": "Creates a new experiment with the provided configuration",
@@ -27,14 +472,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "provisioning",
-                      "provisioning_failed",
-                      "active",
-                      "stale",
-                      "archived",
-                      "published"
-                    ],
+                    "enum": ["active", "stale", "archived", "published"],
                     "description": "Initial status of the experiment"
                   },
                   "visibility": {
@@ -204,14 +642,7 @@
               "application/json": {
                 "schema": {
                   "type": "string",
-                  "enum": [
-                    "provisioning",
-                    "provisioning_failed",
-                    "active",
-                    "stale",
-                    "archived",
-                    "published"
-                  ]
+                  "enum": ["active", "stale", "archived", "published"]
                 }
               }
             }
@@ -253,14 +684,7 @@
                       },
                       "status": {
                         "type": "string",
-                        "enum": [
-                          "provisioning",
-                          "provisioning_failed",
-                          "active",
-                          "stale",
-                          "archived",
-                          "published"
-                        ]
+                        "enum": ["active", "stale", "archived", "published"]
                       },
                       "visibility": {
                         "type": "string",
@@ -462,14 +886,7 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "provisioning",
-                        "provisioning_failed",
-                        "active",
-                        "stale",
-                        "archived",
-                        "published"
-                      ]
+                      "enum": ["active", "stale", "archived", "published"]
                     },
                     "visibility": {
                       "type": "string",
@@ -666,14 +1083,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "provisioning",
-                      "provisioning_failed",
-                      "active",
-                      "stale",
-                      "archived",
-                      "published"
-                    ],
+                    "enum": ["active", "stale", "archived", "published"],
                     "description": "Updated experiment status"
                   },
                   "visibility": {
@@ -752,14 +1162,7 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "provisioning",
-                        "provisioning_failed",
-                        "active",
-                        "stale",
-                        "archived",
-                        "published"
-                      ]
+                      "enum": ["active", "stale", "archived", "published"]
                     },
                     "visibility": {
                       "type": "string",
@@ -1002,14 +1405,7 @@
                         },
                         "status": {
                           "type": "string",
-                          "enum": [
-                            "provisioning",
-                            "provisioning_failed",
-                            "active",
-                            "stale",
-                            "archived",
-                            "published"
-                          ]
+                          "enum": ["active", "stale", "archived", "published"]
                         },
                         "visibility": {
                           "type": "string",
@@ -1678,14 +2074,22 @@
           {
             "name": "tableName",
             "in": "query",
-            "description": "Optional table name to filter results to a specific table",
+            "description": "Table name: 'raw_data', 'device', 'raw_ambyte_data', or macro filename",
             "required": true,
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 256
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": ["raw_data", "device", "raw_ambyte_data", "macro_data"]
+                    },
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  ]
                 }
               }
             }
@@ -1742,10 +2146,6 @@
                       "name": {
                         "type": "string",
                         "description": "Technical name of the table used for queries and operations"
-                      },
-                      "displayName": {
-                        "type": "string",
-                        "description": "Human-readable display name of the table for UI"
                       },
                       "catalog_name": {
                         "type": "string",
@@ -1809,7 +2209,6 @@
                     },
                     "required": [
                       "name",
-                      "displayName",
                       "catalog_name",
                       "schema_name",
                       "page",
@@ -1875,7 +2274,7 @@
     },
     "/api/v1/experiments/{id}/tables": {
       "get": {
-        "description": "Retrieves metadata for all tables in the experiment (names, display names, row counts) without data",
+        "description": "Retrieves metadata for all tables in the experiment (names, display names, row counts)",
         "summary": "Get experiment tables metadata",
         "tags": ["experiments"],
         "parameters": [
@@ -1913,55 +2312,13 @@
                         "type": "integer",
                         "description": "Total number of rows in the table"
                       },
-                      "columns": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string",
-                              "description": "Column name"
-                            },
-                            "type_text": {
-                              "type": "string",
-                              "description": "Full type string representation"
-                            },
-                            "type_name": {
-                              "type": "string",
-                              "description": "Base type name (e.g., STRING, INT, ARRAY)"
-                            },
-                            "position": {
-                              "type": "integer",
-                              "description": "Column position in the table"
-                            },
-                            "nullable": {
-                              "type": "boolean",
-                              "description": "Whether the column can contain null values"
-                            },
-                            "comment": {
-                              "type": "string",
-                              "description": "Column description or comment"
-                            },
-                            "type_json": {
-                              "type": "string",
-                              "description": "JSON representation of complex types"
-                            },
-                            "type_precision": {
-                              "type": "integer",
-                              "description": "Precision for numeric types"
-                            },
-                            "type_scale": {
-                              "type": "integer",
-                              "description": "Scale for numeric types"
-                            },
-                            "partition_index": {
-                              "type": "integer",
-                              "description": "Partition index if partitioned"
-                            }
-                          },
-                          "required": ["name", "type_text", "type_name", "position"]
-                        },
-                        "description": "Column information for the table"
+                      "defaultSortColumn": {
+                        "type": "string",
+                        "description": "Default column to sort by in the UI"
+                      },
+                      "errorColumn": {
+                        "type": "string",
+                        "description": "Column name that contains error information if any"
                       }
                     },
                     "required": ["name", "displayName", "totalRows"]
@@ -2014,160 +2371,6 @@
                     }
                   },
                   "required": ["message"]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/experiments/{id}/provisioning-status": {
-      "post": {
-        "description": "Receives status updates from Databricks workflows and updates the corresponding experiment status",
-        "summary": "Handle experiment provisioning status updates",
-        "tags": ["experiments"],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "ID of the experiment"
-          },
-          {
-            "name": "x-api-key-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-databricks-signature",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-databricks-timestamp",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "operationId": "experiments.updateProvisioningStatus",
-        "requestBody": {
-          "description": "Body",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "SUCCESS",
-                      "FAILURE",
-                      "CANCELED",
-                      "TIMEOUT",
-                      "FAILED",
-                      "RUNNING",
-                      "PENDING",
-                      "SKIPPED",
-                      "DEPLOYING",
-                      "DEPLOYED",
-                      "COMPLETED",
-                      "QUEUED",
-                      "TERMINATED",
-                      "WAITING",
-                      "INITIALIZING",
-                      "IDLE",
-                      "SETTING_UP",
-                      "RESETTING"
-                    ]
-                  },
-                  "jobRunId": {
-                    "type": "string"
-                  },
-                  "taskRunId": {
-                    "type": "string"
-                  },
-                  "timestamp": {
-                    "type": "string"
-                  }
-                },
-                "required": ["status", "jobRunId", "taskRunId", "timestamp"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "200",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["success", "message"]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "400",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "statusCode": {
-                      "type": "number"
-                    }
-                  },
-                  "required": ["error", "message", "statusCode"]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "401",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "statusCode": {
-                      "type": "number"
-                    }
-                  },
-                  "required": ["error", "message", "statusCode"]
                 }
               }
             }
@@ -7009,6 +7212,233 @@
         }
       }
     },
+    "/api/v1/transfer-requests": {
+      "post": {
+        "summary": "Create a project transfer request",
+        "tags": ["experiments"],
+        "parameters": [],
+        "operationId": "experiments.createTransferRequest",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projectIdOld": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "projectUrlOld": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": ["projectIdOld", "projectUrlOld"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "userEmail": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "sourcePlatform": {
+                      "type": "string"
+                    },
+                    "projectIdOld": {
+                      "type": "string"
+                    },
+                    "projectUrlOld": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["pending", "completed", "rejected"]
+                    },
+                    "requestedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "requestId",
+                    "userId",
+                    "userEmail",
+                    "sourcePlatform",
+                    "projectIdOld",
+                    "projectUrlOld",
+                    "status",
+                    "requestedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all transfer requests for the authenticated user",
+        "tags": ["experiments"],
+        "parameters": [],
+        "operationId": "experiments.listTransferRequests",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "userId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "userEmail": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "sourcePlatform": {
+                        "type": "string"
+                      },
+                      "projectIdOld": {
+                        "type": "string"
+                      },
+                      "projectUrlOld": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": ["pending", "completed", "rejected"]
+                      },
+                      "requestedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "requestId",
+                      "userId",
+                      "userEmail",
+                      "sourcePlatform",
+                      "projectIdOld",
+                      "projectUrlOld",
+                      "status",
+                      "requestedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/macros": {
       "get": {
         "description": "Returns a list of macros based on the specified filter criteria",
@@ -8191,9 +8621,7 @@
                       "nullable": true
                     },
                     "emailVerified": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true
+                      "type": "boolean"
                     },
                     "image": {
                       "type": "string",
@@ -8446,7 +8874,7 @@
     },
     "/api/v1/users/metadata": {
       "post": {
-        "description": "Fetches user profile metadata (firstName, lastName) for multiple user IDs to populate Databricks pipeline tables",
+        "description": "Fetches user profile metadata (firstName, lastName, avatarUrl) for multiple user IDs to populate Databricks pipeline tables",
         "summary": "Get user metadata for Databricks pipelines",
         "tags": ["users"],
         "parameters": [
@@ -8520,9 +8948,13 @@
                           },
                           "lastName": {
                             "type": "string"
+                          },
+                          "avatarUrl": {
+                            "type": "string",
+                            "nullable": true
                           }
                         },
-                        "required": ["userId", "firstName", "lastName"]
+                        "required": ["userId", "firstName", "lastName", "avatarUrl"]
                       }
                     },
                     "success": {

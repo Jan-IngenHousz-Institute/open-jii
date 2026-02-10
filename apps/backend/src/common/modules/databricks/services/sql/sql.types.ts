@@ -62,6 +62,7 @@ export interface SchemaData {
     name: string;
     type_name: string;
     type_text: string;
+    position: number;
   }[];
   rows: (string | null)[][];
   totalRows: number;

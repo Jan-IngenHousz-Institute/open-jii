@@ -7,15 +7,18 @@ import type { ExperimentDataResponse, AnnotationType, AnnotationContent } from "
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
 
 // Mock the parseAnnotations function
-vi.mock("~/components/experiment-data/experiment-data-table-annotations-cell", () => ({
-  parseAnnotations: vi.fn((str: string): unknown[] => {
-    try {
-      return JSON.parse(str) as unknown[];
-    } catch {
-      return [];
-    }
+vi.mock(
+  "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell",
+  () => ({
+    parseAnnotations: vi.fn((str: string): unknown[] => {
+      try {
+        return JSON.parse(str) as unknown[];
+      } catch {
+        return [];
+      }
+    }),
   }),
-}));
+);
 
 // Mock structuredClone for older test environments
 Object.assign(global, {
@@ -26,7 +29,6 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
   const mockExperimentData: ExperimentDataResponse = [
     {
       name: "test_table",
-      displayName: "Test Table",
       catalog_name: "test_catalog",
       schema_name: "test_schema",
       page: 1,
@@ -236,7 +238,6 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const emptyData: ExperimentDataResponse = [
         {
           name: "test_table",
-          displayName: "Test Table",
           catalog_name: "test_catalog",
           schema_name: "test_schema",
           page: 1,
@@ -310,7 +311,6 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const emptyData: ExperimentDataResponse = [
         {
           name: "test_table",
-          displayName: "Test Table",
           catalog_name: "test_catalog",
           schema_name: "test_schema",
           page: 1,
@@ -443,7 +443,6 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const emptyData: ExperimentDataResponse = [
         {
           name: "test_table",
-          displayName: "Test Table",
           catalog_name: "test_catalog",
           schema_name: "test_schema",
           page: 1,
@@ -640,7 +639,6 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const emptyData: ExperimentDataResponse = [
         {
           name: "test_table",
-          displayName: "Test Table",
           catalog_name: "test_catalog",
           schema_name: "test_schema",
           page: 1,
@@ -741,7 +739,6 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const dataWithEmptyColumns: ExperimentDataResponse = [
         {
           name: "test_table",
-          displayName: "Test Table",
           catalog_name: "test_catalog",
           schema_name: "test_schema",
           page: 1,

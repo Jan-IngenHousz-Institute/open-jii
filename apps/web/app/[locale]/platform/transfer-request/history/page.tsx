@@ -21,9 +21,9 @@ import { cva } from "@repo/ui/lib/utils";
 const statusBadgeVariants = cva("", {
   variants: {
     status: {
-      pending: "bg-badge-provisioning",
+      pending: "bg-badge-stale",
       completed: "bg-badge-active",
-      rejected: "bg-badge-provisioningFailed",
+      rejected: "bg-destructive text-destructive-foreground",
     },
   },
   defaultVariants: {

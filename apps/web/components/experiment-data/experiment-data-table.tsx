@@ -44,7 +44,7 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import { DataDownloadModal } from "./data-download-modal/data-download-modal";
-import { ExperimentDataTableChart } from "./experiment-data-table-chart";
+import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 // Helper function to map column names for sorting
 function getSortColumnName(columnName: string, columnType?: string): string {
@@ -63,18 +63,22 @@ export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 export function ExperimentDataTable({
   experimentId,
   tableName,
-  displayName,
   pageSize = 10,
+  displayName,
+  defaultSortColumn,
+  errorColumn,
 }: {
   experimentId: string;
   tableName: string;
-  displayName?: string;
   pageSize: number;
+  displayName?: string;
+  defaultSortColumn?: string;
+  errorColumn?: string;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  const [sortColumn, setSortColumn] = useState<string | undefined>("timestamp");
+  const [sortColumn, setSortColumn] = useState<string | undefined>(defaultSortColumn);
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
   // Annotation dialog states
@@ -101,6 +105,11 @@ export function ExperimentDataTable({
     isPinned: boolean;
   } | null>(null);
 
+  // Expandable cell state - only one cell can be expanded at a time
+  const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
+    null,
+  );
+
   const { t } = useTranslation();
 
   // Remove hover functionality - chart only shows on click
@@ -121,6 +130,20 @@ export function ExperimentDataTable({
   const closePinnedChart = useCallback(() => {
     setChartDisplay(null);
   }, []);
+
+  // Expandable cell handlers
+  const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
+    setExpandedCell((prev) =>
+      prev?.rowId === rowId && prev.columnName === columnName ? null : { rowId, columnName },
+    );
+  }, []);
+
+  const isCellExpanded = useCallback(
+    (rowId: string, columnName: string) => {
+      return expandedCell?.rowId === rowId && expandedCell.columnName === columnName;
+    },
+    [expandedCell],
+  );
 
   // Annotation dialog handlers
   const openAddAnnotationDialog = useCallback(
@@ -158,18 +181,21 @@ export function ExperimentDataTable({
   );
 
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
-    pagination.pageIndex + 1,
-    pagination.pageSize,
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
     tableName,
-    sortColumn,
-    sortDirection,
-    formatValue,
-    toggleChartPin,
-    openAddAnnotationDialog,
-    openDeleteAnnotationsDialog,
-  );
+    orderBy: sortColumn,
+    orderDirection: sortDirection,
+    formatFunction: formatValue,
+    onChartClick: toggleChartPin,
+    onAddAnnotation: openAddAnnotationDialog,
+    onDeleteAnnotations: openDeleteAnnotationsDialog,
+    onToggleCellExpansion: toggleCellExpansion,
+    isCellExpanded,
+    errorColumn,
+  });
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
@@ -255,7 +281,7 @@ export function ExperimentDataTable({
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     enableRowSelection: true,
-    getRowId: (row, index) => `${pagination.pageIndex}-${index}`,
+    getRowId: (row) => String(row.id),
     onRowSelectionChange: setRowSelection,
     onPaginationChange,
     state: {
@@ -318,7 +344,7 @@ export function ExperimentDataTable({
 
   return (
     <Form {...selectionForm}>
-      <form>
+      <form className="grid max-w-full">
         <h5 className="mb-3 text-base font-medium">{displayName}</h5>
         <BulkActionsBar
           rowIds={selectedRowIds}
@@ -327,8 +353,8 @@ export function ExperimentDataTable({
           onAddAnnotation={openAddAnnotationDialog}
           onDeleteAnnotations={openDeleteAnnotationsDialog}
         />
-        <div className="text-muted-foreground relative -mt-px overflow-visible rounded-b-lg border">
-          <Table>
+        <div className="text-muted-foreground relative -mt-px overflow-x-auto rounded-b-lg border">
+          <Table className="w-max min-w-full">
             <ExperimentTableHeader
               headerGroups={table.getHeaderGroups()}
               sortColumn={sortColumn}
@@ -340,7 +366,14 @@ export function ExperimentDataTable({
                 <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
               )}
               {!isLoading && (
-                <ExperimentDataRows rows={table.getRowModel().rows} columnCount={columnCount} />
+                <ExperimentDataRows
+                  rows={table.getRowModel().rows}
+                  columnCount={columnCount}
+                  expandedCell={expandedCell}
+                  tableRows={tableRows}
+                  columns={persistedMetaData?.rawColumns ?? []}
+                  errorColumn={errorColumn}
+                />
               )}
             </TableBody>
           </Table>

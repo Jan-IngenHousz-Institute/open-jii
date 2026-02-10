@@ -1,8 +1,9 @@
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { beforeAll, describe, expect, it } from "vitest";
+
+import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import XAxisConfiguration from "./x-axis-configuration";
@@ -24,30 +25,21 @@ beforeAll(() => {
 });
 
 // Mock table data
-const mockTable: ExperimentTableWithColumns = {
-  name: "test-table",
-  tableMetadata: {
-    columns: [],
-    totalRows: 0,
-    totalPages: 0,
-  },
-  tableRows: [],
-  columns: [
-    { name: "time", type_name: "timestamp", type_text: "timestamp", position: 1 },
-    { name: "temperature", type_name: "double", type_text: "double", position: 2 },
-    { name: "humidity", type_name: "double", type_text: "double", position: 3 },
-    { name: "pressure", type_name: "integer", type_text: "integer", position: 4 },
-  ],
-};
+const mockColumns: DataColumn[] = [
+  { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+  { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "pressure", type_name: "INT", type_text: "INT" },
+];
 
 // Test wrapper component with form context
 function TestWrapper({
   defaultValues,
-  table = mockTable,
+  columns = mockColumns,
   xAxisDataSources,
 }: {
   defaultValues?: Partial<ChartFormValues>;
-  table?: ExperimentTableWithColumns;
+  columns?: DataColumn[];
   xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
 }) {
   const methods = useForm<ChartFormValues>({
@@ -70,7 +62,7 @@ function TestWrapper({
 
   return (
     <FormProvider {...methods}>
-      <XAxisConfiguration form={methods} table={table} xAxisDataSources={xAxisDataSources} />
+      <XAxisConfiguration form={methods} columns={columns} xAxisDataSources={xAxisDataSources} />
     </FormProvider>
   );
 }
@@ -143,9 +135,9 @@ describe("XAxisConfiguration", () => {
       const trigger = screen.getByRole("combobox", { name: /xAxis/i });
       await user.click(trigger);
 
-      expect(screen.getByText("timestamp")).toBeInTheDocument();
-      expect(screen.getAllByText("double").length).toBe(2);
-      expect(screen.getByText("integer")).toBeInTheDocument();
+      expect(screen.getByText("TIMESTAMP")).toBeInTheDocument();
+      expect(screen.getAllByText("DOUBLE").length).toBe(2);
+      expect(screen.getByText("INT")).toBeInTheDocument();
     });
 
     it("should allow selecting a column", async () => {

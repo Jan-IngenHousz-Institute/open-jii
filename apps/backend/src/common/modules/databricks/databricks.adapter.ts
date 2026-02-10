@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { ExperimentVisualizationDto } from "../../../experiments/core/models/experiment-visualizations.model";
+import { ExperimentTableName } from "@repo/api";
+
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
@@ -12,14 +13,10 @@ import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
-import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
-import type { DatabricksPipelineStartUpdateResponse } from "./services/pipelines/pipelines.types";
+import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
-import { DatabricksTablesService } from "./services/tables/tables.service";
-import type { ListTablesResponse } from "./services/tables/tables.types";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
-import type { CreateVolumeParams, VolumeResponse } from "./services/volumes/volumes.types";
 import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 import type {
   ImportWorkspaceObjectResponse,
@@ -27,20 +24,42 @@ import type {
 } from "./services/workspace/workspace.types";
 import { WorkspaceObjectFormat } from "./services/workspace/workspace.types";
 
+export interface ExperimentTableMetadata {
+  tableName: string;
+  rowCount: number;
+  macroSchema?: string | null;
+  questionsSchema?: string | null;
+}
 @Injectable()
 export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
+  // Schema and catalog names exposed to repository
+  readonly CATALOG_NAME: string;
+  readonly CENTRUM_SCHEMA_NAME: string;
+
+  // Physical Databricks table names exposed to repository
+  readonly RAW_DATA_TABLE_NAME: string;
+  readonly DEVICE_DATA_TABLE_NAME: string;
+  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
+  readonly MACRO_DATA_TABLE_NAME: string;
+
   constructor(
     private readonly jobsService: DatabricksJobsService,
+    private readonly queryBuilder: QueryBuilderService,
     private readonly sqlService: DatabricksSqlService,
-    private readonly tablesService: DatabricksTablesService,
     private readonly filesService: DatabricksFilesService,
-    private readonly pipelinesService: DatabricksPipelinesService,
     private readonly volumesService: DatabricksVolumesService,
     private readonly configService: DatabricksConfigService,
     private readonly workspaceService: DatabricksWorkspaceService,
-  ) {}
+  ) {
+    this.CATALOG_NAME = this.configService.getCatalogName();
+    this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
+    this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
+    this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
+    this.RAW_AMBYTE_DATA_TABLE_NAME = this.configService.getRawAmbyteDataTableName();
+    this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
+  }
 
   /**
    * Check if the Databricks service is available and responding
@@ -50,455 +69,25 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Trigger the experiment provisioning Databricks job with the specified parameters
-   */
-  async triggerExperimentProvisioningJob(
-    experimentId: string,
-    params: Record<string, string>,
-  ): Promise<Result<DatabricksJobRunResponse>> {
-    const jobId = this.configService.getExperimentProvisioningJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, params, experimentId);
-  }
-
-  /**
    * Trigger the ambyte processing Databricks job with the specified parameters
    */
   async triggerAmbyteProcessingJob(
-    schemaName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>> {
     this.logger.log({
       msg: "Triggering ambyte processing job",
       operation: "triggerAmbyteProcessingJob",
-      schemaName,
+      experimentId: params.EXPERIMENT_ID,
     });
 
-    // Add experiment schema to params
+    // Add catalog name to params
     const jobParams = {
       ...params,
-      EXPERIMENT_SCHEMA: schemaName,
+      CATALOG_NAME: this.configService.getCatalogName(),
     };
 
     const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
     return this.jobsService.triggerJob(jobId, jobParams);
-  }
-
-  /**
-   * Trigger the enriched tables refresh Databricks job with the specified parameters
-   */
-  async triggerEnrichedTablesRefreshJob(
-    metadataKey: string,
-    metadataValue: string,
-  ): Promise<Result<DatabricksJobRunResponse>> {
-    this.logger.log(
-      `Triggering enriched tables refresh for metadata: ${metadataKey}=${metadataValue}`,
-    );
-
-    const jobParams = {
-      metadata_key: metadataKey,
-      metadata_value: metadataValue,
-    };
-
-    const jobId = this.configService.getEnrichedTablesRefreshJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, jobParams);
-  }
-
-  /**
-   * Execute a SQL query in a specific schema
-   */
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    tableName?: string,
-  ): Promise<Result<SchemaData>> {
-    // tableName parameter is available for future use (e.g., logging, validation)
-    if (tableName) {
-      this.logger.debug({
-        msg: "Executing SQL query",
-        operation: "executeSqlQuery",
-        schemaName,
-        tableName,
-      });
-    }
-    const result = await this.sqlService.executeSqlQuery(schemaName, sqlStatement, "INLINE");
-    return result as Result<SchemaData>;
-  }
-
-  /**
-   * Download experiment data using EXTERNAL_LINKS disposition for large datasets
-   */
-  async downloadExperimentData(
-    schemaName: string,
-    sqlStatement: string,
-  ): Promise<Result<DownloadLinksData>> {
-    const result = await this.sqlService.executeSqlQuery(
-      schemaName,
-      sqlStatement,
-      "EXTERNAL_LINKS",
-      "CSV",
-    );
-    return result as Result<DownloadLinksData>;
-  }
-
-  /**
-   * List tables in the schema for a specific experiment
-   */
-  async listTables(schemaName: string): Promise<Result<ListTablesResponse>> {
-    return this.tablesService.listTables(schemaName);
-  }
-
-  /**
-   * Validate that data sources (table and columns) exist in the experiment
-   */
-  async validateDataSources(
-    dataConfig: ExperimentVisualizationDto["dataConfig"],
-    schemaName: string,
-  ): Promise<Result<boolean>> {
-    this.logger.log({
-      msg: "Validating data sources",
-      operation: "validateDataSources",
-      schemaName,
-    });
-
-    // Check if table exists in Databricks
-    const tablesResult = await this.listTables(schemaName);
-
-    if (tablesResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to list tables",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "validateDataSources",
-        schemaName,
-        error: tablesResult.error,
-      });
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    const tableExists = tablesResult.value.tables.some(
-      (table) => table.name === dataConfig.tableName,
-    );
-
-    if (!tableExists) {
-      this.logger.warn({
-        msg: "Table does not exist in schema",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "validateDataSources",
-        schemaName,
-        tableName: dataConfig.tableName,
-      });
-      return failure(
-        AppError.badRequest(`Table '${dataConfig.tableName}' does not exist in this experiment`),
-      );
-    }
-
-    // Check if columns exist in the table by querying the table schema
-    const schemaQuery = `DESCRIBE ${dataConfig.tableName}`;
-
-    this.logger.debug({
-      msg: "Executing schema query",
-      operation: "validateDataSources",
-      schemaName,
-      schemaQuery,
-    });
-    const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
-
-    if (schemaResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to get table schema",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "validateDataSources",
-        schemaName,
-        error: schemaResult.error,
-      });
-      return failure(
-        AppError.internal(`Failed to get table schema: ${schemaResult.error.message}`),
-      );
-    }
-
-    // Extract column names from schema (first column contains column names)
-    const availableColumns = schemaResult.value.rows.map((row) => row[0]);
-
-    // Check columns for each data source
-    const allMissingColumns: string[] = [];
-
-    for (const dataSource of dataConfig.dataSources) {
-      if (!availableColumns.includes(dataSource.columnName)) {
-        allMissingColumns.push(dataSource.columnName);
-      }
-    }
-
-    if (allMissingColumns.length > 0) {
-      const uniqueMissingColumns = [...new Set(allMissingColumns)];
-      this.logger.warn(
-        `Missing columns in table '${dataConfig.tableName}': ${uniqueMissingColumns.join(", ")}`,
-      );
-      return failure(
-        AppError.badRequest(
-          `Columns do not exist in table '${dataConfig.tableName}': ${uniqueMissingColumns.join(", ")}`,
-        ),
-      );
-    }
-
-    this.logger.log(
-      `Data sources validation successful for table '${dataConfig.tableName}' with ${dataConfig.dataSources.length} data sources`,
-    );
-    return success(true);
-  }
-
-  /**
-   * Upload a file to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param sourceType - Type of data source (e.g., 'ambyte')
-   * @param directoryName - Unique directory name for this upload session
-   * @param fileName - Name of the file
-   * @param fileBuffer - File contents as a buffer
-   * @returns Result containing the upload response
-   */
-  async uploadExperimentData(
-    schemaName: string,
-    sourceType: string,
-    directoryName: string,
-    fileName: string,
-    fileBuffer: Buffer,
-  ): Promise<Result<UploadFileResponse>> {
-    const catalogName = this.configService.getCatalogName();
-
-    // Construct the full path
-    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
-
-    return this.filesService.upload(filePath, fileBuffer);
-  }
-
-  /**
-   * Trigger an experiment pipeline by ID
-   * Starts a pipeline update using the stored pipeline ID
-   *
-   * @param pipelineId - The Databricks pipeline ID
-   * @param experimentId - ID of the experiment for logging purposes
-   * @param options - Optional parameters for the pipeline update
-   * @returns Result containing the pipeline update response or an error
-   */
-  async triggerExperimentPipeline(
-    pipelineId: string,
-    experimentId: string,
-    options?: {
-      fullRefresh?: boolean;
-      fullRefreshSelection?: string[];
-      refreshSelection?: string[];
-    },
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log({
-      msg: "Triggering pipeline",
-      operation: "triggerExperimentPipeline",
-      pipelineId,
-      experimentId,
-    });
-
-    // Start the pipeline update using the stored pipeline ID
-    return this.pipelinesService.startPipelineUpdate({
-      pipelineId,
-      cause: "API_CALL",
-      fullRefresh: options?.fullRefresh,
-      fullRefreshSelection: options?.fullRefreshSelection,
-      refreshSelection: options?.refreshSelection,
-    });
-  }
-
-  /**
-   * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param pipelineId - The Databricks pipeline ID
-   * @returns Result containing the pipeline update response or an error
-   */
-  async triggerExperimentPipelineSilverRefresh(
-    schemaName: string,
-    pipelineId: string,
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    return this.refreshSilverData(schemaName, pipelineId);
-  }
-
-  /**
-   * Refresh all silver quality tables for an experiment with full refresh
-   * This is a convenience method that wraps triggerExperimentPipelineSilverRefresh
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param pipelineId - The Databricks pipeline ID
-   * @returns Result containing the pipeline update response or an error
-   */
-  async refreshSilverData(
-    schemaName: string,
-    pipelineId: string,
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    this.logger.log({
-      msg: "Refreshing silver data",
-      operation: "refreshSilverData",
-      schemaName,
-      pipelineId,
-    });
-
-    // First, get the list of tables in the experiment
-    const tablesResult = await this.listTables(schemaName);
-
-    if (tablesResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to list tables for silver data refresh",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "refreshSilverData",
-        schemaName,
-        error: tablesResult.error,
-      });
-      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-    }
-
-    // Filter for tables with quality === "silver"
-    const silverTables = tablesResult.value.tables
-      .filter((table) => table.properties?.quality === "silver")
-      .map((table) => table.name);
-
-    if (silverTables.length === 0) {
-      this.logger.warn({
-        msg: "No silver quality tables found",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "refreshSilverData",
-        schemaName,
-      });
-      return failure(AppError.notFound(`No silver quality tables found for schema ${schemaName}`));
-    }
-
-    this.logger.log(
-      `Found ${silverTables.length} silver tables to refresh: ${silverTables.join(", ")}`,
-    );
-
-    // Trigger the pipeline with full refresh for silver tables
-    // Use schemaName for experimentId logging since we only have schemaName available
-    return this.triggerExperimentPipeline(pipelineId, schemaName, {
-      fullRefreshSelection: silverTables,
-    });
-  }
-
-  /**
-   * Create a new volume in Databricks Unity Catalog
-   *
-   * @param params - Volume creation parameters
-   * @returns Result containing the created volume information
-   */
-  async createVolume(params: CreateVolumeParams): Promise<Result<VolumeResponse>> {
-    return this.volumesService.createVolume(params);
-  }
-
-  /**
-   * Create a new managed volume under an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to create
-   * @param comment - Optional comment for the volume
-   * @returns Result containing the created volume information
-   */
-  async createExperimentVolume(
-    schemaName: string,
-    volumeName: string,
-    comment?: string,
-  ): Promise<Result<VolumeResponse>> {
-    this.logger.log({
-      msg: "Creating managed volume",
-      operation: "createExperimentVolume",
-      schemaName,
-      volumeName,
-    });
-
-    const catalogName = this.configService.getCatalogName();
-
-    // Create volume parameters
-    const params: CreateVolumeParams = {
-      catalog_name: catalogName,
-      schema_name: schemaName,
-      name: volumeName,
-      volume_type: "MANAGED",
-    };
-
-    // Add comment if provided
-    if (comment) {
-      params.comment = comment;
-    }
-
-    return this.volumesService.createVolume(params);
-  }
-
-  /**
-   * Get a volume from an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to retrieve
-   * @returns Result containing the volume information
-   */
-  async getExperimentVolume(
-    schemaName: string,
-    volumeName: string,
-  ): Promise<Result<VolumeResponse>> {
-    this.logger.log({
-      msg: "Getting volume",
-      operation: "getExperimentVolume",
-      schemaName,
-      volumeName,
-    });
-
-    const catalogName = this.configService.getCatalogName();
-
-    // Construct the full volume name
-    const fullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
-
-    return await this.volumesService.getVolume({ name: fullVolumeName });
-  }
-
-  /**
-   * Returns table metadata for a specific table in an experiment
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param tableName - Name of the table
-   */
-  async getTableMetadata(
-    schemaName: string,
-    tableName: string,
-  ): Promise<Result<Map<string, string>>> {
-    this.logger.log({
-      msg: "Checking table metadata",
-      operation: "getTableMetadata",
-      schemaName,
-      tableName,
-    });
-
-    const schemaQuery = `DESCRIBE ${tableName}`;
-
-    this.logger.debug({
-      msg: "Executing schema query",
-      operation: "getTableMetadata",
-      schemaName,
-      schemaQuery,
-    });
-    const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
-
-    if (schemaResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to get metadata",
-        errorCode: ErrorCodes.DATABRICKS_TABLE_FAILED,
-        operation: "getTableMetadata",
-        schemaName,
-        tableName,
-        error: schemaResult.error,
-      });
-      return failure(AppError.internal(`Failed to get metadata: ${schemaResult.error.message}`));
-    }
-
-    const availableColumns = new Map(
-      schemaResult.value.rows
-        .filter((row) => row[0] != null && row[1] != null)
-        .map((row) => [row[0] as unknown as string, row[1] as unknown as string] as const),
-    );
-
-    return success(availableColumns);
   }
 
   /**
@@ -605,5 +194,220 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       path: `/Shared/macros/${filename}`,
       recursive: false,
     });
+  }
+
+  /**
+   * Get consolidated experiment table metadata (row counts and schemas) from the
+   * experiment_table_metadata cache table. This is a single-query optimization
+   * that replaces multiple separate queries.
+   *
+   * Returns metadata for all tables in an experiment:
+   * - Raw data table (logical name: 'raw_data')
+   * - Device data table (logical name: 'device')
+   * - Ambyte data table (logical name: 'raw_ambyte_data')
+   * - All macro tables (one per macro_filename, uses macro_name as display name)
+   *
+   * @param experimentId - The experiment identifier
+   * @param options - Optional configuration
+   * @param options.tableName - If provided, only return metadata for this specific table (logical name or macro name)
+   * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
+   * @returns Result containing array of table metadata with schemas and row counts
+   */
+  async getExperimentTableMetadata(
+    experimentId: string,
+    options?: {
+      tableName?: string;
+      includeSchemas?: boolean;
+    },
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    const catalog = this.configService.getCatalogName();
+    const schema = this.configService.getCentrumSchemaName();
+
+    const includeSchemas = options?.includeSchemas !== false; // Default to true
+    const columns = includeSchemas
+      ? ["table_name", "row_count", "macro_schema", "questions_schema"]
+      : ["table_name", "row_count"];
+
+    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
+    if (options?.tableName) {
+      whereConditions.push(["table_name", options.tableName]);
+    }
+
+    const query = this.queryBuilder.buildQuery({
+      table: `${catalog}.${schema}.experiment_table_metadata`,
+      columns,
+      whereConditions,
+    });
+
+    this.logger.debug({
+      msg: "Querying experiment table metadata",
+      operation: "getExperimentTableMetadata",
+      experimentId,
+      tableName: options?.tableName,
+      includeSchemas,
+    });
+
+    const result = await this.sqlService.executeSqlQuery(schema, query);
+
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    // Transform rows into structured data
+    if (!("rows" in result.value)) {
+      return failure(AppError.internal("Invalid query result format", "INVALID_QUERY_RESULT"));
+    }
+
+    const metadata = result.value.rows.map((row) => {
+      const base = {
+        // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+        tableName: row[0] as string,
+        rowCount: row[1] ? parseInt(row[1], 10) : 0,
+      };
+
+      if (includeSchemas) {
+        return {
+          ...base,
+          macroSchema: row[2],
+          questionsSchema: row[3],
+        };
+      }
+
+      return base;
+    });
+
+    return success(metadata);
+  }
+
+  /**
+   * Build a SQL query for experiment data with optional VARIANT parsing
+   * Automatically handles both simple SELECT and VARIANT parsing based on variants parameter
+   */
+  buildExperimentQuery(params: {
+    tableName: string;
+    experimentId: string;
+    columns?: string[];
+    variants?: { columnName: string; schema: string }[];
+    exceptColumns?: string[];
+    orderBy?: string;
+    orderDirection?: "ASC" | "DESC";
+    limit?: number;
+    offset?: number;
+  }): string {
+    const {
+      tableName,
+      experimentId,
+      columns,
+      variants,
+      exceptColumns,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    } = params;
+
+    const catalog = this.configService.getCatalogName();
+    const schema = this.configService.getCentrumSchemaName();
+
+    // Map table names to their corresponding physical tables
+    const tableMapping: Record<string, string> = {
+      [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
+      [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
+      [ExperimentTableName.RAW_AMBYTE_DATA]: this.RAW_AMBYTE_DATA_TABLE_NAME,
+    };
+
+    const targetTable = tableMapping[tableName];
+    const table = targetTable
+      ? `${catalog}.${schema}.${targetTable}`
+      : `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
+
+    // For known physical tables, filter by experiment_id only
+    // For macros, filter by experiment_id AND macro_filename
+    const whereConditions: [string, string][] = targetTable
+      ? [["experiment_id", experimentId]]
+      : [
+          ["experiment_id", experimentId],
+          ["macro_filename", tableName],
+        ];
+
+    return this.queryBuilder.buildQuery({
+      table,
+      columns,
+      variants,
+      exceptColumns,
+      whereConditions,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    });
+  }
+
+  /**
+   * Execute a SQL query with INLINE disposition (returns data directly)
+   */
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition?: "INLINE",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<SchemaData>>;
+
+  /**
+   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
+   */
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition: "EXTERNAL_LINKS",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<DownloadLinksData>>;
+
+  /**
+   * Execute a SQL query in a specific schema with optional disposition and format.
+   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
+   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
+   */
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition: "INLINE" | "EXTERNAL_LINKS" = "INLINE",
+    format: "JSON_ARRAY" | "ARROW_STREAM" | "CSV" = "JSON_ARRAY",
+  ): Promise<Result<SchemaData | DownloadLinksData>> {
+    this.logger.debug({
+      msg: "Executing SQL query",
+      operation: "executeSqlQuery",
+      schemaName,
+      disposition,
+      format,
+    });
+    return this.sqlService.executeSqlQuery(schemaName, sqlStatement, disposition, format);
+  }
+
+  /**
+   * Upload a file to Databricks for a specific experiment.
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
+   *
+   * @param schemaName - Schema name of the experiment
+   * @param sourceType - Type of data source (e.g., 'ambyte')
+   * @param directoryName - Unique directory name for this upload session
+   * @param fileName - Name of the file
+   * @param fileBuffer - File contents as a buffer
+   * @returns Result containing the upload response
+   */
+  async uploadExperimentData(
+    schemaName: string,
+    experimentId: string,
+    sourceType: string,
+    directoryName: string,
+    fileName: string,
+    fileBuffer: Buffer,
+  ): Promise<Result<UploadFileResponse>> {
+    const catalogName = this.configService.getCatalogName();
+
+    // Construct the full path with experiment_id subdirectory
+    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
+
+    return this.filesService.upload(filePath, fileBuffer);
   }
 }

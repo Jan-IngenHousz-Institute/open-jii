@@ -19,12 +19,7 @@ export interface Table {
   comment?: string;
   created_at: number;
   columns?: ColumnInfo[];
-  properties?: {
-    display_name?: string;
-    downstream?: "true" | "false";
-    quality?: "bronze" | "silver" | "gold";
-    [key: string]: string | undefined;
-  };
+  properties?: Record<string, string | undefined>;
 }
 
 export interface ListTablesResponse {

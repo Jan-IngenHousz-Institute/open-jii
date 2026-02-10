@@ -117,7 +117,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </Button>
       </div>
 
-      <NavTabs defaultValue={tables[0].name} className="w-full">
+      <NavTabs defaultValue={tables[0].name} className="max-w-full">
         <NavTabsList>
           {tables.map((table) => (
             <NavTabsTrigger key={table.name} value={table.name}>
@@ -133,6 +133,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
               experimentId={id}
               tableName={table.name}
               displayName={table.displayName}
+              defaultSortColumn={table.defaultSortColumn}
+              errorColumn={table.errorColumn}
               pageSize={10}
             />
           </NavTabsContent>

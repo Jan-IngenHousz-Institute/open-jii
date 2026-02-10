@@ -27,8 +27,8 @@ from .executors.r_executor import execute_r_macro
 
 def execute_macro_script(
     macro_name: str, 
-    input_data: Dict[str, Any], 
-    macros_path: str = "/Shared/Workspace/macros",
+    sample_data: str, 
+    macros_path: str = "/Workspace/Shared/macros",
     helpers_path: str = None
 ) -> Dict[str, Any]:
     """
@@ -37,7 +37,7 @@ def execute_macro_script(
     
     Args:
         macro_name: Name of the macro script (without extension)
-        input_data: Input data to pass to the script
+        sample_data: Sample data as JSON string from VariantVal.toJson()
         macros_path: Path to the macros directory
         helpers_path: Path to the JavaScript helpers file (optional)
         
@@ -46,7 +46,7 @@ def execute_macro_script(
     """
     print(f"[MACRO] Starting execution of macro: {macro_name}")
     print(f"[MACRO] Macros path: {macros_path}")
-    print(f"[MACRO] Input data keys: {list(input_data.keys()) if input_data else 'None'}")
+    print(f"[MACRO] Sample data type: {type(sample_data).__name__ if sample_data else 'None'}")
     
     # Define supported extensions and their executors
     executors = {
@@ -71,25 +71,31 @@ def execute_macro_script(
     
     if script_path is None:
         supported_extensions = list(executors.keys())
-        print(f"[MACRO] ERROR: No macro script found for '{macro_name}' with supported extensions: {supported_extensions}")
-        return {}
+        error_msg = f"No macro script found for '{macro_name}' with supported extensions: {supported_extensions}"
+        print(f"[MACRO] ERROR: {error_msg}")
+        raise FileNotFoundError(error_msg)
     
     try:
         print(f"[MACRO] Executing {script_type} macro: {macro_name}")
         
         # Execute based on script type
-        sample_data = input_data.get("sample")
         if script_type == 'javascript':
             result = executor_func(script_path, sample_data, macro_name, helpers_path)
         else:
             result = executor_func(script_path, sample_data)
         
         print(f"[MACRO] Successfully executed macro {macro_name}, output keys: {list(result.keys()) if result else 'None'}")
+        
+        # If result is empty or None, raise an error so it gets captured
+        if not result:
+            raise ValueError(f"Macro '{macro_name}' returned empty result")
+            
         return result
             
     except Exception as e:
         print(f"[MACRO] ERROR executing macro {macro_name}: {str(e)}")
-        return {}
+        # Re-raise so the error gets captured in macro_error column
+        raise
 
 
 def get_available_macros(macros_path: str = "/Shared/Workspace/macros") -> List[str]:

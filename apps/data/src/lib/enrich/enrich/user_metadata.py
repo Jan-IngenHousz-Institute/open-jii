@@ -7,8 +7,16 @@ from the openJII backend API.
 
 from typing import Dict, Any, List
 import pandas as pd
+from pyspark.sql.types import StructType, StructField, StringType
 
 from .backend_client import BackendClient
+
+# Define user struct schema: STRUCT<id: STRING, name: STRING, avatar: STRING>
+user_schema = StructType([
+    StructField("id", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("avatar", StringType(), True)
+])
 
 
 def _fetch_user_metadata(user_ids: List[str], backend_client: BackendClient) -> Dict[str, Dict[str, Any]]:
@@ -31,23 +39,24 @@ def _fetch_user_metadata(user_ids: List[str], backend_client: BackendClient) -> 
         print(f"Error fetching user metadata: {str(e)}")
         return {}
 
-
-
-def add_user_data_column(df, environment: str, dbutils):
+def add_user_column(df, environment: str, dbutils):
     """
-    Add user metadata columns to DataFrame by calling backend API.
+    Add user profile columns and user struct to DataFrame by calling backend API.
+    
+    Fetches user metadata once and adds all profile columns plus the user struct in a single pass.
     
     Args:
-        df: PySpark DataFrame with 'user_id' column containing user IDs
+        df: PySpark DataFrame with 'user_id' column
         environment: Environment name (dev, prod, etc.)
         dbutils: Databricks utilities instance for accessing secrets
         
     Returns:
-        DataFrame with additional user columns: user_id, user_name
+        DataFrame with additional columns: user
+        The user column is a STRUCT<id: STRING, name: STRING, avatar: STRING>
     """
     from .backend_client import BackendClient
     from pyspark.sql import functions as F
-    from pyspark.sql.types import StringType
+    from pyspark.sql.types import StructType, StructField
     
     # Get secrets on driver node to pass to workers
     scope = f"node-webhook-secret-scope-{environment}"
@@ -55,34 +64,52 @@ def add_user_data_column(df, environment: str, dbutils):
     api_key_id = dbutils.secrets.get(scope=scope, key="webhook_api_key_id")
     webhook_secret = dbutils.secrets.get(scope=scope, key="webhook_secret")
     
-    @F.pandas_udf(StringType())
-    def get_user_name(user_ids: pd.Series) -> pd.Series:
-        """Get full names for user IDs"""
-        # Create client on worker node using passed secrets
+    # Define schema for returned struct
+    profile_schema = StructType([
+        StructField("first_name", StringType(), True),
+        StructField("last_name", StringType(), True),
+        StructField("avatar_url", StringType(), True)
+    ])
+    
+    @F.pandas_udf(profile_schema)
+    def get_user_profiles(user_ids: pd.Series) -> pd.DataFrame:
+        """Fetch all profile fields in a single API call"""
         worker_client = BackendClient(base_url, api_key_id, webhook_secret)
-        
         unique_users = user_ids.dropna().unique().tolist()
         user_metadata = _fetch_user_metadata(unique_users, worker_client)
         
-        def create_full_name(uid):
+        def extract_profile(uid):
             if pd.isna(uid):
-                return None
+                return pd.Series([None, None, None])
             user_info = user_metadata.get(uid, {})
-            first_name = user_info.get('firstName')
-            last_name = user_info.get('lastName')
-            
-            if first_name and last_name:
-                return f"{first_name} {last_name}"
-            elif first_name:
-                return first_name
-            elif last_name:
-                return last_name
-            return None
+            return pd.Series([
+                user_info.get('firstName'),
+                user_info.get('lastName'),
+                user_info.get('avatarUrl')
+            ])
         
-        return user_ids.map(create_full_name)
+        return user_ids.apply(extract_profile)
     
-    # Add user_name column using user_id
-    result_df = df.withColumn("user_name", get_user_name(F.col("user_id")))
+    # Add profile struct column, then expand to individual columns (temporary)
+    result_df = df.withColumn("_profile", get_user_profiles(F.col("user_id")))
+    result_df = (result_df
+        .withColumn("first_name", F.col("_profile.first_name"))
+        .withColumn("last_name", F.col("_profile.last_name"))
+        .withColumn("avatar_url", F.col("_profile.avatar_url"))
+        .drop("_profile")
+    )
+    
+    # Add user struct column: STRUCT<id: STRING, name: STRING, avatar: STRING>
+    result_df = result_df.withColumn(
+        "user",
+        F.struct(
+            F.col("user_id").alias("id"),
+            F.concat_ws(" ", F.col("first_name"), F.col("last_name")).alias("name"),
+            F.col("avatar_url").alias("avatar")
+        )
+    )
+    
+    # Drop temporary columns, keep only user struct
+    result_df = result_df.drop("first_name", "last_name", "avatar_url")
     
     return result_df
-

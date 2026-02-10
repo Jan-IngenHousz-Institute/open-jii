@@ -25,9 +25,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
   let repository: ExperimentDataAnnotationsRepository;
   let databricksPort: DatabricksPort;
 
-  const mockExperimentName = "test_experiment";
   const mockExperimentId = faker.string.uuid();
-  const mockSchemaName = `exp_${mockExperimentName}_${mockExperimentId}`;
   const mockUserId = faker.string.uuid();
   const mockAnnotationId = faker.string.uuid();
   const mockRowId = faker.string.uuid();
@@ -54,117 +52,6 @@ describe("ExperimentDataAnnotationsRepository", () => {
     await testApp.teardown();
   });
 
-  describe("ensureTableExists", () => {
-    it("should create table when it does not exist", async () => {
-      // Mock listTables to show no annotations table exists
-      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
-        success({
-          tables: [],
-          next_page_token: undefined,
-        }),
-      );
-
-      // Mock CREATE TABLE and ALTER TABLE operations
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(
-          success({
-            columns: [],
-            rows: [],
-            totalRows: 0,
-            truncated: false,
-          }),
-        ) // CREATE TABLE
-        .mockResolvedValueOnce(
-          success({
-            columns: [],
-            rows: [],
-            totalRows: 0,
-            truncated: false,
-          }),
-        ); // ALTER TABLE
-
-      const result = await repository.ensureTableExists(mockSchemaName, mockExperimentId);
-
-      assertSuccess(result);
-      expect(databricksPort.listTables).toHaveBeenCalledWith(mockSchemaName);
-      expect(databricksPort.executeSqlQuery).toHaveBeenCalledTimes(2);
-    });
-
-    it("should skip table creation when table already exists", async () => {
-      // Mock listTables to show annotations table exists
-      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
-        success({
-          tables: [
-            {
-              name: "annotations",
-              catalog_name: "test_catalog",
-              schema_name: "test_schema",
-              table_type: "MANAGED",
-              created_at: Date.now(),
-            },
-          ],
-          next_page_token: undefined,
-        }),
-      );
-
-      // Set up spy for executeSqlQuery (should not be called)
-      const executeQuerySpy = vi.spyOn(databricksPort, "executeSqlQuery");
-
-      const result = await repository.ensureTableExists(mockSchemaName, mockExperimentId);
-
-      assertSuccess(result);
-      expect(result.value).toBeNull(); // Returns null when table exists
-      expect(databricksPort.listTables).toHaveBeenCalledWith(mockSchemaName);
-      expect(executeQuerySpy).not.toHaveBeenCalled();
-    });
-
-    it("should handle listTables failure", async () => {
-      // Mock listTables to fail
-      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
-        failure({
-          message: "Failed to list tables",
-          code: "DATABRICKS_ERROR",
-          statusCode: 500,
-          name: "DatabricksError",
-        }),
-      );
-
-      // Set up spy for executeSqlQuery (should not be called)
-      const executeQuerySpy = vi.spyOn(databricksPort, "executeSqlQuery");
-
-      const result = await repository.ensureTableExists(mockSchemaName, mockExperimentId);
-
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to list tables");
-      expect(executeQuerySpy).not.toHaveBeenCalled();
-    });
-
-    it("should handle CREATE TABLE failure", async () => {
-      // Mock listTables to show no annotations table exists
-      vi.spyOn(databricksPort, "listTables").mockResolvedValueOnce(
-        success({
-          tables: [],
-          next_page_token: undefined,
-        }),
-      );
-
-      // Mock CREATE TABLE to fail
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(
-        failure({
-          message: "Failed to create table",
-          code: "DATABRICKS_ERROR",
-          statusCode: 500,
-          name: "DatabricksError",
-        }),
-      );
-
-      const result = await repository.ensureTableExists(mockSchemaName, mockExperimentId);
-
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to create annotations table");
-    });
-  });
-
   describe("storeAnnotations", () => {
     const createValidAnnotation = (): CreateAnnotationDto => ({
       userId: mockUserId,
@@ -177,8 +64,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
     });
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -191,7 +78,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, annotations);
+      const result = await repository.storeAnnotations(mockExperimentId, annotations);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -199,8 +86,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(result.value).toEqual({ rowsAffected: 1 });
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        mockSchemaName,
-        expect.stringContaining("INSERT INTO annotations"),
+        databricksPort.CENTRUM_SCHEMA_NAME,
+        expect.stringContaining("INSERT INTO experiment_annotations"),
       );
     });
 
@@ -218,7 +105,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, annotations);
+      const result = await repository.storeAnnotations(mockExperimentId, annotations);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -234,7 +121,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
     it("should return success with empty result when no annotations provided", async () => {
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, []);
+      const result = await repository.storeAnnotations(mockExperimentId, []);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -253,7 +140,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       ];
 
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, invalidAnnotations);
+      const result = await repository.storeAnnotations(mockExperimentId, invalidAnnotations);
 
       // Assert
       expect(result.isFailure()).toBe(true);
@@ -271,7 +158,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, [
+      const result = await repository.storeAnnotations(mockExperimentId, [
         annotationWithSpecialChars,
       ]);
 
@@ -294,7 +181,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(databricksError));
 
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, annotations);
+      const result = await repository.storeAnnotations(mockExperimentId, annotations);
 
       // Assert
       expect(result.isFailure()).toBe(true);
@@ -312,8 +199,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
     };
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_updated_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_updated_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -326,7 +213,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
       // Act
       const result = await repository.updateAnnotation(
-        mockSchemaName,
+        mockExperimentId,
         mockAnnotationId,
         validUpdateData,
       );
@@ -336,8 +223,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
       assertSuccess(result);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        mockSchemaName,
-        expect.stringContaining("UPDATE annotations"),
+        databricksPort.CENTRUM_SCHEMA_NAME,
+        expect.stringContaining("UPDATE experiment_annotations"),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
@@ -358,7 +245,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
       // Act
       const result = await repository.updateAnnotation(
-        mockSchemaName,
+        mockExperimentId,
         mockAnnotationId,
         partialUpdateData,
       );
@@ -377,7 +264,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
     it("should return validation error for invalid annotation ID", async () => {
       // Act
       const result = await repository.updateAnnotation(
-        mockSchemaName,
+        mockExperimentId,
         "invalid-uuid",
         validUpdateData,
       );
@@ -397,7 +284,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
       // Act
       const result = await repository.updateAnnotation(
-        mockSchemaName,
+        mockExperimentId,
         mockAnnotationId,
         invalidUpdateData,
       );
@@ -412,8 +299,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
   describe("deleteAnnotation", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -425,15 +312,15 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.deleteAnnotation(mockSchemaName, mockAnnotationId);
+      const result = await repository.deleteAnnotation(mockExperimentId, mockAnnotationId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        mockSchemaName,
-        expect.stringContaining("DELETE FROM annotations"),
+        databricksPort.CENTRUM_SCHEMA_NAME,
+        expect.stringContaining("DELETE FROM experiment_annotations"),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
@@ -445,7 +332,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
     it("should return validation error for invalid annotation ID", async () => {
       // Act
-      const result = await repository.deleteAnnotation(mockSchemaName, "invalid-uuid");
+      const result = await repository.deleteAnnotation(mockExperimentId, "invalid-uuid");
 
       // Assert
       expect(result.isFailure()).toBe(true);
@@ -453,13 +340,29 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(result.error.message).toContain("Invalid annotation ID");
       // Method is not called on validation error
     });
+
+    it("should handle databricks port failure in delete", async () => {
+      // Arrange
+      const databricksError = AppError.internal("Databricks connection failed");
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(databricksError));
+
+      // Act
+      const result = await repository.deleteAnnotation(mockExperimentId, mockAnnotationId);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toBe(
+        "Failed to delete annotation: Databricks connection failed",
+      );
+    });
   });
 
   describe("deleteAnnotationsBulk", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_deleted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -473,7 +376,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
       // Act
       const result = await repository.deleteAnnotationsBulk(
-        mockSchemaName,
+        mockExperimentId,
         mockTableName,
         rowIds,
         "comment",
@@ -484,39 +387,48 @@ describe("ExperimentDataAnnotationsRepository", () => {
       assertSuccess(result);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        mockSchemaName,
-        expect.stringContaining("DELETE FROM annotations"),
+        databricksPort.CENTRUM_SCHEMA_NAME,
+        expect.stringContaining("DELETE FROM experiment_annotations"),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[1];
 
-      expect(sqlQuery).toContain(`table_name='${mockTableName}'`);
-      expect(sqlQuery).toContain("id IN (");
+      expect(sqlQuery).toContain(`table_name = '${mockTableName}'`);
+      expect(sqlQuery).toContain("row_id IN (");
       rowIds.forEach((id) => {
         expect(sqlQuery).toContain(`'${id}'`);
       });
-      expect(sqlQuery).toContain(`type='comment`);
+      expect(sqlQuery).toContain(`type = 'comment'`);
       expect(sqlQuery).not.toContain("user_id =");
     });
 
     it("should return success with empty result when no annotation IDs provided", async () => {
+      // Arrange
+      const executeSqlSpy = vi.spyOn(databricksPort, "executeSqlQuery");
+
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, []);
+      const result = await repository.deleteAnnotationsBulk(
+        mockExperimentId,
+        mockTableName,
+        [],
+        "comment",
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual({ rowsAffected: 0 });
-      // Method is not called for empty arrays
+      // executeSqlQuery should not be called for empty arrays
+      expect(executeSqlSpy).not.toHaveBeenCalled();
     });
   });
 
   describe("SQL injection protection", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -538,7 +450,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, [maliciousAnnotation]);
+      const result = await repository.storeAnnotations(mockExperimentId, [maliciousAnnotation]);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -564,7 +476,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       };
 
       // Act
-      const result = await repository.storeAnnotations(mockSchemaName, [invalidAnnotation]);
+      const result = await repository.storeAnnotations(mockExperimentId, [invalidAnnotation]);
 
       // Assert
       expect(result.isFailure()).toBe(true);
@@ -584,7 +496,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
 
       // Act
       const result = await repository.deleteAnnotationsBulk(
-        mockSchemaName,
+        mockExperimentId,
         "test_table",
         ["row1", "row2"],
         "comment",
