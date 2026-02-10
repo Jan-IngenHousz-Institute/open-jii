@@ -220,16 +220,19 @@ resource "aws_secretsmanager_secret" "writer_credentials" {
   }
 }
 
+ephemeral "random_password" "db_password" {
+  length = 16
+}
+
 resource "aws_secretsmanager_secret_version" "writer_credentials" {
   secret_id = aws_secretsmanager_secret.writer_credentials.id
-  secret_string = jsonencode({
+
+  secret_string_wo = jsonencode({
     username = "openjii_writer"
-    password = "PLACEHOLDER_WILL_BE_SET_BY_MIGRATION_SCRIPT"
+    password = ephemeral.random_password.db_password.result
   })
 
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
+  secret_string_wo_version = 1
 }
 
 # IAM role for RDS Enhanced Monitoring (conditional)
