@@ -345,15 +345,15 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
-    "BRONZE_TABLE"                = "raw_data"
-    "SILVER_TABLE"                = "clean_data"
-    "RAW_KINESIS_TABLE"           = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"         = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME"     = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"             = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"                 = var.environment
-    "MONITORING_SLACK_CHANNEL"    = var.slack_channel
-    "pipelines.trigger.interval"  = "120 seconds"
+    "BRONZE_TABLE"               = "raw_data"
+    "SILVER_TABLE"               = "clean_data"
+    "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"        = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME"    = "unity-catalog-kinesis-role-${var.environment}"
+    "CHECKPOINT_PATH"            = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+    "ENVIRONMENT"                = var.environment
+    "MONITORING_SLACK_CHANNEL"   = var.slack_channel
+    "pipelines.trigger.interval" = "120 seconds"
   }
 
   continuous_mode  = true
@@ -584,14 +584,14 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST                           = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID                      = module.node_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET                  = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_AMBYTE_PROCESSING_JOB_ID       = module.ambyte_processing_job.job_id
-    DATABRICKS_WAREHOUSE_ID                   = var.backend_databricks_warehouse_id
-    DATABRICKS_WEBHOOK_API_KEY_ID             = var.backend_webhook_api_key_id
-    DATABRICKS_WEBHOOK_SECRET                 = var.backend_webhook_secret
-    DATABRICKS_WEBHOOK_API_KEY                = var.backend_webhook_api_key
+    DATABRICKS_HOST                     = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID                = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET            = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_AMBYTE_PROCESSING_JOB_ID = module.ambyte_processing_job.job_id
+    DATABRICKS_WAREHOUSE_ID             = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID       = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET           = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY          = var.backend_webhook_api_key
   })
 
   tags = {
@@ -1044,6 +1044,26 @@ module "backend_ecs" {
     {
       name  = "DATABRICKS_CATALOG_NAME"
       value = module.databricks_catalog.catalog_name
+    },
+    {
+      name  = "DATABRICKS_CENTRUM_SCHEMA_NAME"
+      value = "centrum"
+    },
+    {
+      name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
+      value = "enriched_experiment_raw_data"
+    },
+    {
+      name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
+      value = "experiment_device_data"
+    },
+    {
+      name  = "DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME"
+      value = "enriched_raw_ambyte_data"
+    },
+    {
+      name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
+      value = "enriched_experiment_macro_data"
     },
     {
       name  = "DB_HOST"
