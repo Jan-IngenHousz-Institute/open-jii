@@ -161,6 +161,42 @@ module "github_cicd_service_principal" {
   }
 }
 
+# Cluster policy for cost control and resource management
+module "node_cluster_policy" {
+  source = "../../modules/databricks/cluster-policy"
+
+  name        = "node-service-principal-policy-${var.environment}"
+  description = "Cluster policy for node service principal with cost controls"
+
+  definition = jsonencode({
+    cluster_type = {
+      type   = "allowlist"
+      values = ["all-purpose", "dlt"]
+    }
+    node_type_id = {
+      type  = "fixed"
+      value = "r5d.large"
+    }
+    num_workers = {
+      type  = "fixed"
+      value = 1
+    }
+  })
+
+  permissions = [
+    {
+      service_principal_name = module.node_service_principal.service_principal_application_id
+      permission_level       = "CAN_USE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
 # Create Slack notification destination
 module "slack_notification_destination" {
   source = "../../modules/databricks/notification-destination"
@@ -309,19 +345,24 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
-    "BRONZE_TABLE"             = "raw_data"
-    "SILVER_TABLE"             = "clean_data"
-    "RAW_KINESIS_TABLE"        = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"      = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME"  = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"          = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"              = var.environment
-    "MONITORING_SLACK_CHANNEL" = var.slack_channel
+    "BRONZE_TABLE"                = "raw_data"
+    "SILVER_TABLE"                = "clean_data"
+    "RAW_KINESIS_TABLE"           = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"         = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME"     = "unity-catalog-kinesis-role-${var.environment}"
+    "CHECKPOINT_PATH"             = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+    "ENVIRONMENT"                 = var.environment
+    "MONITORING_SLACK_CHANNEL"    = var.slack_channel
+    "pipelines.trigger.interval"  = "120 seconds"
   }
 
-  continuous_mode  = false
+  continuous_mode  = true
   development_mode = true
-  serverless       = true
+  serverless       = false
+
+  node_type_id = "r5d.large"
+  num_workers  = 1
+  policy_id    = module.node_cluster_policy.policy_id
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -337,81 +378,8 @@ module "centrum_pipeline" {
   providers = {
     databricks.workspace = databricks.workspace
   }
-}
 
-module "pipeline_scheduler" {
-  source = "../../modules/databricks/job"
-
-  name        = "Pipeline-Scheduler-DEV"
-  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 6am and 6pm"
-
-  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 6am and 6pm (UTC)
-  # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,15,30,45 6-18 * * ?"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key          = "trigger_centrum_pipeline"
-      task_type    = "pipeline"
-      compute_type = "serverless"
-      pipeline_id  = module.centrum_pipeline.pipeline_id
-    },
-    {
-      key           = "trigger_experiment_pipelines"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipelines_orchestrator_task"
-
-      parameters = {
-        "catalog_name"            = module.databricks_catalog.catalog_name,
-        "central_schema"          = "centrum",
-        "experiment_status_table" = "experiment_status",
-        "environment"             = upper(var.environment)
-      }
-
-      depends_on = "trigger_centrum_pipeline"
-    },
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_start = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.centrum_pipeline]
+  depends_on = [module.node_cluster_policy]
 }
 
 module "centrum_backup_job" {
@@ -548,158 +516,6 @@ module "ambyte_processing_job" {
   }
 }
 
-module "experiment_provisioning_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Experiment-Provisioning-Job-DEV"
-  description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  # Enable job queueing
-  queue = {
-    enabled = true
-  }
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 3
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "experiment_pipeline_create"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipeline_create_task"
-
-      parameters = {
-        "experiment_id"            = "{{experiment_id}}"
-        "experiment_name"          = "{{experiment_name}}"
-        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
-        # "experiment_pipeline_path" = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/experiment_pipeline"
-        "catalog_name"   = module.databricks_catalog.catalog_name
-        "central_schema" = "centrum"
-        "environment"    = upper(var.environment)
-        "slack_channel"  = var.slack_channel
-      }
-    },
-    {
-      key           = "experiment_status_update"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_status_update_task"
-
-      parameters = {
-        "experiment_id"       = "{{experiment_id}}"
-        "job_run_id"          = "{{job.run_id}}"
-        "task_run_id"         = "{{task.run_id}}"
-        "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
-        "pipeline_id"         = "{{tasks.experiment_pipeline_create.values.pipeline_id}}"
-        "schema_name"         = "{{tasks.experiment_pipeline_create.values.schema_name}}"
-        "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
-        "key_scope"           = module.experiment_secret_scope.scope_name
-      }
-
-      depends_on = "experiment_pipeline_create"
-    },
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "enriched_tables_refresh_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Enriched-Tables-Refresh-Job-DEV"
-  description = "Refreshes enriched tables across experiment pipelines when metadata changes (e.g., user profile updates)"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  # Enable job queueing
-  queue = {
-    enabled = true
-  }
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "refresh_enriched_tables"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/enriched_tables_refresh_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/enriched_tables_refresh_task"
-
-      parameters = {
-        metadata_key         = "{{metadata_key}}"
-        metadata_value       = "{{metadata_value}}"
-        catalog_name         = module.databricks_catalog.catalog_name
-        central_schema       = "centrum"
-        central_silver_table = "clean_data"
-        environment          = var.environment
-      }
-    }
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
   cluster_identifier     = "open-jii-${var.environment}-db-cluster"
@@ -771,9 +587,7 @@ module "databricks_secrets" {
     DATABRICKS_HOST                           = module.databricks_workspace.workspace_url
     DATABRICKS_CLIENT_ID                      = module.node_service_principal.service_principal_application_id
     DATABRICKS_CLIENT_SECRET                  = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID = module.experiment_provisioning_job.job_id
     DATABRICKS_AMBYTE_PROCESSING_JOB_ID       = module.ambyte_processing_job.job_id
-    DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID = module.enriched_tables_refresh_job.job_id
     DATABRICKS_WAREHOUSE_ID                   = var.backend_databricks_warehouse_id
     DATABRICKS_WEBHOOK_API_KEY_ID             = var.backend_webhook_api_key_id
     DATABRICKS_WEBHOOK_SECRET                 = var.backend_webhook_secret

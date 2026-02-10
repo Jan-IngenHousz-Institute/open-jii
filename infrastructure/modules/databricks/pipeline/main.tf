@@ -39,6 +39,9 @@ resource "databricks_pipeline" "this" {
       # Use smallest available instance or specified type
       node_type_id = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest[0].id
 
+      # Cluster policy if specified
+      policy_id = var.policy_id
+
       # Support for autoscaling
       dynamic "autoscale" {
         for_each = var.autoscale ? [1] : []
