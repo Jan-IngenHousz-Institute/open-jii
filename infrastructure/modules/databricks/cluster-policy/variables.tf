@@ -37,7 +37,6 @@ variable "libraries" {
   description = "List of libraries to be installed on every cluster created with this policy"
   type = list(object({
     jar = optional(string)
-    egg = optional(string)
     whl = optional(string)
     pypi = optional(object({
       package = string

@@ -24,18 +24,27 @@ resource "databricks_cluster_policy" "this" {
       jar = try(libraries.value.jar, null)
       whl = try(libraries.value.whl, null)
 
-      pypi {
-        package = try(libraries.value.pypi.package, null)
-        repo    = try(libraries.value.pypi.repo, null)
+      dynamic "pypi" {
+        for_each = try(libraries.value.pypi, null) == null ? [] : [libraries.value.pypi]
+        content {
+          package = pypi.value.package
+          repo    = try(pypi.value.repo, null)
+        }
       }
-      maven {
-        coordinates = try(libraries.value.maven.coordinates, null)
-        repo        = try(libraries.value.maven.repo, null)
-        exclusions  = try(libraries.value.maven.exclusions, null)
+      dynamic "maven" {
+        for_each = try(libraries.value.maven, null) == null ? [] : [libraries.value.maven]
+        content {
+          coordinates = maven.value.coordinates
+          repo        = try(maven.value.repo, null)
+          exclusions  = try(maven.value.exclusions, null)
+        }
       }
-      cran {
-        package = try(libraries.value.cran.package, null)
-        repo    = try(libraries.value.cran.repo, null)
+      dynamic "cran" {
+        for_each = try(libraries.value.cran, null) == null ? [] : [libraries.value.cran]
+        content {
+          package = cran.value.package
+          repo    = try(cran.value.repo, null)
+        }
       }
     }
   }

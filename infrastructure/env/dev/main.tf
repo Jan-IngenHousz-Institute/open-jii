@@ -998,16 +998,8 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
     },
     {
-      name      = "DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID::"
-    },
-    {
       name      = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
-    },
-    {
-      name      = "DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
