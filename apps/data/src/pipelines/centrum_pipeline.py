@@ -4,8 +4,8 @@
 # for openJII IoT sensor data processing following the dual medallion pattern
 
 %pip install -q mini-racer==0.12.4
-%pip install -q /Workspace/Shared/wheels/multispeq-0.2.0-py3-none-any.whl
-%pip install -q /Workspace/Shared/wheels/enrich-0.2.0-py3-none-any.whl
+%pip install -q /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
+%pip install -q /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 import dlt
@@ -191,7 +191,6 @@ def clean_data():
         )
     )
 
-
     df = df.withColumn(
         "macros",
         F.when(
@@ -219,8 +218,16 @@ def clean_data():
         )
     )
 
-    df = df.withColumn("questions", F.col("parsed_data.questions"))
-    df = df.withColumn("annotations", F.coalesce(F.col("parsed_data.annotations"), F.array()))
+    df = df.withColumn(
+        "questions",
+        F.col("parsed_data.questions")
+    )
+    
+    df = df.withColumn(
+        "annotations",
+        F.coalesce(F.col("parsed_data.annotations"), F.array())
+    )
+
     df = df.withColumn(
         "id",
         F.abs(
@@ -233,13 +240,29 @@ def clean_data():
             )
         )
     )
-    
+
+    df = df.withColumn(
+        "new_id",
+        F.abs(
+            F.hash(
+                F.col("experiment_id"),
+                F.col("device_id"),
+                F.col("timestamp"),
+                F.col("sample"),
+                F.col("ingestion_timestamp"),
+                F.expr("uuid()")
+            )
+        )
+    )
+
+    # Populate missing annotation IDs and rowIds
+    # If annotations come from payload without IDs, generate them here
     df = df.withColumn(
         "annotations",
         F.expr("""
             transform(annotations, a -> struct(
                 coalesce(a.id, uuid()) as id,
-                coalesce(a.rowId, cast(id as string)) as rowId,
+                coalesce(a.rowId, cast(new_id as string)) as rowId,
                 a.type as type,
                 a.content as content,
                 a.createdBy as createdBy,
@@ -253,6 +276,7 @@ def clean_data():
     # Select final columns for silver layer
     return df.select(
         "id",
+        "new_id",
         "device_id",
         "device_name",
         "device_version",
@@ -423,7 +447,7 @@ def experiment_raw_data():
             )
         )
         .select(
-            "id",
+            F.col("new_id").alias("id"),
             "experiment_id",
             "device_id",
             "device_name",
@@ -452,7 +476,9 @@ def experiment_raw_data():
     }
 )
 def experiment_device_data():
-    """Device metadata aggregated per experiment."""
+    """
+    Aggregate device stats per experiment from clean_data.
+    """
     silver_df = dlt.read(SILVER_TABLE)
     
     return (
@@ -501,8 +527,7 @@ def experiment_device_data():
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true",
-        "delta.enableRowTracking": "true",
-        "delta.feature.variantType-preview": "supported",
+        "delta.feature.variantType-preview": "supported"
     }
 )
 def experiment_macro_data():
@@ -624,32 +649,24 @@ def experiment_macro_data():
 # DBTITLE 1,Gold Layer - Experiment Table Metadata
 @dlt.table(
     name=EXPERIMENT_TABLE_METADATA,
-    comment="Gold layer: Consolidated metadata cache for all experiment tables (row counts, schemas).",
+    comment="Gold layer: Consolidated metadata cache for all experiment tables (row counts, schemas). Single query optimization. Replaces EXPERIMENT_MACROS_TABLE and EXPERIMENT_QUESTIONS_TABLE.",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
         "delta.feature.variantType-preview": "supported",
     }
 )
 def experiment_table_metadata():
     """Metadata for all experiment tables."""
-    
-    # 1. Macro tables metadata (one row per macro_filename per experiment)
-    # One macro file = one table, even if macro_name changes over time
-    # Compute row counts, macro schema, and questions schema directly from macro data
+
     macro_metadata = (
         dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
-        .filter("macro_output IS NOT NULL")  # Only count successful macro executions
+        .filter("macro_output IS NOT NULL")
         .groupBy("experiment_id", "macro_filename")
         .agg(
-            F.max("macro_name").alias("table_name"),  # Use latest macro_name as display name
+            F.max("macro_name").alias("table_name"),
             F.count("*").alias("row_count"),
-            # Aggregate macro_output schema for this specific macro (NULLIF converts VOID to NULL)
             F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
-            # Aggregate questions_schema from the actual questions_data in macro rows (NULLIF converts VOID to NULL)
-            # This correctly handles cases where different samples have different questions
             F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
         .select(
@@ -730,7 +747,6 @@ def experiment_table_metadata():
 def experiment_contributors():
     """Cached user profiles per experiment."""
     
-    # Get unique users per experiment (batch read, not streaming)
     unique_users = (
         dlt.read(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
@@ -895,17 +911,10 @@ def enriched_experiment_macro_data():
 )
 def raw_ambyte_data():
     """Streaming ingestion of pre-processed Ambyte trace data."""
-    # Base path for all processed ambyte data across all experiments
-    # Point directly to the processed-ambyte subdirectories using wildcards
     processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/*/processed-ambyte"
     
-    # Schema location for Auto Loader metadata (schema inference and checkpointing)
     schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/_schemas/ambyte_schema"
     
-    # Read all parquet files recursively using cloudFiles for Auto Loader (streaming)
-    # This will automatically detect new files as they are added by the ambyte_processing_task
-    # The path pattern will match: /Volumes/{catalog}/centrum/data-uploads/*/processed-ambyte/*.parquet
-    # The experiment_id column is included in the parquet files by the ambyte_processing_task
     df = (
         spark.readStream
         .format("cloudFiles")
