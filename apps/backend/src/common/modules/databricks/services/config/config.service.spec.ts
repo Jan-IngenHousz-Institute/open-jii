@@ -101,27 +101,27 @@ describe("DatabricksConfigService", () => {
 
     it("should return the correct centrum schema name", () => {
       const centrumSchemaName = configService.getCentrumSchemaName();
-      expect(centrumSchemaName).toBe("centrum");
+      expect(centrumSchemaName).toBe(process.env.DATABRICKS_CENTRUM_SCHEMA_NAME);
     });
 
     it("should return the correct raw data table name", () => {
       const rawDataTableName = configService.getRawDataTableName();
-      expect(rawDataTableName).toBe("enriched_experiment_raw_data");
+      expect(rawDataTableName).toBe(process.env.DATABRICKS_RAW_DATA_TABLE_NAME);
     });
 
     it("should return the correct device data table name", () => {
       const deviceDataTableName = configService.getDeviceDataTableName();
-      expect(deviceDataTableName).toBe("experiment_device_data");
+      expect(deviceDataTableName).toBe(process.env.DATABRICKS_DEVICE_DATA_TABLE_NAME);
     });
 
     it("should return the correct raw ambyte data table name", () => {
       const rawAmbyteDataTableName = configService.getRawAmbyteDataTableName();
-      expect(rawAmbyteDataTableName).toBe("enriched_raw_ambyte_data");
+      expect(rawAmbyteDataTableName).toBe(process.env.DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME);
     });
 
     it("should return the correct macro data table name", () => {
       const macroDataTableName = configService.getMacroDataTableName();
-      expect(macroDataTableName).toBe("enriched_experiment_macro_data");
+      expect(macroDataTableName).toBe(process.env.DATABRICKS_MACRO_DATA_TABLE_NAME);
     });
   });
 });

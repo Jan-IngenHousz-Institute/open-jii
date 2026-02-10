@@ -366,7 +366,7 @@ describe("DatabricksAdapter", () => {
 
       expect(query).toContain("SELECT `id`, `timestamp`");
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
-      expect(query).toContain("enriched_experiment_raw_data"); // physical table name
+      expect(query).toContain(databricksAdapter.RAW_DATA_TABLE_NAME);
     });
 
     it("should build query for macro tables with macro_filename filter", () => {
@@ -379,7 +379,7 @@ describe("DatabricksAdapter", () => {
       expect(query).toContain("SELECT `id`, `data`");
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
       expect(query).toContain("`macro_filename` = 'some_macro_name'");
-      expect(query).toContain("enriched_experiment_macro_data"); // physical table name
+      expect(query).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
     });
 
     it("should handle VARIANT columns parsing", () => {

@@ -86,7 +86,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(result.value).toEqual({ rowsAffected: 1 });
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("INSERT INTO experiment_annotations"),
       );
     });
@@ -223,7 +223,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       assertSuccess(result);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("UPDATE experiment_annotations"),
       );
 
@@ -319,7 +319,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       assertSuccess(result);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("DELETE FROM experiment_annotations"),
       );
 
@@ -387,7 +387,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       assertSuccess(result);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("DELETE FROM experiment_annotations"),
       );
 

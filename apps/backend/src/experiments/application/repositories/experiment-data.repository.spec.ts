@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { expect } from "vitest";
 
+import type { ExperimentTableMetadata } from "../../../common/modules/databricks/databricks.adapter";
 import { AppError, success, failure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { ExperimentDto } from "../../core/models/experiment.model";
@@ -26,7 +27,6 @@ describe("ExperimentDataRepository", () => {
     updatedAt: new Date(),
     createdBy: faker.string.uuid(),
     pipelineId: faker.string.uuid(),
-    schemaName: "centrum",
   } as ExperimentDto;
 
   beforeAll(async () => {
@@ -50,6 +50,7 @@ describe("ExperimentDataRepository", () => {
 
   describe("getTableData", () => {
     const experimentId = faker.string.uuid();
+
     const baseParams = {
       experimentId,
       experiment: mockExperiment,
@@ -57,19 +58,16 @@ describe("ExperimentDataRepository", () => {
     };
 
     it("should successfully get table data with pagination", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_data",
+          tableName: "raw_data",
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
         },
       ];
 
-      const mockQuery = "SELECT * FROM centrum.exp_123_raw_data LIMIT 5 OFFSET 0";
+      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_DATA_TABLE_NAME} LIMIT 5 OFFSET 0`;
       const mockSchemaData = {
         columns: [
           { name: "id", type_name: "string", type_text: "string", position: 0 },
@@ -101,7 +99,7 @@ describe("ExperimentDataRepository", () => {
       expect(result.value[0]).toMatchObject({
         name: "raw_data",
         catalog_name: "Test Experiment",
-        schema_name: "centrum",
+        schema_name: databricksPort.CENTRUM_SCHEMA_NAME,
         page: 1,
         pageSize: 5,
         totalRows: 100,
@@ -157,19 +155,16 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should get full table data when specific columns are requested", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_data",
+          tableName: "raw_data",
           rowCount: 100,
           macroSchema: null,
           questionsSchema: "STRUCT<q1: STRING, q2: INT>",
         },
       ];
 
-      const mockQuery = "SELECT id, value FROM centrum.exp_123_raw_data";
+      const mockQuery = `SELECT id, value FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_DATA_TABLE_NAME}`;
       const mockSchemaData = {
         columns: [
           { name: "id", type_name: "string", type_text: "string", position: 0 },
@@ -201,7 +196,7 @@ describe("ExperimentDataRepository", () => {
       expect(result.value[0]).toMatchObject({
         name: "raw_data",
         catalog_name: "Test Experiment",
-        schema_name: "centrum",
+        schema_name: process.env.DATABRICKS_CENTRUM_SCHEMA_NAME ?? "default",
         page: 1,
         pageSize: 3,
         totalRows: 3,
@@ -222,19 +217,16 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should handle macro tables with both schemas", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "macro_123",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_macro_123",
+          tableName: "macro_123",
           rowCount: 50,
           macroSchema: "STRUCT<output: STRING>",
           questionsSchema: "STRUCT<q1: STRING>",
         },
       ];
 
-      const mockQuery = "SELECT * FROM centrum.exp_123_macro_123";
+      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.MACRO_DATA_TABLE_NAME}`;
       const mockSchemaData = {
         columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
         rows: [["1"]],
@@ -278,19 +270,16 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should exclude macro_output when schema is missing for macro tables", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "macro_123",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_macro_123",
+          tableName: "macro_123",
           rowCount: 50,
           macroSchema: null,
           questionsSchema: "STRUCT<q1: STRING>",
         },
       ];
 
-      const mockQuery = "SELECT * FROM centrum.exp_123_macro_123";
+      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.MACRO_DATA_TABLE_NAME}`;
       const mockSchemaData = {
         columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
         rows: [["1"]],
@@ -332,19 +321,16 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should exclude questions_data when schema is missing", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_data",
+          tableName: "raw_data",
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
         },
       ];
 
-      const mockQuery = "SELECT * FROM centrum.exp_123_raw_data";
+      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_DATA_TABLE_NAME}`;
       const mockSchemaData = {
         columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
         rows: [["1"]],
@@ -375,19 +361,16 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should handle device table type correctly", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "device",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_device",
+          tableName: "device",
           rowCount: 10,
           macroSchema: null,
           questionsSchema: null,
         },
       ];
 
-      const mockQuery = "SELECT * FROM centrum.exp_123_device";
+      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.DEVICE_DATA_TABLE_NAME}`;
       const mockSchemaData = {
         columns: [{ name: "device_id", type_name: "string", type_text: "string", position: 0 }],
         rows: [["device1"]],
@@ -421,12 +404,9 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should return failure when executeSqlQuery fails for full table data", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_data",
+          tableName: "raw_data",
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
@@ -438,7 +418,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue("SELECT * FROM table");
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(`SELECT * FROM table`);
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
 
       const result = await repository.getTableData({
@@ -456,12 +436,9 @@ describe("ExperimentDataRepository", () => {
   describe("getTableDataForDownload", () => {
     it("should successfully get download links", async () => {
       const testExperimentId = faker.string.uuid();
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_data",
+          tableName: "raw_data",
           rowCount: 1000,
           macroSchema: "STRUCT<data: STRING>",
           questionsSchema: null,
@@ -494,7 +471,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      const mockQuery = "SELECT * FROM table";
+      const mockQuery = `SELECT * FROM table`;
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(mockQuery);
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockDownloadData));
 
@@ -515,7 +492,7 @@ describe("ExperimentDataRepository", () => {
       });
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         mockQuery,
         "EXTERNAL_LINKS",
         "CSV",
@@ -552,12 +529,9 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should return failure when SQL execution fails", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_data",
+          tableName: "raw_data",
           rowCount: 1000,
           macroSchema: null,
           questionsSchema: null,
@@ -569,7 +543,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue("SELECT * FROM table");
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(`SELECT * FROM table`);
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
 
       const result = await repository.getTableDataForDownload({
@@ -589,19 +563,16 @@ describe("ExperimentDataRepository", () => {
 
     it("should handle exceptColumns being empty", async () => {
       // Test case where all variant columns have schemas, resulting in empty exceptColumns
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_ambyte_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_ambyte_data",
+          tableName: "raw_ambyte_data",
           rowCount: 10,
           macroSchema: null,
           questionsSchema: null,
         },
       ];
 
-      const mockQuery = "SELECT * FROM centrum.exp_123_raw_ambyte_data";
+      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_AMBYTE_DATA_TABLE_NAME}`;
       const mockSchemaData = {
         columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
         rows: [["1"]],
@@ -631,12 +602,9 @@ describe("ExperimentDataRepository", () => {
     });
 
     it("should handle SQL execution failure in getTableDataPage", async () => {
-      const mockMetadata = [
+      const mockMetadata: ExperimentTableMetadata[] = [
         {
-          name: "raw_data",
-          catalogName: "centrum",
-          schemaName: "centrum",
-          tableName: "exp_123_raw_data",
+          tableName: "raw_data",
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
@@ -648,7 +616,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue("SELECT * FROM table");
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(`SELECT * FROM table`);
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
 
       const result = await repository.getTableData({

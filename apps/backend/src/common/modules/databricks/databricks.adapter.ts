@@ -24,6 +24,12 @@ import type {
 } from "./services/workspace/workspace.types";
 import { WorkspaceObjectFormat } from "./services/workspace/workspace.types";
 
+export interface ExperimentTableMetadata {
+  tableName: string;
+  rowCount: number;
+  macroSchema?: string | null;
+  questionsSchema?: string | null;
+}
 @Injectable()
 export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
@@ -213,16 +219,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       tableName?: string;
       includeSchemas?: boolean;
     },
-  ): Promise<
-    Result<
-      {
-        tableName: string;
-        rowCount: number;
-        macroSchema?: string | null;
-        questionsSchema?: string | null;
-      }[]
-    >
-  > {
+  ): Promise<Result<ExperimentTableMetadata[]>> {
     const catalog = this.configService.getCatalogName();
     const schema = this.configService.getCentrumSchemaName();
 
