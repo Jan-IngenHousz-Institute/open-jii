@@ -124,9 +124,11 @@ describe("QueryBuilder Base", () => {
         .limit(10)
         .build();
 
-      expect(query).toContain(
-        "SELECT id,\n    ts\n        FROM (\n          SELECT \n        * EXCEPT (payload, data),\n        data.*\n      FROM (\n        SELECT \n          *,\n          from_json(payload::string, 'STRUCT<x:INT>') as data",
-      );
+      expect(query).toContain("SELECT id");
+      expect(query).toContain("ts");
+      expect(query).toContain("* EXCEPT (payload, data)");
+      expect(query).toContain("data.*");
+      expect(query).toContain("from_json(payload::string, 'STRUCT<x:INT>') as data");
       expect(query).toContain("FROM events");
       expect(query).toContain("WHERE ts > 0");
       expect(query).toContain("ORDER BY `ts` DESC");

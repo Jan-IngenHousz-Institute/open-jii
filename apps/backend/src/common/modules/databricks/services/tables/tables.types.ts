@@ -19,10 +19,7 @@ export interface Table {
   comment?: string;
   created_at: number;
   columns?: ColumnInfo[];
-  properties?: {
-    error_column?: string;
-    [key: string]: string | undefined;
-  };
+  properties?: Record<string, string | undefined>;
 }
 
 export interface ListTablesResponse {

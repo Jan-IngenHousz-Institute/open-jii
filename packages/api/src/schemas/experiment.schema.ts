@@ -8,7 +8,6 @@ export const ExperimentTableName = {
   RAW_DATA: "raw_data",
   DEVICE: "device",
   RAW_AMBYTE_DATA: "raw_ambyte_data",
-  MACRO_DATA: "macro_data",
 } as const;
 
 export type ExperimentTableNameType =
@@ -17,7 +16,7 @@ export type ExperimentTableNameType =
 /**
  * Zod enum for core table names
  */
-export const zExperimentTableName = z.enum(["raw_data", "device", "raw_ambyte_data", "macro_data"]);
+export const zExperimentTableName = z.enum(["raw_data", "device", "raw_ambyte_data"]);
 
 /**
  * Union type: core table names OR string (for dynamic macro tables)

@@ -245,8 +245,6 @@ describe("CreateExperimentUseCase", () => {
 
     const result = await useCase.execute(experimentData, testUserId);
     assertFailure(result);
-    // The use case acts as a "cleanup" or transactional boundary usually, but here it returns failure.
-    // The logger logged EXPERIMENT_CREATE_FAILED.
     expect(result.error.message).toContain("Failed to associate protocols");
   });
 

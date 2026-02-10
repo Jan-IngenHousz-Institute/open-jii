@@ -45,7 +45,7 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("preexecute", () => {
-    it("should return success - volume assumed to exist", async () => {
+    it("should return success", async () => {
       // Create test experiment
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",

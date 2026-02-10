@@ -14,13 +14,9 @@ export default registerAs("databricks", () => ({
     [process.env.DATABRICKS_WEBHOOK_API_KEY_ID!]: process.env.DATABRICKS_WEBHOOK_API_KEY,
   },
   webhookSecret: process.env.DATABRICKS_WEBHOOK_SECRET,
-  // Schema name with default (can be overridden via environment variables)
-  centrumSchemaName: process.env.DATABRICKS_CENTRUM_SCHEMA_NAME ?? "centrum",
-  // Table names with defaults (can be overridden via environment variables)
-  rawDataTableName: process.env.DATABRICKS_RAW_DATA_TABLE_NAME ?? "enriched_experiment_raw_data",
-  deviceDataTableName: process.env.DATABRICKS_DEVICE_DATA_TABLE_NAME ?? "experiment_device_data",
-  rawAmbyteDataTableName:
-    process.env.DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME ?? "enriched_raw_ambyte_data",
-  macroDataTableName:
-    process.env.DATABRICKS_MACRO_DATA_TABLE_NAME ?? "enriched_experiment_macro_data",
+  centrumSchemaName: process.env.DATABRICKS_CENTRUM_SCHEMA_NAME,
+  rawDataTableName: process.env.DATABRICKS_RAW_DATA_TABLE_NAME,
+  deviceDataTableName: process.env.DATABRICKS_DEVICE_DATA_TABLE_NAME,
+  rawAmbyteDataTableName: process.env.DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME,
+  macroDataTableName: process.env.DATABRICKS_MACRO_DATA_TABLE_NAME,
 }));

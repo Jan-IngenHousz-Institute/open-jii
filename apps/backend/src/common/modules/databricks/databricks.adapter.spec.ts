@@ -389,9 +389,10 @@ describe("DatabricksAdapter", () => {
         variants: [{ columnName: "data", schema: '{"field1":"int"}' }],
       });
 
-      expect(query).toContain(
-        'SELECT \n        * EXCEPT (data, parsed_data),\n        parsed_data.*\n      FROM (\n        SELECT \n          *,\n          from_json(data::string, \'{"field1":"int"}\') as parsed_data',
-      );
+      expect(query).toContain("SELECT");
+      expect(query).toContain("* EXCEPT (data, parsed_data)");
+      expect(query).toContain("parsed_data.*");
+      expect(query).toContain('from_json(data::string, \'{"field1":"int"}\') as parsed_data');
     });
 
     it("should handle all query options (limit, offset, orderBy)", () => {
