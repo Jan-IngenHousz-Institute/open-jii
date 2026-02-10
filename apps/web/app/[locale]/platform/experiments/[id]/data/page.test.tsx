@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { ExperimentTableName } from "@repo/api";
+
 import ExperimentDataPage from "./page";
 
 globalThis.React = React;
@@ -69,16 +71,22 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
     experimentId,
     tableName,
     displayName,
+    defaultSortColumn,
+    errorColumn,
   }: {
     experimentId: string;
     tableName: string;
     displayName?: string;
+    defaultSortColumn?: string;
+    errorColumn?: string;
   }) => (
     <div
       data-testid="experiment-data-table"
       data-experiment-id={experimentId}
       data-table-name={tableName}
       data-display-name={displayName}
+      data-default-sort-column={defaultSortColumn}
+      data-error-column={errorColumn}
     >
       Table: {displayName ?? tableName}
     </div>
@@ -134,8 +142,14 @@ describe("ExperimentDataPage", () => {
 
   const mockTablesData = {
     tables: [
-      { name: "measurements", displayName: "Measurements", totalRows: 100 },
-      { name: "device", displayName: "Device Data", totalRows: 50 },
+      {
+        name: "measurements",
+        displayName: "Measurements",
+        totalRows: 100,
+        defaultSortColumn: "timestamp",
+        errorColumn: "error_code",
+      },
+      { name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 },
     ],
     isLoading: false,
     error: null,
@@ -230,7 +244,7 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("renders tab triggers for each table with row counts", async () => {
+  it("renders tab triggers for each table with row counts, including device table", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
@@ -238,17 +252,19 @@ describe("ExperimentDataPage", () => {
       expect(measurementsTab).toBeInTheDocument();
       expect(measurementsTab).toHaveTextContent("Measurements (100)");
 
+      // Device table should be present
       const deviceTab = screen.getByTestId("nav-tab-trigger-device");
       expect(deviceTab).toBeInTheDocument();
-      expect(deviceTab).toHaveTextContent("Device Data (50)");
+      expect(deviceTab).toHaveTextContent("Device Metadata (50)");
     });
   });
 
-  it("renders table content for each tab", async () => {
+  it("renders table content for each tab, including device table", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("nav-tab-content-measurements")).toBeInTheDocument();
+      // Device table content should be rendered
       expect(screen.getByTestId("nav-tab-content-device")).toBeInTheDocument();
     });
   });
@@ -264,6 +280,23 @@ describe("ExperimentDataPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
+    });
+  });
+
+  it("displays device table when it's the only table", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [{ name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 }],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      // Device table should be shown
+      const deviceTab = screen.getByTestId("nav-tab-trigger-device");
+      expect(deviceTab).toBeInTheDocument();
+      expect(deviceTab).toHaveTextContent("Device Metadata (50)");
     });
   });
 
@@ -287,13 +320,15 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("passes correct experiment ID and table name to ExperimentDataTable", async () => {
+  it("passes correct properties to ExperimentDataTable", async () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
       const measurementsTable = screen.getAllByTestId("experiment-data-table")[0];
       expect(measurementsTable).toHaveAttribute("data-experiment-id", "exp-123");
       expect(measurementsTable).toHaveAttribute("data-table-name", "measurements");
+      expect(measurementsTable).toHaveAttribute("data-error-column", "error_code");
+      expect(measurementsTable).toHaveAttribute("data-default-sort-column", "timestamp");
     });
   });
 

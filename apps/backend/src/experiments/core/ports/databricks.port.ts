@@ -3,18 +3,11 @@ import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
-import type { DatabricksPipelineStartUpdateResponse } from "../../../common/modules/databricks/services/pipelines/pipelines.types";
 import type {
   SchemaData,
   DownloadLinksData,
 } from "../../../common/modules/databricks/services/sql/sql.types";
-import type { ListTablesResponse } from "../../../common/modules/databricks/services/tables/tables.types";
-import type {
-  CreateVolumeParams,
-  VolumeResponse,
-} from "../../../common/modules/databricks/services/volumes/volumes.types";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExperimentVisualizationDto } from "../models/experiment-visualizations.model";
 
 /**
  * Injection token for the Databricks port
@@ -26,78 +19,111 @@ export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
  * This interface defines the contract for external Databricks services
  */
 export interface DatabricksPort {
+  // Schema name
+  readonly CENTRUM_SCHEMA_NAME: string;
+
+  // Physical Databricks table names (only those consumed by repository)
+  readonly RAW_DATA_TABLE_NAME: string;
+  readonly DEVICE_DATA_TABLE_NAME: string;
+  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
+  readonly MACRO_DATA_TABLE_NAME: string;
+
   /**
    * Check if the Databricks service is available and responding
    */
   healthCheck(): Promise<Result<DatabricksHealthCheck>>;
 
   /**
-   * Trigger the experiment provisioning Databricks job with the specified parameters
+   * Get consolidated experiment table metadata (row counts and schemas) from the
+   * experiment_table_metadata cache table. This is a single-query optimization
+   * that replaces multiple separate queries.
+   *
+   * Returns metadata for all tables in an experiment:
+   * - Raw data table
+   * - Device data table
+   * - Ambyte data table
+   * - All macro tables
+   *
+   * @param experimentId - The experiment identifier
+   * @param options - Optional configuration
+   * @param options.tableName - If provided, only return metadata for this specific table
+   * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
+   * @returns Result containing array of table metadata with schemas and row counts
    */
-  triggerExperimentProvisioningJob(
+  getExperimentTableMetadata(
     experimentId: string,
-    params: Record<string, string>,
-  ): Promise<Result<DatabricksJobRunResponse>>;
+    options?: {
+      tableName?: string;
+      includeSchemas?: boolean;
+    },
+  ): Promise<
+    Result<
+      {
+        tableName: string;
+        rowCount: number;
+        macroSchema?: string | null;
+        questionsSchema?: string | null;
+      }[]
+    >
+  >;
 
   /**
-   * Trigger the ambyte processing Databricks job with the specified parameters
+   * Build a SQL query for experiment data with optional VARIANT parsing
+   * Consolidates simple queries and VARIANT parsing into one method
+   *
+   * @param params - Query parameters including table name, experiment ID, columns, variants, ordering, pagination
+   * @returns SQL query string
    */
-  triggerAmbyteProcessingJob(
-    schemaName: string,
-    params: Record<string, string>,
-  ): Promise<Result<DatabricksJobRunResponse>>;
+  buildExperimentQuery(params: {
+    tableName: string;
+    experimentId: string;
+    columns?: string[];
+    variants?: { columnName: string; schema: string }[];
+    exceptColumns?: string[];
+    orderBy?: string;
+    orderDirection?: "ASC" | "DESC";
+    limit?: number;
+    offset?: number;
+  }): string;
 
   /**
-   * Trigger the enriched tables refresh Databricks job with the specified parameters
+   * Execute a SQL query with INLINE disposition (returns data directly)
    */
-  triggerEnrichedTablesRefreshJob(
-    metadataKey: string,
-    metadataValue: string,
-  ): Promise<Result<DatabricksJobRunResponse>>;
-
-  /**
-   * Execute a SQL query in a specific schema
-   */
-  executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
-
-  /**
-   * Download experiment data using EXTERNAL_LINKS disposition for large datasets
-   */
-  downloadExperimentData(
+  executeSqlQuery(
     schemaName: string,
     sqlStatement: string,
+    disposition?: "INLINE",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<SchemaData>>;
+
+  /**
+   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
+   */
+  executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition: "EXTERNAL_LINKS",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
   ): Promise<Result<DownloadLinksData>>;
 
   /**
-   * List tables in the schema for a specific experiment
+   * Execute a SQL query in a specific schema with optional disposition and format.
+   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
+   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
    */
-  listTables(schemaName: string): Promise<Result<ListTablesResponse>>;
-
-  /**
-   * Validate that data sources (table and columns) exist in the experiment
-   *
-   * @param dataConfig - Configuration containing table name and column names to validate
-   * @param schemaName - Schema name of the experiment
-   * @returns Result indicating whether the data sources are valid
-   */
-  validateDataSources(
-    dataConfig: ExperimentVisualizationDto["dataConfig"],
+  executeSqlQuery(
     schemaName: string,
-  ): Promise<Result<boolean>>;
-
-  /**
-   * Returns table metadata for a specific table in an experiment
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param tableName - Name of the table
-   */
-  getTableMetadata(schemaName: string, tableName: string): Promise<Result<Map<string, string>>>;
+    sqlStatement: string,
+    disposition?: "INLINE" | "EXTERNAL_LINKS",
+    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
+  ): Promise<Result<SchemaData | DownloadLinksData>>;
 
   /**
    * Upload data to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
+   * Constructs the path: /Volumes/{catalogName}/centrum/data-uploads/{experimentId}/{sourceType}/{directoryName}/{fileName}
    *
-   * @param schemaName - Schema name of the experiment
+   * @param schemaName - Schema name (should be "centrum")
+   * @param experimentId - ID of the experiment (used for subdirectory)
    * @param sourceType - Type of data source (e.g., 'ambyte')
    * @param directoryName - Unique directory name for this upload session
    * @param fileName - Name of the file
@@ -106,6 +132,7 @@ export interface DatabricksPort {
    */
   uploadExperimentData(
     schemaName: string,
+    experimentId: string,
     sourceType: string,
     directoryName: string,
     fileName: string,
@@ -113,73 +140,9 @@ export interface DatabricksPort {
   ): Promise<Result<UploadFileResponse>>;
 
   /**
-   * Trigger an experiment pipeline by ID
-   * Starts a pipeline update using the stored pipeline ID
-   *
-   * @param pipelineId - The Databricks pipeline ID
-   * @param experimentId - ID of the experiment for logging purposes
-   * @param options - Optional parameters for the pipeline update
+   * Trigger the ambyte processing Databricks job with the specified parameters
    */
-  triggerExperimentPipeline(
-    pipelineId: string,
-    experimentId: string,
-    options?: {
-      fullRefresh?: boolean;
-      fullRefreshSelection?: string[];
-      refreshSelection?: string[];
-    },
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
-
-  /**
-   * Trigger an experiment pipeline to refresh all silver quality tables with full refresh
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param pipelineId - The Databricks pipeline ID
-   */
-  triggerExperimentPipelineSilverRefresh(
-    schemaName: string,
-    pipelineId: string,
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
-
-  /**
-   * Create a new volume in Databricks Unity Catalog
-   *
-   * @param params - Volume creation parameters
-   * @returns Result containing the created volume information
-   */
-  createVolume(params: CreateVolumeParams): Promise<Result<VolumeResponse>>;
-
-  /**
-   * Create a new managed volume under an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to create
-   * @param comment - Optional comment for the volume
-   * @returns Result containing the created volume information
-   */
-  createExperimentVolume(
-    schemaName: string,
-    volumeName: string,
-    comment?: string,
-  ): Promise<Result<VolumeResponse>>;
-
-  /**
-   * Get a volume from an experiment schema
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param volumeName - Name of the volume to retrieve
-   * @returns Result containing the volume information
-   */
-  getExperimentVolume(schemaName: string, volumeName: string): Promise<Result<VolumeResponse>>;
-
-  /**
-   * Refresh all silver quality tables for an experiment with full refresh
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param pipelineId - The Databricks pipeline ID
-   */
-  refreshSilverData(
-    schemaName: string,
-    pipelineId: string,
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
+  triggerAmbyteProcessingJob(
+    params: Record<string, string>,
+  ): Promise<Result<DatabricksJobRunResponse>>;
 }

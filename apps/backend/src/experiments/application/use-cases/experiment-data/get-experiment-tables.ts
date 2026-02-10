@@ -1,5 +1,7 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import { ExperimentTableName } from "@repo/api";
+
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -7,45 +9,46 @@ import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
-/**
- * Column information structure
- */
-export interface ColumnInfoDto {
-  name: string;
-  type_text: string;
-  type_name: string;
-  position: number;
-  nullable?: boolean;
-  comment?: string;
-  type_json?: string;
-  type_precision?: number;
-  type_scale?: number;
-  partition_index?: number;
-}
-
-/**
- * Table metadata structure
- */
 export interface TableMetadataDto {
   name: string;
   displayName: string;
   totalRows: number;
-  columns?: ColumnInfoDto[];
+  defaultSortColumn?: string;
+  errorColumn?: string;
 }
 
-/**
- * Response is an array of table metadata
- */
 export type ExperimentTablesMetadataDto = TableMetadataDto[];
 
 @Injectable()
 export class GetExperimentTablesUseCase {
   private readonly logger = new Logger(GetExperimentTablesUseCase.name);
 
+  // Static table properties for known physical tables
+  private readonly tableProperties: Record<
+    string,
+    { displayName: string; defaultSortColumn?: string; errorColumn?: string }
+  >;
+
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
-  ) {}
+  ) {
+    // Initialize table properties using logical table names from ExperimentTableName
+    this.tableProperties = {
+      [ExperimentTableName.RAW_DATA]: {
+        displayName: "Raw Data",
+        defaultSortColumn: "timestamp",
+      },
+      [ExperimentTableName.DEVICE]: {
+        displayName: "Device Metadata",
+        defaultSortColumn: "processed_timestamp",
+      },
+      [ExperimentTableName.RAW_AMBYTE_DATA]: {
+        displayName: "Ambyte Raw Data",
+        defaultSortColumn: "processed_at",
+      },
+    };
+  }
 
   async execute(
     experimentId: string,
@@ -58,7 +61,6 @@ export class GetExperimentTablesUseCase {
       userId,
     });
 
-    // Check if experiment exists and user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
@@ -78,6 +80,7 @@ export class GetExperimentTablesUseCase {
           });
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
+
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn({
             msg: "User attempted to access tables without proper permissions",
@@ -89,80 +92,44 @@ export class GetExperimentTablesUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        if (!experiment.schemaName) {
+        const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+          includeSchemas: false,
+        });
+
+        if (metadataResult.isFailure()) {
           this.logger.error({
-            msg: "Experiment has no schema name",
-            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
+            msg: "Failed to get experiment table metadata",
             operation: "getExperimentTables",
             experimentId,
+            error: metadataResult.error.message,
           });
-          return failure(AppError.internal("Experiment schema not provisioned"));
+          return failure(AppError.internal("Failed to retrieve table metadata"));
         }
 
-        const schemaName = experiment.schemaName;
+        const tables = metadataResult.value.map(({ tableName, rowCount }) => {
+          const isKnownTable = tableName in this.tableProperties;
+          const properties = this.tableProperties[tableName];
 
-        // Get list of tables
-        const tablesResult = await this.databricksPort.listTables(schemaName);
-
-        if (tablesResult.isFailure()) {
-          return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
-        }
-
-        // Filter tables to only include those with downstream: "false" (final/enriched tables for user consumption)
-        // and exclude annotations table.
-        const finalTables = tablesResult.value.tables.filter(
-          (table) => table.properties?.downstream === "false" && table.name !== "annotations",
-        );
-
-        const response: ExperimentTablesMetadataDto = [];
-
-        // Fetch row counts for each table
-        for (const table of finalTables) {
-          // Get total row count
-          const countResult = await this.databricksPort.executeSqlQuery(
-            schemaName,
-            `SELECT COUNT(*) as count FROM ${table.name}`,
-          );
-
-          let totalRows = 0;
-          if (countResult.isSuccess()) {
-            totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
-          } else {
-            this.logger.warn({
-              msg: "Failed to get row count for table",
-              operation: "getExperimentTables",
-              tableName: table.name,
-              error: countResult.error.message,
-            });
+          if (isKnownTable) {
+            return {
+              name: tableName,
+              displayName: properties.displayName,
+              totalRows: rowCount,
+              defaultSortColumn: properties.defaultSortColumn,
+              errorColumn: properties.errorColumn,
+            };
           }
 
-          response.push({
-            name: table.name,
-            displayName: table.properties?.display_name ?? table.name,
-            totalRows,
-            columns: table.columns?.map((col) => ({
-              name: col.name,
-              type_text: col.type_text,
-              type_name: col.type_name,
-              position: col.position,
-              nullable: col.nullable,
-              comment: col.comment,
-              type_json: col.type_json,
-              type_precision: col.type_precision,
-              type_scale: col.type_scale,
-              partition_index: col.partition_index,
-            })),
-          });
-        }
+          return {
+            name: tableName,
+            displayName: `Processed Data (${tableName})`,
+            totalRows: rowCount,
+            defaultSortColumn: "timestamp",
+            errorColumn: "macro_error",
+          };
+        });
 
-        // Make sure 'device' table is last if it exists
-        const deviceTableIndex = response.findIndex((t) => t.name === "device");
-        if (deviceTableIndex !== -1 && deviceTableIndex !== response.length - 1) {
-          const deviceTable = response.splice(deviceTableIndex, 1)[0];
-          response.push(deviceTable);
-        }
-
-        return success(response);
+        return success(tables);
       },
     );
   }

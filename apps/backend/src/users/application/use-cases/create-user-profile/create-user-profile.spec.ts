@@ -1,15 +1,13 @@
-import { failure, success, AppError } from "../../../../common/utils/fp-utils";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { UserRepository } from "../../../core/repositories/user.repository";
 import { CreateUserProfileUseCase } from "./create-user-profile";
 
 describe("CreateUserProfileUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: CreateUserProfileUseCase;
-  let mockDatabricksPort: DatabricksPort;
+  let userRepository: UserRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -19,12 +17,7 @@ describe("CreateUserProfileUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateUserProfileUseCase);
-
-    // Mock Databricks port
-    mockDatabricksPort = testApp.module.get(DATABRICKS_PORT);
-    vi.spyOn(mockDatabricksPort, "triggerEnrichedTablesRefreshJob").mockResolvedValue(
-      success({ run_id: 12345, number_in_job: 1 }),
-    );
+    userRepository = testApp.module.get(UserRepository);
   });
 
   afterEach(() => {
@@ -89,162 +82,30 @@ describe("CreateUserProfileUseCase", () => {
     });
   });
 
-  it("should trigger enriched tables refresh on new profile creation", async () => {
-    const dto = {
-      firstName: "Alice",
-      lastName: "Smith",
-      organization: "TestOrg",
-    };
+  it("should handle error when finding existing profile fails", async () => {
+    vi.spyOn(userRepository, "findUserProfile").mockResolvedValue(
+      failure(AppError.internal("DB Error")),
+    );
 
+    const dto = { firstName: "Test", lastName: "User", organization: "Org" };
     const result = await useCase.execute(dto, testUserId);
 
-    expect(result.isSuccess()).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDatabricksPort.triggerEnrichedTablesRefreshJob).toHaveBeenCalledWith(
-      "user_id",
-      testUserId,
-    );
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("should trigger enriched tables refresh when firstName changes", async () => {
-    // Create initial profile
-    const initialDto = {
-      firstName: "Alice",
-      lastName: "Smith",
-      organization: "TestOrg",
-    };
-    await useCase.execute(initialDto, testUserId);
-
-    // Clear previous calls
-    vi.clearAllMocks();
-
-    // Update firstName
-    const updatedDto = {
-      firstName: "Alicia", // Changed
-      lastName: "Smith",
-      organization: "TestOrg",
-    };
-
-    const result = await useCase.execute(updatedDto, testUserId);
-
-    expect(result.isSuccess()).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDatabricksPort.triggerEnrichedTablesRefreshJob).toHaveBeenCalledWith(
-      "user_id",
-      testUserId,
-    );
-  });
-
-  it("should trigger enriched tables refresh when lastName changes", async () => {
-    // Create initial profile
-    const initialDto = {
-      firstName: "Alice",
-      lastName: "Smith",
-      organization: "TestOrg",
-    };
-    await useCase.execute(initialDto, testUserId);
-
-    // Clear previous calls
-    vi.clearAllMocks();
-
-    // Update lastName
-    const updatedDto = {
-      firstName: "Alice",
-      lastName: "Johnson", // Changed
-      organization: "TestOrg",
-    };
-
-    const result = await useCase.execute(updatedDto, testUserId);
-
-    expect(result.isSuccess()).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDatabricksPort.triggerEnrichedTablesRefreshJob).toHaveBeenCalledWith(
-      "user_id",
-      testUserId,
-    );
-  });
-
-  it("should trigger enriched tables refresh when activated changes", async () => {
-    // Create initial profile
-    const initialDto = {
-      firstName: "Alice",
-      lastName: "Smith",
-      organization: "TestOrg",
-      activated: true,
-    };
-    await useCase.execute(initialDto, testUserId);
-
-    // Clear previous calls
-    vi.clearAllMocks();
-
-    // Update activated status
-    const updatedDto = {
-      firstName: "Alice",
-      lastName: "Smith",
-      organization: "TestOrg",
-      activated: false, // Changed
-    };
-
-    const result = await useCase.execute(updatedDto, testUserId);
-
-    expect(result.isSuccess()).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDatabricksPort.triggerEnrichedTablesRefreshJob).toHaveBeenCalledWith(
-      "user_id",
-      testUserId,
-    );
-  });
-
-  it("should NOT trigger enriched tables refresh when only bio or organization changes", async () => {
-    // Create initial profile
-    const initialDto = {
-      firstName: "Alice",
-      lastName: "Smith",
-      bio: "Initial bio",
-      organization: "TestOrg",
-    };
-    await useCase.execute(initialDto, testUserId);
-
-    // Clear previous calls
-    vi.clearAllMocks();
-
-    // Update only bio and organization (not relevant fields)
-    const updatedDto = {
-      firstName: "Alice", // Same
-      lastName: "Smith", // Same
-      bio: "Updated bio", // Changed but not relevant
-      organization: "NewOrg", // Changed but not relevant
-    };
-
-    const result = await useCase.execute(updatedDto, testUserId);
-
-    expect(result.isSuccess()).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDatabricksPort.triggerEnrichedTablesRefreshJob).not.toHaveBeenCalled();
-  });
-
-  it("should continue execution even if Databricks job trigger fails", async () => {
-    // Mock Databricks failure
-    const databricksError = AppError.internal("Databricks error");
-    vi.spyOn(mockDatabricksPort, "triggerEnrichedTablesRefreshJob").mockResolvedValue(
-      failure(databricksError),
+  it("should handle error when updating user fails", async () => {
+    vi.spyOn(userRepository, "update").mockResolvedValue(
+      failure(AppError.internal("DB Update Error")),
     );
 
-    const dto = {
-      firstName: "Alice",
-      lastName: "Smith",
-      organization: "TestOrg",
-    };
-
+    const dto = { firstName: "Test", lastName: "User", organization: "Org" };
     const result = await useCase.execute(dto, testUserId);
 
-    // Should still succeed despite Databricks failure
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value).toMatchObject({
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      organization: dto.organization,
-    });
+    assertFailure(result);
+    // The use case masks the error as Not Found for some reason, or returns the failure?
+    // Code says: return failure(AppError.notFound(`Cannot update user with ID ${userId}`));
+    expect(result.error.code).toBe("NOT_FOUND");
+    expect(result.error.message).toContain(`Cannot update user with ID ${testUserId}`);
   });
 });

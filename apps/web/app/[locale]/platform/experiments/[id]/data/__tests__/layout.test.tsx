@@ -46,69 +46,6 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-// Mock UI components
-vi.mock("@repo/ui/components", () => {
-  const Alert = ({
-    children,
-    variant,
-    className,
-  }: React.PropsWithChildren<{ variant?: string; className?: string }>) => (
-    <div data-testid="alert" data-variant={variant} className={className}>
-      {children}
-    </div>
-  );
-
-  const AlertTitle = ({ children }: React.PropsWithChildren) => (
-    <h3 data-testid="alert-title">{children}</h3>
-  );
-
-  const AlertDescription = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="alert-description">{children}</div>
-  );
-
-  const TooltipProvider = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="tooltip-provider">{children}</div>
-  );
-
-  const Tooltip = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="tooltip">{children}</div>
-  );
-
-  const TooltipTrigger = ({
-    children,
-    asChild: _asChild,
-  }: React.PropsWithChildren<{ asChild?: boolean }>) => {
-    return (
-      <div data-testid="tooltip-trigger" className="ml-2 inline h-4 w-4 cursor-help">
-        {children}
-      </div>
-    );
-  };
-
-  const TooltipContent = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="tooltip-content">{children}</div>
-  );
-
-  return {
-    Alert,
-    AlertTitle,
-    AlertDescription,
-    TooltipProvider,
-    Tooltip,
-    TooltipTrigger,
-    TooltipContent,
-  };
-});
-
-// Mock Lucide icons
-vi.mock("lucide-react", () => ({
-  AlertTriangle: (props: React.ComponentProps<"div">) => (
-    <div data-testid="alert-triangle-icon" {...props} />
-  ),
-  Info: (props: React.ComponentProps<"div">) => <div data-testid="info-icon" {...props} />,
-  Loader2: (props: React.ComponentProps<"div">) => <div data-testid="loader2-icon" {...props} />,
-}));
-
 // -------------------
 // Test Data
 // -------------------
@@ -238,104 +175,18 @@ describe("<DataLayout />", () => {
 
       expect(screen.getByTestId("child-content")).toBeInTheDocument();
       expect(screen.getByText("Child Content")).toBeInTheDocument();
-      expect(screen.queryByTestId("alert")).not.toBeInTheDocument();
     });
 
     it("renders children when experiment status is completed", () => {
       renderDataLayout({ experimentStatus: "completed" });
 
       expect(screen.getByTestId("child-content")).toBeInTheDocument();
-      expect(screen.queryByTestId("alert")).not.toBeInTheDocument();
     });
 
     it("renders children when experiment status is unknown", () => {
       renderDataLayout({ experimentStatus: "unknown" });
 
       expect(screen.getByTestId("child-content")).toBeInTheDocument();
-      expect(screen.queryByTestId("alert")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Provisioning State", () => {
-    it("shows provisioning alert and blocks children when status is provisioning", () => {
-      renderDataLayout({ experimentStatus: "provisioning" });
-
-      // Should show alert instead of children
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-
-      // Should show the alert with correct styling
-      const alert = screen.getByTestId("alert");
-      expect(alert).toBeInTheDocument();
-      expect(alert).toHaveAttribute("data-variant", "default");
-
-      // Should show correct title and description
-      expect(screen.getByTestId("alert-title")).toHaveTextContent(
-        "experimentData.provisioning.title",
-      );
-      expect(screen.getByTestId("alert-description")).toHaveTextContent(
-        "experimentData.provisioning.description",
-      );
-
-      // Should show loader icon
-      expect(screen.getByTestId("loader2-icon")).toBeInTheDocument();
-
-      // Should show header content
-      expect(screen.getByText("experimentData.title")).toBeInTheDocument();
-      expect(screen.getByText("experimentData.description")).toBeInTheDocument();
-    });
-
-    it("shows tooltip for provisioning state", () => {
-      renderDataLayout({ experimentStatus: "provisioning" });
-
-      // Should show tooltip components
-      expect(screen.getByTestId("tooltip-provider")).toBeInTheDocument();
-      expect(screen.getByTestId("tooltip")).toBeInTheDocument();
-      expect(screen.getByTestId("tooltip-trigger")).toBeInTheDocument();
-      expect(screen.getByTestId("tooltip-content")).toBeInTheDocument();
-
-      // Should show info icon in tooltip trigger
-      expect(screen.getByTestId("info-icon")).toBeInTheDocument();
-
-      // Should show correct tooltip text
-      expect(screen.getByText("experimentData.provisioning.tooltip")).toBeInTheDocument();
-    });
-  });
-
-  describe("Provisioning Failed State", () => {
-    it("shows provisioning failed alert and blocks children when status is provisioning_failed", () => {
-      renderDataLayout({ experimentStatus: "provisioning_failed" });
-
-      // Should show alert instead of children
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-
-      // Should show the alert with correct styling
-      const alert = screen.getByTestId("alert");
-      expect(alert).toBeInTheDocument();
-      expect(alert).toHaveAttribute("data-variant", "destructive");
-
-      // Should show correct title and description
-      expect(screen.getByTestId("alert-title")).toHaveTextContent(
-        "experimentData.provisioningFailed.title",
-      );
-      expect(screen.getByTestId("alert-description")).toHaveTextContent(
-        "experimentData.provisioningFailed.description",
-      );
-
-      // Should show alert triangle icon
-      expect(screen.getByTestId("alert-triangle-icon")).toBeInTheDocument();
-
-      // Should show header content
-      expect(screen.getByText("experimentData.title")).toBeInTheDocument();
-      expect(screen.getByText("experimentData.description")).toBeInTheDocument();
-    });
-
-    it("does not show tooltip for provisioning_failed state", () => {
-      renderDataLayout({ experimentStatus: "provisioning_failed" });
-
-      // Should not show tooltip components
-      expect(screen.queryByTestId("tooltip-provider")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("tooltip")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("info-icon")).not.toBeInTheDocument();
     });
   });
 
@@ -350,32 +201,6 @@ describe("<DataLayout />", () => {
       renderDataLayout();
 
       expect(mockUse).toHaveBeenCalledWith(expect.any(Promise));
-    });
-  });
-
-  describe("Tooltip Interaction", () => {
-    it("only shows tooltip for provisioning state, not for other states", () => {
-      // Test provisioning state has tooltip
-      const { rerender } = renderDataLayout({ experimentStatus: "provisioning" });
-      expect(screen.getByTestId("tooltip-provider")).toBeInTheDocument();
-
-      // Test active state doesn't have tooltip
-      mockUseExperiment.mockReturnValue(createMockExperiment("active"));
-      rerender(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-      expect(screen.queryByTestId("tooltip-provider")).not.toBeInTheDocument();
-
-      // Test provisioning_failed state doesn't have tooltip
-      mockUseExperiment.mockReturnValue(createMockExperiment("provisioning_failed"));
-      rerender(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-      expect(screen.queryByTestId("tooltip-provider")).not.toBeInTheDocument();
     });
   });
 });

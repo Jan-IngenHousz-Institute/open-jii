@@ -79,11 +79,6 @@ describe("ExperimentTitle", () => {
     expect(screen.getByText("status.active")).toBeInTheDocument();
   });
 
-  it("renders status badge for provisioning experiments", () => {
-    renderComponent({ status: "provisioning" });
-    expect(screen.getByText("status.provisioning")).toBeInTheDocument();
-  });
-
   it("renders status badge for archived experiments", () => {
     renderComponent({ status: "archived" });
     expect(screen.getByText("status.archived")).toBeInTheDocument();
@@ -92,11 +87,6 @@ describe("ExperimentTitle", () => {
   it("renders status badge for stale experiments", () => {
     renderComponent({ status: "stale" });
     expect(screen.getByText("status.stale")).toBeInTheDocument();
-  });
-
-  it("renders status badge for provisioning_failed experiments", () => {
-    renderComponent({ status: "provisioning_failed" });
-    expect(screen.getByText("status.provisioningFailed")).toBeInTheDocument();
   });
 
   it("renders status badge for published experiments", () => {

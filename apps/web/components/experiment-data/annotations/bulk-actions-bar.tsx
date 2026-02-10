@@ -12,7 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-import { parseAnnotations, groupAnnotations } from "../experiment-data-table-annotations-cell";
+import {
+  parseAnnotations,
+  groupAnnotations,
+} from "../table-cells/annotations/experiment-data-table-annotations-cell";
 
 interface BulkActionsBarProps {
   rowIds: string[];
