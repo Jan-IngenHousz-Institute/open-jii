@@ -14,8 +14,16 @@ resource "aws_cloudtrail" "cloud_trail" {
 }
 
 resource "aws_s3_bucket" "cloud_trail_bucket" {
-  bucket        = "${var.project_name}-${var.environment}-trail-bucket"
-  force_destroy = true
+  bucket = "${var.project_name}-${var.environment}-trail-bucket"
+}
+
+resource "aws_s3_bucket_public_access_block" "cloud_trail_bucket_public_access_block" {
+  bucket = aws_s3_bucket.cloud_trail_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 data "aws_iam_policy_document" "cloud_trail_bucket_policy" {
@@ -60,8 +68,6 @@ data "aws_iam_policy_document" "cloud_trail_bucket_policy" {
       values   = ["arn:aws:cloudtrail:${var.region}:${data.aws_caller_identity.current.account_id}:trail/${local.trail_name}"]
     }
   }
-
-  depends_on = [aws_s3_bucket.cloud_trail_bucket]
 }
 
 resource "aws_s3_bucket_policy" "cloud_trail_bucket_policy" {
