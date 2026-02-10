@@ -456,74 +456,10 @@ module "centrum_backup_job" {
 module "ambyte_processing_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Enriched-Tables-Refresh-Job-PROD"
-  description = "Refreshes enriched tables across experiment pipelines when metadata changes (e.g., user profile updates)"
+  name        = "Ambyte-Processing-Job-PROD"
+  description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
 
   max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  # Enable job queueing
-  queue = {
-    enabled = true
-  }
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "refresh_enriched_tables"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/enriched_tables_refresh_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/enriched_tables_refresh_task"
-
-      parameters = {
-        metadata_key         = "{{metadata_key}}"
-        metadata_value       = "{{metadata_value}}"
-        catalog_name         = module.databricks_catalog.catalog_name
-        central_schema       = "centrum"
-        central_silver_table = "clean_data"
-        environment          = upper(var.environment)
-      }
-    }
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "aurora_db" {
-  source             = "../../modules/aurora_db"
-  cluster_identifier = "open-jii-${var.environment}-db-cluster"
-  description        = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
-
-  max_concurrent_runs           = 1 # Limit concurrent runs when queueing is enabled
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"
