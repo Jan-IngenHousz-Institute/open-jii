@@ -1,22 +1,40 @@
 import { flexRender } from "@tanstack/react-table";
-import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
+import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
-import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/experiment-data-table-annotations-cell";
-import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell";
+import type {
+  DataRow,
+  TableMetadata,
+} from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { AnnotationType } from "@repo/api";
+import {
+  WellKnownColumnTypes,
+  ColumnPrimitiveType,
+  isNumericType,
+  isMapType,
+  isStructType,
+  isVariantType,
+  isStructArrayType,
+  isNumericArrayType,
+  isSortableType,
+  isWellKnownSortableType,
+  getWellKnownSortField,
+} from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
-import { ExperimentDataTableArrayCell } from "./experiment-data-table-array-cell";
-import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
-import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
-import { ExperimentDataTableUserCell } from "./experiment-data-table-user-cell";
-
-const ANNOTATIONS_STRUCT_STRING =
-  "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>";
+import { ExperimentDataTableCellCollapsible } from "./experiment-data-table-cell-collapsible";
+import { ExperimentDataTableArrayCell } from "./table-cells/array/experiment-data-table-array-cell";
+import { ExperimentDataTableChartCell } from "./table-cells/chart/experiment-data-table-chart-cell";
+import { ExperimentDataTableErrorCell } from "./table-cells/error/experiment-data-table-error-cell";
+import { ExperimentDataTableMapCell } from "./table-cells/map/experiment-data-table-map-cell";
+import { ExperimentDataTableStructCell } from "./table-cells/struct/experiment-data-table-struct-cell";
+import { ExperimentDataTableTextCell } from "./table-cells/text/experiment-data-table-text-cell";
+import { ExperimentDataTableUserCell } from "./table-cells/user/experiment-data-table-user-cell";
+import { ExperimentDataTableVariantCell } from "./table-cells/variant/experiment-data-table-variant-cell";
 
 function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): string {
   return cn(
@@ -25,47 +43,11 @@ function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): s
   );
 }
 
-function isNumericType(type?: string): boolean {
-  return type === "DOUBLE" || type === "INT" || type === "LONG" || type === "BIGINT";
-}
-
-function isSortableColumnType(type?: string): boolean {
-  if (!type) return false;
-
-  // Primitive types that can be sorted
-  if (
-    type === "STRING" ||
-    type === "TIMESTAMP" ||
-    type === "DOUBLE" ||
-    type === "INT" ||
-    type === "LONG" ||
-    type === "BIGINT" ||
-    type === "BOOLEAN" ||
-    type === "DATE" ||
-    type === "USER"
-  ) {
-    return true;
-  }
-
-  // Complex types that cannot be sorted
-  if (
-    type.startsWith("MAP") ||
-    type.startsWith("ARRAY") ||
-    type.startsWith("STRUCT") ||
-    type === "ARRAY" ||
-    type === "MAP"
-  ) {
-    return false;
-  }
-
-  // Default to sortable for unknown types
-  return true;
-}
-
 function getSortColumnName(columnName: string, columnType?: string): string {
-  // For USER columns, sort by user_name instead of the column name
-  if (columnType === "USER") {
-    return "user_name";
+  // For well-known sortable types (e.g., CONTRIBUTOR), sort by a specific field in their struct
+  const sortField = getWellKnownSortField(columnType);
+  if (sortField) {
+    return `${columnName}.${sortField}`;
   }
   return columnName;
 }
@@ -96,76 +78,113 @@ export function formatValue(
   onChartClick?: (data: number[], columnName: string) => void,
   onAddAnnotation?: (rowIds: string[], annotationType: AnnotationType) => void,
   onDeleteAnnotations?: (rowIds: string[], annotationType: AnnotationType) => void,
-) {
-  switch (type) {
-    case "DOUBLE":
-    case "INT":
-    case "LONG":
-    case "BIGINT":
-      return <div className="text-right tabular-nums">{value as number}</div>;
-    case "TIMESTAMP":
-      return (value as string).substring(0, 19).replace("T", " ");
-    case "USER":
-      return (
-        <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
-      );
-    case "STRING":
-      return value as string;
-    case ANNOTATIONS_STRUCT_STRING:
-      return (
-        <ExperimentDataTableAnnotationsCell
-          data={value as string}
-          rowId={rowId}
-          onAddAnnotation={onAddAnnotation}
-          onDeleteAnnotations={onDeleteAnnotations}
-        />
-      );
-    case "ARRAY":
-    case "ARRAY<DOUBLE>":
-    case "ARRAY<REAL>":
-    case "ARRAY<FLOAT>":
-    case "ARRAY<NUMERIC>":
-      return (
-        <ExperimentDataTableChartCell
-          data={value as string} // Pass the raw string value to be parsed
-          columnName={columnName ?? "Chart"}
-          onClick={onChartClick}
-        />
-      );
-    default: {
-      // Check if the type contains ARRAY<STRUCT<...>>
-      if (type.includes("ARRAY<STRUCT<")) {
-        return (
-          <ExperimentDataTableArrayCell data={value as string} columnName={columnName ?? "Array"} />
-        );
-      }
-
-      // Check if the type contains MAP
-      if (type.includes("MAP<STRING,") || type === "MAP") {
-        return (
-          <ExperimentDataTableMapCell data={value as string} _columnName={columnName ?? "Map"} />
-        );
-      }
-
-      // Check if the type contains ARRAY and appears to be numeric
-      if (
-        type.includes("ARRAY") &&
-        (type.includes("DOUBLE") ||
-          type.includes("REAL") ||
-          type.includes("FLOAT") ||
-          type.includes("NUMERIC"))
-      ) {
-        return (
-          <ExperimentDataTableChartCell
-            data={value as string}
-            columnName={columnName ?? "Chart"}
-            onClick={onChartClick}
-          />
-        );
-      }
-      return value as string;
-    }
+  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
+  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  errorColumn?: string,
+): string | React.JSX.Element {
+  // Check if this is the error column
+  if (errorColumn && columnName === errorColumn) {
+    return <ExperimentDataTableErrorCell error={value as string} />;
   }
+
+  // Exact type matches
+  const exactTypeFormatters: Record<string, () => string | React.JSX.Element> = {
+    [ColumnPrimitiveType.DOUBLE]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.INT]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.LONG]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.BIGINT]: () => (
+      <div className="text-right tabular-nums">{value as number}</div>
+    ),
+    [ColumnPrimitiveType.TIMESTAMP]: () => (value as string).substring(0, 19).replace("T", " "),
+    [ColumnPrimitiveType.STRING]: () => <ExperimentDataTableTextCell text={value as string} />,
+    [WellKnownColumnTypes.CONTRIBUTOR]: () => (
+      <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
+    ),
+    [WellKnownColumnTypes.ANNOTATIONS]: () => (
+      <ExperimentDataTableAnnotationsCell
+        data={value as string}
+        rowId={rowId}
+        onAddAnnotation={onAddAnnotation}
+        onDeleteAnnotations={onDeleteAnnotations}
+      />
+    ),
+  };
+
+  if (!value) {
+    return "";
+  }
+
+  // Check for exact type match
+  if (type in exactTypeFormatters) {
+    return exactTypeFormatters[type]();
+  }
+
+  // Pattern-based type checks
+  if (isNumericArrayType(type)) {
+    return (
+      <ExperimentDataTableChartCell
+        data={value as string}
+        columnName={columnName ?? "Chart"}
+        onClick={onChartClick}
+      />
+    );
+  }
+
+  if (isStructArrayType(type)) {
+    return (
+      <ExperimentDataTableArrayCell
+        data={value as string}
+        columnName={columnName ?? "Array"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Array") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  if (isMapType(type)) {
+    return (
+      <ExperimentDataTableMapCell
+        data={value as string}
+        columnName={columnName ?? "Map"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Map") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  if (isStructType(type)) {
+    return (
+      <ExperimentDataTableStructCell
+        data={value as string}
+        columnName={columnName ?? "Struct"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Struct") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  if (isVariantType(type)) {
+    return (
+      <ExperimentDataTableVariantCell
+        data={value as string}
+        columnName={columnName ?? "Variant"}
+        rowId={rowId}
+        isExpanded={isCellExpanded?.(rowId, columnName ?? "Variant") ?? false}
+        onToggleExpansion={onToggleCellExpansion}
+      />
+    );
+  }
+
+  return <ExperimentDataTableTextCell text={value as string} />;
 }
 
 export function ExperimentTableHeader({
@@ -188,11 +207,17 @@ export function ExperimentTableHeader({
           const columnName = header.column.id;
 
           const isNumericColumn = isNumericType(meta?.type);
-          const canSort = isSortableColumnType(meta?.type);
+          const canSort = isSortableType(meta?.type) || isWellKnownSortableType(meta?.type);
           const isSortable = columnName !== "select" && !!onSort && canSort;
           const columnType = meta?.type;
           const actualSortColumn = getSortColumnName(columnName, columnType);
-          const isCurrentlySorted = sortColumn === actualSortColumn;
+          // Check if this column is currently sorted - handle both exact match and nested field match
+          // For well-known types like CONTRIBUTOR, sortColumn might be "created_by.name" while columnName is "created_by"
+          const isCurrentlySorted = !!(
+            sortColumn === actualSortColumn ||
+            sortColumn === columnName ||
+            sortColumn?.startsWith(`${columnName}.`)
+          );
 
           return (
             <TableHead
@@ -201,7 +226,7 @@ export function ExperimentTableHeader({
               style={{
                 minWidth: header.column.columnDef.size,
               }}
-              onClick={() => isSortable && onSort(columnName, columnType)}
+              onClick={() => isSortable && onSort(actualSortColumn, columnType)}
             >
               {header.isPlaceholder ? null : (
                 <div className="flex items-center justify-between">
@@ -220,12 +245,21 @@ export function ExperimentTableHeader({
 export function ExperimentDataRows({
   rows,
   columnCount,
+  expandedCell,
+  tableRows,
+  columns = [],
+  errorColumn,
 }: {
-  rows: Row<RowData>[];
+  rows: Row<DataRow>[];
   columnCount: number;
+  expandedCell?: { rowId: string; columnName: string } | null;
+  tableRows?: DataRow[];
+  columns?: TableMetadata["rawColumns"];
+  errorColumn?: string;
 }) {
   const { t } = useTranslation();
-  if (rows.length === 0)
+
+  if (rows.length === 0) {
     return (
       <TableRow>
         <TableCell colSpan={columnCount} className="h-4 text-center">
@@ -233,20 +267,52 @@ export function ExperimentDataRows({
         </TableCell>
       </TableRow>
     );
-  return rows.map((row) => (
-    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-      {row.getVisibleCells().map((cell, cellIndex) => (
-        <TableCell
-          key={`${cell.id}-${cellIndex}`}
-          style={{
-            minWidth: cell.column.columnDef.size,
-          }}
+  }
+
+  return rows.map((row) => {
+    const rowId = String(row.original.id);
+
+    // Check if this row has an error
+    const hasError = errorColumn && !!row.original[errorColumn];
+
+    // Check if this row has an expanded cell
+    const expandedColumn =
+      expandedCell?.rowId === rowId
+        ? columns.find((col) => col.name === expandedCell.columnName)
+        : undefined;
+
+    return (
+      <React.Fragment key={row.id}>
+        <TableRow
+          data-state={row.getIsSelected() && "selected"}
+          className={cn("", hasError && "border-l-destructive bg-destructive/5 border-l-2")}
         >
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  ));
+          {row.getVisibleCells().map((cell, cellIndex) => (
+            <TableCell
+              key={`${cell.id}-${cellIndex}`}
+              style={{
+                minWidth: cell.column.columnDef.size,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </TableCell>
+          ))}
+        </TableRow>
+
+        {/* Render expanded row if any cell is expanded */}
+        {expandedColumn && tableRows && (
+          <ExperimentDataTableCellCollapsible
+            key={`${row.id}-expanded`}
+            columnCount={columnCount}
+            columnName={expandedColumn.name}
+            columnType={expandedColumn.type_text}
+            cellData={row.original[expandedColumn.name]}
+          />
+        )}
+      </React.Fragment>
+    );
+  });
 }
 
 export function LoadingRows({ rowCount, columnCount }: { rowCount: number; columnCount: number }) {

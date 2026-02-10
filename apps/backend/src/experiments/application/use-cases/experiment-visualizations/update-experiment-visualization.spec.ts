@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker";
 
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type {
@@ -17,7 +16,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
   let useCase: UpdateExperimentVisualizationUseCase;
   let experimentVisualizationRepository: ExperimentVisualizationRepository;
   let experimentRepository: ExperimentRepository;
-  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -29,7 +27,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     useCase = testApp.module.get(UpdateExperimentVisualizationUseCase);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
     experimentRepository = testApp.module.get(ExperimentRepository);
-    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     vi.restoreAllMocks();
   });
@@ -87,8 +84,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           isAdmin: false,
         }),
       );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
       const updatedVisualization: ExperimentVisualizationDto = {
         ...mockVisualization,
@@ -188,58 +183,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       expect(result.error.message).toBe("You do not have permission to modify this visualization");
     });
 
-    it("should fail when data source validation fails", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Original Visualization",
-        description: "Original Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId, // User is the owner
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
-      );
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false,
-        }),
-      );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(
-        failure({
-          message: "Table not found",
-          code: "INVALID_DATA_SOURCE",
-          statusCode: 400,
-          name: "",
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Table not found");
-    });
-
     it("should fail when repository update operation fails", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
@@ -273,8 +216,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           isAdmin: false,
         }),
       );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
         failure({
@@ -328,8 +269,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           isAdmin: false,
         }),
       );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
         success([mockVisualization]),
@@ -502,8 +441,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         }),
       );
 
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
-
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
         success([updatedVisualization]),
       );
@@ -562,8 +499,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           isAdmin: false,
         }),
       );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
       // Mock repository to return empty array (no visualization was updated)
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(success([]));
@@ -651,52 +586,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       } finally {
         vi.restoreAllMocks();
       }
-    });
-
-    it("should fail when experiment has no schema name", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: "Test Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
-      );
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            ...experiment,
-            schemaName: null,
-          },
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toBe("Experiment schema not provisioned");
     });
   });
 });

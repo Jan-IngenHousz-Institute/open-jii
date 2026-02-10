@@ -7,17 +7,12 @@ import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
-import type { DatabricksRunNowRequest } from "./services/jobs/jobs.types";
-import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
-import { DatabricksTablesService } from "./services/tables/tables.service";
-import { DatabricksVolumesService } from "./services/volumes/volumes.service";
 import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 
 // Constants for testing
 const MOCK_ACCESS_TOKEN = "mock-token";
 const MOCK_EXPIRES_IN = 3600;
-const MOCK_CATALOG_NAME = "test_catalog";
 
 describe("DatabricksAdapter", () => {
   const testApp = TestHarness.App;
@@ -74,48 +69,8 @@ describe("DatabricksAdapter", () => {
     });
   });
 
-  describe("triggerExperimentProvisioningJob", () => {
-    it("should successfully trigger experiment provisioning job", async () => {
-      const experimentId = "exp-123";
-      const mockParams = {
-        EXPERIMENT_ID: "exp-123",
-        EXPERIMENT_SCHEMA: "Test Experiment",
-        USER_ID: "user-456",
-      };
-
-      const mockResponse = {
-        run_id: 12345,
-        number_in_job: 1,
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock job run-now request
-      nock(databricksHost)
-        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
-        .reply(200, mockResponse);
-
-      // Execute trigger experiment provisioning job
-      const result = await databricksAdapter.triggerExperimentProvisioningJob(
-        experimentId,
-        mockParams,
-      );
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual(mockResponse);
-    });
-  });
-
   describe("triggerAmbyteProcessingJob", () => {
     it("should successfully trigger ambyte processing job", async () => {
-      const schemaName = "exp_test_experiment_exp-123";
       const mockParams = {
         EXPERIMENT_ID: "exp-123",
         YEAR_PREFIX: "2025",
@@ -126,6 +81,10 @@ describe("DatabricksAdapter", () => {
         number_in_job: 1,
       };
 
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue("main");
+
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -133,135 +92,27 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock job run-now request - expect the schema in the params
+      // Mock job run-now request - expect CATALOG_NAME to be added to params
       nock(databricksHost)
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
           (body: { job_parameters?: Record<string, string> }) => {
-            return body.job_parameters?.EXPERIMENT_SCHEMA === schemaName;
+            return (
+              body.job_parameters?.CATALOG_NAME === "main" &&
+              body.job_parameters.EXPERIMENT_ID === "exp-123" &&
+              body.job_parameters.YEAR_PREFIX === "2025"
+            );
           },
         )
         .reply(200, mockResponse);
 
       // Execute trigger ambyte processing job
-      const result = await databricksAdapter.triggerAmbyteProcessingJob(schemaName, mockParams);
+      const result = await databricksAdapter.triggerAmbyteProcessingJob(mockParams);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual(mockResponse);
-    });
-  });
-
-  describe("triggerEnrichedTablesRefreshJob", () => {
-    it("should successfully trigger enriched tables refresh job", async () => {
-      const metadataKey = "user_id";
-      const metadataValue = "user-123-456-789";
-
-      const mockResponse = {
-        run_id: 98765,
-        number_in_job: 1,
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock job run-now request - expect metadata key/value in the params
-      nock(databricksHost)
-        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`, (body: DatabricksRunNowRequest) => {
-          return (
-            body.job_parameters.metadata_key === metadataKey &&
-            body.job_parameters.metadata_value === metadataValue
-          );
-        })
-        .reply(200, mockResponse);
-
-      // Execute trigger enriched tables refresh job
-      const result = await databricksAdapter.triggerEnrichedTablesRefreshJob(
-        metadataKey,
-        metadataValue,
-      );
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual(mockResponse);
-    });
-
-    it("should handle different metadata key/value combinations", async () => {
-      const testCases = [
-        { key: "user_id", value: "user-abc-123" },
-        { key: "location_id", value: "loc-xyz-789" },
-        { key: "experiment_id", value: "exp-def-456" },
-      ];
-
-      for (const { key, value } of testCases) {
-        const mockResponse = {
-          run_id: Math.floor(Math.random() * 100000),
-          number_in_job: 1,
-        };
-
-        // Mock token request
-        nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-          access_token: MOCK_ACCESS_TOKEN,
-          expires_in: MOCK_EXPIRES_IN,
-          token_type: "Bearer",
-        });
-
-        // Mock job run-now request
-        nock(databricksHost)
-          .post(
-            `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
-            (body: DatabricksRunNowRequest) => {
-              return (
-                body.job_parameters.metadata_key === key &&
-                body.job_parameters.metadata_value === value
-              );
-            },
-          )
-          .reply(200, mockResponse);
-
-        // Execute trigger enriched tables refresh job
-        const result = await databricksAdapter.triggerEnrichedTablesRefreshJob(key, value);
-
-        // Assert result is success
-        expect(result.isSuccess()).toBe(true);
-        assertSuccess(result);
-        expect(result.value).toEqual(mockResponse);
-      }
-    });
-
-    it("should handle failure when job trigger fails", async () => {
-      const metadataKey = "user_id";
-      const metadataValue = "user-123-456-789";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock job run-now request with failure
-      nock(databricksHost).post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`).reply(500, {
-        error_code: "INTERNAL_ERROR",
-        message: "Failed to trigger job",
-      });
-
-      // Execute trigger enriched tables refresh job
-      const result = await databricksAdapter.triggerEnrichedTablesRefreshJob(
-        metadataKey,
-        metadataValue,
-      );
-
-      // Assert result is failure
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to trigger job");
     });
   });
 
@@ -272,8 +123,8 @@ describe("DatabricksAdapter", () => {
     it("should successfully execute a SQL query and return results", async () => {
       const mockTableData = {
         columns: [
-          { name: "column1", type_name: "string", type_text: "string" },
-          { name: "column2", type_name: "number", type_text: "number" },
+          { name: "column1", type_name: "string", type_text: "string", position: 0 },
+          { name: "column2", type_name: "number", type_text: "number", position: 1 },
         ],
         rows: [
           ["value1", "1"],
@@ -325,32 +176,24 @@ describe("DatabricksAdapter", () => {
     });
   });
 
-  describe("downloadExperimentData", () => {
-    const schemaName = "exp_test_experiment_123";
-    const sqlStatement = "SELECT * FROM test_table";
+  describe("getExperimentTableMetadata", () => {
+    const experimentId = "exp-123";
 
-    it("should successfully download experiment data with external links", async () => {
-      const mockDownloadData = {
-        external_links: [
-          {
-            chunk_index: 0,
-            row_count: 1000,
-            row_offset: 0,
-            byte_count: 5242880,
-            external_link: "https://databricks-presigned-url.com/chunk0",
-            expiration: "2024-01-15T12:00:00.000Z",
-          },
-          {
-            chunk_index: 1,
-            row_count: 500,
-            row_offset: 1000,
-            byte_count: 2621440,
-            external_link: "https://databricks-presigned-url.com/chunk1",
-            expiration: "2024-01-15T12:00:00.000Z",
-          },
+    it("should successfully retrieve table metadata with schemas", async () => {
+      const mockMetadata = {
+        columns: [
+          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "row_count", type_name: "bigint", type_text: "bigint" },
+          { name: "macro_schema", type_name: "string", type_text: "string" },
+          { name: "questions_schema", type_name: "string", type_text: "string" },
         ],
-        totalRows: 1500,
-        format: "CSV",
+        rows: [
+          ["raw_data", "100", null, null],
+          ["device", "50", null, null],
+          ["some_macro", "25", '{"col1":"int"}', '{"q1":"text"}'],
+        ],
+        totalRows: 3,
+        truncated: false,
       };
 
       // Mock token request
@@ -360,7 +203,7 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock SQL statement execution with EXTERNAL_LINKS disposition
+      // Mock SQL statement execution
       nock(databricksHost)
         .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
         .reply(200, {
@@ -368,57 +211,49 @@ describe("DatabricksAdapter", () => {
           status: { state: "SUCCEEDED" },
           manifest: {
             schema: {
-              column_count: 2,
-              columns: [
-                { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
-                { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 },
-              ],
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({
+                ...col,
+                position: i,
+              })),
             },
-            total_row_count: mockDownloadData.totalRows,
-            format: mockDownloadData.format,
+            total_row_count: mockMetadata.totalRows,
+            truncated: mockMetadata.truncated,
           },
           result: {
-            external_links: mockDownloadData.external_links,
-            chunk_index: 0,
-            row_count: 0,
-            row_offset: 0,
+            data_array: mockMetadata.rows,
           },
         });
 
-      // Execute download query
-      const result = await databricksAdapter.downloadExperimentData(schemaName, sqlStatement);
+      // Execute getExperimentTableMetadata
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toEqual(mockDownloadData);
+      expect(result.value).toEqual([
+        { tableName: "raw_data", rowCount: 100, macroSchema: null, questionsSchema: null },
+        { tableName: "device", rowCount: 50, macroSchema: null, questionsSchema: null },
+        {
+          tableName: "some_macro",
+          rowCount: 25,
+          macroSchema: '{"col1":"int"}',
+          questionsSchema: '{"q1":"text"}',
+        },
+      ]);
     });
-  });
 
-  describe("listTables", () => {
-    const schemaName = "exp_test_experiment_123";
-
-    it("should successfully list tables", async () => {
-      const mockTablesResponse = {
-        tables: [
-          {
-            name: "bronze_data",
-            catalog_name: "test_catalog",
-            schema_name: schemaName,
-            table_type: "MANAGED",
-            comment: "Bronze data table",
-            created_at: 1620000000000,
-          },
-          {
-            name: "silver_data",
-            catalog_name: "test_catalog",
-            schema_name: schemaName,
-            table_type: "MANAGED",
-            comment: "Silver data table",
-            created_at: 1620000000001,
-          },
+    it("should retrieve metadata for specific table only", async () => {
+      const mockMetadata = {
+        columns: [
+          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "row_count", type_name: "bigint", type_text: "bigint" },
+          { name: "macro_schema", type_name: "string", type_text: "string" },
+          { name: "questions_schema", type_name: "string", type_text: "string" },
         ],
-        next_page_token: null,
+        rows: [["device", "50", null, null]],
+        totalRows: 1,
+        truncated: false,
       };
 
       // Mock token request
@@ -428,351 +263,158 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock tables list API call
+      // Mock SQL statement execution
       nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, mockTablesResponse);
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({
+                ...col,
+                position: i,
+              })),
+            },
+            total_row_count: mockMetadata.totalRows,
+            truncated: mockMetadata.truncated,
+          },
+          result: {
+            data_array: mockMetadata.rows,
+          },
+        });
 
-      // Execute list tables
-      const result = await databricksAdapter.listTables(schemaName);
+      // Execute getExperimentTableMetadata with specific table
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
+        tableName: "device",
+      });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value.tables).toEqual(mockTablesResponse.tables);
+      expect(result.value).toEqual([
+        { tableName: "device", rowCount: 50, macroSchema: null, questionsSchema: null },
+      ]);
+    });
+
+    it("should exclude schemas when includeSchemas is false", async () => {
+      const mockMetadata = {
+        columns: [
+          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "row_count", type_name: "bigint", type_text: "bigint" },
+        ],
+        rows: [
+          ["raw_data", "100"],
+          ["device", "50"],
+        ],
+        totalRows: 2,
+        truncated: false,
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({
+                ...col,
+                position: i,
+              })),
+            },
+            total_row_count: mockMetadata.totalRows,
+            truncated: mockMetadata.truncated,
+          },
+          result: {
+            data_array: mockMetadata.rows,
+          },
+        });
+
+      // Execute getExperimentTableMetadata without schemas
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
+        includeSchemas: false,
+      });
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { tableName: "raw_data", rowCount: 100 },
+        { tableName: "device", rowCount: 50 },
+      ]);
     });
   });
 
-  describe("validateDataSources", () => {
-    const schemaName = "exp_test_experiment_123";
-
-    it("should validate data sources successfully when table and columns exist", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
+  describe("buildExperimentQuery", () => {
+    it("should build query for standard tables (raw_data, device, raw_ambyte_data)", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        experimentId: "exp-123",
+        columns: ["id", "timestamp"],
       });
 
-      // Mock tables list API call
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              name: "sensor_data",
-              catalog_name: "main",
-              schema_name: schemaName,
-              table_type: "MANAGED",
-            },
-          ],
-        });
-
-      // Mock DESCRIBE table query to get column schema
-      nock(databricksHost)
-        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
-        .reply(200, {
-          statement_id: "mock-describe-statement-id",
-          status: { state: "SUCCEEDED" },
-          manifest: {
-            schema: {
-              column_count: 3,
-              columns: [
-                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
-                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
-                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
-              ],
-            },
-            total_row_count: 3,
-            truncated: false,
-          },
-          result: {
-            data_array: [
-              ["timestamp", "TIMESTAMP", "Timestamp column"],
-              ["temperature", "DOUBLE", "Temperature readings"],
-              ["humidity", "DOUBLE", "Humidity readings"],
-            ],
-            chunk_index: 0,
-            row_count: 3,
-            row_offset: 0,
-          },
-        });
-
-      // Test data config
-      const dataConfig = {
-        tableName: "sensor_data",
-        dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
-          { tableName: "sensor_data", columnName: "temperature", role: "y" },
-        ],
-      };
-
-      // Execute the method
-      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toBe(true);
+      expect(query).toContain("SELECT `id`, `timestamp`");
+      expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
+      expect(query).toContain(databricksAdapter.RAW_DATA_TABLE_NAME);
     });
 
-    it("should fail when table does not exist", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
+    it("should build query for macro tables with macro_filename filter", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "some_macro_name",
+        experimentId: "exp-123",
+        columns: ["id", "data"],
       });
 
-      // Mock tables list API call - return empty array
-      nock(databricksHost).get(DatabricksTablesService.TABLES_ENDPOINT).query(true).reply(200, {
-        tables: [],
-      });
-
-      // Test data config with non-existent table
-      const dataConfig = {
-        tableName: "non_existent_table",
-        dataSources: [
-          { tableName: "non_existent_table", columnName: "timestamp", role: "x" },
-          { tableName: "non_existent_table", columnName: "temperature", role: "y" },
-        ],
-      };
-
-      // Execute the method
-      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe(
-        "Table 'non_existent_table' does not exist in this experiment",
-      );
+      expect(query).toContain("SELECT `id`, `data`");
+      expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
+      expect(query).toContain("`macro_filename` = 'some_macro_name'");
+      expect(query).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
     });
 
-    it("should fail when columns do not exist in table", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
+    it("should handle VARIANT columns parsing", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "device",
+        experimentId: "exp-123",
+        variants: [{ columnName: "data", schema: '{"field1":"int"}' }],
       });
 
-      // Mock tables list API call
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              name: "sensor_data",
-              catalog_name: "main",
-              schema_name: schemaName,
-              table_type: "MANAGED",
-            },
-          ],
-        });
-
-      // Mock DESCRIBE table query - return limited columns
-      nock(databricksHost)
-        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
-        .reply(200, {
-          statement_id: "mock-describe-statement-id",
-          status: { state: "SUCCEEDED" },
-          manifest: {
-            schema: {
-              column_count: 3,
-              columns: [
-                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
-                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
-                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
-              ],
-            },
-            total_row_count: 2,
-            truncated: false,
-          },
-          result: {
-            data_array: [
-              ["timestamp", "TIMESTAMP", "Timestamp column"],
-              ["temperature", "DOUBLE", "Temperature readings"],
-            ],
-            chunk_index: 0,
-            row_count: 2,
-            row_offset: 0,
-          },
-        });
-
-      // Test data config with non-existent column
-      const dataConfig = {
-        tableName: "sensor_data",
-        dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
-          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Non-existent column
-        ],
-      };
-
-      // Execute the method
-      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Columns do not exist in table 'sensor_data': pressure");
+      expect(query).toContain("SELECT");
+      expect(query).toContain("* EXCEPT (data, parsed_data)");
+      expect(query).toContain("parsed_data.*");
+      expect(query).toContain('from_json(data::string, \'{"field1":"int"}\') as parsed_data');
     });
 
-    it("should handle error when listing tables fails", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
+    it("should handle all query options (limit, offset, orderBy)", () => {
+      const query = databricksAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        experimentId: "exp-123",
+        columns: ["id", "timestamp"],
+        orderBy: "timestamp",
+        orderDirection: "DESC",
+        limit: 100,
+        offset: 50,
       });
 
-      // Mock tables list API call with an error
-      nock(databricksHost).get(DatabricksTablesService.TABLES_ENDPOINT).query(true).reply(500, {
-        error_code: "INTERNAL_ERROR",
-        message: "Failed to list tables",
-      });
-
-      // Test data config
-      const dataConfig = {
-        tableName: "sensor_data",
-        dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
-          { tableName: "sensor_data", columnName: "temperature", role: "y" },
-        ],
-      };
-
-      // Execute the method
-      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to list tables");
-    });
-
-    it("should handle error when describing table schema fails", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock tables list API call
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              name: "sensor_data",
-              catalog_name: "main",
-              schema_name: schemaName,
-              table_type: "MANAGED",
-            },
-          ],
-        });
-
-      // Mock DESCRIBE table query with error
-      nock(databricksHost).post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`).reply(500, {
-        error_code: "INTERNAL_ERROR",
-        message: "Failed to describe table",
-      });
-
-      // Test data config
-      const dataConfig = {
-        tableName: "sensor_data",
-        dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
-          { tableName: "sensor_data", columnName: "temperature", role: "y" },
-        ],
-      };
-
-      // Execute the method
-      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to get table schema");
-    });
-
-    it("should handle multiple missing columns correctly", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock tables list API call
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              name: "sensor_data",
-              catalog_name: "main",
-              schema_name: schemaName,
-              table_type: "MANAGED",
-            },
-          ],
-        });
-
-      // Mock DESCRIBE table query - return only one column
-      nock(databricksHost)
-        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
-        .reply(200, {
-          statement_id: "mock-describe-statement-id",
-          status: { state: "SUCCEEDED" },
-          manifest: {
-            schema: {
-              column_count: 3,
-              columns: [
-                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
-                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
-                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
-              ],
-            },
-            total_row_count: 1,
-            truncated: false,
-          },
-          result: {
-            data_array: [["timestamp", "TIMESTAMP", "Timestamp column"]],
-            chunk_index: 0,
-            row_count: 1,
-            row_offset: 0,
-          },
-        });
-
-      // Test data config with multiple non-existent columns
-      const dataConfig = {
-        tableName: "sensor_data",
-        dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp", role: "x" }, // Exists
-          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Missing
-          { tableName: "sensor_data", columnName: "humidity", role: "z" }, // Missing
-          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Duplicate missing
-        ],
-      };
-
-      // Execute the method
-      const result = await databricksAdapter.validateDataSources(dataConfig, schemaName);
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe(
-        "Columns do not exist in table 'sensor_data': pressure, humidity",
-      );
+      expect(query).toContain("ORDER BY `timestamp` DESC");
+      expect(query).toContain("LIMIT 100");
+      expect(query).toContain("OFFSET 50");
     });
   });
 
   describe("uploadExperimentData", () => {
     const schemaName = "exp_test_experiment_123";
+    const experimentId = "123-456-789";
     const sourceType = "ambyte";
     const directoryName = "upload_20250910_143022_123-456-789";
     const fileName = "data.csv";
@@ -785,7 +427,7 @@ describe("DatabricksAdapter", () => {
       vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
 
       // Calculate expected file path
-      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -803,6 +445,7 @@ describe("DatabricksAdapter", () => {
       // Execute upload file
       const result = await databricksAdapter.uploadExperimentData(
         schemaName,
+        experimentId,
         sourceType,
         directoryName,
         fileName,
@@ -824,7 +467,7 @@ describe("DatabricksAdapter", () => {
 
       // Use consistent schema name
       const testSchemaName = "exp_test_experiment_with_spaces_123";
-      const expectedFilePath = `/Volumes/${catalogName}/${testSchemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${testSchemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -842,6 +485,7 @@ describe("DatabricksAdapter", () => {
       // Execute upload file
       const result = await databricksAdapter.uploadExperimentData(
         testSchemaName,
+        experimentId,
         sourceType,
         directoryName,
         fileName,
@@ -852,861 +496,6 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value.filePath).toEqual(expectedFilePath);
-    });
-  });
-
-  describe("triggerExperimentPipeline", () => {
-    const experimentId = "123-456-789";
-    const pipelineId = "pipeline-abc123";
-
-    it("should trigger pipeline update with pipeline ID", async () => {
-      const updateId = "update-xyz789";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock start pipeline update API call
-      nock(databricksHost)
-        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
-        .reply(200, {
-          update_id: updateId,
-        });
-
-      // Execute trigger experiment pipeline
-      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        update_id: updateId,
-      });
-    });
-
-    it("should handle failure when pipeline update fails", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock pipeline update failure
-      nock(databricksHost)
-        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
-        .reply(404, {
-          error_code: "RESOURCE_DOES_NOT_EXIST",
-          message: "Pipeline not found",
-        });
-
-      // Execute trigger experiment pipeline
-      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId);
-
-      // Assert result is failure
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Pipeline");
-    });
-
-    it("should trigger pipeline with full refresh option", async () => {
-      const pipelineId = "pipeline-abc123";
-      const updateId = "update-xyz789";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock start pipeline update API call with full refresh
-      nock(databricksHost)
-        .post(
-          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
-          (body: Record<string, any>) => {
-            return body.full_refresh === true;
-          },
-        )
-        .reply(200, {
-          update_id: updateId,
-        });
-
-      // Execute trigger experiment pipeline with full refresh
-      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
-        fullRefresh: true,
-      });
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        update_id: updateId,
-      });
-    });
-
-    it("should trigger pipeline with full refresh selection", async () => {
-      const pipelineId = "pipeline-abc123";
-      const updateId = "update-xyz789";
-      const tablesToRefresh = ["table1", "table2"];
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock start pipeline update API call with full refresh selection
-      nock(databricksHost)
-        .post(
-          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
-          (body: Record<string, any>) => {
-            return (
-              Array.isArray(body.full_refresh_selection) &&
-              body.full_refresh_selection.length === 2 &&
-              body.full_refresh_selection.includes("table1") &&
-              body.full_refresh_selection.includes("table2")
-            );
-          },
-        )
-        .reply(200, {
-          update_id: updateId,
-        });
-
-      // Execute trigger experiment pipeline with full refresh selection
-      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
-        fullRefreshSelection: tablesToRefresh,
-      });
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        update_id: updateId,
-      });
-    });
-
-    it("should trigger pipeline with refresh selection", async () => {
-      const pipelineId = "pipeline-abc123";
-      const updateId = "update-xyz789";
-      const tablesToRefresh = ["table3"];
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock start pipeline update API call with refresh selection
-      nock(databricksHost)
-        .post(
-          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
-          (body: Record<string, any>) => {
-            return (
-              Array.isArray(body.refresh_selection) &&
-              body.refresh_selection.length === 1 &&
-              body.refresh_selection.includes("table3")
-            );
-          },
-        )
-        .reply(200, {
-          update_id: updateId,
-        });
-
-      // Execute trigger experiment pipeline with refresh selection
-      const result = await databricksAdapter.triggerExperimentPipeline(pipelineId, experimentId, {
-        refreshSelection: tablesToRefresh,
-      });
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        update_id: updateId,
-      });
-    });
-  });
-
-  describe("refreshSilverData", () => {
-    const schemaName = "exp_test_experiment_123-456-789";
-    const pipelineId = "pipeline-abc123";
-
-    it("should refresh silver tables successfully", async () => {
-      const updateId = "update-xyz789";
-      const silverTable1 = "silver_table_1";
-      const silverTable2 = "silver_table_2";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list tables to get silver tables
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              catalog_name: MOCK_CATALOG_NAME,
-              schema_name: schemaName,
-              name: silverTable1,
-              properties: { quality: "silver" },
-            },
-            {
-              catalog_name: MOCK_CATALOG_NAME,
-              schema_name: schemaName,
-              name: silverTable2,
-              properties: { quality: "silver" },
-            },
-            {
-              catalog_name: MOCK_CATALOG_NAME,
-              schema_name: schemaName,
-              name: "bronze_table",
-              properties: { quality: "bronze" },
-            },
-          ],
-        });
-
-      // Mock start pipeline update API call with full refresh selection
-      nock(databricksHost)
-        .post(
-          `${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`,
-          (body: Record<string, any>) => {
-            return (
-              Array.isArray(body.full_refresh_selection) &&
-              body.full_refresh_selection.length === 2 &&
-              body.full_refresh_selection.includes(silverTable1) &&
-              body.full_refresh_selection.includes(silverTable2) &&
-              body.cause === "API_CALL"
-            );
-          },
-        )
-        .reply(200, {
-          update_id: updateId,
-        });
-
-      // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        update_id: updateId,
-      });
-    });
-
-    it("should handle case with no silver tables", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list tables with no silver tables
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              catalog_name: MOCK_CATALOG_NAME,
-              schema_name: schemaName,
-              name: "bronze_table",
-              properties: { quality: "bronze" },
-            },
-          ],
-        });
-
-      // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
-
-      // Assert result is failure (no silver tables found)
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("No silver quality tables found");
-    });
-
-    it("should handle table listing failure", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list tables failure
-      nock(databricksHost).get(DatabricksTablesService.TABLES_ENDPOINT).query(true).reply(404, {
-        error_code: "SCHEMA_DOES_NOT_EXIST",
-        message: "Schema not found",
-      });
-
-      // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
-
-      // Assert result is failure
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to list tables");
-    });
-
-    it("should handle pipeline trigger failure", async () => {
-      const silverTable1 = "silver_table_1";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list tables to get silver tables
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              catalog_name: MOCK_CATALOG_NAME,
-              schema_name: schemaName,
-              name: silverTable1,
-              properties: { quality: "silver" },
-            },
-          ],
-        });
-
-      // Mock pipeline update failure
-      nock(databricksHost)
-        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
-        .reply(404, {
-          error_code: "RESOURCE_DOES_NOT_EXIST",
-          message: "Pipeline not found",
-        });
-
-      // Execute refresh silver data
-      const result = await databricksAdapter.refreshSilverData(schemaName, pipelineId);
-
-      // Assert result is failure
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Pipeline");
-    });
-  });
-
-  describe("triggerExperimentPipelineSilverRefresh", () => {
-    const schemaName = "exp_test_experiment_123-456-789";
-    const pipelineId = "pipeline-abc123";
-
-    it("should successfully trigger silver refresh", async () => {
-      const updateId = "update-xyz789";
-      const silverTable1 = "silver_table_1";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock list tables to get silver tables
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              catalog_name: MOCK_CATALOG_NAME,
-              schema_name: schemaName,
-              name: silverTable1,
-              properties: { quality: "silver" },
-            },
-          ],
-        });
-
-      // Mock start pipeline update API call
-      nock(databricksHost)
-        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
-        .reply(200, {
-          update_id: updateId,
-        });
-
-      // Execute trigger experiment pipeline silver refresh
-      const result = await databricksAdapter.triggerExperimentPipelineSilverRefresh(
-        schemaName,
-        pipelineId,
-      );
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        update_id: updateId,
-      });
-    });
-  });
-
-  describe("createVolume", () => {
-    it("should successfully create a volume", async () => {
-      const mockVolumeParams = {
-        catalog_name: "main",
-        schema_name: "test_schema",
-        name: "test_volume",
-        volume_type: "MANAGED" as const,
-        comment: "Test volume comment",
-      };
-
-      const mockVolumeResponse = {
-        catalog_name: "main",
-        schema_name: "test_schema",
-        name: "test_volume",
-        full_name: "main.test_schema.test_volume",
-        volume_type: "MANAGED",
-        comment: "Test volume comment",
-        volume_id: "volume-123",
-        created_at: 1620000000000,
-        created_by: "test-user",
-        updated_at: 1620000000000,
-        updated_by: "test-user",
-        owner: "test-user",
-        metastore_id: "metastore-123",
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock create volume API call
-      nock(databricksHost)
-        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
-        .reply(200, mockVolumeResponse);
-
-      // Execute create volume
-      const result = await databricksAdapter.createVolume(mockVolumeParams);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual(mockVolumeResponse);
-    });
-  });
-
-  describe("createExperimentVolume", () => {
-    const experimentName = "Test Experiment";
-    const experimentId = "123-456-789";
-    const volumeName = "data-uploads";
-    const comment = "Volume for test experiment data uploads";
-    const catalogName = "main";
-
-    it("should successfully create an experiment volume with correct naming", async () => {
-      // Get the actual config service for mocking
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
-
-      // Calculate expected schema name based on adapter implementation
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
-
-      const mockVolumeResponse = {
-        catalog_name: catalogName,
-        schema_name: schemaName,
-        name: volumeName,
-        full_name: `${catalogName}.${schemaName}.${volumeName}`,
-        volume_type: "MANAGED",
-        comment,
-        volume_id: "volume-123",
-        created_at: 1620000000000,
-        created_by: "test-user",
-        updated_at: 1620000000000,
-        updated_by: "test-user",
-        owner: "test-user",
-        metastore_id: "metastore-123",
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock create volume API call
-      nock(databricksHost)
-        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
-        .reply(200, mockVolumeResponse);
-
-      // Execute create experiment volume
-      const result = await databricksAdapter.createExperimentVolume(
-        schemaName,
-        volumeName,
-        comment,
-      );
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual(mockVolumeResponse);
-    });
-
-    it("should create experiment volume without comment", async () => {
-      // Get the actual config service for mocking
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
-
-      // Calculate expected schema name based on adapter implementation
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
-
-      const mockVolumeResponse = {
-        catalog_name: catalogName,
-        schema_name: schemaName,
-        name: volumeName,
-        full_name: `${catalogName}.${schemaName}.${volumeName}`,
-        volume_type: "MANAGED",
-        volume_id: "volume-123",
-        created_at: 1620000000000,
-        created_by: "test-user",
-        updated_at: 1620000000000,
-        updated_by: "test-user",
-        owner: "test-user",
-        metastore_id: "metastore-123",
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock create volume API call
-      nock(databricksHost)
-        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
-        .reply(200, mockVolumeResponse);
-
-      // Execute create experiment volume without comment
-      const result = await databricksAdapter.createExperimentVolume(schemaName, volumeName);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual(mockVolumeResponse);
-    });
-
-    it("should handle spaces and special characters in experiment name", async () => {
-      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
-
-      // Get the actual config service for mocking
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
-
-      // Calculate expected schema name based on adapter implementation
-      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
-
-      const mockVolumeResponse = {
-        catalog_name: catalogName,
-        schema_name: schemaName,
-        name: volumeName,
-        full_name: `${catalogName}.${schemaName}.${volumeName}`,
-        volume_type: "MANAGED",
-        comment,
-        volume_id: "volume-123",
-        created_at: 1620000000000,
-        created_by: "test-user",
-        updated_at: 1620000000000,
-        updated_by: "test-user",
-        owner: "test-user",
-        metastore_id: "metastore-123",
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock create volume API call
-      nock(databricksHost)
-        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
-        .reply(200, mockVolumeResponse);
-
-      // Execute create experiment volume with special characters
-      const result = await databricksAdapter.createExperimentVolume(
-        schemaName,
-        volumeName,
-        comment,
-      );
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.schema_name).toEqual(schemaName);
-    });
-  });
-
-  describe("getExperimentVolume", () => {
-    const experimentName = "Test Experiment";
-    const experimentId = "123-456-789";
-    const volumeName = "data-uploads";
-    const catalogName = "main";
-
-    it("should successfully get an experiment volume", async () => {
-      // Get the actual config service for mocking
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
-
-      // Calculate expected schema name and full volume name based on adapter implementation
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
-      const expectedFullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
-
-      const mockVolumeResponse = {
-        catalog_name: catalogName,
-        schema_name: schemaName,
-        name: volumeName,
-        full_name: expectedFullVolumeName,
-        volume_type: "MANAGED",
-        volume_id: "volume-123",
-        created_at: 1620000000000,
-        created_by: "test-user",
-        updated_at: 1620000000000,
-        updated_by: "test-user",
-        owner: "test-user",
-        metastore_id: "metastore-123",
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock get volume API call
-      nock(databricksHost)
-        .get(
-          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(expectedFullVolumeName)}`,
-        )
-        .reply(200, mockVolumeResponse);
-
-      // Execute get experiment volume
-      const result = await databricksAdapter.getExperimentVolume(schemaName, volumeName);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual(mockVolumeResponse);
-    });
-
-    it("should handle failure when volume is not found", async () => {
-      // Get the actual config service for mocking
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
-
-      // Calculate expected schema name and full volume name based on adapter implementation
-      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
-      const expectedFullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock get volume API call with 404 error
-      nock(databricksHost)
-        .get(
-          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(expectedFullVolumeName)}`,
-        )
-        .reply(404, {
-          error_code: "VOLUME_DOES_NOT_EXIST",
-          message: "Volume does not exist",
-        });
-
-      // Execute get experiment volume
-      const result = await databricksAdapter.getExperimentVolume(schemaName, volumeName);
-
-      // Assert result is failure
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to get volume");
-    });
-
-    it("should handle spaces and special characters in experiment name", async () => {
-      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
-
-      // Get the actual config service for mocking
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
-
-      // Calculate expected schema name and full volume name based on adapter implementation
-      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId}`;
-      const expectedFullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
-
-      const mockVolumeResponse = {
-        catalog_name: catalogName,
-        schema_name: schemaName,
-        name: volumeName,
-        full_name: expectedFullVolumeName,
-        volume_type: "MANAGED",
-        volume_id: "volume-123",
-        created_at: 1620000000000,
-        created_by: "test-user",
-        updated_at: 1620000000000,
-        updated_by: "test-user",
-        owner: "test-user",
-        metastore_id: "metastore-123",
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock get volume API call
-      nock(databricksHost)
-        .get(
-          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(expectedFullVolumeName)}`,
-        )
-        .reply(200, mockVolumeResponse);
-
-      // Execute get experiment volume with special characters
-      const result = await databricksAdapter.getExperimentVolume(schemaName, volumeName);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.full_name).toEqual(expectedFullVolumeName);
-    });
-  });
-
-  describe("getTableMetadata", () => {
-    const schemaName = "exp_test_experiment_123";
-    const tableName = "sensor_data";
-
-    it("should return metadata successfully", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock tables list API call
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              name: "sensor_data",
-              catalog_name: "main",
-              schema_name: schemaName,
-              table_type: "MANAGED",
-            },
-          ],
-        });
-
-      // Mock DESCRIBE table query to get column schema
-      nock(databricksHost)
-        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
-        .reply(200, {
-          statement_id: "mock-describe-statement-id",
-          status: { state: "SUCCEEDED" },
-          manifest: {
-            schema: {
-              column_count: 3,
-              columns: [
-                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
-                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
-                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
-              ],
-            },
-            total_row_count: 3,
-            truncated: false,
-          },
-          result: {
-            data_array: [
-              ["timestamp", "TIMESTAMP", "Timestamp column"],
-              ["temperature", "DOUBLE", "Temperature readings"],
-              ["humidity", "DOUBLE", "Humidity readings"],
-            ],
-            chunk_index: 0,
-            row_count: 3,
-            row_offset: 0,
-          },
-        });
-
-      // Expected metadata
-      const expectedMetadata = new Map<string, string>([
-        ["timestamp", "TIMESTAMP"],
-        ["temperature", "DOUBLE"],
-        ["humidity", "DOUBLE"],
-      ]);
-
-      // Execute the method
-      const result = await databricksAdapter.getTableMetadata(schemaName, tableName);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toStrictEqual(expectedMetadata);
-    });
-
-    it("should handle error when getting table metadata fails", async () => {
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock tables list API call
-      nock(databricksHost)
-        .get(DatabricksTablesService.TABLES_ENDPOINT)
-        .query(true)
-        .reply(200, {
-          tables: [
-            {
-              name: "sensor_data",
-              catalog_name: "main",
-              schema_name: schemaName,
-              table_type: "MANAGED",
-            },
-          ],
-        });
-
-      // Mock DESCRIBE table query with error
-      nock(databricksHost).post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`).reply(500, {
-        error_code: "INTERNAL_ERROR",
-        message: "Failed to get metadata",
-      });
-
-      // Execute the method
-      const result = await databricksAdapter.getTableMetadata(schemaName, tableName);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to get metadata");
     });
   });
 

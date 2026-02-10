@@ -95,16 +95,10 @@ export function ExperimentTitle({
     switch (status) {
       case "active":
         return <Badge className="bg-badge-active">{t("status.active")}</Badge>;
-      case "provisioning":
-        return <Badge className="bg-badge-provisioning">{t("status.provisioning")}</Badge>;
       case "archived":
         return <Badge className="bg-badge-archived">{t("status.archived")}</Badge>;
       case "stale":
         return <Badge className="bg-badge-stale">{t("status.stale")}</Badge>;
-      case "provisioning_failed":
-        return (
-          <Badge className="bg-badge-provisioningFailed">{t("status.provisioningFailed")}</Badge>
-        );
       case "published":
         return <Badge className="bg-badge-published">{t("status.published")}</Badge>;
       default:

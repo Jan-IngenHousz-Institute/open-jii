@@ -1,18 +1,14 @@
-import { faker } from "@faker-js/faker";
-
 import { eq, users } from "@repo/database";
 
-import { success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { UserRepository } from "../../../core/repositories/user.repository";
 import { DeleteUserUseCase } from "./delete-user";
 
 describe("DeleteUserUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: DeleteUserUseCase;
-  let mockDatabricksPort: DatabricksPort;
+  let userRepository: UserRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -21,12 +17,7 @@ describe("DeleteUserUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(DeleteUserUseCase);
-
-    // Mock Databricks port
-    mockDatabricksPort = testApp.module.get(DATABRICKS_PORT);
-    vi.spyOn(mockDatabricksPort, "triggerEnrichedTablesRefreshJob").mockResolvedValue(
-      success({ run_id: 12345, number_in_job: 1 }),
-    );
+    userRepository = testApp.module.get(UserRepository);
   });
 
   afterEach(() => {
@@ -80,65 +71,33 @@ describe("DeleteUserUseCase", () => {
     expect(result.error.message).toContain(`User with ID ${nonExistentId} not found`);
   });
 
-  it("should trigger enriched tables refresh on successful user deletion", async () => {
-    // Arrange
-    const userToDeleteId = await testApp.createTestUser({
-      email: "to-delete@example.com",
-      name: "User ToDelete",
+  it("should fail if user is the only admin of an experiment", async () => {
+    // 1. Create user
+    const userId = await testApp.createTestUser({});
+
+    // 2. Create experiment with this user as creator (default admin)
+    await testApp.createExperiment({
+      userId,
+      name: "User Admin Exp",
     });
 
-    // Act
-    const result = await useCase.execute(userToDeleteId);
+    // 3. Try delete
+    const result = await useCase.execute(userId);
 
-    // Assert
-    expect(result.isSuccess()).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDatabricksPort.triggerEnrichedTablesRefreshJob).toHaveBeenCalledWith(
-      "user_id",
-      userToDeleteId,
-    );
+    // 4. Expect Forbidden
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
   });
 
-  it("should continue execution even if Databricks job trigger fails", async () => {
-    // Arrange
-    const userToDeleteId = await testApp.createTestUser({
-      email: "to-delete@example.com",
-      name: "User ToDelete",
-    });
+  it("should handle repository deletion failure", async () => {
+    const userId = await testApp.createTestUser({});
 
-    // Mock Databricks failure
-    const databricksError = AppError.internal("Databricks error");
-    vi.spyOn(mockDatabricksPort, "triggerEnrichedTablesRefreshJob").mockResolvedValue(
-      failure(databricksError),
-    );
+    // Mock failure
+    vi.spyOn(userRepository, "delete").mockResolvedValue(failure(AppError.internal("DB Error")));
 
-    // Act
-    const result = await useCase.execute(userToDeleteId);
+    const result = await useCase.execute(userId);
 
-    // Assert - Should still succeed despite Databricks failure
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value).toBeUndefined();
-
-    // Verify the user was still soft-deleted
-    const [deletedUser] = await testApp.database
-      .select()
-      .from(users)
-      .where(eq(users.id, userToDeleteId));
-
-    expect(deletedUser).toBeDefined();
-    expect(deletedUser.email).not.toBe("to-delete@example.com"); // Email is anonymized
-    expect(deletedUser.email).toMatch(/^deleted-/); // Starts with deleted- prefix
-    expect(deletedUser.name).toBe("Deleted User");
-  });
-
-  it("should NOT trigger enriched tables refresh when user deletion fails due to admin check", async () => {
-    const nonExistentId = faker.string.uuid();
-
-    const result = await useCase.execute(nonExistentId);
-
-    expect(result.isSuccess()).toBe(false);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDatabricksPort.triggerEnrichedTablesRefreshJob).not.toHaveBeenCalled();
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 });

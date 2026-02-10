@@ -30,7 +30,7 @@ describe("UpdateExperimentUseCase", () => {
     const { experiment } = await testApp.createExperiment({
       name: "Original Experiment Name",
       description: "Original description",
-      status: "provisioning",
+      status: "stale",
       visibility: "private",
       userId: testUserId,
     });
@@ -67,7 +67,7 @@ describe("UpdateExperimentUseCase", () => {
     const { experiment } = await testApp.createExperiment({
       name: "Original Name",
       description: "Original description",
-      status: "provisioning",
+      status: "active",
       visibility: "private",
       userId: testUserId,
     });
