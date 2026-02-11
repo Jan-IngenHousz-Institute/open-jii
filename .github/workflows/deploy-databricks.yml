@@ -7,6 +7,11 @@ on:
         description: "Environment to deploy to"
         required: true
         type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   id-token: write
@@ -21,6 +26,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup Python
         uses: actions/setup-python@v5

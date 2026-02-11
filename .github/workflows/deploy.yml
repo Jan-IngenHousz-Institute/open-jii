@@ -43,7 +43,7 @@ jobs:
     uses: ./.github/workflows/tofu.yml
     with:
       environment: ${{ inputs.environment }}
-      ref: ${{ inputs.ref }}
+      ref: ${{ inputs.ref || github.sha }}
       tofu_version: "1.9.0"
     secrets: inherit
 
@@ -57,7 +57,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
 
       - name: Setup Node.js and pnpm
@@ -84,6 +84,7 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
       timeout_minutes: 10
+      ref: ${{ inputs.ref || github.sha }}
     secrets: inherit
 
   deploy-backend:
@@ -101,6 +102,7 @@ jobs:
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref || github.sha }}
     secrets: inherit
 
   deploy-frontend:
@@ -118,6 +120,7 @@ jobs:
     uses: ./.github/workflows/deploy-nextjs-opennext.yml
     with:
       environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref || github.sha }}
     secrets: inherit
 
   deploy-docs:
@@ -134,6 +137,7 @@ jobs:
     uses: ./.github/workflows/deploy-docs.yml
     with:
       environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref || github.sha }}
     secrets: inherit
 
   # deploy-databricks:
@@ -150,4 +154,5 @@ jobs:
   #   uses: ./.github/workflows/deploy-databricks.yml
   #   with:
   #     environment: ${{ inputs.environment }}
+  #     ref: ${{ inputs.ref || github.sha }}
   #   secrets: inherit
