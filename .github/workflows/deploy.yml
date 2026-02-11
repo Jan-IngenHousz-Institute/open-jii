@@ -13,6 +13,11 @@ on:
         description: "Target environment (dev, staging, prod)"
         required: true
         type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy"
+        required: false
+        type: string
+        default: ""
       deploy_infrastructure:
         description: "Whether to deploy infrastructure"
         required: false
@@ -38,6 +43,7 @@ jobs:
     uses: ./.github/workflows/tofu.yml
     with:
       environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref }}
       tofu_version: "1.9.0"
     secrets: inherit
 
@@ -51,6 +57,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
 
       - name: Setup Node.js and pnpm

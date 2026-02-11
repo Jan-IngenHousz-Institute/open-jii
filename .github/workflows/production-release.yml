@@ -10,6 +10,11 @@ on:
                 type: choice
                 options:
                     - prod
+            ref:
+                description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+                required: false
+                type: string
+                default: ""
             deploy_all:
                 description: "Deploy all applications regardless of changes"
                 required: false
@@ -31,6 +36,7 @@ jobs:
         uses: ./.github/workflows/deploy.yml
         with:
             environment: ${{ inputs.environment }}
+            ref: ${{ inputs.ref }}
             deploy_infrastructure: true
             deploy_all: ${{ inputs.deploy_all }}
         secrets: inherit
