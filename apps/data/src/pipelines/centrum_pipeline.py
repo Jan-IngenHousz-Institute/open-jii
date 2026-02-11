@@ -4,8 +4,8 @@
 # for openJII IoT sensor data processing following the dual medallion pattern
 
 %pip install -q mini-racer==0.12.4
-%pip install -q /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
-%pip install -q /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
+%pip install -q /Workspace/Shared/.bundle/open-jii/dev/artifacts/.internal/multispeq-0.1.0-py3-none-any.whl
+%pip install -q /Workspace/Shared/.bundle/open-jii/dev/artifacts/.internal/enrich-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 import dlt

@@ -343,8 +343,7 @@ module "centrum_pipeline" {
   catalog_name = module.databricks_catalog.catalog_name
 
   notebook_paths = [
-    "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
-    # "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum_pipeline"
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum_pipeline"
   ]
 
   configuration = {
@@ -416,8 +415,7 @@ module "centrum_backup_job" {
       key           = "backup_centrum_raw_data"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/centrum_backup_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/centrum_backup_task"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/centrum_backup_task"
 
       parameters = {
         "CATALOG_NAME"    = module.databricks_catalog.catalog_name
@@ -485,8 +483,7 @@ module "ambyte_processing_job" {
       key           = "process_ambyte_data"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/ambyte_processing_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/ambyte_processing_task"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/ambyte_processing_task"
 
       parameters = {
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
