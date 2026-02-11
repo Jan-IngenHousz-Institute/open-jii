@@ -170,8 +170,8 @@ module "github_cicd_service_principal" {
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
-  name        = "centrum-pipeline-cluster-policy-${var.environment}"
-  description = "Cluster policy for centrum pipeline with pre-installed libraries and cost controls"
+  name        = "node-service-principal-policy-${var.environment}"
+  description = "Cluster policy for node service principal with cost controls"
 
   definition = jsonencode({
     cluster_type = {
@@ -187,20 +187,6 @@ module "node_cluster_policy" {
       value = 1
     }
   })
-
-  libraries = [
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/multispeq-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
-    },
-    {
-      pypi = {
-        package = "mini-racer==0.12.4"
-      }
-    }
-  ]
 
   permissions = [
     {
@@ -372,10 +358,25 @@ module "centrum_pipeline" {
     "ENVIRONMENT"                = upper(var.environment)
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
+    "BRONZE_TABLE"               = "raw_data"
+    "SILVER_TABLE"               = "clean_data"
+    "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"        = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME"    = "unity-catalog-kinesis-role-${var.environment}"
+    "CHECKPOINT_PATH"            = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+    "ENVIRONMENT"                = upper(var.environment)
+    "MONITORING_SLACK_CHANNEL"   = var.slack_channel
+    "pipelines.trigger.interval" = "120 seconds"
   }
 
   continuous_mode  = true
+  continuous_mode  = true
   development_mode = true
+  serverless       = false
+
+  node_type_id = "r5d.large"
+  num_workers  = 1
+  policy_id    = module.node_cluster_policy.policy_id
   serverless       = false
 
   node_type_id = "r5d.large"
@@ -396,6 +397,8 @@ module "centrum_pipeline" {
   providers = {
     databricks.workspace = databricks.workspace
   }
+
+  depends_on = [module.node_cluster_policy]
 
   depends_on = [module.node_cluster_policy]
 }
@@ -467,135 +470,13 @@ module "centrum_backup_job" {
   depends_on = [module.centrum_pipeline]
 }
 
-module "ambyte_processing_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Ambyte-Processing-Job-PROD"
-  description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  # Enable job queueing
-  queue = {
-    enabled = true
-  }
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Environment configuration for serverless compute dependencies
-  environments = [
-    {
-      environment_key = "ambyte_processing"
-      spec = {
-        environment_version = "4"
-        dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl"
-        ]
-      }
-    }
-  ]
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "process_ambyte_data"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/ambyte_processing_task"
-
-      parameters = {
-        EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
-        EXPERIMENT_NAME   = "{{EXPERIMENT_NAME}}"
-        EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
-        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
-        YEAR_PREFIX       = "{{YEAR_PREFIX}}"
-        CATALOG_NAME      = module.databricks_catalog.catalog_name
-        ENVIRONMENT       = upper(var.environment)
-      }
-    }
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "data_downloads_volume" {
-  source = "../../modules/databricks/volume"
-
-  catalog_name = module.databricks_catalog.catalog_name
-  schema_name  = "centrum"
-  volume_name  = "data-exports"
-  comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet)"
-
-  grants = {
-    node_service_principal = {
-      principal  = module.node_service_principal.service_principal_application_id
-      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
-    }
-  }
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.databricks_catalog]
-}
-
-module "data_imports_volume" {
-  source = "../../modules/databricks/volume"
-
-  catalog_name = module.databricks_catalog.catalog_name
-  schema_name  = "centrum"
-  volume_name  = "data-imports"
-  comment      = "Managed volume for experiment data imports"
-
-  grants = {
-    node_service_principal = {
-      principal  = module.node_service_principal.service_principal_application_id
-      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
-    }
-  }
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.databricks_catalog]
-}
-
 module "data_export_job" {
   source = "../../modules/databricks/job"
 
   name        = "Data-Export-Job-PROD"
   description = "Exports experiment table data in multiple formats (CSV, JSON, Parquet) to Unity Catalog volumes"
 
-  max_concurrent_runs           = 5
+  max_concurrent_runs           = 1
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "PERFORMANCE_OPTIMIZED"
@@ -741,7 +622,6 @@ module "databricks_secrets" {
     DATABRICKS_CLIENT_ID                = module.node_service_principal.service_principal_application_id
     DATABRICKS_CLIENT_SECRET            = module.node_service_principal.service_principal_secret_value
     DATABRICKS_AMBYTE_PROCESSING_JOB_ID = module.ambyte_processing_job.job_id
-    DATABRICKS_DATA_EXPORT_JOB_ID       = module.data_export_job.job_id
     DATABRICKS_WAREHOUSE_ID             = var.backend_databricks_warehouse_id
     DATABRICKS_WEBHOOK_API_KEY_ID       = var.backend_webhook_api_key_id
     DATABRICKS_WEBHOOK_SECRET           = var.backend_webhook_secret
@@ -1164,10 +1044,6 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
     },
     {
-      name      = "DATABRICKS_DATA_EXPORT_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::"
-    },
-    {
       name      = "DATABRICKS_WAREHOUSE_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
     },
@@ -1198,6 +1074,26 @@ module "backend_ecs" {
     {
       name  = "DATABRICKS_CATALOG_NAME"
       value = module.databricks_catalog.catalog_name
+    },
+    {
+      name  = "DATABRICKS_CENTRUM_SCHEMA_NAME"
+      value = "centrum"
+    },
+    {
+      name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
+      value = "enriched_experiment_raw_data"
+    },
+    {
+      name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
+      value = "experiment_device_data"
+    },
+    {
+      name  = "DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME"
+      value = "enriched_raw_ambyte_data"
+    },
+    {
+      name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
+      value = "enriched_experiment_macro_data"
     },
     {
       name  = "DATABRICKS_CENTRUM_SCHEMA_NAME"
