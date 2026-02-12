@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -247,7 +247,9 @@ describe("<TransferRequestForm />", () => {
       });
 
       // Trigger success
-      triggerSuccess();
+      await act(async () => {
+        triggerSuccess();
+      });
 
       await waitFor(() => {
         expect(screen.getByText("transferRequest.successTitle")).toBeInTheDocument();
@@ -273,7 +275,9 @@ describe("<TransferRequestForm />", () => {
       await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
       // Trigger success
-      triggerSuccess();
+      await act(async () => {
+        triggerSuccess();
+      });
 
       await waitFor(() => {
         expect(screen.getByText("transferRequest.submitAnother")).toBeInTheDocument();
@@ -298,7 +302,9 @@ describe("<TransferRequestForm />", () => {
       await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
       // Trigger success
-      triggerSuccess();
+      await act(async () => {
+        triggerSuccess();
+      });
 
       await waitFor(() => {
         expect(screen.getByText("transferRequest.submitAnother")).toBeInTheDocument();
@@ -333,9 +339,13 @@ describe("<TransferRequestForm />", () => {
       await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
       // Trigger success
-      triggerSuccess();
+      await act(async () => {
+        triggerSuccess();
+      });
 
-      rerender(<TransferRequestForm />);
+      await act(async () => {
+        rerender(<TransferRequestForm />);
+      });
 
       const submitAnotherButton = await screen.findByText("transferRequest.submitAnother");
       await user.click(submitAnotherButton);

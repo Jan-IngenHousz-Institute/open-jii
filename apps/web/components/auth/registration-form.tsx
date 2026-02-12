@@ -94,7 +94,7 @@ export function RegistrationForm({
         },
       });
     } catch (error) {
-      console.error("Registration error:", error);
+      // Error handled by UI state
     } finally {
       setIsPending(false);
     }

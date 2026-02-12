@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -216,12 +216,14 @@ describe("NewExperimentForm", () => {
   });
 
   describe("Success Handling", () => {
-    it("shows toast and navigates on success", () => {
+    it("shows toast and navigates on success", async () => {
       render(<NewExperimentForm />);
       const onSuccessCallback = (globalThis as GlobalWithCallback).__onSuccessCallback;
       const mockExperimentId = "exp-123";
 
-      onSuccessCallback?.(mockExperimentId);
+      await act(async () => {
+        onSuccessCallback?.(mockExperimentId);
+      });
 
       expect(mockToast).toHaveBeenCalledWith({
         description: "experiments.experimentCreated",

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -199,25 +199,31 @@ describe("DataUploadModal", () => {
     });
 
     // Close modal
-    rerender(
-      <DataUploadModal
-        experimentId="test-experiment"
-        open={false}
-        onOpenChange={mockOnOpenChange}
-      />,
-    );
+    await act(async () => {
+      rerender(
+        <DataUploadModal
+          experimentId="test-experiment"
+          open={false}
+          onOpenChange={mockOnOpenChange}
+        />,
+      );
+    });
 
     // Wait for reset timeout
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
 
     // Reopen modal
-    rerender(
-      <DataUploadModal
-        experimentId="test-experiment"
-        open={true}
-        onOpenChange={mockOnOpenChange}
-      />,
-    );
+    await act(async () => {
+      rerender(
+        <DataUploadModal
+          experimentId="test-experiment"
+          open={true}
+          onOpenChange={mockOnOpenChange}
+        />,
+      );
+    });
 
     // Should be back to sensor selection
     expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();

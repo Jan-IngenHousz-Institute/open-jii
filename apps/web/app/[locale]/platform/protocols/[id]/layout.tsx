@@ -57,6 +57,7 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
   // Determine active tab from URL
   const getActiveTab = () => {
     if (pathname.endsWith("/settings")) return "settings";
+    if (pathname.endsWith("/test")) return "test";
     if (pathname.endsWith(`/protocols/${id}`)) return "overview";
     return "overview";
   };
@@ -76,10 +77,15 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
       </div>
 
       <Tabs value={activeTab} className="w-full">
-        <TabsList className={`grid w-full ${isCreator ? "grid-cols-2" : "grid-cols-1"}`}>
+        <TabsList className={`grid w-full ${isCreator ? "grid-cols-3" : "grid-cols-2"}`}>
           <TabsTrigger value="overview" asChild>
             <Link href={`/platform/protocols/${id}`} locale={locale}>
               {t("protocols.overview")}
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="test" asChild>
+            <Link href={`/platform/protocols/${id}/test`} locale={locale}>
+              Test
             </Link>
           </TabsTrigger>
           {isCreator && (

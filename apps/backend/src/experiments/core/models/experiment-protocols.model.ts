@@ -10,7 +10,7 @@ export const experimentProtocolSchema = createSelectSchema(experimentProtocols)
     protocol: z.object({
       id: z.string().uuid(),
       name: z.string(),
-      family: z.enum(["multispeq", "ambit"]),
+      family: z.enum(["multispeq", "ambit", "generic"]),
       createdBy: z.string().uuid(),
     }),
   });

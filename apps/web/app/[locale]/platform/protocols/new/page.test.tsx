@@ -14,7 +14,15 @@ vi.mock("@repo/i18n/server", () => ({
 }));
 
 vi.mock("@/components/new-protocol", () => ({
-  NewProtocolForm: () => <div data-testid="new-protocol-form">New Protocol Form</div>,
+  NewProtocolForm: () => (
+    <div data-testid="new-protocol-form">
+      <div>
+        <h3 className="text-lg font-medium">protocols.newProtocol</h3>
+        <p className="text-muted-foreground text-sm">newProtocol.description</p>
+      </div>
+      <div>New Protocol Form</div>
+    </div>
+  ),
 }));
 
 // --- Tests ---

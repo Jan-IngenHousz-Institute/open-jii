@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -385,7 +385,7 @@ describe("<UnifiedNavbar />", () => {
     expect(within(dropdown).getByTestId("avatar-image")).toBeInTheDocument();
   });
 
-  it("sets up intersection observer when isHomePage is true", () => {
+  it("sets up intersection observer when isHomePage is true", async () => {
     const observeMock = vi.fn();
     const unobserveMock = vi.fn();
     let observerCallback: IntersectionObserverCallback | null = null;
@@ -407,17 +407,21 @@ describe("<UnifiedNavbar />", () => {
     main.appendChild(heroSection);
     document.body.appendChild(main);
 
-    const { unmount } = render(
-      <QueryClientProvider
-        client={
-          new QueryClient({
-            defaultOptions: { queries: { retry: false } },
-          })
-        }
-      >
-        <UnifiedNavbar locale="en-US" session={null} isHomePage={true} />
-      </QueryClientProvider>,
-    );
+    let unmount: (() => void) | undefined;
+    await act(async () => {
+      const result = render(
+        <QueryClientProvider
+          client={
+            new QueryClient({
+              defaultOptions: { queries: { retry: false } },
+            })
+          }
+        >
+          <UnifiedNavbar locale="en-US" session={null} isHomePage={true} />
+        </QueryClientProvider>,
+      );
+      unmount = result.unmount;
+    });
 
     expect(mockIntersectionObserver).toHaveBeenCalledWith(expect.any(Function), {
       threshold: 0,
@@ -426,17 +430,21 @@ describe("<UnifiedNavbar />", () => {
     expect(observeMock).toHaveBeenCalledWith(heroSection);
 
     // Trigger the IntersectionObserver callback to cover lines 143-144
-    observerCallback(
-      [{ isIntersecting: false, target: heroSection } as unknown as IntersectionObserverEntry],
-      {} as IntersectionObserver,
-    );
+    await act(async () => {
+      observerCallback(
+        [{ isIntersecting: false, target: heroSection } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
 
-    observerCallback(
-      [{ isIntersecting: true, target: heroSection } as unknown as IntersectionObserverEntry],
-      {} as IntersectionObserver,
-    );
+      observerCallback(
+        [{ isIntersecting: true, target: heroSection } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
 
-    unmount();
+    await act(async () => {
+      unmount?.();
+    });
     expect(unobserveMock).toHaveBeenCalledWith(heroSection);
 
     // Cleanup

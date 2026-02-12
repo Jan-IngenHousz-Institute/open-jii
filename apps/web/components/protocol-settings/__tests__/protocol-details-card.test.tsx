@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -66,16 +66,20 @@ describe("ProtocolDetailsCard", () => {
     vi.clearAllMocks();
   });
 
-  it("should render the form with initial values", () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+  it("should render the form with initial values", async () => {
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     expect(screen.getByDisplayValue("Test Protocol")).toBeInTheDocument();
     // Description is wrapped in <p> tags by Quill, so can't use getByDisplayValue
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 
-  it("should display all form fields", () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+  it("should display all form fields", async () => {
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
@@ -83,15 +87,19 @@ describe("ProtocolDetailsCard", () => {
     expect(screen.getByRole("heading", { name: /code/i })).toBeInTheDocument();
   });
 
-  it("should disable submit button when form is pristine", () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+  it("should disable submit button when form is pristine", async () => {
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const submitButton = screen.getByRole("button", { name: /save/i });
     expect(submitButton).toBeDisabled();
   });
 
   it("should enable submit button when form is dirty and valid", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -113,7 +121,9 @@ describe("ProtocolDetailsCard", () => {
       isPending: false,
     } as never);
 
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -138,7 +148,9 @@ describe("ProtocolDetailsCard", () => {
   it("should show toast notification on successful update", async () => {
     const { toast } = await import("@repo/ui/hooks");
 
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -155,7 +167,9 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should disable submit button when code is invalid", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -180,7 +194,9 @@ describe("ProtocolDetailsCard", () => {
       isPending: true,
     } as never);
 
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const submitButton = screen.getByRole("button", { name: /save/i });
     expect(submitButton).toBeDisabled();
@@ -198,8 +214,10 @@ describe("ProtocolDetailsCard", () => {
     expect(descriptionInput).toHaveValue("New description");
   });
 
-  it("should update code field", () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+  it("should update code field", async () => {
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const codeEditor = screen.getByTestId("code-editor");
     const newCode = JSON.stringify([{ averages: 2 }]);
@@ -210,29 +228,37 @@ describe("ProtocolDetailsCard", () => {
     expect(codeEditor).toHaveValue(newCode);
   });
 
-  it("should show family selector with correct options", () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+  it("should show family selector with correct options", async () => {
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const familySelect = screen.getByLabelText(/family/i);
     expect(familySelect).toBeInTheDocument();
   });
 
-  it("should display card title and description", () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+  it("should display card title and description", async () => {
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     expect(screen.getByText("protocolSettings.generalSettings")).toBeInTheDocument();
     expect(screen.getByText("protocolSettings.generalDescription")).toBeInTheDocument();
   });
 
-  it("should handle empty code value", () => {
-    render(<ProtocolDetailsCard {...defaultProps} initialCode={[{}]} />);
+  it("should handle empty code value", async () => {
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} initialCode={[{}]} />);
+    });
 
     const codeEditor = screen.getByTestId("code-editor");
     expect(codeEditor).toHaveValue(JSON.stringify([{}]));
   });
 
   it("should validate name field", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    await act(async () => {
+      render(<ProtocolDetailsCard {...defaultProps} />);
+    });
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);

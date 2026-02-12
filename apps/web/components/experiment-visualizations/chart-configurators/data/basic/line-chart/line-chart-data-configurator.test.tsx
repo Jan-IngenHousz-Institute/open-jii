@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi } from "vitest";
 
@@ -92,7 +92,7 @@ describe("LineChartDataConfigurator", () => {
     expect(screen.getByTestId("y-axis-configuration")).toBeInTheDocument();
   });
 
-  it("should provide addYAxisSeries function to Y-axis configuration", () => {
+  it("should provide addYAxisSeries function to Y-axis configuration", async () => {
     function TestComponent() {
       const form = useForm<ChartFormValues>({
         defaultValues: {
@@ -109,11 +109,15 @@ describe("LineChartDataConfigurator", () => {
       return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
-    render(<TestComponent />);
+    await act(async () => {
+      render(<TestComponent />);
+    });
 
     // Verify the addYAxisSeries function was captured and can be called
     expect(capturedAddYAxisSeries).toBeTruthy();
-    expect(() => capturedAddYAxisSeries?.()).not.toThrow();
+    await act(async () => {
+      capturedAddYAxisSeries?.();
+    });
   });
 
   it("should pass isColorColumnSelected as true when color column is configured", () => {

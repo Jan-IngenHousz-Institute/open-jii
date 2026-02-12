@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -488,7 +488,7 @@ describe("FileUploadStep", () => {
     expect(screen.getByTestId("file-upload-button")).toBeInTheDocument();
   });
 
-  it("triggers upload error callback with network error", () => {
+  it("triggers upload error callback with network error", async () => {
     let storedErrorCallback: ((error: { message: string }) => void) | undefined;
 
     (useExperimentDataUpload as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -522,7 +522,9 @@ describe("FileUploadStep", () => {
 
     // Now trigger the error callback to test line 86
     if (storedErrorCallback) {
-      storedErrorCallback({ message: "Network error" });
+      await act(async () => {
+        storedErrorCallback({ message: "Network error" });
+      });
     }
 
     expect(mockOnUploadSuccess).not.toHaveBeenCalled();

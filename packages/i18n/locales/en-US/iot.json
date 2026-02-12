@@ -1,0 +1,36 @@
+{
+  "iot": {
+    "protocolTester": {
+      "connectionType": "Connection Type",
+      "bluetooth": "Bluetooth",
+      "serial": "Serial",
+      "device": "Device",
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "notConnected": "Not Connected",
+      "pairingWithDevice": "Pairing with device",
+      "wireless": "Wireless",
+      "usb": "USB",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "unknownDevice": "Unknown Device",
+      "version": "Version",
+      "runProtocol": "Run Protocol",
+      "running": "Running...",
+      "results": "Results",
+      "success": "Success",
+      "failed": "Failed",
+      "passed": "Passed",
+      "error": "Error",
+      "responseData": "Response Data",
+      "noResultsYet": "No results yet",
+      "runProtocolToSeeResults": "Run a protocol to see results",
+      "webBluetoothNotSupported": "Web Bluetooth not supported in this browser",
+      "webSerialNotSupported": "Web Serial not supported in this browser",
+      "testProtocol": "Test Protocol",
+      "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
+      "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
+      "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop."
+    }
+  }
+}
