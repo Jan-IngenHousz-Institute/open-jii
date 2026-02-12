@@ -33,3 +33,14 @@ output "master_user_secret_arn" {
   description = "The ARN of the secret in AWS Secrets Manager containing master credentials"
   sensitive   = true
 }
+
+output "writer_credentials_secret_arn" {
+  value       = aws_secretsmanager_secret.writer_credentials.arn
+  description = "The ARN of the secret in AWS Secrets Manager containing writer user credentials"
+  sensitive   = true
+}
+
+output "writer_username" {
+  value       = "openjii_writer"
+  description = "Username for the writer application user (has full CRUD permissions)"
+}
