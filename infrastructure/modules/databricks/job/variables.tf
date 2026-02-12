@@ -147,3 +147,15 @@ variable "email_notifications" {
   })
   default = null
 }
+
+variable "environments" {
+  description = "List of environment configurations for serverless compute dependencies"
+  type = list(object({
+    environment_key = string
+    spec = object({
+      environment_version = optional(string, "1")
+      dependencies        = list(string)
+    })
+  }))
+  default = []
+}
