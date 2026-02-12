@@ -1,0 +1,32 @@
+query pageHome($locale: String, $preview: Boolean) {
+  pageHomeHeroCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomeHeroFields
+    }
+  }
+  pageHomeMissionCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomeMissionFields
+    }
+  }
+  pageHomeFeaturesCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomeFeaturesFields
+    }
+  }
+  pageHomePartnersCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomePartnersFields
+    }
+  }
+  footerCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...FooterFields
+    }
+  }
+  landingMetadataCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...LandingMetadataFields
+    }
+  }
+}

@@ -66,11 +66,12 @@ describe("Home", () => {
   };
 
   const mockContentfulData = {
-    hero: { pageHomeHeroCollection: { items: [{ title: "Hero Title" }] } },
-    mission: { pageHomeMissionCollection: { items: [{ title: "Mission Title" }] } },
-    features: { pageHomeFeaturesCollection: { items: [{ title: "Features Title" }] } },
-    partners: { pageHomePartnersCollection: { items: [{ title: "Partners Title" }] } },
-    footer: { footerCollection: { items: [{ title: "Footer Title" }] } },
+    pageHomeHeroCollection: { items: [{ title: "Hero Title" }] },
+    pageHomeMissionCollection: { items: [{ title: "Mission Title" }] },
+    pageHomeFeaturesCollection: { items: [{ title: "Features Title" }] },
+    pageHomePartnersCollection: { items: [{ title: "Partners Title" }] },
+    footerCollection: { items: [{ title: "Footer Title" }] },
+    landingMetadataCollection: { items: [{ title: "Metadata Title", description: "Description" }] },
   };
 
   beforeEach(() => {
@@ -78,18 +79,10 @@ describe("Home", () => {
     mockAuth.mockResolvedValue(null);
     mockGetContentfulClients.mockResolvedValue({
       client: {
-        pageHomeHero: vi.fn().mockResolvedValue(mockContentfulData.hero),
-        pageHomeMission: vi.fn().mockResolvedValue(mockContentfulData.mission),
-        pageHomeFeatures: vi.fn().mockResolvedValue(mockContentfulData.features),
-        pageHomePartners: vi.fn().mockResolvedValue(mockContentfulData.partners),
-        footer: vi.fn().mockResolvedValue(mockContentfulData.footer),
+        pageHome: vi.fn().mockResolvedValue(mockContentfulData),
       },
       previewClient: {
-        pageHomeHero: vi.fn().mockResolvedValue(mockContentfulData.hero),
-        pageHomeMission: vi.fn().mockResolvedValue(mockContentfulData.mission),
-        pageHomeFeatures: vi.fn().mockResolvedValue(mockContentfulData.features),
-        pageHomePartners: vi.fn().mockResolvedValue(mockContentfulData.partners),
-        footer: vi.fn().mockResolvedValue(mockContentfulData.footer),
+        pageHome: vi.fn().mockResolvedValue(mockContentfulData),
       },
     });
   });
@@ -145,18 +138,24 @@ describe("Home", () => {
   it("handles case when Contentful data is missing", async () => {
     mockGetContentfulClients.mockResolvedValueOnce({
       client: {
-        pageHomeHero: vi.fn().mockResolvedValue({ pageHomeHeroCollection: { items: [] } }),
-        pageHomeMission: vi.fn().mockResolvedValue({ pageHomeMissionCollection: { items: [] } }),
-        pageHomeFeatures: vi.fn().mockResolvedValue({ pageHomeFeaturesCollection: { items: [] } }),
-        pageHomePartners: vi.fn().mockResolvedValue({ pageHomePartnersCollection: { items: [] } }),
-        footer: vi.fn().mockResolvedValue({ footerCollection: { items: [] } }),
+        pageHome: vi.fn().mockResolvedValue({
+          pageHomeHeroCollection: { items: [] },
+          pageHomeMissionCollection: { items: [] },
+          pageHomeFeaturesCollection: { items: [] },
+          pageHomePartnersCollection: { items: [] },
+          footerCollection: { items: [] },
+          landingMetadataCollection: { items: [] },
+        }),
       },
       previewClient: {
-        pageHomeHero: vi.fn().mockResolvedValue({ pageHomeHeroCollection: { items: [] } }),
-        pageHomeMission: vi.fn().mockResolvedValue({ pageHomeMissionCollection: { items: [] } }),
-        pageHomeFeatures: vi.fn().mockResolvedValue({ pageHomeFeaturesCollection: { items: [] } }),
-        pageHomePartners: vi.fn().mockResolvedValue({ pageHomePartnersCollection: { items: [] } }),
-        footer: vi.fn().mockResolvedValue({ footerCollection: { items: [] } }),
+        pageHome: vi.fn().mockResolvedValue({
+          pageHomeHeroCollection: { items: [] },
+          pageHomeMissionCollection: { items: [] },
+          pageHomeFeaturesCollection: { items: [] },
+          pageHomePartnersCollection: { items: [] },
+          footerCollection: { items: [] },
+          landingMetadataCollection: { items: [] },
+        }),
       },
     });
 
