@@ -170,8 +170,8 @@ module "github_cicd_service_principal" {
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
-  name        = "node-service-principal-policy-${var.environment}"
-  description = "Cluster policy for node service principal with cost controls"
+  name        = "centrum-pipeline-cluster-policy-${var.environment}"
+  description = "Cluster policy for centrum pipeline with pre-installed libraries and cost controls"
 
   definition = jsonencode({
     cluster_type = {
@@ -187,6 +187,20 @@ module "node_cluster_policy" {
       value = 1
     }
   })
+
+  libraries = [
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/multispeq-0.1.0-py3-none-any.whl"
+    },
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
+    },
+    {
+      pypi = {
+        package = "mini-racer==0.12.4"
+      }
+    }
+  ]
 
   permissions = [
     {
@@ -489,6 +503,19 @@ module "ambyte_processing_job" {
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
   }
+
+  # Environment configuration for serverless compute dependencies
+  environments = [
+    {
+      environment_key = "ambyte_processing"
+      spec = {
+        environment_version = "1"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
 
   # Configure task retries
   task_retry_config = {
