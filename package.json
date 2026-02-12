@@ -47,9 +47,7 @@
   "pnpm": {
     "overrides": {
       "react": "catalog:react19",
-      "react-dom": "catalog:react19",
-      "@auth/core": "^0.41.1",
-      "mermaid": "^11.10.0"
+      "react-dom": "catalog:react19"
     },
     "patchedDependencies": {
       "react-native-usb-serialport-for-android": "patches/react-native-usb-serialport-for-android.patch",
