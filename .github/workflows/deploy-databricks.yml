@@ -40,8 +40,8 @@ jobs:
           databricks bundle validate -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_GHA_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_ID }}
-          DATABRICKS_GHA_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_SECRET }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
 
       - name: Plan bundle deployment
         working-directory: apps/data
@@ -50,8 +50,8 @@ jobs:
           databricks bundle plan -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_GHA_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_ID }}
-          DATABRICKS_GHA_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_SECRET }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
 
       - name: Deploy bundle
         working-directory: apps/data
@@ -60,8 +60,8 @@ jobs:
           databricks bundle deploy -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_GHA_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_ID }}
-          DATABRICKS_GHA_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_SECRET }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
 
       - name: Show deployment summary
         working-directory: apps/data
@@ -70,13 +70,6 @@ jobs:
           databricks bundle summary -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_GHA_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_ID }}
-          DATABRICKS_GHA_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_GHA_CLIENT_SECRET }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
 
-      - name: Deployment summary
-        run: |
-          echo "Deployment to ${{ inputs.environment }} completed successfully"
-          echo "Bundle: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/"
-          echo "Notebooks: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/notebooks/"
-          echo "Artifacts: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/artifacts/"
-          echo "Workspace: ${{ secrets.DATABRICKS_HOST }}"
