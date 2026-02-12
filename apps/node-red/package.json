@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "node-red": "^4.1.1",
+    "node-red": "^4.1.5",
     "node-red-contrib-aws-iot-hub": "^0.1.14"
   }
 }
