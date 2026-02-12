@@ -2,6 +2,7 @@ import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sid
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
+import { Suspense } from "react";
 import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
@@ -49,7 +50,7 @@ export default async function AppLayout({
         <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
           <div className="mx-auto w-full max-w-7xl">
             <Breadcrumbs locale={locale} />
-            {children}
+            <Suspense>{children}</Suspense>
           </div>
         </div>
       </SidebarInset>
