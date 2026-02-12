@@ -3,10 +3,6 @@
 # This notebook implements the complete medallion architecture (Bronze-Silver-Gold)
 # for openJII IoT sensor data processing following the dual medallion pattern
 
-%pip install -q mini-racer==0.12.4
-%pip install -q /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
-%pip install -q /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
-
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
