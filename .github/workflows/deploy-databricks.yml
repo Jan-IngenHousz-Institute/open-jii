@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy to ${{ inputs.environment }}
+    name: Deploy Databricks Bundle
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
 
