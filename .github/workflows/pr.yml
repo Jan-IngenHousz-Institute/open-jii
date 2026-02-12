@@ -9,7 +9,6 @@ on:
       - reopened
   workflow_dispatch:
 
-
 permissions:
   contents: read
   pull-requests: read
@@ -85,17 +84,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history needed for semantic versioning
-      
+          fetch-depth: 0 # Full history needed for semantic versioning
+
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-      
+
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
-      
+
       - name: Preview Release (Dry Run)
         id: preview
         if: steps.detect.outputs.has_affected_apps == 'true'
@@ -103,8 +102,8 @@ jobs:
         with:
           affected_apps: ${{ steps.detect.outputs.affected_apps }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          dry_run: 'true'
-      
+          dry_run: "true"
+
       - name: Comment PR with Preview
         if: steps.detect.outputs.has_affected_apps == 'true'
         uses: actions/github-script@v7
@@ -112,9 +111,9 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const releases = JSON.parse('${{ steps.preview.outputs.releases_created }}');
-            
+
             let comment = '## 🔍 Release Preview\n\n';
-            
+
             if (Object.keys(releases).length === 0) {
               comment += '✅ **No new releases will be created.**\n\n';
               comment += 'The changes in this PR do not trigger a version bump (e.g., docs, chore, style commits).\n';
@@ -138,22 +137,22 @@ jobs:
               comment += '- `docs:`, `chore:`, `style:` → No release\n\n';
               comment += '📖 [Release Documentation](https://docs.openjii.org/releases)\n';
             }
-            
+
             comment += '\n---\n';
             comment += '*This is a preview based on your conventional commits. Actual releases will occur when merged to main.*';
-            
+
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
+
             const botComment = comments.find(comment => 
               comment.user.type === 'Bot' && 
               comment.body.includes('🔍 Release Preview')
             );
-            
+
             // Update or create comment
             if (botComment) {
               await github.rest.issues.updateComment({
@@ -173,6 +172,7 @@ jobs:
 
   tofu:
     name: OpenTofu (Plan)
+    if: github.actor != 'dependabot[bot]'
     needs: build_lint_test
     runs-on: ubuntu-latest
     strategy:
