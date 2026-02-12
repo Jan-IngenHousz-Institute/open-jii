@@ -16,7 +16,7 @@
     "postinstall": "cd ../../packages/api && pnpm run build && cd - &&  cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd -"
   },
   "dependencies": {
-    "@aws-sdk/client-cognito-identity": "^3.806.0",
+    "@aws-sdk/client-cognito-identity": "^3.988.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
@@ -52,7 +52,7 @@
     "expo-symbols": "~1.0.7",
     "expo-web-browser": "~15.0.9",
     "htmlparser2": "^10.0.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "lucide-react-native": "^0.513.0",
     "nativewind": "^4.1.23",
     "paho-mqtt": "^1.1.0",

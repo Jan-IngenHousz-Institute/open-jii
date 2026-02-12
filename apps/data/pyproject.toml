@@ -19,7 +19,7 @@ openjii = { path = "src/lib/openjii", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 build = "^1.0.0"
-wheel = "^0.42.0"
+wheel = "^0.46.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
