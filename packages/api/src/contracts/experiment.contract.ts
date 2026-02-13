@@ -45,6 +45,8 @@ import {
   zTransferRequestList,
   zProjectTransferWebhookPayload,
   zProjectTransferWebhookResponse,
+  zExperimentMetadata,
+  zUpsertExperimentMetadataBody,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -625,5 +627,49 @@ export const experimentContract = c.router({
     summary: "Execute project transfer from Databricks",
     description:
       "Creates experiment, protocol, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
+  },
+  // --- Experiment Metadata Endpoints ---
+  getExperimentMetadata: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/metadata",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentMetadata.nullable(),
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get experiment metadata",
+    description: "Retrieves the metadata (custom columns and rows) for an experiment",
+  },
+
+  upsertExperimentMetadata: {
+    method: "PUT",
+    path: "/api/v1/experiments/:id/metadata",
+    pathParams: zIdPathParam,
+    body: zUpsertExperimentMetadataBody,
+    responses: {
+      200: zExperimentMetadata,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Create or update experiment metadata",
+    description: "Creates or replaces the metadata for an experiment with the provided columns and rows",
+  },
+
+  deleteExperimentMetadata: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/metadata",
+    pathParams: zIdPathParam,
+    responses: {
+      204: null,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Delete experiment metadata",
+    description: "Removes all metadata from an experiment",
   },
 });
