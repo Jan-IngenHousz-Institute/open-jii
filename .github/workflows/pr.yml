@@ -172,7 +172,6 @@ jobs:
 
   tofu:
     name: OpenTofu (Plan)
-    if: github.actor != 'dependabot[bot]'
     needs: build_lint_test
     runs-on: ubuntu-latest
     strategy:
@@ -214,9 +213,11 @@ jobs:
 
     steps:
       - name: Checkout Repository
+        if: github.actor != 'dependabot[bot]'
         uses: actions/checkout@v4
 
       - name: Setup OpenTofu and AWS Credentials
+        if: github.actor != 'dependabot[bot]'
         uses: ./.github/actions/tofu/tofu-setup
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
@@ -224,11 +225,14 @@ jobs:
           tofu_version: "1.9.0"
 
       - name: OpenTofu Format Check
+        if: github.actor != 'dependabot[bot]'
         uses: ./.github/actions/tofu/tofu-fmt-check
         continue-on-error: false
 
       - name: OpenTofu Init and Validate
+        if: github.actor != 'dependabot[bot]'
         uses: ./.github/actions/tofu/tofu-init-validate
 
       - name: OpenTofu Plan
+        if: github.actor != 'dependabot[bot]'
         uses: ./.github/actions/tofu/tofu-plan
