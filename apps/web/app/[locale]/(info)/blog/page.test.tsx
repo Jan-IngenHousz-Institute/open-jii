@@ -149,12 +149,7 @@ describe("BlogPage", () => {
         pageLandingCollection: {
           items: [{}],
         },
-        pageBlogPostCollection: {
-          items: [
-            { title: "Post 1", slug: "post-1" },
-            { title: "Post 2", slug: "post-2" },
-          ],
-        },
+        pageBlogPostCollection: mockBlogData.pageBlogPostCollection,
       };
 
       mockGetContentfulClients.mockResolvedValueOnce({
@@ -215,23 +210,13 @@ describe("BlogPage", () => {
         client: {
           pageBlog: vi.fn().mockResolvedValue({
             pageLandingCollection: { items: [] },
-            pageBlogPostCollection: {
-              items: [
-                { title: "Post 1", slug: "post-1" },
-                { title: "Post 2", slug: "post-2" },
-              ],
-            },
+            pageBlogPostCollection: mockBlogData.pageBlogPostCollection,
           }),
         },
         previewClient: {
           pageBlog: vi.fn().mockResolvedValue({
             pageLandingCollection: { items: [] },
-            pageBlogPostCollection: {
-              items: [
-                { title: "Post 1", slug: "post-1" },
-                { title: "Post 2", slug: "post-2" },
-              ],
-            },
+            pageBlogPostCollection: mockBlogData.pageBlogPostCollection,
           }),
         },
       });
@@ -242,13 +227,17 @@ describe("BlogPage", () => {
     it("returns early when featured blog post or posts are missing", async () => {
       const dataWithoutFeatured = {
         pageLandingCollection: {
-          items: [{ featuredBlogPost: null }],
+          items: [
+            {
+              featuredBlogPost: {
+                slug: "featured-post",
+                title: "Featured Post",
+              },
+            },
+          ],
         },
         pageBlogPostCollection: {
-          items: [
-            { title: "Post 1", slug: "post-1" },
-            { title: "Post 2", slug: "post-2" },
-          ],
+          items: [],
         },
       };
 
