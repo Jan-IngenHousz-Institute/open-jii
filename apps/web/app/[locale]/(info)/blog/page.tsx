@@ -23,7 +23,7 @@ const getBlogData = cache(async (locale: string, preview: boolean) => {
   const gqlClient = preview ? previewClient : client;
   const blogData = await gqlClient.pageBlog({
     locale,
-    limit: 6,
+    limit: 7,
     order: PageBlogPostOrder.PublishedDateDesc,
     preview,
   });
@@ -70,8 +70,15 @@ export default async function Page({ params }: LandingPageProps) {
     notFound();
   }
 
-  // Filter out the featured post from the posts list
-  const filteredPosts = posts?.filter((post) => post?.slug !== page.featuredBlogPost?.slug) ?? [];
+  let filteredPosts = posts ?? [];
+
+  // Filter out the featured post from the grid of posts
+  if (page.featuredBlogPost?.slug) {
+    filteredPosts = filteredPosts.filter((post) => post?.slug !== page.featuredBlogPost?.slug);
+  }
+
+  // Always cap at 6
+  filteredPosts = filteredPosts.slice(0, 6);
 
   if (!page.featuredBlogPost || filteredPosts.length === 0) {
     return;
