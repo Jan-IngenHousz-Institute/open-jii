@@ -286,6 +286,7 @@
       "description": "Import plot or plant metadata from a CSV/Excel file or paste from clipboard",
       "importPrompt": "Import your metadata",
       "supportedFormats": "Supports CSV, TSV, and Excel files (.xlsx, .xls)",
+      "pasteHint": "Tip: You can also paste directly with {{shortcut}}",
       "uploadFile": "Upload File",
       "pasteClipboard": "Paste from Clipboard",
       "pasting": "Pasting...",

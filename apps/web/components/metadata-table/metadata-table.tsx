@@ -94,12 +94,13 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
       ),
     }));
 
-    // Add actions column
+    // Add actions column (sticky, no rename/delete options)
     if (!disabled) {
       cols.push({
         id: "actions",
         header: "",
         size: 50,
+        meta: { isActionsColumn: true },
         cell: ({ row }) => (
           <Button
             variant="ghost"
@@ -139,21 +140,28 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
 
   return (
     <div className="space-y-4 overflow-hidden">
-      <div className="overflow-auto rounded-lg border">
+      <div className="relative overflow-auto rounded-lg border">
         <Table className="w-max min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.column.columnDef.size }}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const isActionsColumn = header.column.id === "actions";
+                  return (
+                    <TableHead
+                      key={header.id}
+                      style={{ width: header.column.columnDef.size }}
+                      className={cn(
+                        isActionsColumn &&
+                          "sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -170,11 +178,21 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
             ) : (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="p-0">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isActionsColumn = cell.column.id === "actions";
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          "p-0",
+                          isActionsColumn &&
+                            "sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             )}

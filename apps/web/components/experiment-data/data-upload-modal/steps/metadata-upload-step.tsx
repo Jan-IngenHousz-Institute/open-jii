@@ -148,6 +148,11 @@ function MetadataUploadStepContent({ onBack }: { onBack: () => void }) {
               <p className="text-muted-foreground mt-1 text-sm">
                 {t("uploadModal.metadata.supportedFormats")}
               </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t("uploadModal.metadata.pasteHint", {
+                  shortcut: navigator?.platform?.includes("Mac") ? "⌘V" : "Ctrl+V",
+                })}
+              </p>
             </div>
             <div className="flex gap-3">
               <Button
@@ -202,9 +207,7 @@ function MetadataUploadStepContent({ onBack }: { onBack: () => void }) {
             className="hidden"
           />
 
-          <div className="max-h-[300px] overflow-auto">
-            <MetadataTable pageSize={5} />
-          </div>
+          <MetadataTable pageSize={10} />
         </div>
       )}
 

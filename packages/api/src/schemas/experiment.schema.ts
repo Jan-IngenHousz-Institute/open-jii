@@ -1014,3 +1014,39 @@ export type TransferRequestStatus = z.infer<typeof zTransferRequestStatus>;
 export type TransferRequest = z.infer<typeof zTransferRequest>;
 export type CreateTransferRequestBody = z.infer<typeof zCreateTransferRequestBody>;
 export type TransferRequestList = z.infer<typeof zTransferRequestList>;
+
+// --- Experiment Metadata Schemas ---
+export const zMetadataColumnType = z.enum(["string", "number", "boolean", "date"]);
+
+export const zMetadataColumn = z.object({
+  id: z.string().min(1, "Column ID is required"),
+  name: z.string().min(1, "Column name is required").max(255),
+  type: zMetadataColumnType.default("string"),
+});
+
+export const zMetadataRow = z
+  .record(z.string(), z.unknown())
+  .and(z.object({ _id: z.string().min(1, "Row ID is required") }));
+
+export const zExperimentMetadata = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  columns: z.array(zMetadataColumn),
+  rows: z.array(zMetadataRow),
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zUpsertExperimentMetadataBody = z.object({
+  columns: z.array(zMetadataColumn).min(1, "At least one column is required"),
+  rows: z.array(zMetadataRow),
+});
+
+// Metadata types
+export type MetadataColumnType = z.infer<typeof zMetadataColumnType>;
+export type MetadataColumn = z.infer<typeof zMetadataColumn>;
+export type MetadataRow = z.infer<typeof zMetadataRow>;
+export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
+export type UpsertExperimentMetadataBody = z.infer<typeof zUpsertExperimentMetadataBody>;
