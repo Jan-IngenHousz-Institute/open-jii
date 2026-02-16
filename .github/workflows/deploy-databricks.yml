@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy to ${{ inputs.environment }}
+    name: Deploy Databricks Bundle
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
 
@@ -42,11 +42,23 @@ jobs:
 
       - name: Validate bundle
         working-directory: apps/data
-        run: databricks bundle validate -t ${{ inputs.environment }}
+        run: |
+          echo "Validating bundle for ${{ inputs.environment }} environment..."
+          databricks bundle validate -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_CLIENT_SECRET }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+
+      - name: Plan bundle deployment
+        working-directory: apps/data
+        run: |
+          echo "Planning bundle deployment to ${{ inputs.environment }} environment..."
+          databricks bundle plan -t ${{ inputs.environment }}
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
 
       - name: Deploy bundle
         working-directory: apps/data
@@ -55,13 +67,16 @@ jobs:
           databricks bundle deploy -t ${{ inputs.environment }}
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GITHUB_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GITHUB_CLIENT_SECRET }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
 
-      - name: Deployment summary
+      - name: Show deployment summary
+        working-directory: apps/data
         run: |
-          echo "Deployment to ${{ inputs.environment }} completed successfully"
-          echo "Bundle: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/"
-          echo "Notebooks: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/notebooks/"
-          echo "Artifacts: /Workspace/Shared/.bundle/open-jii/${{ inputs.environment }}/artifacts/"
-          echo "Workspace: ${{ secrets.DATABRICKS_HOST }}"
+          echo "Fetching bundle deployment summary..."
+          databricks bundle summary -t ${{ inputs.environment }}
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+

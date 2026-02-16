@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
@@ -15,18 +16,24 @@ interface BlogPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
-  const { locale, slug } = await params;
-  const { isEnabled: preview } = await draftMode();
+const getBlogDetailData = cache(async (locale: string, slug: string, preview: boolean) => {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
-
-  const { pageBlogPostCollection } = await gqlClient.pageBlogPost({
+  const blogDetailData = await gqlClient.pageBlogDetail({
     locale,
     slug,
     preview,
   });
-  const blogPost = pageBlogPostCollection?.items[0];
+  return {
+    blogPost: blogDetailData.pageBlogPostCollection?.items[0],
+    landingPage: blogDetailData.pageLandingCollection?.items[0],
+  };
+});
+
+export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const { isEnabled: preview } = await draftMode();
+  const { blogPost } = await getBlogDetailData(locale, slug, preview);
 
   const languages = Object.fromEntries(
     locales.map((locale) => [locale, locale === defaultLocale ? `/${slug}` : `/${locale}/${slug}`]),
@@ -53,20 +60,8 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
 export default async function Page({ params }: BlogPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
   const { t } = await initTranslations({ locale });
-  const { pageBlogPostCollection } = await gqlClient.pageBlogPost({
-    locale,
-    slug,
-    preview,
-  });
-  const { pageLandingCollection } = await gqlClient.pageLanding({
-    locale,
-    preview,
-  });
-  const landingPage = pageLandingCollection?.items[0];
-  const blogPost = pageBlogPostCollection?.items[0];
+  const { blogPost, landingPage } = await getBlogDetailData(locale, slug, preview);
   const relatedPosts = blogPost?.relatedBlogPostsCollection?.items;
   const isFeatured = Boolean(
     blogPost?.slug && landingPage?.featuredBlogPost?.slug === blogPost.slug,
