@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
+import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { AboutContent } from "@repo/cms";
@@ -9,12 +10,12 @@ interface AboutPageProps {
   params: Promise<{ locale: string }>;
 }
 
-async function getAboutData(locale: string, preview: boolean) {
+const getAboutData = cache(async (locale: string, preview: boolean) => {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const aboutQuery = await gqlClient.pageAbout({ locale, preview });
   return aboutQuery.pageAboutCollection?.items[0] as PageAboutFieldsFragment;
-}
+});
 
 export async function generateMetadata({ params }: AboutPageProps): Promise<Metadata> {
   const { locale } = await params;

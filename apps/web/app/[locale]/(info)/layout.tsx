@@ -5,11 +5,8 @@ import { auth } from "~/app/actions/auth";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { HomeFooter } from "@repo/cms";
-import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import { Toaster } from "@repo/ui/components";
-
-const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];
 
 interface InfoLayoutProps {
   children: React.ReactNode;
@@ -29,19 +26,12 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
 
   return (
     <>
-      <ContentfulPreviewProvider
-        locale={locale}
-        enableInspectorMode={preview}
-        enableLiveUpdates={preview}
-        targetOrigin={allowedOriginList}
-      >
-        <UnifiedNavbar locale={locale} session={session} />
-        <div className="mx-auto flex w-full max-w-7xl justify-center">
-          <main className="flex min-h-screen w-full flex-col px-4">{children}</main>
-        </div>
-        <HomeFooter footerData={footerData} preview={preview} locale={locale} />
-        <Toaster />
-      </ContentfulPreviewProvider>
+      <UnifiedNavbar locale={locale} session={session} />
+      <div className="mx-auto flex w-full max-w-7xl justify-center">
+        <main className="flex min-h-screen w-full flex-col px-4">{children}</main>
+      </div>
+      <HomeFooter footerData={footerData} preview={preview} locale={locale} />
+      <Toaster />
     </>
   );
 }
