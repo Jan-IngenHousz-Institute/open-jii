@@ -53,29 +53,6 @@ vi.mock("@repo/cms", () => ({
   ),
 }));
 
-vi.mock("@repo/cms/contentful", () => ({
-  ContentfulPreviewProvider: ({
-    children,
-    locale,
-    enableInspectorMode,
-    enableLiveUpdates,
-  }: {
-    children: React.ReactNode;
-    locale: string;
-    enableInspectorMode: boolean;
-    enableLiveUpdates: boolean;
-  }) => (
-    <div
-      data-testid="contentful-preview-provider"
-      data-locale={locale}
-      data-inspector={enableInspectorMode}
-      data-live={enableLiveUpdates}
-    >
-      {children}
-    </div>
-  ),
-}));
-
 // --- Tests ---
 describe("InfoLayout", () => {
   const locale = "en-US";
@@ -104,7 +81,6 @@ describe("InfoLayout", () => {
   it("renders all components with correct structure", async () => {
     render(await InfoLayout(defaultProps));
 
-    expect(screen.getByTestId("contentful-preview-provider")).toBeInTheDocument();
     expect(screen.getByTestId("unified-navbar")).toBeInTheDocument();
     expect(screen.getByTestId("test-children")).toBeInTheDocument();
     expect(screen.getByTestId("home-footer")).toBeInTheDocument();
@@ -115,10 +91,6 @@ describe("InfoLayout", () => {
 
     expect(screen.getByTestId("unified-navbar")).toHaveTextContent("en-US");
     expect(screen.getByTestId("home-footer")).toHaveTextContent("en-US");
-    expect(screen.getByTestId("contentful-preview-provider")).toHaveAttribute(
-      "data-locale",
-      "en-US",
-    );
   });
 
   it("renders without session by default", async () => {
@@ -141,11 +113,6 @@ describe("InfoLayout", () => {
     render(await InfoLayout(defaultProps));
 
     expect(screen.getByTestId("home-footer")).toHaveTextContent("published");
-    expect(screen.getByTestId("contentful-preview-provider")).toHaveAttribute(
-      "data-inspector",
-      "false",
-    );
-    expect(screen.getByTestId("contentful-preview-provider")).toHaveAttribute("data-live", "false");
   });
 
   it("renders with correct container structure", async () => {

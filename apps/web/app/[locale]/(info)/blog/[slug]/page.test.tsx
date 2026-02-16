@@ -58,7 +58,7 @@ describe("BlogSlugPage", () => {
     params: Promise.resolve({ locale, slug }),
   };
 
-  const mockBlogPostData = {
+  const mockBlogDetailData = {
     pageBlogPostCollection: {
       items: [
         {
@@ -80,13 +80,13 @@ describe("BlogSlugPage", () => {
         },
       ],
     },
-  };
-
-  const mockRelatedPostsData = {
-    pageBlogPostCollection: {
+    pageLandingCollection: {
       items: [
-        { title: "Related Post 1", slug: "related-1" },
-        { title: "Related Post 2", slug: "related-2" },
+        {
+          featuredBlogPost: {
+            slug: "featured-post",
+          },
+        },
       ],
     },
   };
@@ -95,14 +95,10 @@ describe("BlogSlugPage", () => {
     vi.clearAllMocks();
     mockGetContentfulClients.mockResolvedValue({
       client: {
-        pageBlogPost: vi.fn().mockResolvedValue(mockBlogPostData),
-        pageBlogPostCollection: vi.fn().mockResolvedValue(mockRelatedPostsData),
-        pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [{}] } }),
+        pageBlogDetail: vi.fn().mockResolvedValue(mockBlogDetailData),
       },
       previewClient: {
-        pageBlogPost: vi.fn().mockResolvedValue(mockBlogPostData),
-        pageBlogPostCollection: vi.fn().mockResolvedValue(mockRelatedPostsData),
-        pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [{}] } }),
+        pageBlogDetail: vi.fn().mockResolvedValue(mockBlogDetailData),
       },
     });
     mockInitTranslations.mockResolvedValue({
@@ -142,14 +138,17 @@ describe("BlogSlugPage", () => {
             },
           ],
         },
+        pageLandingCollection: {
+          items: [{}],
+        },
       };
 
       mockGetContentfulClients.mockResolvedValueOnce({
         client: {
-          pageBlogPost: vi.fn().mockResolvedValue(postDataWithoutSeo),
+          pageBlogDetail: vi.fn().mockResolvedValue(postDataWithoutSeo),
         },
         previewClient: {
-          pageBlogPost: vi.fn().mockResolvedValue(postDataWithoutSeo),
+          pageBlogDetail: vi.fn().mockResolvedValue(postDataWithoutSeo),
         },
       });
 
@@ -192,14 +191,16 @@ describe("BlogSlugPage", () => {
     it("calls notFound when blog post is missing", async () => {
       mockGetContentfulClients.mockResolvedValueOnce({
         client: {
-          pageBlogPost: vi.fn().mockResolvedValue({ pageBlogPostCollection: { items: [] } }),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockRelatedPostsData),
-          pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [{}] } }),
+          pageBlogDetail: vi.fn().mockResolvedValue({
+            pageBlogPostCollection: { items: [] },
+            pageLandingCollection: { items: [{}] },
+          }),
         },
         previewClient: {
-          pageBlogPost: vi.fn().mockResolvedValue({ pageBlogPostCollection: { items: [] } }),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockRelatedPostsData),
-          pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [{}] } }),
+          pageBlogDetail: vi.fn().mockResolvedValue({
+            pageBlogPostCollection: { items: [] },
+            pageLandingCollection: { items: [{}] },
+          }),
         },
       });
 
@@ -208,7 +209,7 @@ describe("BlogSlugPage", () => {
     });
 
     it("handles case when no related posts exist", async () => {
-      const mockBlogPostDataNoRelated = {
+      const blogDetailDataNoRelated = {
         pageBlogPostCollection: {
           items: [
             {
@@ -227,18 +228,17 @@ describe("BlogSlugPage", () => {
             },
           ],
         },
+        pageLandingCollection: {
+          items: [{}],
+        },
       };
 
       mockGetContentfulClients.mockResolvedValueOnce({
         client: {
-          pageBlogPost: vi.fn().mockResolvedValue(mockBlogPostDataNoRelated),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockRelatedPostsData),
-          pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [{}] } }),
+          pageBlogDetail: vi.fn().mockResolvedValue(blogDetailDataNoRelated),
         },
         previewClient: {
-          pageBlogPost: vi.fn().mockResolvedValue(mockBlogPostDataNoRelated),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockRelatedPostsData),
-          pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [{}] } }),
+          pageBlogDetail: vi.fn().mockResolvedValue(blogDetailDataNoRelated),
         },
       });
 
