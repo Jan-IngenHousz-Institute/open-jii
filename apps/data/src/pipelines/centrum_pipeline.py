@@ -16,12 +16,6 @@ from datetime import datetime
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
-import json
-import pandas as pd
-from datetime import datetime
-from multispeq import execute_macro_script
-from enrich.user_metadata import add_user_column
-from enrich.annotations_metadata import add_annotation_column
 
 # COMMAND ----------
 
@@ -78,7 +72,6 @@ sensor_schema = StructType([
 
 ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 CATALOG_NAME = "open_jii_dev"
-CATALOG_NAME = "open_jii_dev"
 
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
@@ -87,19 +80,6 @@ KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
-
-MACROS_PATH = "/Workspace/Shared/macros"
-
-EXPERIMENT_STATUS_TABLE = "experiment_status"
-EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
-EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
-EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
-EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
-EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
-ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
-ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
-RAW_AMBYTE_TABLE = "raw_ambyte_data"
-ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
 
 MACROS_PATH = "/Workspace/Shared/macros"
 
@@ -127,15 +107,9 @@ ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
         "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true",
         "pipelines.reset.allowed": "false"
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-        "delta.enableChangeDataFeed": "true",
-        "pipelines.reset.allowed": "false"
     }
 )
 def raw_data():
-    """Bronze layer: Ingest raw Kinesis sensor data."""
-    
     """Bronze layer: Ingest raw Kinesis sensor data."""
     
     return (
@@ -184,15 +158,12 @@ def raw_data():
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true"
     }
 )
 @dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
 @dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
-    """Silver layer: Clean and standardize sensor data."""
     """Silver layer: Clean and standardize sensor data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
     
@@ -210,10 +181,6 @@ def clean_data():
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
-        .withColumn(
-            "ingest_latency_ms", 
-            F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
-        )
         .withColumn(
             "ingest_latency_ms", 
             F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
@@ -257,7 +224,6 @@ def clean_data():
         F.coalesce(F.col("parsed_data.annotations"), F.array())
     )
 
-
     df = df.withColumn(
         "id",
         F.abs(
@@ -285,21 +251,6 @@ def clean_data():
         )
     )
 
-
-    df = df.withColumn(
-        "new_id",
-        F.abs(
-            F.hash(
-                F.col("experiment_id"),
-                F.col("device_id"),
-                F.col("timestamp"),
-                F.col("sample"),
-                F.col("ingestion_timestamp"),
-                F.expr("uuid()")
-            )
-        )
-    )
-
     # Populate missing annotation IDs and rowIds
     # If annotations come from payload without IDs, generate them here
     df = df.withColumn(
@@ -307,7 +258,6 @@ def clean_data():
         F.expr("""
             transform(annotations, a -> struct(
                 coalesce(a.id, uuid()) as id,
-                coalesce(a.rowId, cast(new_id as string)) as rowId,
                 coalesce(a.rowId, cast(new_id as string)) as rowId,
                 a.type as type,
                 a.content as content,
@@ -322,7 +272,6 @@ def clean_data():
     # Select final columns for silver layer
     return df.select(
         "id",
-        "new_id",
         "new_id",
         "device_id",
         "device_name",
@@ -348,20 +297,15 @@ def clean_data():
 # DBTITLE 1,Gold Layer - Experiment Status
 @dlt.table(
     name=EXPERIMENT_STATUS_TABLE,
-    name=EXPERIMENT_STATUS_TABLE,
     comment="Gold layer: Materialized view tracking experiment freshness status",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true"
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
     }
 )
 def experiment_status():
-    """Track experiment data freshness."""
-    FRESHNESS_THRESHOLD_MINUTES = 60
     """Track experiment data freshness."""
     FRESHNESS_THRESHOLD_MINUTES = 60
     
@@ -379,7 +323,6 @@ def experiment_status():
             F.max("timestamp").alias("latest_timestamp"),
             F.max("processed_timestamp").alias("latest_processed_timestamp")
         )
-        .filter("experiment_id IS NOT NULL")
         .filter("experiment_id IS NOT NULL")
     )
     
@@ -987,587 +930,6 @@ def raw_ambyte_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Gold Layer - Experiment Raw Data
-@dlt.table(
-    name=EXPERIMENT_RAW_DATA_TABLE,
-    comment="Gold layer: Per-experiment raw sample data partitioned by experiment_id with VARIANT sample",
-    table_properties={
-        "quality": "gold",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-        "delta.enableChangeDataFeed": "true",
-        "delta.feature.variantType-preview": "supported"
-    }
-)
-def experiment_raw_data():
-    """Per-experiment raw sample data with VARIANT support."""
-    
-    # Define UDF for sanitizing question labels
-    @F.pandas_udf(ArrayType(StructType([
-        StructField("question_label", StringType(), True),
-        StructField("question_answer", StringType(), True)
-    ])))
-    def sanitize_questions_udf(questions: pd.Series) -> pd.Series:
-        
-        def sanitize_label(label):
-            if not label:
-                return "question_empty"
-            
-            # Convert to lowercase
-            sanitized = label.lower()
-            
-            # Replace invalid characters with underscores
-            invalid_chars = ' ,;{}()\n\t='
-            for char in invalid_chars:
-                sanitized = sanitized.replace(char, '_')
-            
-            # Remove leading/trailing underscores
-            sanitized = sanitized.strip('_')
-            
-            # Collapse multiple underscores to single
-            while '__' in sanitized:
-                sanitized = sanitized.replace('__', '_')
-            
-            # Ensure it's not empty and doesn't start with a number
-            if not sanitized or sanitized[0].isdigit():
-                sanitized = f"question_{sanitized}"
-            
-            return sanitized
-        
-        def sanitize_questions_array(questions_array):
-            if questions_array is None or len(questions_array) == 0:
-                return []
-            
-            result = []
-            for q in questions_array:
-                if q:
-                    result.append({
-                        'question_label': sanitize_label(q.get('question_label')),
-                        'question_answer': q.get('question_answer')
-                    })
-            return result
-        
-        return questions.apply(sanitize_questions_array)
-    
-    return (
-        dlt.read_stream(SILVER_TABLE)
-        .filter("experiment_id IS NOT NULL")
-        .withColumn("data", F.expr("parse_json(sample)"))
-        .withColumn(
-            "questions_sanitized",
-            F.when(
-                F.col("questions").isNotNull() & (F.size("questions") > 0),
-                sanitize_questions_udf(F.col("questions"))
-            )
-        )
-        .withColumn(
-            "questions_data",
-            F.when(
-                F.col("questions_sanitized").isNotNull() & (F.size("questions_sanitized") > 0),
-                F.expr("""
-                    parse_json(
-                        to_json(
-                            map_from_arrays(
-                                array_distinct(transform(questions_sanitized, q -> q.question_label)),
-                                transform(
-                                    array_distinct(transform(questions_sanitized, q -> q.question_label)),
-                                    label -> element_at(filter(questions_sanitized, q -> q.question_label = label), -1).question_answer
-                                )
-                            )
-                        )
-                    )
-                """)
-            )
-        )
-        .select(
-            F.col("new_id").alias("id"),
-            "experiment_id",
-            "device_id",
-            "device_name",
-            "timestamp",
-            "macros",
-            "questions_data",
-            "annotations",
-            "user_id",
-            "data",
-            "date",
-            "processed_timestamp"
-        )
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Experiment Device Data
-@dlt.table(
-    name=EXPERIMENT_DEVICE_DATA_TABLE,
-    comment="Gold layer: Device metadata aggregated per experiment",
-    table_properties={
-        "quality": "gold",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-    }
-)
-def experiment_device_data():
-    """
-    Aggregate device stats per experiment from clean_data.
-    """
-    silver_df = dlt.read(SILVER_TABLE)
-    
-    return (
-        silver_df
-        .filter("experiment_id IS NOT NULL")
-        .groupBy("experiment_id", "device_id", "device_firmware")
-        .agg(
-            F.max("device_name").alias("device_name"),
-            F.max("device_version").alias("device_version"),
-            F.max("device_battery").alias("device_battery"),
-            F.count("*").alias("total_measurements"),
-            F.max("processed_timestamp").alias("processed_timestamp")
-        )
-        .withColumn(
-            "id",
-            F.abs(
-                F.hash(
-                    F.col("experiment_id"),
-                    F.col("device_id"),
-                    F.col("device_firmware")
-                )
-            )
-        )
-        .select(
-            "id",
-            "experiment_id",
-            "device_id",
-            "device_firmware",
-            "device_name",
-            "device_version",
-            "device_battery",
-            "total_measurements",
-            "processed_timestamp"
-        )
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Experiment Macro Data
-@dlt.table(
-    name=EXPERIMENT_MACRO_DATA_TABLE,
-    comment="Gold layer: Unified macro processing with VARIANT column for flexible schema",
-    table_properties={
-        "quality": "gold",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-        "delta.enableChangeDataFeed": "true",
-        "delta.feature.variantType-preview": "supported"
-    }
-)
-def experiment_macro_data():
-    """Process macros with VARIANT output column."""
-    
-    # Read from experiment_raw_data and explode macros
-    base_df = (
-        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
-        .filter("macros IS NOT NULL")
-        .filter("size(macros) > 0")
-        .select(
-            "id",
-            "experiment_id",
-            "device_id",
-            "device_name",
-            "timestamp",
-            "user_id",
-            "data",
-            "date",
-            "processed_timestamp",
-            "questions_data",
-            "annotations",
-            F.explode("macros").alias("macro")
-        )
-        .select(
-            "id",
-            "experiment_id",
-            "device_id",
-            "device_name",
-            "timestamp",
-            "user_id",
-            "data",
-            "date",
-            "processed_timestamp",
-            "questions_data",
-            "annotations",
-            F.col("macro.id").alias("macro_id"),
-            F.col("macro.name").alias("macro_name"),
-            F.col("macro.filename").alias("macro_filename")
-        )
-    )
-    
-    # Define UDF to execute macro and return struct with result and error
-    @F.pandas_udf(returnType=StructType([
-        StructField("result", StringType(), True),
-        StructField("error", StringType(), True)
-    ]))
-    def execute_macro_udf(pdf: pd.DataFrame) -> pd.DataFrame:
-        results = []
-        errors = []
-        
-        for _, row in pdf.iterrows():
-            data = row.get("data")
-            macro_filename = row.get("macro_filename")
-            macro_name = row.get("macro_name")
-            
-            if pd.isna(data) or pd.isna(macro_filename):
-                results.append(None)
-                errors.append(f"NULL data or macro_filename (macro: {macro_name})")
-                continue
-            
-            try:
-                sample_json = data.toJson()
-                
-                result = execute_macro_script(macro_filename, sample_json, MACROS_PATH)
-                
-                if result:
-                    results.append(json.dumps(result))
-                    errors.append(None)
-                else:
-                    results.append(None)
-                    errors.append(f"Macro returned empty result (macro: {macro_name})")
-            except Exception as e:
-                results.append(None)
-                errors.append(f"{str(e)} (macro: {macro_name})")
-        
-        return pd.DataFrame({"result": results, "error": errors})
-    
-    return (
-        base_df
-        .withColumn("macro_result", execute_macro_udf(F.struct("data", "macro_filename", "macro_name")))
-        .withColumn(
-            "macro_output",
-            F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
-        )
-        .withColumn("macro_error", F.col("macro_result.error"))
-        .withColumn(
-            "macro_row_id",
-            F.abs(
-                F.hash(
-                    F.col("id"),
-                    F.col("macro_filename"),
-                    F.col("processed_timestamp")
-                )
-            )
-        )
-        .select(
-            "experiment_id",
-            F.col("macro_row_id").alias("id"),
-            F.col("id").alias("raw_id"),
-            "device_id",
-            "device_name",
-            "timestamp",
-            "user_id",
-            "macro_id",
-            "macro_name",
-            "macro_filename",
-            "macro_output",
-            "macro_error",
-            "processed_timestamp",
-            "date",
-            "questions_data",
-            "annotations"
-        )
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Experiment Table Metadata
-@dlt.table(
-    name=EXPERIMENT_TABLE_METADATA,
-    comment="Gold layer: Consolidated metadata cache for all experiment tables (row counts, schemas). Single query optimization. Replaces EXPERIMENT_MACROS_TABLE and EXPERIMENT_QUESTIONS_TABLE.",
-    table_properties={
-        "quality": "gold",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.feature.variantType-preview": "supported",
-    }
-)
-def experiment_table_metadata():
-    """Metadata for all experiment tables."""
-
-    macro_metadata = (
-        dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
-        .filter("macro_output IS NOT NULL")
-        .groupBy("experiment_id", "macro_filename")
-        .agg(
-            F.max("macro_name").alias("table_name"),
-            F.count("*").alias("row_count"),
-            F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
-            F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
-        )
-        .select(
-            F.col("experiment_id"),
-            F.col("table_name"),
-            F.col("macro_filename"),
-            F.col("row_count"),
-            F.col("macro_schema"),
-            F.col("questions_schema")
-        )
-    )
-    
-    raw_data_metadata = (
-        dlt.read(EXPERIMENT_RAW_DATA_TABLE)
-        .groupBy("experiment_id")
-        .agg(
-            F.count("*").alias("row_count"),
-            F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
-        )
-        .select(
-            F.col("experiment_id"),
-            F.lit("raw_data").alias("table_name"),
-            F.lit(None).cast("string").alias("macro_filename"),
-            F.col("row_count"),
-            F.lit(None).cast("string").alias("macro_schema"),
-            F.col("questions_schema")
-        )
-    )
-    
-    device_metadata = (
-        dlt.read(EXPERIMENT_DEVICE_DATA_TABLE)
-        .groupBy("experiment_id")
-        .agg(F.count("*").alias("row_count"))
-        .select(
-            F.col("experiment_id"),
-            F.lit("device").alias("table_name"),
-            F.lit(None).cast("string").alias("macro_filename"),
-            F.col("row_count"),
-            F.lit(None).cast("string").alias("macro_schema"),
-            F.lit(None).cast("string").alias("questions_schema")
-        )
-    )
-    
-    ambyte_metadata = (
-        dlt.read(RAW_AMBYTE_TABLE)
-        .groupBy("experiment_id")
-        .agg(F.count("*").alias("row_count"))
-        .select(
-            F.col("experiment_id"),
-            F.lit("raw_ambyte_data").alias("table_name"),
-            F.lit(None).cast("string").alias("macro_filename"),
-            F.col("row_count"),
-            F.lit(None).cast("string").alias("macro_schema"),
-            F.lit(None).cast("string").alias("questions_schema")
-        )
-    )
-    
-    return (
-        macro_metadata
-        .unionByName(raw_data_metadata)
-        .unionByName(device_metadata)
-        .unionByName(ambyte_metadata)
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Experiment Contributors
-@dlt.table(
-    name=EXPERIMENT_CONTRIBUTORS_TABLE,
-    comment="Gold layer: Cached user profiles for enrichment (full refresh on each pipeline run)",
-    table_properties={
-        "quality": "gold",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
-    }
-)
-def experiment_contributors():
-    """Cached user profiles per experiment."""
-    
-    unique_users = (
-        dlt.read(SILVER_TABLE)
-        .filter("experiment_id IS NOT NULL")
-        .filter("user_id IS NOT NULL")
-        .select("experiment_id", "user_id")
-        .distinct()
-    )
-    
-    return add_user_column(unique_users, ENVIRONMENT, dbutils)
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Enriched Experiment Raw Data
-@dlt.table(
-    name=ENRICHED_RAW_DATA_VIEW,
-    comment="Enriched materialized view: Raw data with questions, user struct, and annotations. Incrementally refreshed.",
-    table_properties={
-        "quality": "gold",
-        "delta.enableRowTracking": "true",
-        "delta.enableChangeDataFeed": "true",
-        "delta.enableDeletionVectors": "true",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-        "delta.feature.variantType-preview": "supported",
-    }
-)
-def enriched_experiment_raw_data():
-    """Enriched raw data with user profiles and annotations."""
-    raw_data = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
-    contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
-    
-    enriched = (
-        raw_data
-        .join(
-            contributors,
-            (raw_data.experiment_id == contributors.experiment_id) & 
-            (raw_data.user_id == contributors.user_id),
-            "left"
-        )
-        .select(
-            raw_data.experiment_id,
-            raw_data.id,
-            raw_data.device_id,
-            raw_data.device_name,
-            raw_data.timestamp,
-            raw_data.date,
-            raw_data.macros,
-            raw_data.questions_data,
-            raw_data.annotations,
-            contributors.user.alias("contributor"),
-            raw_data.data,
-            raw_data.processed_timestamp
-        )
-    )
-    
-    return add_annotation_column(
-        enriched,
-        table_name="experiment_raw_data",
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Enriched Raw Ambyte Data
-@dlt.table(
-    name=ENRICHED_RAW_AMBYTE_DATA_VIEW,
-    comment="Enriched materialized view: Raw ambyte data with annotations. Incrementally refreshed.",
-    table_properties={
-        "quality": "gold",
-        "delta.enableRowTracking": "true",
-        "delta.enableChangeDataFeed": "true",
-        "delta.enableDeletionVectors": "true",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-    }
-)
-def enriched_raw_ambyte_data():
-    """Enriched ambyte data with annotations."""
-    raw_ambyte = dlt.read(RAW_AMBYTE_TABLE).drop("_rescued_data")
-    
-    return add_annotation_column(
-        raw_ambyte,
-        table_name="raw_ambyte_data",
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Enriched Experiment Macro Data
-@dlt.table(
-    name=ENRICHED_MACRO_DATA_VIEW,
-    comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Incrementally refreshed.",
-    table_properties={
-        "quality": "gold",
-        "delta.enableDeletionVectors": "true",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-        "delta.feature.variantType-preview": "supported",
-    }
-)
-def enriched_experiment_macro_data():
-    """Enriched macro data with user profiles and annotations."""
-    macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
-    contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
-    
-    enriched = (
-        macro_data
-        .join(
-            contributors,
-            (macro_data.experiment_id == contributors.experiment_id) & 
-            (macro_data.user_id == contributors.user_id),
-            "left"
-        )
-        .select(
-            macro_data.experiment_id,
-            macro_data.id,
-            macro_data.raw_id,
-            macro_data.device_id,
-            macro_data.device_name,
-            macro_data.timestamp,
-            macro_data.date,
-            contributors.user.alias("contributor"),
-            macro_data.macro_id,
-            macro_data.macro_name,
-            macro_data.macro_filename,
-            macro_data.macro_output,
-            macro_data.macro_error,
-            macro_data.processed_timestamp,
-            macro_data.questions_data,
-            macro_data.annotations
-        )
-    )
-    
-    return add_annotation_column(
-        enriched,
-        table_name="experiment_macro_data",  # Generic macro data table name
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Raw Ambyte Data - Streaming Table
-@dlt.table(
-    name=RAW_AMBYTE_TABLE,
-    comment="Streaming table: Pre-processed Ambyte trace data from parquet files, partitioned by experiment_id",
-    table_properties={
-        "quality": "bronze",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
-    },
-    partition_cols=["experiment_id"]
-)
-def raw_ambyte_data():
-    """Streaming ingestion of pre-processed Ambyte trace data."""
-    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/*/processed-ambyte"
-    
-    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/_schemas/ambyte_schema"
-    
-    df = (
-        spark.readStream
-        .format("cloudFiles")
-        .option("cloudFiles.format", "parquet")
-        .option("cloudFiles.schemaLocation", schema_location)
-        .option("recursiveFileLookup", "true")
-        .load(processed_path)
-    )
-    
-    return (
-        df
-        .withColumn(
-            "id",
-            F.abs(F.hash(*[F.col(c) for c in df.columns]))
-        )
-    )
-
-# COMMAND ----------
-
 # DBTITLE 1,Event Hook - Slack Notifications
 @dlt.on_event_hook(max_allowable_consecutive_failures=3)
 def send_slack_notifications(event):
@@ -1589,7 +951,6 @@ def send_slack_notifications(event):
         update_id = event['origin'].get('update_id')
         
         color = "#FF0000" if state == 'FAILED' else "#FFA500"
-        color = "#FF0000" if state == 'FAILED' else "#FFA500"
         
         try:
             databricks_host = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="databricks-host")
@@ -1606,8 +967,6 @@ def send_slack_notifications(event):
             update_url = None
         
         timestamp = event.get('timestamp')
-        if timestamp and isinstance(timestamp, (int, float)):
-            timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC')
         if timestamp and isinstance(timestamp, (int, float)):
             timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC')
         
