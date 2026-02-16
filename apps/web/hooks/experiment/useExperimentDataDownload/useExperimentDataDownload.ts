@@ -1,42 +1,28 @@
-import { tsr } from "@/lib/tsr";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
-const downloadFile = (url: string) => {
-  // Create a link element and trigger download
-  const downloadLink = document.createElement("a");
-  downloadLink.href = url;
-  downloadLink.target = "_blank";
-  downloadLink.rel = "noopener noreferrer";
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
-};
+export const useExperimentDataDownload = () => {
+  return useMutation({
+    mutationFn: async ({
+      experimentId,
+      tableName,
+      format,
+    }: {
+      experimentId: string;
+      tableName: string;
+      format: "csv" | "json" | "parquet";
+    }) => {
+      // Construct the download URL
+      const url = `/api/v1/experiments/${experimentId}/data/download?tableName=${encodeURIComponent(tableName)}&format=${format}`;
 
-export const useExperimentDataDownload = (
-  experimentId: string,
-  tableName: string,
-  enabled = false,
-) => {
-  return useQuery({
-    queryKey: ["downloadExperimentData", experimentId, tableName],
-    queryFn: async () => {
-      const result = await tsr.experiments.downloadExperimentData.query({
-        params: { id: experimentId },
-        query: { tableName },
-      });
+      // Trigger download by creating a temporary link
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-      if (result.status === 200) {
-        return { data: result.body, tableName };
-      } else {
-        throw new Error("Failed to generate download links");
-      }
+      return { success: true };
     },
-    enabled,
   });
-};
-
-export const useDownloadFile = () => {
-  return {
-    downloadFile: (url: string) => downloadFile(url),
-  };
 };

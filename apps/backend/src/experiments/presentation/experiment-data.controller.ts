@@ -1,4 +1,4 @@
-import { Controller, Logger, Req } from "@nestjs/common";
+import { Controller, Logger, Req, StreamableFile } from "@nestjs/common";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
@@ -15,7 +15,6 @@ import { DownloadExperimentDataUseCase } from "../application/use-cases/experime
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
-import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 
 @Controller()
 export class ExperimentDataController {
@@ -24,7 +23,6 @@ export class ExperimentDataController {
   constructor(
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
-    private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
     private readonly downloadExperimentDataUseCase: DownloadExperimentDataUseCase,
   ) {}
@@ -387,7 +385,7 @@ export class ExperimentDataController {
   downloadExperimentData(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.downloadExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
-      const { tableName } = query;
+      const { tableName, format } = query;
 
       this.logger.log({
         msg: "Processing download request",
@@ -395,6 +393,7 @@ export class ExperimentDataController {
         experimentId,
         userId: session.user.id,
         tableName,
+        format: format as string,
       });
 
       const result = await this.downloadExperimentDataUseCase.execute(
@@ -402,24 +401,26 @@ export class ExperimentDataController {
         session.user.id,
         {
           tableName,
+          format: format as "csv" | "json" | "parquet",
         },
       );
 
       if (result.isSuccess()) {
-        const data = result.value;
-
         this.logger.log({
-          msg: "Successfully prepared download links",
+          msg: "Successfully prepared download stream",
           operation: "downloadData",
           experimentId,
           tableName,
-          totalChunks: data.externalLinks.length,
           status: "success",
         });
 
+        const { stream, filename } = result.value;
         return {
           status: StatusCodes.OK,
-          body: data,
+          body: new StreamableFile(stream, {
+            type: "application/octet-stream",
+            disposition: `attachment; filename="${filename}"`,
+          }),
         };
       }
 

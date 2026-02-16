@@ -540,6 +540,69 @@ module "ambyte_processing_job" {
   }
 }
 
+module "data_export_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Data-Export-Job-DEV"
+  description = "Exports experiment table data in multiple formats (CSV, JSON, Parquet) to Unity Catalog volumes"
+
+  max_concurrent_runs           = 5 # Allow multiple concurrent exports
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 1
+    min_retry_interval_millis = 30000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "export_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/data_export_task"
+
+      parameters = {
+        EXPERIMENT_ID = "{{EXPERIMENT_ID}}"
+        TABLE_NAME    = "{{TABLE_NAME}}"
+        SQL_QUERY     = "{{SQL_QUERY}}"
+        CATALOG_NAME  = module.databricks_catalog.catalog_name
+        ENVIRONMENT   = upper(var.environment)
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
   cluster_identifier     = "open-jii-${var.environment}-db-cluster"
@@ -612,6 +675,7 @@ module "databricks_secrets" {
     DATABRICKS_CLIENT_ID                = module.node_service_principal.service_principal_application_id
     DATABRICKS_CLIENT_SECRET            = module.node_service_principal.service_principal_secret_value
     DATABRICKS_AMBYTE_PROCESSING_JOB_ID = module.ambyte_processing_job.job_id
+    DATABRICKS_DATA_EXPORT_JOB_ID       = module.data_export_job.job_id
     DATABRICKS_WAREHOUSE_ID             = var.backend_databricks_warehouse_id
     DATABRICKS_WEBHOOK_API_KEY_ID       = var.backend_webhook_api_key_id
     DATABRICKS_WEBHOOK_SECRET           = var.backend_webhook_secret
@@ -1024,6 +1088,10 @@ module "backend_ecs" {
     {
       name      = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_DATA_EXPORT_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"

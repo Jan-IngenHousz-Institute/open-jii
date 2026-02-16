@@ -1,7 +1,10 @@
+import type { Readable } from "stream";
+
 import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
+  DatabricksJobRunStatusResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type {
   SchemaData,
@@ -145,4 +148,33 @@ export interface DatabricksPort {
   triggerAmbyteProcessingJob(
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>>;
+
+  /**
+   * Trigger the data export Databricks job with the specified parameters
+   * @param experimentId - The experiment ID
+   * @param tableName - The table name to export
+   * @param sqlQuery - Optional SQL query to use for export
+   */
+  triggerDataExportJob(
+    experimentId: string,
+    tableName: string,
+    sqlQuery?: string,
+  ): Promise<Result<DatabricksJobRunResponse>>;
+
+  /**
+   * Wait for a Databricks job run to complete
+   * @param runId - The run ID to wait for
+   * @param timeoutMs - Optional timeout in milliseconds
+   */
+  waitForJobCompletion(
+    runId: number,
+    timeoutMs?: number,
+  ): Promise<Result<DatabricksJobRunStatusResponse>>;
+
+  /**
+   * Download a file from Databricks using the Files API
+   * @param filePath - The full path to the file in Databricks
+   * @returns Result containing a readable stream
+   */
+  downloadFile(filePath: string): Promise<Result<Readable>>;
 }

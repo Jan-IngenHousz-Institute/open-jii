@@ -34,6 +34,7 @@ export class DatabricksConfigService {
       ambyteProcessingJobId: this.configService.getOrThrow<string>(
         "databricks.ambyteProcessingJobId",
       ),
+      dataExportJobId: this.configService.getOrThrow<string>("databricks.dataExportJobId"),
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
       centrumSchemaName: this.configService.getOrThrow<string>("databricks.centrumSchemaName"),
@@ -110,10 +111,31 @@ export class DatabricksConfigService {
   }
 
   /**
+   * Returns the Databricks data export job ID
+   */
+  getDataExportJobId(): string {
+    return this.config.dataExportJobId;
+  }
+
+  /**
+   * Returns the Databricks data export job ID as a number
+   */
+  getDataExportJobIdAsNumber(): number {
+    return parseInt(this.config.dataExportJobId, 10);
+  }
+
+  /**
    * Returns the Databricks warehouse ID
    */
   getWarehouseId(): string {
     return this.config.warehouseId;
+  }
+
+  /**
+   * Returns the environment name
+   */
+  getEnvironment(): string {
+    return this.configService.get<string>("NODE_ENV", "development");
   }
 
   /**

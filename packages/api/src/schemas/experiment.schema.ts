@@ -920,6 +920,7 @@ export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 // --- Download Data Schemas ---
 export const zDownloadExperimentDataQuery = z.object({
   tableName: z.string().describe("Name of the table to download"),
+  format: z.enum(["csv", "json", "parquet"]).default("csv"),
 });
 
 export const zExternalLink = z.object({
@@ -931,16 +932,7 @@ export const zExternalLink = z.object({
   expiration: z.string().datetime(),
 });
 
-export const zDownloadExperimentDataResponse = z.object({
-  externalLinks: z.array(
-    z.object({
-      externalLink: z.string().url(),
-      expiration: z.string().datetime(),
-      totalSize: z.number().int().nonnegative(),
-      rowCount: z.number().int().nonnegative(),
-    }),
-  ),
-});
+export const zDownloadExperimentDataResponse = z.unknown(); // Response handled manually via streaming
 
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;

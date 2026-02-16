@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import * as React from "react";
+import { useExperimentDataDownload } from "~/hooks/experiment/useExperimentDataDownload/useExperimentDataDownload";
 
 import { useTranslation } from "@repo/i18n/client";
 import {
@@ -12,11 +13,7 @@ import {
   DialogTitle,
 } from "@repo/ui/components";
 
-import { DownloadLinksStep } from "./steps/download-links-step";
 import { FormatSelectionStep } from "./steps/format-selection-step";
-
-// Define types
-type DownloadStep = "format-selection" | "download-links";
 
 interface DataDownloadModalProps {
   experimentId: string;
@@ -32,25 +29,27 @@ export function DataDownloadModal({
   onOpenChange,
 }: DataDownloadModalProps) {
   const { t } = useTranslation("experimentData");
-  const [step, setStep] = React.useState<DownloadStep>("format-selection");
+  const { mutate: downloadData, isPending } = useExperimentDataDownload();
 
-  const handleFormatSubmit = (_format: string) => {
-    setStep("download-links");
+  const handleFormatSubmit = (format: string) => {
+    downloadData(
+      {
+        experimentId,
+        tableName,
+        format: format as "csv" | "json" | "parquet",
+      },
+      {
+        onSuccess: () => {
+          // Close modal after triggering download
+          onOpenChange(false);
+        },
+      },
+    );
   };
 
   const handleClose = () => {
     onOpenChange(false);
   };
-
-  // Reset state when modal closes
-  React.useEffect(() => {
-    if (!open) {
-      const timer = setTimeout(() => {
-        setStep("format-selection");
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,17 +64,11 @@ export function DataDownloadModal({
           </DialogDescription>
         </DialogHeader>
 
-        {step === "format-selection" && (
-          <FormatSelectionStep onFormatSubmit={handleFormatSubmit} onClose={handleClose} />
-        )}
-
-        {step === "download-links" && (
-          <DownloadLinksStep
-            experimentId={experimentId}
-            tableName={tableName}
-            onClose={handleClose}
-          />
-        )}
+        <FormatSelectionStep
+          onFormatSubmit={handleFormatSubmit}
+          onClose={handleClose}
+          isDownloading={isPending}
+        />
       </DialogContent>
     </Dialog>
   );

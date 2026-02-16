@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { Readable } from "stream";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError, success } from "../../../../common/utils/fp-utils";
@@ -10,23 +11,20 @@ import { ExperimentDataRepository } from "../../repositories/experiment-data.rep
  */
 export interface DownloadExperimentDataQuery {
   tableName: string;
+  format: "csv" | "json" | "parquet";
 }
 
 /**
- * Response structure for download links data
+ * Response structure for download data with stream
  */
 export interface DownloadExperimentDataDto {
-  externalLinks: {
-    externalLink: string;
-    expiration: string;
-    totalSize: number;
-    rowCount: number;
-  }[];
+  stream: Readable;
+  filename: string;
 }
 
 /**
- * Use case for downloading complete experiment table data using EXTERNAL_LINKS
- * This enables efficient download of large datasets from Databricks tables
+ * Use case for downloading complete experiment table data as a file stream
+ * Triggers a Databricks job to export data and streams the result
  */
 @Injectable()
 export class DownloadExperimentDataUseCase {
@@ -47,6 +45,7 @@ export class DownloadExperimentDataUseCase {
       operation: "downloadExperimentData",
       experimentId,
       tableName: query.tableName,
+      format: query.format,
     });
 
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -83,38 +82,40 @@ export class DownloadExperimentDataUseCase {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    const downloadResult = await this.experimentDataRepository.getTableDataForDownload({
+    // Trigger the data export job and wait for completion
+    const downloadResult = await this.experimentDataRepository.exportTableDataAsFile({
       experimentId,
       tableName: query.tableName,
+      format: query.format,
     });
 
     if (downloadResult.isFailure()) {
       this.logger.error({
-        msg: "Failed to get download links for experiment data",
+        msg: "Failed to export experiment data",
         operation: "downloadExperimentData",
         experimentId,
         tableName: query.tableName,
+        format: query.format,
         error: downloadResult.error.message,
       });
-      return failure(AppError.internal("Failed to prepare data download"));
+      return failure(AppError.internal("Failed to export data"));
     }
 
-    return success(downloadResult.value).map(
-      (downloadData: DownloadExperimentDataDto & { totalRows: number }) => {
-        this.logger.log({
-          msg: "Successfully prepared download",
-          operation: "downloadExperimentData",
-          experimentId,
-          tableName: query.tableName,
-          totalRows: downloadData.totalRows,
-          totalChunks: downloadData.externalLinks.length,
-          status: "success",
-        });
+    const { stream, filePath } = downloadResult.value;
 
-        return {
-          externalLinks: downloadData.externalLinks,
-        };
-      },
-    );
+    this.logger.log({
+      msg: "Successfully prepared download stream",
+      operation: "downloadExperimentData",
+      experimentId,
+      tableName: query.tableName,
+      format: query.format,
+      filePath,
+      status: "success",
+    });
+
+    return success({
+      stream,
+      filename: filePath.split("/").pop() || "download",
+    });
   }
 }

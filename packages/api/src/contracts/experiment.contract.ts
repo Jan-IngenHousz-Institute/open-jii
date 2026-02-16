@@ -332,6 +332,7 @@ export const experimentContract = c.router({
     method: "GET",
     path: "/api/v1/experiments/:id/data/download",
     pathParams: zIdPathParam,
+    // contentType: "application/octet-stream",
     query: zDownloadExperimentDataQuery,
     responses: {
       200: zDownloadExperimentDataResponse,
@@ -340,7 +341,7 @@ export const experimentContract = c.router({
     },
     summary: "Download experiment data",
     description:
-      "Generates download links for complete table data using EXTERNAL_LINKS disposition",
+      "Downloads complete experiment table data in the specified format (CSV, JSON, or Parquet)",
   },
 
   getExperimentLocations: {

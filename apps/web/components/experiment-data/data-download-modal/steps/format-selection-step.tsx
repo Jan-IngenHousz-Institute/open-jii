@@ -32,9 +32,14 @@ type FormatSelectionValues = z.infer<typeof formatSelectionSchema>;
 interface FormatSelectionStepProps {
   onFormatSubmit: (format: string) => void;
   onClose: () => void;
+  isDownloading?: boolean;
 }
 
-export function FormatSelectionStep({ onFormatSubmit, onClose }: FormatSelectionStepProps) {
+export function FormatSelectionStep({
+  onFormatSubmit,
+  onClose,
+  isDownloading,
+}: FormatSelectionStepProps) {
   const { t } = useTranslation("experimentData");
 
   const form = useForm<FormatSelectionValues>({
@@ -74,6 +79,8 @@ export function FormatSelectionStep({ onFormatSubmit, onClose }: FormatSelection
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="csv">CSV</SelectItem>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="parquet">Parquet</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -91,12 +98,21 @@ export function FormatSelectionStep({ onFormatSubmit, onClose }: FormatSelection
         </Button>
         <Button
           type="submit"
-          disabled={!form.watch("format")}
+          disabled={!form.watch("format") || isDownloading}
           className="w-full sm:w-auto"
           form="format-selection-form"
         >
-          <Download className="mr-2 h-4 w-4" />
-          {t("experimentData.downloadModal.generateLinks")}
+          {isDownloading ? (
+            <>
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+              {t("experimentData.downloadModal.downloading")}
+            </>
+          ) : (
+            <>
+              <Download className="mr-2 h-4 w-4" />
+              {t("experimentData.downloadModal.download")}
+            </>
+          )}
         </Button>
       </DialogFooter>
     </div>

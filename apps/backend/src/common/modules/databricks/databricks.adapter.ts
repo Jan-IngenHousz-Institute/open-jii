@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { Readable } from "stream";
 
 import { ExperimentTableName } from "@repo/api";
 
@@ -12,7 +13,10 @@ import { DatabricksFilesService } from "./services/files/files.service";
 import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
-import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
+import type {
+  DatabricksJobRunResponse,
+  DatabricksJobRunStatusResponse,
+} from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
@@ -88,6 +92,59 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
     return this.jobsService.triggerJob(jobId, jobParams);
+  }
+
+  /**
+   * Trigger the data export Databricks job with the specified parameters
+   * @param experimentId - The experiment ID
+   * @param tableName - The table name to export
+   * @param sqlQuery - Optional SQL query to execute instead of reading from table
+   * @returns Result containing the job run response
+   */
+  async triggerDataExportJob(
+    experimentId: string,
+    tableName: string,
+    sqlQuery?: string,
+  ): Promise<Result<DatabricksJobRunResponse>> {
+    this.logger.log({
+      msg: "Triggering data export job",
+      operation: "triggerDataExportJob",
+      experimentId,
+      tableName,
+    });
+
+    const jobParams = {
+      EXPERIMENT_ID: experimentId,
+      TABLE_NAME: tableName,
+      SQL_QUERY: sqlQuery || "",
+      CATALOG_NAME: this.configService.getCatalogName(),
+      ENVIRONMENT: this.configService.getEnvironment().toUpperCase(),
+    };
+
+    const jobId = this.configService.getDataExportJobIdAsNumber();
+    return this.jobsService.triggerJob(jobId, jobParams);
+  }
+
+  /**
+   * Wait for a job run to complete
+   * @param runId - The run ID to wait for
+   * @param timeoutMs - Maximum time to wait in milliseconds
+   * @returns Result containing the final job run status
+   */
+  async waitForJobCompletion(
+    runId: number,
+    timeoutMs?: number,
+  ): Promise<Result<DatabricksJobRunStatusResponse>> {
+    return this.jobsService.waitForJobCompletion(runId, timeoutMs);
+  }
+
+  /**
+   * Download a file from Databricks as a stream
+   * @param filePath - The full path to the file in Databricks
+   * @returns Result containing a readable stream
+   */
+  async downloadFile(filePath: string): Promise<Result<Readable>> {
+    return this.filesService.download(filePath);
   }
 
   /**
