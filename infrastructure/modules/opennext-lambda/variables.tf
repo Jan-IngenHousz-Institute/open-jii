@@ -139,7 +139,7 @@ variable "additional_iam_policies" {
 }
 
 variable "use_alias_url" {
-  description = "Whether to create a Lambda function alias for the specified environment"
+  description = "Whether to configure the Lambda Function URL to use a named alias qualifier instead of $LATEST"
   type        = bool
   default     = false
 }

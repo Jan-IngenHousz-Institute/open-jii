@@ -337,12 +337,30 @@ jobs:
           FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
           NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
           
+          # Invoke the specific version and capture both payload and invoke metadata
           echo "Health checking new version $NEW_VERSION (before updating alias)..."
           timeout 30 aws lambda invoke \
             --function-name "$FUNCTION_NAME:$NEW_VERSION" \
-            /tmp/response.json
+            /tmp/response.json > /tmp/invoke-metadata.json
+          INVOKE_EXIT_CODE=$?
           
-          echo "Health check response:"
+          if [ "$INVOKE_EXIT_CODE" -ne 0 ]; then
+            echo "❌ Lambda invoke command failed with exit code $INVOKE_EXIT_CODE"
+            echo "Invoke metadata (if any):"
+            cat /tmp/invoke-metadata.json || true
+            exit 1
+          fi
+          
+          echo "Invoke metadata:"
+          cat /tmp/invoke-metadata.json
+          
+          # Check for invocation-level errors reported by Lambda (e.g., FunctionError)
+          if jq -e '.FunctionError and .FunctionError != null' /tmp/invoke-metadata.json > /dev/null; then
+            echo "❌ Lambda health check failed: FunctionError reported in invoke metadata"
+            exit 1
+          fi
+          
+          echo "Health check response payload:"
           cat /tmp/response.json
           
           # Check for errors
