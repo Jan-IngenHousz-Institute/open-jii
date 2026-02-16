@@ -1,14 +1,14 @@
 import {
+  LayoutDashboard,
+  Leaf,
   Archive,
   BookOpen,
   CirclePlus,
   Code,
   FileSliders,
   HelpCircle,
-  Home,
   LifeBuoy,
   LogOut,
-  Microscope,
   RadioReceiver,
   Settings,
   User,
@@ -32,8 +32,8 @@ export interface NavSection {
  * Icon mapping for navigation items
  */
 export const iconMap = {
-  Home,
-  Microscope,
+  LayoutDashboard,
+  Leaf,
   FileSliders,
   Code,
   Settings,
@@ -56,14 +56,14 @@ export const mainNavigation = {
     titleKey: "dashboard.title",
     namespace: "common",
     url: (locale: string) => `/${locale}/platform`,
-    icon: "Home",
+    icon: "LayoutDashboard",
     items: [] as NavLink[],
   },
   experiments: {
     titleKey: "sidebar.experiments",
     namespace: "navigation",
     url: (locale: string) => `/${locale}/platform/experiments`,
-    icon: "Microscope",
+    icon: "Leaf",
     items: [
       {
         titleKey: "sidebar.newExperiment",

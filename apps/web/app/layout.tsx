@@ -5,9 +5,11 @@ import { CookieBanner } from "../components/cookie-banner";
 import { PostHogProvider } from "../providers/PostHogProvider";
 import "./globals.css";
 
+// Global fallback metadata used when a page does not define its own (via CMS or locally).
 export const metadata: Metadata = {
-  title: "Jan IngenHousz Institute",
-  description: "Improving photosynthesis for a sustainable future",
+  title: "openJII - Open-science platform",
+  description:
+    "Open-science platform by the Jan Ingenhousz Institute for real-time analysis and visualization of photosynthesis data from IoT sensors, enabling collaborative plant science research.",
 };
 
 interface RootLayoutProps {

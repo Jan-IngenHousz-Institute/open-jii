@@ -50,7 +50,7 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
               <div className={cardVariants({ featured: isPreferred })}>
                 <div className="mb-auto">
                   <div className="mb-2 flex items-start gap-2">
-                    <h3 className="min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
+                    <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
                       {protocol.name}
                     </h3>
                     {isPreferred && (

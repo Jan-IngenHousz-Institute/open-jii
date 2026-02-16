@@ -6,6 +6,7 @@ interface DashboardBannerProps {
   title: string;
   description: string;
   descriptionItalic?: string;
+  descriptionItalicHref?: string;
   buttonLabel?: string;
   buttonHref?: string;
   secondaryButtonLabel?: string;
@@ -17,6 +18,7 @@ export function DashboardBanner({
   title,
   description,
   descriptionItalic,
+  descriptionItalicHref,
   buttonLabel,
   buttonHref,
   secondaryButtonLabel,
@@ -31,10 +33,19 @@ export function DashboardBanner({
         </h2>
         <p className="text-[0.8125rem] font-normal leading-[1.3125rem] text-[#68737B]">
           {description}
-          <span className="italic">{descriptionItalic}</span>
+          {descriptionItalic && descriptionItalicHref && (
+            <Link
+              href={descriptionItalicHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="italic hover:underline"
+            >
+              {descriptionItalic}
+            </Link>
+          )}
         </p>
       </div>
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+      <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row">
         {secondaryButtonLabel && secondaryButtonHref && (
           <Link
             href={secondaryButtonHref}

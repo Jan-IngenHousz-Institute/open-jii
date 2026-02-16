@@ -33,7 +33,6 @@ describe("DatabricksConfigService", () => {
       expect(config.host).toBeDefined();
       expect(config.clientId).toBeDefined();
       expect(config.clientSecret).toBeDefined();
-      expect(config.experimentProvisioningJobId).toBeDefined();
       expect(config.ambyteProcessingJobId).toBeDefined();
       expect(config.warehouseId).toBeDefined();
       expect(config.catalogName).toBeDefined();
@@ -47,7 +46,7 @@ describe("DatabricksConfigService", () => {
       const getOrThrowSpy = vi
         .spyOn(configService, "getOrThrow")
         .mockImplementation((key: string) => {
-          if (key === "databricks.experimentProvisioningJobId") {
+          if (key === "databricks.ambyteProcessingJobId") {
             return "";
           }
 
@@ -78,21 +77,6 @@ describe("DatabricksConfigService", () => {
       expect(clientSecret).toBe(process.env.DATABRICKS_CLIENT_SECRET);
     });
 
-    it("should return the correct experiment provisioning job ID", () => {
-      const experimentProvisioningJobId = configService.getExperimentProvisioningJobId();
-      expect(experimentProvisioningJobId).toBe(
-        process.env.DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID,
-      );
-    });
-
-    it("should return the correct experiment provisioning job ID as a number", () => {
-      const experimentProvisioningJobIdAsNumber =
-        configService.getExperimentProvisioningJobIdAsNumber();
-      expect(experimentProvisioningJobIdAsNumber).toBe(
-        Number(process.env.DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID),
-      );
-    });
-
     it("should return the correct ambyte processing job ID", () => {
       const ambyteProcessingJobId = configService.getAmbyteProcessingJobId();
       expect(ambyteProcessingJobId).toBe(process.env.DATABRICKS_AMBYTE_PROCESSING_JOB_ID);
@@ -113,6 +97,31 @@ describe("DatabricksConfigService", () => {
     it("should return the correct catalog name", () => {
       const catalogName = configService.getCatalogName();
       expect(catalogName).toBe(process.env.DATABRICKS_CATALOG_NAME);
+    });
+
+    it("should return the correct centrum schema name", () => {
+      const centrumSchemaName = configService.getCentrumSchemaName();
+      expect(centrumSchemaName).toBe(process.env.DATABRICKS_CENTRUM_SCHEMA_NAME);
+    });
+
+    it("should return the correct raw data table name", () => {
+      const rawDataTableName = configService.getRawDataTableName();
+      expect(rawDataTableName).toBe(process.env.DATABRICKS_RAW_DATA_TABLE_NAME);
+    });
+
+    it("should return the correct device data table name", () => {
+      const deviceDataTableName = configService.getDeviceDataTableName();
+      expect(deviceDataTableName).toBe(process.env.DATABRICKS_DEVICE_DATA_TABLE_NAME);
+    });
+
+    it("should return the correct raw ambyte data table name", () => {
+      const rawAmbyteDataTableName = configService.getRawAmbyteDataTableName();
+      expect(rawAmbyteDataTableName).toBe(process.env.DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME);
+    });
+
+    it("should return the correct macro data table name", () => {
+      const macroDataTableName = configService.getMacroDataTableName();
+      expect(macroDataTableName).toBe(process.env.DATABRICKS_MACRO_DATA_TABLE_NAME);
     });
   });
 });

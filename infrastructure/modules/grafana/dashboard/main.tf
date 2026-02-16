@@ -74,6 +74,22 @@ resource "grafana_dashboard" "dashboard" {
   config_json = templatefile("${path.module}/dashboard.json.tftpl", local.dashboard_vars)
 }
 
+resource "grafana_dashboard" "dora_dashboard" {
+  provider  = grafana.amg
+  folder    = grafana_folder.folder.id
+  overwrite = true
+
+  config_json = templatefile("${path.module}/dora.json.tftpl",
+    {
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+      project        = var.project
+      environment    = var.environment
+      aws_region     = var.aws_region
+      account_id     = data.aws_caller_identity.current.account_id
+    }
+  )
+}
+
 ### Alerting rules 
 
 resource "grafana_contact_point" "slack" {
@@ -97,10 +113,11 @@ resource "grafana_contact_point" "slack" {
 
 # Backend API Alerts
 resource "grafana_rule_group" "backend_alerts" {
-  provider         = grafana.amg
-  name             = "Backend API Alerts"
-  folder_uid       = grafana_folder.folder.uid
-  interval_seconds = 60
+  provider           = grafana.amg
+  name               = "Backend API Alerts"
+  folder_uid         = grafana_folder.folder.uid
+  interval_seconds   = 60
+  disable_provenance = true
 
   rule {
     name      = "Backend High CPU Usage"
@@ -241,6 +258,85 @@ EOT
     annotations = {
       description = "Unhealthy targets detected in backend service"
       summary     = "Backend service has unhealthy targets"
+    }
+    labels = {
+      severity = "critical"
+      service  = "backend"
+    }
+  }
+
+  rule {
+    name      = "Backend High 5xx Error Rate"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId            = "A"
+        region           = var.aws_region
+        namespace        = "AWS/ApplicationELB"
+        metricName       = "HTTPCode_Target_5XX_Count"
+        statistic        = "Sum"
+        period           = "300"
+        matchExact       = true
+        metricEditorMode = 0
+        metricQueryType  = 0
+        queryMode        = "Metrics"
+        id               = "m1"
+        expression       = "FILL(m1, 0)"
+        dimensions = {
+          LoadBalancer = [local.dashboard_vars.load_balancer_dimension]
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 5"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "Backend is returning 5xx errors"
+      summary     = "5xx errors detected on backend service"
     }
     labels = {
       severity = "critical"

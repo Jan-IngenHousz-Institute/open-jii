@@ -83,10 +83,10 @@ resource "aws_acm_certificate_validation" "regional_services_cert" {
 resource "aws_acm_certificate" "cloudfront_certs" {
   for_each = var.cloudfront_domain_configs
 
-  provider          = aws.us_east_1_for_cloudfront
-  domain_name       = each.value # each.value is the FQDN from the map
-  subject_alternative_names = each.key ==  "web" ? [ "www.${local.base_domain}"] : null
-  validation_method = "DNS"
+  provider                  = aws.us_east_1_for_cloudfront
+  domain_name               = each.value # each.value is the FQDN from the map
+  subject_alternative_names = each.key == "web" ? ["www.${local.base_domain}"] : null
+  validation_method         = "DNS"
 
   tags = merge(
     {
@@ -124,11 +124,11 @@ resource "aws_route53_record" "cloudfront_cert_validation_san" {
   }
 
   allow_overwrite = true
-  name    = tolist(each.value.domain_validation_options)[1].resource_record_name
-  records = [tolist(each.value.domain_validation_options)[1].resource_record_value]
-  ttl     = 60
-  type    = tolist(each.value.domain_validation_options)[1].resource_record_type
-  zone_id = local.zone_id
+  name            = tolist(each.value.domain_validation_options)[1].resource_record_name
+  records         = [tolist(each.value.domain_validation_options)[1].resource_record_value]
+  ttl             = 60
+  type            = tolist(each.value.domain_validation_options)[1].resource_record_type
+  zone_id         = local.zone_id
 }
 
 # Certificate validation for the CloudFront (us-east-1) certificates
@@ -170,9 +170,9 @@ resource "aws_route53_record" "cloudfront_record" {
 }
 
 resource "aws_route53_record" "www_cname" {
-zone_id = local.zone_id
-name = "www.${local.base_domain}"
-type = "CNAME"
-ttl = 300
-records = [local.base_domain]
+  zone_id = local.zone_id
+  name    = "www.${local.base_domain}"
+  type    = "CNAME"
+  ttl     = 300
+  records = [local.base_domain]
 }

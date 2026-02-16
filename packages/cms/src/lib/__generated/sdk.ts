@@ -4776,6 +4776,44 @@ export type PageAboutQuery = {
   } | null;
 };
 
+export type PageBlogQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageBlogPostOrder>> | InputMaybe<PageBlogPostOrder>>;
+  where?: InputMaybe<PageBlogPostFilter>;
+}>;
+
+export type PageBlogQuery = {
+  __typename?: "Query";
+  pageLandingCollection?: {
+    __typename?: "PageLandingCollection";
+    items: Array<({ __typename?: "PageLanding" } & PageLandingFieldsFragment) | null>;
+  } | null;
+  pageBlogPostCollection?: {
+    __typename?: "PageBlogPostCollection";
+    items: Array<({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment) | null>;
+  } | null;
+};
+
+export type PageBlogDetailQueryVariables = Exact<{
+  slug: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type PageBlogDetailQuery = {
+  __typename?: "Query";
+  pageBlogPostCollection?: {
+    __typename?: "PageBlogPostCollection";
+    items: Array<({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment) | null>;
+  } | null;
+  pageLandingCollection?: {
+    __typename?: "PageLandingCollection";
+    items: Array<({ __typename?: "PageLanding" } & PageLandingFieldsFragment) | null>;
+  } | null;
+};
+
 export type ReferencePageBlogPostFieldsFragment = {
   __typename: "PageBlogPost";
   slug?: string | null;
@@ -4953,6 +4991,39 @@ export type PageFaqQuery = {
   pageFaqCollection?: {
     __typename?: "PageFaqCollection";
     items: Array<({ __typename?: "PageFaq" } & PageFaqFieldsFragment) | null>;
+  } | null;
+};
+
+export type PageHomeQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type PageHomeQuery = {
+  __typename?: "Query";
+  pageHomeHeroCollection?: {
+    __typename?: "PageHomeHeroCollection";
+    items: Array<({ __typename?: "PageHomeHero" } & PageHomeHeroFieldsFragment) | null>;
+  } | null;
+  pageHomeMissionCollection?: {
+    __typename?: "PageHomeMissionCollection";
+    items: Array<({ __typename?: "PageHomeMission" } & PageHomeMissionFieldsFragment) | null>;
+  } | null;
+  pageHomeFeaturesCollection?: {
+    __typename?: "PageHomeFeaturesCollection";
+    items: Array<({ __typename?: "PageHomeFeatures" } & PageHomeFeaturesFieldsFragment) | null>;
+  } | null;
+  pageHomePartnersCollection?: {
+    __typename?: "PageHomePartnersCollection";
+    items: Array<({ __typename?: "PageHomePartners" } & PageHomePartnersFieldsFragment) | null>;
+  } | null;
+  footerCollection?: {
+    __typename?: "FooterCollection";
+    items: Array<({ __typename?: "Footer" } & FooterFieldsFragment) | null>;
+  } | null;
+  landingMetadataCollection?: {
+    __typename?: "LandingMetadataCollection";
+    items: Array<({ __typename?: "LandingMetadata" } & LandingMetadataFieldsFragment) | null>;
   } | null;
 };
 
@@ -5862,6 +5933,60 @@ export const PageAboutDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
+export const PageBlogDocument: ReturnType<typeof gql> = gql`
+  query pageBlog(
+    $locale: String
+    $preview: Boolean
+    $limit: Int
+    $order: [PageBlogPostOrder]
+    $where: PageBlogPostFilter
+  ) {
+    pageLandingCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageLandingFields
+      }
+    }
+    pageBlogPostCollection(
+      limit: $limit
+      locale: $locale
+      preview: $preview
+      order: $order
+      where: $where
+    ) {
+      items {
+        ...PageBlogPostFields
+      }
+    }
+  }
+  ${PageLandingFieldsFragmentDoc}
+  ${SeoFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
+  ${ReferencePageBlogPostFieldsFragmentDoc}
+  ${AuthorFieldsFragmentDoc}
+  ${PageBlogPostFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+`;
+export const PageBlogDetailDocument: ReturnType<typeof gql> = gql`
+  query pageBlogDetail($slug: String!, $locale: String, $preview: Boolean) {
+    pageBlogPostCollection(limit: 1, where: { slug: $slug }, locale: $locale, preview: $preview) {
+      items {
+        ...PageBlogPostFields
+      }
+    }
+    pageLandingCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageLandingFields
+      }
+    }
+  }
+  ${PageBlogPostFieldsFragmentDoc}
+  ${SeoFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
+  ${AuthorFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ReferencePageBlogPostFieldsFragmentDoc}
+  ${PageLandingFieldsFragmentDoc}
+`;
 export const PageBlogPostDocument: ReturnType<typeof gql> = gql`
   query pageBlogPost($slug: String!, $locale: String, $preview: Boolean) {
     pageBlogPostCollection(limit: 1, where: { slug: $slug }, locale: $locale, preview: $preview) {
@@ -5926,6 +6051,51 @@ export const PageFaqDocument: ReturnType<typeof gql> = gql`
   }
   ${PageFaqFieldsFragmentDoc}
   ${FaqQuestionFieldsFragmentDoc}
+`;
+export const PageHomeDocument: ReturnType<typeof gql> = gql`
+  query pageHome($locale: String, $preview: Boolean) {
+    pageHomeHeroCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageHomeHeroFields
+      }
+    }
+    pageHomeMissionCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageHomeMissionFields
+      }
+    }
+    pageHomeFeaturesCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageHomeFeaturesFields
+      }
+    }
+    pageHomePartnersCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageHomePartnersFields
+      }
+    }
+    footerCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...FooterFields
+      }
+    }
+    landingMetadataCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...LandingMetadataFields
+      }
+    }
+  }
+  ${PageHomeHeroFieldsFragmentDoc}
+  ${ButtonFieldsFragmentDoc}
+  ${PageHomeMissionFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
+  ${PageHomeFeaturesFieldsFragmentDoc}
+  ${FeatureFieldsFragmentDoc}
+  ${PageHomePartnersFieldsFragmentDoc}
+  ${PartnerFieldsFragmentDoc}
+  ${FooterFieldsFragmentDoc}
+  ${LandingMetadataFieldsFragmentDoc}
 `;
 export const PageHomeFeaturesDocument: ReturnType<typeof gql> = gql`
   query pageHomeFeatures($locale: String, $preview: Boolean) {
@@ -6099,6 +6269,42 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    pageBlog(
+      variables?: PageBlogQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageBlogQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageBlogQuery>({
+            document: PageBlogDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageBlog",
+        "query",
+        variables,
+      );
+    },
+    pageBlogDetail(
+      variables: PageBlogDetailQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageBlogDetailQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageBlogDetailQuery>({
+            document: PageBlogDetailDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageBlogDetail",
+        "query",
+        variables,
+      );
+    },
     pageBlogPost(
       variables: PageBlogPostQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -6167,6 +6373,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageFaq",
+        "query",
+        variables,
+      );
+    },
+    pageHome(
+      variables?: PageHomeQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageHomeQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageHomeQuery>({
+            document: PageHomeDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageHome",
         "query",
         variables,
       );

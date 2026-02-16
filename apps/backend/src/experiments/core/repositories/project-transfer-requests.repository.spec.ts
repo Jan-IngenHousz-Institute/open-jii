@@ -61,8 +61,8 @@ describe("ProjectTransferRequestsRepository", () => {
 
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,
@@ -89,7 +89,7 @@ describe("ProjectTransferRequestsRepository", () => {
       expect(result.value.requestedAt).toBeInstanceOf(Date);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("INSERT INTO openjii_project_transfer_requests"),
       );
     });
@@ -111,11 +111,11 @@ describe("ProjectTransferRequestsRepository", () => {
       expect(result.error.message).toContain("Validation failed for transfer request");
     });
 
-    it("should return validation error for invalid email", async () => {
+    it("should return validation error for empty email", async () => {
       // Arrange
       const invalidRequest: CreateTransferRequestDto = {
         ...createValidTransferRequest(),
-        userEmail: "not-an-email",
+        userEmail: "",
       };
 
       // Act
@@ -185,14 +185,19 @@ describe("ProjectTransferRequestsRepository", () => {
   describe("listTransferRequests", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "request_id", type_name: "STRING", type_text: "STRING" },
-        { name: "user_id", type_name: "STRING", type_text: "STRING" },
-        { name: "user_email", type_name: "STRING", type_text: "STRING" },
-        { name: "source_platform", type_name: "STRING", type_text: "STRING" },
-        { name: "project_id_old", type_name: "STRING", type_text: "STRING" },
-        { name: "project_url_old", type_name: "STRING", type_text: "STRING" },
-        { name: "status", type_name: "STRING", type_text: "STRING" },
-        { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        { name: "request_id", type_name: "STRING", type_text: "STRING", position: 0 },
+        { name: "user_id", type_name: "STRING", type_text: "STRING", position: 1 },
+        {
+          name: "user_email",
+          type_name: "STRING",
+          type_text: "STRING",
+          position: 2,
+        },
+        { name: "source_platform", type_name: "STRING", type_text: "STRING", position: 3 },
+        { name: "project_id_old", type_name: "STRING", type_text: "STRING", position: 4 },
+        { name: "project_url_old", type_name: "STRING", type_text: "STRING", position: 5 },
+        { name: "status", type_name: "STRING", type_text: "STRING", position: 6 },
+        { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 7 },
       ],
       rows: [
         [
@@ -238,7 +243,7 @@ describe("ProjectTransferRequestsRepository", () => {
       expect(result.value[0].requestedAt).toBeInstanceOf(Date);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining(`WHERE user_id = '${mockUserId}'`),
       );
     });
@@ -299,14 +304,14 @@ describe("ProjectTransferRequestsRepository", () => {
   describe("findExistingRequest", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "request_id", type_name: "STRING", type_text: "STRING" },
-        { name: "user_id", type_name: "STRING", type_text: "STRING" },
-        { name: "user_email", type_name: "STRING", type_text: "STRING" },
-        { name: "source_platform", type_name: "STRING", type_text: "STRING" },
-        { name: "project_id_old", type_name: "STRING", type_text: "STRING" },
-        { name: "project_url_old", type_name: "STRING", type_text: "STRING" },
-        { name: "status", type_name: "STRING", type_text: "STRING" },
-        { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        { name: "request_id", type_name: "STRING", type_text: "STRING", position: 0 },
+        { name: "user_id", type_name: "STRING", type_text: "STRING", position: 1 },
+        { name: "user_email", type_name: "STRING", type_text: "STRING", position: 2 },
+        { name: "source_platform", type_name: "STRING", type_text: "STRING", position: 3 },
+        { name: "project_id_old", type_name: "STRING", type_text: "STRING", position: 4 },
+        { name: "project_url_old", type_name: "STRING", type_text: "STRING", position: 5 },
+        { name: "status", type_name: "STRING", type_text: "STRING", position: 6 },
+        { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 7 },
       ],
       rows: [
         [
@@ -340,11 +345,11 @@ describe("ProjectTransferRequestsRepository", () => {
       expect(result.value?.status).toBe("pending");
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("WHERE user_id = "),
       );
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        "centrum",
+        databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("LIMIT 1"),
       );
     });
@@ -407,8 +412,8 @@ describe("ProjectTransferRequestsRepository", () => {
   describe("SQL injection protection", () => {
     const mockSchemaData: SchemaData = {
       columns: [
-        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT" },
-        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT" },
+        { name: "num_affected_rows", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "num_inserted_rows", type_name: "LONG", type_text: "BIGINT", position: 1 },
       ],
       rows: [["1", "1"]],
       totalRows: 1,

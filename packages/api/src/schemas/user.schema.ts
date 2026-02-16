@@ -77,6 +77,7 @@ export const zUserMetadata = z.object({
   userId: z.string().uuid(),
   firstName: z.string(),
   lastName: z.string(),
+  avatarUrl: z.string().nullable(),
 });
 
 export const zUserMetadataWebhookResponse = z.object({

@@ -24,7 +24,7 @@ export const OtpEmail = ({ otp, senderName, host }: OtpEmailProps) => {
         <Head />
         <Body className="mx-auto my-auto bg-gray-50 font-sans" style={{ color: "#374151" }}>
           <Container className="mx-auto my-[40px] w-[580px] rounded-lg border border-solid border-gray-200 bg-white shadow-sm">
-            <Preview>Your openJII login code</Preview>
+            <Preview>Your login code is {otp}</Preview>
 
             {/* Header */}
             <Section className="rounded-t-lg bg-[#005e5e] px-8 py-6">

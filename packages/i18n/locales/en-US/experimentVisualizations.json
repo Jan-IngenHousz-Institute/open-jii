@@ -2,6 +2,7 @@
   "ui": {
     "title": "Visualizations",
     "actions": {
+      "title": "Actions",
       "edit": "Edit Visualization",
       "delete": "Delete",
       "deleting": "Deleting...",
@@ -38,7 +39,9 @@
       "title": "Data Source",
       "help": "Choose which table to visualize",
       "selectTable": "Select table",
-      "tableInfo": "{{name}}"
+      "tableInfo": "{{name}}",
+      "noTablesAvailable": "No tables available",
+      "loadingColumns": "Loading columns..."
     }
   },
 

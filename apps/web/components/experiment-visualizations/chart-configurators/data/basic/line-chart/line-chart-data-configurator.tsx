@@ -1,8 +1,9 @@
 "use client";
 
-import type { ExperimentTableWithColumns } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
+
+import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import XAxisConfiguration from "../../shared/x-axis-configuration";
@@ -10,10 +11,13 @@ import YAxisConfiguration from "../../shared/y-axis-configuration";
 
 interface LineChartDataConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
-  table: ExperimentTableWithColumns;
+  columns: DataColumn[];
 }
 
-export default function LineChartDataConfigurator({ form, table }: LineChartDataConfiguratorProps) {
+export default function LineChartDataConfigurator({
+  form,
+  columns,
+}: LineChartDataConfiguratorProps) {
   const {
     fields: dataSourceFields,
     append: appendDataSource,
@@ -45,12 +49,12 @@ export default function LineChartDataConfigurator({ form, table }: LineChartData
   return (
     <div className="space-y-6">
       {/* X-Axis Configuration */}
-      <XAxisConfiguration form={form} table={table} />
+      <XAxisConfiguration form={form} columns={columns} />
 
       {/* Y-Axes Series Configuration */}
       <YAxisConfiguration
         form={form}
-        table={table}
+        columns={columns}
         yAxisDataSources={yAxisDataSources}
         addYAxisSeries={addYAxisSeries}
         removeDataSource={removeDataSource}

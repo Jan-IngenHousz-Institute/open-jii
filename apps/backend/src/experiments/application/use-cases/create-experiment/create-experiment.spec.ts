@@ -1,6 +1,8 @@
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import { LocationRepository } from "../../../../experiments/core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
+import { ExperimentProtocolRepository } from "../../../../experiments/core/repositories/experiment-protocol.repository";
+import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { UserDto } from "../../../../users/core/models/user.model";
 import { CreateExperimentUseCase } from "./create-experiment";
@@ -10,7 +12,9 @@ describe("CreateExperimentUseCase", () => {
   let testUserId: string;
   let useCase: CreateExperimentUseCase;
   let experimentMemberRepository: ExperimentMemberRepository;
-  let databricksAdapter: DatabricksAdapter;
+  let experimentProtocolRepository: ExperimentProtocolRepository;
+  let locationRepository: LocationRepository;
+  let protocolRepository: ProtocolRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -21,12 +25,11 @@ describe("CreateExperimentUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentUseCase);
     experimentMemberRepository = testApp.module.get(ExperimentMemberRepository);
-    databricksAdapter = testApp.module.get(DatabricksAdapter);
+    experimentProtocolRepository = testApp.module.get(ExperimentProtocolRepository);
+    locationRepository = testApp.module.get(LocationRepository);
+    protocolRepository = testApp.module.get(ProtocolRepository);
 
     // Mock the Databricks service
-    vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
-      success({ run_id: 12345, number_in_job: 1 }),
-    );
   });
 
   afterEach(() => {
@@ -42,7 +45,7 @@ describe("CreateExperimentUseCase", () => {
     const experimentData = {
       name: "Test Experiment",
       description: "A test experiment description",
-      status: "provisioning" as const,
+      status: "active" as const,
       visibility: "private" as const,
     };
 
@@ -62,16 +65,6 @@ describe("CreateExperimentUseCase", () => {
       visibility: experimentData.visibility,
       createdBy: testUserId,
     });
-
-    // Verify Databricks job was triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
-      createdExperiment.id,
-      {
-        experiment_id: createdExperiment.id,
-        experiment_name: experimentData.name,
-      },
-    );
   });
 
   it("should add the creating user as an admin member", async () => {
@@ -104,38 +97,51 @@ describe("CreateExperimentUseCase", () => {
     });
   });
 
-  it("should create an experiment even if Databricks job trigger fails", async () => {
-    // Mock Databricks job trigger failure
-    vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
-      failure({
-        name: "DatabricksError",
-        code: "INTERNAL_ERROR",
-        message: "Databricks API error",
-        statusCode: 500,
-      }),
-    );
+  it("should create an experiment with protocols and locations", async () => {
+    // 1. Create a protocol
+    const protocolDto = {
+      name: "Test Protocol",
+      description: "Desc",
+      code: [{}],
+      duration: "1h",
+      family: "multispeq" as const,
+    };
+    const protocolResult = await protocolRepository.create(protocolDto, testUserId);
+    assertSuccess(protocolResult);
+    const protocolId = protocolResult.value[0].id;
 
     const experimentData = {
-      name: "Databricks Failure Test",
-      description: "Testing continued creation when Databricks fails",
+      name: "Complex Experiment",
+      protocols: [{ protocolId }],
+      locations: [
+        {
+          name: "Loc 1",
+          latitude: 10,
+          longitude: 20,
+          country: "TestCountry",
+        },
+      ],
     };
 
     const result = await useCase.execute(experimentData, testUserId);
-
-    // Verify experiment was still created successfully
-    expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.name).toBe(experimentData.name);
+    const createdExperiment = result.value;
 
-    // Verify Databricks job was triggered but failed
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
-      result.value.id,
-      {
-        experiment_id: result.value.id,
-        experiment_name: experimentData.name,
-      },
-    );
+    // Verify protocols
+    const protocolsResult = await experimentProtocolRepository.listProtocols(createdExperiment.id);
+    assertSuccess(protocolsResult);
+    expect(protocolsResult.value).toHaveLength(1);
+    expect(protocolsResult.value[0].protocol.id).toBe(protocolId);
+
+    // Verify locations
+    const locationsResult = await locationRepository.findByExperimentId(createdExperiment.id);
+    assertSuccess(locationsResult);
+    expect(locationsResult.value).toHaveLength(1);
+    expect(locationsResult.value[0].name).toBe("Loc 1");
+    // Latitude stored as string in DB usually, but repository might convert or not.
+    // Looking at repository code: it inserts using .toString(), returns standard DTO.
+    // If DTO has string, then it matches.
+    expect(Number(locationsResult.value[0].latitude)).toBe(10);
   });
 
   it("should create an experiment with minimal data", async () => {
@@ -157,16 +163,6 @@ describe("CreateExperimentUseCase", () => {
       name: minimalData.name,
       createdBy: testUserId,
     });
-
-    // Verify Databricks job was triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
-      createdExperiment.id,
-      {
-        experiment_id: createdExperiment.id,
-        experiment_name: minimalData.name,
-      },
-    );
   });
 
   it("should return error if name is not provided", async () => {
@@ -184,8 +180,6 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.message).toContain("Experiment name is required");
 
     // Verify Databricks job was not triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 
   it("should return error if userId is not provided", async () => {
@@ -203,8 +197,6 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.message).toContain("User ID is required");
 
     // Verify Databricks job was not triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 
   it("should return error if experiment name already exists", async () => {
@@ -227,7 +219,55 @@ describe("CreateExperimentUseCase", () => {
     );
 
     // Verify Databricks job was not triggered
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
+  });
+
+  it("should fail validation if protocols association fails", async () => {
+    // Mock failure
+    vi.spyOn(experimentProtocolRepository, "addProtocols").mockResolvedValue(
+      failure(AppError.badRequest("Database error", "DATABASE_ERROR")),
+    );
+
+    const protocolDto = {
+      name: "Test Protocol",
+      description: "Desc",
+      code: [{}],
+      duration: "1h",
+      family: "multispeq" as const,
+    };
+    const protocolResult = await protocolRepository.create(protocolDto, testUserId);
+    assertSuccess(protocolResult);
+    const protocolId = protocolResult.value[0].id;
+
+    const experimentData = {
+      name: "Bad Protocol Experiment",
+      protocols: [{ protocolId }],
+    };
+
+    const result = await useCase.execute(experimentData, testUserId);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to associate protocols");
+  });
+
+  it("should fail validation if locations creation fails", async () => {
+    // Mock failure
+    vi.spyOn(locationRepository, "createMany").mockResolvedValue(
+      failure(AppError.badRequest("Database error", "DATABASE_ERROR")),
+    );
+
+    const experimentData = {
+      name: "Bad Location Experiment",
+      locations: [
+        {
+          name: "Loc 1",
+          latitude: 10,
+          longitude: 20,
+          country: "TestCountry",
+        },
+      ],
+    };
+
+    const result = await useCase.execute(experimentData, testUserId);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to associate locations");
   });
 });

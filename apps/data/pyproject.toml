@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "openjii-data"
+version = "0.1.0"
+description = "Databricks notebooks and Python packages for OpenJII"
+authors = ["openJII Team"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pandas = "^2.0.0"
+numpy = "^1.24.0"
+scipy = "^1.10.0"
+requests = "^2.31.0"
+multispeq = { path = "src/lib/multispeq", develop = true }
+ambyte = { path = "src/lib/ambyte", develop = true }
+enrich = { path = "src/lib/enrich", develop = true }
+openjii = { path = "src/lib/openjii", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+build = "^1.0.0"
+wheel = "^0.46.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

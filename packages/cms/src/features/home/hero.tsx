@@ -62,7 +62,8 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
         {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
         <Button
-          className="text-primary bg-badge-featured group rounded-md px-5 py-6 text-sm font-semibold shadow transition-all duration-300 ease-out hover:scale-[1.03] hover:bg-white"
+          variant="secondary"
+          className="group px-5 py-6 font-semibold shadow transition-all duration-300 ease-out hover:scale-[1.03] hover:bg-white"
           {...buttonInspectorProps({ fieldId: "label" })}
         >
           <div className="flex items-center space-x-2">

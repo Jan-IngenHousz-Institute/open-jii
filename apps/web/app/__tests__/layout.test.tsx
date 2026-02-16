@@ -43,7 +43,9 @@ describe("RootLayout Component", () => {
 
   it("should export metadata", () => {
     expect(metadata).toBeDefined();
-    expect(metadata.title).toBe("Jan IngenHousz Institute");
-    expect(metadata.description).toBe("Improving photosynthesis for a sustainable future");
+    expect(metadata.title).toBe("openJII - Open-science platform");
+    expect(metadata.description).toBe(
+      "Open-science platform by the Jan Ingenhousz Institute for real-time analysis and visualization of photosynthesis data from IoT sensors, enabling collaborative plant science research.",
+    );
   });
 });

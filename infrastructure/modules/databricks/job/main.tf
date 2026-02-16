@@ -40,6 +40,18 @@ resource "databricks_job" "this" {
     }
   }
 
+  # Environment configuration for serverless compute dependencies
+  dynamic "environment" {
+    for_each = var.environments
+    content {
+      environment_key = environment.value.environment_key
+      spec {
+        environment_version = environment.value.spec.environment_version
+        dependencies        = environment.value.spec.dependencies
+      }
+    }
+  }
+
   dynamic "continuous" {
     for_each = var.continuous ? [1] : []
     content {
@@ -59,6 +71,9 @@ resource "databricks_job" "this" {
     for_each = var.tasks
     content {
       task_key = task.value.key
+
+      # Reference environment for serverless tasks if specified
+      environment_key = var.use_serverless && length(var.environments) > 0 ? var.environments[0].environment_key : null
 
       dynamic "new_cluster" {
         for_each = (!var.use_serverless && task.value.task_type == "notebook" && task.value.compute_type == "new_cluster") ? [1] : []

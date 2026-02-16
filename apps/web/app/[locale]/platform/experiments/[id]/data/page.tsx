@@ -1,13 +1,13 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { Upload } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
 import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
+import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import { useTranslation } from "@repo/i18n/client";
@@ -26,7 +26,7 @@ interface ExperimentDataPageProps {
 
 export default function ExperimentDataPage({ params }: ExperimentDataPageProps) {
   const { id } = use(params);
-  const { data, isLoading, error } = useExperiment(id);
+  const { data, isLoading, error } = useExperimentAccess(id);
   const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
@@ -71,7 +71,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     return <div>{t("notFound")}</div>;
   }
 
-  const experiment = data.body;
+  const experiment = data.body.experiment;
+  const hasAccess = data.body.isAdmin;
 
   // Check if experiment is archived - if so, redirect to not found (should use archive route)
   if (experiment.status === "archived") {
@@ -86,7 +87,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
             <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
           </div>
-          <Button onClick={() => setUploadModalOpen(true)}>
+          <Button onClick={() => setUploadModalOpen(true)} disabled={!hasAccess}>
             <Upload className="mr-2 h-4 w-4" />
             {t("experimentData.uploadData")}
           </Button>
@@ -110,13 +111,13 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
           <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
         </div>
-        <Button onClick={() => setUploadModalOpen(true)}>
+        <Button onClick={() => setUploadModalOpen(true)} disabled={!hasAccess}>
           <Upload className="mr-2 h-4 w-4" />
           {t("experimentData.uploadData")}
         </Button>
       </div>
 
-      <NavTabs defaultValue={tables[0].name} className="w-full">
+      <NavTabs defaultValue={tables[0].name} className="max-w-full">
         <NavTabsList>
           {tables.map((table) => (
             <NavTabsTrigger key={table.name} value={table.name}>
@@ -132,6 +133,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
               experimentId={id}
               tableName={table.name}
               displayName={table.displayName}
+              defaultSortColumn={table.defaultSortColumn}
+              errorColumn={table.errorColumn}
               pageSize={10}
             />
           </NavTabsContent>

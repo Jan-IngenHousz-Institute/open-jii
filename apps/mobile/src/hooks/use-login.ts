@@ -1,8 +1,8 @@
 import { useAsyncCallback } from "react-async-hook";
-
-import { authClient } from "@repo/auth/client.native";
+import { useAuthClient } from "~/services/auth";
 
 export function useLoginFlow() {
+  const authClient = useAuthClient();
   const { execute: startGitHubLogin, loading: githubLoading } = useAsyncCallback(async () => {
     try {
       await authClient.signIn.social({

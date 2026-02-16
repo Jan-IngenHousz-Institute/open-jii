@@ -1,16 +1,13 @@
 import { TranslationsProvider } from "@/components/translations-provider";
-import type { Metadata } from "next";
 import { Poppins, Overpass, Inter, Noto_Sans } from "next/font/google";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
-import { getContentfulClients } from "~/lib/contentful";
 import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
-import type { LandingMetadataFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import { defaultLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
@@ -46,41 +43,6 @@ const notoSans = Noto_Sans({
 interface LocaleLayoutProps {
   children: ReactNode;
   params: Promise<{ locale: string }>;
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
-
-  try {
-    const metadataQuery = await gqlClient.landingMetadata({ locale, preview });
-    const metadata = metadataQuery.landingMetadataCollection
-      ?.items[0] as LandingMetadataFieldsFragment;
-
-    return {
-      title: metadata.title ?? "openJII",
-      description: metadata.description ?? t("jii.aboutDescription"),
-    };
-  } catch (error) {
-    console.error("Failed to fetch landing metadata:", error);
-  }
-
-  // Fallback to default values
-  return {
-    title: "openJII",
-    description: t("jii.aboutDescription"),
-  };
 }
 
 const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];

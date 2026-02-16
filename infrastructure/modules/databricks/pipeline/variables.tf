@@ -73,6 +73,12 @@ variable "serverless" {
   default     = false
 }
 
+variable "policy_id" {
+  description = "Cluster policy ID to attach to the pipeline cluster"
+  type        = string
+  default     = null
+}
+
 variable "log_level" {
   description = "Log level for the pipeline"
   type        = string

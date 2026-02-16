@@ -1,0 +1,24 @@
+query pageBlog(
+  $locale: String
+  $preview: Boolean
+  $limit: Int
+  $order: [PageBlogPostOrder]
+  $where: PageBlogPostFilter
+) {
+  pageLandingCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageLandingFields
+    }
+  }
+  pageBlogPostCollection(
+    limit: $limit
+    locale: $locale
+    preview: $preview
+    order: $order
+    where: $where
+  ) {
+    items {
+      ...PageBlogPostFields
+    }
+  }
+}

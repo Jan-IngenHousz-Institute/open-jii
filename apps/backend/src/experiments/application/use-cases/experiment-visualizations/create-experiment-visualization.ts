@@ -78,34 +78,6 @@ export class CreateExperimentVisualizationUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        if (!experiment.schemaName) {
-          this.logger.error({
-            msg: "Experiment has no schema name",
-            errorCode: ErrorCodes.EXPERIMENT_SCHEMA_NOT_READY,
-            operation: "createExperimentVisualization",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.internal("Experiment schema not provisioned"));
-        }
-
-        // Validate data sources exist
-        const dataSourceValidation = await this.databricksPort.validateDataSources(
-          data.dataConfig,
-          experiment.schemaName,
-        );
-
-        if (dataSourceValidation.isFailure()) {
-          this.logger.warn({
-            msg: "Data source validation failed",
-            operation: "createExperimentVisualization",
-            experimentId,
-            userId,
-            error: dataSourceValidation.error.message,
-          });
-          return failure(dataSourceValidation.error);
-        }
-
         this.logger.debug({
           msg: "Creating visualization in repository",
           operation: "createExperimentVisualization",

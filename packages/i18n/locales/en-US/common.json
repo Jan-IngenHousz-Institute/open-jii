@@ -23,6 +23,8 @@
     "confirm": "Confirm",
     "confirmDelete": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
     "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
     "yes": "Yes",
     "no": "No",
     "search": "Search",
@@ -166,7 +168,9 @@
     "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
     "noMacrosAvailable": "No macros available",
     "createFirstMacro": "Create your first macro to get started",
-    "requestTransfer": "Request Project Transfer"
+    "requestTransfer": "Request Project Transfer",
+    "infrastructureSetupTitle": "Infrastructure Setup",
+    "infrastructureSetupDescription": "After finishing this process the experiment infrastructure will be set up which can take 10 to 40 minutes. Viewing data will be possible once the experiment is active. In the meantime, data can already be added through the openJII mobile app."
   },
   "transferRequest": {
     "title": "Request Project Transfer",

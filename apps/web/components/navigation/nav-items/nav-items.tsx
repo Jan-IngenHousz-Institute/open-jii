@@ -4,6 +4,20 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { cva } from "@repo/ui/lib/utils";
+
+const navIconVariants = cva("h-5 w-5 shrink-0", {
+  variants: {
+    isActive: {
+      true: "fill-white",
+      false: "",
+    },
+  },
+  defaultVariants: {
+    isActive: false,
+  },
+});
+
 export function NavItems({
   items,
 }: {
@@ -39,7 +53,7 @@ export function NavItems({
                   : "font-medium"
               }`}
             >
-              {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
+              {item.icon && <item.icon className={navIconVariants({ isActive })} />}
               <span className="text-sm leading-[18px] tracking-[0.02em] group-data-[collapsible=icon]:hidden">
                 {item.title}
               </span>

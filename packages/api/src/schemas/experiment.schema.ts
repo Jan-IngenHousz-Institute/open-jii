@@ -1,5 +1,28 @@
 import { z } from "zod";
 
+// --- Table Name Types ---
+/**
+ * Core table names that are always present in the centrum schema
+ */
+export const ExperimentTableName = {
+  RAW_DATA: "raw_data",
+  DEVICE: "device",
+  RAW_AMBYTE_DATA: "raw_ambyte_data",
+} as const;
+
+export type ExperimentTableNameType =
+  (typeof ExperimentTableName)[keyof typeof ExperimentTableName];
+
+/**
+ * Zod enum for core table names
+ */
+export const zExperimentTableName = z.enum(["raw_data", "device", "raw_ambyte_data"]);
+
+/**
+ * Union type: core table names OR string (for dynamic macro tables)
+ */
+export const zTableNameInput = z.union([zExperimentTableName, z.string().min(1).max(256)]);
+
 // --- Location Schemas ---
 export const zLocation = z.object({
   id: z.string().uuid(),
@@ -117,14 +140,7 @@ export const zAddExperimentProtocolsBody = z.object({
 });
 
 // Define Zod schemas for experiment models
-export const zExperimentStatus = z.enum([
-  "provisioning",
-  "provisioning_failed",
-  "active",
-  "stale",
-  "archived",
-  "published",
-]);
+export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
 
 export const zExperimentVisibility = z.enum(["private", "public"]);
 
@@ -760,11 +776,9 @@ export const zExperimentFilterQuery = z.object({
 export const zExperimentDataQuery = z.object({
   page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
   pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
-  tableName: z
-    .string()
-    .min(1)
-    .max(256)
-    .describe("Optional table name to filter results to a specific table"),
+  tableName: zTableNameInput.describe(
+    "Table name: 'raw_data', 'device', 'raw_ambyte_data', or macro filename",
+  ),
   columns: z
     .string()
     .optional()
@@ -775,9 +789,8 @@ export const zExperimentDataQuery = z.object({
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
 });
 
-export const zExperimentDataTableInfo = z.object({
+export const zExperimentDataTable = z.object({
   name: z.string().describe("Technical name of the table used for queries and operations"),
-  displayName: z.string().describe("Human-readable display name of the table for UI"),
   catalog_name: z.string().describe("Catalog name"),
   schema_name: z.string().describe("Schema name"),
   data: zExperimentData.optional(),
@@ -795,15 +808,78 @@ export const zExperimentMemberPathParam = z.object({
   memberId: z.string().uuid().describe("ID of the member"),
 });
 
-export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
+export const zExperimentDataTableList = z.array(zExperimentDataTable);
 
 export const zExperimentDataResponse = zExperimentDataTableList;
 
 // --- Table Metadata Schemas (without data) ---
+
+// ============================================================================
+// Column Type System
+// Single source of truth for all data column types used across frontend and backend
+// ============================================================================
+
+// Primitive Types Zod Schema
+export const zColumnPrimitiveType = z.enum([
+  // String types
+  "STRING",
+  "VARCHAR",
+  "CHAR",
+  // Numeric types - Integer
+  "TINYINT",
+  "SMALLINT",
+  "INT",
+  "BIGINT",
+  "LONG", // Alias for BIGINT
+  // Numeric types - Floating point
+  "FLOAT",
+  "DOUBLE",
+  "REAL",
+  "DECIMAL",
+  "NUMERIC",
+  // Boolean
+  "BOOLEAN",
+  // Date/Time
+  "DATE",
+  "TIMESTAMP",
+  "TIMESTAMP_NTZ",
+  // Binary
+  "BINARY",
+  // Semi-structured
+  "VARIANT",
+]);
+
+export type ColumnPrimitiveType = z.infer<typeof zColumnPrimitiveType>;
+
+// Export constants object for convenient access (backwards compatible)
+export const ColumnPrimitiveType = zColumnPrimitiveType.enum;
+
+// Well-known Type Strings
+export const zAnnotationsColumnType = z.literal(
+  "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
+);
+
+export const zQuestionsColumnType = z.literal(
+  "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
+);
+
+export const zContributorColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
+
+export type AnnotationsColumnType = z.infer<typeof zAnnotationsColumnType>;
+export type QuestionsColumnType = z.infer<typeof zQuestionsColumnType>;
+export type ContributorColumnType = z.infer<typeof zContributorColumnType>;
+
+// Export constants object for convenient access (backwards compatible)
+export const WellKnownColumnTypes = {
+  ANNOTATIONS: zAnnotationsColumnType.value,
+  QUESTIONS: zQuestionsColumnType.value,
+  CONTRIBUTOR: zContributorColumnType.value,
+} as const;
+
 export const zColumnInfo = z.object({
   name: z.string().describe("Column name"),
-  type_text: z.string().describe("Full type string representation"),
-  type_name: z.string().describe("Base type name (e.g., STRING, INT, ARRAY)"),
+  type_text: z.string().describe("Full type definition string (e.g., 'ARRAY<STRUCT<...>>')"),
+  type_name: z.string().describe("Base type category (e.g., primitive, array, map, struct types)"),
   position: z.number().int().describe("Column position in the table"),
   nullable: z.boolean().optional().describe("Whether the column can contain null values"),
   comment: z.string().optional().describe("Column description or comment"),
@@ -817,7 +893,8 @@ export const zExperimentTableMetadata = z.object({
   name: z.string().describe("Technical name of the table used for queries and operations"),
   displayName: z.string().describe("Human-readable display name of the table for UI"),
   totalRows: z.number().int().describe("Total number of rows in the table"),
-  columns: z.array(zColumnInfo).optional().describe("Column information for the table"),
+  defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
+  errorColumn: z.string().optional().describe("Column name that contains error information if any"),
 });
 
 export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
@@ -839,54 +916,6 @@ export const zUploadExperimentDataResponse = z.object({
 });
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
-
-// Webhook Schemas
-export const zExperimentWebhookAuthHeader = z.object({
-  "x-api-key-id": z.string(),
-  "x-databricks-signature": z.string(),
-  "x-databricks-timestamp": z.string(),
-});
-
-export const zExperimentProvisioningStatusWebhookPayload = z.object({
-  status: z.enum([
-    // Terminal statuses
-    "SUCCESS",
-    "FAILURE",
-    "CANCELED",
-    "TIMEOUT",
-    "FAILED",
-    // Non-terminal statuses
-    "RUNNING",
-    "PENDING",
-    "SKIPPED",
-    "DEPLOYING",
-    "DEPLOYED",
-    "COMPLETED",
-    "QUEUED",
-    "TERMINATED",
-    "WAITING",
-    "INITIALIZING",
-    "IDLE",
-    "SETTING_UP",
-    "RESETTING",
-  ]),
-  jobRunId: z.string(),
-  taskRunId: z.string(),
-  timestamp: z.string(),
-  pipelineId: z.string().optional(),
-  schemaName: z.string().optional(),
-});
-
-export const zExperimentWebhookSuccessResponse = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-
-export const zExperimentWebhookErrorResponse = z.object({
-  error: z.string(),
-  message: z.string(),
-  statusCode: z.number(),
-});
 
 // --- Download Data Schemas ---
 export const zDownloadExperimentDataQuery = z.object({
@@ -935,14 +964,6 @@ export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathPara
 export type DataSourceType = z.infer<typeof zDataSourceType>;
 export type UploadExperimentDataBody = z.infer<typeof zUploadExperimentDataBody>;
 export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataResponse>;
-
-// Webhook types
-export type ExperimentProvisioningStatusWebhookPayload = z.infer<
-  typeof zExperimentProvisioningStatusWebhookPayload
->;
-export type ExperimentProvisioningStatus = ExperimentProvisioningStatusWebhookPayload["status"];
-export type ExperimentWebhookSuccessResponse = z.infer<typeof zExperimentWebhookSuccessResponse>;
-export type ExperimentWebhookErrorResponse = z.infer<typeof zExperimentWebhookErrorResponse>;
 
 // Visualization types
 export type ChartFamily = z.infer<typeof zChartFamily>;

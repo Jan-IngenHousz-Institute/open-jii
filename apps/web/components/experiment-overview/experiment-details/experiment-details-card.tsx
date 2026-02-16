@@ -107,7 +107,7 @@ export function ExperimentDetailsCard({
             className="text-muted-foreground mx-4 border-t"
           />
 
-          {currentUserRole === "admin" || currentUserRole === "member" ? (
+          {currentUserRole === "admin" ? (
             <ExperimentVisibilityCard
               experimentId={experimentId}
               initialVisibility={experiment.visibility}
