@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: "1.9.0"
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
 
   workflow_call:
     inputs:
@@ -23,6 +28,11 @@ on:
         description: "Target environment (dev, staging, prod)"
         required: true
         type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy"
+        required: false
+        type: string
+        default: ""
       tofu_version:
         description: "OpenTofu version to use"
         required: false
@@ -69,6 +79,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup OpenTofu and AWS Credentials
         uses: ./.github/actions/tofu/tofu-setup
@@ -135,6 +147,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup OpenTofu and AWS Credentials
         uses: ./.github/actions/tofu/tofu-setup
