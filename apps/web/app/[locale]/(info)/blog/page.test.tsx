@@ -82,7 +82,7 @@ describe("BlogPage", () => {
     params: Promise.resolve({ locale }),
   };
 
-  const mockLandingPageData = {
+  const mockBlogData = {
     pageLandingCollection: {
       items: [
         {
@@ -99,9 +99,6 @@ describe("BlogPage", () => {
         },
       ],
     },
-  };
-
-  const mockBlogPostsData = {
     pageBlogPostCollection: {
       items: [
         { title: "Post 1", slug: "post-1" },
@@ -114,12 +111,10 @@ describe("BlogPage", () => {
     vi.clearAllMocks();
     mockGetContentfulClients.mockResolvedValue({
       client: {
-        pageLanding: vi.fn().mockResolvedValue(mockLandingPageData),
-        pageBlogPostCollection: vi.fn().mockResolvedValue(mockBlogPostsData),
+        pageBlog: vi.fn().mockResolvedValue(mockBlogData),
       },
       previewClient: {
-        pageLanding: vi.fn().mockResolvedValue(mockLandingPageData),
-        pageBlogPostCollection: vi.fn().mockResolvedValue(mockBlogPostsData),
+        pageBlog: vi.fn().mockResolvedValue(mockBlogData),
       },
     });
     mockInitTranslations.mockResolvedValue({
@@ -150,18 +145,19 @@ describe("BlogPage", () => {
     });
 
     it("should handle missing SEO fields", async () => {
-      const landingDataWithoutSeo = {
+      const blogDataWithoutSeo = {
         pageLandingCollection: {
           items: [{}],
         },
+        pageBlogPostCollection: mockBlogData.pageBlogPostCollection,
       };
 
       mockGetContentfulClients.mockResolvedValueOnce({
         client: {
-          pageLanding: vi.fn().mockResolvedValue(landingDataWithoutSeo),
+          pageBlog: vi.fn().mockResolvedValue(blogDataWithoutSeo),
         },
         previewClient: {
-          pageLanding: vi.fn().mockResolvedValue(landingDataWithoutSeo),
+          pageBlog: vi.fn().mockResolvedValue(blogDataWithoutSeo),
         },
       });
 
@@ -212,12 +208,16 @@ describe("BlogPage", () => {
     it("calls notFound when page data is missing", async () => {
       mockGetContentfulClients.mockResolvedValueOnce({
         client: {
-          pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [] } }),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockBlogPostsData),
+          pageBlog: vi.fn().mockResolvedValue({
+            pageLandingCollection: { items: [] },
+            pageBlogPostCollection: mockBlogData.pageBlogPostCollection,
+          }),
         },
         previewClient: {
-          pageLanding: vi.fn().mockResolvedValue({ pageLandingCollection: { items: [] } }),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockBlogPostsData),
+          pageBlog: vi.fn().mockResolvedValue({
+            pageLandingCollection: { items: [] },
+            pageBlogPostCollection: mockBlogData.pageBlogPostCollection,
+          }),
         },
       });
 
@@ -227,18 +227,26 @@ describe("BlogPage", () => {
     it("returns early when featured blog post or posts are missing", async () => {
       const dataWithoutFeatured = {
         pageLandingCollection: {
-          items: [{ featuredBlogPost: null }],
+          items: [
+            {
+              featuredBlogPost: {
+                slug: "featured-post",
+                title: "Featured Post",
+              },
+            },
+          ],
+        },
+        pageBlogPostCollection: {
+          items: [],
         },
       };
 
       mockGetContentfulClients.mockResolvedValueOnce({
         client: {
-          pageLanding: vi.fn().mockResolvedValue(dataWithoutFeatured),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockBlogPostsData),
+          pageBlog: vi.fn().mockResolvedValue(dataWithoutFeatured),
         },
         previewClient: {
-          pageLanding: vi.fn().mockResolvedValue(dataWithoutFeatured),
-          pageBlogPostCollection: vi.fn().mockResolvedValue(mockBlogPostsData),
+          pageBlog: vi.fn().mockResolvedValue(dataWithoutFeatured),
         },
       });
 

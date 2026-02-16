@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
+import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { TermsAndConditionsPage } from "@repo/cms";
@@ -9,13 +10,13 @@ interface TermsAndConditionsPageProps {
   params: Promise<{ locale: string }>;
 }
 
-async function getTermsAndConditionsData(locale: string, preview: boolean) {
+const getTermsAndConditionsData = cache(async (locale: string, preview: boolean) => {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const termsQuery = await gqlClient.pageTermsAndConditions({ locale, preview });
   return termsQuery.pageTermsAndConditionsCollection
     ?.items[0] as PageTermsAndConditionsFieldsFragment;
-}
+});
 
 export async function generateMetadata({ params }: TermsAndConditionsPageProps): Promise<Metadata> {
   const { locale } = await params;

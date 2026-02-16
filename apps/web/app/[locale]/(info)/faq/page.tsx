@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
+import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { FaqContent } from "@repo/cms";
@@ -9,12 +10,12 @@ interface FaqPageProps {
   params: Promise<{ locale: string }>;
 }
 
-async function getFaqData(locale: string, preview: boolean) {
+const getFaqData = cache(async (locale: string, preview: boolean) => {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const faqQuery = await gqlClient.pageFaq({ locale, preview });
   return faqQuery.pageFaqCollection?.items[0] as PageFaqFieldsFragment;
-}
+});
 
 export async function generateMetadata({ params }: FaqPageProps): Promise<Metadata> {
   const { locale } = await params;

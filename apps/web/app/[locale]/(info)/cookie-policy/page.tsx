@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
+import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { CookiePolicyContent } from "@repo/cms";
@@ -9,12 +10,12 @@ interface CookiePolicyPageProps {
   params: Promise<{ locale: string }>;
 }
 
-async function getCookiePolicyData(locale: string, preview: boolean) {
+const getCookiePolicyData = cache(async (locale: string, preview: boolean) => {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const cookiePolicyQuery = await gqlClient.pageCookiePolicy({ locale, preview });
   return cookiePolicyQuery.pageCookiePolicyCollection?.items[0] as PageCookiePolicyFieldsFragment;
-}
+});
 
 export async function generateMetadata({ params }: CookiePolicyPageProps): Promise<Metadata> {
   const { locale } = await params;

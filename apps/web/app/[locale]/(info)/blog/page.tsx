@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
@@ -17,16 +18,25 @@ interface LandingPageProps {
   }>;
 }
 
+const getBlogData = cache(async (locale: string, preview: boolean) => {
+  const { previewClient, client } = await getContentfulClients();
+  const gqlClient = preview ? previewClient : client;
+  const blogData = await gqlClient.pageBlog({
+    locale,
+    limit: 7,
+    order: PageBlogPostOrder.PublishedDateDesc,
+    preview,
+  });
+  return {
+    page: blogData.pageLandingCollection?.items[0],
+    posts: blogData.pageBlogPostCollection?.items,
+  };
+});
+
 export async function generateMetadata({ params }: LandingPageProps): Promise<Metadata> {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const landingPageData = await gqlClient.pageLanding({
-    locale,
-    preview,
-  });
-  const page = landingPageData.pageLandingCollection?.items[0];
+  const { page } = await getBlogData(locale, preview);
 
   const languages = Object.fromEntries(
     locales.map((locale) => [locale, locale === defaultLocale ? "/" : `/${locale}`]),
@@ -53,28 +63,24 @@ export default async function Page({ params }: LandingPageProps) {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
   const { t, resources } = await initTranslations({ locale });
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
 
-  const landingPageData = await gqlClient.pageLanding({ locale, preview });
-  const page = landingPageData.pageLandingCollection?.items[0];
+  const { page, posts } = await getBlogData(locale, preview);
 
   if (!page) {
     notFound();
   }
 
-  const blogPostsData = await gqlClient.pageBlogPostCollection({
-    limit: 6,
-    locale,
-    order: PageBlogPostOrder.PublishedDateDesc,
-    where: {
-      slug_not: page.featuredBlogPost?.slug,
-    },
-    preview,
-  });
-  const posts = blogPostsData.pageBlogPostCollection?.items;
+  let filteredPosts = posts ?? [];
 
-  if (!page.featuredBlogPost || !posts) {
+  // Filter out the featured post from the grid of posts
+  if (page.featuredBlogPost?.slug) {
+    filteredPosts = filteredPosts.filter((post) => post?.slug !== page.featuredBlogPost?.slug);
+  }
+
+  // Always cap at 6
+  filteredPosts = filteredPosts.slice(0, 6);
+
+  if (!page.featuredBlogPost || filteredPosts.length === 0) {
     return;
   }
 
@@ -100,7 +106,7 @@ export default async function Page({ params }: LandingPageProps) {
             </h2>
             <ArticleTileGrid
               className="md:grid-cols-2 lg:grid-cols-3"
-              articles={posts}
+              articles={filteredPosts}
               locale={locale}
             />
           </Container>
