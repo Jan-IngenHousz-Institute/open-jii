@@ -7,7 +7,7 @@ patchedDependencies:
   react-native-usb-serialport-for-android: patches/react-native-usb-serialport-for-android.patch
 
 catalog:
-  axios: ^1.13.2
+  axios: ^1.13.5
   typescript: ^5.8.3
   zod: ^3.24.3
   eslint: ^9.25.1
@@ -16,10 +16,10 @@ catalog:
   tailwindcss: ^3.4.15
   "@types/node": ^22.15.3
   nodemailer: ^7.0.11
-  "@types/nodemailer": ^6.4.17
+  "@types/nodemailer": ^7.0.9
   posthog-js: ^1.279.1
   posthog-node: ^5.10.2
-  next: ^15.5.9
+  next: ^15.5.10
 
 catalogs:
   react19:

@@ -9,14 +9,14 @@ data with additional metadata and other contextual information.
 __version__ = "0.1.0"
 
 from .backend_client import BackendClient, BackendIntegrationError
-from .user_metadata import add_user_data_column
+from .user_metadata import add_user_column
 from .question_metadata import add_question_columns, get_experiment_question_labels
 from .annotations_metadata import add_annotation_column
 
 __all__ = [
     "BackendClient",
     "BackendIntegrationError",
-    "add_user_data_column",
+    "add_user_column",
     "add_question_columns",
     "get_experiment_question_labels",
     "add_annotation_column"
