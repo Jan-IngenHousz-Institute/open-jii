@@ -1,9 +1,9 @@
 import { StatusCodes } from "http-status-codes";
 
-import { CognitoService } from "../../common/modules/aws/services/cognito/cognito.service";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
+import { GetIoTCredentialsUseCase } from "../application/use-cases/get-iot-credentials/get-iot-credentials";
 
 describe("IoTController", () => {
   const testApp = TestHarness.App;
@@ -30,7 +30,7 @@ describe("IoTController", () => {
     const path = "/api/v1/iot/credentials";
 
     it("should return IoT credentials for authenticated user", async () => {
-      // Mock the Cognito service
+      // Mock the use case
       const mockCredentials = {
         accessKeyId: "AKIAIOSFODNN7EXAMPLE",
         secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
@@ -38,8 +38,8 @@ describe("IoTController", () => {
         expiration: new Date("2026-02-06T12:00:00Z"),
       };
 
-      const cognitoService = testApp.module.get(CognitoService);
-      vi.spyOn(cognitoService, "getIoTCredentials").mockResolvedValue(success(mockCredentials));
+      const useCase = testApp.module.get(GetIoTCredentialsUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(success(mockCredentials));
 
       const response = await testApp
         .post(path)
@@ -60,8 +60,8 @@ describe("IoTController", () => {
     });
 
     it("should return 500 when Cognito service fails", async () => {
-      const cognitoService = testApp.module.get(CognitoService);
-      vi.spyOn(cognitoService, "getIoTCredentials").mockResolvedValue(
+      const useCase = testApp.module.get(GetIoTCredentialsUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(
         failure(new AppError("Cognito error", ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED)),
       );
 
@@ -80,10 +80,8 @@ describe("IoTController", () => {
         expiration: new Date(),
       };
 
-      const cognitoService = testApp.module.get(CognitoService);
-      const spy = vi
-        .spyOn(cognitoService, "getIoTCredentials")
-        .mockResolvedValue(success(mockCredentials));
+      const useCase = testApp.module.get(GetIoTCredentialsUseCase);
+      const spy = vi.spyOn(useCase, "execute").mockResolvedValue(success(mockCredentials));
 
       await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.OK);
 

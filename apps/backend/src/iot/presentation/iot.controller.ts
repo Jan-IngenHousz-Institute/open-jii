@@ -6,14 +6,14 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
 
-import { CognitoService } from "../../common/modules/aws/services/cognito/cognito.service";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { GetIoTCredentialsUseCase } from "../application/use-cases/get-iot-credentials/get-iot-credentials";
 
 @Controller()
 export class IoTController {
   private readonly logger = new Logger(IoTController.name);
 
-  constructor(private readonly cognitoService: CognitoService) {}
+  constructor(private readonly getIoTCredentialsUseCase: GetIoTCredentialsUseCase) {}
 
   @TsRestHandler(contract.iot.getCredentials)
   getCredentials(@Session() session: UserSession) {
@@ -26,7 +26,7 @@ export class IoTController {
         userId,
       });
 
-      const result = await this.cognitoService.getIoTCredentials(userId);
+      const result = await this.getIoTCredentialsUseCase.execute(userId);
 
       if (result.isSuccess()) {
         const credentials = result.value;
