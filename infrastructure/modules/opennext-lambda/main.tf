@@ -173,5 +173,6 @@ resource "aws_iam_role_policy" "additional_policies" {
 resource "aws_lambda_function_url" "function_url" {
   count              = var.create_function_url ? 1 : 0
   function_name      = aws_lambda_function.function.function_name
+  qualifier          = var.use_alias_url ? "live" : null
   authorization_type = var.function_url_authorization_type
 }
