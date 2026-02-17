@@ -468,6 +468,23 @@ jobs:
             --zip-file fileb://apps/web/.open-next/image-optimization-function.zip \
             --publish
 
+      - name: Prune old Lambda versions (keep 10 latest) from Image Optimization Function
+        if: success()
+        run: |
+          FUNCTION_NAME="${{ env.IMAGE_FUNCTION }}"
+          KEEP=10
+          echo "Pruning old Lambda versions (keeping $KEEP latest)..."
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              if [[ -n "$VERSION" ]]; then
+                echo "Deleting old version: $VERSION"
+                aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              fi
+            done
+          echo "✅ Version pruning complete"
+
       - name: Check Revalidation Function
         id: check-revalidation
         run: |
@@ -494,6 +511,23 @@ jobs:
             --zip-file fileb://apps/web/.open-next/revalidation-function.zip \
             --publish
 
+      - name: Prune old Lambda versions (keep 10 latest) from Revalidation Function
+        if: success()
+        run: |
+          FUNCTION_NAME="${{ env.REVALIDATION_FUNCTION }}"
+          KEEP=10
+          echo "Pruning old Lambda versions (keeping $KEEP latest)..."
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              if [[ -n "$VERSION" ]]; then
+                echo "Deleting old version: $VERSION"
+                aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              fi
+            done
+          echo "✅ Version pruning complete"
+
       - name: Check Warmer Function
         id: check-warmer
         run: |
@@ -519,6 +553,23 @@ jobs:
             --function-name "${{ env.WARMER_FUNCTION }}" \
             --zip-file fileb://apps/web/.open-next/warmer-function.zip \
             --publish
+
+      - name: Prune old Lambda versions (keep 10 latest) from Warmer Function
+        if: success()
+        run: |
+          FUNCTION_NAME="${{ env.WARMER_FUNCTION }}"
+          KEEP=10
+          echo "Pruning old Lambda versions (keeping $KEEP latest)..."
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              if [[ -n "$VERSION" ]]; then
+                echo "Deleting old version: $VERSION"
+                aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              fi
+            done
+          echo "✅ Version pruning complete"
 
       - name: Finalize Lambda Deployments and Summarize Results
         id: update-lambdas
