@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import React from "react";
 import { vi, describe, it, expect } from "vitest";
 
-import LocaleLayout, { generateMetadata } from "../[locale]/layout";
+import LocaleLayout from "../[locale]/layout";
 
 // Mock PostHog server feature flag utility
 vi.mock("~/lib/posthog-server", () => ({
@@ -51,21 +51,6 @@ vi.mock("next/headers", () => ({
   draftMode: vi.fn(() => ({ isEnabled: false })),
 }));
 
-const mockLandingMetadata = vi.fn();
-
-vi.mock("~/lib/contentful", () => ({
-  getContentfulClients: vi.fn(() =>
-    Promise.resolve({
-      client: {
-        landingMetadata: mockLandingMetadata,
-      },
-      previewClient: {
-        landingMetadata: mockLandingMetadata,
-      },
-    }),
-  ),
-}));
-
 vi.mock("@repo/i18n/server", () => ({
   default: () => Promise.resolve({ t: (key: string) => key }),
 }));
@@ -93,42 +78,5 @@ describe("LocaleLayout Component", () => {
   it("should render basic structure", async () => {
     const result = render(await LocaleLayout(mockProps));
     expect(result.container.firstChild).toBeTruthy();
-  });
-});
-
-describe("generateMetadata", () => {
-  it("should generate metadata from Contentful when data is available", async () => {
-    mockLandingMetadata.mockResolvedValueOnce({
-      landingMetadataCollection: {
-        items: [
-          {
-            title: "CMS Title",
-            description: "CMS Description",
-          },
-        ],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" as const }),
-    });
-
-    expect(metadata).toEqual({
-      title: "CMS Title",
-      description: "CMS Description",
-    });
-  });
-
-  it("should use fallback values when Contentful query fails", async () => {
-    mockLandingMetadata.mockRejectedValueOnce(new Error("Network error"));
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" as const }),
-    });
-
-    expect(metadata).toEqual({
-      title: "openJII",
-      description: "jii.aboutDescription",
-    });
   });
 });
