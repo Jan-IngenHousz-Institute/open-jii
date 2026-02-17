@@ -14,6 +14,8 @@ import {
   DatabricksJobsListRequest,
   DatabricksJobsListResponse,
   DatabricksRunNowRequest,
+  DatabricksRunsListRequest,
+  DatabricksRunsListResponse,
   PerformanceTarget,
 } from "./jobs.types";
 
@@ -50,12 +52,6 @@ export class DatabricksJobsService {
         return result.value;
       },
       (error) => {
-        this.logger.error({
-          msg: "Failed to trigger Databricks job",
-          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
-          operation: "triggerJob",
-          error,
-        });
         return apiErrorMapper(`Databricks job trigger: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -229,120 +225,54 @@ export class DatabricksJobsService {
   }
 
   /**
-   * Wait for a job run to complete
-   * @param runId - The run ID to wait for
-   * @param timeoutMs - Maximum time to wait in milliseconds (default: 5 minutes)
-   * @param pollIntervalMs - How often to poll for status (default: 2 seconds)
+   * List job runs for a specific job
+   * @param jobId - The job ID to list runs for
+   * @param activeOnly - If true, only return active (non-terminal) runs
+   * @param limit - Maximum number of runs to return (default: 25)
    */
-  async waitForJobCompletion(
-    runId: number,
-    timeoutMs: number = 300000,
-    pollIntervalMs: number = 2000,
-  ): Promise<Result<DatabricksJobRunStatusResponse>> {
-    const startTime = Date.now();
-
-    this.logger.log({
-      msg: "Waiting for job run to complete",
-      operation: "waitForJobCompletion",
-      runId,
-      timeoutMs,
-      pollIntervalMs,
-    });
-
+  async listRunsForJob(
+    jobId: number,
+    activeOnly = false,
+    limit = 25,
+  ): Promise<Result<DatabricksRunsListResponse>> {
     return await tryCatch(
       async () => {
-        while (true) {
-          this.checkTimeout(runId, startTime, timeoutMs);
-
-          const statusResult = await this.getJobRunStatus(runId);
-          if (statusResult.isFailure()) {
-            throw statusResult.error;
-          }
-
-          const status = statusResult.value;
-          const { life_cycle_state, result_state, state_message } = status.state;
-
-          this.logger.debug({
-            msg: "Job run status",
-            operation: "waitForJobCompletion",
-            runId,
-            lifecycleState: life_cycle_state,
-            resultState: result_state,
-          });
-
-          if (this.isTerminalState(life_cycle_state)) {
-            return this.handleTerminalState(
-              runId,
-              life_cycle_state,
-              result_state,
-              state_message,
-              Date.now() - startTime,
-              status,
-            );
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        const tokenResult = await this.authService.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
         }
+
+        const token = tokenResult.value;
+        const host = this.configService.getHost();
+        const apiUrl = `${host}${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`;
+
+        const requestParams: DatabricksRunsListRequest = {
+          job_id: jobId,
+          active_only: activeOnly,
+          limit,
+          expand_tasks: false,
+        };
+
+        const response = await this.httpService.axiosRef.get<DatabricksRunsListResponse>(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: requestParams,
+          timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+        });
+
+        return response.data;
       },
       (error) => {
         this.logger.error({
-          msg: "Failed while waiting for job completion",
+          msg: "Failed to list job runs",
           errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
-          operation: "waitForJobCompletion",
-          runId,
+          operation: "listRunsForJob",
+          jobId,
           error,
         });
-        return apiErrorMapper(`Failed waiting for job completion: ${getAxiosErrorMessage(error)}`);
+        return apiErrorMapper(`Failed to list job runs: ${getAxiosErrorMessage(error)}`);
       },
     );
-  }
-
-  private checkTimeout(runId: number, startTime: number, timeoutMs: number): void {
-    if (Date.now() - startTime > timeoutMs) {
-      throw AppError.internal(
-        `Job run ${runId} did not complete within ${timeoutMs / 1000} seconds`,
-        "JOB_TIMEOUT",
-      );
-    }
-  }
-
-  private isTerminalState(lifecycleState: string): boolean {
-    return ["TERMINATED", "SKIPPED", "INTERNAL_ERROR"].includes(lifecycleState);
-  }
-
-  private handleTerminalState(
-    runId: number,
-    lifecycleState: string,
-    resultState: string | undefined,
-    stateMessage: string | undefined,
-    duration: number,
-    status: DatabricksJobRunStatusResponse,
-  ): DatabricksJobRunStatusResponse {
-    switch (lifecycleState) {
-      case "TERMINATED":
-        if (resultState === "SUCCESS") {
-          this.logger.log({
-            msg: "Job run completed successfully",
-            operation: "waitForJobCompletion",
-            runId,
-            duration,
-          });
-          return status;
-        }
-        throw AppError.internal(
-          `Job run ${runId} failed with state: ${resultState}. Message: ${stateMessage || "N/A"}`,
-        );
-
-      case "SKIPPED":
-        throw AppError.internal(`Job run ${runId} was skipped`);
-
-      case "INTERNAL_ERROR":
-        throw AppError.internal(
-          `Job run ${runId} encountered an internal error: ${stateMessage || "N/A"}`,
-        );
-
-      default:
-        throw AppError.internal(`Job run ${runId} reached unexpected state: ${lifecycleState}`);
-    }
   }
 }

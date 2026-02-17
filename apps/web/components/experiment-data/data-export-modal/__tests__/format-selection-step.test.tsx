@@ -32,19 +32,30 @@ vi.mock("@repo/ui/components", () => ({
     form?: string;
     variant?: string;
     className?: string;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      type={type}
-      form={form}
-      data-variant={variant}
-      className={className}
-      data-testid={variant === "outline" ? "close-button" : "submit-button"}
-    >
-      {children}
-    </button>
-  ),
+  }) => {
+    const getTestId = () => {
+      const childText = React.Children.toArray(children)
+        .map((child) => (typeof child === "string" ? child : ""))
+        .join("");
+      if (childText.includes("common.back")) return "back-button";
+      if (childText.includes("common.close")) return "close-button";
+      return "submit-button";
+    };
+
+    return (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        type={type}
+        form={form}
+        data-variant={variant}
+        className={className}
+        data-testid={getTestId()}
+      >
+        {children}
+      </button>
+    );
+  },
   DialogFooter: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dialog-footer">{children}</div>
   ),
@@ -101,7 +112,7 @@ vi.mock("react-hook-form", () => ({
   }),
 }));
 
-// Mock zod resolver
+// Mock @hookform/resolvers/zod
 vi.mock("@hookform/resolvers/zod", () => ({
   zodResolver: () => ({}),
 }));
@@ -109,9 +120,11 @@ vi.mock("@hookform/resolvers/zod", () => ({
 describe("FormatSelectionStep", () => {
   const mockOnFormatSubmit = vi.fn();
   const mockOnClose = vi.fn();
+  const mockOnBack = vi.fn();
   const defaultProps = {
     onFormatSubmit: mockOnFormatSubmit,
     onClose: mockOnClose,
+    onBack: mockOnBack,
   };
 
   beforeEach(() => {
@@ -122,12 +135,12 @@ describe("FormatSelectionStep", () => {
     render(<FormatSelectionStep {...defaultProps} {...props} />);
   };
 
-  it("renders format selection form", () => {
+  it("renders back button in dialog footer", () => {
     renderStep();
 
-    expect(screen.getByText("experimentData.downloadModal.format")).toBeInTheDocument();
-    expect(screen.getByTestId("select")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog-footer")).toBeInTheDocument();
+    const backButton = screen.getByTestId("back-button");
+    expect(backButton).toBeInTheDocument();
+    expect(backButton).toHaveTextContent("common.back");
   });
 
   it("renders close button in dialog footer", () => {
@@ -143,7 +156,16 @@ describe("FormatSelectionStep", () => {
 
     const submitButton = screen.getByTestId("submit-button");
     expect(submitButton).toBeInTheDocument();
-    expect(submitButton).toHaveTextContent("experimentData.downloadModal.generateLinks");
+    expect(submitButton).toHaveTextContent("experimentData.exportModal.createExport");
+  });
+
+  it("calls onBack when back button is clicked", () => {
+    renderStep();
+
+    const backButton = screen.getByTestId("back-button");
+    fireEvent.click(backButton);
+
+    expect(mockOnBack).toHaveBeenCalledTimes(1);
   });
 
   it("calls onClose when close button is clicked", () => {
@@ -177,6 +199,25 @@ describe("FormatSelectionStep", () => {
     const form = document.getElementById("format-selection-form");
     expect(form).toBeInTheDocument();
     expect(form).toHaveAttribute("id", "format-selection-form");
+  });
+
+  it("disables submit button when isCreating is true", () => {
+    renderStep({ isCreating: true });
+
+    const submitButton = screen.getByTestId("submit-button");
+    expect(submitButton).toBeDisabled();
+  });
+
+  it("shows creating text when isCreating is true", () => {
+    renderStep({ isCreating: true });
+
+    expect(screen.getByText("experimentData.exportModal.creating")).toBeInTheDocument();
+  });
+
+  it("shows create export text when isCreating is false", () => {
+    renderStep({ isCreating: false });
+
+    expect(screen.getByText("experimentData.exportModal.createExport")).toBeInTheDocument();
   });
 
   it("submit button references correct form", () => {

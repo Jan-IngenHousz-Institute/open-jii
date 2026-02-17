@@ -807,6 +807,10 @@ export const zExperimentMemberPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
   memberId: z.string().uuid().describe("ID of the member"),
 });
+export const zExportPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  exportId: z.string().uuid().describe("ID of the export"),
+});
 
 export const zExperimentDataTableList = z.array(zExperimentDataTable);
 
@@ -917,22 +921,40 @@ export const zUploadExperimentDataResponse = z.object({
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 
-// --- Download Data Schemas ---
-export const zDownloadExperimentDataQuery = z.object({
-  tableName: z.string().describe("Name of the table to download"),
-  format: z.enum(["csv", "json", "parquet"]).default("csv"),
+// --- Export Data Schemas ---
+export const zInitiateExportBody = z.object({
+  tableName: z.string().describe("Name of the table to export"),
+  format: z.enum(["csv", "json", "parquet"]).describe("Export format"),
 });
 
-export const zExternalLink = z.object({
-  chunk_index: z.number().int(),
-  row_count: z.number().int(),
-  row_offset: z.number().int(),
-  byte_count: z.number().int(),
-  external_link: z.string().url(),
-  expiration: z.string().datetime(),
+export const zInitiateExportResponse = z.object({
+  exportId: z.string().uuid().describe("Unique export identifier"),
+  status: z.string().describe("Export status"),
 });
 
-export const zDownloadExperimentDataResponse = z.unknown(); // Response handled manually via streaming
+export const zListExportsQuery = z.object({
+  tableName: z.string().describe("Name of the table"),
+});
+
+export const zExportRecord = z.object({
+  exportId: z.string().uuid().nullable(),
+  experimentId: z.string().uuid(),
+  tableName: z.string(),
+  format: z.enum(["csv", "json", "parquet"]),
+  status: z.enum(["pending", "running", "completed", "failed"]),
+  filePath: z.string().nullable(),
+  rowCount: z.number().int().nullable(),
+  fileSize: z.number().int().nullable(),
+  createdBy: z.string().uuid(),
+  createdAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
+});
+
+export const zListExportsResponse = z.object({
+  exports: z.array(zExportRecord),
+});
+
+export const zDownloadExportResponse = z.unknown(); // Response handled manually via streaming
 
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
@@ -949,8 +971,11 @@ export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 export type ColumnInfo = z.infer<typeof zColumnInfo>;
 export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
 export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
-export type DownloadExperimentDataQuery = z.infer<typeof zDownloadExperimentDataQuery>;
-export type DownloadExperimentDataResponse = z.infer<typeof zDownloadExperimentDataResponse>;
+export type InitiateExportBody = z.infer<typeof zInitiateExportBody>;
+export type InitiateExportResponse = z.infer<typeof zInitiateExportResponse>;
+export type ListExportsQuery = z.infer<typeof zListExportsQuery>;
+export type ExportRecord = z.infer<typeof zExportRecord>;
+export type ListExportsResponse = z.infer<typeof zListExportsResponse>;
 export type IdPathParam = z.infer<typeof zIdPathParam>;
 export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;
 export type DataSourceType = z.infer<typeof zDataSourceType>;

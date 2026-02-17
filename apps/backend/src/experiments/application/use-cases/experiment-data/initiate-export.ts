@@ -1,48 +1,38 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Readable } from "stream";
+import { randomUUID } from "crypto";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError, success } from "../../../../common/utils/fp-utils";
+import type {
+  InitiateExportQuery,
+  InitiateExportDto,
+} from "../../../core/models/experiment-data-exports.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataExportsRepository } from "../../repositories/experiment-data-exports.repository";
 import { ExperimentDataRepository } from "../../repositories/experiment-data.repository";
 
 /**
- * Query parameters for downloading experiment data
- */
-export interface DownloadExperimentDataQuery {
-  tableName: string;
-  format: "csv" | "json" | "parquet";
-}
-
-/**
- * Response structure for download data with stream
- */
-export interface DownloadExperimentDataDto {
-  stream: Readable;
-  filename: string;
-}
-
-/**
- * Use case for downloading complete experiment table data as a file stream
- * Triggers a Databricks job to export data and streams the result
+ * Use case for initiating an export job
+ * Creates metadata record and triggers Databricks job without waiting
  */
 @Injectable()
-export class DownloadExperimentDataUseCase {
-  private readonly logger = new Logger(DownloadExperimentDataUseCase.name);
+export class InitiateExportUseCase {
+  private readonly logger = new Logger(InitiateExportUseCase.name);
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDataRepository: ExperimentDataRepository,
+    private readonly exportsRepository: ExperimentDataExportsRepository,
   ) {}
 
   async execute(
     experimentId: string,
     userId: string,
-    query: DownloadExperimentDataQuery,
-  ): Promise<Result<DownloadExperimentDataDto>> {
+    query: InitiateExportQuery,
+  ): Promise<Result<InitiateExportDto>> {
     this.logger.debug({
-      msg: "Starting data download",
-      operation: "downloadExperimentData",
+      msg: "Initiating data export",
+      operation: "initiateExport",
       experimentId,
       tableName: query.tableName,
       format: query.format,
@@ -53,7 +43,7 @@ export class DownloadExperimentDataUseCase {
     if (accessResult.isFailure()) {
       this.logger.warn({
         msg: "Failed to check access for experiment",
-        operation: "downloadExperimentData",
+        operation: "initiateExport",
         experimentId,
       });
       return failure(AppError.internal("Failed to verify experiment access"));
@@ -65,7 +55,7 @@ export class DownloadExperimentDataUseCase {
       this.logger.warn({
         msg: "Experiment not found",
         errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-        operation: "downloadExperimentData",
+        operation: "initiateExport",
         experimentId,
       });
       return failure(AppError.notFound("Experiment not found"));
@@ -75,47 +65,50 @@ export class DownloadExperimentDataUseCase {
       this.logger.warn({
         msg: "Access denied to experiment",
         errorCode: ErrorCodes.FORBIDDEN,
-        operation: "downloadExperimentData",
+        operation: "initiateExport",
         experimentId,
         userId,
       });
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    // Trigger the data export job and wait for completion
-    const downloadResult = await this.experimentDataRepository.exportTableDataAsFile({
+    // Generate unique export ID
+    const exportId = randomUUID();
+
+    // Trigger the export job
+    const initiateResult = await this.exportsRepository.initiateExport({
+      exportId,
       experimentId,
       tableName: query.tableName,
       format: query.format,
+      userId,
     });
 
-    if (downloadResult.isFailure()) {
+    if (initiateResult.isFailure()) {
       this.logger.error({
-        msg: "Failed to export experiment data",
-        operation: "downloadExperimentData",
+        msg: "Failed to initiate export",
+        operation: "initiateExport",
         experimentId,
         tableName: query.tableName,
         format: query.format,
-        error: downloadResult.error.message,
+        error: initiateResult.error.message,
       });
-      return failure(AppError.internal("Failed to export data"));
+      return failure(AppError.internal("Failed to initiate export"));
     }
 
-    const { stream, filePath } = downloadResult.value;
-
     this.logger.log({
-      msg: "Successfully prepared download stream",
-      operation: "downloadExperimentData",
+      msg: "Export initiated successfully",
+      operation: "initiateExport",
       experimentId,
       tableName: query.tableName,
       format: query.format,
-      filePath,
+      exportId,
       status: "success",
     });
 
     return success({
-      stream,
-      filename: filePath.split("/").pop() || "download",
+      exportId,
+      status: "pending",
     });
   }
 }

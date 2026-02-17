@@ -5,6 +5,22 @@ export enum PerformanceTarget {
   PERFORMANCE_OPTIMIZED = "PERFORMANCE_OPTIMIZED",
 }
 
+export enum JobLifecycleState {
+  PENDING = "PENDING",
+  RUNNING = "RUNNING",
+  TERMINATING = "TERMINATING",
+  TERMINATED = "TERMINATED",
+  SKIPPED = "SKIPPED",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+}
+
+export enum JobResultState {
+  SUCCESS = "SUCCESS",
+  FAILED = "FAILED",
+  CANCELED = "CANCELED",
+  TIMEOUT = "TIMEOUT",
+}
+
 export interface DatabricksHealthCheck {
   healthy: boolean;
   service: string;
@@ -28,15 +44,9 @@ export interface DatabricksJobRunResponse {
 export interface DatabricksJobRunStatusResponse {
   run_id: number;
   state: {
-    life_cycle_state:
-      | "PENDING"
-      | "RUNNING"
-      | "TERMINATING"
-      | "TERMINATED"
-      | "SKIPPED"
-      | "INTERNAL_ERROR";
+    life_cycle_state: JobLifecycleState;
     state_message: string;
-    result_state?: "SUCCESS" | "FAILED" | "CANCELED" | "TIMEOUT";
+    result_state?: JobResultState;
   };
   tasks?: {
     run_id: number;
@@ -63,4 +73,38 @@ export interface DatabricksJobsListResponse {
       name: string;
     };
   }[];
+}
+
+export interface DatabricksRunsListRequest {
+  job_id?: number;
+  active_only?: boolean;
+  completed_only?: boolean;
+  offset?: number;
+  limit?: number;
+  expand_tasks?: boolean;
+}
+
+export interface DatabricksJobRun {
+  run_id: number;
+  job_id: number;
+  number_in_job: number;
+  state: {
+    life_cycle_state: JobLifecycleState;
+    state_message?: string;
+    result_state?: JobResultState;
+  };
+  start_time: number; // Epoch milliseconds - set when run starts (cluster creation call)
+  end_time?: number; // Optional - set to 0 if job is still running
+  job_parameters?: {
+    name: string;
+    value: string;
+    default?: string;
+  }[];
+}
+
+export interface DatabricksRunsListResponse {
+  runs?: DatabricksJobRun[]; // Optional - only included if there are runs to list
+  has_more: boolean;
+  next_page_token?: string;
+  prev_page_token?: string;
 }

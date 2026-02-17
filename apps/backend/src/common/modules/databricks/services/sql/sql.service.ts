@@ -106,12 +106,6 @@ export class DatabricksSqlService {
             ? this.formatDownloadLinksResponse(pollResult.value)
             : this.formatExperimentDataResponse(pollResult.value);
         } catch (error) {
-          this.logger.error({
-            msg: "Error executing SQL query",
-            errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
-            operation: "executeSqlQuery",
-            error,
-          });
           throw error instanceof AppError
             ? error
             : AppError.internal(

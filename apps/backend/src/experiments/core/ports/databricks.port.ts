@@ -4,13 +4,13 @@ import type { UploadFileResponse } from "../../../common/modules/databricks/serv
 import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
-  DatabricksJobRunStatusResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type {
   SchemaData,
   DownloadLinksData,
 } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
+import type { ExportMetadata } from "../models/experiment-data-exports.model";
 
 /**
  * Injection token for the Databricks port
@@ -22,7 +22,8 @@ export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
  * This interface defines the contract for external Databricks services
  */
 export interface DatabricksPort {
-  // Schema name
+  // Schema and catalog names
+  readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
 
   // Physical Databricks table names (only those consumed by repository)
@@ -153,28 +154,40 @@ export interface DatabricksPort {
    * Trigger the data export Databricks job with the specified parameters
    * @param experimentId - The experiment ID
    * @param tableName - The table name to export
+   * @param format - The export format (csv, json, parquet)
+   * @param exportId - Unique export identifier
+   * @param userId - User ID who initiated the export
    * @param sqlQuery - Optional SQL query to use for export
    */
   triggerDataExportJob(
     experimentId: string,
     tableName: string,
+    format: string,
+    exportId: string,
+    userId: string,
     sqlQuery?: string,
   ): Promise<Result<DatabricksJobRunResponse>>;
 
   /**
-   * Wait for a Databricks job run to complete
-   * @param runId - The run ID to wait for
-   * @param timeoutMs - Optional timeout in milliseconds
+   * Stream an export file by export ID
+   * Fetches metadata, validates status, and streams the file
+   * @param exportId - The export ID
+   * @param experimentId - The experiment ID (for additional validation)
+   * @returns Result containing a readable stream and file path
    */
-  waitForJobCompletion(
-    runId: number,
-    timeoutMs?: number,
-  ): Promise<Result<DatabricksJobRunStatusResponse>>;
+  streamExport(
+    exportId: string,
+    experimentId: string,
+  ): Promise<Result<{ stream: Readable; filePath: string }>>;
 
   /**
-   * Download a file from Databricks using the Files API
-   * @param filePath - The full path to the file in Databricks
-   * @returns Result containing a readable stream
+   * Get completed export metadata for an experiment table from Delta Lake
+   * Returns raw SchemaData from the database query
    */
-  downloadFile(filePath: string): Promise<Result<Readable>>;
+  getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>>;
+
+  /**
+   * Get active (in-progress) exports from job runs
+   */
+  getActiveExports(experimentId: string, tableName: string): Promise<Result<ExportMetadata[]>>;
 }

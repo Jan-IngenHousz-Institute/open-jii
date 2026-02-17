@@ -31,14 +31,16 @@ type FormatSelectionValues = z.infer<typeof formatSelectionSchema>;
 
 interface FormatSelectionStepProps {
   onFormatSubmit: (format: string) => void;
+  onBack: () => void;
   onClose: () => void;
-  isDownloading?: boolean;
+  isCreating?: boolean;
 }
 
 export function FormatSelectionStep({
   onFormatSubmit,
+  onBack,
   onClose,
-  isDownloading,
+  isCreating,
 }: FormatSelectionStepProps) {
   const { t } = useTranslation("experimentData");
 
@@ -93,24 +95,27 @@ export function FormatSelectionStep({
       </Form>
 
       <DialogFooter className="flex-col gap-2 sm:flex-row">
+        <Button variant="outline" onClick={onBack} className="w-full sm:w-auto">
+          {t("common.back")}
+        </Button>
         <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
           {t("common.close")}
         </Button>
         <Button
           type="submit"
-          disabled={!form.watch("format") || isDownloading}
+          disabled={!form.watch("format") || isCreating}
           className="w-full sm:w-auto"
           form="format-selection-form"
         >
-          {isDownloading ? (
+          {isCreating ? (
             <>
               <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
-              {t("experimentData.downloadModal.downloading")}
+              {t("experimentData.exportModal.creating")}
             </>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              {t("experimentData.downloadModal.download")}
+              {t("experimentData.exportModal.createExport")}
             </>
           )}
         </Button>

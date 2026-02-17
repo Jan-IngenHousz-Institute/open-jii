@@ -20,8 +20,12 @@ import {
   zExperimentAccess,
   zUploadExperimentDataBody,
   zUploadExperimentDataResponse,
-  zDownloadExperimentDataQuery,
-  zDownloadExperimentDataResponse,
+  zInitiateExportBody,
+  zInitiateExportResponse,
+  zListExportsQuery,
+  zListExportsResponse,
+  zExportPathParam,
+  zDownloadExportResponse,
   zLocationList,
   zAddExperimentLocationsBody,
   zUpdateExperimentLocationsBody,
@@ -328,20 +332,46 @@ export const experimentContract = c.router({
     description: "Uploads experiment data files to Databricks",
   },
 
-  downloadExperimentData: {
-    method: "GET",
-    path: "/api/v1/experiments/:id/data/download",
+  initiateExport: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/data/exports",
     pathParams: zIdPathParam,
-    // contentType: "application/octet-stream",
-    query: zDownloadExperimentDataQuery,
+    body: zInitiateExportBody,
     responses: {
-      200: zDownloadExperimentDataResponse,
+      201: zInitiateExportResponse,
+      400: zErrorResponse,
       403: zErrorResponse,
       404: zErrorResponse,
     },
-    summary: "Download experiment data",
-    description:
-      "Downloads complete experiment table data in the specified format (CSV, JSON, or Parquet)",
+    summary: "Initiate data export",
+    description: "Initiates an asynchronous export job for experiment table data",
+  },
+
+  listExports: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/data/exports",
+    pathParams: zIdPathParam,
+    query: zListExportsQuery,
+    responses: {
+      200: zListExportsResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List data exports",
+    description: "Lists all export jobs for an experiment table",
+  },
+
+  downloadExport: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/data/exports/:exportId",
+    pathParams: zExportPathParam,
+    responses: {
+      200: zDownloadExportResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Download export file",
+    description: "Downloads a completed export file",
   },
 
   getExperimentLocations: {

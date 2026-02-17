@@ -3,6 +3,7 @@ import { Readable } from "stream";
 
 import { ExperimentTableName } from "@repo/api";
 
+import type { ExportMetadata } from "../../../experiments/core/models/experiment-data-exports.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
@@ -13,14 +14,11 @@ import { DatabricksFilesService } from "./services/files/files.service";
 import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
-import type {
-  DatabricksJobRunResponse,
-  DatabricksJobRunStatusResponse,
-} from "./services/jobs/jobs.types";
+import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
+import { JobLifecycleState } from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
-import { DatabricksVolumesService } from "./services/volumes/volumes.service";
 import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 import type {
   ImportWorkspaceObjectResponse,
@@ -53,7 +51,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     private readonly queryBuilder: QueryBuilderService,
     private readonly sqlService: DatabricksSqlService,
     private readonly filesService: DatabricksFilesService,
-    private readonly volumesService: DatabricksVolumesService,
     private readonly configService: DatabricksConfigService,
     private readonly workspaceService: DatabricksWorkspaceService,
   ) {
@@ -98,25 +95,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Trigger the data export Databricks job with the specified parameters
    * @param experimentId - The experiment ID
    * @param tableName - The table name to export
-   * @param sqlQuery - Optional SQL query to execute instead of reading from table
+   * @param format - The export format (csv, json, parquet)
+   * @param exportId - Unique export identifier
+   * @param userId - User ID who initiated the export
    * @returns Result containing the job run response
    */
   async triggerDataExportJob(
     experimentId: string,
     tableName: string,
-    sqlQuery?: string,
+    format: string,
+    exportId: string,
+    userId: string,
   ): Promise<Result<DatabricksJobRunResponse>> {
-    this.logger.log({
-      msg: "Triggering data export job",
-      operation: "triggerDataExportJob",
-      experimentId,
-      tableName,
-    });
-
     const jobParams = {
       EXPERIMENT_ID: experimentId,
       TABLE_NAME: tableName,
-      SQL_QUERY: sqlQuery || "",
+      FORMAT: format,
+      EXPORT_ID: exportId,
+      USER_ID: userId,
       CATALOG_NAME: this.configService.getCatalogName(),
       ENVIRONMENT: this.configService.getEnvironment().toUpperCase(),
     };
@@ -126,25 +122,196 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Wait for a job run to complete
-   * @param runId - The run ID to wait for
-   * @param timeoutMs - Maximum time to wait in milliseconds
-   * @returns Result containing the final job run status
+   * Stream an export file by export ID
+   * Fetches metadata, validates status, and streams the file
+   * @param exportId - The export ID
+   * @param experimentId - The experiment ID (for additional validation)
+   * @returns Result containing a readable stream and file path
    */
-  async waitForJobCompletion(
-    runId: number,
-    timeoutMs?: number,
-  ): Promise<Result<DatabricksJobRunStatusResponse>> {
-    return this.jobsService.waitForJobCompletion(runId, timeoutMs);
+  async streamExport(
+    exportId: string,
+    experimentId: string,
+  ): Promise<Result<{ stream: Readable; filePath: string }>> {
+    this.logger.log({
+      msg: "Streaming export by ID",
+      operation: "streamExport",
+      exportId,
+      experimentId,
+    });
+
+    // Fetch export metadata using query builder (select all columns)
+    const query = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_data_exports`,
+      whereConditions: [
+        ["export_id", exportId],
+        ["experiment_id", experimentId],
+      ],
+      limit: 1,
+    });
+
+    const metadataResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, query, "INLINE");
+
+    if (metadataResult.isFailure()) {
+      return metadataResult;
+    }
+
+    const schemaData = metadataResult.value;
+
+    if (schemaData.rows.length === 0) {
+      this.logger.warn({
+        msg: "Export not found",
+        operation: "streamExport",
+        exportId,
+      });
+      return failure(AppError.notFound("Export not found"));
+    }
+
+    // Parse file path from query result
+    const filePathIndex = schemaData.columns.findIndex((col) => col.name === "file_path");
+    const filePath = schemaData.rows[0][filePathIndex];
+
+    if (!filePath) {
+      this.logger.error({
+        msg: "Export has no file path",
+        operation: "streamExport",
+        exportId,
+      });
+      return failure(AppError.internal("Export file path is missing"));
+    }
+
+    // Stream the file
+    const downloadResult = await this.filesService.download(filePath);
+
+    if (downloadResult.isFailure()) {
+      return downloadResult;
+    }
+
+    return success({
+      stream: downloadResult.value,
+      filePath,
+    });
   }
 
   /**
-   * Download a file from Databricks as a stream
-   * @param filePath - The full path to the file in Databricks
-   * @returns Result containing a readable stream
+   * Get completed export metadata for an experiment and table from Delta Lake
+   * Returns raw SchemaData from the database query
+   * @param experimentId - The experiment ID
+   * @param tableName - The table name
+   * @returns Result containing raw SchemaData with export records
    */
-  async downloadFile(filePath: string): Promise<Result<Readable>> {
-    return this.filesService.download(filePath);
+  async getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>> {
+    this.logger.log({
+      msg: "Fetching completed exports from Delta Lake",
+      operation: "getExportMetadata",
+      experimentId,
+      tableName,
+    });
+
+    const query = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_data_exports`,
+      whereConditions: [
+        ["experiment_id", experimentId],
+        ["table_name", tableName],
+      ],
+      orderBy: "created_at",
+      orderDirection: "DESC",
+    });
+
+    const completedResult = await this.executeSqlQuery(
+      this.CENTRUM_SCHEMA_NAME,
+      query,
+      "INLINE",
+      "JSON_ARRAY",
+    );
+
+    if (completedResult.isFailure()) {
+      return failure(completedResult.error);
+    }
+
+    this.logger.log({
+      msg: "Completed exports fetched successfully",
+      operation: "getExportMetadata",
+      experimentId,
+      tableName,
+      count: completedResult.value.rows.length,
+    });
+
+    return completedResult;
+  }
+
+  /**
+   * Get active (in-progress) exports for an experiment by querying job runs
+   * Filters active job runs by experiment_id and table_name parameters
+   * @param experimentId - The experiment ID to filter by
+   * @param tableName - The table name to filter by
+   * @returns Result containing array of ExportMetadata for active exports
+   */
+  async getActiveExports(
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<ExportMetadata[]>> {
+    this.logger.log({
+      msg: "Fetching active exports from job runs",
+      operation: "getActiveExports",
+      experimentId,
+      tableName,
+    });
+
+    const jobId = this.configService.getDataExportJobIdAsNumber();
+
+    // Get active job runs for the export job
+    const runsResult = await this.jobsService.listRunsForJob(jobId, true);
+
+    if (runsResult.isFailure()) {
+      return failure(runsResult.error);
+    }
+
+    const runs = runsResult.value.runs ?? [];
+
+    const activeExports = runs.reduce<ExportMetadata[]>((acc, run) => {
+      const paramsArray = run.job_parameters ?? [];
+      const params: Record<string, string> = paramsArray.reduce((record, param) => {
+        record[param.name] = param.value;
+        return record;
+      }, {});
+
+      if (params.EXPERIMENT_ID !== experimentId || params.TABLE_NAME !== tableName) {
+        return acc;
+      }
+
+      const lifecycleState = run.state.life_cycle_state;
+      let status: string;
+      switch (lifecycleState) {
+        case JobLifecycleState.PENDING:
+          status = "pending";
+          break;
+        case JobLifecycleState.RUNNING:
+        case JobLifecycleState.TERMINATING:
+          status = "running";
+          break;
+        default:
+          status = "unknown";
+      }
+
+      acc.push({
+        exportId: null,
+        experimentId: params.EXPERIMENT_ID,
+        tableName: params.TABLE_NAME,
+        format: params.FORMAT as "csv" | "json" | "parquet",
+        status: status as "pending" | "running",
+        filePath: null,
+        rowCount: null,
+        fileSize: null,
+        createdBy: params.USER_ID || "",
+        createdAt: new Date(run.start_time).toISOString(),
+        completedAt: null,
+        jobRunId: run.run_id,
+      });
+
+      return acc;
+    }, []);
+
+    return success(activeExports);
   }
 
   /**

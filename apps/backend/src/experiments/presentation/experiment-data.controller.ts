@@ -1,4 +1,4 @@
-import { Controller, Logger, Req, StreamableFile } from "@nestjs/common";
+import { Controller, Logger, Req } from "@nestjs/common";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
@@ -11,7 +11,6 @@ import { contract } from "@repo/api";
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { handleFailure } from "../../common/utils/fp-utils";
-import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
@@ -24,7 +23,6 @@ export class ExperimentDataController {
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
-    private readonly downloadExperimentDataUseCase: DownloadExperimentDataUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.getExperimentTables)
@@ -374,53 +372,6 @@ export class ExperimentDataController {
         return {
           status: StatusCodes.CREATED,
           body: result.value,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
-  }
-
-  @TsRestHandler(contract.experiments.downloadExperimentData)
-  downloadExperimentData(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.downloadExperimentData, async ({ params, query }) => {
-      const { id: experimentId } = params;
-      const { tableName, format } = query;
-
-      this.logger.log({
-        msg: "Processing download request",
-        operation: "downloadData",
-        experimentId,
-        userId: session.user.id,
-        tableName,
-        format: format as string,
-      });
-
-      const result = await this.downloadExperimentDataUseCase.execute(
-        experimentId,
-        session.user.id,
-        {
-          tableName,
-          format: format as "csv" | "json" | "parquet",
-        },
-      );
-
-      if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Successfully prepared download stream",
-          operation: "downloadData",
-          experimentId,
-          tableName,
-          status: "success",
-        });
-
-        const { stream, filename } = result.value;
-        return {
-          status: StatusCodes.OK,
-          body: new StreamableFile(stream, {
-            type: "application/octet-stream",
-            disposition: `attachment; filename="${filename}"`,
-          }),
         };
       }
 
