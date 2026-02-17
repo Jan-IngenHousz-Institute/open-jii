@@ -164,6 +164,7 @@ module "server_function" {
   architecture                    = var.lambda_architecture
   create_function_url             = true
   function_url_authorization_type = var.function_url_authorization_type
+  use_alias_url                   = true
 
   s3_permissions       = true
   s3_bucket_arns       = [aws_s3_bucket.assets.arn, aws_s3_bucket.cache.arn]
@@ -391,11 +392,13 @@ resource "aws_s3_bucket_policy" "assets" {
 }
 
 resource "aws_lambda_permission" "allow_cloudfront_server" {
-  statement_id  = "AllowCloudFrontInvokeServer"
-  action        = "lambda:InvokeFunctionUrl"
-  function_name = module.server_function.function_name
-  principal     = "cloudfront.amazonaws.com"
-  source_arn    = module.cloudfront.distribution_arn
+  statement_id           = "AllowCloudFrontInvokeServer"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = module.server_function.function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = module.cloudfront.distribution_arn
+  function_url_auth_type = "AWS_IAM"
+  qualifier              = "live"
 }
 
 resource "aws_lambda_permission" "allow_cloudfront_image" {

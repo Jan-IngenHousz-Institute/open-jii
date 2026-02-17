@@ -137,3 +137,9 @@ variable "additional_iam_policies" {
   type        = map(string)
   default     = {}
 }
+
+variable "use_alias_url" {
+  description = "Whether to configure the Lambda Function URL to use a named alias qualifier instead of $LATEST"
+  type        = bool
+  default     = false
+}
