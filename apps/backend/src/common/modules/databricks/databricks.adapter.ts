@@ -111,7 +111,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       FORMAT: format,
       USER_ID: userId,
       CATALOG_NAME: this.configService.getCatalogName(),
-      ENVIRONMENT: this.configService.getEnvironment().toUpperCase(),
     };
 
     const jobId = this.configService.getDataExportJobIdAsNumber();

@@ -2,10 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError, success } from "../../../../common/utils/fp-utils";
-import type {
-  InitiateExportQuery,
-  InitiateExportDto,
-} from "../../../core/models/experiment-data-exports.model";
+import type { ExportFormat } from "../../../core/models/experiment-data-exports.model";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 import { ExperimentDataRepository } from "../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -27,8 +24,8 @@ export class InitiateExportUseCase {
   async execute(
     experimentId: string,
     userId: string,
-    query: InitiateExportQuery,
-  ): Promise<Result<InitiateExportDto>> {
+    query: { tableName: string; format: ExportFormat },
+  ): Promise<Result<{ status: string }>> {
     this.logger.debug({
       msg: "Initiating data export",
       operation: "initiateExport",

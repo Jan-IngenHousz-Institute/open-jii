@@ -10,12 +10,7 @@ globalThis.React = React;
 // Mock translation
 vi.mock("@repo/i18n/client", () => ({
   useTranslation: () => ({
-    t: (key: string, params?: Record<string, string>) => {
-      if (params) {
-        return Object.entries(params).reduce((str, [k, v]) => str.replace(`{{${k}}}`, v), key);
-      }
-      return key;
-    },
+    t: (key: string) => key,
   }),
 }));
 

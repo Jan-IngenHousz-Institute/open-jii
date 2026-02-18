@@ -143,11 +143,15 @@ def get_table_metadata(experiment_id, table_name, catalog_name, schema_name="cen
         Dictionary with keys: table_name, row_count, macro_schema, questions_schema
     """
     from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col
+
     spark = SparkSession.builder.getOrCreate()
     
-    metadata_df = spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata") \
-        .filter(f"experiment_id = '{experiment_id}' AND table_name = '{table_name}'") \
+    metadata_df = (
+        spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata")
+        .filter((col("experiment_id") == experiment_id) & (col("table_name") == table_name))
         .select("table_name", "row_count", "macro_schema", "questions_schema")
+    )
     
     rows = metadata_df.collect()
     if not rows:
@@ -160,6 +164,17 @@ def get_table_metadata(experiment_id, table_name, catalog_name, schema_name="cen
         "macro_schema": row.macro_schema,
         "questions_schema": row.questions_schema,
     }
+
+
+# Table type configuration: (source_table_name, order_by_column)
+_TABLE_CONFIG = {
+    "raw_data": ("enriched_experiment_raw_data", "timestamp"),
+    "device": ("experiment_device_data", "processed_timestamp"),
+    "raw_ambyte_data": ("enriched_raw_ambyte_data", "processed_at"),
+    "macro": ("enriched_experiment_macro_data", "timestamp"),
+}
+
+_MACRO_EXCLUDE_COLS = ["raw_id", "macro_id", "macro_name", "macro_filename", "date"]
 
 
 def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="centrum"):
@@ -193,93 +208,53 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     from pyspark.sql.functions import col, from_json
     
     spark = SparkSession.builder.getOrCreate()
-    
-    # Get metadata for schemas
     metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name)
     
-    # Transform schemas: Replace OBJECT< with STRUCT< for from_json compatibility
-    if metadata["macro_schema"]:
-        metadata["macro_schema"] = metadata["macro_schema"].replace("OBJECT<", "STRUCT<")
-    if metadata["questions_schema"]:
-        metadata["questions_schema"] = metadata["questions_schema"].replace("OBJECT<", "STRUCT<")
+    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT)
+    def normalize_schema(schema):
+        return schema.replace("OBJECT<", "STRUCT<") if schema else None
     
-    # Determine source table and type based on table_name
-    if table_name == "raw_data":
-        source_table = f"{catalog_name}.{schema_name}.enriched_experiment_raw_data"
-        table_type = "raw_data"
-    elif table_name == "device":
-        source_table = f"{catalog_name}.{schema_name}.experiment_device_data"
-        table_type = "device"
-    elif table_name == "raw_ambyte_data":
-        source_table = f"{catalog_name}.{schema_name}.enriched_raw_ambyte_data"
-        table_type = "raw_ambyte_data"
-    else:
-        # Macro table
-        source_table = f"{catalog_name}.{schema_name}.enriched_experiment_macro_data"
-        table_type = "macro"
+    macro_schema = normalize_schema(metadata["macro_schema"])
+    questions_schema = normalize_schema(metadata["questions_schema"])
     
-    # Load base dataframe
+    # Resolve table type: known names map directly, anything else is a macro
+    table_type = table_name if table_name in {"raw_data", "device", "raw_ambyte_data"} else "macro"
+    source_name, order_col = _TABLE_CONFIG[table_type]
+    
+    # Load and filter base dataframe
+    source_table = f"{catalog_name}.{schema_name}.{source_name}"
     df = spark.table(source_table).filter(col("experiment_id") == experiment_id)
     
-    # Filter by macro filename if macro table
     if table_type == "macro":
         df = df.filter(col("macro_filename") == table_name)
     
-    # Parse variants if schemas exist
-    if table_type == "macro" and metadata["macro_schema"]:
-        df = df.withColumn("parsed_macro_output", from_json(col("macro_output").cast("string"), metadata["macro_schema"]))
+    # Parse variant columns and build expansion/exclusion lists
+    expand_cols = []
+    exclude_cols = ["experiment_id"]
     
-    if metadata["questions_schema"]:
-        df = df.withColumn("parsed_questions_data", from_json(col("questions_data").cast("string"), metadata["questions_schema"]))
-    
-    # Select and exclude columns based on table type
     if table_type == "macro":
-        # Macro tables: parse both macro_output and questions_data if schemas exist
-        # Exclude: experiment_id, raw_id, macro_id, macro_name, macro_filename, date
-        # Also exclude the original variant columns and their parsed aliases
-        if metadata["macro_schema"] and metadata["questions_schema"]:
-            df = df.select("*", "parsed_macro_output.*", "parsed_questions_data.*")
-            exclude_cols = [
-                "macro_output", "parsed_macro_output",
-                "questions_data", "parsed_questions_data",
-                "experiment_id", "raw_id", "macro_id",
-                "macro_name", "macro_filename", "date"
-            ]
-        elif metadata["macro_schema"]:
-            df = df.select("*", "parsed_macro_output.*")
-            exclude_cols = [
-                "macro_output", "parsed_macro_output",
-                "experiment_id", "raw_id", "macro_id",
-                "macro_name", "macro_filename", "date"
-            ]
-        elif metadata["questions_schema"]:
-            df = df.select("*", "parsed_questions_data.*")
-            exclude_cols = [
-                "questions_data", "parsed_questions_data",
-                "experiment_id", "raw_id", "macro_id",
-                "macro_name", "macro_filename", "date"
-            ]
-        else:
-            exclude_cols = [
-                "experiment_id", "raw_id", "macro_id",
-                "macro_name", "macro_filename", "date"
-            ]
-        df = df.drop(*[c for c in exclude_cols if c in df.columns])
-        df = df.orderBy("timestamp")
-    elif table_type == "device":
-        # Device table: no variants, only exclude experiment_id
-        df = df.drop("experiment_id").orderBy("processed_timestamp")
-    elif table_type == "raw_ambyte_data":
-        # Raw ambyte data: no variants, only exclude experiment_id
-        df = df.drop("experiment_id").orderBy("processed_at")
-    elif table_type == "raw_data":
-        # Raw data: only has questions_data variant, no macro_output
-        if metadata["questions_schema"]:
-            df = df.select("*", "parsed_questions_data.*")
-            exclude_cols = ["questions_data", "parsed_questions_data", "experiment_id"]
-        else:
-            exclude_cols = ["experiment_id"]
-        df = df.drop(*[c for c in exclude_cols if c in df.columns])
-        df = df.orderBy("timestamp")
+        exclude_cols.extend(_MACRO_EXCLUDE_COLS)
     
-    return df
+    if table_type == "macro" and macro_schema:
+        df = df.withColumn(
+            "parsed_macro_output",
+            from_json(col("macro_output").cast("string"), macro_schema),
+        )
+        expand_cols.append("parsed_macro_output.*")
+        exclude_cols.extend(["macro_output", "parsed_macro_output"])
+    
+    if table_type in ("macro", "raw_data") and questions_schema:
+        df = df.withColumn(
+            "parsed_questions_data",
+            from_json(col("questions_data").cast("string"), questions_schema),
+        )
+        expand_cols.append("parsed_questions_data.*")
+        exclude_cols.extend(["questions_data", "parsed_questions_data"])
+    
+    # Expand parsed struct fields into top-level columns
+    if expand_cols:
+        df = df.select("*", *expand_cols)
+    
+    df = df.drop(*[c for c in exclude_cols if c in df.columns])
+    
+    return df.orderBy(order_col)

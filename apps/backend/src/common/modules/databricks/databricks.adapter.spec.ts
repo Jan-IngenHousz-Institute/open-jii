@@ -689,7 +689,6 @@ describe("DatabricksAdapter", () => {
 
       const configService = testApp.module.get(DatabricksConfigService);
       vi.spyOn(configService, "getCatalogName").mockReturnValue("main");
-      vi.spyOn(configService, "getEnvironment").mockReturnValue("dev");
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -710,8 +709,7 @@ describe("DatabricksAdapter", () => {
               params.TABLE_NAME === tableName &&
               params.FORMAT === format &&
               params.USER_ID === userId &&
-              params.CATALOG_NAME === "main" &&
-              params.ENVIRONMENT === "DEV"
+              params.CATALOG_NAME === "main"
             );
           },
         )
@@ -732,7 +730,6 @@ describe("DatabricksAdapter", () => {
     it("should handle API failure when triggering data export job", async () => {
       const configService = testApp.module.get(DatabricksConfigService);
       vi.spyOn(configService, "getCatalogName").mockReturnValue("main");
-      vi.spyOn(configService, "getEnvironment").mockReturnValue("dev");
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {

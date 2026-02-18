@@ -1,5 +1,3 @@
-import type { Readable } from "stream";
-
 /**
  * Export format types
  */
@@ -27,43 +25,6 @@ export interface ExportMetadata {
   createdAt: string;
   completedAt: string | null;
   jobRunId: number | null; // Internal field for logging/tracking, not exposed in API
-}
-
-/**
- * Query parameters for listing exports
- */
-export interface ListExportsQuery {
-  tableName: string;
-}
-
-/**
- * Response structure for list exports
- */
-export interface ListExportsDto {
-  exports: ExportMetadata[];
-}
-
-/**
- * Query parameters for initiating an export
- */
-export interface InitiateExportQuery {
-  tableName: string;
-  format: ExportFormat;
-}
-
-/**
- * Response structure for initiated export
- */
-export interface InitiateExportDto {
-  status: string;
-}
-
-/**
- * Response structure for download export with stream
- */
-export interface DownloadExportDto {
-  stream: Readable;
-  filename: string;
 }
 
 /**

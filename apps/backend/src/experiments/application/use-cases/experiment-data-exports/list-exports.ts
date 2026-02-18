@@ -2,10 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError, success } from "../../../../common/utils/fp-utils";
-import type {
-  ListExportsQuery,
-  ListExportsDto,
-} from "../../../core/models/experiment-data-exports.model";
+import type { ExportMetadata } from "../../../core/models/experiment-data-exports.model";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -24,8 +21,8 @@ export class ListExportsUseCase {
   async execute(
     experimentId: string,
     userId: string,
-    query: ListExportsQuery,
-  ): Promise<Result<ListExportsDto>> {
+    query: { tableName: string },
+  ): Promise<Result<{ exports: ExportMetadata[] }>> {
     this.logger.debug({
       msg: "Listing exports",
       operation: "listExports",

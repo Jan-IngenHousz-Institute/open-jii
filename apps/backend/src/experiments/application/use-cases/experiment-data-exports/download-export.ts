@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { Readable } from "stream";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
-import type { DownloadExportDto } from "../../../core/models/experiment-data-exports.model";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -22,7 +22,7 @@ export class DownloadExportUseCase {
     experimentId: string,
     exportId: string,
     userId: string,
-  ): Promise<Result<DownloadExportDto>> {
+  ): Promise<Result<{ stream: Readable; filename: string }>> {
     this.logger.debug({
       msg: "Starting export download",
       operation: "downloadExport",
@@ -45,8 +45,7 @@ export class DownloadExportUseCase {
 
     // Build a clean filename: {tableName}-export-{exportId}.{ext}
     const ext = filePath.split(".").pop();
-    const prefix = tableName ? `${tableName}-export` : "export";
-    const filename = `${prefix}-${exportId}${ext ? `.${ext}` : ""}`;
+    const filename = `${tableName}-export-${exportId}${ext ? `.${ext}` : ""}`;
 
     this.logger.log({
       msg: "Successfully prepared export download stream",

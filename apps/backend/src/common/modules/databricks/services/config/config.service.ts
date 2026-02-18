@@ -132,13 +132,6 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the environment name
-   */
-  getEnvironment(): string {
-    return this.configService.get<string>("NODE_ENV", "development");
-  }
-
-  /**
    * Returns the Databricks catalog name
    */
   getCatalogName(): string {
