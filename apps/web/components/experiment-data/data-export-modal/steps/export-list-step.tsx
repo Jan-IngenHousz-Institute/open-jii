@@ -301,7 +301,7 @@ export function ExportListStep({
         </ScrollArea>
       ) : (
         exports.length > 0 && (
-          <ScrollArea className="max-h-[280px] rounded-lg border p-2">
+          <ScrollArea className="max-h-[280px]">
             <div className="space-y-2">
               {exports.map((exportRecord, index) => (
                 <ExportCard
