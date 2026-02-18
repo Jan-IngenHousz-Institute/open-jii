@@ -165,10 +165,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     // Parse file path and table name from query result
     const filePathIndex = schemaData.columns.findIndex((col) => col.name === "file_path");
     const tableNameIndex = schemaData.columns.findIndex((col) => col.name === "table_name");
-    const rawFilePath = schemaData.rows[0][filePathIndex];
+    const filePath = schemaData.rows[0][filePathIndex];
     const tableName = schemaData.rows[0][tableNameIndex];
 
-    if (!rawFilePath) {
+    if (!filePath) {
       this.logger.error({
         msg: "Export has no file path",
         operation: "streamExport",
@@ -185,8 +185,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       });
       return failure(AppError.internal("Export table name is missing"));
     }
-
-    const filePath = rawFilePath;
 
     // Stream the file
     const downloadResult = await this.filesService.download(filePath);
