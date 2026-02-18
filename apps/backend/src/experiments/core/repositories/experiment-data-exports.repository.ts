@@ -2,9 +2,9 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { Readable } from "stream";
 
 import { Result, success } from "../../../common/utils/fp-utils";
-import type { ExportMetadata } from "../../core/models/experiment-data-exports.model";
-import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
+import type { ExportMetadata } from "../models/experiment-data-exports.model";
+import { DATABRICKS_PORT } from "../ports/databricks.port";
+import type { DatabricksPort } from "../ports/databricks.port";
 
 /**
  * Repository for experiment data export operations

@@ -4,9 +4,9 @@ import { Readable } from "stream";
 
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
-import { DownloadExportUseCase } from "../application/use-cases/experiment-data/download-export";
-import { InitiateExportUseCase } from "../application/use-cases/experiment-data/initiate-export";
-import { ListExportsUseCase } from "../application/use-cases/experiment-data/list-exports";
+import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
+import { InitiateExportUseCase } from "../application/use-cases/experiment-data-exports/initiate-export";
+import { ListExportsUseCase } from "../application/use-cases/experiment-data-exports/list-exports";
 import { ExperimentDataExportsController } from "./experiment-data-exports.controller";
 
 /* eslint-disable @typescript-eslint/unbound-method */

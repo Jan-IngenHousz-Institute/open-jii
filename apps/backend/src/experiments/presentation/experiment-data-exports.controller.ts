@@ -7,9 +7,9 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api";
 
 import { handleFailure } from "../../common/utils/fp-utils";
-import { DownloadExportUseCase } from "../application/use-cases/experiment-data/download-export";
-import { InitiateExportUseCase } from "../application/use-cases/experiment-data/initiate-export";
-import { ListExportsUseCase } from "../application/use-cases/experiment-data/list-exports";
+import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
+import { InitiateExportUseCase } from "../application/use-cases/experiment-data-exports/initiate-export";
+import { ListExportsUseCase } from "../application/use-cases/experiment-data-exports/list-exports";
 
 @Controller()
 export class ExperimentDataExportsController {

@@ -2,9 +2,9 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
-import { ExperimentDto } from "../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
+import { ExperimentDto } from "../models/experiment.model";
+import { DATABRICKS_PORT } from "../ports/databricks.port";
+import type { DatabricksPort } from "../ports/databricks.port";
 
 export interface SchemaDataDto {
   columns: {

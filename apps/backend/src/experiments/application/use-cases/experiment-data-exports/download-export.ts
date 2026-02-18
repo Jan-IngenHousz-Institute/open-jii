@@ -2,8 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
 import type { DownloadExportDto } from "../../../core/models/experiment-data-exports.model";
+import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { ExperimentDataExportsRepository } from "../../repositories/experiment-data-exports.repository";
 
 /**
  * Use case for downloading a completed export by export ID

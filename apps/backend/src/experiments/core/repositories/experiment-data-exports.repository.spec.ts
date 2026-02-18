@@ -10,9 +10,9 @@ import {
   assertFailure,
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { ExportMetadata } from "../../core/models/experiment-data-exports.model";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
-import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
+import type { ExportMetadata } from "../models/experiment-data-exports.model";
+import type { DatabricksPort } from "../ports/databricks.port";
+import { DATABRICKS_PORT } from "../ports/databricks.port";
 import { ExperimentDataExportsRepository } from "./experiment-data-exports.repository";
 
 describe("ExperimentDataExportsRepository", () => {

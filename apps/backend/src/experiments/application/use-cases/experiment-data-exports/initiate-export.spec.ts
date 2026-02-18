@@ -8,8 +8,8 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { ExperimentDataExportsRepository } from "../../repositories/experiment-data-exports.repository";
 import { InitiateExportUseCase } from "./initiate-export";
 
 describe("InitiateExportUseCase", () => {

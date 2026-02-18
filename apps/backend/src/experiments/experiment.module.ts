@@ -10,9 +10,6 @@ import { DatabricksModule } from "../common/modules/databricks/databricks.module
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { UserModule } from "../users/user.module";
-import { ExperimentDataExportsRepository } from "./application/repositories/experiment-data-exports.repository";
-// Repositories
-import { ExperimentDataRepository } from "./application/repositories/experiment-data.repository";
 // Services
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 // Use Cases
@@ -21,11 +18,11 @@ import { DeleteExperimentUseCase } from "./application/use-cases/delete-experime
 import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
-import { DownloadExportUseCase } from "./application/use-cases/experiment-data/download-export";
+import { DownloadExportUseCase } from "./application/use-cases/experiment-data-exports/download-export";
+import { InitiateExportUseCase } from "./application/use-cases/experiment-data-exports/initiate-export";
+import { ListExportsUseCase } from "./application/use-cases/experiment-data-exports/list-exports";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
-import { InitiateExportUseCase } from "./application/use-cases/experiment-data/initiate-export";
-import { ListExportsUseCase } from "./application/use-cases/experiment-data/list-exports";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
 import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locations/geocode-location";
@@ -60,6 +57,9 @@ import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
+import { ExperimentDataExportsRepository } from "./core/repositories/experiment-data-exports.repository";
+// Repositories
+import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";

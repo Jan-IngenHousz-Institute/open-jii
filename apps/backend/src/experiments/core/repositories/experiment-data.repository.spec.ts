@@ -4,9 +4,9 @@ import { expect } from "vitest";
 import type { ExperimentTableMetadata } from "../../../common/modules/databricks/databricks.adapter";
 import { AppError, success, failure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { ExperimentDto } from "../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
+import type { ExperimentDto } from "../models/experiment.model";
+import { DATABRICKS_PORT } from "../ports/databricks.port";
+import type { DatabricksPort } from "../ports/databricks.port";
 import { ExperimentDataRepository } from "./experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
