@@ -104,7 +104,7 @@ const StatusBadge = ({ status }: { status: ExportRecord["status"] }) => {
   );
 };
 
-const formatLabel: Record<string, string> = {
+const FORMAT_LABELS: Record<string, string> = {
   csv: "CSV",
   ndjson: "NDJSON",
   "json-array": "JSON Array",
@@ -144,7 +144,7 @@ const ExportCard = ({
 
   metaItems.push({
     icon: FileText,
-    label: formatLabel[exportRecord.format] ?? exportRecord.format,
+    label: FORMAT_LABELS[exportRecord.format] ?? exportRecord.format,
   });
 
   if (exportRecord.rowCount != null) {

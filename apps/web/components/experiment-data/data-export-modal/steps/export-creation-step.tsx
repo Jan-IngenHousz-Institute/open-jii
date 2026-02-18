@@ -5,6 +5,13 @@ import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components";
 
+const FORMAT_LABELS: Record<string, string> = {
+  csv: "CSV",
+  ndjson: "NDJSON",
+  "json-array": "JSON Array",
+  parquet: "Parquet",
+};
+
 type CreationStatus = "loading" | "success" | "error";
 
 interface ExportCreationStepProps {
@@ -22,6 +29,8 @@ export function ExportCreationStep({
 }: ExportCreationStepProps) {
   const { t } = useTranslation("experimentData");
 
+  const formatDisplayName = FORMAT_LABELS[format] ?? format.toUpperCase();
+
   if (status === "loading") {
     return (
       <div className="space-y-4">
@@ -31,12 +40,12 @@ export function ExportCreationStep({
             <div>
               <p className="font-medium">
                 {t("experimentData.exportModal.creatingTitle", {
-                  format: format.toUpperCase(),
+                  format: formatDisplayName,
                 })}
               </p>
               <p className="mt-1 text-blue-700 dark:text-blue-300">
                 {t("experimentData.exportModal.creatingDescription", {
-                  format: format.toUpperCase(),
+                  format: formatDisplayName,
                 })}
               </p>
             </div>
