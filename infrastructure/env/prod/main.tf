@@ -543,6 +543,28 @@ module "ambyte_processing_job" {
   }
 }
 
+module "data_downloads_volume" {
+  source = "../../modules/databricks/volume"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  volume_name  = "data-downloads"
+  comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet)"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
 module "data_export_job" {
   source = "../../modules/databricks/job"
 
