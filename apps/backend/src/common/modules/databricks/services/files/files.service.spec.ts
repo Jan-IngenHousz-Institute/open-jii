@@ -112,7 +112,7 @@ describe("DatabricksFilesService", () => {
   });
 
   describe("download", () => {
-    const downloadPath = `/Volumes/${MOCK_CATALOG_NAME}/${MOCK_SCHEMA_NAME}/data-downloads/exp-123/raw_data/csv/export-1/raw_data.csv`;
+    const downloadPath = `/Volumes/${MOCK_CATALOG_NAME}/${MOCK_SCHEMA_NAME}/data-exports/exp-123/raw_data/csv/export-1/raw_data.csv`;
 
     it("should successfully download a file as a stream", async () => {
       // Mock token request

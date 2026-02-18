@@ -548,7 +548,7 @@ module "data_downloads_volume" {
 
   catalog_name = module.databricks_catalog.catalog_name
   schema_name  = "centrum"
-  volume_name  = "data-downloads"
+  volume_name  = "data-exports"
   comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet)"
 
   grants = {

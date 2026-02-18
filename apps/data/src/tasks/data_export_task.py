@@ -49,8 +49,8 @@ EXPORT_METADATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_export_metadata"
 write_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 # Output paths
-# Structure: /Volumes/{catalog}/centrum/data-downloads/{experiment_id}/{table_name}/{format}/{export_id}/
-VOLUME_BASE_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-downloads"
+# Structure: /Volumes/{catalog}/centrum/data-exports/{experiment_id}/{table_name}/{format}/{export_id}/
+VOLUME_BASE_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-exports"
 OUTPUT_BASE_PATH = f"{VOLUME_BASE_PATH}/{EXPERIMENT_ID}/{TABLE_NAME}/{FORMAT}"
 OUTPUT_PATH = f"{OUTPUT_BASE_PATH}/{EXPORT_ID}"
 

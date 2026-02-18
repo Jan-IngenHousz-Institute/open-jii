@@ -44,7 +44,7 @@ describe("DownloadExportUseCase", () => {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       read() {},
     });
-    const filePath = `/volumes/catalog/centrum/data-downloads/${experimentId}/raw_data/csv/${exportId}/raw_data.csv`;
+    const filePath = `/volumes/catalog/centrum/data-exports/${experimentId}/raw_data/csv/${exportId}/raw_data.csv`;
 
     vi.spyOn(exportsRepository, "downloadExport").mockResolvedValue(
       success({ stream: mockStream, filePath, tableName: "raw_data" }),
