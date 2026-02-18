@@ -6,6 +6,15 @@ resource "aws_ecr_repository" "this" {
   image_tag_mutability = var.image_tag_mutability # IMMUTABLE prevents tag overwriting for safety
   force_delete         = var.force_delete         # Allows deletion even with images (use carefully)
 
+
+  dynamic "image_tag_mutability_exclusion_filter" {
+    for_each = var.image_tag_mutability == "IMMUTABLE_WITH_EXCLUSION" ? [1] : []
+    content {
+      filter      = "latest" # Exclude 'latest' tag from immutability to allow updates during development
+      filter_type = "WILDCARD"
+    }
+  }
+
   # Vulnerability scanning - analyzes images for known security issues
   # Uses AWS-maintained CVE database, updated multiple times daily
   image_scanning_configuration {
