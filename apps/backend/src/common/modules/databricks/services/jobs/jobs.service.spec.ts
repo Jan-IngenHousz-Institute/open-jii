@@ -314,4 +314,102 @@ describe("DatabricksJobsService", () => {
       expect(result.value.has_more).toBe(false);
     });
   });
+
+  describe("triggerJob - validateJobRunResponse", () => {
+    it("should fail when Databricks returns response without run_id", async () => {
+      const jobId = 12345;
+      const mockParams = {
+        EXPERIMENT_ID: "exp-123",
+        USER_ID: "user-456",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock job run-now returning response without run_id
+      nock(databricksHost)
+        .post(DatabricksJobsService.JOBS_ENDPOINT + "/run-now")
+        .reply(200, { number_in_job: 1 });
+
+      const result = await jobsService.triggerJob(jobId, mockParams);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Databricks job trigger");
+    });
+  });
+
+  describe("getJobRunStatus", () => {
+    it("should successfully get job run status", async () => {
+      const runId = 12345;
+
+      const mockResponse = {
+        run_id: runId,
+        state: { life_cycle_state: "RUNNING", state_message: "" },
+        start_time: Date.now(),
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock runs/get API call
+      nock(databricksHost)
+        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/get")
+        .query({ run_id: runId })
+        .reply(200, mockResponse);
+
+      const result = await jobsService.getJobRunStatus(runId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.run_id).toBe(runId);
+      expect(result.value.state.life_cycle_state).toBe("RUNNING");
+    });
+
+    it("should handle API errors when getting job run status", async () => {
+      const runId = 12345;
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock runs/get API call with error
+      nock(databricksHost)
+        .get(DatabricksJobsService.JOBS_ENDPOINT + "/runs/get")
+        .query({ run_id: runId })
+        .reply(404, { message: "Run not found" });
+
+      const result = await jobsService.getJobRunStatus(runId);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get job run status");
+    });
+
+    it("should handle token fetch failure when getting job run status", async () => {
+      const runId = 12345;
+
+      // Mock token request with error
+      nock(databricksHost)
+        .post(DatabricksAuthService.TOKEN_ENDPOINT)
+        .reply(401, { error_description: "Invalid client credentials" });
+
+      const result = await jobsService.getJobRunStatus(runId);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get job run status");
+    });
+  });
 });

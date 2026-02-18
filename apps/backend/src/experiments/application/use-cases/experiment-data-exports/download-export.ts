@@ -45,7 +45,8 @@ export class DownloadExportUseCase {
 
     // Build a clean filename: {tableName}-export-{exportId}.{ext}
     const ext = filePath.split(".").pop();
-    const filename = `${tableName}-export-${exportId}${ext ? `.${ext}` : ""}`;
+    const prefix = tableName ? `${tableName}-` : "";
+    const filename = `${prefix}export-${exportId}${ext ? `.${ext}` : ""}`;
 
     this.logger.log({
       msg: "Successfully prepared export download stream",

@@ -18,7 +18,7 @@ import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
 import { JobLifecycleState, JobResultState } from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
-import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
+import type { SchemaData } from "./services/sql/sql.types";
 import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 import type {
   ImportWorkspaceObjectResponse,
@@ -145,7 +145,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       limit: 1,
     });
 
-    const metadataResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, query, "INLINE");
+    const metadataResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, query);
 
     if (metadataResult.isFailure()) {
       return metadataResult;
@@ -229,12 +229,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       orderDirection: "DESC",
     });
 
-    const completedResult = await this.executeSqlQuery(
-      this.CENTRUM_SCHEMA_NAME,
-      query,
-      "INLINE",
-      "JSON_ARRAY",
-    );
+    const completedResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, query);
 
     if (completedResult.isFailure()) {
       return failure(completedResult.error);
@@ -669,44 +664,16 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Execute a SQL query with INLINE disposition (returns data directly)
+   * Execute a SQL query in a specific schema.
+   * Uses INLINE disposition and JSON_ARRAY format.
    */
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition?: "INLINE",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<SchemaData>>;
-
-  /**
-   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
-   */
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition: "EXTERNAL_LINKS",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<DownloadLinksData>>;
-
-  /**
-   * Execute a SQL query in a specific schema with optional disposition and format.
-   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
-   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
-   */
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition: "INLINE" | "EXTERNAL_LINKS" = "INLINE",
-    format: "JSON_ARRAY" | "ARROW_STREAM" | "CSV" = "JSON_ARRAY",
-  ): Promise<Result<SchemaData | DownloadLinksData>> {
+  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
     this.logger.debug({
       msg: "Executing SQL query",
       operation: "executeSqlQuery",
       schemaName,
-      disposition,
-      format,
     });
-    return this.sqlService.executeSqlQuery(schemaName, sqlStatement, disposition, format);
+    return this.sqlService.executeSqlQuery(schemaName, sqlStatement);
   }
 
   /**

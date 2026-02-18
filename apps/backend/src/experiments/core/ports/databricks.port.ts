@@ -5,10 +5,7 @@ import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
-import type {
-  SchemaData,
-  DownloadLinksData,
-} from "../../../common/modules/databricks/services/sql/sql.types";
+import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportMetadata } from "../models/experiment-data-exports.model";
 
@@ -91,36 +88,10 @@ export interface DatabricksPort {
   }): string;
 
   /**
-   * Execute a SQL query with INLINE disposition (returns data directly)
+   * Execute a SQL query in a specific schema.
+   * Uses INLINE disposition and JSON_ARRAY format.
    */
-  executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition?: "INLINE",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<SchemaData>>;
-
-  /**
-   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
-   */
-  executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition: "EXTERNAL_LINKS",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<DownloadLinksData>>;
-
-  /**
-   * Execute a SQL query in a specific schema with optional disposition and format.
-   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
-   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
-   */
-  executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition?: "INLINE" | "EXTERNAL_LINKS",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<SchemaData | DownloadLinksData>>;
+  executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
 
   /**
    * Upload data to Databricks for a specific experiment.

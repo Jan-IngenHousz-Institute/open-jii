@@ -24,12 +24,15 @@ vi.mock("~/hooks/experiment/useListExports/useListExports", () => ({
 }));
 
 const mockDownloadExport = vi.fn();
+const mockUseDownloadExport = vi.fn<
+  () => {
+    downloadExport: typeof mockDownloadExport;
+    isDownloading: boolean;
+    downloadingExportId: string | null;
+  }
+>();
 vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
-  useDownloadExport: () => ({
-    downloadExport: mockDownloadExport,
-    isDownloading: false,
-    downloadingExportId: null,
-  }),
+  useDownloadExport: () => mockUseDownloadExport(),
 }));
 
 // Mock utility functions
@@ -136,6 +139,11 @@ describe("ExportListStep", () => {
     vi.clearAllMocks();
     // Clean up any remaining DOM elements from previous tests
     document.body.innerHTML = "";
+    mockUseDownloadExport.mockReturnValue({
+      downloadExport: mockDownloadExport,
+      isDownloading: false,
+      downloadingExportId: null,
+    });
   });
 
   afterEach(() => {
@@ -446,5 +454,104 @@ describe("ExportListStep", () => {
 
     expect(screen.getByText("experimentData.exportModal.status.failed")).toBeInTheDocument();
     expect(screen.getAllByText("Parquet").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("calls downloadExport when download button is clicked", () => {
+    const mockExports: ExportRecord[] = [
+      {
+        exportId: "export-1",
+        experimentId: mockExperimentId,
+        tableName: mockTableName,
+        format: "csv",
+        status: "completed",
+        filePath: "/path/to/file.csv",
+        rowCount: 50,
+        fileSize: 512,
+        createdBy: "user-1",
+        createdAt: "2024-01-01T00:00:00Z",
+        completedAt: "2024-01-01T00:05:00Z",
+      },
+    ];
+
+    mockUseListExports.mockReturnValue({
+      data: { body: { exports: mockExports } },
+      isLoading: false,
+      error: null,
+    });
+
+    renderStep();
+
+    const downloadButton = screen.getByTestId("download-button");
+    fireEvent.click(downloadButton);
+
+    expect(mockDownloadExport).toHaveBeenCalledWith("export-1");
+  });
+
+  it("renders export card without rowCount and fileSize metadata", () => {
+    const mockExports: ExportRecord[] = [
+      {
+        exportId: "export-1",
+        experimentId: mockExperimentId,
+        tableName: mockTableName,
+        format: "csv",
+        status: "completed",
+        filePath: "/path/to/file.csv",
+        rowCount: null,
+        fileSize: null,
+        createdBy: "user-1",
+        createdAt: "2024-01-01T00:00:00Z",
+        completedAt: null,
+      },
+    ];
+
+    mockUseListExports.mockReturnValue({
+      data: { body: { exports: mockExports } },
+      isLoading: false,
+      error: null,
+    });
+
+    renderStep();
+
+    // Should render without row count or file size metadata
+    expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
+    expect(screen.getAllByText("CSV").length).toBeGreaterThanOrEqual(1);
+    // No rows or file size info should be present
+    expect(screen.queryByText(/bytes/)).not.toBeInTheDocument();
+  });
+
+  it("shows loading spinner on download button when downloading", () => {
+    const mockExports: ExportRecord[] = [
+      {
+        exportId: "export-1",
+        experimentId: mockExperimentId,
+        tableName: mockTableName,
+        format: "csv",
+        status: "completed",
+        filePath: "/path/to/file.csv",
+        rowCount: 50,
+        fileSize: 512,
+        createdBy: "user-1",
+        createdAt: "2024-01-01T00:00:00Z",
+        completedAt: "2024-01-01T00:05:00Z",
+      },
+    ];
+
+    mockUseDownloadExport.mockReturnValue({
+      downloadExport: mockDownloadExport,
+      isDownloading: true,
+      downloadingExportId: "export-1",
+    });
+
+    mockUseListExports.mockReturnValue({
+      data: { body: { exports: mockExports } },
+      isLoading: false,
+      error: null,
+    });
+
+    renderStep();
+
+    // The download button should be present and disabled
+    const downloadButton = screen.getByTestId("download-button");
+    expect(downloadButton).toBeDisabled();
   });
 });
