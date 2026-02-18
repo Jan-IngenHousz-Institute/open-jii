@@ -21,18 +21,18 @@ export const useExperimentAnnotationAdd = () => {
       // Optimistically update the cache
       queryClient.setQueriesData(
         { queryKey: ["experiment", variables.params.id] },
-        (oldData: unknown) => {
-          const fullResponse = oldData as { body: ExperimentDataResponse };
-          if (!fullResponse.body[0]?.data) return oldData;
+        (oldData: { body?: ExperimentDataResponse } | undefined) => {
+          // Return early if no data in cache or no experiment data
+          if (!oldData?.body?.[0]?.data) return oldData;
 
           const updatedBody = update(
-            fullResponse.body,
+            oldData.body,
             variables.body.tableName,
             [variables.body.rowId],
             variables.body.annotation,
           );
 
-          return { ...fullResponse, body: updatedBody };
+          return { ...oldData, body: updatedBody };
         },
       );
 
