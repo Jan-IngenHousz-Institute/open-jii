@@ -246,7 +246,7 @@ def clean_data():
                 F.col("timestamp"),
                 F.col("sample"),
                 F.col("ingestion_timestamp"),
-                F.expr("uuid()")
+                F.col("kinesis_sequence_number")
             )
         )
     )
