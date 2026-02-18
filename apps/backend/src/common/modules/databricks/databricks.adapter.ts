@@ -186,9 +186,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       return failure(AppError.internal("Export table name is missing"));
     }
 
-    // The Databricks Files API requires a plain /Volumes/... path.
-    // Strip the "dbfs:" prefix that Spark writes when saving files.
-    const filePath = rawFilePath.replace(/^dbfs:/, "");
+    const filePath = rawFilePath;
 
     // Stream the file
     const downloadResult = await this.filesService.download(filePath);

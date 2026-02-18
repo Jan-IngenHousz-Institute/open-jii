@@ -139,9 +139,21 @@ def export_data(df):
 # COMMAND ----------
 
 # DBTITLE 1,Get File Path
+def _strip_dbfs_prefix(path):
+    """
+    Strip the "dbfs:" prefix that Spark/dbutils adds to file paths.
+    The Databricks Files API (used by the backend for downloads) requires
+    plain /Volumes/... paths, so we normalise them here before persisting.
+    """
+    if path and path.startswith("dbfs:"):
+        return path[len("dbfs:"):]
+    return path
+
+
 def get_export_file_path(directory_path):
     """
-    Get the actual file path from the export directory
+    Get the actual file path from the export directory.
+    Returns a clean path with the dbfs: prefix stripped.
     """
     try:
         # List files in the directory
@@ -158,17 +170,17 @@ def get_export_file_path(directory_path):
             # For multi-part output, return the directory path
             if len(data_files) == 1:
                 logger.info(f"Found single data file")
-                return data_files[0]
+                return _strip_dbfs_prefix(data_files[0])
             else:
                 logger.info(f"Found {len(data_files)} data files")
-                return directory_path
+                return _strip_dbfs_prefix(directory_path)
         else:
             logger.warning(f"No data files found in {directory_path}")
-            return directory_path
+            return _strip_dbfs_prefix(directory_path)
             
     except Exception as e:
         logger.error(f"Error listing files: {e}")
-        return directory_path
+        return _strip_dbfs_prefix(directory_path)
 
 # COMMAND ----------
 

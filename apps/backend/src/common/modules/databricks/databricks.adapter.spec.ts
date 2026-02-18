@@ -1008,11 +1008,10 @@ describe("DatabricksAdapter", () => {
       expect(result.error.message).toContain("Export file path is missing");
     });
 
-    it("should strip dbfs: prefix from file path", async () => {
+    it("should stream export successfully", async () => {
       const exportId = "export-abc";
       const experimentId = "exp-456";
-      const rawFilePath = "dbfs:/volumes/catalog/schema/exports/export-abc/raw_data.csv";
-      const strippedPath = "/volumes/catalog/schema/exports/export-abc/raw_data.csv";
+      const filePath = "/volumes/catalog/schema/exports/export-abc/raw_data.csv";
 
       // Mock token request for SQL query
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -1021,7 +1020,7 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock SQL query returning row with dbfs: prefix in file_path
+      // Mock SQL query returning export metadata
       nock(databricksHost)
         .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
         .reply(200, {
@@ -1040,7 +1039,7 @@ describe("DatabricksAdapter", () => {
             truncated: false,
           },
           result: {
-            data_array: [[exportId, rawFilePath, "raw_data"]],
+            data_array: [[exportId, filePath, "raw_data"]],
             chunk_index: 0,
             row_count: 1,
             row_offset: 0,
@@ -1054,16 +1053,16 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock file download with stripped path (no dbfs: prefix)
+      // Mock file download
       nock(databricksHost)
-        .get(`${DatabricksFilesService.FILES_ENDPOINT}${strippedPath}`)
+        .get(`${DatabricksFilesService.FILES_ENDPOINT}${filePath}`)
         .reply(200, "csv-content", { "content-type": "text/csv" });
 
       const result = await databricksAdapter.streamExport(exportId, experimentId);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value.filePath).toBe(strippedPath);
+      expect(result.value.filePath).toBe(filePath);
       expect(result.value.tableName).toBe("raw_data");
     });
   });
