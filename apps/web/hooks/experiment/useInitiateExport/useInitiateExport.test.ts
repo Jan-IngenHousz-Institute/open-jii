@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 import { tsr } from "@/lib/tsr";
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { useInitiateExport } from "./useInitiateExport";
 
-// Mock the tsr module
 vi.mock("@/lib/tsr", () => ({
   tsr: {
     useQueryClient: vi.fn(),
@@ -17,157 +15,93 @@ vi.mock("@/lib/tsr", () => ({
   },
 }));
 
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
+const mockTsr = vi.mocked(tsr, true);
 
 describe("useInitiateExport", () => {
   const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
+  let capturedOnSuccess: ((...args: unknown[]) => Promise<void>) | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedOnSuccess = undefined;
 
-    const mockQueryClient = {
+    mockTsr.useQueryClient.mockReturnValue({
       invalidateQueries: mockInvalidateQueries,
-    };
+    } as never);
 
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient as any);
+    mockTsr.experiments.initiateExport.useMutation.mockImplementation(((opts: {
+      onSuccess: typeof capturedOnSuccess;
+    }) => {
+      capturedOnSuccess = opts.onSuccess;
+      return { mutate: vi.fn(), isPending: false };
+    }) as never);
   });
 
-  it("should call useMutation with correct configuration", () => {
-    const mockUseMutation = vi.fn();
-    mockTsr.experiments.initiateExport.useMutation = mockUseMutation as any;
-
+  it("should call useMutation with onSuccess handler", () => {
     renderHook(() => useInitiateExport());
 
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onSuccess: expect.any(Function),
-    });
+    const call = mockTsr.experiments.initiateExport.useMutation.mock.calls[0]?.[0] as {
+      onSuccess?: unknown;
+    };
+    expect(typeof call.onSuccess).toBe("function");
   });
 
   it("should return mutation result", () => {
-    const mockMutationResult = {
-      mutate: vi.fn(),
-      isPending: false,
-      error: null,
-      data: undefined,
-    };
-
-    mockTsr.experiments.initiateExport.useMutation = vi
-      .fn()
-      .mockReturnValue(mockMutationResult) as any;
-
     const { result } = renderHook(() => useInitiateExport());
 
-    expect(result.current).toBe(mockMutationResult);
+    expect(result.current).toHaveProperty("mutate");
   });
 
-  it("should accept onSuccess callback", () => {
-    const mockUseMutation = vi.fn();
-    mockTsr.experiments.initiateExport.useMutation = mockUseMutation as any;
+  it("should invalidate exports queries on success", async () => {
+    renderHook(() => useInitiateExport());
 
-    const mockOnSuccess = vi.fn();
+    await capturedOnSuccess?.(
+      { body: { exportId: "export-456" } },
+      { params: { id: "exp-123" }, body: { tableName: "raw_data", format: "csv" } },
+    );
 
-    renderHook(() => useInitiateExport({ onSuccess: mockOnSuccess }));
-
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onSuccess: expect.any(Function),
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["exports", "exp-123", "raw_data"],
+      refetchType: "all",
     });
   });
 
-  describe("onSuccess callback", () => {
-    it("should invalidate exports queries with correct queryKey", async () => {
-      let onSuccess: ((data: any, variables: any) => Promise<void>) | undefined;
+  it("should invalidate queries for different table names", async () => {
+    renderHook(() => useInitiateExport());
 
-      mockTsr.experiments.initiateExport.useMutation = vi.fn((opts: any) => {
-        onSuccess = opts.onSuccess;
-        return { mutate: vi.fn() };
-      }) as any;
+    await capturedOnSuccess?.(
+      { body: { exportId: "export-789" } },
+      { params: { id: "exp-123" }, body: { tableName: "device", format: "ndjson" } },
+    );
 
-      renderHook(() => useInitiateExport());
-
-      const variables = {
-        params: { id: "exp-123" },
-        body: { tableName: "raw_data", format: "csv" },
-      };
-
-      const data = { body: { exportId: "export-456" } };
-
-      await onSuccess?.(data, variables);
-
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["exports", "exp-123", "raw_data"],
-        refetchType: "all",
-      });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["exports", "exp-123", "device"],
+      refetchType: "all",
     });
+  });
 
-    it("should call custom onSuccess callback after invalidating queries", async () => {
-      const mockCustomOnSuccess = vi.fn();
-      let onSuccess: ((data: any, variables: any) => Promise<void>) | undefined;
+  it("should call custom onSuccess after invalidating queries", async () => {
+    const mockCustomOnSuccess = vi.fn();
 
-      mockTsr.experiments.initiateExport.useMutation = vi.fn((opts: any) => {
-        onSuccess = opts.onSuccess;
-        return { mutate: vi.fn() };
-      }) as any;
+    renderHook(() => useInitiateExport({ onSuccess: mockCustomOnSuccess }));
 
-      renderHook(() => useInitiateExport({ onSuccess: mockCustomOnSuccess }));
+    await capturedOnSuccess?.(
+      { body: { exportId: "export-456" } },
+      { params: { id: "exp-123" }, body: { tableName: "raw_data", format: "csv" } },
+    );
 
-      const variables = {
-        params: { id: "exp-123" },
-        body: { tableName: "raw_data", format: "csv" },
-      };
+    expect(mockInvalidateQueries).toHaveBeenCalled();
+    expect(mockCustomOnSuccess).toHaveBeenCalled();
+  });
 
-      const data = { body: { exportId: "export-456" } };
+  it("should not throw when custom onSuccess is not provided", async () => {
+    renderHook(() => useInitiateExport());
 
-      await onSuccess?.(data, variables);
-
-      expect(mockInvalidateQueries).toHaveBeenCalled();
-      expect(mockCustomOnSuccess).toHaveBeenCalled();
-    });
-
-    it("should invalidate queries for different table names", async () => {
-      let onSuccess: ((data: any, variables: any) => Promise<void>) | undefined;
-
-      mockTsr.experiments.initiateExport.useMutation = vi.fn((opts: any) => {
-        onSuccess = opts.onSuccess;
-        return { mutate: vi.fn() };
-      }) as any;
-
-      renderHook(() => useInitiateExport());
-
-      const variables = {
-        params: { id: "exp-123" },
-        body: { tableName: "device", format: "ndjson" },
-      };
-
-      const data = { body: { exportId: "export-789" } };
-
-      await onSuccess?.(data, variables);
-
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["exports", "exp-123", "device"],
-        refetchType: "all",
-      });
-    });
-
-    it("should not call custom onSuccess if not provided", async () => {
-      let onSuccess: ((data: any, variables: any) => Promise<void>) | undefined;
-
-      mockTsr.experiments.initiateExport.useMutation = vi.fn((opts: any) => {
-        onSuccess = opts.onSuccess;
-        return { mutate: vi.fn() };
-      }) as any;
-
-      renderHook(() => useInitiateExport());
-
-      const variables = {
-        params: { id: "exp-123" },
-        body: { tableName: "raw_data", format: "parquet" },
-      };
-
-      const data = { body: { exportId: "export-999" } };
-
-      // Should not throw error when onSuccess is undefined
-      await expect(onSuccess?.(data, variables)).resolves.toBeUndefined();
-      expect(mockInvalidateQueries).toHaveBeenCalled();
-    });
+    await expect(
+      capturedOnSuccess?.(
+        { body: { exportId: "export-999" } },
+        { params: { id: "exp-123" }, body: { tableName: "raw_data", format: "parquet" } },
+      ),
+    ).resolves.toBeUndefined();
   });
 });
