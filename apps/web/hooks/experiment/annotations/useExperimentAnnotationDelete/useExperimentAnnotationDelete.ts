@@ -21,13 +21,13 @@ export const useExperimentAnnotationDelete = () => {
       // Optimistically update the cache by removing the annotation
       queryClient.setQueriesData(
         { queryKey: ["experiment", variables.params.id] },
-        (oldData: unknown) => {
-          const fullResponse = oldData as { body: ExperimentDataResponse };
-          if (!fullResponse.body[0]?.data) return oldData;
+        (oldData: { body?: ExperimentDataResponse } | undefined) => {
+          // Return early if no data in cache or no experiment data
+          if (!oldData?.body?.[0]?.data) return oldData;
 
-          const updatedBody = remove(fullResponse.body, variables.params.annotationId);
+          const updatedBody = remove(oldData.body, variables.params.annotationId);
 
-          return { ...fullResponse, body: updatedBody };
+          return { ...oldData, body: updatedBody };
         },
       );
 
