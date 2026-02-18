@@ -46,6 +46,7 @@ describe("useListExports", () => {
         query: { tableName: mockTableName },
       },
       queryKey: ["exports", mockExperimentId, mockTableName],
+      refetchInterval: 60_000,
     });
   });
 
@@ -160,7 +161,7 @@ describe("useListExports", () => {
         exportId: null,
         experimentId: mockExperimentId,
         tableName: mockTableName,
-        format: "json" as const,
+        format: "ndjson" as const,
         status: "running" as const,
         filePath: null,
         rowCount: null,
@@ -220,6 +221,7 @@ describe("useListExports", () => {
         query: { tableName: mockTableName },
       },
       queryKey: ["exports", mockExperimentId, mockTableName],
+      refetchInterval: 60_000,
     });
 
     // Change table name
@@ -235,6 +237,7 @@ describe("useListExports", () => {
         query: { tableName: newTableName },
       },
       queryKey: ["exports", mockExperimentId, newTableName],
+      refetchInterval: 60_000,
     });
   });
 });

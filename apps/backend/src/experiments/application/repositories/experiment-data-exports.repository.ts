@@ -21,18 +21,16 @@ export class ExperimentDataExportsRepository {
    * The Databricks Python job uses load_experiment_table() which handles data loading internally
    */
   async initiateExport(params: {
-    exportId: string;
     experimentId: string;
     tableName: string;
     format: string;
     userId: string;
   }): Promise<Result<void>> {
-    const { exportId, experimentId, tableName, format, userId } = params;
+    const { experimentId, tableName, format, userId } = params;
 
     this.logger.log({
       msg: "Initiating export",
       operation: "initiateExport",
-      exportId,
       experimentId,
       tableName,
       format,
@@ -43,7 +41,6 @@ export class ExperimentDataExportsRepository {
       experimentId,
       tableName,
       format,
-      exportId,
       userId,
     );
 
@@ -56,7 +53,6 @@ export class ExperimentDataExportsRepository {
     this.logger.log({
       msg: "Export job triggered successfully",
       operation: "initiateExport",
-      exportId,
       experimentId,
       tableName,
       runId,
@@ -132,8 +128,34 @@ export class ExperimentDataExportsRepository {
       return success(completedExports);
     }
 
-    // Merge active and completed exports (active first)
-    const allExports = [...activeResult.value, ...completedExports];
+    // Collect run IDs of completed exports to avoid duplicating them when fetching failed runs
+    const completedExportRunIds = new Set<number>();
+    for (const e of completedExports) {
+      if (e.jobRunId != null) {
+        completedExportRunIds.add(e.jobRunId);
+      }
+    }
+
+    // Get failed exports from completed job runs
+    const failedResult = await this.databricksPort.getFailedExports(
+      experimentId,
+      tableName,
+      completedExportRunIds,
+    );
+
+    if (failedResult.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to fetch failed exports, returning active and completed only",
+        operation: "listExports",
+        experimentId,
+        tableName,
+        error: failedResult.error.message,
+      });
+      return success([...activeResult.value, ...completedExports]);
+    }
+
+    // Merge active, failed, and completed exports (active first, then failed, then completed)
+    const allExports = [...activeResult.value, ...failedResult.value, ...completedExports];
 
     this.logger.log({
       msg: "Successfully retrieved exports",
@@ -141,6 +163,7 @@ export class ExperimentDataExportsRepository {
       experimentId,
       tableName,
       activeCount: activeResult.value.length,
+      failedCount: failedResult.value.length,
       completedCount: completedExports.length,
       totalCount: allExports.length,
     });
@@ -155,7 +178,7 @@ export class ExperimentDataExportsRepository {
   async downloadExport(params: {
     experimentId: string;
     exportId: string;
-  }): Promise<Result<{ stream: Readable; filePath: string }>> {
+  }): Promise<Result<{ stream: Readable; filePath: string; tableName: string }>> {
     const { experimentId, exportId } = params;
 
     this.logger.log({

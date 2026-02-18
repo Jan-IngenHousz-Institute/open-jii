@@ -27,8 +27,9 @@
       "description": "View and manage exports for the '{{tableName}}' dataset.",
       "createDescription": "Create a new export for the '{{tableName}}' dataset.",
       "status": {
+        "queued": "Queued",
         "pending": "Pending",
-        "running": "Running",
+        "running": "Preparing",
         "completed": "Completed",
         "failed": "Failed"
       },
@@ -40,9 +41,19 @@
       "error": "Error",
       "noExports": "No exports yet. Create your first export to get started.",
       "exportCount": "{{count}} export(s) available",
+      "loadingExports": "Loading exports...",
+      "format": "Format",
+      "exportTitle": "Export #{{number}}",
+      "failedTooltip": "No action needed — this failure will be investigated and resolved. The export will reappear here with the correct status once the issue is fixed.",
       "createNew": "Create New Export",
       "creating": "Creating export...",
-      "createExport": "Create Export"
+      "createExport": "Create Export",
+      "creatingTitle": "Creating {{format}} export",
+      "creatingDescription": "This may take a moment.",
+      "creationSuccess": "Export created successfully!",
+      "creationSuccessDescription": "Your export has been queued and will be available for download shortly.",
+      "creationError": "Failed to create export",
+      "backToList": "Back to exports"
     }
   }
 }

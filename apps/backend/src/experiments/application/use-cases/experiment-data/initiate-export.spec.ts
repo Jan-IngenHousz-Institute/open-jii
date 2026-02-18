@@ -55,7 +55,6 @@ describe("InitiateExportUseCase", () => {
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.exportId).toBeDefined();
     expect(result.value.status).toBe("pending");
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -120,12 +119,11 @@ describe("InitiateExportUseCase", () => {
 
     const result = await useCase.execute(experiment.id, anotherUserId, {
       tableName: "raw_data",
-      format: "json",
+      format: "ndjson",
     });
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    expect(result.value.exportId).toBeDefined();
     expect(result.value.status).toBe("pending");
   });
 

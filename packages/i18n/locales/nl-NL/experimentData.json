@@ -27,8 +27,9 @@
       "description": "Bekijk en beheer exports voor de '{{tableName}}' dataset.",
       "createDescription": "Maak een nieuwe export voor de '{{tableName}}' dataset.",
       "status": {
+        "queued": "In wachtrij",
         "pending": "In behandeling",
-        "running": "Wordt uitgevoerd",
+        "running": "Voorbereiden",
         "completed": "Voltooid",
         "failed": "Mislukt"
       },
@@ -40,9 +41,19 @@
       "error": "Fout",
       "noExports": "Nog geen exports. Maak uw eerste export om te beginnen.",
       "exportCount": "{{count}} export(s) beschikbaar",
+      "loadingExports": "Exports laden...",
+      "format": "Formaat",
+      "exportTitle": "Export #{{number}}",
+      "failedTooltip": "Geen actie nodig — deze fout wordt onderzocht en opgelost. De export verschijnt hier opnieuw met de juiste status zodra het probleem is verholpen.",
       "createNew": "Nieuwe export maken",
       "creating": "Export maken...",
-      "createExport": "Export maken"
+      "createExport": "Export maken",
+      "creatingTitle": "{{format}} export wordt aangemaakt",
+      "creatingDescription": "Dit kan even duren.",
+      "creationSuccess": "Export succesvol aangemaakt!",
+      "creationSuccessDescription": "Uw export is in de wachtrij geplaatst en is binnenkort beschikbaar om te downloaden.",
+      "creationError": "Export aanmaken mislukt",
+      "backToList": "Terug naar exports"
     }
   }
 }

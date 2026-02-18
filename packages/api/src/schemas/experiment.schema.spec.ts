@@ -754,7 +754,7 @@ describe("Experiment Schema", () => {
     });
 
     it("zInitiateExportBody accepts all valid formats", () => {
-      for (const format of ["csv", "json", "parquet"] as const) {
+      for (const format of ["csv", "ndjson", "json-array", "parquet"] as const) {
         expect(zInitiateExportBody.parse({ tableName: "t1", format })).toEqual({
           tableName: "t1",
           format,
@@ -773,14 +773,12 @@ describe("Experiment Schema", () => {
     });
 
     it("zInitiateExportResponse valid", () => {
-      const res = { exportId: uuidA, status: "pending" };
+      const res = { status: "pending" };
       expect(zInitiateExportResponse.parse(res)).toEqual(res);
     });
 
-    it("zInitiateExportResponse rejects bad uuid", () => {
-      expect(() =>
-        zInitiateExportResponse.parse({ exportId: "nope", status: "pending" }),
-      ).toThrow();
+    it("zInitiateExportResponse rejects empty status", () => {
+      expect(() => zInitiateExportResponse.parse({})).toThrow();
     });
 
     it("zListExportsQuery valid", () => {
@@ -814,7 +812,7 @@ describe("Experiment Schema", () => {
         exportId: null,
         experimentId: uuidB,
         tableName: "raw_data",
-        format: "json",
+        format: "ndjson",
         status: "running",
         filePath: null,
         rowCount: null,
@@ -839,7 +837,7 @@ describe("Experiment Schema", () => {
         createdAt: isoTime,
         completedAt: null,
       };
-      for (const status of ["pending", "running", "completed", "failed"] as const) {
+      for (const status of ["queued", "pending", "running", "completed", "failed"] as const) {
         expect(zExportRecord.parse({ ...base, status })).toEqual({ ...base, status });
       }
     });

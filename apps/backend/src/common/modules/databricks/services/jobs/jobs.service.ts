@@ -115,7 +115,7 @@ export class DatabricksJobsService {
       queue: {
         enabled: true,
       },
-      performance_target: PerformanceTarget.STANDARD,
+      performance_target: PerformanceTarget.PERFORMANCE_OPTIMIZED,
     };
 
     if (idempotencyToken) {
@@ -229,11 +229,13 @@ export class DatabricksJobsService {
    * @param jobId - The job ID to list runs for
    * @param activeOnly - If true, only return active (non-terminal) runs
    * @param limit - Maximum number of runs to return (default: 25)
+   * @param completedOnly - If true, only return completed (terminal) runs
    */
   async listRunsForJob(
     jobId: number,
     activeOnly = false,
     limit = 25,
+    completedOnly = false,
   ): Promise<Result<DatabricksRunsListResponse>> {
     return await tryCatch(
       async () => {
@@ -249,6 +251,7 @@ export class DatabricksJobsService {
         const requestParams: DatabricksRunsListRequest = {
           job_id: jobId,
           active_only: activeOnly,
+          completed_only: completedOnly,
           limit,
           expand_tasks: false,
         };

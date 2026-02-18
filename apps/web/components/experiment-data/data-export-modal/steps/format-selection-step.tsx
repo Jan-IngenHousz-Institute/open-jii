@@ -32,14 +32,12 @@ type FormatSelectionValues = z.infer<typeof formatSelectionSchema>;
 interface FormatSelectionStepProps {
   onFormatSubmit: (format: string) => void;
   onBack: () => void;
-  onClose: () => void;
   isCreating?: boolean;
 }
 
 export function FormatSelectionStep({
   onFormatSubmit,
   onBack,
-  onClose,
   isCreating,
 }: FormatSelectionStepProps) {
   const { t } = useTranslation("experimentData");
@@ -70,7 +68,7 @@ export function FormatSelectionStep({
               <FormItem>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">
-                    {t("experimentData.downloadModal.format")}
+                    {t("experimentData.exportModal.format")}
                   </FormLabel>
                   <div className="col-span-3">
                     <Select value={field.value} onValueChange={field.onChange}>
@@ -97,9 +95,6 @@ export function FormatSelectionStep({
       <DialogFooter className="flex-col gap-2 sm:flex-row">
         <Button variant="outline" onClick={onBack} className="w-full sm:w-auto">
           {t("common.back")}
-        </Button>
-        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-          {t("common.close")}
         </Button>
         <Button
           type="submit"

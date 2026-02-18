@@ -40,7 +40,6 @@ describe("ExperimentDataExportsRepository", () => {
   });
 
   describe("initiateExport", () => {
-    const exportId = faker.string.uuid();
     const experimentId = faker.string.uuid();
     const tableName = "raw_data";
     const format = "csv";
@@ -54,7 +53,6 @@ describe("ExperimentDataExportsRepository", () => {
       );
 
       const result = await repository.initiateExport({
-        exportId,
         experimentId,
         tableName,
         format,
@@ -69,7 +67,6 @@ describe("ExperimentDataExportsRepository", () => {
         experimentId,
         tableName,
         format,
-        exportId,
         userId,
       );
     });
@@ -79,7 +76,6 @@ describe("ExperimentDataExportsRepository", () => {
       vi.spyOn(databricksPort, "triggerDataExportJob").mockResolvedValue(failure(error));
 
       const result = await repository.initiateExport({
-        exportId,
         experimentId,
         tableName,
         format,
@@ -139,7 +135,7 @@ describe("ExperimentDataExportsRepository", () => {
           exportId: null,
           experimentId,
           tableName,
-          format: "json",
+          format: "ndjson",
           status: "running",
           filePath: null,
           rowCount: null,
@@ -153,6 +149,7 @@ describe("ExperimentDataExportsRepository", () => {
 
       vi.spyOn(databricksPort, "getExportMetadata").mockResolvedValue(success(mockSchemaData));
       vi.spyOn(databricksPort, "getActiveExports").mockResolvedValue(success(mockActiveExports));
+      vi.spyOn(databricksPort, "getFailedExports").mockResolvedValue(success([]));
 
       const result = await repository.listExports({ experimentId, tableName });
 
@@ -250,12 +247,167 @@ describe("ExperimentDataExportsRepository", () => {
 
       vi.spyOn(databricksPort, "getExportMetadata").mockResolvedValue(success(mockSchemaData));
       vi.spyOn(databricksPort, "getActiveExports").mockResolvedValue(success([]));
+      vi.spyOn(databricksPort, "getFailedExports").mockResolvedValue(success([]));
 
       const result = await repository.listExports({ experimentId, tableName });
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toHaveLength(0);
+    });
+
+    it("should return merged active, failed, and completed exports", async () => {
+      const mockSchemaData = {
+        columns: [
+          { name: "export_id", type_name: "string", type_text: "string", position: 0 },
+          { name: "experiment_id", type_name: "string", type_text: "string", position: 1 },
+          { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+          { name: "format", type_name: "string", type_text: "string", position: 3 },
+          { name: "status", type_name: "string", type_text: "string", position: 4 },
+          { name: "file_path", type_name: "string", type_text: "string", position: 5 },
+          { name: "row_count", type_name: "bigint", type_text: "bigint", position: 6 },
+          { name: "file_size", type_name: "bigint", type_text: "bigint", position: 7 },
+          { name: "created_by", type_name: "string", type_text: "string", position: 8 },
+          { name: "created_at", type_name: "string", type_text: "string", position: 9 },
+          { name: "completed_at", type_name: "string", type_text: "string", position: 10 },
+          { name: "job_run_id", type_name: "bigint", type_text: "bigint", position: 11 },
+        ],
+        rows: [
+          [
+            "completed-export-1",
+            experimentId,
+            tableName,
+            "csv",
+            "completed",
+            "/path/to/file.csv",
+            "1000",
+            "50000",
+            "user-1",
+            "2026-01-01T00:00:00Z",
+            "2026-01-01T00:05:00Z",
+            "111",
+          ],
+        ],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      const mockActiveExports: ExportMetadata[] = [
+        {
+          exportId: null,
+          experimentId,
+          tableName,
+          format: "ndjson",
+          status: "running",
+          filePath: null,
+          rowCount: null,
+          fileSize: null,
+          createdBy: "user-2",
+          createdAt: "2026-01-03T00:00:00Z",
+          completedAt: null,
+          jobRunId: 333,
+        },
+      ];
+
+      const mockFailedExports: ExportMetadata[] = [
+        {
+          exportId: null,
+          experimentId,
+          tableName,
+          format: "parquet",
+          status: "failed",
+          filePath: null,
+          rowCount: null,
+          fileSize: null,
+          createdBy: "user-3",
+          createdAt: "2026-01-02T00:00:00Z",
+          completedAt: "2026-01-02T00:01:00Z",
+          jobRunId: 444,
+        },
+      ];
+
+      vi.spyOn(databricksPort, "getExportMetadata").mockResolvedValue(success(mockSchemaData));
+      vi.spyOn(databricksPort, "getActiveExports").mockResolvedValue(success(mockActiveExports));
+      vi.spyOn(databricksPort, "getFailedExports").mockResolvedValue(success(mockFailedExports));
+
+      const result = await repository.listExports({ experimentId, tableName });
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      // Active first, then failed, then completed
+      expect(result.value).toHaveLength(3);
+      expect(result.value[0].status).toBe("running");
+      expect(result.value[1].status).toBe("failed");
+      expect(result.value[2].status).toBe("completed");
+    });
+
+    it("should return active and completed exports when getFailedExports fails", async () => {
+      const mockSchemaData = {
+        columns: [
+          { name: "export_id", type_name: "string", type_text: "string", position: 0 },
+          { name: "experiment_id", type_name: "string", type_text: "string", position: 1 },
+          { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+          { name: "format", type_name: "string", type_text: "string", position: 3 },
+          { name: "status", type_name: "string", type_text: "string", position: 4 },
+          { name: "file_path", type_name: "string", type_text: "string", position: 5 },
+          { name: "row_count", type_name: "bigint", type_text: "bigint", position: 6 },
+          { name: "file_size", type_name: "bigint", type_text: "bigint", position: 7 },
+          { name: "created_by", type_name: "string", type_text: "string", position: 8 },
+          { name: "created_at", type_name: "string", type_text: "string", position: 9 },
+          { name: "completed_at", type_name: "string", type_text: "string", position: 10 },
+          { name: "job_run_id", type_name: "bigint", type_text: "bigint", position: 11 },
+        ],
+        rows: [
+          [
+            "export-1",
+            experimentId,
+            tableName,
+            "csv",
+            "completed",
+            "/path/file.csv",
+            "500",
+            "25000",
+            "user-1",
+            "2026-01-01T00:00:00Z",
+            "2026-01-01T00:05:00Z",
+            "111",
+          ],
+        ],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      const mockActiveExports: ExportMetadata[] = [
+        {
+          exportId: null,
+          experimentId,
+          tableName,
+          format: "ndjson",
+          status: "running",
+          filePath: null,
+          rowCount: null,
+          fileSize: null,
+          createdBy: "user-2",
+          createdAt: "2026-01-02T00:00:00Z",
+          completedAt: null,
+          jobRunId: 222,
+        },
+      ];
+
+      vi.spyOn(databricksPort, "getExportMetadata").mockResolvedValue(success(mockSchemaData));
+      vi.spyOn(databricksPort, "getActiveExports").mockResolvedValue(success(mockActiveExports));
+      vi.spyOn(databricksPort, "getFailedExports").mockResolvedValue(
+        failure(AppError.internal("Failed to list completed runs")),
+      );
+
+      const result = await repository.listExports({ experimentId, tableName });
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+      expect(result.value[0].status).toBe("running");
+      expect(result.value[1].status).toBe("completed");
     });
   });
 
@@ -273,7 +425,7 @@ describe("ExperimentDataExportsRepository", () => {
       const mockFilePath = "/path/to/exported/file.csv";
 
       vi.spyOn(databricksPort, "streamExport").mockResolvedValue(
-        success({ stream: mockStream, filePath: mockFilePath }),
+        success({ stream: mockStream, filePath: mockFilePath, tableName: "raw_data" }),
       );
 
       const result = await repository.downloadExport({ experimentId, exportId });
@@ -281,6 +433,7 @@ describe("ExperimentDataExportsRepository", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value.filePath).toBe(mockFilePath);
+      expect(result.value.tableName).toBe("raw_data");
       expect(result.value.stream).toBe(mockStream);
 
       expect(databricksPort.streamExport).toHaveBeenCalledWith(exportId, experimentId);

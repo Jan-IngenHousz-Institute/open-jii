@@ -15,7 +15,7 @@ import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
-import { JobLifecycleState } from "./services/jobs/jobs.types";
+import { JobLifecycleState, JobResultState } from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
@@ -95,8 +95,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Trigger the data export Databricks job with the specified parameters
    * @param experimentId - The experiment ID
    * @param tableName - The table name to export
-   * @param format - The export format (csv, json, parquet)
-   * @param exportId - Unique export identifier
+   * @param format - The export format (csv, ndjson, json-array, parquet)
    * @param userId - User ID who initiated the export
    * @returns Result containing the job run response
    */
@@ -104,14 +103,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     experimentId: string,
     tableName: string,
     format: string,
-    exportId: string,
     userId: string,
   ): Promise<Result<DatabricksJobRunResponse>> {
     const jobParams = {
       EXPERIMENT_ID: experimentId,
       TABLE_NAME: tableName,
       FORMAT: format,
-      EXPORT_ID: exportId,
       USER_ID: userId,
       CATALOG_NAME: this.configService.getCatalogName(),
       ENVIRONMENT: this.configService.getEnvironment().toUpperCase(),
@@ -131,7 +128,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   async streamExport(
     exportId: string,
     experimentId: string,
-  ): Promise<Result<{ stream: Readable; filePath: string }>> {
+  ): Promise<Result<{ stream: Readable; filePath: string; tableName: string }>> {
     this.logger.log({
       msg: "Streaming export by ID",
       operation: "streamExport",
@@ -141,7 +138,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     // Fetch export metadata using query builder (select all columns)
     const query = this.queryBuilder.buildQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_data_exports`,
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_export_metadata`,
       whereConditions: [
         ["export_id", exportId],
         ["experiment_id", experimentId],
@@ -166,11 +163,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       return failure(AppError.notFound("Export not found"));
     }
 
-    // Parse file path from query result
+    // Parse file path and table name from query result
     const filePathIndex = schemaData.columns.findIndex((col) => col.name === "file_path");
-    const filePath = schemaData.rows[0][filePathIndex];
+    const tableNameIndex = schemaData.columns.findIndex((col) => col.name === "table_name");
+    const rawFilePath = schemaData.rows[0][filePathIndex];
+    const tableName = schemaData.rows[0][tableNameIndex];
 
-    if (!filePath) {
+    if (!rawFilePath) {
       this.logger.error({
         msg: "Export has no file path",
         operation: "streamExport",
@@ -178,6 +177,19 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       });
       return failure(AppError.internal("Export file path is missing"));
     }
+
+    if (!tableName) {
+      this.logger.error({
+        msg: "Export has no table name",
+        operation: "streamExport",
+        exportId,
+      });
+      return failure(AppError.internal("Export table name is missing"));
+    }
+
+    // The Databricks Files API requires a plain /Volumes/... path.
+    // Strip the "dbfs:" prefix that Spark writes when saving files.
+    const filePath = rawFilePath.replace(/^dbfs:/, "");
 
     // Stream the file
     const downloadResult = await this.filesService.download(filePath);
@@ -189,6 +201,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     return success({
       stream: downloadResult.value,
       filePath,
+      tableName,
     });
   }
 
@@ -208,7 +221,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     });
 
     const query = this.queryBuilder.buildQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_data_exports`,
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_export_metadata`,
       whereConditions: [
         ["experiment_id", experimentId],
         ["table_name", tableName],
@@ -280,8 +293,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       }
 
       const lifecycleState = run.state.life_cycle_state;
-      let status: string;
+      let status: ExportMetadata["status"];
       switch (lifecycleState) {
+        case JobLifecycleState.QUEUED:
+          status = "queued";
+          break;
         case JobLifecycleState.PENDING:
           status = "pending";
           break;
@@ -289,22 +305,28 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         case JobLifecycleState.TERMINATING:
           status = "running";
           break;
+        case JobLifecycleState.INTERNAL_ERROR:
+          // Platform-level error, not caught by getFailedExports()
+          status = "failed";
+          break;
         default:
-          status = "unknown";
+          // Skip runs with unexpected lifecycle states
+          // (active_only should not return TERMINATED or SKIPPED)
+          return acc;
       }
 
       acc.push({
         exportId: null,
         experimentId: params.EXPERIMENT_ID,
         tableName: params.TABLE_NAME,
-        format: params.FORMAT as "csv" | "json" | "parquet",
-        status: status as "pending" | "running",
+        format: params.FORMAT as "csv" | "ndjson" | "json-array" | "parquet",
+        status,
         filePath: null,
         rowCount: null,
         fileSize: null,
         createdBy: params.USER_ID || "",
         createdAt: new Date(run.start_time).toISOString(),
-        completedAt: null,
+        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
         jobRunId: run.run_id,
       });
 
@@ -312,6 +334,86 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     }, []);
 
     return success(activeExports);
+  }
+
+  /**
+   * Get failed exports for an experiment by querying completed job runs
+   * Filters completed job runs that have a non-SUCCESS result state
+   * @param experimentId - The experiment ID to filter by
+   * @param tableName - The table name to filter by
+   * @param completedExportRunIds - Set of job run IDs already present in completed exports (to avoid duplicates)
+   * @returns Result containing array of ExportMetadata for failed exports
+   */
+  async getFailedExports(
+    experimentId: string,
+    tableName: string,
+    completedExportRunIds: Set<number>,
+  ): Promise<Result<ExportMetadata[]>> {
+    this.logger.log({
+      msg: "Fetching failed exports from completed job runs",
+      operation: "getFailedExports",
+      experimentId,
+      tableName,
+    });
+
+    const jobId = this.configService.getDataExportJobIdAsNumber();
+
+    // Get completed (terminated) job runs for the export job
+    const runsResult = await this.jobsService.listRunsForJob(jobId, false, 25, true);
+
+    if (runsResult.isFailure()) {
+      return failure(runsResult.error);
+    }
+
+    const runs = runsResult.value.runs ?? [];
+
+    const failedExports = runs.reduce<ExportMetadata[]>((acc, run) => {
+      // Skip runs that already have a completed export record in Delta Lake
+      if (completedExportRunIds.has(run.run_id)) {
+        return acc;
+      }
+
+      const paramsArray = run.job_parameters ?? [];
+      const params: Record<string, string> = paramsArray.reduce(
+        (record: Record<string, string>, param) => {
+          record[param.name] = param.value;
+          return record;
+        },
+        {},
+      );
+
+      if (params.EXPERIMENT_ID !== experimentId || params.TABLE_NAME !== tableName) {
+        return acc;
+      }
+
+      // Only include runs that terminated with a non-success result
+      const resultState = run.state.result_state;
+      if (
+        run.state.life_cycle_state !== JobLifecycleState.TERMINATED ||
+        resultState === JobResultState.SUCCESS
+      ) {
+        return acc;
+      }
+
+      acc.push({
+        exportId: null,
+        experimentId: params.EXPERIMENT_ID,
+        tableName: params.TABLE_NAME,
+        format: params.FORMAT as "csv" | "ndjson" | "json-array" | "parquet",
+        status: "failed",
+        filePath: null,
+        rowCount: null,
+        fileSize: null,
+        createdBy: params.USER_ID || "",
+        createdAt: new Date(run.start_time).toISOString(),
+        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
+        jobRunId: run.run_id,
+      });
+
+      return acc;
+    }, []);
+
+    return success(failedExports);
   }
 
   /**

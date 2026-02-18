@@ -154,18 +154,14 @@ export interface DatabricksPort {
    * Trigger the data export Databricks job with the specified parameters
    * @param experimentId - The experiment ID
    * @param tableName - The table name to export
-   * @param format - The export format (csv, json, parquet)
-   * @param exportId - Unique export identifier
+   * @param format - The export format (csv, ndjson, json-array, parquet)
    * @param userId - User ID who initiated the export
-   * @param sqlQuery - Optional SQL query to use for export
    */
   triggerDataExportJob(
     experimentId: string,
     tableName: string,
     format: string,
-    exportId: string,
     userId: string,
-    sqlQuery?: string,
   ): Promise<Result<DatabricksJobRunResponse>>;
 
   /**
@@ -178,7 +174,7 @@ export interface DatabricksPort {
   streamExport(
     exportId: string,
     experimentId: string,
-  ): Promise<Result<{ stream: Readable; filePath: string }>>;
+  ): Promise<Result<{ stream: Readable; filePath: string; tableName: string }>>;
 
   /**
    * Get completed export metadata for an experiment table from Delta Lake
@@ -190,4 +186,14 @@ export interface DatabricksPort {
    * Get active (in-progress) exports from job runs
    */
   getActiveExports(experimentId: string, tableName: string): Promise<Result<ExportMetadata[]>>;
+
+  /**
+   * Get failed exports from completed job runs
+   * @param completedExportRunIds - Set of run IDs already in the completed exports table (to deduplicate)
+   */
+  getFailedExports(
+    experimentId: string,
+    tableName: string,
+    completedExportRunIds: Set<number>,
+  ): Promise<Result<ExportMetadata[]>>;
 }

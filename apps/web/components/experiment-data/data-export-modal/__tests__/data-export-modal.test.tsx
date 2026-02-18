@@ -9,32 +9,36 @@ globalThis.React = React;
 
 // Mock the hooks
 const mockInitiateExport = vi.fn();
-const mockIsPending = vi.fn(() => false);
+let capturedOnSuccess: (() => void) | undefined;
 
 vi.mock("~/hooks/experiment/useInitiateExport/useInitiateExport", () => ({
   useInitiateExport: (options: { onSuccess?: () => void } = {}) => {
+    capturedOnSuccess = options.onSuccess;
     return {
       mutate: mockInitiateExport,
-      isPending: mockIsPending(),
-      onSuccess: options.onSuccess,
+      isPending: false,
     };
   },
+}));
+
+vi.mock("~/util/apiError", () => ({
+  parseApiError: (error: { body?: { message?: string } }) => error.body,
 }));
 
 // Mock the step components
 vi.mock("../steps/export-list-step", () => ({
   ExportListStep: ({
-    onCreateNew,
+    onCreateExport,
     onClose,
   }: {
     experimentId: string;
     tableName: string;
-    onCreateNew: () => void;
+    onCreateExport: (format: string) => void;
     onClose: () => void;
   }) => (
     <div data-testid="export-list-step">
-      <button onClick={onCreateNew} data-testid="create-button">
-        Create New Export
+      <button onClick={() => onCreateExport("csv")} data-testid="create-csv-button">
+        Create CSV Export
       </button>
       <button onClick={onClose} data-testid="close-button">
         Close
@@ -43,29 +47,25 @@ vi.mock("../steps/export-list-step", () => ({
   ),
 }));
 
-vi.mock("../steps/format-selection-step", () => ({
-  FormatSelectionStep: ({
-    onFormatSubmit,
-    onBack,
-    onClose,
-    isCreating,
+vi.mock("../steps/export-creation-step", () => ({
+  ExportCreationStep: ({
+    format,
+    status,
+    errorMessage,
+    onBackToList,
   }: {
-    onFormatSubmit: (format: string) => void;
-    onBack: () => void;
-    onClose: () => void;
-    isCreating?: boolean;
+    format: string;
+    status: string;
+    errorMessage?: string;
+    onBackToList: () => void;
   }) => (
-    <div data-testid="format-selection-step">
-      <button onClick={() => onFormatSubmit("csv")} data-testid="submit-csv" disabled={isCreating}>
-        Submit CSV
+    <div data-testid="export-creation-step">
+      <span data-testid="creation-format">{format}</span>
+      <span data-testid="creation-status">{status}</span>
+      {errorMessage && <span data-testid="creation-error">{errorMessage}</span>}
+      <button onClick={onBackToList} data-testid="back-to-list-button">
+        Back to list
       </button>
-      <button onClick={onBack} data-testid="back-button">
-        Back
-      </button>
-      <button onClick={onClose} data-testid="close-button">
-        Close
-      </button>
-      {isCreating && <span data-testid="is-creating">Creating...</span>}
     </div>
   ),
 }));
@@ -123,7 +123,7 @@ describe("DataExportModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPending.mockReturnValue(false);
+    capturedOnSuccess = undefined;
   });
 
   const renderModal = (props = {}) => {
@@ -144,92 +144,120 @@ describe("DataExportModal", () => {
   it("starts with export list step", () => {
     renderModal();
     expect(screen.getByTestId("export-list-step")).toBeInTheDocument();
-    expect(screen.queryByTestId("format-selection-step")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("export-creation-step")).not.toBeInTheDocument();
   });
 
-  it("transitions to format selection step when create button is clicked", async () => {
+  it("transitions to creation step when format is selected", async () => {
     renderModal();
 
-    const createButton = screen.getByTestId("create-button");
-    fireEvent.click(createButton);
+    fireEvent.click(screen.getByTestId("create-csv-button"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("format-selection-step")).toBeInTheDocument();
+      expect(screen.getByTestId("export-creation-step")).toBeInTheDocument();
       expect(screen.queryByTestId("export-list-step")).not.toBeInTheDocument();
     });
   });
 
-  it("displays create title when on format selection step", async () => {
+  it("calls initiateExport with correct params when format is selected", () => {
     renderModal();
 
-    fireEvent.click(screen.getByTestId("create-button"));
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+
+    expect(mockInitiateExport).toHaveBeenCalledWith(
+      {
+        params: { id: "test-experiment-123" },
+        body: {
+          tableName: "raw_data",
+          format: "csv",
+        },
+      },
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        onError: expect.any(Function),
+      }),
+    );
+  });
+
+  it("passes selected format to creation step", async () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-csv-button"));
 
     await waitFor(() => {
-      expect(screen.getByText("experimentData.exportModal.createTitle")).toBeInTheDocument();
+      expect(screen.getByTestId("creation-format")).toHaveTextContent("csv");
+    });
+  });
+
+  it("shows loading status initially on creation step", async () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("creation-status")).toHaveTextContent("loading");
+    });
+  });
+
+  it("shows success status after successful export creation", async () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+
+    // Simulate success callback
+    capturedOnSuccess?.();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("creation-status")).toHaveTextContent("success");
+    });
+  });
+
+  it("shows error status after failed export creation", async () => {
+    mockInitiateExport.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_params: unknown, options?: { onError?: (err: any) => void }) => {
+        options?.onError?.({ body: { message: "Something went wrong" } });
+      },
+    );
+
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("creation-status")).toHaveTextContent("error");
     });
   });
 
   it("navigates back to list step when back button is clicked", async () => {
     renderModal();
 
-    // Go to format selection
-    fireEvent.click(screen.getByTestId("create-button"));
+    fireEvent.click(screen.getByTestId("create-csv-button"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("format-selection-step")).toBeInTheDocument();
+      expect(screen.getByTestId("export-creation-step")).toBeInTheDocument();
     });
 
-    // Go back
-    fireEvent.click(screen.getByTestId("back-button"));
+    fireEvent.click(screen.getByTestId("back-to-list-button"));
 
     await waitFor(() => {
       expect(screen.getByTestId("export-list-step")).toBeInTheDocument();
-      expect(screen.queryByTestId("format-selection-step")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("export-creation-step")).not.toBeInTheDocument();
     });
   });
 
-  it("calls initiateExport when format is submitted", async () => {
+  it("displays create title when on creation step", async () => {
     renderModal();
 
-    // Go to format selection
-    fireEvent.click(screen.getByTestId("create-button"));
+    fireEvent.click(screen.getByTestId("create-csv-button"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("format-selection-step")).toBeInTheDocument();
-    });
-
-    // Submit format
-    fireEvent.click(screen.getByTestId("submit-csv"));
-
-    expect(mockInitiateExport).toHaveBeenCalledWith({
-      params: { id: "test-experiment-123" },
-      body: {
-        tableName: "raw_data",
-        format: "csv",
-      },
+      expect(screen.getByText("experimentData.exportModal.createTitle")).toBeInTheDocument();
     });
   });
 
-  it("closes modal when close button is clicked from list step", () => {
+  it("closes modal when close button is clicked", () => {
     renderModal();
 
-    const closeButton = screen.getByTestId("close-button");
-    fireEvent.click(closeButton);
-
-    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
-  });
-
-  it("closes modal from format selection step", async () => {
-    renderModal();
-
-    // Go to format selection
-    fireEvent.click(screen.getByTestId("create-button"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("format-selection-step")).toBeInTheDocument();
-    });
-
-    // Close modal
     fireEvent.click(screen.getByTestId("close-button"));
 
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
@@ -240,41 +268,21 @@ describe("DataExportModal", () => {
 
     const { rerender } = render(<DataExportModal {...defaultProps} open={true} />);
 
-    // Go to format selection (synchronous state update)
-    fireEvent.click(screen.getByTestId("create-button"));
-    expect(screen.getByTestId("format-selection-step")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+    expect(screen.getByTestId("export-creation-step")).toBeInTheDocument();
 
-    // Close modal
     rerender(<DataExportModal {...defaultProps} open={false} />);
-
-    // Fast-forward timer for state reset
     vi.advanceTimersByTime(350);
 
-    // Reopen modal
     rerender(<DataExportModal {...defaultProps} open={true} />);
-
-    // Should be back to list step
     expect(screen.getByTestId("export-list-step")).toBeInTheDocument();
-    expect(screen.queryByTestId("format-selection-step")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("export-creation-step")).not.toBeInTheDocument();
 
     vi.useRealTimers();
   });
 
-  it("passes isPending state to format selection step", () => {
-    mockIsPending.mockReturnValue(true);
-
-    renderModal();
-
-    // Go to format selection (synchronous state update)
-    fireEvent.click(screen.getByTestId("create-button"));
-
-    expect(screen.getByTestId("format-selection-step")).toBeInTheDocument();
-    expect(screen.getByTestId("is-creating")).toBeInTheDocument();
-  });
-
   it("renders dialog header correctly", () => {
     renderModal();
-
     expect(screen.getByTestId("dialog-header")).toBeInTheDocument();
   });
 });

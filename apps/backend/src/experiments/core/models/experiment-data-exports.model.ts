@@ -3,12 +3,12 @@ import type { Readable } from "stream";
 /**
  * Export format types
  */
-export type ExportFormat = "csv" | "json" | "parquet";
+export type ExportFormat = "csv" | "ndjson" | "json-array" | "parquet";
 
 /**
  * Export status types
  */
-export type ExportStatus = "pending" | "running" | "completed" | "failed";
+export type ExportStatus = "queued" | "pending" | "running" | "completed" | "failed";
 
 /**
  * Core export metadata record
@@ -55,7 +55,6 @@ export interface InitiateExportQuery {
  * Response structure for initiated export
  */
 export interface InitiateExportDto {
-  exportId: string;
   status: string;
 }
 
@@ -68,7 +67,7 @@ export interface DownloadExportDto {
 }
 
 /**
- * Database row representation from experiment_data_exports table
+ * Database row representation from experiment_export_metadata table
  * Snake_case to match database column naming
  */
 export interface ExportMetadataRow {

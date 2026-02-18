@@ -27,8 +27,9 @@
       "description": "Anzeigen und Verwalten von Exporten für den Datensatz '{{tableName}}'.",
       "createDescription": "Erstellen Sie einen neuen Export für den Datensatz '{{tableName}}'.",
       "status": {
+        "queued": "Warteschlange",
         "pending": "Ausstehend",
-        "running": "Läuft",
+        "running": "Vorbereitung",
         "completed": "Abgeschlossen",
         "failed": "Fehlgeschlagen"
       },
@@ -40,9 +41,19 @@
       "error": "Fehler",
       "noExports": "Noch keine Exporte. Erstellen Sie Ihren ersten Export, um zu beginnen.",
       "exportCount": "{{count}} Export(e) verfügbar",
+      "loadingExports": "Exporte werden geladen...",
+      "format": "Format",
+      "exportTitle": "Export #{{number}}",
+      "failedTooltip": "Kein Handlungsbedarf — dieser Fehler wird untersucht und behoben. Der Export wird hier mit dem korrekten Status erneut angezeigt, sobald das Problem gelöst ist.",
       "createNew": "Neuen Export erstellen",
       "creating": "Export wird erstellt...",
-      "createExport": "Export erstellen"
+      "createExport": "Export erstellen",
+      "creatingTitle": "{{format}}-Export wird erstellt",
+      "creatingDescription": "Dies kann einen Moment dauern.",
+      "creationSuccess": "Export erfolgreich erstellt!",
+      "creationSuccessDescription": "Ihr Export wurde in die Warteschlange gestellt und steht in Kürze zum Download bereit.",
+      "creationError": "Export konnte nicht erstellt werden",
+      "backToList": "Zurück zu Exporten"
     }
   }
 }

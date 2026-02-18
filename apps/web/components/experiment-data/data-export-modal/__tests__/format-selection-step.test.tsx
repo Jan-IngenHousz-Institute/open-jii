@@ -119,11 +119,9 @@ vi.mock("@hookform/resolvers/zod", () => ({
 
 describe("FormatSelectionStep", () => {
   const mockOnFormatSubmit = vi.fn();
-  const mockOnClose = vi.fn();
   const mockOnBack = vi.fn();
   const defaultProps = {
     onFormatSubmit: mockOnFormatSubmit,
-    onClose: mockOnClose,
     onBack: mockOnBack,
   };
 
@@ -143,14 +141,6 @@ describe("FormatSelectionStep", () => {
     expect(backButton).toHaveTextContent("common.back");
   });
 
-  it("renders close button in dialog footer", () => {
-    renderStep();
-
-    const closeButton = screen.getByTestId("close-button");
-    expect(closeButton).toBeInTheDocument();
-    expect(closeButton).toHaveTextContent("common.close");
-  });
-
   it("renders submit button in dialog footer", () => {
     renderStep();
 
@@ -166,15 +156,6 @@ describe("FormatSelectionStep", () => {
     fireEvent.click(backButton);
 
     expect(mockOnBack).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls onClose when close button is clicked", () => {
-    renderStep();
-
-    const closeButton = screen.getByTestId("close-button");
-    fireEvent.click(closeButton);
-
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
   it("calls onFormatSubmit when form is submitted with CSV format", async () => {
@@ -231,7 +212,7 @@ describe("FormatSelectionStep", () => {
   it("displays format label correctly", () => {
     renderStep();
 
-    expect(screen.getByText("experimentData.downloadModal.format")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.exportModal.format")).toBeInTheDocument();
   });
 
   it("renders CSV option in select", () => {

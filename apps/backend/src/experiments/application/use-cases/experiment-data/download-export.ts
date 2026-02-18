@@ -41,10 +41,12 @@ export class DownloadExportUseCase {
       return downloadResult;
     }
 
-    const { stream, filePath } = downloadResult.value;
+    const { stream, filePath, tableName } = downloadResult.value;
 
-    // Extract filename from path
-    const filename = filePath.split("/").pop() ?? `export-${exportId}`;
+    // Build a clean filename: {tableName}-export-{exportId}.{ext}
+    const ext = filePath.split(".").pop();
+    const prefix = tableName ? `${tableName}-export` : "export";
+    const filename = `${prefix}-${exportId}${ext ? `.${ext}` : ""}`;
 
     this.logger.log({
       msg: "Successfully prepared export download stream",

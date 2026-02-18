@@ -1,26 +1,66 @@
 "use client";
 
-import { FileText, Download, Clock, CheckCircle2, XCircle, Loader2, Plus } from "lucide-react";
+import {
+  FileText,
+  Download,
+  Clock,
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Plus,
+  Rows3,
+  HardDrive,
+} from "lucide-react";
 import * as React from "react";
+import { useDownloadExport } from "~/hooks/experiment/useDownloadExport/useDownloadExport";
 import { useListExports } from "~/hooks/experiment/useListExports/useListExports";
 import { parseApiError } from "~/util/apiError";
 import { formatFileSize } from "~/util/format-file-size";
 
 import type { ExportRecord } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
-import { Button, DialogFooter, ScrollArea } from "@repo/ui/components";
+import {
+  Button,
+  DialogFooter,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  ScrollArea,
+  Skeleton,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components";
 
 interface ExportListStepProps {
   experimentId: string;
   tableName: string;
-  onCreateNew: () => void;
+  onCreateExport: (format: string) => void;
   onClose: () => void;
 }
+
+const statusBorderColor: Record<string, string> = {
+  queued: "border-l-gray-400",
+  pending: "border-l-yellow-400",
+  running: "border-l-blue-400",
+  completed: "border-l-green-500",
+  failed: "border-l-red-500",
+};
 
 const StatusBadge = ({ status }: { status: ExportRecord["status"] }) => {
   const { t } = useTranslation("experimentData");
 
   const statusConfig = {
+    queued: {
+      icon: Clock,
+      className:
+        "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-800",
+      label: t("experimentData.exportModal.status.queued"),
+      spin: false,
+    },
     pending: {
       icon: Clock,
       className:
@@ -51,123 +91,157 @@ const StatusBadge = ({ status }: { status: ExportRecord["status"] }) => {
     },
   };
 
-  const config = statusConfig[status];
+  const config = status in statusConfig ? statusConfig[status] : statusConfig.pending;
   const Icon = config.icon;
 
   return (
-    <div
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${config.className}`}
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${config.className}`}
     >
       <Icon className={`h-3 w-3 ${config.spin ? "animate-spin" : ""}`} />
       {config.label}
-    </div>
+    </span>
   );
+};
+
+const formatLabel: Record<string, string> = {
+  csv: "CSV",
+  ndjson: "NDJSON",
+  "json-array": "JSON Array",
+  parquet: "Parquet",
+};
+
+const formatDateTime = (dateString: string | null): string => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 };
 
 const ExportCard = ({
   export: exportRecord,
   onDownload,
+  isDownloading,
+  index,
 }: {
   export: ExportRecord;
   onDownload: (exportId: string) => void;
+  isDownloading: boolean;
+  index: number;
 }) => {
   const { t } = useTranslation("experimentData");
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "-";
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(dateString));
-  };
-
   const canDownload = exportRecord.status === "completed" && exportRecord.exportId;
+  const isFailed = exportRecord.status === "failed";
+  const borderColor = statusBorderColor[exportRecord.status] ?? "border-l-gray-300";
+  const dateTime = formatDateTime(exportRecord.createdAt);
 
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex items-start gap-4">
-        <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
-          <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+  // Collect metadata items to render inline
+  const metaItems: { icon: React.ElementType; label: string }[] = [];
+
+  metaItems.push({
+    icon: FileText,
+    label: formatLabel[exportRecord.format] ?? exportRecord.format,
+  });
+
+  if (exportRecord.rowCount != null) {
+    metaItems.push({
+      icon: Rows3,
+      label: `${exportRecord.rowCount.toLocaleString()} ${t("experimentData.exportModal.rows").toLowerCase()}`,
+    });
+  }
+
+  if (exportRecord.fileSize != null) {
+    metaItems.push({
+      icon: HardDrive,
+      label: formatFileSize(exportRecord.fileSize),
+    });
+  }
+
+  const card = (
+    <div
+      className={`flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800 ${borderColor}`}
+    >
+      <div className="flex-shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
+        <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {t("experimentData.exportModal.exportTitle", { number: index })}
+          </span>
+          <StatusBadge status={exportRecord.status} />
         </div>
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold uppercase text-gray-900 dark:text-gray-100">
-              {exportRecord.format}
+
+        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+          {metaItems.map((item, i) => {
+            const MetaIcon = item.icon;
+            return (
+              <span key={i} className="inline-flex items-center gap-1">
+                <MetaIcon className="h-3 w-3" />
+                {item.label}
+              </span>
+            );
+          })}
+          {dateTime && (
+            <span className="inline-flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {dateTime}
             </span>
-            <StatusBadge status={exportRecord.status} />
-          </div>
-          <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-            <div>
-              <span className="font-medium">{t("experimentData.exportModal.created")}:</span>{" "}
-              {formatDate(exportRecord.createdAt)}
-            </div>
-            {exportRecord.completedAt && (
-              <div>
-                <span className="font-medium">{t("experimentData.exportModal.completed")}:</span>{" "}
-                {formatDate(exportRecord.completedAt)}
-              </div>
-            )}
-            {exportRecord.rowCount !== null && (
-              <div>
-                <span className="font-medium">{t("experimentData.exportModal.rows")}:</span>{" "}
-                {exportRecord.rowCount.toLocaleString()}
-              </div>
-            )}
-            {exportRecord.fileSize !== null && (
-              <div>
-                <span className="font-medium">{t("experimentData.exportModal.size")}:</span>{" "}
-                {formatFileSize(exportRecord.fileSize)}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
+
       {canDownload && exportRecord.exportId && (
         <Button
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          size="icon"
           onClick={() => onDownload(exportRecord.exportId ?? "")}
-          className="flex-shrink-0"
+          disabled={isDownloading}
+          className="h-8 w-8 flex-shrink-0"
         >
-          <Download className="h-4 w-4" />
+          {isDownloading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          )}
         </Button>
       )}
     </div>
   );
+
+  if (isFailed) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{card}</TooltipTrigger>
+          <TooltipContent
+            side="top"
+            className="max-w-xs border bg-white text-center text-gray-700 shadow-md dark:border-gray-700 dark:bg-gray-100 dark:text-gray-800"
+          >
+            {t("experimentData.exportModal.failedTooltip")}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return card;
 };
 
 export function ExportListStep({
   experimentId,
   tableName,
-  onCreateNew,
+  onCreateExport,
   onClose,
 }: ExportListStepProps) {
   const { t } = useTranslation("experimentData");
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
-
-  const handleDownload = (exportId: string) => {
-    // Construct the download URL
-    const url = `/api/v1/experiments/${experimentId}/data/exports/${exportId}`;
-
-    // Trigger download by creating a temporary link
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  const { downloadExport, isDownloading, downloadingExportId } = useDownloadExport(experimentId);
 
   if (error) {
     const errorMessage =
@@ -182,37 +256,90 @@ export function ExportListStep({
   const exports = data?.body.exports ?? [];
 
   return (
-    <div className="space-y-4 py-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {exports.length === 0
-            ? t("experimentData.exportModal.noExports")
-            : t("experimentData.exportModal.exportCount", { count: exports.length })}
+    <div className="flex flex-col gap-4 pt-4">
+      {isLoading ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {t("experimentData.exportModal.loadingExports")}
         </p>
-        <Button onClick={onCreateNew} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          {t("experimentData.exportModal.createNew")}
-        </Button>
-      </div>
+      ) : exports.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border bg-gray-50 py-8 dark:bg-gray-900">
+          <div className="bg-muted mb-3 flex h-16 w-16 items-center justify-center rounded-full">
+            <Download className="text-muted-foreground h-8 w-8" />
+          </div>
+          <p className="text-muted-foreground text-center text-sm">
+            {t("experimentData.exportModal.noExports")}
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {t("experimentData.exportModal.exportCount", { count: exports.length })}
+        </p>
+      )}
 
-      {exports.length > 0 && (
-        <ScrollArea className="max-h-[400px] pr-4">
-          <div className="space-y-3">
-            {exports.map((exportRecord, index) => (
-              <ExportCard
-                key={exportRecord.exportId ?? `export-${index}`}
-                export={exportRecord}
-                onDownload={handleDownload}
-              />
+      {isLoading ? (
+        <ScrollArea className="max-h-[280px]">
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 border-l-gray-200 bg-white px-3 py-2.5 dark:border-gray-700 dark:border-l-gray-600 dark:bg-gray-800"
+              >
+                <Skeleton className="h-7 w-7 rounded-md" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-10 rounded" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-3 w-16 rounded" />
+                    <Skeleton className="h-3 w-12 rounded" />
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </ScrollArea>
+      ) : (
+        exports.length > 0 && (
+          <ScrollArea className="max-h-[280px] rounded-lg border p-2">
+            <div className="space-y-2">
+              {exports.map((exportRecord, index) => (
+                <ExportCard
+                  key={exportRecord.exportId ?? `export-${index}`}
+                  export={exportRecord}
+                  index={exports.length - index}
+                  onDownload={downloadExport}
+                  isDownloading={isDownloading && downloadingExportId === exportRecord.exportId}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        )
       )}
 
-      <DialogFooter>
+      <DialogFooter className="mt-2 flex items-center justify-between gap-2 sm:justify-between">
         <Button variant="outline" onClick={onClose}>
           {t("common.close")}
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t("experimentData.exportModal.createExport")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="min-w-[var(--radix-dropdown-menu-trigger-width)]"
+          >
+            <DropdownMenuItem onClick={() => onCreateExport("csv")}>CSV</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCreateExport("ndjson")}>NDJSON</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCreateExport("json-array")}>
+              JSON Array
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </DialogFooter>
     </div>
   );

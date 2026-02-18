@@ -23,6 +23,15 @@ vi.mock("~/hooks/experiment/useListExports/useListExports", () => ({
     mockUseListExports(params),
 }));
 
+const mockDownloadExport = vi.fn();
+vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
+  useDownloadExport: () => ({
+    downloadExport: mockDownloadExport,
+    isDownloading: false,
+    downloadingExportId: null,
+  }),
+}));
+
 // Mock utility functions
 vi.mock("~/util/format-file-size", () => ({
   formatFileSize: (size: number) => `${size} bytes`,
@@ -47,39 +56,71 @@ vi.mock("@repo/ui/components", () => ({
     size,
     variant,
     className,
+    disabled,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
     size?: string;
     variant?: string;
     className?: string;
+    disabled?: boolean;
   }) => (
     <button
       onClick={onClick}
       data-size={size}
       data-variant={variant}
       className={className}
+      disabled={disabled}
       data-testid={
-        variant === "outline" && size === "sm"
+        variant === "ghost" && size === "icon"
           ? "download-button"
           : variant === "outline"
             ? "close-button"
-            : "action-button"
+            : "create-export-button"
       }
     >
       {children}
     </button>
   ),
-  DialogFooter: ({ children }: { children: React.ReactNode }) => (
+  DialogFooter: ({ children }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="dialog-footer">{children}</div>
   ),
   ScrollArea: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="scroll-area">{children}</div>
   ),
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dropdown-menu">{children}</div>
+  ),
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
+    <div data-testid="dropdown-trigger">{children}</div>
+  ),
+  DropdownMenuContent: ({ children }: { children: React.ReactNode; align?: string }) => (
+    <div data-testid="dropdown-content">{children}</div>
+  ),
+  DropdownMenuItem: ({
+    children,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => (
+    <button data-testid="dropdown-item" onClick={onClick}>
+      {children}
+    </button>
+  ),
+  Skeleton: ({ className }: { className?: string }) => (
+    <div data-testid="skeleton" className={`animate-pulse ${className ?? ""}`} />
+  ),
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 describe("ExportListStep", () => {
-  const mockOnCreateNew = vi.fn();
+  const mockOnCreateExport = vi.fn();
   const mockOnClose = vi.fn();
   const mockExperimentId = "exp-123";
   const mockTableName = "raw_data";
@@ -87,7 +128,7 @@ describe("ExportListStep", () => {
   const defaultProps = {
     experimentId: mockExperimentId,
     tableName: mockTableName,
-    onCreateNew: mockOnCreateNew,
+    onCreateExport: mockOnCreateExport,
     onClose: mockOnClose,
   };
 
@@ -105,7 +146,7 @@ describe("ExportListStep", () => {
     render(<ExportListStep {...defaultProps} {...props} />);
   };
 
-  it("renders loading state", () => {
+  it("renders loading state with skeleton cards and action buttons", () => {
     mockUseListExports.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -114,7 +155,12 @@ describe("ExportListStep", () => {
 
     const { container } = render(<ExportListStep {...defaultProps} />);
 
-    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+    // Loading text and skeleton cards
+    expect(screen.getByText("experimentData.exportModal.loadingExports")).toBeInTheDocument();
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+    // Close and Create Export buttons should still be visible during loading
+    expect(screen.getByText("common.close")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.exportModal.createExport")).toBeInTheDocument();
   });
 
   it("renders error state with message", () => {
@@ -144,7 +190,6 @@ describe("ExportListStep", () => {
     renderStep();
 
     expect(screen.getByText("experimentData.exportModal.noExports")).toBeInTheDocument();
-    expect(screen.getByText("experimentData.exportModal.createNew")).toBeInTheDocument();
   });
 
   it("renders list of exports with completed export", () => {
@@ -173,8 +218,8 @@ describe("ExportListStep", () => {
     renderStep();
 
     expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
-    expect(screen.getByText("csv")).toBeInTheDocument();
-    expect(screen.getByText("100")).toBeInTheDocument();
+    expect(screen.getAllByText("CSV").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/100/)).toBeInTheDocument();
     expect(screen.getByText("1024 bytes")).toBeInTheDocument();
   });
 
@@ -184,7 +229,7 @@ describe("ExportListStep", () => {
         exportId: null,
         experimentId: mockExperimentId,
         tableName: mockTableName,
-        format: "json",
+        format: "ndjson",
         status: "running",
         filePath: null,
         rowCount: null,
@@ -203,13 +248,12 @@ describe("ExportListStep", () => {
 
     renderStep();
 
-    expect(screen.getByText("json")).toBeInTheDocument();
+    expect(screen.getAllByText("NDJSON").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("experimentData.exportModal.status.running")).toBeInTheDocument();
-    // Download button (variant=outline, size=sm) should not be present for running exports
     expect(screen.queryByTestId("download-button")).not.toBeInTheDocument();
   });
 
-  it("calls onCreateNew when create button is clicked", () => {
+  it("calls onCreateExport with format when dropdown item is clicked", () => {
     mockUseListExports.mockReturnValue({
       data: { body: { exports: [] } },
       isLoading: false,
@@ -218,10 +262,43 @@ describe("ExportListStep", () => {
 
     renderStep();
 
-    const createButton = screen.getByText("experimentData.exportModal.createNew");
-    fireEvent.click(createButton);
+    const dropdownItems = screen.getAllByTestId("dropdown-item");
+    // Click "CSV" item (first)
+    fireEvent.click(dropdownItems[0]);
 
-    expect(mockOnCreateNew).toHaveBeenCalledTimes(1);
+    expect(mockOnCreateExport).toHaveBeenCalledWith("csv");
+  });
+
+  it("calls onCreateExport with ndjson when NDJSON dropdown item is clicked", () => {
+    mockUseListExports.mockReturnValue({
+      data: { body: { exports: [] } },
+      isLoading: false,
+      error: null,
+    });
+
+    renderStep();
+
+    const dropdownItems = screen.getAllByTestId("dropdown-item");
+    // Click "NDJSON" item (second)
+    fireEvent.click(dropdownItems[1]);
+
+    expect(mockOnCreateExport).toHaveBeenCalledWith("ndjson");
+  });
+
+  it("calls onCreateExport with json-array when JSON Array dropdown item is clicked", () => {
+    mockUseListExports.mockReturnValue({
+      data: { body: { exports: [] } },
+      isLoading: false,
+      error: null,
+    });
+
+    renderStep();
+
+    const dropdownItems = screen.getAllByTestId("dropdown-item");
+    // Click "JSON Array" item (third)
+    fireEvent.click(dropdownItems[2]);
+
+    expect(mockOnCreateExport).toHaveBeenCalledWith("json-array");
   });
 
   it("calls onClose when close button is clicked", () => {
@@ -233,63 +310,41 @@ describe("ExportListStep", () => {
 
     renderStep();
 
-    const closeButton = screen.getByText("common.close");
+    const closeButton = screen.getByTestId("close-button");
     fireEvent.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
-  it("triggers download when download button is clicked", () => {
-    const mockExports: ExportRecord[] = [
-      {
-        exportId: "export-1",
-        experimentId: mockExperimentId,
-        tableName: mockTableName,
-        format: "csv",
-        status: "completed",
-        filePath: "/path/to/file.csv",
-        rowCount: 100,
-        fileSize: 1024,
-        createdBy: "user-1",
-        createdAt: "2024-01-01T00:00:00Z",
-        completedAt: "2024-01-01T00:05:00Z",
-      },
-    ];
-
+  it("renders dropdown menu and close button in footer", () => {
     mockUseListExports.mockReturnValue({
-      data: { body: { exports: mockExports } },
+      data: { body: { exports: [] } },
       isLoading: false,
       error: null,
     });
 
     renderStep();
 
-    // Mock DOM methods after render so React can mount
-    const mockClick = vi.fn();
-    const originalCreateElement = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
-      const element = originalCreateElement(tagName);
-      if (tagName === "a") {
-        element.click = mockClick;
-      }
-      return element;
+    expect(screen.getByTestId("dialog-footer")).toBeInTheDocument();
+    expect(screen.getByTestId("dropdown-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("close-button")).toBeInTheDocument();
+  });
+
+  it("renders four format options in dropdown", () => {
+    mockUseListExports.mockReturnValue({
+      data: { body: { exports: [] } },
+      isLoading: false,
+      error: null,
     });
-    const mockAppendChild = vi
-      .spyOn(document.body, "appendChild")
-      .mockImplementation(() => null as unknown as Node);
-    const mockRemoveChild = vi
-      .spyOn(document.body, "removeChild")
-      .mockImplementation(() => null as unknown as Node);
 
-    const downloadButton = screen.getByTestId("download-button");
-    fireEvent.click(downloadButton);
+    renderStep();
 
-    expect(mockAppendChild).toHaveBeenCalled();
-    expect(mockClick).toHaveBeenCalled();
-    expect(mockRemoveChild).toHaveBeenCalled();
-
-    mockAppendChild.mockRestore();
-    mockRemoveChild.mockRestore();
+    const dropdownItems = screen.getAllByTestId("dropdown-item");
+    expect(dropdownItems).toHaveLength(4);
+    expect(dropdownItems[0]).toHaveTextContent("CSV");
+    expect(dropdownItems[1]).toHaveTextContent("NDJSON");
+    expect(dropdownItems[2]).toHaveTextContent("JSON Array");
+    expect(dropdownItems[3]).toHaveTextContent("Parquet");
   });
 
   it("renders multiple exports", () => {
@@ -311,7 +366,7 @@ describe("ExportListStep", () => {
         exportId: "export-2",
         experimentId: mockExperimentId,
         tableName: mockTableName,
-        format: "json",
+        format: "ndjson",
         status: "completed",
         filePath: "/path/to/file.json",
         rowCount: 200,
@@ -331,8 +386,8 @@ describe("ExportListStep", () => {
     renderStep();
 
     expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
-    expect(screen.getByText("csv")).toBeInTheDocument();
-    expect(screen.getByText("json")).toBeInTheDocument();
+    expect(screen.getAllByText("CSV").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("NDJSON").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByTestId("scroll-area")).toBeInTheDocument();
   });
 
@@ -390,6 +445,6 @@ describe("ExportListStep", () => {
     renderStep();
 
     expect(screen.getByText("experimentData.exportModal.status.failed")).toBeInTheDocument();
-    expect(screen.getByText("parquet")).toBeInTheDocument();
+    expect(screen.getAllByText("Parquet").length).toBeGreaterThanOrEqual(1);
   });
 });

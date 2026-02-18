@@ -13,5 +13,6 @@ export const useListExports = ({
       query: { tableName },
     },
     queryKey: ["exports", experimentId, tableName],
+    refetchInterval: 60_000,
   });
 };

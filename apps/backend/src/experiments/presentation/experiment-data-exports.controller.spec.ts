@@ -64,11 +64,8 @@ describe("ExperimentDataExportsController", () => {
   describe("initiateExport", () => {
     it("should return 201 when export is initiated successfully", async () => {
       const experimentId = faker.string.uuid();
-      const exportId = faker.string.uuid();
 
-      vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(
-        success({ exportId, status: "pending" }),
-      );
+      vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(success({ status: "pending" }));
 
       const handler = controller.initiateExport(mockSession);
       const result = await handler({
@@ -78,7 +75,7 @@ describe("ExperimentDataExportsController", () => {
       });
 
       expect(result.status).toBe(201);
-      expect(result.body).toEqual({ exportId, status: "pending" });
+      expect(result.body).toEqual({ status: "pending" });
       expect(initiateExportUseCase.execute).toHaveBeenCalledWith(
         experimentId,
         mockSession.user.id,

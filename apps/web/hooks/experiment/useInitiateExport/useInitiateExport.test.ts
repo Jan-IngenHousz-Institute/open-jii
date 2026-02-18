@@ -95,6 +95,7 @@ describe("useInitiateExport", () => {
 
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["exports", "exp-123", "raw_data"],
+        refetchType: "all",
       });
     });
 
@@ -134,7 +135,7 @@ describe("useInitiateExport", () => {
 
       const variables = {
         params: { id: "exp-123" },
-        body: { tableName: "device", format: "json" },
+        body: { tableName: "device", format: "ndjson" },
       };
 
       const data = { body: { exportId: "export-789" } };
@@ -143,6 +144,7 @@ describe("useInitiateExport", () => {
 
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["exports", "exp-123", "device"],
+        refetchType: "all",
       });
     });
 

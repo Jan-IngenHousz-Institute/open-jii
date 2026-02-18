@@ -578,7 +578,6 @@ module "data_export_job" {
         EXPERIMENT_ID = "{{EXPERIMENT_ID}}"
         TABLE_NAME    = "{{TABLE_NAME}}"
         FORMAT        = "{{FORMAT}}"
-        EXPORT_ID     = "{{EXPORT_ID}}"
         USER_ID       = "{{USER_ID}}"
         CATALOG_NAME  = module.databricks_catalog.catalog_name
         ENVIRONMENT   = upper(var.environment)

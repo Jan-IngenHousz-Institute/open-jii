@@ -680,7 +680,6 @@ describe("DatabricksAdapter", () => {
       const experimentId = "exp-456";
       const tableName = "raw_data";
       const format = "csv";
-      const exportId = "export-789";
       const userId = "user-123";
 
       const mockResponse = {
@@ -704,14 +703,15 @@ describe("DatabricksAdapter", () => {
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
           (body: { job_parameters?: Record<string, string> }) => {
+            const params = body.job_parameters;
+            if (!params) return false;
             return (
-              body.job_parameters?.EXPERIMENT_ID === experimentId &&
-              body.job_parameters?.TABLE_NAME === tableName &&
-              body.job_parameters?.FORMAT === format &&
-              body.job_parameters?.EXPORT_ID === exportId &&
-              body.job_parameters?.USER_ID === userId &&
-              body.job_parameters?.CATALOG_NAME === "main" &&
-              body.job_parameters?.ENVIRONMENT === "DEV"
+              params.EXPERIMENT_ID === experimentId &&
+              params.TABLE_NAME === tableName &&
+              params.FORMAT === format &&
+              params.USER_ID === userId &&
+              params.CATALOG_NAME === "main" &&
+              params.ENVIRONMENT === "DEV"
             );
           },
         )
@@ -721,7 +721,6 @@ describe("DatabricksAdapter", () => {
         experimentId,
         tableName,
         format,
-        exportId,
         userId,
       );
 
@@ -751,7 +750,6 @@ describe("DatabricksAdapter", () => {
         "exp-1",
         "raw_data",
         "csv",
-        "export-1",
         "user-1",
       );
 
@@ -782,17 +780,18 @@ describe("DatabricksAdapter", () => {
           status: { state: "SUCCEEDED" },
           manifest: {
             schema: {
-              column_count: 2,
+              column_count: 3,
               columns: [
                 { name: "export_id", type_name: "string", type_text: "string", position: 0 },
                 { name: "file_path", type_name: "string", type_text: "string", position: 1 },
+                { name: "table_name", type_name: "string", type_text: "string", position: 2 },
               ],
             },
             total_row_count: 1,
             truncated: false,
           },
           result: {
-            data_array: [[exportId, filePath]],
+            data_array: [[exportId, filePath, "raw_data"]],
             chunk_index: 0,
             row_count: 1,
             row_offset: 0,
@@ -816,6 +815,7 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value.filePath).toBe(filePath);
+      expect(result.value.tableName).toBe("raw_data");
       expect(result.value.stream).toBeInstanceOf(Object);
     });
 
@@ -861,6 +861,52 @@ describe("DatabricksAdapter", () => {
       assertFailure(result);
       expect(result.error.code).toBe("NOT_FOUND");
       expect(result.error.message).toContain("Export not found");
+    });
+
+    it("should return internal error when table name is missing", async () => {
+      const exportId = "export-abc";
+      const experimentId = "exp-456";
+      const filePath = "/volumes/catalog/schema/exports/export-abc/raw_data.csv";
+
+      // Mock token request for SQL query
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL query returning row with file_path but no table_name
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "stmt-3",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 3,
+              columns: [
+                { name: "export_id", type_name: "string", type_text: "string", position: 0 },
+                { name: "file_path", type_name: "string", type_text: "string", position: 1 },
+                { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+              ],
+            },
+            total_row_count: 1,
+            truncated: false,
+          },
+          result: {
+            data_array: [[exportId, filePath, null]],
+            chunk_index: 0,
+            row_count: 1,
+            row_offset: 0,
+          },
+        });
+
+      const result = await databricksAdapter.streamExport(exportId, experimentId);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toContain("Export table name is missing");
     });
   });
 
@@ -979,7 +1025,7 @@ describe("DatabricksAdapter", () => {
               job_parameters: [
                 { name: "EXPERIMENT_ID", value: "other-exp" },
                 { name: "TABLE_NAME", value: "other_table" },
-                { name: "FORMAT", value: "json" },
+                { name: "FORMAT", value: "ndjson" },
                 { name: "USER_ID", value: "user-2" },
               ],
             },
@@ -1049,6 +1095,247 @@ describe("DatabricksAdapter", () => {
         .reply(500, { message: "Internal server error" });
 
       const result = await databricksAdapter.getActiveExports(experimentId, tableName);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+    });
+
+    it("should include INTERNAL_ERROR runs as failed", async () => {
+      const experimentId = "exp-456";
+      const tableName = "raw_data";
+
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataExportJobIdAsNumber").mockReturnValue(42);
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock runs list API with INTERNAL_ERROR run
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 333,
+              job_id: 42,
+              number_in_job: 1,
+              state: { life_cycle_state: "INTERNAL_ERROR" },
+              start_time: Date.now(),
+              end_time: Date.now(),
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "TABLE_NAME", value: tableName },
+                { name: "FORMAT", value: "parquet" },
+                { name: "USER_ID", value: "user-1" },
+              ],
+            },
+          ],
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getActiveExports(experimentId, tableName);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0].status).toBe("failed");
+      expect(result.value[0].jobRunId).toBe(333);
+    });
+  });
+
+  describe("getFailedExports", () => {
+    it("should return failed exports filtered by experiment and table", async () => {
+      const experimentId = "exp-456";
+      const tableName = "raw_data";
+
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataExportJobIdAsNumber").mockReturnValue(42);
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock completed runs list API
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 111,
+              job_id: 42,
+              number_in_job: 1,
+              state: { life_cycle_state: "TERMINATED", result_state: "FAILED" },
+              start_time: Date.now() - 60000,
+              end_time: Date.now(),
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "TABLE_NAME", value: tableName },
+                { name: "FORMAT", value: "csv" },
+                { name: "USER_ID", value: "user-1" },
+              ],
+            },
+            {
+              run_id: 222,
+              job_id: 42,
+              number_in_job: 2,
+              state: { life_cycle_state: "TERMINATED", result_state: "SUCCESS" },
+              start_time: Date.now() - 120000,
+              end_time: Date.now() - 60000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "TABLE_NAME", value: tableName },
+                { name: "FORMAT", value: "ndjson" },
+                { name: "USER_ID", value: "user-2" },
+              ],
+            },
+            {
+              run_id: 333,
+              job_id: 42,
+              number_in_job: 3,
+              state: { life_cycle_state: "TERMINATED", result_state: "CANCELED" },
+              start_time: Date.now() - 180000,
+              end_time: Date.now() - 120000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "TABLE_NAME", value: tableName },
+                { name: "FORMAT", value: "parquet" },
+                { name: "USER_ID", value: "user-3" },
+              ],
+            },
+          ],
+          has_more: false,
+        });
+
+      // Run 222 (SUCCESS) should be in completedExportRunIds
+      const completedExportRunIds = new Set([222]);
+
+      const result = await databricksAdapter.getFailedExports(
+        experimentId,
+        tableName,
+        completedExportRunIds,
+      );
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      // Run 111 (FAILED) and run 333 (CANCELED) should be returned, but not 222 (SUCCESS)
+      expect(result.value).toHaveLength(2);
+      expect(result.value[0].status).toBe("failed");
+      expect(result.value[0].jobRunId).toBe(111);
+      expect(result.value[1].status).toBe("failed");
+      expect(result.value[1].jobRunId).toBe(333);
+    });
+
+    it("should exclude runs already in completed exports", async () => {
+      const experimentId = "exp-456";
+      const tableName = "raw_data";
+
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataExportJobIdAsNumber").mockReturnValue(42);
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock completed runs list API
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 111,
+              job_id: 42,
+              number_in_job: 1,
+              state: { life_cycle_state: "TERMINATED", result_state: "FAILED" },
+              start_time: Date.now(),
+              end_time: Date.now(),
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "TABLE_NAME", value: tableName },
+                { name: "FORMAT", value: "csv" },
+                { name: "USER_ID", value: "user-1" },
+              ],
+            },
+          ],
+          has_more: false,
+        });
+
+      // This run ID is already in the completed exports, so it should be excluded
+      const completedExportRunIds = new Set([111]);
+
+      const result = await databricksAdapter.getFailedExports(
+        experimentId,
+        tableName,
+        completedExportRunIds,
+      );
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("should return empty array when no completed runs exist", async () => {
+      const experimentId = "exp-456";
+      const tableName = "raw_data";
+
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataExportJobIdAsNumber").mockReturnValue(42);
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock runs list API with no runs
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getFailedExports(experimentId, tableName, new Set());
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("should handle API failure when listing completed runs", async () => {
+      const experimentId = "exp-456";
+      const tableName = "raw_data";
+
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataExportJobIdAsNumber").mockReturnValue(42);
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock runs list API with error
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(500, { message: "Internal server error" });
+
+      const result = await databricksAdapter.getFailedExports(experimentId, tableName, new Set());
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);

@@ -3,6 +3,7 @@
 import { Download } from "lucide-react";
 import * as React from "react";
 import { useInitiateExport } from "~/hooks/experiment/useInitiateExport/useInitiateExport";
+import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n/client";
 import {
@@ -13,8 +14,8 @@ import {
   DialogTitle,
 } from "@repo/ui/components";
 
+import { ExportCreationStep } from "./steps/export-creation-step";
 import { ExportListStep } from "./steps/export-list-step";
-import { FormatSelectionStep } from "./steps/format-selection-step";
 
 interface DataExportModalProps {
   experimentId: string;
@@ -23,7 +24,7 @@ interface DataExportModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ModalStep = "list" | "create";
+type ModalStep = "list" | "creating";
 
 export function DataExportModal({
   experimentId,
@@ -33,45 +34,63 @@ export function DataExportModal({
 }: DataExportModalProps) {
   const { t } = useTranslation("experimentData");
   const [currentStep, setCurrentStep] = React.useState<ModalStep>("list");
+  const [selectedFormat, setSelectedFormat] = React.useState("");
+  const [creationStatus, setCreationStatus] = React.useState<"loading" | "success" | "error">(
+    "loading",
+  );
+  const [errorMessage, setErrorMessage] = React.useState<string>();
 
   // Reset state when modal closes
   React.useEffect(() => {
     if (!open) {
-      // Reset on close with a slight delay to avoid visual jumps
       const timer = setTimeout(() => {
         setCurrentStep("list");
+        setSelectedFormat("");
+        setCreationStatus("loading");
+        setErrorMessage(undefined);
       }, 300);
       return () => clearTimeout(timer);
     }
   }, [open]);
 
-  const { mutate: initiateExport, isPending } = useInitiateExport({
+  const { mutate: initiateExport } = useInitiateExport({
     onSuccess: () => {
-      // Navigate back to list after successful creation
-      setCurrentStep("list");
+      setCreationStatus("success");
     },
   });
 
-  const handleFormatSubmit = (format: string) => {
-    initiateExport({
-      params: { id: experimentId },
-      body: {
-        tableName,
-        format: format as "csv" | "json" | "parquet",
+  const handleCreateExport = (format: string) => {
+    setSelectedFormat(format);
+    setCreationStatus("loading");
+    setErrorMessage(undefined);
+    setCurrentStep("creating");
+
+    initiateExport(
+      {
+        params: { id: experimentId },
+        body: {
+          tableName,
+          format: format as "csv" | "ndjson" | "json-array" | "parquet",
+        },
       },
-    });
-  };
-
-  const handleClose = () => {
-    onOpenChange(false);
-  };
-
-  const handleCreateNew = () => {
-    setCurrentStep("create");
+      {
+        onError: (error) => {
+          setCreationStatus("error");
+          setErrorMessage(parseApiError(error)?.message);
+        },
+      },
+    );
   };
 
   const handleBackToList = () => {
     setCurrentStep("list");
+    setSelectedFormat("");
+    setCreationStatus("loading");
+    setErrorMessage(undefined);
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
   };
 
   return (
@@ -95,15 +114,15 @@ export function DataExportModal({
           <ExportListStep
             experimentId={experimentId}
             tableName={tableName}
-            onCreateNew={handleCreateNew}
+            onCreateExport={handleCreateExport}
             onClose={handleClose}
           />
         ) : (
-          <FormatSelectionStep
-            onFormatSubmit={handleFormatSubmit}
-            onBack={handleBackToList}
-            onClose={handleClose}
-            isCreating={isPending}
+          <ExportCreationStep
+            format={selectedFormat}
+            status={creationStatus}
+            errorMessage={errorMessage}
+            onBackToList={handleBackToList}
           />
         )}
       </DialogContent>

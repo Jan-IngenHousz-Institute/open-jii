@@ -1,5 +1,4 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { randomUUID } from "crypto";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError, success } from "../../../../common/utils/fp-utils";
@@ -72,12 +71,8 @@ export class InitiateExportUseCase {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    // Generate unique export ID
-    const exportId = randomUUID();
-
     // Trigger the export job
     const initiateResult = await this.exportsRepository.initiateExport({
-      exportId,
       experimentId,
       tableName: query.tableName,
       format: query.format,
@@ -102,12 +97,10 @@ export class InitiateExportUseCase {
       experimentId,
       tableName: query.tableName,
       format: query.format,
-      exportId,
       status: "success",
     });
 
     return success({
-      exportId,
       status: "pending",
     });
   }

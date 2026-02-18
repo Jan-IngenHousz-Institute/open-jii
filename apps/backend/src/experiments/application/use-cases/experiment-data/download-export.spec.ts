@@ -44,10 +44,10 @@ describe("DownloadExportUseCase", () => {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       read() {},
     });
-    const filePath = `/volumes/catalog/schema/exports/${exportId}/raw_data.csv`;
+    const filePath = `/volumes/catalog/centrum/data-downloads/${experimentId}/raw_data/csv/${exportId}/raw_data.csv`;
 
     vi.spyOn(exportsRepository, "downloadExport").mockResolvedValue(
-      success({ stream: mockStream, filePath }),
+      success({ stream: mockStream, filePath, tableName: "raw_data" }),
     );
 
     const result = await useCase.execute(experimentId, exportId, userId);
@@ -55,7 +55,7 @@ describe("DownloadExportUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.stream).toBe(mockStream);
-    expect(result.value.filename).toBe("raw_data.csv");
+    expect(result.value.filename).toBe(`raw_data-export-${exportId}.csv`);
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(exportsRepository.downloadExport).toHaveBeenCalledWith({
@@ -74,15 +74,15 @@ describe("DownloadExportUseCase", () => {
     });
 
     vi.spyOn(exportsRepository, "downloadExport").mockResolvedValue(
-      success({ stream: mockStream, filePath: "" }),
+      success({ stream: mockStream, filePath: "", tableName: "" }),
     );
 
     const result = await useCase.execute(experimentId, exportId, userId);
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
-    // When filePath is empty, split("/").pop() returns "" (empty string)
-    expect(result.value.filename).toBe("");
+    // When filePath is empty, filename is export-{exportId} with no extension
+    expect(result.value.filename).toBe(`export-${exportId}`);
   });
 
   it("should propagate failure from downloadExport", async () => {

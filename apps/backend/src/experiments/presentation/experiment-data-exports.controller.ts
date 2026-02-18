@@ -48,7 +48,6 @@ export class ExperimentDataExportsController {
           experimentId,
           tableName,
           format,
-          exportId: result.value.exportId,
           status: "success",
         });
 

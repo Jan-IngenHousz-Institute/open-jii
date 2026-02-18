@@ -6,12 +6,15 @@ export enum PerformanceTarget {
 }
 
 export enum JobLifecycleState {
+  QUEUED = "QUEUED",
   PENDING = "PENDING",
   RUNNING = "RUNNING",
   TERMINATING = "TERMINATING",
   TERMINATED = "TERMINATED",
   SKIPPED = "SKIPPED",
   INTERNAL_ERROR = "INTERNAL_ERROR",
+  BLOCKED = "BLOCKED",
+  WAITING_FOR_RETRY = "WAITING_FOR_RETRY",
 }
 
 export enum JobResultState {
