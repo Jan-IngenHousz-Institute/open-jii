@@ -89,6 +89,16 @@ describe("DatabricksConfigService", () => {
       );
     });
 
+    it("should return the correct data export job ID", () => {
+      const dataExportJobId = configService.getDataExportJobId();
+      expect(dataExportJobId).toBe(process.env.DATABRICKS_DATA_EXPORT_JOB_ID);
+    });
+
+    it("should return the correct data export job ID as a number", () => {
+      const dataExportJobIdAsNumber = configService.getDataExportJobIdAsNumber();
+      expect(dataExportJobIdAsNumber).toBe(Number(process.env.DATABRICKS_DATA_EXPORT_JOB_ID));
+    });
+
     it("should return the correct warehouse ID", () => {
       const warehouseId = configService.getWarehouseId();
       expect(warehouseId).toBe(process.env.DATABRICKS_WAREHOUSE_ID);

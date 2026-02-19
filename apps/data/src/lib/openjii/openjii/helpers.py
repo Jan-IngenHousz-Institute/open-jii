@@ -120,3 +120,141 @@ def explode_set_data(df, set_column='set'):
     ], axis=1)
     
     return result
+
+
+def get_table_metadata(experiment_id, table_name, catalog_name, schema_name="centrum"):
+    """
+    Fetch metadata for a specific experiment table.
+    
+    Parameters:
+    -----------
+    experiment_id : str
+        The experiment identifier
+    table_name : str
+        The table name (e.g., 'raw_data', 'device', or macro filename)
+    catalog_name : str
+        The catalog name (e.g., 'open_jii_dev')
+    schema_name : str, optional
+        The schema name (default: 'centrum')
+    
+    Returns:
+    --------
+    dict
+        Dictionary with keys: table_name, row_count, macro_schema, questions_schema
+    """
+    from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col
+
+    spark = SparkSession.builder.getOrCreate()
+    
+    metadata_df = (
+        spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata")
+        .filter((col("experiment_id") == experiment_id) & (col("table_name") == table_name))
+        .select("table_name", "row_count", "macro_schema", "questions_schema")
+    )
+    
+    rows = metadata_df.collect()
+    if not rows:
+        raise ValueError(f"No metadata found for experiment {experiment_id}, table {table_name}")
+    
+    row = rows[0]
+    return {
+        "table_name": row.table_name,
+        "row_count": row.row_count,
+        "macro_schema": row.macro_schema,
+        "questions_schema": row.questions_schema,
+    }
+
+
+# Table type configuration: (source_table_name, order_by_column)
+_TABLE_CONFIG = {
+    "raw_data": ("enriched_experiment_raw_data", "timestamp"),
+    "device": ("experiment_device_data", "processed_timestamp"),
+    "raw_ambyte_data": ("enriched_raw_ambyte_data", "processed_at"),
+    "macro": ("enriched_experiment_macro_data", "timestamp"),
+}
+
+_MACRO_EXCLUDE_COLS = ["raw_id", "macro_id", "macro_name", "macro_filename", "date"]
+
+
+def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="centrum"):
+    """
+    Load experiment data with proper variant parsing and column selection.
+    
+    This utility function handles:
+    - Fetching table metadata with variant schemas
+    - Loading from the correct source table
+    - Parsing VARIANT columns (macro_output, questions_data)
+    - Selecting/excluding appropriate columns
+    - Ordering by correct timestamp column
+    
+    Parameters:
+    -----------
+    experiment_id : str
+        The experiment identifier
+    table_name : str
+        The table name (e.g., 'raw_data', 'device', 'raw_ambyte_data', or macro filename)
+    catalog_name : str
+        The catalog name (e.g., 'open_jii_dev')
+    schema_name : str, optional
+        The schema name (default: 'centrum')
+    
+    Returns:
+    --------
+    DataFrame
+        PySpark DataFrame with parsed variants and proper column selection
+    """
+    from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col, from_json
+    
+    spark = SparkSession.builder.getOrCreate()
+    metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name)
+    
+    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT)
+    def normalize_schema(schema):
+        return schema.replace("OBJECT<", "STRUCT<") if schema else None
+    
+    macro_schema = normalize_schema(metadata["macro_schema"])
+    questions_schema = normalize_schema(metadata["questions_schema"])
+    
+    # Resolve table type: known names map directly, anything else is a macro
+    table_type = table_name if table_name in {"raw_data", "device", "raw_ambyte_data"} else "macro"
+    source_name, order_col = _TABLE_CONFIG[table_type]
+    
+    # Load and filter base dataframe
+    source_table = f"{catalog_name}.{schema_name}.{source_name}"
+    df = spark.table(source_table).filter(col("experiment_id") == experiment_id)
+    
+    if table_type == "macro":
+        df = df.filter(col("macro_filename") == table_name)
+    
+    # Parse variant columns and build expansion/exclusion lists
+    expand_cols = []
+    exclude_cols = ["experiment_id"]
+    
+    if table_type == "macro":
+        exclude_cols.extend(_MACRO_EXCLUDE_COLS)
+    
+    if table_type == "macro" and macro_schema:
+        df = df.withColumn(
+            "parsed_macro_output",
+            from_json(col("macro_output").cast("string"), macro_schema),
+        )
+        expand_cols.append("parsed_macro_output.*")
+        exclude_cols.extend(["macro_output", "parsed_macro_output"])
+    
+    if table_type in ("macro", "raw_data") and questions_schema:
+        df = df.withColumn(
+            "parsed_questions_data",
+            from_json(col("questions_data").cast("string"), questions_schema),
+        )
+        expand_cols.append("parsed_questions_data.*")
+        exclude_cols.extend(["questions_data", "parsed_questions_data"])
+    
+    # Expand parsed struct fields into top-level columns
+    if expand_cols:
+        df = df.select("*", *expand_cols)
+    
+    df = df.drop(*[c for c in exclude_cols if c in df.columns])
+    
+    return df.orderBy(order_col)
