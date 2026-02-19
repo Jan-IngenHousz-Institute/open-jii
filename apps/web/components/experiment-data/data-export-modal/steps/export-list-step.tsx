@@ -11,6 +11,7 @@ import {
   Plus,
   Rows3,
   HardDrive,
+  Check,
 } from "lucide-react";
 import * as React from "react";
 import { useDownloadExport } from "~/hooks/experiment/useDownloadExport/useDownloadExport";
@@ -35,11 +36,14 @@ import {
   TooltipTrigger,
 } from "@repo/ui/components";
 
+import type { CreationStatus } from "../data-export-modal";
+
 interface ExportListStepProps {
   experimentId: string;
   tableName: string;
   onCreateExport: (format: string) => void;
   onClose: () => void;
+  creationStatus?: CreationStatus;
 }
 
 const statusBorderColor: Record<string, string> = {
@@ -238,6 +242,7 @@ export function ExportListStep({
   tableName,
   onCreateExport,
   onClose,
+  creationStatus = "idle",
 }: ExportListStepProps) {
   const { t } = useTranslation("experimentData");
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
@@ -321,25 +326,37 @@ export function ExportListStep({
         <Button variant="outline" onClick={onClose}>
           {t("common.close")}
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              {t("experimentData.exportModal.createExport")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="min-w-[var(--radix-dropdown-menu-trigger-width)]"
-          >
-            <DropdownMenuItem onClick={() => onCreateExport("csv")}>CSV</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onCreateExport("ndjson")}>NDJSON</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onCreateExport("json-array")}>
-              JSON Array
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {creationStatus === "creating" ? (
+          <Button disabled className="gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t("experimentData.exportModal.creating")}
+          </Button>
+        ) : creationStatus === "success" ? (
+          <Button disabled className="gap-2">
+            <Check className="animate-in zoom-in-0 h-4 w-4 duration-300" />
+            {t("experimentData.exportModal.exportCreated")}
+          </Button>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                {t("experimentData.exportModal.createExport")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="min-w-[var(--radix-dropdown-menu-trigger-width)]"
+            >
+              <DropdownMenuItem onClick={() => onCreateExport("csv")}>CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateExport("ndjson")}>NDJSON</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateExport("json-array")}>
+                JSON Array
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </DialogFooter>
     </div>
   );

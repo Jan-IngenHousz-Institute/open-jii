@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataExportModal } from "../data-export-modal";
 
@@ -25,46 +25,32 @@ vi.mock("~/util/apiError", () => ({
   parseApiError: (error: { body?: { message?: string } }) => error.body,
 }));
 
-// Mock the step components
+// Track toast calls
+const mockToast = vi.hoisted(() => vi.fn());
+vi.mock("@repo/ui/hooks", () => ({
+  toast: mockToast,
+}));
+
+// Mock the step component
 vi.mock("../steps/export-list-step", () => ({
   ExportListStep: ({
     onCreateExport,
     onClose,
+    creationStatus,
   }: {
     experimentId: string;
     tableName: string;
     onCreateExport: (format: string) => void;
     onClose: () => void;
+    creationStatus: string;
   }) => (
     <div data-testid="export-list-step">
+      <span data-testid="creation-status">{creationStatus}</span>
       <button onClick={() => onCreateExport("csv")} data-testid="create-csv-button">
         Create CSV Export
       </button>
       <button onClick={onClose} data-testid="close-button">
         Close
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("../steps/export-creation-step", () => ({
-  ExportCreationStep: ({
-    format,
-    status,
-    errorMessage,
-    onBackToList,
-  }: {
-    format: string;
-    status: string;
-    errorMessage?: string;
-    onBackToList: () => void;
-  }) => (
-    <div data-testid="export-creation-step">
-      <span data-testid="creation-format">{format}</span>
-      <span data-testid="creation-status">{status}</span>
-      {errorMessage && <span data-testid="creation-error">{errorMessage}</span>}
-      <button onClick={onBackToList} data-testid="back-to-list-button">
-        Back to list
       </button>
     </div>
   ),
@@ -122,8 +108,12 @@ describe("DataExportModal", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     capturedOnSuccess = undefined;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const renderModal = (props = {}) => {
@@ -141,21 +131,22 @@ describe("DataExportModal", () => {
     expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
   });
 
-  it("starts with export list step", () => {
+  it("always shows export list step", () => {
     renderModal();
     expect(screen.getByTestId("export-list-step")).toBeInTheDocument();
-    expect(screen.queryByTestId("export-creation-step")).not.toBeInTheDocument();
   });
 
-  it("transitions to creation step when format is selected", async () => {
+  it("passes idle creationStatus initially", () => {
+    renderModal();
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
+  });
+
+  it("sets creationStatus to creating when export is initiated", () => {
     renderModal();
 
     fireEvent.click(screen.getByTestId("create-csv-button"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("export-creation-step")).toBeInTheDocument();
-      expect(screen.queryByTestId("export-list-step")).not.toBeInTheDocument();
-    });
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("creating");
   });
 
   it("calls initiateExport with correct params when format is selected", () => {
@@ -172,46 +163,49 @@ describe("DataExportModal", () => {
         },
       },
       expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        onError: expect.any(Function),
+        onError: expect.any(Function) as unknown,
       }),
     );
   });
 
-  it("passes selected format to creation step", async () => {
+  it("sets creationStatus to success and shows toast after successful export", async () => {
     renderModal();
 
     fireEvent.click(screen.getByTestId("create-csv-button"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("creation-format")).toHaveTextContent("csv");
-    });
-  });
-
-  it("shows loading status initially on creation step", async () => {
-    renderModal();
-
-    fireEvent.click(screen.getByTestId("create-csv-button"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("creation-status")).toHaveTextContent("loading");
-    });
-  });
-
-  it("shows success status after successful export creation", async () => {
-    renderModal();
-
-    fireEvent.click(screen.getByTestId("create-csv-button"));
-
-    // Simulate success callback
     capturedOnSuccess?.();
 
     await waitFor(() => {
       expect(screen.getByTestId("creation-status")).toHaveTextContent("success");
     });
+    expect(mockToast).toHaveBeenCalledWith({
+      description: "experimentData.exportModal.creationSuccess",
+    });
   });
 
-  it("shows error status after failed export creation", async () => {
+  it("resets creationStatus to idle after success delay", () => {
+    vi.useFakeTimers();
+
+    renderModal();
+
+    act(() => {
+      fireEvent.click(screen.getByTestId("create-csv-button"));
+    });
+
+    act(() => {
+      capturedOnSuccess?.();
+    });
+
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("success");
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
+  });
+
+  it("resets creationStatus to idle and shows error toast on failure", () => {
     mockInitiateExport.mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (_params: unknown, options?: { onError?: (err: any) => void }) => {
@@ -223,35 +217,11 @@ describe("DataExportModal", () => {
 
     fireEvent.click(screen.getByTestId("create-csv-button"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("creation-status")).toHaveTextContent("error");
-    });
-  });
-
-  it("navigates back to list step when back button is clicked", async () => {
-    renderModal();
-
-    fireEvent.click(screen.getByTestId("create-csv-button"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("export-creation-step")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId("back-to-list-button"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("export-list-step")).toBeInTheDocument();
-      expect(screen.queryByTestId("export-creation-step")).not.toBeInTheDocument();
-    });
-  });
-
-  it("displays create title when on creation step", async () => {
-    renderModal();
-
-    fireEvent.click(screen.getByTestId("create-csv-button"));
-
-    await waitFor(() => {
-      expect(screen.getByText("experimentData.exportModal.createTitle")).toBeInTheDocument();
+    // Error callback fires synchronously in the mock, resetting status to idle
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
+    expect(mockToast).toHaveBeenCalledWith({
+      description: "Something went wrong",
+      variant: "destructive",
     });
   });
 
@@ -263,22 +233,23 @@ describe("DataExportModal", () => {
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("resets to list step when modal closes and reopens", () => {
+  it("resets creationStatus when modal closes and reopens", () => {
     vi.useFakeTimers();
 
     const { rerender } = render(<DataExportModal {...defaultProps} open={true} />);
 
-    fireEvent.click(screen.getByTestId("create-csv-button"));
-    expect(screen.getByTestId("export-creation-step")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(screen.getByTestId("create-csv-button"));
+    });
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("creating");
 
     rerender(<DataExportModal {...defaultProps} open={false} />);
-    vi.advanceTimersByTime(350);
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
 
     rerender(<DataExportModal {...defaultProps} open={true} />);
-    expect(screen.getByTestId("export-list-step")).toBeInTheDocument();
-    expect(screen.queryByTestId("export-creation-step")).not.toBeInTheDocument();
-
-    vi.useRealTimers();
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
   });
 
   it("renders dialog header correctly", () => {

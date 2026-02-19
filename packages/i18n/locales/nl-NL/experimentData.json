@@ -48,6 +48,7 @@
       "createNew": "Nieuwe export maken",
       "creating": "Export maken...",
       "createExport": "Export maken",
+      "exportCreated": "Export aangemaakt",
       "creatingTitle": "{{format}} export wordt aangemaakt",
       "creatingDescription": "Dit kan even duren.",
       "creationSuccess": "Export succesvol aangemaakt!",

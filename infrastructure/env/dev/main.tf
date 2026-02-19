@@ -568,7 +568,7 @@ module "data_export_job" {
   name        = "Data-Export-Job-DEV"
   description = "Exports experiment table data in multiple formats (CSV, JSON, Parquet) to Unity Catalog volumes"
 
-  max_concurrent_runs           = 5 # Allow multiple concurrent exports
+  max_concurrent_runs           = 5
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "PERFORMANCE_OPTIMIZED"

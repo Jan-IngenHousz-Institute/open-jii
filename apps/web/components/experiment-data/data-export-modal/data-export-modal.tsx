@@ -13,8 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
-import { ExportCreationStep } from "./steps/export-creation-step";
 import { ExportListStep } from "./steps/export-list-step";
 
 interface DataExportModalProps {
@@ -24,7 +24,7 @@ interface DataExportModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ModalStep = "list" | "creating";
+export type CreationStatus = "idle" | "creating" | "success";
 
 export function DataExportModal({
   experimentId,
@@ -33,21 +33,13 @@ export function DataExportModal({
   onOpenChange,
 }: DataExportModalProps) {
   const { t } = useTranslation("experimentData");
-  const [currentStep, setCurrentStep] = React.useState<ModalStep>("list");
-  const [selectedFormat, setSelectedFormat] = React.useState("");
-  const [creationStatus, setCreationStatus] = React.useState<"loading" | "success" | "error">(
-    "loading",
-  );
-  const [errorMessage, setErrorMessage] = React.useState<string>();
+  const [creationStatus, setCreationStatus] = React.useState<CreationStatus>("idle");
 
   // Reset state when modal closes
   React.useEffect(() => {
     if (!open) {
       const timer = setTimeout(() => {
-        setCurrentStep("list");
-        setSelectedFormat("");
-        setCreationStatus("loading");
-        setErrorMessage(undefined);
+        setCreationStatus("idle");
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -56,14 +48,16 @@ export function DataExportModal({
   const { mutate: initiateExport } = useInitiateExport({
     onSuccess: () => {
       setCreationStatus("success");
+      toast({ description: t("experimentData.exportModal.creationSuccess") });
+
+      setTimeout(() => {
+        setCreationStatus("idle");
+      }, 2000);
     },
   });
 
   const handleCreateExport = (format: string) => {
-    setSelectedFormat(format);
-    setCreationStatus("loading");
-    setErrorMessage(undefined);
-    setCurrentStep("creating");
+    setCreationStatus("creating");
 
     initiateExport(
       {
@@ -75,18 +69,15 @@ export function DataExportModal({
       },
       {
         onError: (error) => {
-          setCreationStatus("error");
-          setErrorMessage(parseApiError(error)?.message);
+          setCreationStatus("idle");
+          toast({
+            description:
+              parseApiError(error)?.message ?? t("experimentData.exportModal.creationError"),
+            variant: "destructive",
+          });
         },
       },
     );
-  };
-
-  const handleBackToList = () => {
-    setCurrentStep("list");
-    setSelectedFormat("");
-    setCreationStatus("loading");
-    setErrorMessage(undefined);
   };
 
   const handleClose = () => {
@@ -99,32 +90,20 @@ export function DataExportModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            {currentStep === "list"
-              ? t("experimentData.exportModal.title")
-              : t("experimentData.exportModal.createTitle")}
+            {t("experimentData.exportModal.title")}
           </DialogTitle>
           <DialogDescription>
-            {currentStep === "list"
-              ? t("experimentData.exportModal.description", { tableName })
-              : t("experimentData.exportModal.createDescription", { tableName })}
+            {t("experimentData.exportModal.description", { tableName })}
           </DialogDescription>
         </DialogHeader>
 
-        {currentStep === "list" ? (
-          <ExportListStep
-            experimentId={experimentId}
-            tableName={tableName}
-            onCreateExport={handleCreateExport}
-            onClose={handleClose}
-          />
-        ) : (
-          <ExportCreationStep
-            format={selectedFormat}
-            status={creationStatus}
-            errorMessage={errorMessage}
-            onBackToList={handleBackToList}
-          />
-        )}
+        <ExportListStep
+          experimentId={experimentId}
+          tableName={tableName}
+          onCreateExport={handleCreateExport}
+          onClose={handleClose}
+          creationStatus={creationStatus}
+        />
       </DialogContent>
     </Dialog>
   );

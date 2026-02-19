@@ -554,4 +554,39 @@ describe("ExportListStep", () => {
     const downloadButton = screen.getByTestId("download-button");
     expect(downloadButton).toBeDisabled();
   });
+
+  describe("create button phases", () => {
+    beforeEach(() => {
+      mockUseListExports.mockReturnValue({
+        data: { body: { exports: [] } },
+        isLoading: false,
+        error: null,
+      });
+    });
+
+    it("shows dropdown button in idle state (default)", () => {
+      renderStep();
+
+      expect(screen.getByTestId("dropdown-menu")).toBeInTheDocument();
+      expect(screen.getByText("experimentData.exportModal.createExport")).toBeInTheDocument();
+    });
+
+    it("shows disabled spinner button in creating state", () => {
+      renderStep({ creationStatus: "creating" });
+
+      const button = screen.getByTestId("create-export-button");
+      expect(button).toBeDisabled();
+      expect(screen.getByText("experimentData.exportModal.creating")).toBeInTheDocument();
+      expect(screen.queryByTestId("dropdown-menu")).not.toBeInTheDocument();
+    });
+
+    it("shows disabled check button in success state", () => {
+      renderStep({ creationStatus: "success" });
+
+      const button = screen.getByTestId("create-export-button");
+      expect(button).toBeDisabled();
+      expect(screen.getByText("experimentData.exportModal.exportCreated")).toBeInTheDocument();
+      expect(screen.queryByTestId("dropdown-menu")).not.toBeInTheDocument();
+    });
+  });
 });

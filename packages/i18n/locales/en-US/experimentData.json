@@ -48,6 +48,7 @@
       "createNew": "Create New Export",
       "creating": "Creating export...",
       "createExport": "Create Export",
+      "exportCreated": "Export Created",
       "creatingTitle": "Creating {{format}} export",
       "creatingDescription": "This may take a moment.",
       "creationSuccess": "Export created successfully!",
