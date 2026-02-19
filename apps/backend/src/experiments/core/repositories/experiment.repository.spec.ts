@@ -418,7 +418,7 @@ describe("ExperimentRepository", () => {
       await testApp.createExperiment({
         name: "Draft Experiment",
         userId: mainUserId,
-        status: "provisioning",
+        status: "active",
       });
 
       // Create archived experiment
