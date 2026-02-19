@@ -113,7 +113,9 @@ describe("RNUSBSerialAdapter", () => {
       const port = createMockPort();
       new RNUSBSerialAdapter(port as unknown as UsbSerial);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       // Simulate receiving invalid hex (odd length) that causes fromHex to throw
       const rawCallback = port.onReceived.mock.calls[0]?.[0] as (event: { data: string }) => void;
@@ -143,7 +145,9 @@ describe("RNUSBSerialAdapter", () => {
       port.close.mockRejectedValue(new Error("close failed"));
       const adapter = new RNUSBSerialAdapter(port as unknown as UsbSerial);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       await adapter.disconnect();
 

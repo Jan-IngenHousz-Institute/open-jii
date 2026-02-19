@@ -141,7 +141,9 @@ describe("RNBLEAdapter", () => {
       const dataCb = vi.fn();
       adapter.onDataReceived(dataCb);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       device.simulateError(new Error("BLE error"));
 
@@ -157,7 +159,9 @@ describe("RNBLEAdapter", () => {
 
       await RNBLEAdapter.connect("ble-id", bleManager as unknown as BleManager, DEFAULT_CONFIG);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       // Simulate notification with invalid base64 that causes atob to throw
       const monitorCallback = device.monitorCharacteristicForService.mock.calls[0]?.[2] as (
@@ -190,7 +194,9 @@ describe("RNBLEAdapter", () => {
       device.cancelConnection.mockRejectedValue(new Error("Already disconnected"));
       const adapter = new RNBLEAdapter(device as unknown as Device, DEFAULT_CONFIG);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       await adapter.disconnect();
 

@@ -91,7 +91,9 @@ describe("RNBluetoothClassicAdapter", () => {
       const device = createMockDevice();
       new RNBluetoothClassicAdapter(device as unknown as BluetoothDevice);
 
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+        // noop
+      });
 
       // Simulate non-string data by calling the raw callback
       const rawCallback = device.onDataReceived.mock.calls[0]?.[0] as (event: {
@@ -123,7 +125,9 @@ describe("RNBluetoothClassicAdapter", () => {
       device.disconnect.mockRejectedValue(new Error("Already disconnected"));
       const adapter = new RNBluetoothClassicAdapter(device as unknown as BluetoothDevice);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       await adapter.disconnect();
 

@@ -199,7 +199,9 @@ describe("WebSerialAdapter", () => {
       const statusCb = vi.fn();
       adapter.onStatusChanged(statusCb);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       // @ts-expect-error accessing private
       adapter.reader = reader;
@@ -266,7 +268,9 @@ describe("WebSerialAdapter", () => {
       // @ts-expect-error accessing private
       adapter.writer = writer;
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       await adapter.disconnect();
 
@@ -306,7 +310,9 @@ describe("WebSerialAdapter", () => {
 
       const adapter = new WebSerialAdapter(port as unknown as SerialPort);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       await adapter.disconnect();
 

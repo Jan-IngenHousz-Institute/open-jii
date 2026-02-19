@@ -55,13 +55,13 @@ function createMockDevice(gattServer?: unknown) {
     name: "Test Device",
     gatt: gattServer,
     addEventListener: vi.fn((type: string, listener: EventListener) => {
-      if (!listeners[type]) listeners[type] = [];
+      listeners[type] = [];
       listeners[type].push(listener);
     }),
     removeEventListener: vi.fn(),
     // Test helper – simulate a gattserverdisconnected event
     simulateDisconnect() {
-      for (const listener of listeners.gattserverdisconnected ?? []) {
+      for (const listener of listeners.gattserverdisconnected) {
         listener(new Event("gattserverdisconnected"));
       }
     },
@@ -267,7 +267,9 @@ describe("WebBluetoothAdapter", () => {
       const dataCb = vi.fn();
       adapter.onDataReceived(dataCb);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       // Simulate notification with a value that causes decode to throw
       const badDataView = {
@@ -276,6 +278,7 @@ describe("WebBluetoothAdapter", () => {
         byteOffset: 0,
       };
       // Override TextDecoder to throw
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       const origDecode = TextDecoder.prototype.decode;
       TextDecoder.prototype.decode = () => {
         throw new Error("decode error");
@@ -331,7 +334,9 @@ describe("WebBluetoothAdapter", () => {
 
       notifyChar.stopNotifications.mockRejectedValue(new Error("stop failed"));
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
 
       await adapter.disconnect();
 
