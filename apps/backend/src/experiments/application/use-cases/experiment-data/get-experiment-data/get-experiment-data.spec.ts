@@ -8,8 +8,8 @@ import {
   AppError,
 } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
+import { ExperimentDataRepository } from "../../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
-import { ExperimentDataRepository } from "../../../repositories/experiment-data.repository";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
 describe("GetExperimentDataUseCase", () => {

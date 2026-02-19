@@ -4,9 +4,9 @@ import { expect } from "vitest";
 import type { ExperimentTableMetadata } from "../../../common/modules/databricks/databricks.adapter";
 import { AppError, success, failure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { ExperimentDto } from "../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
+import type { ExperimentDto } from "../models/experiment.model";
+import { DATABRICKS_PORT } from "../ports/databricks.port";
+import type { DatabricksPort } from "../ports/databricks.port";
 import { ExperimentDataRepository } from "./experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -424,131 +424,6 @@ describe("ExperimentDataRepository", () => {
       const result = await repository.getTableData({
         ...baseParams,
         columns: ["id", "value"],
-      });
-
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error).toBe(error);
-      }
-    });
-  });
-
-  describe("getTableDataForDownload", () => {
-    it("should successfully get download links", async () => {
-      const testExperimentId = faker.string.uuid();
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          tableName: "raw_data",
-          rowCount: 1000,
-          macroSchema: "STRUCT<data: STRING>",
-          questionsSchema: null,
-        },
-      ];
-
-      const mockDownloadData = {
-        external_links: [
-          {
-            chunk_index: 0,
-            row_count: 500,
-            row_offset: 0,
-            byte_count: 1048576,
-            external_link: "https://databricks.com/chunk0",
-            expiration: "2024-12-31T23:59:59Z",
-          },
-          {
-            chunk_index: 1,
-            row_count: 500,
-            row_offset: 500,
-            byte_count: 1048576,
-            external_link: "https://databricks.com/chunk1",
-            expiration: "2024-12-31T23:59:59Z",
-          },
-        ],
-        totalRows: 1000,
-        format: "CSV" as const,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      const mockQuery = `SELECT * FROM table`;
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(mockQuery);
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockDownloadData));
-
-      const result = await repository.getTableDataForDownload({
-        experimentId: testExperimentId,
-        tableName: "raw_data",
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.totalRows).toBe(1000);
-      expect(result.value.externalLinks).toHaveLength(2);
-      expect(result.value.externalLinks[0]).toMatchObject({
-        externalLink: "https://databricks.com/chunk0",
-        expiration: "2024-12-31T23:59:59Z",
-        totalSize: 1048576,
-        rowCount: 500,
-      });
-
-      expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        databricksPort.CENTRUM_SCHEMA_NAME,
-        mockQuery,
-        "EXTERNAL_LINKS",
-        "CSV",
-      );
-    });
-
-    it("should return failure when table not found", async () => {
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
-
-      const result = await repository.getTableDataForDownload({
-        experimentId: faker.string.uuid(),
-        tableName: "nonexistent",
-      });
-
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error.message).toContain("Table 'nonexistent' not found");
-      }
-    });
-
-    it("should return failure when metadata fetch fails", async () => {
-      const error = AppError.internal("Metadata fetch failed");
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(failure(error));
-
-      const result = await repository.getTableDataForDownload({
-        experimentId: faker.string.uuid(),
-        tableName: "raw_data",
-      });
-
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error).toBe(error);
-      }
-    });
-
-    it("should return failure when SQL execution fails", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          tableName: "raw_data",
-          rowCount: 1000,
-          macroSchema: null,
-          questionsSchema: null,
-        },
-      ];
-
-      const error = AppError.internal("SQL execution failed");
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(`SELECT * FROM table`);
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
-
-      const result = await repository.getTableDataForDownload({
-        experimentId: faker.string.uuid(),
-        tableName: "raw_data",
       });
 
       expect(result.isSuccess()).toBe(false);

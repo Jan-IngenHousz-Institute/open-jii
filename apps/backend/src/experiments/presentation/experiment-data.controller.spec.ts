@@ -6,7 +6,6 @@ import { expect } from "vitest";
 
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
-import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
@@ -22,7 +21,6 @@ describe("ExperimentDataController", () => {
   let controller: ExperimentDataController;
   let getExperimentDataUseCase: GetExperimentDataUseCase;
   let getExperimentTablesUseCase: GetExperimentTablesUseCase;
-  let downloadExperimentDataUseCase: DownloadExperimentDataUseCase;
   let uploadAmbyteDataUseCase: UploadAmbyteDataUseCase;
 
   const mockSession: UserSession = {
@@ -56,7 +54,6 @@ describe("ExperimentDataController", () => {
     controller = testApp.module.get(ExperimentDataController);
     getExperimentDataUseCase = testApp.module.get(GetExperimentDataUseCase);
     getExperimentTablesUseCase = testApp.module.get(GetExperimentTablesUseCase);
-    downloadExperimentDataUseCase = testApp.module.get(DownloadExperimentDataUseCase);
     uploadAmbyteDataUseCase = testApp.module.get(UploadAmbyteDataUseCase);
     vi.restoreAllMocks();
   });
@@ -217,58 +214,6 @@ describe("ExperimentDataController", () => {
       });
 
       expect(result.status).toBe(400);
-    });
-  });
-
-  describe("downloadExperimentData", () => {
-    it("should return download links successfully", async () => {
-      const experimentId = faker.string.uuid();
-      const mockDownloadData = {
-        externalLinks: [
-          {
-            externalLink: "https://databricks.com/chunk0",
-            expiration: "2024-12-31T23:59:59Z",
-            totalSize: 1048576,
-            rowCount: 500,
-          },
-        ],
-        totalRows: 500,
-      };
-
-      vi.spyOn(downloadExperimentDataUseCase, "execute").mockResolvedValue(
-        success(mockDownloadData),
-      );
-
-      const handler = controller.downloadExperimentData(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual(mockDownloadData);
-      expect(downloadExperimentDataUseCase.execute).toHaveBeenCalledWith(
-        experimentId,
-        mockSession.user.id,
-        { tableName: "raw_data" },
-      );
-    });
-
-    it("should handle use case failure", async () => {
-      const experimentId = faker.string.uuid();
-      const error = AppError.internal("Download failed");
-
-      vi.spyOn(downloadExperimentDataUseCase, "execute").mockResolvedValue(failure(error));
-
-      const handler = controller.downloadExperimentData(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(500);
     });
   });
 
