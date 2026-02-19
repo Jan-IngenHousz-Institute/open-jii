@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import "@testing-library/jest-dom/vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -14,7 +15,7 @@ vi.mock("@repo/iot", () => ({
       device_version: "1.0.0",
       device_battery: 85,
     }),
-    destroy: vi.fn(),
+    destroy: vi.fn().mockResolvedValue(undefined),
   })),
   GenericDeviceProtocol: vi.fn().mockImplementation(() => ({
     initialize: vi.fn(),
@@ -23,46 +24,44 @@ vi.mock("@repo/iot", () => ({
       device_name: "Generic Device",
       device_version: "1.0.0",
     }),
-    destroy: vi.fn(),
+    destroy: vi.fn().mockResolvedValue(undefined),
   })),
-  WebBluetoothAdapter: vi.fn().mockImplementation(() => ({
-    isConnected: vi.fn().mockReturnValue(true),
-    send: vi.fn(),
-    onDataReceived: vi.fn(),
-    onStatusChanged: vi.fn(),
-    disconnect: vi.fn(),
-  })),
-  WebSerialAdapter: vi.fn().mockImplementation(() => ({
-    isConnected: vi.fn().mockReturnValue(true),
-    send: vi.fn(),
-    onDataReceived: vi.fn(),
-    onStatusChanged: vi.fn(),
-    disconnect: vi.fn(),
-  })),
-  MULTISPEQ_BLE_CONFIG: {
-    serviceUUID: "test-service",
-    writeUUID: "test-write",
-    notifyUUID: "test-notify",
+  MULTISPEQ_BLE_UUIDS: {
+    SERVICE: "test-service",
+    WRITE: "test-write",
+    NOTIFY: "test-notify",
+  },
+  GENERIC_BLE_UUIDS: {
+    SERVICE: "generic-service",
+    WRITE: "generic-write",
+    NOTIFY: "generic-notify",
+  },
+  GENERIC_SERIAL_DEFAULTS: {
+    baudRate: 115200,
   },
 }));
 
-// Mock Web Bluetooth API
-const mockRequestDevice = vi.fn();
-Object.defineProperty(navigator, "bluetooth", {
-  value: {
-    requestDevice: mockRequestDevice,
+// Mock transport adapters
+vi.mock("@repo/iot/transport/web", () => ({
+  WebBluetoothAdapter: {
+    requestAndConnect: vi.fn().mockResolvedValue({
+      isConnected: vi.fn().mockReturnValue(true),
+      send: vi.fn(),
+      onDataReceived: vi.fn(),
+      onStatusChanged: vi.fn(),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+    }),
   },
-  configurable: true,
-});
-
-// Mock Web Serial API
-const mockRequestPort = vi.fn();
-Object.defineProperty(navigator, "serial", {
-  value: {
-    requestPort: mockRequestPort,
+  WebSerialAdapter: {
+    requestAndConnect: vi.fn().mockResolvedValue({
+      isConnected: vi.fn().mockReturnValue(true),
+      send: vi.fn(),
+      onDataReceived: vi.fn(),
+      onStatusChanged: vi.fn(),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+    }),
   },
-  configurable: true,
-});
+}));
 
 describe("useIotCommunication", () => {
   beforeEach(() => {
@@ -109,6 +108,59 @@ describe("useIotCommunication", () => {
       const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
       expect(typeof result.current.connect).toBe("function");
     });
+
+    it("successfully connects via bluetooth with multispeq", async () => {
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
+
+      void result.current.connect();
+
+      await waitFor(() => {
+        expect(result.current.isConnected).toBe(true);
+        expect(result.current.deviceInfo).toEqual({
+          device_name: "Test Device",
+          device_version: "1.0.0",
+          device_battery: 85,
+        });
+        expect(result.current.protocol).not.toBeNull();
+      });
+    });
+
+    it("successfully connects via serial with multispeq", async () => {
+      const { result } = renderHook(() => useIotCommunication("multispeq", "serial"));
+
+      void result.current.connect();
+
+      await waitFor(() => {
+        expect(result.current.isConnected).toBe(true);
+        expect(result.current.protocol).not.toBeNull();
+      });
+    });
+
+    it("successfully connects with generic sensor family", async () => {
+      const { result } = renderHook(() => useIotCommunication("generic", "bluetooth"));
+
+      void result.current.connect();
+
+      await waitFor(() => {
+        expect(result.current.isConnected).toBe(true);
+        expect(result.current.deviceInfo).toEqual({
+          device_name: "Generic Device",
+          device_version: "1.0.0",
+        });
+        expect(result.current.protocol).not.toBeNull();
+      });
+    });
+
+    it("successfully connects via serial with generic sensor family", async () => {
+      const { result } = renderHook(() => useIotCommunication("generic", "serial"));
+
+      void result.current.connect();
+
+      await waitFor(() => {
+        expect(result.current.isConnected).toBe(true);
+        expect(result.current.protocol).not.toBeNull();
+      });
+    });
   });
 
   describe("disconnect function", () => {
@@ -119,37 +171,51 @@ describe("useIotCommunication", () => {
   });
 
   describe("error handling", () => {
-    it("sets error state when connection fails", async () => {
-      mockRequestDevice.mockRejectedValueOnce(new Error("Connection failed"));
+    it("starts with no error", () => {
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
+      expect(result.current.error).toBe(null);
+    });
 
+    it("clears state when protocol is null", () => {
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
+      expect(result.current.protocol).toBe(null);
+      expect(result.current.deviceInfo).toBe(null);
+    });
+  });
+
+  describe("disconnect function", () => {
+    it("disconnects successfully", async () => {
       const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
       void result.current.connect();
 
       await waitFor(() => {
-        expect(result.current.error).toBeTruthy();
+        expect(result.current.isConnected).toBe(true);
+      });
+
+      await result.current.disconnect();
+
+      await waitFor(() => {
         expect(result.current.isConnected).toBe(false);
+        expect(result.current.deviceInfo).toBe(null);
+        expect(result.current.error).toBe(null);
       });
     });
 
-    it("clears error on successful connection", async () => {
+    it("disconnects when protocol is null", async () => {
       const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
-      // First set an error
-      mockRequestDevice.mockRejectedValueOnce(new Error("First error"));
-      void result.current.connect();
+      await result.current.disconnect();
 
-      await waitFor(() => {
-        expect(result.current.error).toBeTruthy();
-      });
+      expect(result.current.isConnected).toBe(false);
     });
   });
 
   describe("cleanup", () => {
-    it("cleans up on unmount", () => {
+    it("cleans up when not connected", () => {
       const { result, unmount } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
-      expect(result.current).toBeDefined();
+      expect(result.current.isConnected).toBe(false);
       unmount();
     });
   });

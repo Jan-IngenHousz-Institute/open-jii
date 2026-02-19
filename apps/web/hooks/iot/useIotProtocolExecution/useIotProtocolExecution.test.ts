@@ -117,5 +117,115 @@ describe("useIotProtocolExecution", () => {
         "Data error",
       );
     });
+
+    it("parses JSON string data from device", async () => {
+      const mockExecute = vi
+        .fn()
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true, data: '{"temperature": 27.3, "humidity": 65}' });
+
+      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+      );
+
+      const data = await result.current.executeProtocol([{ command: "measure" }]);
+
+      expect(data).toEqual({ temperature: 27.3, humidity: 65 });
+    });
+
+    it("keeps string data as-is when JSON parsing fails", async () => {
+      const mockExecute = vi
+        .fn()
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true, data: "invalid json {}" });
+
+      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+      );
+
+      const data = await result.current.executeProtocol([{ command: "measure" }]);
+
+      expect(data).toBe("invalid json {}");
+    });
+
+    it("returns non-string data without modification", async () => {
+      const mockData = { raw: true, values: [1, 2, 3] };
+      const mockExecute = vi
+        .fn()
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true, data: mockData });
+
+      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+      );
+
+      const data = await result.current.executeProtocol([{ command: "measure" }]);
+
+      expect(data).toEqual(mockData);
+    });
+
+    it("uses default error messages when error.message is undefined", async () => {
+      const mockExecute = vi.fn().mockResolvedValueOnce({
+        success: false,
+        error: {},
+      });
+
+      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+      );
+
+      await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
+        "Failed to load protocol on device",
+      );
+    });
+
+    it("uses default error message for RUN when error.message is undefined", async () => {
+      const mockExecute = vi.fn().mockResolvedValueOnce({ success: true }).mockResolvedValueOnce({
+        success: false,
+        error: {},
+      });
+
+      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+      );
+
+      await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
+        "Failed to run protocol",
+      );
+    });
+
+    it("uses default error message for GET_DATA when error.message is undefined", async () => {
+      const mockExecute = vi
+        .fn()
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({
+          success: false,
+          error: {},
+        });
+
+      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+      );
+
+      await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
+        "Failed to get measurement data",
+      );
+    });
   });
 });

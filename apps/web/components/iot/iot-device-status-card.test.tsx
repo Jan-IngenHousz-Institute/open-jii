@@ -117,6 +117,11 @@ describe("DeviceStatusCard", () => {
       expect(screen.getByText("iot.protocolRunner.wireless")).toBeInTheDocument();
     });
 
+    it("shows USB connection type label when using serial", () => {
+      render(<DeviceStatusCard {...defaultProps} connectionType="serial" />);
+      expect(screen.getByText("iot.protocolRunner.usb")).toBeInTheDocument();
+    });
+
     it("shows pairing message when connecting", () => {
       render(<DeviceStatusCard {...defaultProps} isConnecting={true} />);
       expect(screen.getByText("iot.protocolRunner.pairingWithDevice")).toBeInTheDocument();
