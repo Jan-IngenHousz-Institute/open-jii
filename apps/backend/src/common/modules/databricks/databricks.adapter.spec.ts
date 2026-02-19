@@ -461,7 +461,7 @@ describe("DatabricksAdapter", () => {
       vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
 
       // Calculate expected file path
-      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-imports/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -501,7 +501,7 @@ describe("DatabricksAdapter", () => {
 
       // Use consistent schema name
       const testSchemaName = "exp_test_experiment_with_spaces_123";
-      const expectedFilePath = `/Volumes/${catalogName}/${testSchemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${testSchemaName}/data-imports/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
