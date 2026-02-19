@@ -674,7 +674,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
   /**
    * Upload a file to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-imports/{sourceType}/{directoryName}/{fileName}
    *
    * @param schemaName - Schema name of the experiment
    * @param sourceType - Type of data source (e.g., 'ambyte')
@@ -694,7 +694,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     const catalogName = this.configService.getCatalogName();
 
     // Construct the full path with experiment_id subdirectory
-    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
+    const filePath = `/Volumes/${catalogName}/${schemaName}/data-imports/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
     return this.filesService.upload(filePath, fileBuffer);
   }

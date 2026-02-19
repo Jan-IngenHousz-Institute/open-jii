@@ -95,7 +95,7 @@ export interface DatabricksPort {
 
   /**
    * Upload data to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/centrum/data-uploads/{experimentId}/{sourceType}/{directoryName}/{fileName}
+   * Constructs the path: /Volumes/{catalogName}/centrum/data-imports/{experimentId}/{sourceType}/{directoryName}/{fileName}
    *
    * @param schemaName - Schema name (should be "centrum")
    * @param experimentId - ID of the experiment (used for subdirectory)
