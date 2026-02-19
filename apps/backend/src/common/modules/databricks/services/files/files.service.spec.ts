@@ -101,7 +101,7 @@ describe("DatabricksFilesService", () => {
         .post(DatabricksAuthService.TOKEN_ENDPOINT)
         .reply(401, { error_description: "Invalid client credentials" });
 
-      const expectedPath = `/Volumes/${MOCK_CATALOG_NAME}/${MOCK_SCHEMA_NAME}/data-uploads/${MOCK_SOURCE_TYPE}/${MOCK_FILE_NAME}`;
+      const expectedPath = `/Volumes/${MOCK_CATALOG_NAME}/${MOCK_SCHEMA_NAME}/data-imports/${MOCK_SOURCE_TYPE}/${MOCK_FILE_NAME}`;
 
       const result = await filesService.upload(expectedPath, MOCK_FILE_BUFFER);
 
