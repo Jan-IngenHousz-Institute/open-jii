@@ -6,14 +6,15 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
 
+import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
-import { GetIoTCredentialsUseCase } from "../application/use-cases/get-iot-credentials/get-iot-credentials";
+import { GetIotCredentialsUseCase } from "../application/use-cases/get-iot-credentials/get-iot-credentials";
 
 @Controller()
-export class IoTController {
-  private readonly logger = new Logger(IoTController.name);
+export class IotController {
+  private readonly logger = new Logger(IotController.name);
 
-  constructor(private readonly getIoTCredentialsUseCase: GetIoTCredentialsUseCase) {}
+  constructor(private readonly getIotCredentialsUseCase: GetIotCredentialsUseCase) {}
 
   @TsRestHandler(contract.iot.getCredentials)
   getCredentials(@Session() session: UserSession) {
@@ -26,7 +27,7 @@ export class IoTController {
         userId,
       });
 
-      const result = await this.getIoTCredentialsUseCase.execute(userId);
+      const result = await this.getIotCredentialsUseCase.execute(userId);
 
       if (result.isSuccess()) {
         const credentials = result.value;
@@ -41,12 +42,7 @@ export class IoTController {
 
         return {
           status: StatusCodes.OK,
-          body: {
-            accessKeyId: credentials.accessKeyId,
-            secretAccessKey: credentials.secretAccessKey,
-            sessionToken: credentials.sessionToken,
-            expiration: credentials.expiration.toISOString(),
-          },
+          body: formatDates(credentials),
         };
       }
 

@@ -1,20 +1,20 @@
 import { Module } from "@nestjs/common";
 
-import { CognitoAdapter } from "../common/modules/aws/adapters/cognito.adapter";
+import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
-import { GetIoTCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
-import { COGNITO_PORT } from "./core/ports/cognito.port";
-import { IoTController } from "./presentation/iot.controller";
+import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
+import { AWS_PORT } from "./core/ports/aws.port";
+import { IotController } from "./presentation/iot.controller";
 
 @Module({
   imports: [AwsModule],
-  controllers: [IoTController],
+  controllers: [IotController],
   providers: [
-    GetIoTCredentialsUseCase,
+    GetIotCredentialsUseCase,
     {
-      provide: COGNITO_PORT,
-      useExisting: CognitoAdapter,
+      provide: AWS_PORT,
+      useExisting: AwsAdapter,
     },
   ],
 })
-export class IoTModule {}
+export class IotModule {}

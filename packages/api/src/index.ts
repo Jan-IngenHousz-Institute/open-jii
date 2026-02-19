@@ -10,6 +10,7 @@ export * from "./contracts/protocol.contract";
 
 // Schema exports
 export * from "./schemas/experiment.schema";
+export * from "./schemas/iot.schema";
 export * from "./schemas/macro.schema";
 export * from "./schemas/user.schema";
 export * from "./schemas/protocol.schema";

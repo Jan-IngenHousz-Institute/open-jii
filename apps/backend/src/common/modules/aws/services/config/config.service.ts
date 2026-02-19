@@ -25,10 +25,10 @@ export class AwsConfigService {
     return {
       region: this.configService.getOrThrow<string>("aws.region"),
       placeIndexName: this.configService.getOrThrow<string>("aws.location.placeIndexName"),
-      cognitoIdentityPoolId:
-        this.configService.get<string>("aws.cognito.identityPoolId") ?? "local-development-pool-id",
-      cognitoDeveloperProviderName:
-        this.configService.get<string>("aws.cognito.developerProviderName") ?? "local.development",
+      cognitoIdentityPoolId: this.configService.getOrThrow<string>("aws.cognito.identityPoolId"),
+      cognitoDeveloperProviderName: this.configService.getOrThrow<string>(
+        "aws.cognito.developerProviderName",
+      ),
     };
   }
 

@@ -13,7 +13,7 @@ describe("API Contract", () => {
 
   it("should include IoT contract with getCredentials endpoint", () => {
     expect(contract.iot.getCredentials).toBeDefined();
-    expect(contract.iot.getCredentials.method).toBe("POST");
+    expect(contract.iot.getCredentials.method).toBe("GET");
     expect(contract.iot.getCredentials.path).toBe("/api/v1/iot/credentials");
   });
 });

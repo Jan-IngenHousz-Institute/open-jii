@@ -3,22 +3,15 @@ import {
   GetOpenIdTokenForDeveloperIdentityCommand,
   GetCredentialsForIdentityCommand,
 } from "@aws-sdk/client-cognito-identity";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { AppError, Result, tryCatch } from "../../../../utils/fp-utils";
 import { AwsConfigService } from "../config/config.service";
-
-export interface IoTCredentials {
-  accessKeyId: string;
-  secretAccessKey: string;
-  sessionToken: string;
-  expiration: Date;
-}
+import type { IotCredentials, OpenIdTokenResult } from "./cognito.types";
 
 @Injectable()
 export class CognitoService {
-  private readonly logger = new Logger(CognitoService.name);
   private readonly cognitoClient: CognitoIdentityClient;
 
   constructor(private readonly awsConfig: AwsConfigService) {
@@ -28,61 +21,66 @@ export class CognitoService {
   }
 
   /**
-   * Get temporary AWS credentials for an authenticated user to access IoT Core
+   * Get an OpenID token for a developer-authenticated identity.
    *
    * This uses developer-authenticated identities where the backend acts as the
    * identity provider and authenticates users through Better Auth.
    *
    * @param userId - The authenticated user's ID from Better Auth session
-   * @returns Temporary AWS credentials (AccessKeyId, SecretKey, SessionToken, Expiration)
+   * @returns The Cognito identity ID and OpenID token
    */
-  async getIoTCredentials(userId: string): Promise<Result<IoTCredentials>> {
-    this.logger.debug({
-      msg: "Getting IoT credentials for user",
-      operation: "getIoTCredentials",
-      userId,
-    });
-
+  async getOpenIdToken(userId: string): Promise<Result<OpenIdTokenResult>> {
     return tryCatch(
       async () => {
-        // Step 1: Get OpenID token for developer identity
         const tokenCommand = new GetOpenIdTokenForDeveloperIdentityCommand({
           IdentityPoolId: this.awsConfig.cognitoIdentityPoolId,
           Logins: {
-            // Developer provider name from Cognito Identity Pool configuration
             [this.awsConfig.cognitoDeveloperProviderName]: userId,
           },
-          // Token duration in seconds (max 15 minutes for developer-authenticated identities)
           TokenDuration: 900, // 15 minutes
         });
 
         const tokenResponse = await this.cognitoClient.send(tokenCommand);
 
         if (!tokenResponse.IdentityId || !tokenResponse.Token) {
-          this.logger.error({
-            msg: "Failed to get OpenID token from Cognito",
-            operation: "getIoTCredentials",
-            userId,
-            errorCode: ErrorCodes.AWS_COGNITO_TOKEN_FAILED,
-          });
-          throw new AppError(
+          throw AppError.internal(
             "Failed to obtain OpenID token from Cognito",
             ErrorCodes.AWS_COGNITO_TOKEN_FAILED,
           );
         }
 
-        this.logger.debug({
-          msg: "Successfully obtained OpenID token",
-          operation: "getIoTCredentials",
-          userId,
+        return {
           identityId: tokenResponse.IdentityId,
-        });
+          token: tokenResponse.Token,
+        };
+      },
+      (error) => {
+        if (error instanceof AppError) {
+          return error;
+        }
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return AppError.internal(errorMessage, ErrorCodes.AWS_COGNITO_TOKEN_FAILED);
+      },
+    );
+  }
 
-        // Step 2: Exchange the token for temporary AWS credentials
+  /**
+   * Exchange an OpenID token for temporary AWS credentials.
+   *
+   * @param identityId - The Cognito identity ID
+   * @param token - The OpenID token
+   * @returns Temporary AWS credentials (AccessKeyId, SecretKey, SessionToken, Expiration)
+   */
+  async getCredentialsForIdentity(
+    identityId: string,
+    token: string,
+  ): Promise<Result<IotCredentials>> {
+    return tryCatch(
+      async () => {
         const credentialsCommand = new GetCredentialsForIdentityCommand({
-          IdentityId: tokenResponse.IdentityId,
+          IdentityId: identityId,
           Logins: {
-            "cognito-identity.amazonaws.com": tokenResponse.Token,
+            "cognito-identity.amazonaws.com": token,
           },
         });
 
@@ -93,43 +91,25 @@ export class CognitoService {
           !credentialsResponse.Credentials.SecretKey ||
           !credentialsResponse.Credentials.SessionToken
         ) {
-          this.logger.error({
-            msg: "Failed to get AWS credentials from Cognito",
-            operation: "getIoTCredentials",
-            userId,
-            errorCode: ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED,
-          });
-          throw new AppError(
+          throw AppError.internal(
             "Failed to obtain AWS credentials from Cognito",
             ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED,
           );
         }
 
-        const credentials: IoTCredentials = {
+        return {
           accessKeyId: credentialsResponse.Credentials.AccessKeyId,
           secretAccessKey: credentialsResponse.Credentials.SecretKey,
           sessionToken: credentialsResponse.Credentials.SessionToken,
-          expiration: credentialsResponse.Credentials.Expiration ?? new Date(Date.now() + 900000), // Default to 15 min
+          expiration: credentialsResponse.Credentials.Expiration ?? new Date(Date.now() + 900000),
         };
-
-        this.logger.log({
-          msg: "Successfully obtained IoT credentials",
-          operation: "getIoTCredentials",
-          userId,
-          status: "success",
-          expiresAt: credentials.expiration.toISOString(),
-        });
-
-        return credentials;
       },
       (error) => {
-        // If already an AppError with specific code, preserve it
         if (error instanceof AppError) {
           return error;
         }
-        // Otherwise, wrap unknown errors with generic credentials failure code
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return new AppError(errorMessage, ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED);
+        return AppError.internal(errorMessage, ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED);
       },
     );
   }

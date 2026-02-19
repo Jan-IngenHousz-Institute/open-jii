@@ -1,12 +1,15 @@
 import { TestHarness } from "../../../test/test-harness";
-import { assertFailure, assertSuccess } from "../../utils/fp-utils";
+import { ErrorCodes } from "../../utils/error-codes";
+import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import { AwsAdapter } from "./aws.adapter";
+import { CognitoService } from "./services/cognito/cognito.service";
 import { AwsLocationService } from "./services/location/location.service";
 
 describe("AwsAdapter", () => {
   const testApp = TestHarness.App;
   let awsAdapter: AwsAdapter;
   let awsLocationService: AwsLocationService;
+  let cognitoService: CognitoService;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -16,6 +19,7 @@ describe("AwsAdapter", () => {
     await testApp.beforeEach();
     awsAdapter = testApp.module.get(AwsAdapter);
     awsLocationService = testApp.module.get(AwsLocationService);
+    cognitoService = testApp.module.get(CognitoService);
   });
 
   afterEach(() => {
@@ -118,6 +122,73 @@ describe("AwsAdapter", () => {
 
       assertFailure(result);
       expect(result.error.message).toContain("Unknown error occurred during geocoding");
+    });
+  });
+
+  describe("getIotCredentials", () => {
+    it("should return IoT credentials when both cognito steps succeed", async () => {
+      const userId = "test-user-123";
+      const mockTokenResult = {
+        identityId: "eu-central-1:identity-id-123",
+        token: "mock-openid-token",
+      };
+      const mockCredentials = {
+        accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+        secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        sessionToken: "mock-session-token",
+        expiration: new Date("2026-02-06T12:00:00Z"),
+      };
+
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(success(mockTokenResult));
+      vi.spyOn(cognitoService, "getCredentialsForIdentity").mockResolvedValue(
+        success(mockCredentials),
+      );
+
+      const result = await awsAdapter.getIotCredentials(userId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual(mockCredentials);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cognitoService.getOpenIdToken).toHaveBeenCalledWith(userId);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cognitoService.getCredentialsForIdentity).toHaveBeenCalledWith(
+        mockTokenResult.identityId,
+        mockTokenResult.token,
+      );
+    });
+
+    it("should return failure when getOpenIdToken fails", async () => {
+      const userId = "test-user-123";
+      const error = AppError.internal("Token failed", ErrorCodes.AWS_COGNITO_TOKEN_FAILED);
+
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(failure(error));
+      const credsSpy = vi.spyOn(cognitoService, "getCredentialsForIdentity");
+
+      const result = await awsAdapter.getIotCredentials(userId);
+
+      assertFailure(result);
+      expect(result.error.message).toBe("Token failed");
+      expect(credsSpy).not.toHaveBeenCalled();
+    });
+
+    it("should return failure when getCredentialsForIdentity fails", async () => {
+      const userId = "test-user-123";
+      const mockTokenResult = {
+        identityId: "eu-central-1:identity-id-123",
+        token: "mock-openid-token",
+      };
+      const error = AppError.internal(
+        "Credentials failed",
+        ErrorCodes.AWS_COGNITO_CREDENTIALS_FAILED,
+      );
+
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(success(mockTokenResult));
+      vi.spyOn(cognitoService, "getCredentialsForIdentity").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.getIotCredentials(userId);
+
+      assertFailure(result);
+      expect(result.error.message).toBe("Credentials failed");
     });
   });
 });

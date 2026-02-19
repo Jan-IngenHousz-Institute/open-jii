@@ -1,27 +1,18 @@
 import { initContract } from "@ts-rest/core";
-import { z } from "zod";
 
 import { zErrorResponse } from "../schemas/experiment.schema";
+import { zIotCredentials } from "../schemas/iot.schema";
 
 const c = initContract();
 
-// IoT Credentials Response Schema
-export const zIoTCredentials = z.object({
-  accessKeyId: z.string().describe("AWS Access Key ID for temporary credentials"),
-  secretAccessKey: z.string().describe("AWS Secret Access Key for temporary credentials"),
-  sessionToken: z.string().describe("AWS Session Token for temporary credentials"),
-  expiration: z.string().datetime().describe("ISO 8601 date string when credentials expire"),
-});
-
 export const iotContract = c.router({
   getCredentials: {
-    method: "POST",
+    method: "GET",
     path: "/api/v1/iot/credentials",
-    body: z.object({}), // Empty body, authentication comes from session
     responses: {
-      200: zIoTCredentials,
-      401: zErrorResponse, // Unauthorized - no session
-      500: zErrorResponse, // Server error - Cognito failure
+      200: zIotCredentials,
+      401: zErrorResponse,
+      500: zErrorResponse,
     },
     summary: "Get IoT credentials",
     description:
