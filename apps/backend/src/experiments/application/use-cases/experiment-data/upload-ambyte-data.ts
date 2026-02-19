@@ -20,7 +20,7 @@ export class UploadAmbyteDataUseCase {
 
   static readonly MAX_FILE_SIZE = 10 * 1024 * 1024;
   static readonly MAX_FILE_COUNT = 1000;
-  static readonly UPLOADS_VOLUME_NAME = "data-uploads";
+  static readonly UPLOADS_VOLUME_NAME = "data-imports";
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,

@@ -191,7 +191,7 @@ def check_ambyte_volume_exists():
     Check if the ambyte volume directory exists by trying to read from it.
     Returns True if the volume and processed-ambyte directory exist and contain data.
     """
-    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
+    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-imports/processed-ambyte"
     
     try:
         files = dbutils.fs.ls(processed_path)
@@ -228,10 +228,10 @@ def raw_ambyte_data():
     The ambyte_processing_task must be run first to generate the parquet files.
     """
     # Path to processed parquet files
-    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
+    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-imports/processed-ambyte"
     
     # Path for schema metadata (persistent location in volumes)
-    schema_location = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/_schemas/ambyte_schema"
+    schema_location = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-imports/_schemas/ambyte_schema"
     
     # Read all parquet files recursively using cloudFiles for auto loader (streaming)
     # This will automatically detect new files as they are added
