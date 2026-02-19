@@ -13,6 +13,11 @@ export default mergeConfig(
           "**/*.spec.ts", // Test files
           "**/*.test.ts", // Test files
           "**/test/**", // Test utilities
+          "**/index.ts", // Barrel / re-export files
+          "**/interface.ts", // Type-only files
+          "**/types.ts", // Type-only files
+          "**/config.ts", // Static config constants
+          "**/commands.ts", // Static command constants
         ],
       },
     },

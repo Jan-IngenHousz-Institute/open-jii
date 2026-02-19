@@ -642,7 +642,9 @@ describe("GenericDeviceProtocol", () => {
     });
 
     it("should log connection errors from transport", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
       protocol.initialize(transport);
 
       transport.simulateStatus(false, new Error("Connection lost"));
@@ -655,7 +657,9 @@ describe("GenericDeviceProtocol", () => {
     });
 
     it("should not log when connected status changes without error", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
       protocol.initialize(transport);
 
       transport.simulateStatus(false);
