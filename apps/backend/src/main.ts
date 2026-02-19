@@ -20,6 +20,7 @@ async function bootstrap() {
     app.enableCors({
       origin: corsOrigins,
       credentials: true,
+      exposedHeaders: ["Content-Disposition"],
     });
   }
 

@@ -43,7 +43,7 @@ import {
 } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
-import { DataDownloadModal } from "./data-download-modal/data-download-modal";
+import { DataExportModal } from "./data-export-modal/data-export-modal";
 import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 // Helper function to map column names for sorting
@@ -434,7 +434,7 @@ export function ExperimentDataTable({
             </PaginationContent>
           </Pagination>
         </div>
-        <DataDownloadModal
+        <DataExportModal
           experimentId={experimentId}
           tableName={tableName}
           open={downloadModalOpen}

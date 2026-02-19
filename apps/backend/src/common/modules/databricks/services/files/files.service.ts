@@ -1,5 +1,6 @@
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
+import { Readable } from "stream";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -79,6 +80,64 @@ export class DatabricksFilesService {
         });
         return apiErrorMapper(
           `Failed to upload file to Databricks: ${getAxiosErrorMessage(error)}`,
+        );
+      },
+    );
+  }
+
+  /**
+   * Download a file from Databricks as a stream
+   * @param filePath - The full path to the file in Databricks (e.g., /Volumes/catalog/schema/volume/path/file.csv)
+   * @returns Result containing a readable stream of the file contents
+   */
+  async download(filePath: string): Promise<Result<Readable>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.authService.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+        const host = this.configService.getHost();
+        const apiUrl = `${host}${DatabricksFilesService.FILES_ENDPOINT}`;
+
+        this.logger.debug({
+          msg: "Downloading file from Databricks",
+          operation: "downloadFile",
+          filePath,
+        });
+
+        const fullPath = `${apiUrl}${filePath}`;
+
+        // Use axios to stream the response
+        const response = await this.httpService.axiosRef.get(fullPath, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: "stream",
+          timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+        });
+
+        this.logger.log({
+          msg: "Successfully initiated file download from Databricks",
+          operation: "downloadFile",
+          filePath,
+          status: "success",
+        });
+
+        return response.data as Readable;
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to download file from Databricks",
+          errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
+          operation: "downloadFile",
+          filePath,
+          error,
+        });
+        return apiErrorMapper(
+          `Failed to download file from Databricks: ${getAxiosErrorMessage(error)}`,
         );
       },
     );
