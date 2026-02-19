@@ -2,20 +2,24 @@
 
 import { Loader2, Play } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useIotProtocolConnection } from "~/hooks/iot/useIotProtocolConnection";
+import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
+import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
+import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 
 import type { SensorFamily } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components";
+import { cn } from "@repo/ui/lib/utils";
 
 import { ConnectionTypeSelector } from "./iot-connection-type-selector";
 import { DeviceStatusCard } from "./iot-device-status-card";
 import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
 
-interface IotProtocolTesterProps {
+interface IotProtocolRunnerProps {
   protocolCode: Record<string, unknown>[];
   sensorFamily: SensorFamily;
   protocolName?: string;
+  layout?: "horizontal" | "vertical";
 }
 
 interface TestResult {
@@ -26,30 +30,31 @@ interface TestResult {
   timestamp: Date;
 }
 
-export function IotProtocolTester({
+export function IotProtocolRunner({
   protocolCode,
   sensorFamily,
   protocolName: _protocolName,
-}: IotProtocolTesterProps) {
+  layout = "horizontal",
+}: IotProtocolRunnerProps) {
   const { t } = useTranslation("iot");
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
-  const [browserSupport, setBrowserSupport] = useState<{
-    bluetooth: boolean;
-    serial: boolean;
-  }>({ bluetooth: false, serial: false });
+  const browserSupport = useIotBrowserSupport();
 
-  const { isConnected, isConnecting, error, deviceInfo, connect, disconnect, executeProtocol } =
-    useIotProtocolConnection(sensorFamily, connectionType);
+  const { isConnected, isConnecting, error, deviceInfo, protocol, connect, disconnect } =
+    useIotCommunication(sensorFamily, connectionType);
+  const { executeProtocol } = useIotProtocolExecution(protocol, isConnected);
 
-  // Check browser support for Web Bluetooth and Serial APIs
+  // Disconnect when sensor family changes
   useEffect(() => {
-    setBrowserSupport({
-      bluetooth: typeof navigator !== "undefined" && "bluetooth" in navigator,
-      serial: typeof navigator !== "undefined" && "serial" in navigator,
-    });
-  }, []);
+    if (isConnected) {
+      void disconnect();
+      setTestResult(null);
+    }
+    // Only trigger on sensorFamily change, not on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sensorFamily]);
 
   const handleRunProtocol = async () => {
     if (!isConnected) return;
@@ -82,10 +87,20 @@ export function IotProtocolTester({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-6 md:flex-row">
+    <div className="flex min-w-0 flex-1 flex-col gap-4">
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col gap-4",
+          layout === "horizontal" && "md:flex-row md:gap-6",
+        )}
+      >
         {/* Left Column - Device & Protocol */}
-        <div className="w-full space-y-6 md:w-80">
+        <div
+          className={cn(
+            "w-full min-w-0 space-y-4",
+            layout === "horizontal" && "md:w-80 md:space-y-6",
+          )}
+        >
           {/* Connection Type */}
           {!isConnected && (
             <ConnectionTypeSelector
@@ -108,16 +123,21 @@ export function IotProtocolTester({
 
           {/* Run Protocol Button */}
           {isConnected && (
-            <Button onClick={handleRunProtocol} disabled={isRunning} className="w-full">
+            <Button
+              type="button"
+              onClick={handleRunProtocol}
+              disabled={isRunning}
+              className="w-full"
+            >
               {isRunning ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("iot.protocolTester.running")}
+                  <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" />
+                  <span className="truncate">{t("iot.protocolRunner.running")}</span>
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-4 w-4" />
-                  {t("iot.protocolTester.runProtocol")}
+                  <Play className="mr-2 h-4 w-4 shrink-0" />
+                  <span className="truncate">{t("iot.protocolRunner.runProtocol")}</span>
                 </>
               )}
             </Button>

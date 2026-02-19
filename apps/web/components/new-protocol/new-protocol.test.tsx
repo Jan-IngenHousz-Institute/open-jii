@@ -2,7 +2,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { NewProtocolForm } from "../new-protocol";
+import { NewProtocolForm } from "./new-protocol";
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -41,7 +41,7 @@ vi.mock("@repo/ui/hooks", () => ({
 }));
 
 // Mock ProtocolCodeEditor
-vi.mock("../../protocol-code-editor", () => ({
+vi.mock("../protocol-code-editor", () => ({
   default: ({
     value,
     onChange,
@@ -69,14 +69,27 @@ vi.mock("../../protocol-code-editor", () => ({
   ),
 }));
 
-// Mock NewProtocolDetailsCard
-vi.mock("../new-protocol-details-card", () => ({
-  NewProtocolDetailsCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="protocol-details-card">
-      <input data-testid="name-input" placeholder="Protocol name" />
-      <textarea data-testid="description-input" placeholder="Description" />
-    </div>
-  ),
+// Mock NewProtocolDetailsCard - no longer used, form fields are inline
+// (keeping this comment for clarity on the refactor)
+
+// Mock IotProtocolRunner
+vi.mock("../iot/iot-protocol-runner", () => ({
+  IotProtocolRunner: ({
+    protocolCode: _protocolCode,
+    sensorFamily: _sensorFamily,
+    protocolName: _protocolName,
+    layout: _layout,
+  }: {
+    protocolCode: unknown;
+    sensorFamily: string;
+    protocolName?: string;
+    layout?: string;
+  }) => <div data-testid="iot-protocol-runner">Protocol Runner</div>,
+}));
+
+// Mock useIotBrowserSupport
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => ({ bluetooth: true, serial: true, any: true }),
 }));
 
 describe("NewProtocolForm", () => {
@@ -87,9 +100,9 @@ describe("NewProtocolForm", () => {
   it("should render the form with all sections", () => {
     render(<NewProtocolForm />);
 
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
+    expect(screen.getByTestId("iot-protocol-runner")).toBeInTheDocument();
   });
 
   it("should render submit and cancel buttons", () => {
@@ -120,12 +133,11 @@ describe("NewProtocolForm", () => {
 
     const codeEditor = screen.getByTestId("code-editor");
 
-    // Make the form dirty
-    const nameInput = screen.getByTestId("name-input");
+    // Make the form dirty by typing in the real name input
+    const nameInput = screen.getByRole("textbox", { name: "newProtocol.name" });
     await userEvent.type(nameInput, "Test Protocol");
 
     // Set invalid code
-    // Use fireEvent for JSON strings with curly braces
     fireEvent.input(codeEditor, { target: { value: "{ invalid json" } });
 
     await waitFor(() => {
@@ -243,11 +255,11 @@ describe("NewProtocolForm", () => {
     expect(codeEditor).toHaveValue(JSON.stringify([{}]));
   });
 
-  it("should display code section with title and description", () => {
+  it("should display collapsible details section", () => {
     render(<NewProtocolForm />);
 
-    expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.codeDescription")).toBeInTheDocument();
+    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "newProtocol.name" })).toBeInTheDocument();
   });
 
   it("should handle code editor changes", () => {
@@ -276,11 +288,12 @@ describe("NewProtocolForm", () => {
     expect(submitButton).toBeDisabled();
   });
 
-  it("should use multispeq as default family", () => {
+  it("should use generic as default family", () => {
     render(<NewProtocolForm />);
 
-    // The form should initialize with family: "multispeq"
-    // This is implicit in the defaultValues
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    // The collapsible details section should be visible by default
+    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
+    // The code editor should be initialized
+    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 });

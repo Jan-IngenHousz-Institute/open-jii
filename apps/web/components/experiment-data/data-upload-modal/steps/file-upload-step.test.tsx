@@ -488,7 +488,7 @@ describe("FileUploadStep", () => {
     expect(screen.getByTestId("file-upload-button")).toBeInTheDocument();
   });
 
-  it("triggers upload error callback with network error", async () => {
+  it("triggers upload error callback with network error", () => {
     let storedErrorCallback: ((error: { message: string }) => void) | undefined;
 
     (useExperimentDataUpload as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -522,7 +522,7 @@ describe("FileUploadStep", () => {
 
     // Now trigger the error callback to test line 86
     if (storedErrorCallback) {
-      await act(async () => {
+      act(() => {
         storedErrorCallback({ message: "Network error" });
       });
     }

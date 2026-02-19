@@ -59,7 +59,7 @@ export class WebSerialAdapter implements ITransportAdapter {
   private statusCallback?: (connected: boolean, error?: Error) => void;
   private reading = false;
 
-  constructor(port: any) {
+  constructor(port: SerialPort) {
     this.port = port;
     this.setupDisconnectListener();
   }
@@ -92,16 +92,14 @@ export class WebSerialAdapter implements ITransportAdapter {
           break;
         }
 
-        if (value) {
-          const text = decoder.decode(value, { stream: true });
-          this.dataCallback?.(text);
-        }
+        const text = decoder.decode(value, { stream: true });
+        this.dataCallback?.(text);
       }
     } catch (error) {
       console.error("Error reading from serial port:", error);
       this.statusCallback?.(false, error as Error);
     } finally {
-      this.reader?.releaseLock();
+      this.reader.releaseLock();
       this.reader = null;
       this.reading = false;
     }
@@ -132,23 +130,28 @@ export class WebSerialAdapter implements ITransportAdapter {
   async disconnect(): Promise<void> {
     this.reading = false;
 
-    if (this.reader) {
+    // Grab local references — the startReading() finally block may null these out
+    const reader = this.reader;
+    const writer = this.writer;
+
+    this.reader = null;
+    this.writer = null;
+
+    if (reader) {
       try {
-        await this.reader.cancel();
-        this.reader.releaseLock();
+        await reader.cancel();
+        reader.releaseLock();
       } catch (error) {
         console.error("Error releasing reader:", error);
       }
-      this.reader = null;
     }
 
-    if (this.writer) {
+    if (writer) {
       try {
-        this.writer.releaseLock();
+        writer.releaseLock();
       } catch (error) {
         console.error("Error releasing writer:", error);
       }
-      this.writer = null;
     }
 
     if (this.port) {
@@ -173,12 +176,17 @@ export class WebSerialAdapter implements ITransportAdapter {
   /**
    * Request port from user and connect
    */
-  static async requestAndConnect(options?: any): Promise<WebSerialAdapter> {
+  static async requestAndConnect(options?: SerialOptions): Promise<WebSerialAdapter> {
     if (!WebSerialAdapter.isSupported()) {
       throw new Error("Web Serial not supported in this browser");
     }
 
-    const port = await navigator.serial!.requestPort();
+    const port = await navigator.serial?.requestPort();
+
+    if (!port) {
+      throw new Error("No serial port selected");
+    }
+
     return await WebSerialAdapter.connect(port, options);
   }
 
@@ -186,15 +194,25 @@ export class WebSerialAdapter implements ITransportAdapter {
    * Connect to an existing serial port
    */
   static async connect(
-    port: any,
-    options: any = {
+    port: SerialPort,
+    options: SerialOptions = {
       baudRate: 115200,
       dataBits: 8,
       stopBits: 1,
       parity: "none",
     },
   ): Promise<WebSerialAdapter> {
-    await port.open(options);
+    try {
+      await port.open(options);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("open") || msg.includes("locked") || msg.includes("use")) {
+        throw new Error(
+          "Serial port is already in use. Close any other serial monitors (e.g. pio device monitor) and try again.",
+        );
+      }
+      throw error;
+    }
 
     const adapter = new WebSerialAdapter(port);
 
@@ -203,11 +221,38 @@ export class WebSerialAdapter implements ITransportAdapter {
       adapter.writer = port.writable.getWriter();
     }
 
-    // Start reading
-    adapter.startReading();
+    // Start reading — if the port is grabbed by another process,
+    // the read loop will error almost immediately with "device has been lost".
+    // We use a short race to detect that before returning.
+    const earlyError = new Promise<Error | null>((resolve) => {
+      adapter.statusCallback = (connected, error) => {
+        if (!connected && error) {
+          resolve(error);
+        }
+      };
+      // If no error after 300ms, the port is healthy
+      setTimeout(() => resolve(null), 300);
+    });
+
+    void adapter.startReading();
+
+    const portError = await earlyError;
+    adapter.statusCallback = undefined;
+
+    if (portError) {
+      // Clean up before throwing
+      adapter.connected = false;
+      try {
+        await adapter.disconnect();
+      } catch {
+        // ignore
+      }
+      throw new Error(
+        "Serial port is already in use. Close any other serial monitors (e.g. pio device monitor) and try again.",
+      );
+    }
 
     adapter.connected = true;
-    adapter.statusCallback?.(true);
 
     return adapter;
   }

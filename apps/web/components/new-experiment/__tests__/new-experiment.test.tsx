@@ -216,12 +216,12 @@ describe("NewExperimentForm", () => {
   });
 
   describe("Success Handling", () => {
-    it("shows toast and navigates on success", async () => {
+    it("shows toast and navigates on success", () => {
       render(<NewExperimentForm />);
       const onSuccessCallback = (globalThis as GlobalWithCallback).__onSuccessCallback;
       const mockExperimentId = "exp-123";
 
-      await act(async () => {
+      act(() => {
         onSuccessCallback?.(mockExperimentId);
       });
 

@@ -28,9 +28,9 @@ export function ConnectionTypeSelector({
   const { t } = useTranslation("iot");
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">{t("iot.protocolTester.connectionType")}</h3>
-      <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-1.5">
+      <h3 className="text-sm font-medium">{t("iot.protocolRunner.connectionType")}</h3>
+      <div className="grid grid-cols-2 gap-1.5">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -40,17 +40,17 @@ export function ConnectionTypeSelector({
                   variant={connectionType === "bluetooth" ? "default" : "outline"}
                   size="sm"
                   onClick={() => onConnectionTypeChange("bluetooth")}
-                  className="w-full justify-start"
+                  className="w-full gap-1.5 overflow-hidden px-2"
                   disabled={!browserSupport.bluetooth}
                 >
-                  <Bluetooth className="mr-2 h-4 w-4" />
-                  {t("iot.protocolTester.bluetooth")}
+                  <Bluetooth className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t("iot.protocolRunner.bluetooth")}</span>
                 </Button>
               </div>
             </TooltipTrigger>
             {!browserSupport.bluetooth && (
               <TooltipContent>
-                <p>{t("iot.protocolTester.webBluetoothNotSupported")}</p>
+                <p>{t("iot.protocolRunner.webBluetoothNotSupported")}</p>
               </TooltipContent>
             )}
           </Tooltip>
@@ -64,17 +64,17 @@ export function ConnectionTypeSelector({
                   variant={connectionType === "serial" ? "default" : "outline"}
                   size="sm"
                   onClick={() => onConnectionTypeChange("serial")}
-                  className="w-full justify-start"
+                  className="w-full gap-1.5 overflow-hidden px-2"
                   disabled={!browserSupport.serial}
                 >
-                  <Usb className="mr-2 h-4 w-4" />
-                  {t("iot.protocolTester.serial")}
+                  <Usb className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t("iot.protocolRunner.serial")}</span>
                 </Button>
               </div>
             </TooltipTrigger>
             {!browserSupport.serial && (
               <TooltipContent>
-                <p>{t("iot.protocolTester.webSerialNotSupported")}</p>
+                <p>{t("iot.protocolRunner.webSerialNotSupported")}</p>
               </TooltipContent>
             )}
           </Tooltip>

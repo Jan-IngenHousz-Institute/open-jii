@@ -46,22 +46,22 @@ describe("DeviceStatusCard", () => {
   describe("rendering", () => {
     it("renders the component with title", () => {
       render(<DeviceStatusCard {...defaultProps} />);
-      expect(screen.getByText("iot.protocolTester.device")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.device")).toBeInTheDocument();
     });
 
     it("shows 'Not Connected' status when disconnected", () => {
       render(<DeviceStatusCard {...defaultProps} />);
-      expect(screen.getByText("iot.protocolTester.notConnected")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.notConnected")).toBeInTheDocument();
     });
 
     it("shows 'Connecting' status with animated text when connecting", () => {
       render(<DeviceStatusCard {...defaultProps} isConnecting={true} />);
-      expect(screen.getByText(/iot\.protocolTester\.connecting/)).toBeInTheDocument();
+      expect(screen.getByText(/iot\.protocolRunner\.connecting/)).toBeInTheDocument();
     });
 
     it("shows 'Connected' status when connected", () => {
       render(<DeviceStatusCard {...defaultProps} isConnected={true} />);
-      expect(screen.getByText("iot.protocolTester.connected")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.connected")).toBeInTheDocument();
     });
   });
 
@@ -86,7 +86,7 @@ describe("DeviceStatusCard", () => {
 
       render(<DeviceStatusCard {...defaultProps} isConnected={true} deviceInfo={deviceInfo} />);
 
-      expect(screen.getByText("iot.protocolTester.unknownDevice")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.unknownDevice")).toBeInTheDocument();
     });
 
     it("displays device version when available", () => {
@@ -97,7 +97,7 @@ describe("DeviceStatusCard", () => {
 
       render(<DeviceStatusCard {...defaultProps} isConnected={true} deviceInfo={deviceInfo} />);
 
-      expect(screen.getByText(/iot\.protocolTester\.version/)).toBeInTheDocument();
+      expect(screen.getByText(/iot\.protocolRunner\.version/)).toBeInTheDocument();
     });
 
     it("displays battery level when available", () => {
@@ -114,12 +114,12 @@ describe("DeviceStatusCard", () => {
 
     it("shows connection type label when not connected", () => {
       render(<DeviceStatusCard {...defaultProps} connectionType="bluetooth" />);
-      expect(screen.getByText("iot.protocolTester.wireless")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.wireless")).toBeInTheDocument();
     });
 
     it("shows pairing message when connecting", () => {
       render(<DeviceStatusCard {...defaultProps} isConnecting={true} />);
-      expect(screen.getByText("iot.protocolTester.pairingWithDevice")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.pairingWithDevice")).toBeInTheDocument();
     });
   });
 

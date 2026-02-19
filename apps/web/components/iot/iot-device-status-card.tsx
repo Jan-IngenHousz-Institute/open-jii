@@ -35,73 +35,80 @@ export function DeviceStatusCard({
   const { t } = useTranslation("iot");
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">{t("iot.protocolTester.device")}</h3>
-      <div className="space-y-3 rounded-lg border p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className={cn("mt-0.5", isConnected ? "text-green-600" : "text-muted-foreground")}>
-              {isConnected ? <CheckCircle2 className="h-5 w-5" /> : <Zap className="h-5 w-5" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium">
-                {isConnected ? (
-                  t("iot.protocolTester.connected")
-                ) : isConnecting ? (
-                  <span className="flex items-center">
-                    {t("iot.protocolTester.connecting")}
-                    <span className="inline-block w-6 text-left">
-                      <span className="after:inline-block after:animate-[ellipsis_2s_infinite] after:content-['.']" />
-                    </span>
+    <div className="space-y-1.5">
+      <h3 className="text-sm font-medium">{t("iot.protocolRunner.device")}</h3>
+      <div className="min-w-0 space-y-2 overflow-hidden rounded-lg border p-2.5">
+        <div className="flex items-start gap-1.5">
+          <div
+            className={cn(
+              "mt-0.5 shrink-0",
+              isConnected ? "text-green-600" : "text-muted-foreground",
+            )}
+          >
+            {isConnected ? <CheckCircle2 className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium">
+              {isConnected ? (
+                t("iot.protocolRunner.connected")
+              ) : isConnecting ? (
+                <span className="flex items-center">
+                  {t("iot.protocolRunner.connecting")}
+                  <span className="inline-block w-6 text-left">
+                    <span className="after:inline-block after:animate-[ellipsis_2s_infinite] after:content-['.']" />
                   </span>
-                ) : (
-                  t("iot.protocolTester.notConnected")
-                )}
-              </div>
-              {isConnected && deviceInfo ? (
-                <div className="text-muted-foreground mt-1 space-y-1 text-xs">
-                  <div>{deviceInfo.device_name ?? t("iot.protocolTester.unknownDevice")}</div>
-                  {deviceInfo.device_version && (
-                    <div>
-                      {t("iot.protocolTester.version")} {deviceInfo.device_version}
-                    </div>
-                  )}
-                  {deviceInfo.device_battery && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <Battery className="h-3.5 w-3.5" />
-                      <span>{deviceInfo.device_battery}%</span>
-                    </div>
-                  )}
-                </div>
+                </span>
               ) : (
-                <div className="text-muted-foreground mt-1 text-xs">
-                  {isConnecting
-                    ? t("iot.protocolTester.pairingWithDevice")
-                    : connectionType === "bluetooth"
-                      ? t("iot.protocolTester.wireless")
-                      : t("iot.protocolTester.usb")}
-                </div>
+                t("iot.protocolRunner.notConnected")
               )}
             </div>
-          </div>
-          <Button
-            onClick={isConnected ? onDisconnect : onConnect}
-            disabled={isConnecting}
-            variant={isConnected ? "outline" : "default"}
-            size="sm"
-          >
-            {isConnecting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : isConnected ? (
-              t("iot.protocolTester.disconnect")
+            {isConnected && deviceInfo ? (
+              <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
+                <div className="truncate">
+                  {deviceInfo.device_name ?? t("iot.protocolRunner.unknownDevice")}
+                </div>
+                {deviceInfo.device_version && (
+                  <div>
+                    {t("iot.protocolRunner.version")} {deviceInfo.device_version}
+                  </div>
+                )}
+                {deviceInfo.device_battery && (
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Battery className="h-3 w-3" />
+                    <span>{deviceInfo.device_battery}%</span>
+                  </div>
+                )}
+              </div>
             ) : (
-              t("iot.protocolTester.connect")
+              <div className="text-muted-foreground mt-0.5 text-xs">
+                {isConnecting
+                  ? t("iot.protocolRunner.pairingWithDevice")
+                  : connectionType === "bluetooth"
+                    ? t("iot.protocolRunner.wireless")
+                    : t("iot.protocolRunner.usb")}
+              </div>
             )}
-          </Button>
+          </div>
         </div>
+        <Button
+          type="button"
+          onClick={isConnected ? onDisconnect : onConnect}
+          disabled={isConnecting}
+          variant={isConnected ? "outline" : "default"}
+          size="sm"
+          className="w-full"
+        >
+          {isConnecting ? (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <span className="truncate">
+              {isConnected ? t("iot.protocolRunner.disconnect") : t("iot.protocolRunner.connect")}
+            </span>
+          )}
+        </Button>
 
         {error && (
-          <Alert variant="destructive" className="mt-3">
+          <Alert variant="destructive" className="mt-2">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>

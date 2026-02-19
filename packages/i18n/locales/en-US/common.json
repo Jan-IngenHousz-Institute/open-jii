@@ -681,7 +681,8 @@
     "codeTitle": "Protocol Code",
     "codeDescription": "Define the code structure for your protocol",
     "codePlaceholder": "Enter protocol code as JSON",
-    "finalizeSetup": "Create Protocol"
+    "finalizeSetup": "Create Protocol",
+    "testerTitle": "Connect & Test"
   },
   "protocolSettings": {
     "loading": "Loading protocol settings...",
@@ -705,7 +706,9 @@
     "code": "Protocol Code",
     "codePlaceholder": "Enter protocol code as JSON",
     "codeDescription": "Define the JSON structure and logic for your protocol",
-    "family": "Sensor Family"
+    "family": "Sensor Family",
+    "detailsTitle": "Protocol Details",
+    "testerTitle": "Connect & Test"
   },
   "macroSettings": {
     "macroInfo": "Macro Information",

@@ -323,7 +323,8 @@
     "codeTitle": "Protocol code",
     "codeDescription": "Definieer de code structuur voor je protocol",
     "codePlaceholder": "Voer protocol code in als JSON",
-    "finalizeSetup": "Protocol maken"
+    "finalizeSetup": "Protocol maken",
+    "testerTitle": "Verbinden & Testen"
   },
   "protocolSettings": {
     "loading": "Protocol instellingen laden...",
@@ -348,7 +349,9 @@
     "code": "Protocol code",
     "codePlaceholder": "Voer protocol code in als JSON",
     "codeDescription": "Definieer de JSON-structuur en logica voor je protocol",
-    "family": "Sensor familie"
+    "family": "Sensor familie",
+    "detailsTitle": "Protocol Details",
+    "testerTitle": "Verbinden & Testen"
   },
   "experimentDataTable": {
     "noData": "Geen gegevens ontvangen",

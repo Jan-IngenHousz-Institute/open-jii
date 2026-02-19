@@ -28,6 +28,9 @@ export class GenericDeviceProtocol extends DeviceProtocol {
   override initialize(transport: ITransportAdapter): void {
     super.initialize(transport);
 
+    // Clear any stale response data from a previous session
+    this.responseBuffer = "";
+
     // Setup data receiving
     transport.onDataReceived((data: string) => {
       this.handleDataReceived(data);
@@ -65,8 +68,7 @@ export class GenericDeviceProtocol extends DeviceProtocol {
             const response = JSON.parse(line) as GenericCommandResponse;
             void this.emitter.emit("receivedResponse", response);
           } catch {
-            // Not valid JSON, ignore or log
-            console.warn("Received non-JSON data from device:", line);
+            // Not valid JSON, ignore
           }
         }
       }

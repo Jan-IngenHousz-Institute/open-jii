@@ -44,16 +44,16 @@ function renderWithForm(defaultValues: Partial<CreateExperimentBody>) {
 describe("<NewExperimentVisibilityCard />", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders title & description", async () => {
-    await act(async () => {
+  it("renders title & description", () => {
+    act(() => {
       renderWithForm({});
     });
     expect(screen.getByText("newExperiment.visibilityTitle")).toBeInTheDocument();
     expect(screen.getByText("newExperiment.visibilityDescription")).toBeInTheDocument();
   });
 
-  it("shows embargo section when visibility is not public", async () => {
-    await act(async () => {
+  it("shows embargo section when visibility is not public", () => {
+    act(() => {
       renderWithForm({ visibility: "private" });
     });
     expect(
@@ -61,8 +61,8 @@ describe("<NewExperimentVisibilityCard />", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides embargo section when visibility is public", async () => {
-    await act(async () => {
+  it("hides embargo section when visibility is public", () => {
+    act(() => {
       renderWithForm({ visibility: "public" });
     });
     expect(

@@ -45,8 +45,8 @@ describe("ProtocolResultsDisplay", () => {
     it("displays empty state when no result", () => {
       render(<ProtocolResultsDisplay testResult={null} />);
 
-      expect(screen.getByText("iot.protocolTester.noResultsYet")).toBeInTheDocument();
-      expect(screen.getByText("iot.protocolTester.runProtocolToSeeResults")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.noResultsYet")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.runProtocolToSeeResults")).toBeInTheDocument();
     });
   });
 
@@ -60,7 +60,7 @@ describe("ProtocolResultsDisplay", () => {
 
     it("displays success badge", () => {
       render(<ProtocolResultsDisplay testResult={successResult} />);
-      expect(screen.getByText("iot.protocolTester.success")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.success")).toBeInTheDocument();
     });
 
     it("displays execution time", () => {
@@ -70,7 +70,7 @@ describe("ProtocolResultsDisplay", () => {
 
     it("displays success alert", () => {
       render(<ProtocolResultsDisplay testResult={successResult} />);
-      expect(screen.getByText("iot.protocolTester.passed")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.passed")).toBeInTheDocument();
     });
 
     it("displays response data in JSON format", () => {
@@ -94,7 +94,7 @@ describe("ProtocolResultsDisplay", () => {
 
     it("displays error badge", () => {
       render(<ProtocolResultsDisplay testResult={errorResult} />);
-      expect(screen.getByText("iot.protocolTester.error")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.error")).toBeInTheDocument();
     });
 
     it("displays execution time", () => {
@@ -184,7 +184,9 @@ describe("ProtocolResultsDisplay", () => {
 
     it("handles copy error gracefully", async () => {
       vi.useRealTimers(); // Use real timers for this test
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
       mockWriteText.mockRejectedValueOnce(new Error("Clipboard error"));
 
       render(<ProtocolResultsDisplay testResult={successResult} />);
@@ -228,7 +230,7 @@ describe("ProtocolResultsDisplay", () => {
       };
 
       render(<ProtocolResultsDisplay testResult={nullDataResult} />);
-      expect(screen.getByText("iot.protocolTester.passed")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.passed")).toBeInTheDocument();
     });
 
     it("handles undefined data", () => {
@@ -240,7 +242,7 @@ describe("ProtocolResultsDisplay", () => {
       };
 
       render(<ProtocolResultsDisplay testResult={undefinedDataResult} />);
-      expect(screen.getByText("iot.protocolTester.passed")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.passed")).toBeInTheDocument();
     });
   });
 });

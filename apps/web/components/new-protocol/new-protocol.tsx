@@ -2,48 +2,53 @@
 
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useLocale } from "@/hooks/useLocale";
+import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, FlaskConical } from "lucide-react";
+import { ChevronsUpDown, MonitorX } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { CreateProtocolRequestBody } from "@repo/api";
 import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   Form,
+  FormControl,
   FormField,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  RichTextarea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
+import { cn } from "@repo/ui/lib/utils";
 
-import { IotProtocolTester } from "../iot/iot-protocol-tester";
+import { IotProtocolRunner } from "../iot/iot-protocol-runner";
 import ProtocolCodeEditor from "../protocol-code-editor";
-import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 
 export function NewProtocolForm() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { t: tIot } = useTranslation("iot");
   const locale = useLocale();
   const [isCodeValid, setIsCodeValid] = useState(true);
-  const [view, setView] = useState<"form" | "tester">("form");
-  const [browserSupport, setBrowserSupport] = useState<{
-    bluetooth: boolean;
-    serial: boolean;
-  }>({ bluetooth: false, serial: false });
-
-  useEffect(() => {
-    // Check browser support for Web Bluetooth and Serial APIs
-    setBrowserSupport({
-      bluetooth: typeof navigator !== "undefined" && "bluetooth" in navigator,
-      serial: typeof navigator !== "undefined" && "serial" in navigator,
-    });
-  }, []);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const browserSupport = useIotBrowserSupport();
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
     onSuccess: (id: string) => router.push(`/${locale}/platform/protocols/${id}`),
@@ -55,7 +60,7 @@ export function NewProtocolForm() {
       name: "",
       description: "",
       code: [{}],
-      family: "multispeq",
+      family: "generic",
     },
   });
 
@@ -79,96 +84,172 @@ export function NewProtocolForm() {
     return isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid;
   }, [isPending, form.formState.isDirty, form.formState.isValid, isCodeValid]);
 
-  if (view === "tester") {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-lg font-medium">Test Protocol</h3>
-            <p className="text-muted-foreground text-sm">
-              Connect to a device and test your protocol before saving
-            </p>
-          </div>
-          <Button type="button" onClick={() => setView("form")} variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Form
-          </Button>
-        </div>
-        <IotProtocolTester
-          protocolCode={form.watch("code")}
-          sensorFamily={form.watch("family")}
-          protocolName={form.watch("name") || "Untitled Protocol"}
-        />
-      </div>
-    );
-  }
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-lg font-medium">{t("protocols.newProtocol")}</h3>
-            <p className="text-muted-foreground text-sm">{t("newProtocol.description")}</p>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex h-[calc(100vh-14rem)] min-h-[400px] flex-col"
+      >
+        {/* Header */}
+        <div className="flex flex-col gap-2 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="truncate text-lg font-medium">{t("protocols.newProtocol")}</h3>
+            <p className="text-muted-foreground truncate text-sm">{t("newProtocol.description")}</p>
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button
-                    type="button"
-                    onClick={() => setView("tester")}
-                    variant="outline"
-                    disabled={!browserSupport.bluetooth && !browserSupport.serial}
-                  >
-                    <FlaskConical className="mr-2 h-4 w-4" />
-                    Test Protocol
-                  </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button type="button" onClick={cancel} variant="outline">
+              {t("newProtocol.cancel")}
+            </Button>
+            <Button type="submit" disabled={isDisabled}>
+              {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
+            </Button>
+          </div>
+        </div>
+
+        {/* Split Panel Layout */}
+        <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-lg border">
+          {/* Left Panel - Protocol Details + Code Editor */}
+          <ResizablePanel defaultSize={browserSupport.any ? 55 : 85} minSize={30}>
+            <div className="h-full overflow-y-auto">
+              <div className="flex h-full flex-col">
+                {/* Collapsible Details Section */}
+                <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                  <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between border-b px-4 py-2.5 transition-colors">
+                    <span className="text-sm font-medium">{t("newProtocol.detailsTitle")}</span>
+                    <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="space-y-4 border-b px-3 py-3 sm:px-4 sm:py-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("newProtocol.name")}</FormLabel>
+                              <FormControl>
+                                <Input {...field} trim />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="family"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("newProtocol.family")}</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={t("newProtocol.selectFamily")} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {SENSOR_FAMILY_OPTIONS.map((opt) => (
+                                    <SelectItem
+                                      key={opt.value}
+                                      value={opt.value}
+                                      disabled={opt.disabled}
+                                    >
+                                      {opt.label}
+                                      {opt.disabled ? " (Coming Soon)" : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("newProtocol.description_field")}</FormLabel>
+                            <FormControl>
+                              <RichTextarea
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                placeholder={t("newProtocol.description_field")}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Code Editor - fills remaining space */}
+                <div className="min-h-[200px] flex-1">
+                  <FormField
+                    control={form.control}
+                    name="code"
+                    render={({ field }) => (
+                      <ProtocolCodeEditor
+                        value={field.value}
+                        onChange={field.onChange}
+                        onValidationChange={setIsCodeValid}
+                        label=""
+                        placeholder={t("newProtocol.codePlaceholder")}
+                        error={form.formState.errors.code?.message?.toString()}
+                        height="100%"
+                        borderless
+                      />
+                    )}
+                  />
                 </div>
-              </TooltipTrigger>
-              {!browserSupport.bluetooth && !browserSupport.serial && (
-                <TooltipContent side="left" className="max-w-xs">
-                  <p>Your browser doesn&apos;t support Web Bluetooth or Web Serial APIs.</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Try using Chrome, Edge, or Opera on desktop.
-                  </p>
-                </TooltipContent>
+              </div>
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Right Panel - Connect & Test */}
+          <ResizablePanel
+            defaultSize={browserSupport.any ? 30 : 15}
+            minSize={browserSupport.any ? 20 : 10}
+          >
+            <div
+              className={cn(
+                "flex h-full min-w-0 flex-col overflow-hidden",
+                !browserSupport.any && "bg-muted/30",
               )}
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        <NewProtocolDetailsCard form={form} />
-
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">{t("newProtocol.codeTitle")}</h3>
-          <p className="text-muted-foreground text-sm">{t("newProtocol.codeDescription")}</p>
-          <div className="rounded-md border p-4">
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <ProtocolCodeEditor
-                  value={field.value}
-                  onChange={field.onChange}
-                  onValidationChange={setIsCodeValid}
-                  label={t("newProtocol.code")}
-                  placeholder={t("newProtocol.codePlaceholder")}
-                  error={form.formState.errors.code?.message?.toString()}
-                />
-              )}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button type="button" onClick={cancel} variant="outline">
-            {t("newProtocol.cancel")}
-          </Button>
-          <Button type="submit" disabled={isDisabled}>
-            {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
-          </Button>
-        </div>
+            >
+              {/* Title bar matching Protocol Details header */}
+              <div className="flex w-full items-center border-b px-2.5 py-2.5 sm:px-4">
+                <span className="text-sm font-medium">{t("newProtocol.testerTitle")}</span>
+              </div>
+              <div className="flex flex-1 flex-col overflow-y-auto p-2.5 sm:p-4">
+                {browserSupport.any ? (
+                  <IotProtocolRunner
+                    protocolCode={form.watch("code")}
+                    sensorFamily={form.watch("family")}
+                    protocolName={form.watch("name") || "Untitled Protocol"}
+                    layout="vertical"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <MonitorX className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
+                      <div className="text-muted-foreground text-xs">
+                        {tIot("iot.protocolRunner.browserNotSupported")}
+                      </div>
+                      <div className="text-muted-foreground/60 font-s">
+                        {tIot("iot.protocolRunner.tryDifferentBrowser")}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </form>
     </Form>
   );

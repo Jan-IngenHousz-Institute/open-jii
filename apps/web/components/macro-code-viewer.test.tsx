@@ -162,12 +162,12 @@ describe("MacroCodeViewer", () => {
     expect(statsDiv).toBeInTheDocument();
   });
 
-  it("should copy code to clipboard when clicking copy button", async () => {
+  it("should copy code to clipboard when clicking copy button", () => {
     const code = "# Test code";
     render(<MacroCodeViewer {...defaultProps} value={code} />);
 
     const copyButton = screen.getByTestId("button");
-    await act(async () => {
+    act(() => {
       fireEvent.click(copyButton);
     });
 
@@ -175,13 +175,13 @@ describe("MacroCodeViewer", () => {
     expect(mockClipboard.writeText).toHaveBeenCalledTimes(1);
   });
 
-  it("should change the copy icon to check icon after copying", async () => {
+  it("should change the copy icon to check icon after copying", () => {
     render(<MacroCodeViewer {...defaultProps} />);
 
     const copyButton = screen.getByTestId("button");
 
     // Use jest/vitest act to handle state updates
-    await act(async () => {
+    act(() => {
       fireEvent.click(copyButton);
     });
 
@@ -190,7 +190,7 @@ describe("MacroCodeViewer", () => {
     expect(mockClipboard.writeText).toHaveBeenCalled();
 
     // Fast forward time to see the copy icon return
-    await act(async () => {
+    act(() => {
       vi.advanceTimersByTime(2000);
     });
     expect(screen.getByTestId("copy-icon")).toBeInTheDocument();

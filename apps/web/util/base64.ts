@@ -7,7 +7,7 @@ export const decodeBase64 = (content: string | null): string => {
   if (!content) return "";
   try {
     return atob(content);
-  } catch (e) {
+  } catch {
     return "Error decoding content";
   }
 };
@@ -20,7 +20,7 @@ export const decodeBase64 = (content: string | null): string => {
 export const encodeBase64 = (content: string): string => {
   try {
     return btoa(content);
-  } catch (e) {
+  } catch {
     return "";
   }
 };

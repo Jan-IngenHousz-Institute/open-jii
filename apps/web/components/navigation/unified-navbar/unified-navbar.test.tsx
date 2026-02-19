@@ -385,7 +385,7 @@ describe("<UnifiedNavbar />", () => {
     expect(within(dropdown).getByTestId("avatar-image")).toBeInTheDocument();
   });
 
-  it("sets up intersection observer when isHomePage is true", async () => {
+  it("sets up intersection observer when isHomePage is true", () => {
     const observeMock = vi.fn();
     const unobserveMock = vi.fn();
     let observerCallback: IntersectionObserverCallback | null = null;
@@ -408,7 +408,7 @@ describe("<UnifiedNavbar />", () => {
     document.body.appendChild(main);
 
     let unmount: (() => void) | undefined;
-    await act(async () => {
+    act(() => {
       const result = render(
         <QueryClientProvider
           client={
@@ -430,7 +430,7 @@ describe("<UnifiedNavbar />", () => {
     expect(observeMock).toHaveBeenCalledWith(heroSection);
 
     // Trigger the IntersectionObserver callback to cover lines 143-144
-    await act(async () => {
+    act(() => {
       observerCallback(
         [{ isIntersecting: false, target: heroSection } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
@@ -442,7 +442,7 @@ describe("<UnifiedNavbar />", () => {
       );
     });
 
-    await act(async () => {
+    act(() => {
       unmount?.();
     });
     expect(unobserveMock).toHaveBeenCalledWith(heroSection);

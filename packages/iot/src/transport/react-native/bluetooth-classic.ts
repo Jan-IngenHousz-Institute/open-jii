@@ -2,7 +2,8 @@
  * React Native Bluetooth Classic Adapter
  * Requires: react-native-bluetooth-classic
  */
-import RNBluetoothClassic, { BluetoothDevice } from "react-native-bluetooth-classic";
+import type { BluetoothDevice } from "react-native-bluetooth-classic";
+import RNBluetoothClassic from "react-native-bluetooth-classic";
 
 import type { ITransportAdapter } from "../interface";
 
@@ -23,7 +24,7 @@ export class RNBluetoothClassicAdapter implements ITransportAdapter {
   private setupListeners(): void {
     if (!this.device) return;
 
-    this.device.onDataReceived((event: any) => {
+    this.device.onDataReceived((event) => {
       if (typeof event.data !== "string") {
         console.warn("Received non-string data:", typeof event.data);
         return;

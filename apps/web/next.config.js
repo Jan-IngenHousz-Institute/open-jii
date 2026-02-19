@@ -10,6 +10,7 @@ const nextConfig = {
   transpilePackages: [
     "@repo/api",
     "@repo/auth",
+    "@repo/iot",
     "@repo/ui",
     "@repo/cms",
     "@repo/analytics",

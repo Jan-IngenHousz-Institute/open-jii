@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { useIotProtocolConnection } from "./useIotProtocolConnection";
+import { useIotCommunication } from "./useIotCommunication";
 
 // Mock the IoT package
 vi.mock("@repo/iot", () => ({
@@ -64,14 +64,14 @@ Object.defineProperty(navigator, "serial", {
   configurable: true,
 });
 
-describe("useIotProtocolConnection", () => {
+describe("useIotCommunication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("initial state", () => {
     it("starts disconnected", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
       expect(result.current.isConnected).toBe(false);
       expect(result.current.isConnecting).toBe(false);
@@ -82,54 +82,39 @@ describe("useIotProtocolConnection", () => {
 
   describe("connection types", () => {
     it("initializes with bluetooth connection type", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
       expect(result.current.isConnected).toBe(false);
     });
 
     it("initializes with serial connection type", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "serial"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "serial"));
       expect(result.current.isConnected).toBe(false);
     });
   });
 
   describe("sensor families", () => {
     it("supports multispeq sensor family", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
       expect(result.current).toBeDefined();
     });
 
     it("supports generic sensor family", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("generic", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("generic", "bluetooth"));
       expect(result.current).toBeDefined();
     });
   });
 
   describe("connect function", () => {
     it("provides connect function", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
       expect(typeof result.current.connect).toBe("function");
     });
   });
 
   describe("disconnect function", () => {
     it("provides disconnect function", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
       expect(typeof result.current.disconnect).toBe("function");
-    });
-  });
-
-  describe("executeProtocol function", () => {
-    it("provides executeProtocol function", () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
-      expect(typeof result.current.executeProtocol).toBe("function");
-    });
-
-    it("throws error when not connected", async () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
-
-      await expect(result.current.executeProtocol([{ test: "command" }])).rejects.toThrow(
-        "Not connected to device",
-      );
     });
   });
 
@@ -137,9 +122,9 @@ describe("useIotProtocolConnection", () => {
     it("sets error state when connection fails", async () => {
       mockRequestDevice.mockRejectedValueOnce(new Error("Connection failed"));
 
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
-      result.current.connect();
+      void result.current.connect();
 
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();
@@ -148,11 +133,11 @@ describe("useIotProtocolConnection", () => {
     });
 
     it("clears error on successful connection", async () => {
-      const { result } = renderHook(() => useIotProtocolConnection("multispeq", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
       // First set an error
       mockRequestDevice.mockRejectedValueOnce(new Error("First error"));
-      result.current.connect();
+      void result.current.connect();
 
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();
@@ -162,9 +147,7 @@ describe("useIotProtocolConnection", () => {
 
   describe("cleanup", () => {
     it("cleans up on unmount", () => {
-      const { result, unmount } = renderHook(() =>
-        useIotProtocolConnection("multispeq", "bluetooth"),
-      );
+      const { result, unmount } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
       expect(result.current).toBeDefined();
       unmount();

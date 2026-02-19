@@ -247,7 +247,7 @@ describe("<TransferRequestForm />", () => {
       });
 
       // Trigger success
-      await act(async () => {
+      act(() => {
         triggerSuccess();
       });
 
@@ -275,7 +275,7 @@ describe("<TransferRequestForm />", () => {
       await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
       // Trigger success
-      await act(async () => {
+      act(() => {
         triggerSuccess();
       });
 
@@ -302,7 +302,7 @@ describe("<TransferRequestForm />", () => {
       await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
       // Trigger success
-      await act(async () => {
+      act(() => {
         triggerSuccess();
       });
 
@@ -339,11 +339,11 @@ describe("<TransferRequestForm />", () => {
       await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
       // Trigger success
-      await act(async () => {
+      act(() => {
         triggerSuccess();
       });
 
-      await act(async () => {
+      act(() => {
         rerender(<TransferRequestForm />);
       });
 

@@ -199,7 +199,7 @@ describe("DataUploadModal", () => {
     });
 
     // Close modal
-    await act(async () => {
+    act(() => {
       rerender(
         <DataUploadModal
           experimentId="test-experiment"
@@ -215,7 +215,7 @@ describe("DataUploadModal", () => {
     });
 
     // Reopen modal
-    await act(async () => {
+    act(() => {
       rerender(
         <DataUploadModal
           experimentId="test-experiment"

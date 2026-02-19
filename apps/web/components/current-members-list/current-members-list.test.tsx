@@ -411,7 +411,7 @@ describe("<MemberList />", () => {
     expect(screen.getByText("experimentSettings.cannotDemoteAsLastAdmin")).toBeInTheDocument();
   });
 
-  it("allows admin to change another member's role from member to admin", async () => {
+  it("allows admin to change another member's role from member to admin", () => {
     const onRemove = vi.fn();
     const onUpdateRole = vi.fn();
     const memberUser = mkUser({
@@ -421,7 +421,7 @@ describe("<MemberList />", () => {
       lastName: "User",
     });
 
-    await act(async () => {
+    act(() => {
       renderWithProvider(
         <MemberList
           membersWithUserInfo={[
@@ -442,13 +442,13 @@ describe("<MemberList />", () => {
 
     // Open dropdown
     const selectTrigger = screen.getByRole("combobox");
-    await act(async () => {
+    act(() => {
       fireEvent.click(selectTrigger);
     });
 
     // Select admin role
     const adminOption = screen.getByText("experimentSettings.roleAdmin");
-    await act(async () => {
+    act(() => {
       fireEvent.click(adminOption);
     });
 

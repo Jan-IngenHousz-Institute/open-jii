@@ -512,7 +512,7 @@ describe("EmailLoginForm", () => {
     });
 
     const user = userEvent.setup();
-    await act(async () => {
+    act(() => {
       render(<EmailLoginForm {...defaultProps} />, { wrapper: createWrapper() });
     });
 
@@ -527,7 +527,7 @@ describe("EmailLoginForm", () => {
 
     // Submit OTP
     const otpInput = screen.getByTestId("otp-input");
-    await act(async () => {
+    act(() => {
       fireEvent.change(otpInput, { target: { value: "123456" } });
     });
 
@@ -535,7 +535,7 @@ describe("EmailLoginForm", () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     // Try to submit again - should be prevented by isPending check
-    await act(async () => {
+    act(() => {
       fireEvent.change(otpInput, { target: { value: "654321" } });
     });
 

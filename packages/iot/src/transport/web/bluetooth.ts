@@ -115,7 +115,7 @@ export class WebBluetoothAdapter implements ITransportAdapter {
     // Set up notifications
     await this.notifyCharacteristic.startNotifications();
     this.notifyCharacteristic.addEventListener("characteristicvaluechanged", (event) => {
-      this.handleNotification(event as any);
+      this.handleNotification(event);
     });
   }
 
@@ -171,6 +171,7 @@ export class WebBluetoothAdapter implements ITransportAdapter {
   async disconnect(): Promise<void> {
     if (this.server) {
       try {
+        await this.notifyCharacteristic?.stopNotifications();
         this.server.disconnect();
         this.connected = false;
         this.statusCallback?.(false);
@@ -195,10 +196,14 @@ export class WebBluetoothAdapter implements ITransportAdapter {
       throw new Error("Web Bluetooth not supported in this browser");
     }
 
-    const device = await navigator.bluetooth!.requestDevice({
+    const device = await navigator.bluetooth?.requestDevice({
       filters: [{ services: [config.serviceUUID] }],
       optionalServices: [config.serviceUUID],
     });
+
+    if (!device) {
+      throw new Error("No Bluetooth device selected");
+    }
 
     return await WebBluetoothAdapter.connect(device, config);
   }
@@ -212,7 +217,12 @@ export class WebBluetoothAdapter implements ITransportAdapter {
   ): Promise<WebBluetoothAdapter> {
     const adapter = new WebBluetoothAdapter(device, config);
 
-    adapter.server = await device.gatt!.connect();
+    const gattServer = await device.gatt?.connect();
+    if (!gattServer) {
+      throw new Error("Failed to connect to GATT server");
+    }
+
+    adapter.server = gattServer;
     await adapter.setupCharacteristics();
 
     adapter.connected = true;

@@ -92,7 +92,7 @@ describe("LineChartDataConfigurator", () => {
     expect(screen.getByTestId("y-axis-configuration")).toBeInTheDocument();
   });
 
-  it("should provide addYAxisSeries function to Y-axis configuration", async () => {
+  it("should provide addYAxisSeries function to Y-axis configuration", () => {
     function TestComponent() {
       const form = useForm<ChartFormValues>({
         defaultValues: {
@@ -109,13 +109,13 @@ describe("LineChartDataConfigurator", () => {
       return <LineChartDataConfigurator form={form} columns={mockColumns} />;
     }
 
-    await act(async () => {
+    act(() => {
       render(<TestComponent />);
     });
 
     // Verify the addYAxisSeries function was captured and can be called
     expect(capturedAddYAxisSeries).toBeTruthy();
-    await act(async () => {
+    act(() => {
       capturedAddYAxisSeries?.();
     });
   });

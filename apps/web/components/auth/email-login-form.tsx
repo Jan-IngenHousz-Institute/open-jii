@@ -92,7 +92,7 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       setShowOTPInput(true);
       onShowOTPChange?.(true);
       setCountdown(RESEND_COOLDOWN_SECONDS);
-    } catch (error) {
+    } catch {
       // Error handled by UI state
     }
   }
@@ -116,7 +116,7 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       } else {
         router.push(callbackUrl ?? "/platform");
       }
-    } catch (error: unknown) {
+    } catch {
       otpForm.setError("code", { message: errorMessage });
     }
   }
@@ -128,7 +128,7 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       await signInEmailMutation.mutateAsync(email);
       setCountdown(RESEND_COOLDOWN_SECONDS);
       otpForm.reset();
-    } catch (error) {
+    } catch {
       // Error handled by UI state
     }
   }

@@ -4,7 +4,8 @@ import { AlertCircle, Check, CheckCircle2, Copy, Play } from "lucide-react";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Alert, AlertDescription, Badge, Button, ScrollArea } from "@repo/ui/components";
+import { Alert, AlertDescription, Badge, Button } from "@repo/ui/components";
+import { cn } from "@repo/ui/lib/utils";
 
 interface TestResult {
   success: boolean;
@@ -38,62 +39,62 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
   };
 
   return (
-    <div className="flex-1 space-y-2">
-      <h3 className="text-sm font-medium">{t("iot.protocolTester.results")}</h3>
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+      <h3 className="shrink-0 text-sm font-medium">{t("iot.protocolRunner.results")}</h3>
       {testResult ? (
-        <div className="space-y-3 rounded-lg border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden rounded-lg border p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               {testResult.success ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
               ) : (
-                <AlertCircle className="h-5 w-5 text-red-600" />
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
               )}
-              <div>
-                <div className="text-sm font-medium">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium">
                   {testResult.success
-                    ? t("iot.protocolTester.success")
-                    : t("iot.protocolTester.failed")}
+                    ? t("iot.protocolRunner.success")
+                    : t("iot.protocolRunner.failed")}
                 </div>
-                <div className="text-muted-foreground text-xs">
+                <div className="text-muted-foreground truncate text-xs">
                   {testResult.timestamp.toLocaleTimeString()} • {testResult.executionTime}ms
                 </div>
               </div>
             </div>
             <Badge
               variant={testResult.success ? "default" : "destructive"}
-              className={testResult.success ? "bg-green-600 hover:bg-green-700" : ""}
+              className={cn(
+                "shrink-0",
+                testResult.success ? "bg-green-600 hover:bg-green-700" : "",
+              )}
             >
-              {testResult.success ? t("iot.protocolTester.passed") : t("iot.protocolTester.error")}
+              {testResult.success ? t("iot.protocolRunner.passed") : t("iot.protocolRunner.error")}
             </Badge>
           </div>
 
           {testResult.success ? (
-            <div className="space-y-2">
-              <div className="text-xs font-medium">{t("iot.protocolTester.responseData")}</div>
-              <div className="relative">
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <div className="shrink-0 text-xs font-medium">
+                {t("iot.protocolRunner.responseData")}
+              </div>
+              <div className="relative flex min-h-0 flex-1 flex-col">
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="bg-background hover:bg-accent absolute right-2 top-2 z-10 h-7 border px-2 shadow-sm"
+                  size="icon"
+                  className="bg-background hover:bg-accent absolute right-2 top-2 z-10 h-7 w-7 border shadow-sm"
                   onClick={handleCopy}
-                  title={tCommon("common.copy")}
+                  aria-label={copied ? tCommon("common.copied") : tCommon("common.copy")}
+                  title={copied ? tCommon("common.copied") : tCommon("common.copy")}
                 >
                   {copied ? (
-                    <>
-                      <Check className="mr-1 h-3 w-3 text-green-600" />
-                      <span className="text-xs text-green-600">{tCommon("common.copied")}</span>
-                    </>
+                    <Check className="h-3.5 w-3.5 text-green-600" />
                   ) : (
-                    <>
-                      <Copy className="mr-1 h-3 w-3" />
-                      <span className="text-xs">{tCommon("common.copy")}</span>
-                    </>
+                    <Copy className="h-3.5 w-3.5" />
                   )}
                 </Button>
-                <ScrollArea className="bg-muted/30 h-[500px] rounded border">
-                  <pre className="p-4 text-xs">{JSON.stringify(testResult.data, null, 2)}</pre>
-                </ScrollArea>
+                <div className="bg-muted/30 min-h-[12rem] flex-1 overflow-auto rounded border">
+                  <pre className="p-3 text-xs">{JSON.stringify(testResult.data, null, 2)}</pre>
+                </div>
               </div>
             </div>
           ) : (
@@ -104,14 +105,14 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
           )}
         </div>
       ) : (
-        <div className="bg-muted/20 flex h-[500px] items-center justify-center rounded-lg border border-dashed">
+        <div className="bg-muted/20 flex min-h-24 flex-1 items-center justify-center rounded-lg border border-dashed">
           <div className="text-center">
-            <Play className="text-muted-foreground/20 mx-auto mb-2 h-8 w-8" />
-            <div className="text-muted-foreground text-sm">
-              {t("iot.protocolTester.noResultsYet")}
-            </div>
+            <Play className="text-muted-foreground/20 mx-auto mb-1.5 h-6 w-6" />
             <div className="text-muted-foreground text-xs">
-              {t("iot.protocolTester.runProtocolToSeeResults")}
+              {t("iot.protocolRunner.noResultsYet")}
+            </div>
+            <div className="text-muted-foreground/60 text-xs">
+              {t("iot.protocolRunner.runProtocolToSeeResults")}
             </div>
           </div>
         </div>

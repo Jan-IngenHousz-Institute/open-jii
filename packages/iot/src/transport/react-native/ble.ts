@@ -38,7 +38,7 @@ export class RNBLEAdapter implements ITransportAdapter {
     this.device.monitorCharacteristicForService(
       this.config.serviceUUID,
       this.config.notifyUUID,
-      (error: Error | null, characteristic: any) => {
+      (error, characteristic) => {
         if (error || !characteristic?.value) {
           console.error("BLE notification error:", error);
           return;

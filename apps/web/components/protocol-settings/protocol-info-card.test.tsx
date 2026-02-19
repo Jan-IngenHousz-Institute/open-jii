@@ -59,10 +59,9 @@ describe("ProtocolInfoCard", () => {
     id: "protocol-123",
     name: "Test Protocol",
     description: "Test description",
-    type: "protocol" as const,
-    language: "python" as const,
-    code: btoa("print('Hello, World!')"), // base64 encoded code
-    filename: "test_protocol.py",
+    code: [{ averages: 1 }],
+    family: "generic" as const,
+    sortOrder: null,
     createdBy: "user-123",
     createdByName: "Test User",
     createdAt: "2023-01-01T00:00:00Z",

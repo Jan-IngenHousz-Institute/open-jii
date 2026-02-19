@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { SensorFamily } from "@repo/api";
-import type { IDeviceProtocol } from "@repo/iot";
+import type { IDeviceProtocol, ITransportAdapter } from "@repo/iot";
 import {
   GenericDeviceProtocol,
   GENERIC_BLE_UUIDS,
@@ -20,7 +20,7 @@ interface DeviceInfo {
   device_id?: string;
 }
 
-export function useIotProtocolConnection(
+export function useIotCommunication(
   sensorFamily: SensorFamily,
   connectionType: "bluetooth" | "serial" = "bluetooth",
 ) {
@@ -29,14 +29,30 @@ export function useIotProtocolConnection(
   const [error, setError] = useState<string | null>(null);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [protocol, setProtocol] = useState<IDeviceProtocol | null>(null);
+  const protocolRef = useRef<IDeviceProtocol | null>(null);
+
+  // Keep ref in sync so the cleanup effect always has the latest protocol
+  useEffect(() => {
+    protocolRef.current = protocol;
+  }, [protocol]);
+
+  // Disconnect on unmount (navigating away)
+  useEffect(() => {
+    return () => {
+      const p = protocolRef.current;
+      if (p) {
+        p.destroy().catch((err) => console.error("Cleanup disconnect error:", err));
+      }
+    };
+  }, []);
 
   const connect = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
 
-    try {
-      let adapter;
+    let adapter: ITransportAdapter | undefined;
 
+    try {
       // Create adapter based on connection type
       if (connectionType === "bluetooth") {
         // Bluetooth connection
@@ -48,23 +64,7 @@ export function useIotProtocolConnection(
         });
       } else {
         // Serial connection
-        if (!("serial" in navigator)) {
-          throw new Error("Web Serial API not supported");
-        }
-
-        interface SerialPort {
-          open(options: typeof GENERIC_SERIAL_DEFAULTS): Promise<void>;
-        }
-
-        interface NavigatorSerial {
-          requestPort(): Promise<SerialPort>;
-        }
-
-        const port = await (
-          navigator as unknown as { serial: NavigatorSerial }
-        ).serial.requestPort();
-        await port.open(GENERIC_SERIAL_DEFAULTS);
-        adapter = new WebSerialAdapter(port as never);
+        adapter = await WebSerialAdapter.requestAndConnect(GENERIC_SERIAL_DEFAULTS);
       }
 
       // Initialize protocol based on sensor family
@@ -73,30 +73,30 @@ export function useIotProtocolConnection(
         multispeqProtocol.initialize(adapter);
         setProtocol(multispeqProtocol);
 
-        // Get device info
-        try {
-          const info = await multispeqProtocol.getDeviceInfo();
-          setDeviceInfo(info as DeviceInfo);
-        } catch (err) {
-          console.warn("Could not get device info:", err);
-        }
+        const info = await multispeqProtocol.getDeviceInfo();
+        setDeviceInfo(info as DeviceInfo);
       } else {
         // Generic or Ambit devices
         const genericProtocol = new GenericDeviceProtocol();
         genericProtocol.initialize(adapter);
         setProtocol(genericProtocol);
 
-        // Get device info
-        try {
-          const info = await genericProtocol.getDeviceInfo();
-          setDeviceInfo(info as DeviceInfo);
-        } catch (err) {
-          console.warn("Could not get device info:", err);
-        }
+        const info = await genericProtocol.getDeviceInfo();
+        setDeviceInfo(info as DeviceInfo);
       }
 
       setIsConnected(true);
     } catch (err) {
+      // Clean up the adapter/port so the port is released for retry
+      if (adapter) {
+        try {
+          await adapter.disconnect();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      setProtocol(null);
+      setDeviceInfo(null);
       setError(err instanceof Error ? err.message : "Failed to connect to device");
       console.error("Connection error:", err);
     } finally {
@@ -118,34 +118,13 @@ export function useIotProtocolConnection(
     setError(null);
   }, [protocol]);
 
-  const executeProtocol = useCallback(
-    async (protocolCode: Record<string, unknown>[]) => {
-      if (!protocol || !isConnected) {
-        throw new Error("Not connected to device");
-      }
-
-      // Execute each command in the protocol code array
-      const results = [];
-      for (const command of protocolCode) {
-        const result = await protocol.execute(command);
-        if (!result.success) {
-          throw new Error(result.error?.message ?? "Protocol execution failed");
-        }
-        results.push(result.data);
-      }
-
-      return results;
-    },
-    [protocol, isConnected],
-  );
-
   return {
     isConnected,
     isConnecting,
     error,
     deviceInfo,
+    protocol,
     connect,
     disconnect,
-    executeProtocol,
   };
 }

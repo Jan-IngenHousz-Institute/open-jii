@@ -37,7 +37,7 @@ describe("ConnectionTypeSelector", () => {
         />,
       );
 
-      expect(screen.getByText("iot.protocolTester.connectionType")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.connectionType")).toBeInTheDocument();
     });
 
     it("renders bluetooth and serial buttons", () => {
@@ -49,8 +49,8 @@ describe("ConnectionTypeSelector", () => {
         />,
       );
 
-      expect(screen.getByText("iot.protocolTester.bluetooth")).toBeInTheDocument();
-      expect(screen.getByText("iot.protocolTester.serial")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.bluetooth")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.serial")).toBeInTheDocument();
     });
 
     it("displays bluetooth and USB icons", () => {
@@ -78,9 +78,10 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const bluetoothButton = buttons.find((btn) => btn.textContent?.includes("bluetooth"));
+      const bluetoothButton = buttons.find((btn) => btn.textContent.includes("bluetooth"));
 
-      fireEvent.click(bluetoothButton!);
+      expect(bluetoothButton).toBeDefined();
+      if (bluetoothButton) fireEvent.click(bluetoothButton);
       expect(mockOnConnectionTypeChange).toHaveBeenCalledWith("bluetooth");
     });
 
@@ -94,9 +95,10 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const serialButton = buttons.find((btn) => btn.textContent?.includes("serial"));
+      const serialButton = buttons.find((btn) => btn.textContent.includes("serial"));
 
-      fireEvent.click(serialButton!);
+      expect(serialButton).toBeDefined();
+      if (serialButton) fireEvent.click(serialButton);
       expect(mockOnConnectionTypeChange).toHaveBeenCalledWith("serial");
     });
   });
@@ -112,7 +114,7 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const bluetoothButton = buttons.find((btn) => btn.textContent?.includes("bluetooth"));
+      const bluetoothButton = buttons.find((btn) => btn.textContent.includes("bluetooth"));
 
       expect(bluetoothButton).toBeDisabled();
     });
@@ -127,7 +129,7 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const serialButton = buttons.find((btn) => btn.textContent?.includes("serial"));
+      const serialButton = buttons.find((btn) => btn.textContent.includes("serial"));
 
       expect(serialButton).toBeDisabled();
     });
@@ -159,7 +161,7 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const bluetoothButton = buttons.find((btn) => btn.textContent?.includes("bluetooth"));
+      const bluetoothButton = buttons.find((btn) => btn.textContent.includes("bluetooth"));
 
       expect(bluetoothButton).toBeDefined();
     });
@@ -174,7 +176,7 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const serialButton = buttons.find((btn) => btn.textContent?.includes("serial"));
+      const serialButton = buttons.find((btn) => btn.textContent.includes("serial"));
 
       expect(serialButton).toBeDefined();
     });

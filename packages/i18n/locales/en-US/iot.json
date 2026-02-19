@@ -1,6 +1,6 @@
 {
   "iot": {
-    "protocolTester": {
+    "protocolRunner": {
       "connectionType": "Connection Type",
       "bluetooth": "Bluetooth",
       "serial": "Serial",

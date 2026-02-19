@@ -2,24 +2,23 @@
  * React Native USB Serial Adapter
  * Requires: react-native-usb-serialport-for-android
  */
+import type { UsbSerial } from "react-native-usb-serialport-for-android";
 import { UsbSerialManager, Parity } from "react-native-usb-serialport-for-android";
 
 import { delay } from "../../utils/async";
 import { toHex, fromHex } from "../../utils/hex";
 import type { ITransportAdapter } from "../interface";
 
-type UsbSerialPort = any;
-
 /**
  * Adapter for React Native USB Serial (Android only)
  */
 export class RNUSBSerialAdapter implements ITransportAdapter {
-  private port: UsbSerialPort | null = null;
+  private port: UsbSerial | null = null;
   private connected = false;
   private dataCallback?: (data: string) => void;
   private statusCallback?: (connected: boolean, error?: Error) => void;
 
-  constructor(port: UsbSerialPort) {
+  constructor(port: UsbSerial) {
     this.port = port;
     this.setupListeners();
   }
@@ -27,7 +26,7 @@ export class RNUSBSerialAdapter implements ITransportAdapter {
   private setupListeners(): void {
     if (!this.port) return;
 
-    this.port.onReceived((event: any) => {
+    this.port.onReceived((event) => {
       try {
         const data = fromHex(event.data);
         this.dataCallback?.(data);

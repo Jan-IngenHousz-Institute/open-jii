@@ -86,7 +86,7 @@ async function fetchEntityName(
         break;
       }
     }
-  } catch (error) {
+  } catch {
     // Failed to fetch entity name, return null
   }
 
