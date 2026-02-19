@@ -2,16 +2,16 @@
   "name": "firmware",
   "version": "0.1.0",
   "private": true,
-  "description": "PlatformIO firmware workspace for Open-JII IoT devices (ESP32-S3)",
+  "description": "PlatformIO firmware workspace for openJII IoT devices. Each subdirectory in sketches/ is a self-contained project",
   "scripts": {
-    "check-pio": "command -v pio >/dev/null 2>&1 || (echo 'PlatformIO CLI not found. Install: brew install platformio  or  pip install platformio' && exit 1)",
-    "install": "pnpm run check-pio && pio pkg install -d sketches/sensor-node",
-    "install:all": "pnpm run check-pio && for d in sketches/*/; do pio pkg install -d \"$d\"; done",
-    "build": "pnpm run check-pio && pio run -d sketches/sensor-node",
-    "build:all": "pnpm run check-pio && for d in sketches/*/; do pio run -d \"$d\"; done",
-    "upload": "pnpm run check-pio && pio run -d sketches/sensor-node -t upload",
-    "monitor": "pnpm run check-pio && pio device monitor --baud 115200 --echo",
-    "devices": "pnpm run check-pio && pio device list",
-    "clean": "for d in sketches/*/; do rm -rf \"${d}.pio\"; done"
+    "check-pio": "command -v pio >/dev/null 2>&1 || (echo '\nPlatformIO CLI not found.\n  macOS:   brew install platformio\n  pip:     pip install platformio\n  docs:    https://docs.platformio.org/en/latest/core/installation/index.html\n' && exit 1)",
+    "build": "pnpm --silent run check-pio && for d in sketches/*/; do pio run -d \"$d\"; done",
+    "upload": "pnpm --silent run check-pio && for d in sketches/*/; do pio run -d \"$d\" -t upload; done",
+    "monitor": "pnpm --silent run check-pio && pio device monitor --baud 115200 --echo",
+    "devices": "pnpm --silent run check-pio && pio device list",
+    "test": "pnpm --silent run check-pio && for d in sketches/*/; do pio test -d \"$d\"; done",
+    "clean": "for d in sketches/*/; do rm -rf \"${d}.pio\"; done",
+    "lint": "echo 'No linter configured for firmware sketches — use PlatformIO check instead'",
+    "check": "pnpm --silent run check-pio && for d in sketches/*/; do pio check -d \"$d\"; done"
   }
 }

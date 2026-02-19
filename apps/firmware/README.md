@@ -1,26 +1,13 @@
 # @repo/firmware
 
-PlatformIO workspace for Open-JII IoT device firmware. Each subdirectory in `sketches/` is a self-contained PlatformIO project targeting a specific board + sensor configuration.
-
-## Structure
-
-```
-apps/firmware/
-├── package.json                 ← monorepo scripts (build, upload, monitor)
-├── README.md
-└── sketches/                    ← firmware projects
-    └── sensor-node/             ← ESP32-S3 + BME280 + BH1750
-        ├── platformio.ini
-        └── src/main.cpp
-```
+PlatformIO workspace for Open-JII IoT device firmware. Each subdirectory under `sketches/` is a self-contained [PlatformIO](https://platformio.org/) project targeting a specific board and sensor configuration.
 
 ## Prerequisites
 
 Install [PlatformIO](https://platformio.org/):
 
 ```bash
-# Option A: VS Code extension
-# Search "PlatformIO IDE" in Extensions
+# Option A: VS Code extension — search "PlatformIO IDE" in Extensions
 
 # Option B: CLI
 brew install platformio
@@ -32,63 +19,50 @@ brew install platformio
 From the monorepo root:
 
 ```bash
-# Build the default sketch (sensor-node)
-pnpm --filter @repo/firmware build
-
-# Flash to a connected board
-pnpm --filter @repo/firmware upload
-
-# Open serial monitor (115200 baud)
-pnpm --filter @repo/firmware monitor
-
-# List connected devices
-pnpm --filter @repo/firmware devices
+pnpm --filter @repo/firmware build          # build all sketches
+pnpm --filter @repo/firmware upload         # flash all sketches
+pnpm --filter @repo/firmware monitor        # serial monitor (115200 baud)
+pnpm --filter @repo/firmware devices        # list connected devices
 ```
 
-Or from `apps/firmware/` directly:
+From `apps/firmware/` directly:
 
 ```bash
-# Build a specific sketch
-pio run -d sketches/sensor-node
+pnpm build --sketch <name>    # build a specific sketch
+pnpm build                    # build all sketches
+pnpm upload --sketch <name>   # flash a specific sketch
+pnpm monitor                  # serial monitor
+pnpm test                     # PlatformIO unit tests
+pnpm check                    # static analysis (cppcheck)
+pnpm clean                    # remove .pio/ build dirs
+```
 
-# Flash a specific sketch
-pio run -d sketches/sensor-node -t upload
+Or with PlatformIO directly:
 
-# Build all sketches
-pnpm build:all
+```bash
+pio run -d sketches/<name>
+pio run -d sketches/<name> -t upload
 ```
 
 ## Adding a new sketch
 
-Create a new directory under `sketches/` with a `platformio.ini` and `src/main.cpp`:
+1. Initialize a new PlatformIO project under `sketches/`:
 
-```bash
-mkdir -p sketches/my-project/src
-```
+   ```bash
+   pio project init -d sketches/my-project --board <board_id>
+   ```
 
-Add a `platformio.ini` for your board:
+2. Add your firmware code in `sketches/my-project/src/main.cpp`.
 
-```ini
-[env:my-board]
-platform = espressif32
-board = dfrobot_firebeetle2_esp32s3
-framework = arduino
-monitor_speed = 115200
-```
+3. Build & flash:
 
-Add your `src/main.cpp` and build:
+   ```bash
+   pio run -d sketches/my-project
+   pio run -d sketches/my-project -t upload
+   ```
 
-```bash
-pio run -d sketches/my-project
-```
+The build scripts automatically discover all `sketches/*/` directories — no extra configuration needed.
 
 ## Sketches
 
-### `sensor-node`
-
-Environmental sensor node implementing the `@repo/iot` Generic Device Protocol over USB Serial.
-
-- **Board:** DFRobot FireBeetle 2 ESP32-S3
-- **Sensors:** BME280 (temp/humidity/pressure), BH1750 (light)
-- **Protocol:** 115200 baud, newline-delimited JSON
-- **Details:** See [sketches/sensor-node/](sketches/sensor-node/) and the `@repo/iot` package docs
+- [`test-basic-ble-esp32`](sketches/test-basic-ble-esp32/) — Test BLE sensor node for local development (ESP32-S3 + BME280 + BH1750)
