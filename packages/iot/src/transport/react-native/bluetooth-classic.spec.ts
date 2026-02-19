@@ -86,6 +86,22 @@ describe("RNBluetoothClassicAdapter", () => {
       device.simulateData("incoming data");
       expect(cb).toHaveBeenCalledWith("incoming data");
     });
+
+    it("should warn and skip non-string data", () => {
+      const device = createMockDevice();
+      new RNBluetoothClassicAdapter(device as unknown as BluetoothDevice);
+
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      // Simulate non-string data by calling the raw callback
+      const rawCallback = device.onDataReceived.mock.calls[0]?.[0] as (event: {
+        data: unknown;
+      }) => void;
+      rawCallback({ data: 12345 });
+
+      expect(consoleSpy).toHaveBeenCalledWith("Received non-string data:", "number");
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("disconnect", () => {
@@ -100,6 +116,19 @@ describe("RNBluetoothClassicAdapter", () => {
       expect(device.disconnect).toHaveBeenCalled();
       expect(adapter.isConnected()).toBe(false);
       expect(statusCb).toHaveBeenCalledWith(false);
+    });
+
+    it("should handle disconnect error gracefully", async () => {
+      const device = createMockDevice();
+      device.disconnect.mockRejectedValue(new Error("Already disconnected"));
+      const adapter = new RNBluetoothClassicAdapter(device as unknown as BluetoothDevice);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await adapter.disconnect();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error disconnecting:", expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 

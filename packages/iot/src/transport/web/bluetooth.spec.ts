@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { WebBluetoothAdapter } from "./bluetooth";
@@ -49,12 +48,23 @@ function createMockCharacteristic() {
 }
 
 function createMockDevice(gattServer?: unknown) {
+  const listeners: Record<string, EventListener[]> = {};
+
   return {
     id: "test-device-id",
     name: "Test Device",
     gatt: gattServer,
-    addEventListener: vi.fn(),
+    addEventListener: vi.fn((type: string, listener: EventListener) => {
+      if (!listeners[type]) listeners[type] = [];
+      listeners[type].push(listener);
+    }),
     removeEventListener: vi.fn(),
+    // Test helper – simulate a gattserverdisconnected event
+    simulateDisconnect() {
+      for (const listener of listeners.gattserverdisconnected ?? []) {
+        listener(new Event("gattserverdisconnected"));
+      }
+    },
   };
 }
 
@@ -83,6 +93,12 @@ function createMockGATT(
   };
 
   return server;
+}
+
+type BluetoothDevice = Parameters<typeof WebBluetoothAdapter.connect>[0];
+
+function asMockBluetooth(): { requestDevice: ReturnType<typeof vi.fn> } {
+  return navigator.bluetooth as unknown as { requestDevice: ReturnType<typeof vi.fn> };
 }
 
 // --- Tests ---
@@ -134,7 +150,10 @@ describe("WebBluetoothAdapter", () => {
       const gatt = createMockGATT(writeChar, notifyChar);
       const device = createMockDevice(gatt);
 
-      const adapter = await WebBluetoothAdapter.connect(device as any, DEFAULT_CONFIG);
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
 
       await adapter.send("hello");
 
@@ -149,7 +168,10 @@ describe("WebBluetoothAdapter", () => {
       const gatt = createMockGATT(writeChar, notifyChar);
       const device = createMockDevice(gatt);
 
-      const adapter = await WebBluetoothAdapter.connect(device as any, DEFAULT_CONFIG);
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
 
       // send() calls stringifyIfObject which JSON-encodes objects
       await adapter.send('{"cmd":"RUN"}');
@@ -159,7 +181,7 @@ describe("WebBluetoothAdapter", () => {
 
     it("should throw when write characteristic not initialized", async () => {
       const device = createMockDevice();
-      const adapter = new WebBluetoothAdapter(device as any, DEFAULT_CONFIG);
+      const adapter = new WebBluetoothAdapter(device as unknown as BluetoothDevice, DEFAULT_CONFIG);
 
       await expect(adapter.send("test")).rejects.toThrow("Write characteristic not initialized");
     });
@@ -172,7 +194,10 @@ describe("WebBluetoothAdapter", () => {
       const gatt = createMockGATT(writeChar, notifyChar);
       const device = createMockDevice(gatt);
 
-      const adapter = await WebBluetoothAdapter.connect(device as any, DEFAULT_CONFIG);
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
 
       const dataCb = vi.fn();
       adapter.onDataReceived(dataCb);
@@ -191,13 +216,82 @@ describe("WebBluetoothAdapter", () => {
       const gatt = createMockGATT(writeChar, notifyChar);
       const device = createMockDevice(gatt);
 
-      const adapter = await WebBluetoothAdapter.connect(device as any, DEFAULT_CONFIG);
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
 
       const dataCb = vi.fn();
       adapter.onDataReceived(dataCb);
 
       notifyChar.simulateNotification("complete__EOM__");
       expect(dataCb).toHaveBeenCalledWith("complete");
+    });
+
+    it("should handle notification with no value gracefully", async () => {
+      const writeChar = createMockCharacteristic();
+      const notifyChar = createMockCharacteristic();
+      const gatt = createMockGATT(writeChar, notifyChar);
+      const device = createMockDevice(gatt);
+
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
+
+      const dataCb = vi.fn();
+      adapter.onDataReceived(dataCb);
+
+      // Simulate notification with no value
+      const event = { target: { value: undefined } } as unknown as Event;
+      const listeners = notifyChar.addEventListener.mock.calls[0] as unknown as [
+        string,
+        EventListener,
+      ];
+      listeners[1](event);
+
+      expect(dataCb).not.toHaveBeenCalled();
+    });
+
+    it("should catch errors during notification processing", async () => {
+      const writeChar = createMockCharacteristic();
+      const notifyChar = createMockCharacteristic();
+      const gatt = createMockGATT(writeChar, notifyChar);
+      const device = createMockDevice(gatt);
+
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
+
+      const dataCb = vi.fn();
+      adapter.onDataReceived(dataCb);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      // Simulate notification with a value that causes decode to throw
+      const badDataView = {
+        buffer: new ArrayBuffer(0),
+        byteLength: 0,
+        byteOffset: 0,
+      };
+      // Override TextDecoder to throw
+      const origDecode = TextDecoder.prototype.decode;
+      TextDecoder.prototype.decode = () => {
+        throw new Error("decode error");
+      };
+
+      const event = { target: { value: badDataView } } as unknown as Event;
+      const listeners = notifyChar.addEventListener.mock.calls[0] as unknown as [
+        string,
+        EventListener,
+      ];
+      listeners[1](event);
+
+      TextDecoder.prototype.decode = origDecode;
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error processing notification:", expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 
@@ -208,7 +302,10 @@ describe("WebBluetoothAdapter", () => {
       const gatt = createMockGATT(writeChar, notifyChar);
       const device = createMockDevice(gatt);
 
-      const adapter = await WebBluetoothAdapter.connect(device as any, DEFAULT_CONFIG);
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
 
       const statusCb = vi.fn();
       adapter.onStatusChanged(statusCb);
@@ -220,6 +317,27 @@ describe("WebBluetoothAdapter", () => {
       expect(adapter.isConnected()).toBe(false);
       expect(statusCb).toHaveBeenCalledWith(false);
     });
+
+    it("should handle disconnect error gracefully", async () => {
+      const writeChar = createMockCharacteristic();
+      const notifyChar = createMockCharacteristic();
+      const gatt = createMockGATT(writeChar, notifyChar);
+      const device = createMockDevice(gatt);
+
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
+
+      notifyChar.stopNotifications.mockRejectedValue(new Error("stop failed"));
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await adapter.disconnect();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error disconnecting:", expect.any(Error));
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("connect", () => {
@@ -229,7 +347,10 @@ describe("WebBluetoothAdapter", () => {
       const gatt = createMockGATT(writeChar, notifyChar);
       const device = createMockDevice(gatt);
 
-      const adapter = await WebBluetoothAdapter.connect(device as any, DEFAULT_CONFIG);
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
+      );
 
       expect(gatt.connect).toHaveBeenCalled();
       expect(gatt.getPrimaryService).toHaveBeenCalledWith(DEFAULT_CONFIG.serviceUUID);
@@ -239,9 +360,30 @@ describe("WebBluetoothAdapter", () => {
 
     it("should throw when GATT server is not available", async () => {
       const device = createMockDevice(undefined);
-      await expect(WebBluetoothAdapter.connect(device as any, DEFAULT_CONFIG)).rejects.toThrow(
-        "Failed to connect to GATT server",
+      await expect(
+        WebBluetoothAdapter.connect(device as unknown as BluetoothDevice, DEFAULT_CONFIG),
+      ).rejects.toThrow("Failed to connect to GATT server");
+    });
+
+    it("should invoke statusCallback on GATT disconnect event", async () => {
+      const writeChar = createMockCharacteristic();
+      const notifyChar = createMockCharacteristic();
+      const gatt = createMockGATT(writeChar, notifyChar);
+      const device = createMockDevice(gatt);
+
+      const adapter = await WebBluetoothAdapter.connect(
+        device as unknown as BluetoothDevice,
+        DEFAULT_CONFIG,
       );
+
+      const statusCb = vi.fn();
+      adapter.onStatusChanged(statusCb);
+
+      // Simulate GATT disconnect event via device helper
+      device.simulateDisconnect();
+
+      expect(adapter.isConnected()).toBe(false);
+      expect(statusCb).toHaveBeenCalledWith(false);
     });
   });
 
@@ -256,6 +398,27 @@ describe("WebBluetoothAdapter", () => {
       await expect(WebBluetoothAdapter.requestAndConnect(DEFAULT_CONFIG)).rejects.toThrow(
         "Web Bluetooth not supported",
       );
+    });
+
+    it("should throw when no device is selected", async () => {
+      asMockBluetooth().requestDevice.mockResolvedValue(null);
+
+      await expect(WebBluetoothAdapter.requestAndConnect(DEFAULT_CONFIG)).rejects.toThrow(
+        "No Bluetooth device selected",
+      );
+    });
+
+    it("should connect when device is selected", async () => {
+      const writeChar = createMockCharacteristic();
+      const notifyChar = createMockCharacteristic();
+      const gatt = createMockGATT(writeChar, notifyChar);
+      const device = createMockDevice(gatt);
+
+      asMockBluetooth().requestDevice.mockResolvedValue(device);
+
+      const adapter = await WebBluetoothAdapter.requestAndConnect(DEFAULT_CONFIG);
+
+      expect(adapter.isConnected()).toBe(true);
     });
   });
 });

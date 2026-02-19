@@ -108,6 +108,20 @@ describe("RNUSBSerialAdapter", () => {
       port.simulateReceive(original);
       expect(cb).toHaveBeenCalledWith(original);
     });
+
+    it("should catch hex decode errors gracefully", () => {
+      const port = createMockPort();
+      new RNUSBSerialAdapter(port as unknown as UsbSerial);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      // Simulate receiving invalid hex (odd length) that causes fromHex to throw
+      const rawCallback = port.onReceived.mock.calls[0]?.[0] as (event: { data: string }) => void;
+      rawCallback({ data: "Z" });
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error decoding hex data:", expect.any(Error));
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("disconnect", () => {
@@ -122,6 +136,19 @@ describe("RNUSBSerialAdapter", () => {
       expect(port.close).toHaveBeenCalled();
       expect(adapter.isConnected()).toBe(false);
       expect(statusCb).toHaveBeenCalledWith(false);
+    });
+
+    it("should handle close error gracefully", async () => {
+      const port = createMockPort();
+      port.close.mockRejectedValue(new Error("close failed"));
+      const adapter = new RNUSBSerialAdapter(port as unknown as UsbSerial);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await adapter.disconnect();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error disconnecting:", expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 

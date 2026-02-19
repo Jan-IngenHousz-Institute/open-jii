@@ -126,6 +126,49 @@ describe("RNBLEAdapter", () => {
       device.simulateNotification("complete__EOM__");
       expect(dataCb).toHaveBeenCalledWith("complete");
     });
+
+    it("should handle notification error gracefully", async () => {
+      const device = createMockDevice();
+      const bleManager = createMockBleManager();
+      bleManager.connectToDevice.mockResolvedValue(device);
+
+      const adapter = await RNBLEAdapter.connect(
+        "ble-id",
+        bleManager as unknown as BleManager,
+        DEFAULT_CONFIG,
+      );
+
+      const dataCb = vi.fn();
+      adapter.onDataReceived(dataCb);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      device.simulateError(new Error("BLE error"));
+
+      expect(consoleSpy).toHaveBeenCalledWith("BLE notification error:", expect.any(Error));
+      expect(dataCb).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle atob decode error gracefully", async () => {
+      const device = createMockDevice();
+      const bleManager = createMockBleManager();
+      bleManager.connectToDevice.mockResolvedValue(device);
+
+      await RNBLEAdapter.connect("ble-id", bleManager as unknown as BleManager, DEFAULT_CONFIG);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      // Simulate notification with invalid base64 that causes atob to throw
+      const monitorCallback = device.monitorCharacteristicForService.mock.calls[0]?.[2] as (
+        error: Error | null,
+        characteristic: { value: string | null } | null,
+      ) => void;
+      monitorCallback(null, { value: "!!!invalid-base64!!!" });
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error processing BLE data:", expect.any(Error));
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("disconnect", () => {
@@ -140,6 +183,19 @@ describe("RNBLEAdapter", () => {
       expect(device.cancelConnection).toHaveBeenCalled();
       expect(adapter.isConnected()).toBe(false);
       expect(statusCb).toHaveBeenCalledWith(false);
+    });
+
+    it("should handle disconnect error gracefully", async () => {
+      const device = createMockDevice();
+      device.cancelConnection.mockRejectedValue(new Error("Already disconnected"));
+      const adapter = new RNBLEAdapter(device as unknown as Device, DEFAULT_CONFIG);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await adapter.disconnect();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error disconnecting:", expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 

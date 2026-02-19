@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { WebSerialAdapter } from "./serial";
@@ -67,6 +66,8 @@ interface MockSerialPort {
   removeEventListener: ReturnType<typeof vi.fn>;
 }
 
+type SerialPort = ConstructorParameters<typeof WebSerialAdapter>[0];
+
 function createMockPort(
   reader: ReturnType<typeof createMockReader>,
   writer: ReturnType<typeof createMockWriter>,
@@ -79,6 +80,10 @@ function createMockPort(
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   };
+}
+
+function asMockSerial(): { requestPort: ReturnType<typeof vi.fn> } {
+  return navigator.serial as unknown as { requestPort: ReturnType<typeof vi.fn> };
 }
 
 // --- Tests ---
@@ -133,7 +138,7 @@ describe("WebSerialAdapter", () => {
       const writer = createMockWriter();
       const port = createMockPort(reader, writer);
 
-      new WebSerialAdapter(port as any);
+      new WebSerialAdapter(port as unknown as SerialPort);
 
       expect(
         (navigator.serial as unknown as { addEventListener: ReturnType<typeof vi.fn> })
@@ -148,7 +153,7 @@ describe("WebSerialAdapter", () => {
       const writer = createMockWriter();
       const port = createMockPort(reader, writer);
 
-      const adapter = new WebSerialAdapter(port as any);
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
       // Manually assign writer (normally done in connect)
       // @ts-expect-error accessing private field for testing
       adapter.writer = writer;
@@ -163,7 +168,7 @@ describe("WebSerialAdapter", () => {
       const writer = createMockWriter();
       const port = createMockPort(reader, writer);
 
-      const adapter = new WebSerialAdapter(port as any);
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
 
       await expect(adapter.send("test")).rejects.toThrow("Writer not initialized");
     });
@@ -175,12 +180,41 @@ describe("WebSerialAdapter", () => {
       const writer = createMockWriter();
       const port = createMockPort(reader, writer);
 
-      const adapter = new WebSerialAdapter(port as any);
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
       const cb = vi.fn();
       adapter.onDataReceived(cb);
 
       // Verify callback is stored (indirectly tested via reading loop)
       expect(adapter.isConnected()).toBe(false);
+    });
+  });
+
+  describe("startReading", () => {
+    it("should catch read errors and report via statusCallback", async () => {
+      const reader = createMockReader();
+      const writer = createMockWriter();
+      const port = createMockPort(reader, writer);
+
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
+      const statusCb = vi.fn();
+      adapter.onStatusChanged(statusCb);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      // @ts-expect-error accessing private
+      adapter.reader = reader;
+      // @ts-expect-error accessing private
+      adapter.reading = false;
+
+      // Start reading by calling private method
+      reader.read.mockRejectedValue(new Error("device lost"));
+
+      // @ts-expect-error accessing private
+      await adapter.startReading();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error reading from serial port:", expect.any(Error));
+      expect(statusCb).toHaveBeenCalledWith(false, expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 
@@ -190,7 +224,7 @@ describe("WebSerialAdapter", () => {
       const writer = createMockWriter();
       const port = createMockPort(reader, writer);
 
-      const adapter = new WebSerialAdapter(port as any);
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
       // @ts-expect-error accessing private
       adapter.reader = reader;
       // @ts-expect-error accessing private
@@ -209,7 +243,7 @@ describe("WebSerialAdapter", () => {
       const writer = createMockWriter();
       const port = createMockPort(reader, writer);
 
-      const adapter = new WebSerialAdapter(port as any);
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
       const statusCb = vi.fn();
       adapter.onStatusChanged(statusCb);
 
@@ -217,6 +251,67 @@ describe("WebSerialAdapter", () => {
 
       expect(adapter.isConnected()).toBe(false);
       expect(statusCb).toHaveBeenCalledWith(false);
+    });
+
+    it("should handle reader.cancel error gracefully", async () => {
+      const reader = createMockReader();
+      const writer = createMockWriter();
+      const port = createMockPort(reader, writer);
+
+      reader.cancel.mockRejectedValue(new Error("cancel failed"));
+
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
+      // @ts-expect-error accessing private
+      adapter.reader = reader;
+      // @ts-expect-error accessing private
+      adapter.writer = writer;
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await adapter.disconnect();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error releasing reader:", expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle writer.releaseLock error gracefully", async () => {
+      const reader = createMockReader();
+      const writer = createMockWriter();
+      const port = createMockPort(reader, writer);
+
+      writer.releaseLock.mockImplementation(() => {
+        throw new Error("releaseLock failed");
+      });
+
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
+      // @ts-expect-error accessing private
+      adapter.writer = writer;
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
+
+      await adapter.disconnect();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error releasing writer:", expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle port.close error gracefully", async () => {
+      const reader = createMockReader();
+      const writer = createMockWriter();
+      const port = createMockPort(reader, writer);
+
+      port.close.mockRejectedValue(new Error("close failed"));
+
+      const adapter = new WebSerialAdapter(port as unknown as SerialPort);
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await adapter.disconnect();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Error closing port:", expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 
@@ -234,7 +329,7 @@ describe("WebSerialAdapter", () => {
           }),
       );
 
-      const adapter = await WebSerialAdapter.connect(port as any);
+      const adapter = await WebSerialAdapter.connect(port as unknown as SerialPort);
 
       expect(port.open).toHaveBeenCalledWith({
         baudRate: 115200,
@@ -251,7 +346,33 @@ describe("WebSerialAdapter", () => {
       const port = createMockPort(reader, writer);
       port.open.mockRejectedValue(new Error("Port is already open"));
 
-      await expect(WebSerialAdapter.connect(port as any)).rejects.toThrow(/already in use/);
+      await expect(WebSerialAdapter.connect(port as unknown as SerialPort)).rejects.toThrow(
+        /already in use/,
+      );
+    });
+
+    it("should rethrow non-port-in-use errors", async () => {
+      const reader = createMockReader();
+      const writer = createMockWriter();
+      const port = createMockPort(reader, writer);
+      port.open.mockRejectedValue(new Error("Permission denied"));
+
+      await expect(WebSerialAdapter.connect(port as unknown as SerialPort)).rejects.toThrow(
+        "Permission denied",
+      );
+    });
+
+    it("should detect early read error and throw port-in-use", async () => {
+      const reader = createMockReader();
+      const writer = createMockWriter();
+      const port = createMockPort(reader, writer);
+
+      // Simulate startReading calling statusCallback with an error almost immediately
+      reader.read.mockRejectedValue(new Error("device has been lost"));
+
+      await expect(WebSerialAdapter.connect(port as unknown as SerialPort)).rejects.toThrow(
+        /already in use/,
+      );
     });
   });
 
@@ -266,6 +387,32 @@ describe("WebSerialAdapter", () => {
       await expect(WebSerialAdapter.requestAndConnect()).rejects.toThrow(
         "Web Serial not supported",
       );
+    });
+
+    it("should throw when no port is selected", async () => {
+      asMockSerial().requestPort.mockResolvedValue(null);
+
+      await expect(WebSerialAdapter.requestAndConnect()).rejects.toThrow("No serial port selected");
+    });
+
+    it("should connect when port is selected", async () => {
+      const reader = createMockReader();
+      const writer = createMockWriter();
+      const port = createMockPort(reader, writer);
+
+      asMockSerial().requestPort.mockResolvedValue(port);
+
+      // Simulate reading loop staying alive for 300ms
+      reader.read.mockImplementation(
+        () =>
+          new Promise(() => {
+            /* never resolves */
+          }),
+      );
+
+      const adapter = await WebSerialAdapter.requestAndConnect();
+
+      expect(adapter.isConnected()).toBe(true);
     });
   });
 });

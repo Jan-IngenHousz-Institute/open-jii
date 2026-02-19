@@ -69,6 +69,19 @@ flag_management:
           target: 75% # 75% branch coverage for new API code
           threshold: 5%
           informational: false
+    - name: iot
+      paths:
+        - packages/iot/**
+      carryforward: true
+      statuses:
+        - type: project
+          target: 75% # 75% lines coverage for IoT package
+          threshold: 5% # 5% wiggle room for IoT
+          informational: false # Make it blocking but lenient
+        - type: patch
+          target: 75% # 75% branch coverage for new IoT code
+          threshold: 5%
+          informational: false
 
 # Coverage status configuration (works with flag management)
 coverage:
@@ -92,6 +105,10 @@ coverage:
       api:
         flags:
           - api
+        informational: false # Now blocking with 75% target
+      iot:
+        flags:
+          - iot
         informational: false # Now blocking with 75% target
 
 # Comment configuration for PR
