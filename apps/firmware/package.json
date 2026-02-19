@@ -1,0 +1,17 @@
+{
+  "name": "firmware",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlatformIO firmware workspace for Open-JII IoT devices (ESP32-S3)",
+  "scripts": {
+    "check-pio": "command -v pio >/dev/null 2>&1 || (echo 'PlatformIO CLI not found. Install: brew install platformio  or  pip install platformio' && exit 1)",
+    "install": "pnpm run check-pio && pio pkg install -d sketches/sensor-node",
+    "install:all": "pnpm run check-pio && for d in sketches/*/; do pio pkg install -d \"$d\"; done",
+    "build": "pnpm run check-pio && pio run -d sketches/sensor-node",
+    "build:all": "pnpm run check-pio && for d in sketches/*/; do pio run -d \"$d\"; done",
+    "upload": "pnpm run check-pio && pio run -d sketches/sensor-node -t upload",
+    "monitor": "pnpm run check-pio && pio device monitor --baud 115200 --echo",
+    "devices": "pnpm run check-pio && pio device list",
+    "clean": "for d in sketches/*/; do rm -rf \"${d}.pio\"; done"
+  }
+}

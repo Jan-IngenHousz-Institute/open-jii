@@ -260,9 +260,7 @@ describe("GenericDeviceProtocol", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
           () =>
-            transport.simulateData(
-              JSON.stringify({ status: "error", error: "Invalid config" }),
-            ),
+            transport.simulateData(JSON.stringify({ status: "error", error: "Invalid config" })),
           0,
         );
         return Promise.resolve();
@@ -364,9 +362,7 @@ describe("GenericDeviceProtocol", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
           () =>
-            transport.simulateData(
-              JSON.stringify({ status: "error", error: "Sensor not ready" }),
-            ),
+            transport.simulateData(JSON.stringify({ status: "error", error: "Sensor not ready" })),
           0,
         );
         return Promise.resolve();
@@ -407,9 +403,7 @@ describe("GenericDeviceProtocol", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
           () =>
-            transport.simulateData(
-              JSON.stringify({ status: "error", error: "Nothing running" }),
-            ),
+            transport.simulateData(JSON.stringify({ status: "error", error: "Nothing running" })),
           0,
         );
         return Promise.resolve();
@@ -438,9 +432,7 @@ describe("GenericDeviceProtocol", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
           () =>
-            transport.simulateData(
-              JSON.stringify({ status: "success", data: measurementData }),
-            ),
+            transport.simulateData(JSON.stringify({ status: "success", data: measurementData })),
           0,
         );
         return Promise.resolve();
@@ -456,9 +448,7 @@ describe("GenericDeviceProtocol", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
           () =>
-            transport.simulateData(
-              JSON.stringify({ status: "error", error: "No data available" }),
-            ),
+            transport.simulateData(JSON.stringify({ status: "error", error: "No data available" })),
           0,
         );
         return Promise.resolve();
@@ -498,10 +488,7 @@ describe("GenericDeviceProtocol", () => {
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
-          () =>
-            transport.simulateData(
-              JSON.stringify({ status: "error", error: "Reset failed" }),
-            ),
+          () => transport.simulateData(JSON.stringify({ status: "error", error: "Reset failed" })),
           0,
         );
         return Promise.resolve();
@@ -606,8 +593,7 @@ describe("GenericDeviceProtocol", () => {
           );
           // Then send the rest to complete it
           transport.simulateData(
-            JSON.stringify({ status: "success", data: "extra" }).slice("incomplete".length) +
-              "\n",
+            JSON.stringify({ status: "success", data: "extra" }).slice("incomplete".length) + "\n",
           );
         }, 0);
         return Promise.resolve();
@@ -624,9 +610,7 @@ describe("GenericDeviceProtocol", () => {
         setTimeout(
           () =>
             transport.simulateData(
-              "not json at all\n" +
-                JSON.stringify({ status: "success", data: "valid" }) +
-                "\n",
+              "not json at all\n" + JSON.stringify({ status: "success", data: "valid" }) + "\n",
             ),
           0,
         );
@@ -687,10 +671,7 @@ describe("GenericDeviceProtocol", () => {
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
-          () =>
-            transport.simulateData(
-              JSON.stringify({ status: "error", error: "Not supported" }),
-            ),
+          () => transport.simulateData(JSON.stringify({ status: "error", error: "Not supported" })),
           0,
         );
         return Promise.resolve();

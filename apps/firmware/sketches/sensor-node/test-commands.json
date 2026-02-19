@@ -1,0 +1,261 @@
+{
+  "description": "Test commands for Open-JII Sensor Node (Generic Device Protocol)",
+  "connection": {
+    "serial": "115200 baud, newline-delimited JSON",
+    "ble": "Nordic UART Service, JSON with __EOM__ framing"
+  },
+  "commands": {
+    "1_info": {
+      "description": "Get device information (name, type, ID, capabilities)",
+      "send": { "command": "INFO" },
+      "expected_response": {
+        "status": "success",
+        "data": {
+          "device_name": "Open-JII Sensor Node",
+          "device_type": "environmental_sensor",
+          "device_version": "1.0.0",
+          "device_id": "12-character hex MAC",
+          "firmware_version": "0.1.0",
+          "capabilities": ["temperature", "humidity", "pressure", "light", "bluetooth"],
+          "sensors": {
+            "bme280": {
+              "connected": true,
+              "type": "temperature_humidity_pressure",
+              "i2c_address": "0x76/0x77"
+            },
+            "bh1750": {
+              "connected": true,
+              "type": "light",
+              "i2c_address": "0x23"
+            }
+          }
+        }
+      }
+    },
+
+    "2_discover": {
+      "description": "List all available commands",
+      "send": { "command": "DISCOVER" },
+      "expected_response": {
+        "status": "success",
+        "data": {
+          "commands": [
+            "INFO",
+            "DISCOVER",
+            "SET_CONFIG",
+            "GET_CONFIG",
+            "RUN",
+            "STOP",
+            "GET_DATA",
+            "RESET",
+            "PING",
+            "DISCONNECT"
+          ]
+        }
+      }
+    },
+
+    "3_ping": {
+      "description": "Check device is alive and get uptime",
+      "send": { "command": "PING" },
+      "expected_response": {
+        "status": "success",
+        "data": {
+          "pong": true,
+          "uptime_ms": 12345
+        }
+      }
+    },
+
+    "4_set_config_basic": {
+      "description": "Set basic configuration (sample interval)",
+      "send": {
+        "command": "SET_CONFIG",
+        "params": {
+          "sample_interval_ms": 1000,
+          "device_name": "My Sensor Node"
+        }
+      },
+      "expected_response": {
+        "status": "success"
+      }
+    },
+
+    "5_set_config_advanced": {
+      "description": "Set advanced configuration (sensor settings)",
+      "send": {
+        "command": "SET_CONFIG",
+        "params": {
+          "sample_interval_ms": 5000,
+          "sensors": {
+            "bme280": {
+              "enabled": true,
+              "oversampling": 1
+            },
+            "bh1750": {
+              "enabled": true,
+              "mode": "continuous"
+            }
+          },
+          "thresholds": {
+            "temperature_min": 15.0,
+            "temperature_max": 30.0,
+            "humidity_max": 80.0,
+            "light_min": 100.0
+          }
+        }
+      },
+      "expected_response": {
+        "status": "success"
+      }
+    },
+
+    "6_get_config": {
+      "description": "Retrieve stored configuration",
+      "send": { "command": "GET_CONFIG" },
+      "expected_response": {
+        "status": "success",
+        "data": {
+          "sample_interval_ms": 5000,
+          "note": "Returns whatever was set via SET_CONFIG"
+        }
+      }
+    },
+
+    "7_run": {
+      "description": "Start measurement mode",
+      "send": { "command": "RUN" },
+      "expected_response": {
+        "status": "success"
+      }
+    },
+
+    "8_get_data": {
+      "description": "Read sensor values (BME280 + BH1750)",
+      "send": { "command": "GET_DATA" },
+      "expected_response": {
+        "status": "success",
+        "data": {
+          "data": {
+            "temperature_c": 22.5,
+            "humidity_pct": 45.2,
+            "pressure_hpa": 1013.25,
+            "light_lux": 542.0
+          },
+          "timestamp": 12345
+        }
+      },
+      "note": "Values depend on which sensors are connected and initialized"
+    },
+
+    "9_stop": {
+      "description": "Stop measurement mode",
+      "send": { "command": "STOP" },
+      "expected_response": {
+        "status": "success"
+      }
+    },
+
+    "10_reset": {
+      "description": "Clear configuration and stop measurements",
+      "send": { "command": "RESET" },
+      "expected_response": {
+        "status": "success"
+      }
+    },
+
+    "11_disconnect": {
+      "description": "Gracefully disconnect (acknowledge before closing connection)",
+      "send": { "command": "DISCONNECT" },
+      "expected_response": {
+        "status": "success"
+      }
+    },
+
+    "12_invalid_command": {
+      "description": "Test error handling with unknown command",
+      "send": { "command": "INVALID_CMD" },
+      "expected_response": {
+        "status": "error",
+        "error": "Unknown command: INVALID_CMD"
+      }
+    },
+
+    "13_missing_params": {
+      "description": "Test error handling with missing params for SET_CONFIG",
+      "send": { "command": "SET_CONFIG" },
+      "expected_response": {
+        "status": "error",
+        "error": "Missing 'params' object"
+      }
+    }
+  },
+
+  "test_sequences": {
+    "basic_workflow": {
+      "description": "Complete device workflow test",
+      "steps": [
+        { "command": "INFO", "note": "Get device info" },
+        { "command": "DISCOVER", "note": "List commands" },
+        { "command": "PING", "note": "Verify connectivity" },
+        {
+          "command": "SET_CONFIG",
+          "params": { "sample_interval_ms": 2000 },
+          "note": "Configure device"
+        },
+        { "command": "GET_CONFIG", "note": "Verify config was stored" },
+        { "command": "RUN", "note": "Start measurement mode" },
+        { "command": "GET_DATA", "note": "Read sensor data (repeat as needed)" },
+        { "command": "STOP", "note": "Stop measurements" },
+        { "command": "RESET", "note": "Clear configuration" },
+        { "command": "DISCONNECT", "note": "Clean disconnect" }
+      ]
+    },
+
+    "continuous_monitoring": {
+      "description": "Set up and monitor sensors continuously",
+      "steps": [
+        { "command": "INFO" },
+        {
+          "command": "SET_CONFIG",
+          "params": {
+            "sample_interval_ms": 1000,
+            "log_to_serial": true
+          }
+        },
+        { "command": "RUN" },
+        { "note": "Loop: send GET_DATA every 1-5 seconds" },
+        { "command": "GET_DATA" },
+        { "command": "GET_DATA" },
+        { "command": "GET_DATA" },
+        { "note": "When done..." },
+        { "command": "STOP" }
+      ]
+    }
+  },
+
+  "copy_paste_commands": {
+    "note": "Single-line commands ready to paste into Serial Monitor or BLE terminal",
+    "commands": [
+      "{\"command\":\"INFO\"}",
+      "{\"command\":\"DISCOVER\"}",
+      "{\"command\":\"PING\"}",
+      "{\"command\":\"SET_CONFIG\",\"params\":{\"sample_interval_ms\":1000}}",
+      "{\"command\":\"GET_CONFIG\"}",
+      "{\"command\":\"RUN\"}",
+      "{\"command\":\"GET_DATA\"}",
+      "{\"command\":\"STOP\"}",
+      "{\"command\":\"RESET\"}",
+      "{\"command\":\"DISCONNECT\"}"
+    ]
+  },
+
+  "notes": {
+    "serial_usage": "In Arduino Serial Monitor (115200 baud): Paste command + press Enter",
+    "ble_usage": "Via Web Bluetooth: Commands automatically get __EOM__ framing",
+    "sensor_values": "If sensor not detected (bmeReady/bh1750Ready = false), those values won't appear in GET_DATA",
+    "i2c_addresses": "BME280: 0x76 or 0x77 (auto-detected) | BH1750: 0x23",
+    "config_persistence": "Configuration stored in RAM only (lost on reset/power cycle)",
+    "thread_safety": "BLE input is mutex-protected for safe concurrent access"
+  }
+}
