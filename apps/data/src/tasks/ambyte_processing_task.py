@@ -34,8 +34,8 @@ YEAR_PREFIX = dbutils.widgets.get("YEAR_PREFIX")
 ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT") if dbutils.widgets.get("ENVIRONMENT") else "DEV"
 
 # Paths - all experiments use centrum schema
-AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/{EXPERIMENT_ID}/ambyte/{UPLOAD_DIRECTORY}"
-PROCESSED_OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/{EXPERIMENT_ID}/processed-ambyte"
+AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/ambyte/{UPLOAD_DIRECTORY}"
+PROCESSED_OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-ambyte"
 
 spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)

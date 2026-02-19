@@ -907,9 +907,9 @@ def enriched_experiment_macro_data():
 )
 def raw_ambyte_data():
     """Streaming ingestion of pre-processed Ambyte trace data."""
-    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/*/processed-ambyte"
+    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/processed-ambyte"
     
-    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/_schemas/ambyte_schema"
+    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/ambyte_schema"
     
     df = (
         spark.readStream
