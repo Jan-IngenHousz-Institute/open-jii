@@ -29,6 +29,17 @@ export class AwsConfigService {
       cognitoDeveloperProviderName: this.configService.getOrThrow<string>(
         "aws.cognito.developerProviderName",
       ),
+      lambda: {
+        macroRunnerPythonFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.macroRunnerPythonFunctionName",
+        ),
+        macroRunnerJavascriptFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.macroRunnerJavascriptFunctionName",
+        ),
+        macroRunnerRFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.macroRunnerRFunctionName",
+        ),
+      },
     };
   }
 
@@ -82,5 +93,11 @@ export class AwsConfigService {
    */
   get cognitoDeveloperProviderName(): string {
     return this.config.cognitoDeveloperProviderName;
+  }
+  /*
+   * Gets the Lambda function name for macro runner by language
+   */
+  get lambdaConfig() {
+    return this.config.lambda;
   }
 }
