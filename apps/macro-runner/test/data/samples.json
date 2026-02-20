@@ -1,22 +1,5 @@
 [
   {
-    "name": "abcd1123",
-    "language": "python",
-    "script": "IyBBdmFpbGFibGUgZ2xvYmFsczoKIyAgIGpzb24gICAg4oCUIGl0ZW0gZGF0YSAoZGljdCkKIyAgIG91dHB1dCAg4oCUIHJlc3VsdCBkaWN0ICh3cml0ZSB5b3VyIG91dHB1dHMgaGVyZSkKIyAgIG5wICAgICAg4oCUIG51bXB5CiMgICBwZCAgICAgIOKAlCBwYW5kYXMKIyAgIHNjaXB5ICAg4oCUIHNjaXB5CgpvdXRwdXRbJ3Jlc3VsdCddID0ganNvbi5nZXQoJ3ZhbHVlJywgMCkK",
-    "items": [
-      {
-        "id": "item-1",
-        "data": {}
-      }
-    ],
-    "timeout": 10,
-    "protocol_id": "test-samples-abcd1123",
-    "expect": {
-      "success": true,
-      "error": false
-    }
-  },
-  {
     "name": "js_string_ops",
     "language": "javascript",
     "script": "Ly8gQmFzaWMgSmF2YVNjcmlwdCBtYWNybzogc3RyaW5nIHJldmVyc2UgYW5kIHVuaXF1ZSBjaGFyYWN0ZXIgY291bnQKLy8gU291cmNlOiB0ZXN0X3J1bm5lci5pcHluYiDigJQgTm9kZS5qcyBFeGFtcGxlCgpjb25zdCB0ZXh0ID0ganNvbi50ZXh0IHx8ICIiOwpjb25zdCByZXZlcnNlZCA9IHRleHQuc3BsaXQoIiIpLnJldmVyc2UoKS5qb2luKCIiKTsKY29uc3QgdW5pcXVlQ2hhcnMgPSBbLi4ubmV3IFNldCh0ZXh0LnNwbGl0KCIiKSldLnNvcnQoKTsKCm91dHB1dC5wcm9jZXNzZWQgPSB7CiAgICByZXZlcnNlZDogcmV2ZXJzZWQsCiAgICB1bmlxdWVfY291bnQ6IHVuaXF1ZUNoYXJzLmxlbmd0aCwKICAgIGNvbnRhaW5zX3o6IHRleHQudG9Mb3dlckNhc2UoKS5pbmNsdWRlcygieiIpCn07Cg==",
@@ -65,27 +48,13 @@
       {
         "id": "sample-1",
         "data": {
-          "readings": [
-            45.2,
-            46.8,
-            44.1,
-            47.3,
-            45.9,
-            50.1,
-            43.2
-          ]
+          "readings": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2]
         }
       },
       {
         "id": "sample-2",
         "data": {
-          "readings": [
-            38.1,
-            39.5,
-            37.8,
-            40.2,
-            38.7
-          ]
+          "readings": [38.1, 39.5, 37.8, 40.2, 38.7]
         }
       }
     ],
@@ -99,21 +68,14 @@
           "stats": {
             "mean": 46.08571428571428,
             "std": 2.110807950544442,
-            "high_values": [
-              46.8,
-              47.3,
-              50.1
-            ]
+            "high_values": [46.8, 47.3, 50.1]
           }
         },
         {
           "stats": {
             "mean": 38.86,
             "std": 0.8867919710958158,
-            "high_values": [
-              39.5,
-              40.2
-            ]
+            "high_values": [39.5, 40.2]
           }
         }
       ]
@@ -127,35 +89,15 @@
       {
         "id": "sample-1",
         "data": {
-          "x": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
-          "y": [
-            2.1,
-            4,
-            5.8,
-            8.1,
-            9.9
-          ]
+          "x": [1, 2, 3, 4, 5],
+          "y": [2.1, 4, 5.8, 8.1, 9.9]
         }
       },
       {
         "id": "sample-2",
         "data": {
-          "x": [
-            10,
-            20,
-            30
-          ],
-          "y": [
-            22,
-            39,
-            61
-          ]
+          "x": [10, 20, 30],
+          "y": [22, 39, 61]
         }
       }
     ],
@@ -184,23 +126,13 @@
       {
         "id": "sample-1",
         "data": {
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ]
+          "values": [1, 2, 3, 4, 5]
         }
       },
       {
         "id": "sample-2",
         "data": {
-          "values": [
-            10,
-            20,
-            30
-          ]
+          "values": [10, 20, 30]
         }
       }
     ],
@@ -231,23 +163,13 @@
       {
         "id": "sample-1",
         "data": {
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ]
+          "values": [1, 2, 3, 4, 5]
         }
       },
       {
         "id": "sample-2",
         "data": {
-          "values": [
-            100,
-            200,
-            300
-          ]
+          "values": [100, 200, 300]
         }
       }
     ],
@@ -278,23 +200,13 @@
       {
         "id": "sample-1",
         "data": {
-          "values": [
-            10,
-            20,
-            30,
-            40,
-            50
-          ]
+          "values": [10, 20, 30, 40, 50]
         }
       },
       {
         "id": "sample-2",
         "data": {
-          "values": [
-            1.5,
-            2.5,
-            3.5
-          ]
+          "values": [1.5, 2.5, 3.5]
         }
       }
     ],
