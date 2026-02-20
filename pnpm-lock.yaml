@@ -131,6 +131,9 @@ importers:
       '@aws-sdk/client-cognito-identity':
         specifier: ^3.988.0
         version: 3.988.0
+      '@aws-sdk/client-lambda':
+        specifier: ^3.993.0
+        version: 3.994.0
       '@aws-sdk/client-location':
         specifier: ^3.988.0
         version: 3.988.0
