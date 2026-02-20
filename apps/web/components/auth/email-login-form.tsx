@@ -85,7 +85,6 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
     try {
       const res = await signInEmailMutation.mutateAsync(data.email);
       if (res.error) {
-        console.error("Email send error:", res.error);
         return;
       }
 
@@ -93,8 +92,8 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       setShowOTPInput(true);
       onShowOTPChange?.(true);
       setCountdown(RESEND_COOLDOWN_SECONDS);
-    } catch (error) {
-      console.error("Email send error:", error);
+    } catch {
+      // Error handled by UI state
     }
   }
 
@@ -120,8 +119,7 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       } else {
         router.push(callbackUrl ?? "/platform");
       }
-    } catch (error: unknown) {
-      console.error("OTP verification error:", error);
+    } catch {
       otpForm.setError("code", { message: errorMessage });
     }
   }
@@ -133,8 +131,8 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       await signInEmailMutation.mutateAsync(email);
       setCountdown(RESEND_COOLDOWN_SECONDS);
       otpForm.reset();
-    } catch (error) {
-      console.error("Resend error:", error);
+    } catch {
+      // Error handled by UI state
     }
   }
 
