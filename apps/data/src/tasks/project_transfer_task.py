@@ -351,6 +351,18 @@ for row in successful.select("experiment_id", "transfer_id").collect():
     """)
     logger.info(f"  {transfer_id}: completed")
 
+# Update failed transfers
+failed = transfer_results.filter(F.col("success") == False)
+for row in failed.select("transfer_id", "error").collect():
+    transfer_id = row["transfer_id"]
+    error_msg = (row["error"] or "Unknown error").replace("'", "''")
+    spark.sql(f"""
+        UPDATE {TRANSFER_TABLE}
+        SET status = 'failed'
+        WHERE request_id = '{transfer_id}'
+    """)
+    logger.info(f"  {transfer_id}: failed - {error_msg}")
+
 # COMMAND ----------
 
 # DBTITLE 1,Output

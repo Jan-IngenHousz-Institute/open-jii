@@ -242,5 +242,42 @@ describe("ExecuteProjectTransferUseCase", () => {
       assertSuccess(result);
       expect(result.value.flowId).toBeDefined();
     });
+
+    it("should succeed without protocol and macro (experiment only)", async () => {
+      const result = await useCase.execute({
+        experiment: {
+          name: "Experiment Only Transfer",
+          createdBy: testUserId,
+        },
+      });
+
+      assertSuccess(result);
+      expect(result.value.success).toBe(true);
+      expect(result.value.experimentId).toBeDefined();
+      expect(result.value.protocolId).toBeNull();
+      expect(result.value.macroId).toBeNull();
+      expect(result.value.flowId).toBeNull();
+    });
+
+    it("should succeed with only protocol (no macro)", async () => {
+      const result = await useCase.execute({
+        experiment: {
+          name: "Protocol Only Transfer",
+          createdBy: testUserId,
+        },
+        protocol: {
+          name: "Solo Protocol",
+          code: [{ step: "measure" }],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+      });
+
+      assertSuccess(result);
+      expect(result.value.protocolId).toBeDefined();
+      expect(result.value.protocolId).not.toBeNull();
+      expect(result.value.macroId).toBeNull();
+      expect(result.value.flowId).toBeNull();
+    });
   });
 });

@@ -3,11 +3,10 @@ import { describe, it, expect } from "vitest";
 import {
   zProjectTransferWebhookPayload,
   zProjectTransferWebhookResponse,
-  zWebhookAuthHeader,
-  zWebhookErrorResponse,
-} from "../schemas/user.schema";
+} from "../schemas/experiment.schema";
+import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
 
-describe("User Contract Schemas", () => {
+describe("Experiment Contract Schemas", () => {
   describe("projectTransfer request", () => {
     it("should validate a valid project transfer body", () => {
       const body = {
@@ -49,7 +48,7 @@ describe("User Contract Schemas", () => {
       expect(result.success).toBe(false);
     });
 
-    it("should reject body missing protocol", () => {
+    it("should accept body without protocol", () => {
       const body = {
         experiment: {
           name: "E",
@@ -63,10 +62,10 @@ describe("User Contract Schemas", () => {
       };
 
       const result = zProjectTransferWebhookPayload.safeParse(body);
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
-    it("should reject body missing macro", () => {
+    it("should accept body without macro", () => {
       const body = {
         experiment: {
           name: "E",
@@ -80,7 +79,19 @@ describe("User Contract Schemas", () => {
       };
 
       const result = zProjectTransferWebhookPayload.safeParse(body);
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+    });
+
+    it("should accept body with only experiment", () => {
+      const body = {
+        experiment: {
+          name: "E",
+          createdBy: "123e4567-e89b-12d3-a456-426614174000",
+        },
+      };
+
+      const result = zProjectTransferWebhookPayload.safeParse(body);
+      expect(result.success).toBe(true);
     });
   });
 
@@ -91,6 +102,19 @@ describe("User Contract Schemas", () => {
         experimentId: "123e4567-e89b-12d3-a456-426614174000",
         protocolId: "223e4567-e89b-12d3-a456-426614174000",
         macroId: "323e4567-e89b-12d3-a456-426614174000",
+        flowId: null,
+      };
+
+      const result = zProjectTransferWebhookResponse.safeParse(response);
+      expect(result.success).toBe(true);
+    });
+
+    it("should validate a response with null protocolId and macroId", () => {
+      const response = {
+        success: true,
+        experimentId: "123e4567-e89b-12d3-a456-426614174000",
+        protocolId: null,
+        macroId: null,
         flowId: null,
       };
 

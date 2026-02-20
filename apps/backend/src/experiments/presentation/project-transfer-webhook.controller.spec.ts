@@ -74,7 +74,7 @@ describe("ProjectTransferWebhookController", () => {
       const { signature, timestamp } = signPayload(webhookPayload);
 
       const response = await testApp
-        .post(contract.users.projectTransfer.path)
+        .post(contract.experiments.projectTransfer.path)
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -98,7 +98,7 @@ describe("ProjectTransferWebhookController", () => {
       };
 
       await testApp
-        .post(contract.users.projectTransfer.path)
+        .post(contract.experiments.projectTransfer.path)
         .send(webhookPayload)
         .expect(StatusCodes.UNAUTHORIZED)
         .expect(({ body }: { body: WebhookErrorResponse }) => {
@@ -118,7 +118,7 @@ describe("ProjectTransferWebhookController", () => {
       const timestamp = Math.floor(Date.now() / 1000).toString();
 
       await testApp
-        .post(contract.users.projectTransfer.path)
+        .post(contract.experiments.projectTransfer.path)
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", "invalid_signature")
         .set("x-databricks-timestamp", timestamp)
@@ -139,7 +139,7 @@ describe("ProjectTransferWebhookController", () => {
       const { signature, timestamp } = signPayload(payload);
 
       await testApp
-        .post(contract.users.projectTransfer.path)
+        .post(contract.experiments.projectTransfer.path)
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -173,7 +173,7 @@ describe("ProjectTransferWebhookController", () => {
       const { signature, timestamp } = signPayload(webhookPayload);
 
       const response = await testApp
-        .post(contract.users.projectTransfer.path)
+        .post(contract.experiments.projectTransfer.path)
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -212,7 +212,7 @@ describe("ProjectTransferWebhookController", () => {
       const { signature, timestamp } = signPayload(webhookPayload);
 
       const response = await testApp
-        .post(contract.users.projectTransfer.path)
+        .post(contract.experiments.projectTransfer.path)
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
