@@ -86,8 +86,8 @@ async function fetchEntityName(
         break;
       }
     }
-  } catch (error) {
-    console.error("Failed to fetch %s name for %s:", type, id, error);
+  } catch {
+    // Failed to fetch entity name, return null
   }
 
   return null;

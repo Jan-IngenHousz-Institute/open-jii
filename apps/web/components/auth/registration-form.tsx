@@ -93,8 +93,8 @@ export function RegistrationForm({
           organization: data.organization,
         },
       });
-    } catch (error) {
-      console.error("Registration error:", error);
+    } catch {
+      // Error handled by UI state
     } finally {
       setIsPending(false);
     }

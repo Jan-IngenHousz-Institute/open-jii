@@ -4,6 +4,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { JsonCodeViewer } from "@/components/json-code-viewer";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { formatDate } from "@/util/date";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { CalendarIcon, CodeIcon } from "lucide-react";
 import { use } from "react";
 
@@ -60,9 +61,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
             </div>
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">{t("protocols.family")}</h4>
-              <p className="capitalize">
-                {protocol.family === "multispeq" ? "MultispeQ" : "Ambit"}
-              </p>
+              <p className="capitalize">{getSensorFamilyLabel(protocol.family)}</p>
             </div>
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">

@@ -1,3 +1,4 @@
+import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateProtocolRequestBody } from "@repo/api";
@@ -79,10 +80,12 @@ export function NewProtocolDetailsCard({ form }: NewProtocolDetailsCardProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="multispeq">MultispeQ</SelectItem>
-                  <SelectItem value="ambit" disabled>
-                    Ambit (Coming Soon)
-                  </SelectItem>
+                  {SENSOR_FAMILY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                      {opt.label}
+                      {opt.disabled ? " (Coming Soon)" : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />

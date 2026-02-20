@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -45,20 +45,26 @@ describe("<NewExperimentVisibilityCard />", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders title & description", () => {
-    renderWithForm({});
+    act(() => {
+      renderWithForm({});
+    });
     expect(screen.getByText("newExperiment.visibilityTitle")).toBeInTheDocument();
     expect(screen.getByText("newExperiment.visibilityDescription")).toBeInTheDocument();
   });
 
   it("shows embargo section when visibility is not public", () => {
-    renderWithForm({ visibility: "private" });
+    act(() => {
+      renderWithForm({ visibility: "private" });
+    });
     expect(
       screen.getByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
     ).toBeInTheDocument();
   });
 
   it("hides embargo section when visibility is public", () => {
-    renderWithForm({ visibility: "public" });
+    act(() => {
+      renderWithForm({ visibility: "public" });
+    });
     expect(
       screen.queryByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
     ).not.toBeInTheDocument();

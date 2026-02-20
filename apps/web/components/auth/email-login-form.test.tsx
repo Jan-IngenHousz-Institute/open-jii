@@ -512,7 +512,9 @@ describe("EmailLoginForm", () => {
     });
 
     const user = userEvent.setup();
-    render(<EmailLoginForm {...defaultProps} />, { wrapper: createWrapper() });
+    act(() => {
+      render(<EmailLoginForm {...defaultProps} />, { wrapper: createWrapper() });
+    });
 
     // Submit email first
     const emailInput = screen.getByPlaceholderText("auth.emailPlaceholder");
@@ -525,13 +527,17 @@ describe("EmailLoginForm", () => {
 
     // Submit OTP
     const otpInput = screen.getByTestId("otp-input");
-    fireEvent.change(otpInput, { target: { value: "123456" } });
+    act(() => {
+      fireEvent.change(otpInput, { target: { value: "123456" } });
+    });
 
     // Wait a bit for the first submission to process
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     // Try to submit again - should be prevented by isPending check
-    fireEvent.change(otpInput, { target: { value: "654321" } });
+    act(() => {
+      fireEvent.change(otpInput, { target: { value: "654321" } });
+    });
 
     await waitFor(() => {
       // Should only be called once despite two OTP submissions

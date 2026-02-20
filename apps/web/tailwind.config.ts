@@ -122,6 +122,13 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        ellipsis: {
+          "0%": { content: '""' },
+          "25%": { content: '"."' },
+          "50%": { content: '".."' },
+          "75%": { content: '"..."' },
+          "100%": { content: '""' },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",

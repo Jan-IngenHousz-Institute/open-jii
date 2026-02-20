@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -522,7 +522,9 @@ describe("FileUploadStep", () => {
 
     // Now trigger the error callback to test line 86
     if (storedErrorCallback) {
-      storedErrorCallback({ message: "Network error" });
+      act(() => {
+        storedErrorCallback({ message: "Network error" });
+      });
     }
 
     expect(mockOnUploadSuccess).not.toHaveBeenCalled();

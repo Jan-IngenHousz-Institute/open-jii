@@ -24,6 +24,7 @@
     "@repo/auth": "workspace:*",
     "@repo/cms": "workspace:*",
     "@repo/i18n": "workspace:*",
+    "@repo/iot": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "catalog:react-query",
     "@tanstack/react-table": "^8.21.3",

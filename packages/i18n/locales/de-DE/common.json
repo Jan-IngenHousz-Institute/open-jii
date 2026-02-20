@@ -572,7 +572,8 @@
     "codeTitle": "Protokollcode",
     "codeDescription": "Definieren Sie die Code-Struktur für Ihr Protokoll",
     "codePlaceholder": "Protokollcode als JSON eingeben",
-    "finalizeSetup": "Protokoll erstellen"
+    "finalizeSetup": "Protokoll erstellen",
+    "testerTitle": "Verbinden & Testen"
   },
   "protocolSettings": {
     "loading": "Protokolleinstellungen werden geladen...",
@@ -597,6 +598,8 @@
     "code": "Protokollcode",
     "codePlaceholder": "Protokollcode als JSON eingeben",
     "codeDescription": "Definieren Sie die JSON-Struktur und Logik für Ihr Protokoll",
-    "family": "Sensor-Familie"
+    "family": "Sensor-Familie",
+    "detailsTitle": "Protokolldetails",
+    "testerTitle": "Verbinden & Testen"
   }
 }
