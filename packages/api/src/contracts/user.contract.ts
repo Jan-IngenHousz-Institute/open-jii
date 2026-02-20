@@ -13,6 +13,8 @@ import {
   zUserMetadataWebhookPayload,
   zUserMetadataWebhookResponse,
   zWebhookErrorResponse,
+  zProjectTransferWebhookPayload,
+  zProjectTransferWebhookResponse,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -93,5 +95,21 @@ export const userContract = c.router({
     summary: "Get user metadata for Databricks pipelines",
     description:
       "Fetches user profile metadata (firstName, lastName, avatarUrl) for multiple user IDs to populate Databricks pipeline tables",
+  },
+
+  projectTransfer: {
+    method: "POST",
+    path: "/api/v1/webhooks/project-transfer",
+    body: zProjectTransferWebhookPayload,
+    headers: zWebhookAuthHeader,
+    responses: {
+      201: zProjectTransferWebhookResponse,
+      400: zWebhookErrorResponse,
+      401: zWebhookErrorResponse,
+      500: zWebhookErrorResponse,
+    },
+    summary: "Execute project transfer from Databricks",
+    description:
+      "Creates experiment, protocol, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
   },
 });
