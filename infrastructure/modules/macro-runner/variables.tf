@@ -1,0 +1,89 @@
+# ============================================================
+# Macro Runner — module inputs
+# ============================================================
+
+# ---- Required wiring ----
+
+variable "aws_region" {
+  description = "AWS region for ECR repositories"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+}
+
+variable "ci_cd_role_arn" {
+  description = "IAM role ARN used by CI/CD to push container images to ECR"
+  type        = string
+}
+
+variable "isolated_subnet_ids" {
+  description = "Isolated subnet IDs (no IGW, no NAT) where Lambda functions run"
+  type        = list(string)
+}
+
+variable "lambda_sg_id" {
+  description = "Security group ID for macro-runner Lambda functions (created by VPC module)"
+  type        = string
+}
+
+# ---- Per-environment configuration ----
+
+variable "image_tag_mutability" {
+  description = "ECR image tag mutability. Use MUTABLE for dev (overwrite :latest), IMMUTABLE for prod."
+  type        = string
+  default     = "IMMUTABLE"
+
+  validation {
+    condition     = contains(["MUTABLE", "IMMUTABLE"], var.image_tag_mutability)
+    error_message = "image_tag_mutability must be MUTABLE or IMMUTABLE."
+  }
+}
+
+variable "force_delete" {
+  description = "Allow ECR repository deletion even when images exist. true for dev, false for prod."
+  type        = bool
+  default     = false
+}
+
+variable "lambda_functions" {
+  description = "Per-language Lambda compute configuration (memory in MB, timeout in seconds)"
+  type = map(object({
+    memory  = number
+    timeout = number
+  }))
+  default = {
+    python = {
+      memory  = 1024 # numpy / scipy need ~1 GB
+      timeout = 65   # 60 s max script + 5 s overhead
+    }
+    js = {
+      memory  = 512 # Node.js is lightweight
+      timeout = 65
+    }
+    r = {
+      memory  = 1024 # R + jsonlite needs decent memory
+      timeout = 65
+    }
+  }
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention for Lambda function logs (days)"
+  type        = number
+  default     = 7
+}
+
+variable "flow_log_retention_days" {
+  description = "CloudWatch log retention for VPC flow logs (days)"
+  type        = number
+  default     = 14
+}
+
+variable "tags" {
+  description = "Additional tags applied to all resources"
+  type        = map(string)
+  default     = {}
+}

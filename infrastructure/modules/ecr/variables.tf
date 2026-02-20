@@ -76,3 +76,9 @@ variable "ci_cd_role_arn" {
   type        = string
   default     = null
 }
+
+variable "create_repository_policy" {
+  description = "Whether to create the ECR repository policy. Set to false for Lambda-only repos that authenticate via IAM role, not repo policy."
+  type        = bool
+  default     = true
+}

@@ -30,6 +30,9 @@ locals {
     ecs_log_group_name         = var.ecs_log_group_name
     iot_log_group_name         = var.iot_log_group_name
     account_id                 = data.aws_caller_identity.current.account_id
+    macro_runner_python_function_name = lookup(var.macro_runner_function_names, "python", "")
+    macro_runner_js_function_name     = lookup(var.macro_runner_function_names, "javascript", "")
+    macro_runner_r_function_name      = lookup(var.macro_runner_function_names, "r", "")
   }
 }
 
@@ -750,6 +753,246 @@ EOT
     labels = {
       severity = "warning"
       service  = "database"
+    }
+  }
+}
+
+# Macro Runner Alerts
+resource "grafana_rule_group" "macro_runner_health" {
+  count = length(var.macro_runner_function_names) > 0 ? 1 : 0
+
+  provider           = grafana.amg
+  name               = "Macro Runner Health"
+  folder_uid         = grafana_folder.folder.uid
+  interval_seconds   = 60
+  disable_provenance = true
+
+  # --- Errors per language ---
+  dynamic "rule" {
+    for_each = var.macro_runner_function_names
+    content {
+      name      = "Macro Runner ${rule.key} Errors"
+      condition = "C"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "A"
+          region     = var.aws_region
+          namespace  = "AWS/Lambda"
+          metricName = "Errors"
+          statistic  = "Sum"
+          dimensions = {
+            FunctionName = rule.value
+          }
+          expression = "FILL(m1, 0)"
+          id         = "m1"
+        })
+
+        relative_time_range {
+          from = 300
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B > 10"
+          type       = "math"
+          refId      = "C"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      no_data_state  = "OK"
+      exec_err_state = "OK"
+      for            = "5m"
+
+      annotations = {
+        description = "Macro runner ${rule.key} Lambda has more than 10 errors in the last 5 minutes"
+        summary     = "Macro runner ${rule.key} error rate high"
+      }
+      labels = {
+        severity = "warning"
+        service  = "macro-runner"
+      }
+    }
+  }
+
+  # --- Throttles per language ---
+  dynamic "rule" {
+    for_each = var.macro_runner_function_names
+    content {
+      name      = "Macro Runner ${rule.key} Throttles"
+      condition = "C"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "A"
+          region     = var.aws_region
+          namespace  = "AWS/Lambda"
+          metricName = "Throttles"
+          statistic  = "Sum"
+          dimensions = {
+            FunctionName = rule.value
+          }
+          expression = "FILL(m1, 0)"
+          id         = "m1"
+        })
+
+        relative_time_range {
+          from = 300
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B > 0"
+          type       = "math"
+          refId      = "C"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      no_data_state  = "OK"
+      exec_err_state = "OK"
+      for            = "5m"
+
+      annotations = {
+        description = "Macro runner ${rule.key} Lambda is being throttled"
+        summary     = "Macro runner ${rule.key} throttling detected"
+      }
+      labels = {
+        severity = "critical"
+        service  = "macro-runner"
+      }
+    }
+  }
+
+  # --- Rejected VPC traffic (security) ---
+  rule {
+    name      = "Macro Runner Rejected Traffic"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/MacroRunner"
+        metricName = "MacroRunnerRejectedTraffic"
+        statistic  = "Sum"
+        expression = "FILL(m1, 0)"
+        id         = "m1"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 100"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "High rejected traffic from macro-runner isolated subnets — potential escape attempt"
+      summary     = "Macro runner rejected VPC traffic anomaly"
+    }
+    labels = {
+      severity = "critical"
+      service  = "macro-runner"
+      category = "security"
     }
   }
 }

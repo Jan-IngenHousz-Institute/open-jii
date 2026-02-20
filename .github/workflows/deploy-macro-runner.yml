@@ -1,0 +1,234 @@
+# Macro Runner Deployment Workflow
+# Builds 3 Docker images (Python, JS, R) and deploys to Lambda
+
+name: Macro Runner Deployment Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
+
+env:
+  ENV: ${{ inputs.environment }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Macro Runner
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - language: python
+            dockerfile: functions/python/Dockerfile
+            ecr_repo: macro-runner-python
+            function_name: macro-runner-python
+          - language: javascript
+            dockerfile: functions/javascript/Dockerfile
+            ecr_repo: macro-runner-js
+            function_name: macro-runner-js
+          - language: r
+            dockerfile: functions/r/Dockerfile
+            ecr_repo: macro-runner-r
+            function_name: macro-runner-r
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Get Checked Out SHA
+        id: get-sha
+        run: |
+          ACTUAL_SHA=$(git rev-parse HEAD)
+          echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
+          echo "Checked out SHA: $ACTUAL_SHA"
+
+      - name: Capture Deployment Start Time
+        id: deployment-start
+        run: |
+          DEPLOY_START=$(date +%s)
+          echo "DEPLOY_START_TIME=$DEPLOY_START" >> $GITHUB_ENV
+          echo "deploy_start_time=$DEPLOY_START" >> $GITHUB_OUTPUT
+
+          COMMIT_TIME=$(git show -s --format=%ct)
+          echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
+          echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
+
+          echo "📊 DORA Metrics Collection Started"
+          echo "  Language: ${{ matrix.language }}"
+          echo "  Commit SHA: $ACTUAL_SHA"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set environment variables
+        run: |
+          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
+          echo "ECR_REPO=${{ matrix.ecr_repo }}-${{ env.ENV }}" >> $GITHUB_ENV
+          echo "FUNCTION_NAME=${{ matrix.function_name }}-${{ env.ENV }}" >> $GITHUB_ENV
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        working-directory: apps/macro-runner
+        run: |
+          set -euo pipefail
+
+          FULL_IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
+
+          echo "🔨 Building ${{ matrix.language }} macro-runner..."
+          docker build \
+            -f ${{ matrix.dockerfile }} \
+            -t "${FULL_IMAGE}" \
+            --platform linux/amd64 \
+            .
+
+          echo "📦 Pushing ${FULL_IMAGE}..."
+          docker push "${FULL_IMAGE}"
+
+          # Also tag as latest for Lambda's default image URI
+          docker tag "${FULL_IMAGE}" "${ECR_REGISTRY}/${ECR_REPO}:latest"
+          docker push "${ECR_REGISTRY}/${ECR_REPO}:latest"
+
+          echo "image=${FULL_IMAGE}" >> $GITHUB_OUTPUT
+          echo "✅ Image pushed: ${FULL_IMAGE}"
+
+      - name: Update Lambda function code
+        id: update-lambda
+        run: |
+          set -euo pipefail
+
+          echo "🚀 Updating Lambda function: ${FUNCTION_NAME}"
+          aws lambda update-function-code \
+            --function-name "${FUNCTION_NAME}" \
+            --image-uri "${{ steps.build-image.outputs.image }}" \
+            --output json > /dev/null
+
+          echo "⏳ Waiting for function update to complete..."
+          aws lambda wait function-updated-v2 \
+            --function-name "${FUNCTION_NAME}"
+
+          echo "✅ Lambda function updated: ${FUNCTION_NAME}"
+
+      - name: Verify deployment
+        run: |
+          set -euo pipefail
+
+          CURRENT_IMAGE=$(aws lambda get-function-configuration \
+            --function-name "${FUNCTION_NAME}" \
+            --query "CodeSha256" \
+            --output text)
+
+          echo "🔍 Function: ${FUNCTION_NAME}"
+          echo "   Code SHA: ${CURRENT_IMAGE}"
+          echo "   Image: ${{ steps.build-image.outputs.image }}"
+
+      - name: Calculate DORA Metrics
+        id: dora-metrics
+        if: success()
+        run: |
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START_TIME))
+          LEAD_TIME=$((DEPLOY_END - COMMIT_TIME))
+          LEAD_TIME_MS=$((LEAD_TIME * 1000))
+
+          echo "lead_time_ms=$LEAD_TIME_MS" >> $GITHUB_OUTPUT
+          echo "deployment_duration=$DEPLOY_DURATION" >> $GITHUB_OUTPUT
+
+          echo "📊 DORA Metrics (${{ matrix.language }}):"
+          echo "  Lead Time: ${LEAD_TIME}s"
+          echo "  Deployment Duration: ${DEPLOY_DURATION}s"
+
+      - name: Publish DORA - Deployment Frequency
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: "DeploymentFrequency"
+          value: "1"
+          unit: "Count"
+          service: "macro-runner-${{ matrix.language }}"
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Lead Time
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: "LeadTime"
+          value: ${{ steps.dora-metrics.outputs.lead_time_ms }}
+          unit: "Milliseconds"
+          service: "macro-runner-${{ matrix.language }}"
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Success
+        if: success()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: "DeploymentSuccess"
+          value: "1"
+          unit: "Count"
+          service: "macro-runner-${{ matrix.language }}"
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish DORA - Deployment Failed
+        if: failure()
+        uses: ./.github/actions/publish-dora-metric
+        with:
+          metric-name: "DeploymentFailed"
+          value: "1"
+          unit: "Count"
+          service: "macro-runner-${{ matrix.language }}"
+          environment: ${{ env.ENV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "::group::=== ${{ matrix.language }} Deployment Summary ==="
+          echo "Environment: ${{ env.ENV }}"
+          echo "Function: ${FUNCTION_NAME}"
+          echo "Image: ${{ steps.build-image.outputs.image }}"
+
+          if [[ "${{ steps.update-lambda.outcome }}" == "success" ]]; then
+            echo "✅ ${{ matrix.language }} macro-runner deployed successfully"
+          else
+            echo "❌ ${{ matrix.language }} macro-runner deployment failed"
+          fi
+          echo "::endgroup::"

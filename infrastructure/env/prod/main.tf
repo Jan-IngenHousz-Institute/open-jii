@@ -105,6 +105,34 @@ module "vpc_endpoints" {
   public_route_table_ids  = module.vpc.public_rt_ids
   private_subnet_ids      = module.vpc.private_subnets
   security_group_ids      = [module.vpc.default_sg_id]
+
+  # Macro-runner Lambda endpoints (isolated subnets, no internet)
+  isolated_route_table_ids = module.vpc.isolated_rt_ids
+  isolated_subnet_ids      = module.vpc.isolated_subnets
+  create_ecr_api_endpoint  = true
+  create_ecr_dkr_endpoint  = true
+  create_logs_endpoint     = true
+}
+
+# Macro Runner — Lambda-based isolated code execution (Python, JS, R)
+
+module "macro_runner" {
+  source = "../../modules/macro-runner"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  ci_cd_role_arn      = module.iam_oidc.role_arn
+  isolated_subnet_ids = module.vpc.isolated_subnets
+  lambda_sg_id        = module.vpc.macro_runner_lambda_security_group_id
+
+  # Prod settings — defaults are already prod-safe (IMMUTABLE, no force_delete)
+  log_retention_days      = 30
+  flow_log_retention_days = 30
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+  }
 }
 
 module "databricks_workspace_s3_policy" {
@@ -1321,7 +1349,8 @@ module "backend_ecs" {
 
   # Additional IAM policies for the task role
   additional_task_role_policy_arns = [
-    module.location_service.iam_policy_arn
+    module.location_service.iam_policy_arn,
+    module.macro_runner.invoke_policy_arn,
   ]
 
   tags = {
