@@ -162,21 +162,22 @@ metadata = (
 
 # COMMAND ----------
 
-# DBTITLE 1,Project Protocols
-protocols_exploded = (
+# DBTITLE 1,Project Protocols & Macros
+protocols_parsed = (
     projects
     .filter(F.col("protocols").isNotNull())
     .select(
         F.col("project_id"),
         F.explode(F.expr("parse_json(protocols)")).alias("proto"),
     )
-    .selectExpr(
-        "project_id",
-        "proto:id::BIGINT as protocol_id_old",
-        "proto:name::STRING as name",
-        "proto:description::STRING as description",
-        "proto:protocol_json as code",
-    )
+)
+
+protocols_exploded = protocols_parsed.selectExpr(
+    "project_id",
+    "proto:id::BIGINT as protocol_id_old",
+    "proto:name::STRING as name",
+    "proto:description::STRING as description",
+    "proto:protocol_json as code",
 )
 
 protocols = (
@@ -194,16 +195,8 @@ protocols = (
     )
 )
 
-# COMMAND ----------
-
-# DBTITLE 1,Project Macros
 macros_exploded = (
-    projects
-    .filter(F.col("protocols").isNotNull())
-    .select(
-        F.col("project_id"),
-        F.explode(F.expr("parse_json(protocols)")).alias("proto"),
-    )
+    protocols_parsed
     .filter(F.expr("proto:macro IS NOT NULL"))
     .selectExpr(
         "project_id",

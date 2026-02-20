@@ -159,3 +159,26 @@ variable "environments" {
   }))
   default = []
 }
+
+variable "trigger" {
+  description = "Trigger configuration for the job. Supports file_arrival, periodic, and table_update trigger types."
+  type = object({
+    pause_status = optional(string, "UNPAUSED")
+    file_arrival = optional(object({
+      url                               = string
+      min_time_between_triggers_seconds = optional(number)
+      wait_after_last_change_seconds    = optional(number)
+    }))
+    periodic = optional(object({
+      interval = number
+      unit     = string
+    }))
+    table_update = optional(object({
+      table_names                       = list(string)
+      condition                         = string
+      min_time_between_triggers_seconds = optional(number)
+      wait_after_last_change_seconds    = optional(number)
+    }))
+  })
+  default = null
+}

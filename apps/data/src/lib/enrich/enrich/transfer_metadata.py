@@ -19,7 +19,7 @@ from pyspark.sql.types import (
     BooleanType,
 )
 
-from .backend_client import BackendClient, BackendIntegrationError
+from .backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,10 @@ _VALUE_TYPE_TO_KIND = {
 
 def _build_protocol_payload(
     proto_list: Optional[List[Dict]], creator_user_id: str
-) -> Dict[str, Any]:
+) -> Optional[Dict[str, Any]]:
     """Build the protocol section of the webhook payload from the first protocol."""
+    if not proto_list:
+        return None
     proto = proto_list[0]
     code_val = proto.get("code")
     if isinstance(code_val, str):
@@ -71,9 +73,11 @@ def _build_protocol_payload(
 
 def _build_macro_payload(
     macro_list: Optional[List[Dict]], creator_user_id: str
-) -> Dict[str, Any]:
+) -> Optional[Dict[str, Any]]:
     """Build the macro section of the webhook payload from the first macro.
     Encodes javascript_code as base64 as required by the backend."""
+    if not macro_list:
+        return None
     macro = macro_list[0]
     raw_code = macro.get("code")
     b64_code = (
@@ -140,9 +144,11 @@ def _call_transfer_webhook(
                 "description": row.get("project_description"),
                 "createdBy": creator_user_id,
             },
-            "protocol": protocol_payload,
-            "macro": macro_payload,
         }
+        if protocol_payload:
+            payload["protocol"] = protocol_payload
+        if macro_payload:
+            payload["macro"] = macro_payload
         if questions_payload:
             payload["questions"] = questions_payload
 
