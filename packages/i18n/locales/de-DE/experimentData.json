@@ -21,21 +21,40 @@
       "description": "Analyseergebnisse und Berichte werden hier angezeigt, sobald die Datenerfassung beginnt."
     },
     "uploadData": "Daten hochladen",
-    "downloadModal": {
-      "title": "Datensatz herunterladen",
-      "description": "Download für den Datensatz '{{tableName}}' vorbereiten. Bei sehr großen Datensätzen wird der Download automatisch in mehrere Teile aufgeteilt, um ein reibungsloses und effizientes Erlebnis zu gewährleisten.",
-      "format": "Format",
-      "generateLinks": "Download vorbereiten",
-      "generating": "Download wird vorbereitet...",
-      "downloadAll": "Alle Dateien herunterladen",
-      "downloadFiles": "Dateien herunterladen",
-      "rows": "Zeilen",
-      "error": "Download fehlgeschlagen",
-      "success": {
-        "title": "Download-Vorbereitung abgeschlossen!",
-        "description": "{{count}} Datei(en) zum Download bereit. Gesamtgröße: {{totalSize}}, Gesamtzeilen: {{totalRows}}"
+    "exportModal": {
+      "title": "Datensatz exportieren",
+      "createTitle": "Neuen Export erstellen",
+      "description": "Anzeigen und Verwalten von Exporten für den Datensatz '{{tableName}}'.",
+      "createDescription": "Erstellen Sie einen neuen Export für den Datensatz '{{tableName}}'.",
+      "status": {
+        "queued": "Warteschlange",
+        "pending": "Ausstehend",
+        "running": "Vorbereitung",
+        "completed": "Abgeschlossen",
+        "failed": "Fehlgeschlagen"
       },
-      "fileChunk": "{{tableName}} - Teil {{chunkNumber}} von {{totalChunks}}"
+      "created": "Erstellt",
+      "completed": "Abgeschlossen",
+      "rows": "Zeilen",
+      "size": "Größe",
+      "unknownError": "Ein unbekannter Fehler ist aufgetreten",
+      "error": "Fehler",
+      "noExports": "Noch keine Exporte. Erstellen Sie Ihren ersten Export, um zu beginnen.",
+      "exportCount": "{{count}} Export(e) verfügbar",
+      "loadingExports": "Exporte werden geladen...",
+      "format": "Format",
+      "exportTitle": "Export #{{number}}",
+      "failedTooltip": "Kein Handlungsbedarf — dieser Fehler wird untersucht und behoben. Der Export wird hier mit dem korrekten Status erneut angezeigt, sobald das Problem gelöst ist.",
+      "createNew": "Neuen Export erstellen",
+      "creating": "Export wird erstellt...",
+      "createExport": "Export erstellen",
+      "exportCreated": "Export erstellt",
+      "creatingTitle": "{{format}}-Export wird erstellt",
+      "creatingDescription": "Dies kann einen Moment dauern.",
+      "creationSuccess": "Export erfolgreich erstellt!",
+      "creationSuccessDescription": "Ihr Export wurde in die Warteschlange gestellt und steht in Kürze zum Download bereit.",
+      "creationError": "Export konnte nicht erstellt werden",
+      "backToList": "Zurück zu Exporten"
     }
   }
 }

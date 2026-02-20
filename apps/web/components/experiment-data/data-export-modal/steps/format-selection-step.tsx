@@ -31,10 +31,15 @@ type FormatSelectionValues = z.infer<typeof formatSelectionSchema>;
 
 interface FormatSelectionStepProps {
   onFormatSubmit: (format: string) => void;
-  onClose: () => void;
+  onBack: () => void;
+  isCreating?: boolean;
 }
 
-export function FormatSelectionStep({ onFormatSubmit, onClose }: FormatSelectionStepProps) {
+export function FormatSelectionStep({
+  onFormatSubmit,
+  onBack,
+  isCreating,
+}: FormatSelectionStepProps) {
   const { t } = useTranslation("experimentData");
 
   const form = useForm<FormatSelectionValues>({
@@ -63,7 +68,7 @@ export function FormatSelectionStep({ onFormatSubmit, onClose }: FormatSelection
               <FormItem>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">
-                    {t("experimentData.downloadModal.format")}
+                    {t("experimentData.exportModal.format")}
                   </FormLabel>
                   <div className="col-span-3">
                     <Select value={field.value} onValueChange={field.onChange}>
@@ -74,6 +79,8 @@ export function FormatSelectionStep({ onFormatSubmit, onClose }: FormatSelection
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="csv">CSV</SelectItem>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="parquet">Parquet</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -86,17 +93,26 @@ export function FormatSelectionStep({ onFormatSubmit, onClose }: FormatSelection
       </Form>
 
       <DialogFooter className="flex-col gap-2 sm:flex-row">
-        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-          {t("common.close")}
+        <Button variant="outline" onClick={onBack} className="w-full sm:w-auto">
+          {t("common.back")}
         </Button>
         <Button
           type="submit"
-          disabled={!form.watch("format")}
+          disabled={!form.watch("format") || isCreating}
           className="w-full sm:w-auto"
           form="format-selection-form"
         >
-          <Download className="mr-2 h-4 w-4" />
-          {t("experimentData.downloadModal.generateLinks")}
+          {isCreating ? (
+            <>
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+              {t("experimentData.exportModal.creating")}
+            </>
+          ) : (
+            <>
+              <Download className="mr-2 h-4 w-4" />
+              {t("experimentData.exportModal.createExport")}
+            </>
+          )}
         </Button>
       </DialogFooter>
     </div>

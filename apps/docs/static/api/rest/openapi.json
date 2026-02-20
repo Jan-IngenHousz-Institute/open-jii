@@ -2082,7 +2082,7 @@
                   "oneOf": [
                     {
                       "type": "string",
-                      "enum": ["raw_data", "device", "raw_ambyte_data", "macro_data"]
+                      "enum": ["raw_data", "device", "raw_ambyte_data"]
                     },
                     {
                       "type": "string",
@@ -4219,10 +4219,117 @@
         }
       }
     },
-    "/api/v1/experiments/{id}/data/download": {
+    "/api/v1/experiments/{id}/data/exports": {
+      "post": {
+        "description": "Initiates an asynchronous export job for experiment table data",
+        "summary": "Initiate data export",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.initiateExport",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tableName": {
+                    "type": "string",
+                    "description": "Name of the table to export"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": ["csv", "ndjson", "json-array", "parquet"],
+                    "description": "Export format"
+                  }
+                },
+                "required": ["tableName", "format"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Export status"
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
-        "description": "Generates download links for complete table data using EXTERNAL_LINKS disposition",
-        "summary": "Download experiment data",
+        "description": "Lists all export jobs for an experiment table",
+        "summary": "List data exports",
         "tags": ["experiments"],
         "parameters": [
           {
@@ -4238,7 +4345,7 @@
           {
             "name": "tableName",
             "in": "query",
-            "description": "Name of the table to download",
+            "description": "Name of the table",
             "required": true,
             "content": {
               "application/json": {
@@ -4249,7 +4356,7 @@
             }
           }
         ],
-        "operationId": "experiments.downloadExperimentData",
+        "operationId": "experiments.listExports",
         "responses": {
           "200": {
             "description": "200",
@@ -4258,33 +4365,148 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "externalLinks": {
+                    "exports": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "externalLink": {
+                          "exportId": {
                             "type": "string",
-                            "format": "uri"
+                            "format": "uuid",
+                            "nullable": true
                           },
-                          "expiration": {
+                          "experimentId": {
                             "type": "string",
-                            "format": "date-time"
+                            "format": "uuid"
                           },
-                          "totalSize": {
-                            "type": "integer",
-                            "minimum": 0
+                          "tableName": {
+                            "type": "string"
+                          },
+                          "format": {
+                            "type": "string",
+                            "enum": ["csv", "ndjson", "json-array", "parquet"]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": ["queued", "pending", "running", "completed", "failed"]
+                          },
+                          "filePath": {
+                            "type": "string",
+                            "nullable": true
                           },
                           "rowCount": {
                             "type": "integer",
-                            "minimum": 0
+                            "nullable": true
+                          },
+                          "fileSize": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "completedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
                           }
                         },
-                        "required": ["externalLink", "expiration", "totalSize", "rowCount"]
+                        "required": [
+                          "exportId",
+                          "experimentId",
+                          "tableName",
+                          "format",
+                          "status",
+                          "filePath",
+                          "rowCount",
+                          "fileSize",
+                          "createdBy",
+                          "createdAt",
+                          "completedAt"
+                        ]
                       }
                     }
                   },
-                  "required": ["externalLinks"]
+                  "required": ["exports"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/exports/{exportId}": {
+      "get": {
+        "description": "Downloads a completed export file",
+        "summary": "Download export file",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "exportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the export"
+          }
+        ],
+        "operationId": "experiments.downloadExport",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "nullable": true
                 }
               }
             }
@@ -7501,6 +7723,10 @@
                       "code": {
                         "type": "string"
                       },
+                      "sortOrder": {
+                        "type": "number",
+                        "nullable": true
+                      },
                       "createdBy": {
                         "type": "string",
                         "format": "uuid"
@@ -7524,6 +7750,7 @@
                       "description",
                       "language",
                       "code",
+                      "sortOrder",
                       "createdBy",
                       "createdAt",
                       "updatedAt"
@@ -7618,6 +7845,10 @@
                     "code": {
                       "type": "string"
                     },
+                    "sortOrder": {
+                      "type": "number",
+                      "nullable": true
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -7641,6 +7872,7 @@
                     "description",
                     "language",
                     "code",
+                    "sortOrder",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -7717,6 +7949,10 @@
                     "code": {
                       "type": "string"
                     },
+                    "sortOrder": {
+                      "type": "number",
+                      "nullable": true
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -7740,6 +7976,7 @@
                     "description",
                     "language",
                     "code",
+                    "sortOrder",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -7841,6 +8078,10 @@
                     "code": {
                       "type": "string"
                     },
+                    "sortOrder": {
+                      "type": "number",
+                      "nullable": true
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -7864,6 +8105,7 @@
                     "description",
                     "language",
                     "code",
+                    "sortOrder",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -8010,6 +8252,10 @@
                         "type": "string",
                         "enum": ["multispeq", "ambit"]
                       },
+                      "sortOrder": {
+                        "type": "number",
+                        "nullable": true
+                      },
                       "createdBy": {
                         "type": "string",
                         "format": "uuid"
@@ -8032,6 +8278,7 @@
                       "description",
                       "code",
                       "family",
+                      "sortOrder",
                       "createdBy",
                       "createdAt",
                       "updatedAt"
@@ -8130,6 +8377,10 @@
                       "type": "string",
                       "enum": ["multispeq", "ambit"]
                     },
+                    "sortOrder": {
+                      "type": "number",
+                      "nullable": true
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -8152,6 +8403,7 @@
                     "description",
                     "code",
                     "family",
+                    "sortOrder",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -8229,6 +8481,10 @@
                       "type": "string",
                       "enum": ["multispeq", "ambit"]
                     },
+                    "sortOrder": {
+                      "type": "number",
+                      "nullable": true
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -8251,6 +8507,7 @@
                     "description",
                     "code",
                     "family",
+                    "sortOrder",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -8357,6 +8614,10 @@
                       "type": "string",
                       "enum": ["multispeq", "ambit"]
                     },
+                    "sortOrder": {
+                      "type": "number",
+                      "nullable": true
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -8379,6 +8640,7 @@
                     "description",
                     "code",
                     "family",
+                    "sortOrder",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
