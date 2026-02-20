@@ -21,7 +21,13 @@ interface QuestionNodeProps {
 
 export function QuestionNode({ node }: QuestionNodeProps) {
   const { classes } = useTheme();
-  const { nextStep, iterationCount } = useMeasurementFlowStore();
+  const {
+    nextStep,
+    iterationCount,
+    returnToOverviewAfterEdit,
+    setReturnToOverviewAfterEdit,
+    setShowingOverview,
+  } = useMeasurementFlowStore();
   const {
     setAnswer,
     getAnswer,
@@ -42,6 +48,12 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   };
 
   const handleNextStep = () => {
+    if (returnToOverviewAfterEdit) {
+      setReturnToOverviewAfterEdit(false);
+      setShowingOverview(true);
+      return;
+    }
+
     // Handle autoincrement for multi_choice questions (mutually exclusive with remember answer)
     if (content.kind === "multi_choice") {
       const isAutoincrement = isAutoincrementEnabled(node.id);
