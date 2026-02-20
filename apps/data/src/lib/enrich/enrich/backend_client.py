@@ -33,6 +33,9 @@ class BackendClient:
     - Session management with connection pooling
     """
     
+    WEBHOOK_USER_METADATA_PATH = "/api/v1/users/metadata"
+    WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
+    
     def __init__(self, base_url: str, api_key_id: str, webhook_secret: str, timeout: int = 30):
         """
         Initialize the backend client.
@@ -44,7 +47,7 @@ class BackendClient:
             timeout: Request timeout in seconds
         """
         self.base_url = base_url.rstrip('/')
-        self.webhook_path = "/api/v1/users/metadata"
+        self.webhook_path = self.WEBHOOK_USER_METADATA_PATH
         self.api_key_id = api_key_id
         self.webhook_secret = webhook_secret
         self.timeout = timeout
@@ -201,4 +204,57 @@ class BackendClient:
             
         return user_metadata
 
+
+    def execute_macro_batch(
+        self,
+        items: List[Dict[str, Any]],
+        timeout: int = 30,
+        max_batch_size: int = 500,
+    ) -> Dict[str, Any]:
+        """
+        Execute macros via the backend batch endpoint.
+        
+        The backend groups items by macro_id, fetches scripts from the DB,
+        fans out Lambda invocations (one per macro_id), and returns results.
+        
+        Args:
+            items: List of dicts with keys: id (str), macro_id (str uuid), data (dict).
+            timeout: Per-Lambda timeout in seconds (1-60).
+            max_batch_size: Max items per HTTP request (default 500, API limit 5000).
+            
+        Returns:
+            Dict with 'results' list and optional 'errors' list.
+            Each result: {id, macro_id, success, output?, error?}
+            
+        Raises:
+            BackendIntegrationError: If the request fails.
+        """
+        if not items:
+            return {"results": []}
+        
+        all_results: List[Dict[str, Any]] = []
+        all_errors: List[str] = []
+        
+        # Chunk into batches to avoid payload size limits
+        for i in range(0, len(items), max_batch_size):
+            batch = items[i : i + max_batch_size]
+            payload = {"items": batch, "timeout": timeout}
+            
+            try:
+                result = self._make_request(self.WEBHOOK_MACRO_BATCH_PATH, payload)
+                all_results.extend(result.get("results", []))
+                batch_errors = result.get("errors", [])
+                if batch_errors:
+                    all_errors.extend(batch_errors)
+            except BackendIntegrationError:
+                raise
+            except Exception as e:
+                raise BackendIntegrationError(
+                    f"Unexpected error in macro batch execution: {str(e)}"
+                )
+        
+        response: Dict[str, Any] = {"results": all_results}
+        if all_errors:
+            response["errors"] = all_errors
+        return response
 
