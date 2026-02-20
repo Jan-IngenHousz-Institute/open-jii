@@ -1,0 +1,232 @@
+[
+  {
+    "name": "js_string_ops",
+    "language": "javascript",
+    "script": "Ly8gQmFzaWMgSmF2YVNjcmlwdCBtYWNybzogc3RyaW5nIHJldmVyc2UgYW5kIHVuaXF1ZSBjaGFyYWN0ZXIgY291bnQKLy8gU291cmNlOiB0ZXN0X3J1bm5lci5pcHluYiDigJQgTm9kZS5qcyBFeGFtcGxlCgpjb25zdCB0ZXh0ID0ganNvbi50ZXh0IHx8ICIiOwpjb25zdCByZXZlcnNlZCA9IHRleHQuc3BsaXQoIiIpLnJldmVyc2UoKS5qb2luKCIiKTsKY29uc3QgdW5pcXVlQ2hhcnMgPSBbLi4ubmV3IFNldCh0ZXh0LnNwbGl0KCIiKSldLnNvcnQoKTsKCm91dHB1dC5wcm9jZXNzZWQgPSB7CiAgICByZXZlcnNlZDogcmV2ZXJzZWQsCiAgICB1bmlxdWVfY291bnQ6IHVuaXF1ZUNoYXJzLmxlbmd0aCwKICAgIGNvbnRhaW5zX3o6IHRleHQudG9Mb3dlckNhc2UoKS5pbmNsdWRlcygieiIpCn07Cg==",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "text": "PhotosynQ measurement"
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "text": "aBcDeFgHiJkLmNoPqRsTuVwXyZ"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-basic-js_string_ops",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "processed": {
+            "reversed": "tnemerusaem QnysotohP",
+            "unique_count": 14,
+            "contains_z": false
+          }
+        },
+        {
+          "processed": {
+            "reversed": "ZyXwVuTsRqPoNmLkJiHgFeDcBa",
+            "unique_count": 26,
+            "contains_z": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "python_stats",
+    "language": "python",
+    "script": "IyBCYXNpYyBQeXRob24gbWFjcm86IG51bXB5IHN0YXRzIChtZWFuLCBzdGQgZGV2LCBmaWx0ZXIgaGlnaCB2YWx1ZXMpCiMgU291cmNlOiB0ZXN0X3J1bm5lci5pcHluYiDigJQgUHl0aG9uIEV4YW1wbGUKCnZhbHMgPSBqc29uLmdldCgicmVhZGluZ3MiLCBbXSkKaWYgbGVuKHZhbHMpID4gMDoKICAgIGFyciA9IG5wLmFycmF5KHZhbHMpCiAgICBtZWFuX3ZhbCA9IG5wLm1lYW4oYXJyKQogICAgb3V0cHV0WyJzdGF0cyJdID0gewogICAgICAgICJtZWFuIjogZmxvYXQobWVhbl92YWwpLAogICAgICAgICJzdGQiOiBmbG9hdChucC5zdGQoYXJyKSksCiAgICAgICAgImhpZ2hfdmFsdWVzIjogYXJyW2FyciA+IG1lYW5fdmFsXS50b2xpc3QoKQogICAgfQplbHNlOgogICAgb3V0cHV0WyJzdGF0cyJdID0gTm9uZQo=",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "readings": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "readings": [38.1, 39.5, 37.8, 40.2, 38.7]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-python_stats",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "stats": {
+            "mean": 46.08571428571428,
+            "std": 2.110807950544442,
+            "high_values": [46.8, 47.3, 50.1]
+          }
+        },
+        {
+          "stats": {
+            "mean": 38.86,
+            "std": 0.8867919710958158,
+            "high_values": [39.5, 40.2]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "r_regression",
+    "language": "r",
+    "script": "IyBCYXNpYyBSIG1hY3JvOiBsaW5lYXIgcmVncmVzc2lvbgojIFNvdXJjZTogdGVzdF9ydW5uZXIuaXB5bmIg4oCUIFIgRXhhbXBsZQoKeCA8LSB1bmxpc3QoanNvbiR4KQp5IDwtIHVubGlzdChqc29uJHkpCgppZiAobGVuZ3RoKHgpID09IGxlbmd0aCh5KSAmJiBsZW5ndGgoeCkgPiAxKSB7CiAgICBtb2RlbCA8LSBsbSh5IH4geCkKICAgICMgRXh0cmFjdCBzbG9wZSAoY29lZmZpY2llbnQgZm9yIHgpCiAgICBzbG9wZSA8LSBjb2VmKG1vZGVsKVsieCJdCiAgICBvdXRwdXQkc2xvcGUgPC0gYXMubnVtZXJpYyhzbG9wZSkKICAgIG91dHB1dCRyX3NxdWFyZWQgPC0gc3VtbWFyeShtb2RlbCkkci5zcXVhcmVkCn0gZWxzZSB7CiAgICBvdXRwdXQkZXJyb3IgPC0gIkludmFsaWQgZGF0YSBmb3IgcmVncmVzc2lvbiIKfQo=",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "x": [1, 2, 3, 4, 5],
+          "y": [2.1, 4, 5.8, 8.1, 9.9]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "x": [10, 20, 30],
+          "y": [22, 39, 61]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-r_regression",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "slope": 1.97,
+          "r_squared": 0.9985
+        },
+        {
+          "slope": 1.95,
+          "r_squared": 0.9946
+        }
+      ]
+    }
+  },
+  {
+    "name": "valid_numpy",
+    "language": "python",
+    "script": "IyBWYWxpZCBtYWNybyB0ZXN0OiBhbGxvd2VkIFB5dGhvbiBmdW5jdGlvbnMgKG5wIGlzIHByZS1pbXBvcnRlZCkKIyBTb3VyY2U6IHRlc3Rfc2VjdXJpdHkuaXB5bmIgwqc3CiMgRXhwZWN0ZWQ6IFNVQ0NFU1MKCnZhbHVlcyA9IGpzb24uZ2V0KCd2YWx1ZXMnLCBbXSkKb3V0cHV0WydtZWFuJ10gPSBmbG9hdChucC5tZWFuKHZhbHVlcykpIGlmIHZhbHVlcyBlbHNlIE5vbmUKb3V0cHV0WydzdW0nXSA9IHN1bSh2YWx1ZXMpCm91dHB1dFsnbWF4J10gPSBtYXgodmFsdWVzKSBpZiB2YWx1ZXMgZWxzZSBOb25lCg==",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "values": [1, 2, 3, 4, 5]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "values": [10, 20, 30]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-valid_numpy",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "mean": 3,
+          "sum": 15,
+          "max": 5
+        },
+        {
+          "mean": 20,
+          "sum": 60,
+          "max": 30
+        }
+      ]
+    }
+  },
+  {
+    "name": "valid_reduce",
+    "language": "javascript",
+    "script": "Ly8gVmFsaWQgbWFjcm8gdGVzdDogYWxsb3dlZCBKYXZhU2NyaXB0IGZ1bmN0aW9ucwovLyBTb3VyY2U6IHRlc3Rfc2VjdXJpdHkuaXB5bmIgwqc3Ci8vIEV4cGVjdGVkOiBTVUNDRVNTCgpjb25zdCB2YWx1ZXMgPSBqc29uLnZhbHVlcyB8fCBbXTsKb3V0cHV0LnN1bSA9IHZhbHVlcy5yZWR1Y2UoKGEsIGIpID0+IGEgKyBiLCAwKTsKb3V0cHV0LmNvdW50ID0gdmFsdWVzLmxlbmd0aDsKb3V0cHV0LmF2ZyA9IHZhbHVlcy5sZW5ndGggPiAwID8gb3V0cHV0LnN1bSAvIG91dHB1dC5jb3VudCA6IG51bGw7Cg==",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "values": [1, 2, 3, 4, 5]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "values": [100, 200, 300]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-valid_reduce",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "sum": 15,
+          "count": 5,
+          "avg": 3
+        },
+        {
+          "sum": 600,
+          "count": 3,
+          "avg": 200
+        }
+      ]
+    }
+  },
+  {
+    "name": "valid_stats",
+    "language": "r",
+    "script": "IyBWYWxpZCBtYWNybyB0ZXN0OiBhbGxvd2VkIFIgZnVuY3Rpb25zIChtZWFuLCBzZCwgbWVkaWFuKQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzcKIyBFeHBlY3RlZDogU1VDQ0VTUwoKdmFsdWVzIDwtIHVubGlzdChqc29uJHZhbHVlcykKb3V0cHV0JG1lYW4gPC0gbWVhbih2YWx1ZXMpCm91dHB1dCRzZCA8LSBzZCh2YWx1ZXMpCm91dHB1dCRtZWRpYW4gPC0gbWVkaWFuKHZhbHVlcykK",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "values": [10, 20, 30, 40, 50]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "values": [1.5, 2.5, 3.5]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-valid_stats",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "mean": 30,
+          "median": 30,
+          "sd": 15.8114
+        },
+        {
+          "mean": 2.5,
+          "median": 2.5,
+          "sd": 1
+        }
+      ]
+    }
+  }
+]

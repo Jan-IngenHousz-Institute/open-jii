@@ -1,0 +1,280 @@
+[
+  {
+    "name": "js_aggregation_pipeline",
+    "language": "javascript",
+    "script": "dmFyIHZhbHVlcyA9IGpzb24udmFsdWVzIHx8IFsxLDIsMyw0LDVdOwp2YXIgc3VtID0gMCwgbWluID0gSW5maW5pdHksIG1heCA9IC1JbmZpbml0eTsKZm9yICh2YXIgaSA9IDA7IGkgPCB2YWx1ZXMubGVuZ3RoOyBpKyspIHsKICBzdW0gKz0gdmFsdWVzW2ldOwogIGlmICh2YWx1ZXNbaV0gPCBtaW4pIG1pbiA9IHZhbHVlc1tpXTsKICBpZiAodmFsdWVzW2ldID4gbWF4KSBtYXggPSB2YWx1ZXNbaV07Cn0KdmFyIG1lYW4gPSBzdW0gLyB2YWx1ZXMubGVuZ3RoOwp2YXIgdmFyaWFuY2UgPSAwOwpmb3IgKHZhciBpID0gMDsgaSA8IHZhbHVlcy5sZW5ndGg7IGkrKykgewogIHZhcmlhbmNlICs9ICh2YWx1ZXNbaV0gLSBtZWFuKSAqICh2YWx1ZXNbaV0gLSBtZWFuKTsKfQp2YXJpYW5jZSAvPSB2YWx1ZXMubGVuZ3RoOwp2YXIgc29ydGVkID0gdmFsdWVzLnNsaWNlKCkuc29ydChmdW5jdGlvbihhLGIpe3JldHVybiBhLWI7fSk7CnZhciBtaWQgPSBNYXRoLmZsb29yKHNvcnRlZC5sZW5ndGggLyAyKTsKdmFyIG1lZGlhbiA9IHNvcnRlZC5sZW5ndGggJSAyID8gc29ydGVkW21pZF0gOiAoc29ydGVkW21pZC0xXStzb3J0ZWRbbWlkXSkvMjsKb3V0cHV0LnN1bSA9IHN1bTsKb3V0cHV0Lm1lYW4gPSBtZWFuOwpvdXRwdXQudmFyaWFuY2UgPSB2YXJpYW5jZTsKb3V0cHV0LnN0ZGRldiA9IE1hdGguc3FydCh2YXJpYW5jZSk7Cm91dHB1dC5taW4gPSBtaW47Cm91dHB1dC5tYXggPSBtYXg7Cm91dHB1dC5yYW5nZSA9IG1heCAtIG1pbjsKb3V0cHV0Lm1lZGlhbiA9IG1lZGlhbjsKb3V0cHV0LmNvdW50ID0gdmFsdWVzLmxlbmd0aDsKb3V0cHV0LnNvcnRlZCA9IHNvcnRlZDsK",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "values": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2, 48, 42.5, 49.7]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-js_aggregation_pipeline",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "sum": 462.79999999999995,
+          "mean": 46.279999999999994,
+          "variance": 6.039599999999999,
+          "stddev": 2.4575597652956476,
+          "min": 42.5,
+          "max": 50.1,
+          "range": 7.600000000000001,
+          "median": 46.349999999999994,
+          "count": 10,
+          "sorted": [42.5, 43.2, 44.1, 45.2, 45.9, 46.8, 47.3, 48, 49.7, 50.1]
+        }
+      ]
+    }
+  },
+  {
+    "name": "js_string_processing",
+    "language": "javascript",
+    "script": "dmFyIHRleHQgPSBqc29uLnRleHQgfHwgJ2hlbGxvIHdvcmxkJzsKdmFyIHdvcmRzID0gdGV4dC5zcGxpdCgvXHMrLyk7CnZhciBmcmVxID0ge307CmZvciAodmFyIGkgPSAwOyBpIDwgd29yZHMubGVuZ3RoOyBpKyspIHsKICB2YXIgdyA9IHdvcmRzW2ldLnRvTG93ZXJDYXNlKCk7CiAgZnJlcVt3XSA9IChmcmVxW3ddIHx8IDApICsgMTsKfQp2YXIgY2hhcnMgPSB0ZXh0LnNwbGl0KCcnKTsKdmFyIHZvd2VscyA9IDAsIGNvbnNvbmFudHMgPSAwOwpmb3IgKHZhciBpID0gMDsgaSA8IGNoYXJzLmxlbmd0aDsgaSsrKSB7CiAgaWYgKC9bYWVpb3VdL2kudGVzdChjaGFyc1tpXSkpIHZvd2VscysrOwogIGVsc2UgaWYgKC9bYS16XS9pLnRlc3QoY2hhcnNbaV0pKSBjb25zb25hbnRzKys7Cn0Kb3V0cHV0LndvcmRfY291bnQgPSB3b3Jkcy5sZW5ndGg7Cm91dHB1dC5jaGFyX2NvdW50ID0gdGV4dC5sZW5ndGg7Cm91dHB1dC52b3dlbHMgPSB2b3dlbHM7Cm91dHB1dC5jb25zb25hbnRzID0gY29uc29uYW50czsKb3V0cHV0LnVuaXF1ZV93b3JkcyA9IE9iamVjdC5rZXlzKGZyZXEpLmxlbmd0aDsKb3V0cHV0LmZyZXF1ZW5jaWVzID0gZnJlcTsKb3V0cHV0LnJldmVyc2VkID0gdGV4dC5zcGxpdCgnJykucmV2ZXJzZSgpLmpvaW4oJycpOwpvdXRwdXQudXBwZXJjYXNlID0gdGV4dC50b1VwcGVyQ2FzZSgpOwo=",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "text": "The quick brown fox jumps over the lazy dog near the river bank"
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-js_string_processing",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "word_count": 13,
+          "char_count": 63,
+          "vowels": 17,
+          "consonants": 34,
+          "unique_words": 11,
+          "frequencies": {
+            "the": 3,
+            "quick": 1,
+            "brown": 1,
+            "fox": 1,
+            "jumps": 1,
+            "over": 1,
+            "lazy": 1,
+            "dog": 1,
+            "near": 1,
+            "river": 1,
+            "bank": 1
+          },
+          "reversed": "knab revir eht raen god yzal eht revo spmuj xof nworb kciuq ehT",
+          "uppercase": "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG NEAR THE RIVER BANK"
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_increment",
+    "language": "python",
+    "script": "IyBQZXJmb3JtYW5jZSB0ZXN0IG1hY3JvOiBzaW1wbGUgaW5jcmVtZW50CiMgU291cmNlOiB0ZXN0X3BlcmZvcm1hbmNlLmlweW5iCgpvdXRwdXRbJ3JlcyddID0ganNvblsndmFsJ10gKyAxCg==",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "val": 0
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-intensive-py_increment",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "res": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_pandas_transform",
+    "language": "python",
+    "script": "ZGYgPSBwZC5EYXRhRnJhbWUoeyd4JzoganNvbi5nZXQoJ3gnLCBbMSwyLDNdKSwgJ3knOiBqc29uLmdldCgneScsIFs0LDUsNl0pfSkKZGZbJ3hfbm9ybSddID0gKGRmWyd4J10gLSBkZlsneCddLm1lYW4oKSkgLyBkZlsneCddLnN0ZCgpCmRmWyd5X25vcm0nXSA9IChkZlsneSddIC0gZGZbJ3knXS5tZWFuKCkpIC8gZGZbJ3knXS5zdGQoKQpkZlsncHJvZHVjdCddID0gZGZbJ3gnXSAqIGRmWyd5J10KZGZbJ3JhdGlvJ10gPSBkZlsneSddIC8gKGRmWyd4J10gKyAxZS0xMCkKY29yciA9IGRmW1sneCcsJ3knXV0uY29ycigpLmlsb2NbMCwxXQpvdXRwdXRbJ2NvcnJlbGF0aW9uJ10gPSBmbG9hdChjb3JyKQpvdXRwdXRbJ3hfbWVhbiddID0gZmxvYXQoZGZbJ3gnXS5tZWFuKCkpCm91dHB1dFsneV9tZWFuJ10gPSBmbG9hdChkZlsneSddLm1lYW4oKSkKb3V0cHV0Wydyb3dfY291bnQnXSA9IGxlbihkZikKb3V0cHV0Wydwcm9kdWN0X3N1bSddID0gZmxvYXQoZGZbJ3Byb2R1Y3QnXS5zdW0oKSkK",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "x": [1, 2, 3, 4, 5, 6, 7, 8],
+          "y": [2.1, 4, 5.8, 8.1, 9.9, 12, 14.2, 16.1]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-py_pandas_transform",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "correlation": 0.9996976597823294,
+          "x_mean": 4.5,
+          "y_mean": 9.025,
+          "row_count": 8,
+          "product_sum": 409.59999999999997
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_scipy_regression",
+    "language": "python",
+    "script": "ZGVmIF9zcih4LCBuPTEwKToKICAgIGlmIHggPT0gMDogcmV0dXJuIDAuMAogICAgcmV0dXJuIHJvdW5kKHgsIC1pbnQobnAuZmxvb3IobnAubG9nMTAoYWJzKHgpKSkpICsgKG4gLSAxKSkKCnggPSBucC5hcnJheShqc29uLmdldCgieCIsIFsxLDIsMyw0LDVdKSwgZHR5cGU9ZmxvYXQpCnkgPSBucC5hcnJheShqc29uLmdldCgieSIsIFsyLDQsNiw4LDEwXSksIGR0eXBlPWZsb2F0KQpzbG9wZSwgaW50ZXJjZXB0LCByLCBwLCBzZSA9IHNjaXB5LnN0YXRzLmxpbnJlZ3Jlc3MoeCwgeSkKb3V0cHV0WyJzbG9wZSJdID0gX3NyKGZsb2F0KHNsb3BlKSkKb3V0cHV0WyJpbnRlcmNlcHQiXSA9IF9zcihmbG9hdChpbnRlcmNlcHQpKQpvdXRwdXRbInJfc3F1YXJlZCJdID0gX3NyKGZsb2F0KHIqKjIpKQpvdXRwdXRbInBfdmFsdWUiXSA9IF9zcihmbG9hdChwKSkKb3V0cHV0WyJzdGRfZXJyb3IiXSA9IF9zcihmbG9hdChzZSkpCnByZWRpY3RlZCA9IFtfc3IodikgZm9yIHYgaW4gKHNsb3BlICogeCArIGludGVyY2VwdCkudG9saXN0KCldCnJlc2lkdWFscyA9IFtfc3IodikgZm9yIHYgaW4gKHkgLSBzbG9wZSAqIHggLSBpbnRlcmNlcHQpLnRvbGlzdCgpXQpvdXRwdXRbInByZWRpY3RlZCJdID0gcHJlZGljdGVkCm91dHB1dFsicmVzaWR1YWxzIl0gPSByZXNpZHVhbHMKb3V0cHV0WyJybXNlIl0gPSBfc3IoZmxvYXQobnAuc3FydChucC5tZWFuKG5wLmFycmF5KHJlc2lkdWFscykqKjIpKSkpCg==",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "x": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          "y": [2.3, 4.1, 5.8, 8.2, 9.7, 12.1, 13.9, 16, 18.2, 20.1]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-py_scipy_regression",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "slope": 1.996363636,
+          "intercept": 0.06,
+          "r_squared": 0.9990188832,
+          "p_value": 2.534611849e-13,
+          "std_error": 0.02211913647,
+          "predicted": [
+            2.056363636, 4.052727273, 6.049090909, 8.045454545, 10.04181818, 12.03818182,
+            14.03454545, 16.03090909, 18.02727273, 20.02363636
+          ],
+          "residuals": [
+            0.2436363636, 0.04727272727, -0.2490909091, 0.1545454545, -0.3418181818, 0.06181818182,
+            -0.1345454545, -0.03090909091, 0.1727272727, 0.07636363636
+          ],
+          "rmse": 0.1796967142
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_stats_pipeline",
+    "language": "python",
+    "script": "YXJyID0gbnAuYXJyYXkoanNvbi5nZXQoJ3JlYWRpbmdzJywgWzEsMiwzLDQsNV0pKQpvdXRwdXRbJ21lYW4nXSA9IGZsb2F0KG5wLm1lYW4oYXJyKSkKb3V0cHV0WydzdGQnXSA9IGZsb2F0KG5wLnN0ZChhcnIpKQpvdXRwdXRbJ21lZGlhbiddID0gZmxvYXQobnAubWVkaWFuKGFycikpCm91dHB1dFsncTI1J10gPSBmbG9hdChucC5wZXJjZW50aWxlKGFyciwgMjUpKQpvdXRwdXRbJ3E3NSddID0gZmxvYXQobnAucGVyY2VudGlsZShhcnIsIDc1KSkKb3V0cHV0WydpcXInXSA9IG91dHB1dFsncTc1J10gLSBvdXRwdXRbJ3EyNSddCm91dHB1dFsndmFyaWFuY2UnXSA9IGZsb2F0KG5wLnZhcihhcnIpKQpvdXRwdXRbJ3N1bSddID0gZmxvYXQobnAuc3VtKGFycikpCm91dHB1dFsnbWluJ10gPSBmbG9hdChucC5taW4oYXJyKSkKb3V0cHV0WydtYXgnXSA9IGZsb2F0KG5wLm1heChhcnIpKQpvdXRwdXRbJ3JhbmdlJ10gPSBvdXRwdXRbJ21heCddIC0gb3V0cHV0WydtaW4nXQpvdXRwdXRbJ2NvdW50J10gPSBsZW4oYXJyKQpvdXRwdXRbJ3NvcnRlZCddID0gc29ydGVkKGFyci50b2xpc3QoKSkKb3V0cHV0Wydub3JtYWxpemVkJ10gPSAoKGFyciAtIG5wLm1lYW4oYXJyKSkgLyAobnAuc3RkKGFycikgb3IgMSkpLnRvbGlzdCgpCg==",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "readings": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2, 48, 42.5, 49.7]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-py_stats_pipeline",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "mean": 46.28,
+          "std": 2.4575597652956476,
+          "median": 46.349999999999994,
+          "q25": 44.375,
+          "q75": 47.825,
+          "iqr": 3.450000000000003,
+          "variance": 6.039599999999999,
+          "sum": 462.8,
+          "min": 42.5,
+          "max": 50.1,
+          "range": 7.600000000000001,
+          "count": 10,
+          "sorted": [42.5, 43.2, 44.1, 45.2, 45.9, 46.8, 47.3, 48, 49.7, 50.1],
+          "normalized": [
+            -0.4394603196435684, 0.21159200575430945, -0.8870587933546117, 0.415045857441147,
+            -0.1546249272819976, 1.5543874268874391, -1.2532757263909187, 0.6998812498027207,
+            -1.5381111187524925, 1.3916243455379695
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "r_data_summary",
+    "language": "r",
+    "script": "dmFscyA8LSB1bmxpc3QoanNvbiR2YWx1ZXMpCm91dHB1dCRtZWFuIDwtIG1lYW4odmFscykKb3V0cHV0JG1lZGlhbiA8LSBtZWRpYW4odmFscykKb3V0cHV0JHNkIDwtIHNkKHZhbHMpCm91dHB1dCR2YXIgPC0gdmFyKHZhbHMpCm91dHB1dCRtaW4gPC0gbWluKHZhbHMpCm91dHB1dCRtYXggPC0gbWF4KHZhbHMpCm91dHB1dCRyYW5nZSA8LSBtYXgodmFscykgLSBtaW4odmFscykKb3V0cHV0JHEyNSA8LSBxdWFudGlsZSh2YWxzLCAwLjI1KQpvdXRwdXQkcTc1IDwtIHF1YW50aWxlKHZhbHMsIDAuNzUpCm91dHB1dCRpcXIgPC0gSVFSKHZhbHMpCm91dHB1dCRuIDwtIGxlbmd0aCh2YWxzKQpvdXRwdXQkc3VtIDwtIHN1bSh2YWxzKQpvdXRwdXQkc29ydGVkIDwtIHNvcnQodmFscykK",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "values": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2, 48, 42.5, 49.7]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-r_data_summary",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "range": 7.6,
+          "var": 6.7107,
+          "iqr": 3.45,
+          "mean": 46.28,
+          "sum": 462.8,
+          "sorted": [42.5, 43.2, 44.1, 45.2, 45.9, 46.8, 47.3, 48, 49.7, 50.1],
+          "q75": 47.825,
+          "n": 10,
+          "max": 50.1,
+          "median": 46.35,
+          "sd": 2.5905,
+          "q25": 44.375,
+          "min": 42.5
+        }
+      ]
+    }
+  },
+  {
+    "name": "r_statistical_analysis",
+    "language": "r",
+    "script": "eCA8LSB1bmxpc3QoanNvbiR4KQp5IDwtIHVubGlzdChqc29uJHkpCmZpdCA8LSBsbSh5IH4geCkKcyA8LSBzdW1tYXJ5KGZpdCkKb3V0cHV0JHNsb3BlIDwtIGNvZWYoZml0KVsyXQpvdXRwdXQkaW50ZXJjZXB0IDwtIGNvZWYoZml0KVsxXQpvdXRwdXQkcl9zcXVhcmVkIDwtIHMkci5zcXVhcmVkCm91dHB1dCRyZXNpZHVhbF9zZSA8LSBzJHNpZ21hCm91dHB1dCR4X21lYW4gPC0gbWVhbih4KQpvdXRwdXQkeV9tZWFuIDwtIG1lYW4oeSkKb3V0cHV0JHhfc2QgPC0gc2QoeCkKb3V0cHV0JHlfc2QgPC0gc2QoeSkKb3V0cHV0JGNvcnJlbGF0aW9uIDwtIGNvcih4LCB5KQpvdXRwdXQkbiA8LSBsZW5ndGgoeCkK",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "x": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          "y": [2.3, 4.1, 5.8, 8.2, 9.7, 12.1, 13.9, 16, 18.2, 20.1]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-r_statistical_analysis",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "y_mean": 11.04,
+          "residual_se": 0.2009,
+          "x_mean": 5.5,
+          "slope": 1.9964,
+          "x_sd": 3.0277,
+          "correlation": 0.9995,
+          "r_squared": 0.999,
+          "y_sd": 6.0473,
+          "n": 10,
+          "intercept": 0.06
+        }
+      ]
+    }
+  }
+]
