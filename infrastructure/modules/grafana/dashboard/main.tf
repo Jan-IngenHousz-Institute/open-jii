@@ -31,7 +31,7 @@ locals {
     iot_log_group_name         = var.iot_log_group_name
     account_id                 = data.aws_caller_identity.current.account_id
     macro_runner_python_function_name = lookup(var.macro_runner_function_names, "python", "")
-    macro_runner_js_function_name     = lookup(var.macro_runner_function_names, "javascript", "")
+    macro_runner_js_function_name     = lookup(var.macro_runner_function_names, "js", "")
     macro_runner_r_function_name      = lookup(var.macro_runner_function_names, "r", "")
   }
 }
@@ -767,7 +767,6 @@ resource "grafana_rule_group" "macro_runner_health" {
   interval_seconds   = 60
   disable_provenance = true
 
-  # --- Errors per language ---
   dynamic "rule" {
     for_each = var.macro_runner_function_names
     content {
@@ -845,7 +844,6 @@ EOT
     }
   }
 
-  # --- Throttles per language ---
   dynamic "rule" {
     for_each = var.macro_runner_function_names
     content {
@@ -923,7 +921,6 @@ EOT
     }
   }
 
-  # --- Rejected VPC traffic (security) ---
   rule {
     name      = "Macro Runner Rejected Traffic"
     condition = "C"
@@ -997,7 +994,6 @@ EOT
   }
 }
 
-# Notification policy
 resource "grafana_notification_policy" "policy" {
   provider = grafana.amg
 
