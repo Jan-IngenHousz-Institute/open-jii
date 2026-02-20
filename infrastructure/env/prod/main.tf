@@ -127,7 +127,7 @@ module "macro_runner" {
     python = { memory = 1024, timeout = 65 }
     js     = { memory = 512, timeout = 65 }
     r      = { memory = 1024, timeout = 65 }
-    }
+  }
 
   log_retention_days      = 30
   flow_log_retention_days = 30
