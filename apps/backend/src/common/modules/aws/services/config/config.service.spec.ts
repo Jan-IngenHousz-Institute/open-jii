@@ -44,24 +44,23 @@ describe("AwsConfigService", () => {
     });
   });
 
-  describe("validateConfig", () => {
-    it("should throw an error if the config is invalid", () => {
-      const configService = testApp.module.get(ConfigService);
-      const getOrThrowSpy = vi
-        .spyOn(configService, "getOrThrow")
-        .mockImplementation((key: string) => {
-          if (key === "aws.region") {
-            return "";
-          }
+  describe("config validation", () => {
+    it("should throw error for invalid config during construction", () => {
+      // Create a mock ConfigService that returns invalid data
+      const mockConfigService = {
+        getOrThrow: vi.fn((key: string) => {
+          if (key === "aws.region") return ""; // Invalid empty region
+          if (key === "aws.location.placeIndexName") return "test-index";
+          if (key === "aws.lambda.macroRunnerPythonFunctionName") return "fn-py";
+          if (key === "aws.lambda.macroRunnerJavascriptFunctionName") return "fn-js";
+          if (key === "aws.lambda.macroRunnerRFunctionName") return "fn-r";
+          throw new Error(`Unknown config key: ${key}`);
+        }),
+      } as unknown as ConfigService;
 
-          return "valid_string";
-        });
-
-      expect(() => new AwsConfigService(configService)).toThrow(
+      expect(() => new AwsConfigService(mockConfigService)).toThrow(
         "AWS configuration validation failed",
       );
-
-      getOrThrowSpy.mockRestore();
     });
   });
 });
