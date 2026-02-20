@@ -418,7 +418,7 @@ jobs:
           echo "  Migration Duration: ${MIGRATION_DURATION}s"
 
       - name: Publish DORA - Deployment Frequency
-        if: success()
+        if: always()
         uses: ./.github/actions/publish-dora-metric
         with:
           metric-name: 'DeploymentFrequency'

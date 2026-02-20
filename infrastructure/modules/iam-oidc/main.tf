@@ -163,7 +163,8 @@ locals {
         "iam:TagRole",
         "iam:TagPolicy",
         "iam:TagUser",
-        "iam:TagOpenIDConnectProvider"
+        "iam:TagOpenIDConnectProvider",
+        "iam:UpdateAssumeRolePolicy"
       ]
       resource = "*"
     }
