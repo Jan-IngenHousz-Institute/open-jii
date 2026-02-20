@@ -40,15 +40,6 @@ resource "aws_vpc_endpoint" "kinesis_streams" {
   tags                = { Name = "open-jii-kinesis-vpc-endpoint-${var.environment}" }
 }
 
-# ============================================================
-# Macro-runner Lambda endpoints
-# ============================================================
-# Lambda functions in isolated subnets (no NAT, no IGW) need
-# interface endpoints to reach ECR and CloudWatch Logs.
-# The S3 gateway endpoint above already includes isolated RTs
-# for ECR image layer storage.
-# ============================================================
-
 resource "aws_vpc_endpoint" "ecr_api" {
   count = var.create_ecr_api_endpoint ? 1 : 0
 

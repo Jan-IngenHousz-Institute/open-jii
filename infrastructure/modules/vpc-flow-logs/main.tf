@@ -1,12 +1,3 @@
-# ============================================================
-# VPC Flow Logs — Reusable module for subnet-level flow logging
-# ============================================================
-# Creates:
-#   - CloudWatch log group for flow log storage
-#   - IAM role + policy for VPC Flow Logs → CloudWatch
-#   - One aws_flow_log per subnet
-# ============================================================
-
 locals {
   default_tags = merge(var.tags, {
     ManagedBy = "Terraform"
@@ -14,20 +5,12 @@ locals {
   })
 }
 
-# ============================================================
-# CloudWatch Log Group
-# ============================================================
-
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/vpc/${var.name_prefix}-flow-logs-${var.environment}"
   retention_in_days = var.retention_in_days
 
   tags = local.default_tags
 }
-
-# ============================================================
-# IAM Role + Policy — VPC Flow Logs → CloudWatch
-# ============================================================
 
 resource "aws_iam_role" "this" {
   name = "${var.name_prefix}-flow-logs-${var.environment}"
@@ -63,10 +46,6 @@ resource "aws_iam_role_policy" "this" {
     }]
   })
 }
-
-# ============================================================
-# Flow Logs — one per subnet
-# ============================================================
 
 resource "aws_flow_log" "this" {
   count = length(var.subnet_ids)
