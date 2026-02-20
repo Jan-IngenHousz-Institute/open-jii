@@ -600,7 +600,8 @@
     "codePlaceholder": "Protokollcode als JSON eingeben",
     "finalizeSetup": "Protokoll erstellen",
     "compatibleMacros": "Kompatible Makros",
-    "compatibleMacrosDescription": "Optional kompatible Makros für dieses Protokoll auswählen"
+    "compatibleMacrosDescription": "Optional kompatible Makros für dieses Protokoll auswählen",
+    "testerTitle": "Verbinden & Testen"
   },
   "protocolSettings": {
     "loading": "Protokolleinstellungen werden geladen...",
@@ -629,6 +630,8 @@
     "compatibleMacros": "Kompatible Makros",
     "compatibleMacrosDescription": "Makros, die bekanntermaßen mit diesem Protokoll funktionieren. Diese werden im Flow-Builder empfohlen.",
     "noCompatibleMacros": "Noch keine kompatiblen Makros verknüpft.",
-    "addCompatibleMacro": "Kompatibles Makro suchen und hinzufügen..."
+    "addCompatibleMacro": "Kompatibles Makro suchen und hinzufügen...",
+    "detailsTitle": "Protokolldetails",
+    "testerTitle": "Verbinden & Testen"
   }
 }

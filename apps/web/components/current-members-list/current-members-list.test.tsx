@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -11,6 +11,9 @@ import { MemberList } from "./current-members-list";
 globalThis.React = React;
 
 /* ----------------------------- Types ----------------------------- */
+
+// Mock scrollIntoView
+Element.prototype.scrollIntoView = vi.fn();
 
 type StrictUserProfile = UserProfile & {
   userId: string;
@@ -418,30 +421,36 @@ describe("<MemberList />", () => {
       lastName: "User",
     });
 
-    renderWithProvider(
-      <MemberList
-        membersWithUserInfo={[
-          { role: "member", joinedAt: "2024-01-01T00:00:00.000Z", user: memberUser },
-        ]}
-        onRemoveMember={onRemove}
-        isRemovingMember={false}
-        removingMemberId={null}
-        adminCount={1}
-        experimentId="exp-1"
-        currentUserRole="admin"
-        currentUserId="admin-user"
-        newExperiment={true}
-        onUpdateMemberRole={onUpdateRole}
-      />,
-    );
+    act(() => {
+      renderWithProvider(
+        <MemberList
+          membersWithUserInfo={[
+            { role: "member", joinedAt: "2024-01-01T00:00:00.000Z", user: memberUser },
+          ]}
+          onRemoveMember={onRemove}
+          isRemovingMember={false}
+          removingMemberId={null}
+          adminCount={1}
+          experimentId="exp-1"
+          currentUserRole="admin"
+          currentUserId="admin-user"
+          newExperiment={true}
+          onUpdateMemberRole={onUpdateRole}
+        />,
+      );
+    });
 
     // Open dropdown
     const selectTrigger = screen.getByRole("combobox");
-    fireEvent.click(selectTrigger);
+    act(() => {
+      fireEvent.click(selectTrigger);
+    });
 
     // Select admin role
     const adminOption = screen.getByText("experimentSettings.roleAdmin");
-    fireEvent.click(adminOption);
+    act(() => {
+      fireEvent.click(adminOption);
+    });
 
     // Should call onUpdateMemberRole for new experiment
     expect(onUpdateRole).toHaveBeenCalledWith("member-user", "admin");
