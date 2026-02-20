@@ -361,6 +361,8 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  apps/firmware: {}
+
   apps/mobile:
     dependencies:
       '@aws-sdk/client-cognito-identity':

@@ -1,0 +1,25 @@
+# PlatformIO build artifacts
+.pio/
+
+# .vscode configurations
+.vscode/
+
+# PlatformIO IDE / CLion settings
+.idea/
+
+# Compiled firmware binaries (regenerated on build)
+*.bin
+*.elf
+*.hex
+
+# Node
+node_modules/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Linux
+*~

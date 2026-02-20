@@ -1,0 +1,16 @@
+{
+  "name": "firmware",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlatformIO firmware workspace for openJII IoT devices. Each subdirectory in sketches/ is a self-contained project",
+  "scripts": {
+    "check-pio": "command -v pio >/dev/null 2>&1 || (echo '\nPlatformIO CLI not found.\n  macOS:   brew install platformio\n  pip:     pip install platformio\n  docs:    https://docs.platformio.org/en/latest/core/installation/index.html\n' && exit 1)",
+    "compile": "pnpm --silent run check-pio && for d in sketches/*/; do pio run -d \"$d\"; done",
+    "upload": "pnpm --silent run check-pio && for d in sketches/*/; do pio run -d \"$d\" -t upload; done",
+    "monitor": "pnpm --silent run check-pio && pio device monitor --baud 115200 --echo",
+    "devices": "pnpm --silent run check-pio && pio device list",
+    "test:unit": "pnpm --silent run check-pio && for d in sketches/*/; do pio test -d \"$d\"; done",
+    "clean": "for d in sketches/*/; do rm -rf \"${d}.pio\"; done",
+    "check": "pnpm --silent run check-pio && for d in sketches/*/; do pio check -d \"$d\"; done"
+  }
+}
