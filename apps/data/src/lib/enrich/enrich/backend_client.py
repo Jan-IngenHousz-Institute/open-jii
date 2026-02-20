@@ -125,7 +125,7 @@ class BackendClient:
             
             response.raise_for_status()
             
-            if response.status_code == 200:
+            if response.status_code in (200, 201):
                 result = response.json()
                 if result.get('success', False):
                     return result
