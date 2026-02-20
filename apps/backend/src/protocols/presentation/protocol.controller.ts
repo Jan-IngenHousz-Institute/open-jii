@@ -25,7 +25,7 @@ import type { AnalyticsPort } from "../core/ports/analytics.port";
  * @param logger Logger function
  * @returns Parsed code as an object or empty object if input is null/undefined or if parsing fails
  */
-function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknown>[] {
+export function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknown>[] {
   if (!code) {
     return [{}];
   }

@@ -125,7 +125,7 @@ class BackendClient:
             
             response.raise_for_status()
             
-            if response.status_code == 200:
+            if response.status_code in (200, 201):
                 result = response.json()
                 if result.get('success', False):
                     return result
@@ -201,4 +201,42 @@ class BackendClient:
             
         return user_metadata
 
+    def execute_project_transfer(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute a project transfer by calling the backend webhook.
+
+        Creates an experiment, protocol, and macro in one call. The backend
+        returns IDs for all created entities.
+
+        Args:
+            payload: Project transfer payload matching ProjectTransferWebhookPayload schema:
+                - experiment: { name, description, createdBy, locations? }
+                - protocol: { name, description, code, family?, createdBy }
+                - macro: { name, description, language?, code (base64), createdBy }
+                - questions?: [{ kind, text, options?, required? }]
+
+        Returns:
+            Dictionary with keys: experimentId, protocolId, macroId, flowId, success
+
+        Raises:
+            BackendIntegrationError: If the webhook call fails or returns an error
+        """
+        endpoint = "/api/v1/webhooks/project-transfer"
+        result = self._make_request(endpoint, payload)
+
+        # Validate required fields in response
+        experiment_id = result.get("experimentId")
+        if not experiment_id:
+            raise BackendIntegrationError(
+                f"Backend did not return experimentId in response: {result}"
+            )
+
+        return {
+            "success": result.get("success", True),
+            "experimentId": experiment_id,
+            "protocolId": result.get("protocolId"),
+            "macroId": result.get("macroId"),
+            "flowId": result.get("flowId"),
+            "message": result.get("message"),
+        }
 

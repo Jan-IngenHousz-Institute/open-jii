@@ -95,6 +95,7 @@ ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
 ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
+RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
 
 # COMMAND ----------
 
@@ -166,7 +167,7 @@ def raw_data():
 @dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
 @dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
-    """Silver layer: Clean and standardize sensor data."""
+    """Silver layer: Clean and standardize sensor data, including imported data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
     
     df = (
@@ -276,9 +277,12 @@ def clean_data():
             ))
         """)
     )
+
+    # Mark streamed data as requiring macro processing
+    df = df.withColumn("skip_macro_processing", F.lit(False))
     
-    # Select final columns for silver layer
-    return df.select(
+    # Select final columns for bronze-sourced silver data
+    bronze_clean = df.select(
         "id",
         "new_id",
         "device_id",
@@ -297,8 +301,47 @@ def clean_data():
         "date",
         "hour",
         "ingest_latency_ms",
-        "processed_timestamp"
+        "processed_timestamp",
+        "skip_macro_processing"
     )
+
+    # Read imported data and align to the same schema
+    imported_df = dlt.read_stream(RAW_IMPORTED_DATA_TABLE)
+
+    imported_clean = (
+        imported_df
+        .withColumn("id", F.col("id").cast("long"))
+        .withColumn("new_id", F.col("id").cast("long"))
+        .withColumn("processed_timestamp", F.current_timestamp())
+        .withColumn("date", F.to_date("timestamp"))
+        .withColumn("hour", F.hour("timestamp"))
+        .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
+        # Build macros array from macro columns
+        .withColumn(
+            "macros",
+            F.array(
+                F.struct(
+                    F.col("macro_id").alias("id"),
+                    F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("name"),
+                    F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("filename")
+                )
+            )
+        )
+        # Parse questions from JSON string if present, otherwise empty array
+        .withColumn(
+            "questions",
+            F.when(
+                F.col("questions").isNotNull(),
+                F.from_json(F.col("questions"), ArrayType(question_schema))
+            ).otherwise(F.array())
+        )
+        .withColumn("annotations", F.array())
+        # Mark imported data to skip macro processing
+        .withColumn("skip_macro_processing", F.lit(True))
+    )
+
+    # Union bronze-sourced data with imported data
+    return bronze_clean.unionByName(imported_clean)
 
 # COMMAND ----------
 
@@ -462,7 +505,8 @@ def experiment_raw_data():
             "user_id",
             "data",
             "date",
-            "processed_timestamp"
+            "processed_timestamp",
+            "skip_macro_processing"
         )
     )
 
@@ -538,10 +582,13 @@ def experiment_macro_data():
     """Process macros with VARIANT output column."""
     
     # Read from experiment_raw_data and explode macros
+    # Skip rows marked as imported (skip_macro_processing = true) since their
+    # macro output is already included in the imported data
     base_df = (
         dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
+        .filter("skip_macro_processing IS NULL OR skip_macro_processing = false")
         .select(
             "id",
             "experiment_id",
@@ -896,6 +943,47 @@ def enriched_experiment_macro_data():
         catalog_name=CATALOG_NAME,
         experiment_schema="centrum",
         spark=spark
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Raw Imported Data - Streaming Table
+@dlt.table(
+    name=RAW_IMPORTED_DATA_TABLE,
+    comment="Streaming table: Imported measurement data from external platforms (e.g., PhotosynQ transfers), partitioned by experiment_id",
+    table_properties={
+        "quality": "bronze",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true"
+    },
+    partition_cols=["experiment_id"]
+)
+def raw_imported_data():
+    """Streaming ingestion of imported measurement data from parquet files in data-imports volume."""
+    imported_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/photosynq_transfer"
+    
+    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/imported_data_schema"
+    
+    df = (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "parquet")
+        .option("cloudFiles.schemaLocation", schema_location)
+        .option("recursiveFileLookup", "true")
+        .load(imported_path)
+    )
+    
+    return (
+        df
+        .withColumn(
+            "id",
+            F.coalesce(
+                F.col("id"),
+                F.abs(F.hash(*[F.col(c) for c in df.columns])).cast("string")
+            )
+        )
+        .withColumn("ingestion_timestamp", F.current_timestamp())
     )
 
 # COMMAND ----------
