@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
-import { MeasurementItem } from "~/components/measurement-item";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
+import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
 import { useAllMeasurements } from "~/hooks/use-all-measurements";
 import type {
   MeasurementFilter,
@@ -190,8 +190,9 @@ export function RecentMeasurementsScreen() {
           data={measurements}
           keyExtractor={(item) => item.key}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 0, paddingBottom: 16 }}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           renderItem={({ item: measurement }) => (
-            <MeasurementItem
+            <SwipeableMeasurementRow
               id={measurement.key}
               timestamp={measurement.timestamp}
               experimentName={measurement.experimentName}
