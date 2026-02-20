@@ -13,47 +13,19 @@ variable "lambda_sg_id" {
   type        = string
 }
 
-# ---- ECR (provided by the ECR module) ----
-
-variable "ecr_repository_urls" {
-  description = "ECR repository URLs keyed by language (python, js, r)"
-  type        = map(string)
+variable "languages" {
+  description = "Per-language configuration combining Lambda compute settings and ECR repository info"
+  type = map(object({
+    memory             = number
+    timeout            = number
+    ecr_repository_url = string
+    ecr_repository_arn = string
+  }))
 }
-
-variable "ecr_repository_arns" {
-  description = "ECR repository ARNs keyed by language (python, js, r) — used for IAM ECR-pull policy"
-  type        = map(string)
-}
-
-# ---- Flow Logs (provided by the vpc-flow-logs module) ----
 
 variable "flow_log_group_name" {
   description = "CloudWatch log group name for VPC flow logs — used for rejected-traffic metric filter"
   type        = string
-}
-
-# ---- Lambda configuration ----
-
-variable "lambda_functions" {
-  description = "Per-language Lambda configuration overrides"
-  type = map(object({
-    memory  = number
-    timeout = number
-  }))
-  default = {
-    python = {
-      memory  = 1024 # numpy/scipy need ~1GB
-      timeout = 65   # 60s max script + 5s overhead
-    }
-    js = {
-      memory  = 512 # Node.js is lightweight
-      timeout = 65
-    }
-    r = {
-      memory  = 1024 # R + jsonlite needs decent memory
-      timeout = 65
-    }
-  }
 }
 
 variable "log_retention_days" {

@@ -103,15 +103,12 @@ module "vpc_endpoints" {
   private_subnet_ids      = module.vpc.private_subnets
   security_group_ids      = [module.vpc.default_sg_id]
 
-  # Macro-runner Lambda endpoints (isolated subnets, no internet)
   isolated_route_table_ids = module.vpc.isolated_rt_ids
   isolated_subnet_ids      = module.vpc.isolated_subnets
   create_ecr_api_endpoint  = true
   create_ecr_dkr_endpoint  = true
   create_logs_endpoint     = true
 }
-
-# Macro Runner — Lambda-based isolated code execution (Python, JS, R)
 
 module "macro_runner" {
   source = "../../modules/macro-runner"
@@ -121,6 +118,12 @@ module "macro_runner" {
   ci_cd_role_arn      = module.iam_oidc.role_arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.macro_runner_lambda_security_group_id
+
+  languages = {
+    python = { memory = 1024, timeout = 65 }
+    js     = { memory = 512, timeout = 65 }
+    r      = { memory = 1024, timeout = 65 }
+  }
 
   # Dev overrides
   image_tag_mutability = "MUTABLE"
@@ -1665,7 +1668,6 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
-  # Macro Runner Lambda monitoring
   macro_runner_function_names = module.macro_runner.function_names
 
   providers = {

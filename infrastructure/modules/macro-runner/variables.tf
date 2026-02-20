@@ -1,9 +1,3 @@
-# ============================================================
-# Macro Runner — module inputs
-# ============================================================
-
-# ---- Required wiring ----
-
 variable "aws_region" {
   description = "AWS region for ECR repositories"
   type        = string
@@ -29,8 +23,6 @@ variable "lambda_sg_id" {
   type        = string
 }
 
-# ---- Per-environment configuration ----
-
 variable "image_tag_mutability" {
   description = "ECR image tag mutability. Use MUTABLE for dev (overwrite :latest), IMMUTABLE for prod."
   type        = string
@@ -48,26 +40,12 @@ variable "force_delete" {
   default     = false
 }
 
-variable "lambda_functions" {
+variable "languages" {
   description = "Per-language Lambda compute configuration (memory in MB, timeout in seconds)"
   type = map(object({
     memory  = number
     timeout = number
   }))
-  default = {
-    python = {
-      memory  = 1024 # numpy / scipy need ~1 GB
-      timeout = 65   # 60 s max script + 5 s overhead
-    }
-    js = {
-      memory  = 512 # Node.js is lightweight
-      timeout = 65
-    }
-    r = {
-      memory  = 1024 # R + jsonlite needs decent memory
-      timeout = 65
-    }
-  }
 }
 
 variable "log_retention_days" {
