@@ -224,6 +224,50 @@ resource "aws_security_group_rule" "server_lambda_to_aurora" {
   description              = "Allow access from OpenNext server Lambda to Aurora database"
 }
 
+# -------------------------
+# Macro Runner Lambda Security Group
+# -------------------------
+# No inbound (Lambda doesn't receive connections).
+# Outbound: HTTPS to VPC CIDR only (for CloudWatch Logs VPC endpoint).
+resource "aws_security_group" "macro_runner_lambda" {
+  count = var.create_macro_runner_resources ? 1 : 0
+
+  name        = "${var.environment}-macro-runner-lambda-sg"
+  description = "Lambda macro execution — no inbound, HTTPS to VPC endpoints only"
+  vpc_id      = aws_vpc.this.id
+
+  tags = merge(var.tags, {
+    Name     = "${var.environment}-macro-runner-lambda-sg"
+    Security = "isolated"
+  })
+}
+
+# Egress: HTTPS to VPC CIDR (CloudWatch Logs VPC endpoint)
+resource "aws_security_group_rule" "macro_runner_lambda_egress" {
+  count = var.create_macro_runner_resources ? 1 : 0
+
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = [aws_vpc.this.cidr_block]
+  security_group_id = aws_security_group.macro_runner_lambda[0].id
+  description       = "HTTPS to VPC endpoints (CloudWatch Logs)"
+}
+
+# Allow macro-runner Lambda to reach Interface VPC endpoint ENIs (default SG)
+resource "aws_security_group_rule" "vpc_endpoint_ingress_from_macro_runner" {
+  count = var.create_macro_runner_resources ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.macro_runner_lambda[0].id
+  security_group_id        = aws_security_group.default.id
+  description              = "Allow Lambda macro-runner to reach VPC endpoints"
+}
+
 # ---------------
 # Public Subnets
 # ---------------
