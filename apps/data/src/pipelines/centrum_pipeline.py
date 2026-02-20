@@ -6,16 +6,14 @@
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
-from pyspark.sql.window import Window
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, MapType, ArrayType, IntegerType
-from delta.tables import DeltaTable
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType
 import requests
 import json
 import pandas as pd
 from datetime import datetime
-from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
+from enrich.macro_execution import make_execute_macro_udf
 
 # COMMAND ----------
 
@@ -80,8 +78,6 @@ KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
-
-MACROS_PATH = "/Workspace/Shared/macros"
 
 EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
@@ -566,45 +562,23 @@ def experiment_macro_data():
         )
     )
     
-    # Define UDF to execute macro and return struct with result and error
-    @F.pandas_udf(returnType=StructType([
-        StructField("result", StringType(), True),
-        StructField("error", StringType(), True)
-    ]))
-    def execute_macro_udf(pdf: pd.DataFrame) -> pd.DataFrame:
-        results = []
-        errors = []
-        
-        for _, row in pdf.iterrows():
-            data = row.get("data")
-            macro_filename = row.get("macro_filename")
-            macro_name = row.get("macro_name")
-            
-            if pd.isna(data) or pd.isna(macro_filename):
-                results.append(None)
-                errors.append(f"NULL data or macro_filename (macro: {macro_name})")
-                continue
-            
-            try:
-                sample_json = data.toJson()
-                
-                result = execute_macro_script(macro_filename, sample_json, MACROS_PATH)
-                
-                if result:
-                    results.append(json.dumps(result))
-                    errors.append(None)
-                else:
-                    results.append(None)
-                    errors.append(f"Macro returned empty result (macro: {macro_name})")
-            except Exception as e:
-                results.append(None)
-                errors.append(f"{str(e)} (macro: {macro_name})")
-        
-        return pd.DataFrame({"result": results, "error": errors})
+    # Execute macros via backend API → Lambda (sandboxed Firecracker microVMs)
+    execute_macro_udf = make_execute_macro_udf(
+        environment=ENVIRONMENT,
+        dbutils=dbutils,
+        timeout=30,
+    )
     
     return (
         base_df
-        .withColumn("macro_result", execute_macro_udf(F.struct("data", "macro_filename", "macro_name")))
+        .withColumn(
+            "macro_result",
+            execute_macro_udf(F.struct(
+                F.col("id").cast("string").alias("id"),
+                F.col("macro_id"),
+                F.col("data").cast("string").alias("data"),
+            ))
+        )
         .withColumn(
             "macro_output",
             F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))

@@ -12,6 +12,7 @@ from .backend_client import BackendClient, BackendIntegrationError
 from .user_metadata import add_user_column
 from .question_metadata import add_question_columns, get_experiment_question_labels
 from .annotations_metadata import add_annotation_column
+from .macro_execution import make_execute_macro_udf
 
 __all__ = [
     "BackendClient",
@@ -19,5 +20,6 @@ __all__ = [
     "add_user_column",
     "add_question_columns",
     "get_experiment_question_labels",
-    "add_annotation_column"
+    "add_annotation_column",
+    "make_execute_macro_udf",
 ]
