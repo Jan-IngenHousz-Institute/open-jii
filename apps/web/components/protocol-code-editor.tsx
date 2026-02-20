@@ -20,6 +20,8 @@ interface ProtocolCodeEditorProps {
   label: string;
   placeholder?: string;
   error?: string;
+  height?: number | string;
+  borderless?: boolean;
 }
 type IStandaloneCodeEditor = Parameters<OnMount>[0];
 
@@ -30,6 +32,8 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   label,
   placeholder,
   error,
+  height = 700,
+  borderless = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isValidJson, setIsValidJson] = useState(true);
@@ -207,12 +211,15 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   }, [error]);
 
   return (
-    <div className="grid w-full gap-1.5">
+    <div className={cn("grid w-full", borderless ? "h-full" : "gap-1.5")}>
       {label && <Label>{label}</Label>}
       <div
         className={cn(
-          "overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md",
-          error && "border-destructive",
+          "overflow-hidden",
+          borderless
+            ? "flex h-full flex-col"
+            : "rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md",
+          error && !borderless && "border-destructive",
         )}
       >
         {/* Header */}
@@ -243,7 +250,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
         </div>
 
         {/* Monaco Editor */}
-        <div className="relative">
+        <div className={cn("relative", borderless && "flex-1")}>
           {/* Placeholder overlay */}
           {!editorValue && placeholder && (
             <div className="pointer-events-none absolute left-12 top-4 z-10 text-sm text-slate-400">
@@ -251,7 +258,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
             </div>
           )}
           <Editor
-            height={700}
+            height={height}
             language="json"
             value={editorValue}
             onChange={handleEditorChange}

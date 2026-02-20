@@ -25,8 +25,8 @@ export function ProtocolSettings({ protocolId }: ProtocolSettingsProps) {
   const protocol = data.body;
 
   return (
-    <div className="space-y-6">
-      {/* Edit Protocol Details Card - First */}
+    <div className="flex flex-col gap-6">
+      {/* Edit Protocol Details - Split Panel */}
       <ProtocolDetailsCard
         protocolId={protocolId}
         initialName={protocol.name}
@@ -35,7 +35,7 @@ export function ProtocolSettings({ protocolId }: ProtocolSettingsProps) {
         initialFamily={protocol.family}
       />
 
-      {/* Protocol Info Card - Last */}
+      {/* Protocol Info Card */}
       <ProtocolInfoCard protocolId={protocolId} protocol={protocol} />
     </div>
   );

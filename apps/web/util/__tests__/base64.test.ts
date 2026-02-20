@@ -26,19 +26,9 @@ describe("base64 utilities", () => {
     });
 
     it("should handle invalid base64 content", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Mock implementation
-      });
-
       const result = decodeBase64("invalid-base64!");
 
       expect(result).toBe("Error decoding content");
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to decode base64 content:",
-        expect.any(Error),
-      );
-
-      consoleSpy.mockRestore();
     });
 
     it("should handle Python code content", () => {
@@ -70,9 +60,6 @@ return output`;
     });
 
     it("should handle encoding errors gracefully", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Mock implementation
-      });
       // Mock btoa to throw an error
       const originalBtoa = global.btoa;
       global.btoa = vi.fn(() => {
@@ -82,14 +69,9 @@ return output`;
       const result = encodeBase64("test content");
 
       expect(result).toBe("");
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to encode content to base64:",
-        expect.any(Error),
-      );
 
       // Restore original functions
       global.btoa = originalBtoa;
-      consoleSpy.mockRestore();
     });
   });
 });

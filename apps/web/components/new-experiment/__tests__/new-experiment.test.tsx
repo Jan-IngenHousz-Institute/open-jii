@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -221,7 +221,9 @@ describe("NewExperimentForm", () => {
       const onSuccessCallback = (globalThis as GlobalWithCallback).__onSuccessCallback;
       const mockExperimentId = "exp-123";
 
-      onSuccessCallback?.(mockExperimentId);
+      act(() => {
+        onSuccessCallback?.(mockExperimentId);
+      });
 
       expect(mockToast).toHaveBeenCalledWith({
         description: "experiments.experimentCreated",

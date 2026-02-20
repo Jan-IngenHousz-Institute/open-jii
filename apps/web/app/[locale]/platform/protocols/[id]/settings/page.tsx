@@ -60,16 +60,5 @@ export default function ProtocolSettingsPage({ params }: ProtocolSettingsPagePro
     );
   }
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h4 className="text-lg font-medium">{t("protocols.settings")}</h4>
-        <p className="text-muted-foreground text-sm">{t("protocols.settingsDescription")}</p>
-      </div>
-
-      <div className="space-y-6">
-        <ProtocolSettings protocolId={id} />
-      </div>
-    </div>
-  );
+  return <ProtocolSettings protocolId={id} />;
 }
