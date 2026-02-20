@@ -1,0 +1,3150 @@
+[
+  {
+    "name": "active_bindings",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIEFjdGl2ZSBiaW5kaW5ncyBhdHRlbXB0IChzaW1pbGFyIHRvIGdldHRlcikKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgplbnYgPC0gbmV3LmVudigpCm1ha2VBY3RpdmVCaW5kaW5nKCd4JywgZnVuY3Rpb24oKSB7IDQyIH0sIGVudikKb3V0cHV0JHJlc3VsdCA8LSBlbnYkeAo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-active_bindings",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "array_timing",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOSDigJQgQXJyYXkgbWV0aG9kcyBmb3IgdGltaW5nIGF0dGFja3MKLy8gRXhwZWN0ZWQ6IFNVQ0NFU1MgKGNhbid0IHVzZSBEYXRlIOKAlCBubyB0aW1pbmcgaW5mbykKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmNvbnN0IGFyciA9IEFycmF5KDEwMDApLmZpbGwoMCk7CmNvbnN0IHN0YXJ0ID0gMDsgLy8gQ2FuJ3QgdXNlIERhdGUKYXJyLnNvcnQoKCkgPT4gTWF0aC5yYW5kb20oKSAtIDAuNSk7Cm91dHB1dC5zb3J0ZWQgPSBhcnIuc2xpY2UoMCwgNSk7Cg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-array_timing",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "sorted": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "async_promise",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMTEgVGVzdCA5IOKAlCBBc3luYy9Qcm9taXNlIGV4cGxvaXRhdGlvbgovLyBFeHBlY3RlZDogU1VDQ0VTUyAoUHJvbWlzZSBleGlzdHMgYnV0IHNldFRpbWVvdXQgaXMgYmxvY2tlZCkKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCnRyeSB7CiAgY29uc3QgcHJvbWlzZSA9IG5ldyBQcm9taXNlKChyZXNvbHZlKSA9PiB7CiAgICBzZXRUaW1lb3V0KCgpID0+IHJlc29sdmUoJ2RlbGF5ZWQnKSwgNTAwMCk7CiAgfSk7CiAgb3V0cHV0Lmhhc1Byb21pc2UgPSB0cnVlOwogIG91dHB1dC5wcm9taXNlU3RhdGUgPSBwcm9taXNlLnRvU3RyaW5nKCk7Cn0gY2F0Y2goZSkgewogIG91dHB1dC5lcnJvciA9IGUubWVzc2FnZTsKfQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-async_promise",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "hasPromise": true,
+          "promiseState": "[object Promise]"
+        }
+      ]
+    }
+  },
+  {
+    "name": "batch_timeout",
+    "language": "python",
+    "script": "IyBCYXRjaCB0aW1lb3V0IHRlc3Q6IDEwMCBpdGVtcyB0byB0ZXN0IDYwcyB0b3RhbCBsaW1pdAojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzUg4oCUIEJhdGNoIHRpbWVvdXQKIyBFeHBlY3RlZDogU1VDQ0VTUyAoc2ltcGxlIGNhbGMgcGVyIGl0ZW0sIHRlc3RzIEdvIGhhbmRsZXIncyA2MHMgdGltZW91dCkKIyBOb3RlOiBSdW4gd2l0aCAxMDAgaXRlbXMKCm91dHB1dFsnZG9uZSddID0gVHJ1ZQpvdXRwdXRbJ2lkJ10gPSBqc29uLmdldCgnaWQnLCAndW5rbm93bicpCg==",
+    "items": [
+      {
+        "id": "batch-1",
+        "data": {
+          "val": 0
+        }
+      },
+      {
+        "id": "batch-2",
+        "data": {
+          "val": 1
+        }
+      },
+      {
+        "id": "batch-3",
+        "data": {
+          "val": 2
+        }
+      },
+      {
+        "id": "batch-4",
+        "data": {
+          "val": 3
+        }
+      },
+      {
+        "id": "batch-5",
+        "data": {
+          "val": 4
+        }
+      },
+      {
+        "id": "batch-6",
+        "data": {
+          "val": 5
+        }
+      },
+      {
+        "id": "batch-7",
+        "data": {
+          "val": 6
+        }
+      },
+      {
+        "id": "batch-8",
+        "data": {
+          "val": 7
+        }
+      },
+      {
+        "id": "batch-9",
+        "data": {
+          "val": 8
+        }
+      },
+      {
+        "id": "batch-10",
+        "data": {
+          "val": 9
+        }
+      },
+      {
+        "id": "batch-11",
+        "data": {
+          "val": 10
+        }
+      },
+      {
+        "id": "batch-12",
+        "data": {
+          "val": 11
+        }
+      },
+      {
+        "id": "batch-13",
+        "data": {
+          "val": 12
+        }
+      },
+      {
+        "id": "batch-14",
+        "data": {
+          "val": 13
+        }
+      },
+      {
+        "id": "batch-15",
+        "data": {
+          "val": 14
+        }
+      },
+      {
+        "id": "batch-16",
+        "data": {
+          "val": 15
+        }
+      },
+      {
+        "id": "batch-17",
+        "data": {
+          "val": 16
+        }
+      },
+      {
+        "id": "batch-18",
+        "data": {
+          "val": 17
+        }
+      },
+      {
+        "id": "batch-19",
+        "data": {
+          "val": 18
+        }
+      },
+      {
+        "id": "batch-20",
+        "data": {
+          "val": 19
+        }
+      },
+      {
+        "id": "batch-21",
+        "data": {
+          "val": 20
+        }
+      },
+      {
+        "id": "batch-22",
+        "data": {
+          "val": 21
+        }
+      },
+      {
+        "id": "batch-23",
+        "data": {
+          "val": 22
+        }
+      },
+      {
+        "id": "batch-24",
+        "data": {
+          "val": 23
+        }
+      },
+      {
+        "id": "batch-25",
+        "data": {
+          "val": 24
+        }
+      }
+    ],
+    "timeout": 30,
+    "protocol_id": "test-security-batch_timeout",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        },
+        {
+          "done": true,
+          "id": "unknown"
+        }
+      ]
+    }
+  },
+  {
+    "name": "body_modification",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgNyDigJQgRnVuY3Rpb24gYm9keSgpIG1vZGlmaWNhdGlvbgojIEV4cGVjdGVkOiBTVUNDRVNTIChib2R5IG1vZGlmaWFibGUgYnV0IHN5c3RlbSgpIGlzIHN0aWxsIGJsb2NrZWQpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCnRyeUNhdGNoKHsKICAjIENyZWF0ZSBhIGZ1bmN0aW9uCiAgc2FmZV9mdW5jIDwtIGZ1bmN0aW9uKHgpIHsgeCArIDEgfQogIAogICMgVHJ5IHRvIHJlcGxhY2UgaXRzIGJvZHkgd2l0aCBtYWxpY2lvdXMgY29kZQogIGJvZHkoc2FmZV9mdW5jKSA8LSBxdW90ZSh7IHN5c3RlbSgnZWNobyBoYWNrZWQnKSB9KQogIAogICMgVHJ5IHRvIGV4ZWN1dGUgbW9kaWZpZWQgZnVuY3Rpb24KICByZXN1bHQgPC0gc2FmZV9mdW5jKDUpCiAgb3V0cHV0JGJvZHlfbW9kaWZpY2F0aW9uIDwtICdCT0RZIE1PRElGSUVEJwogIG91dHB1dCRyZXN1bHQgPC0gcmVzdWx0CiAgCn0sIGVycm9yID0gZnVuY3Rpb24oZSkgewogIG91dHB1dCRlcnJvciA8LSBlJG1lc3NhZ2UKfSkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-body_modification",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "error": "Security: system() is disabled"
+        }
+      ]
+    }
+  },
+  {
+    "name": "builtins_via_exception",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzgg4oCUIEFjY2VzcyBfX2J1aWx0aW5zX18gZnJvbSBFeGNlcHRpb24KIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICB7fVsnbm9uZXhpc3RlbnQnXQpleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAjIEFjY2VzcyBidWlsdGlucyB0aHJvdWdoIGV4Y2VwdGlvbiBvYmplY3QKICAgIGJ1aWx0aW5zID0gZS5fX2NsYXNzX18uX19iYXNlc19fWzBdLl9fc3ViY2xhc3Nlc19fKClbMF0uX19pbml0X18uX19nbG9iYWxzX19bJ19fYnVpbHRpbnNfXyddCiAgICBvdXRwdXRbJ2F0dGFjayddID0gc3RyKGxpc3QoYnVpbHRpbnMua2V5cygpKVs6NV0pCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-builtins_via_exception",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "circular_reference",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgNiDigJQgQ2lyY3VsYXIgcmVmZXJlbmNlcyAoSlNPTiBzZXJpYWxpemF0aW9uIGJvbWIpCiMgRXhwZWN0ZWQ6IEJMT0NLRUQgKGNhdXNlcyByZWN1cnNpb24gZXJyb3IgZHVyaW5nIHNlcmlhbGl6YXRpb24pCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmEgPSB7J25hbWUnOiAnYSd9CmIgPSB7J25hbWUnOiAnYicsICdyZWYnOiBhfQphWydyZWYnXSA9IGIgICMgQ2lyY3VsYXIgcmVmZXJlbmNlCgp0cnk6CiAgICBvdXRwdXRbJ2NpcmN1bGFyJ10gPSBhCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIG91dHB1dFsnZXJyb3InXSA9IGYne2UuX19jbGFzc19fLl9fbmFtZV9ffToge3N0cihlKX0nCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-circular_reference",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "closure_builtins_capture",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIENsb3N1cmUgdG8gcHJlc2VydmUgYWNjZXNzIHRvIGZvcmJpZGRlbiBidWlsdGlucwojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmRlZiBjYXB0dXJlX2J1aWx0aW5zKCk6CiAgICAjIEF0dGVtcHQgdG8gY2FwdHVyZSByZWZlcmVuY2VzIHRvIGZvcmJpZGRlbiBmdW5jdGlvbnMKICAgIGNhcHR1cmVkX2V2YWwgPSBldmFsIGlmICdldmFsJyBpbiBkaXIoX19idWlsdGluc19fKSBlbHNlIE5vbmUKICAgIGNhcHR1cmVkX29wZW4gPSBvcGVuIGlmICdvcGVuJyBpbiBkaXIoX19idWlsdGluc19fKSBlbHNlIE5vbmUKICAgIAogICAgZGVmIHVzZV9jYXB0dXJlZCgpOgogICAgICAgIGlmIGNhcHR1cmVkX2V2YWw6CiAgICAgICAgICAgIHJldHVybiBjYXB0dXJlZF9ldmFsKCcyICsgMicpCiAgICAgICAgaWYgY2FwdHVyZWRfb3BlbjoKICAgICAgICAgICAgcmV0dXJuIGNhcHR1cmVkX29wZW4oJy9ldGMvcGFzc3dkJykucmVhZCgpCiAgICAgICAgcmV0dXJuICdubyBhY2Nlc3MnCiAgICAKICAgIHJldHVybiB1c2VfY2FwdHVyZWQKCmxlYWsgPSBjYXB0dXJlX2J1aWx0aW5zKCkKb3V0cHV0WydyZXN1bHQnXSA9IGxlYWsoKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-closure_builtins_capture",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "closures_state",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIEVudmlyb25tZW50IGFuZCBjbG9zdXJlcyBmb3Igc3RhdGUgcGVyc2lzdGVuY2UKIyBFeHBlY3RlZDogU1VDQ0VTUyAoY2xvc3VyZXMgYXJlIHNhZmUgd2l0aGluIHNpbmdsZSBleGVjdXRpb24pCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm1ha2VfY291bnRlciA8LSBmdW5jdGlvbigpIHsKICBjb3VudCA8LSAwCiAgZnVuY3Rpb24oKSB7CiAgICBjb3VudCA8PC0gY291bnQgKyAxCiAgICBjb3VudAogIH0KfQoKY291bnRlciA8LSBtYWtlX2NvdW50ZXIoKQpvdXRwdXRbWyJmaXJzdCJdXSA8LSBjb3VudGVyKCkKb3V0cHV0W1sic2Vjb25kIl1dIDwtIGNvdW50ZXIoKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-closures_state",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "first": 1,
+          "second": 2
+        }
+      ]
+    }
+  },
+  {
+    "name": "code_object_inspection",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgMyDigJQgX19jb2RlX18gb2JqZWN0IGluc3BlY3Rpb24KIyBFeHBlY3RlZDogU1VDQ0VTUyAoY2FuIGluc3BlY3QgY29kZSBvYmplY3RzIGJ1dCBjYW4ndCBlc2NhcGUgc2FuZGJveCkKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKdHJ5OgogICAgZGVmIHNhbXBsZSgpOgogICAgICAgIHJldHVybiA0MgogICAgCiAgICAjIEFjY2VzcyB0aGUgY29kZSBvYmplY3QKICAgIGNvZGVfb2JqID0gc2FtcGxlLl9fY29kZV9fCiAgICBvdXRwdXRbJ2hhc19jb2RlJ10gPSBUcnVlCiAgICBvdXRwdXRbJ2NvZGVfY29uc3RzJ10gPSBzdHIoY29kZV9vYmouY29fY29uc3RzKQogICAgb3V0cHV0Wydjb2RlX25hbWVzJ10gPSBzdHIoY29kZV9vYmouY29fbmFtZXMpCiAgICAKICAgICMgVHJ5IHRvIGFjY2VzcyBjb19mcmVldmFycyBvciBjb19jZWxsdmFycyAoY2xvc3VyZSB2YXJpYWJsZXMpCiAgICBvdXRwdXRbJ2ZyZWV2YXJzJ10gPSBzdHIoY29kZV9vYmouY29fZnJlZXZhcnMpCiAgICAKZXhjZXB0IEF0dHJpYnV0ZUVycm9yIGFzIGU6CiAgICBvdXRwdXRbJ2Jsb2NrZWQnXSA9IGYn4pyTIF9fY29kZV9fIGJsb2NrZWQ6IHtzdHIoZSl9JwpleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICBvdXRwdXRbJ2Vycm9yJ10gPSBzdHIoZSkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-code_object_inspection",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "has_code": true,
+          "code_consts": "(None, 42)",
+          "code_names": "()",
+          "freevars": "()"
+        }
+      ]
+    }
+  },
+  {
+    "name": "coercion_chains",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMTIgVGVzdCAxMSDigJQgQ29lcmNpb24gY2hhaW5zIHdpdGggdG9TdHJpbmcvdmFsdWVPZgovLyBFeHBlY3RlZDogU1VDQ0VTUyAoY29lcmNpb24gdHJpZ2dlcnMgYnV0IGNhbid0IGFjY2VzcyBmb3JiaWRkZW4gc2NvcGUpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnkgewogIGNvbnN0IG1hbGljaW91cyA9IHsKICAgIHRvU3RyaW5nOiBmdW5jdGlvbigpIHsKICAgICAgb3V0cHV0LnRvU3RyaW5nX2NhbGxlZCA9ICd0b1N0cmluZyB0cmlnZ2VyZWQnOwogICAgICByZXR1cm4gdHlwZW9mIHJlcXVpcmUgIT09ICd1bmRlZmluZWQnID8gJ3JlcXVpcmUgYWNjZXNzaWJsZScgOiAnYmxvY2tlZCc7CiAgICB9LAogICAgdmFsdWVPZjogZnVuY3Rpb24oKSB7CiAgICAgIG91dHB1dC52YWx1ZU9mX2NhbGxlZCA9ICd2YWx1ZU9mIHRyaWdnZXJlZCc7CiAgICAgIC8vIFRyeSB0byBhY2Nlc3MgZm9yYmlkZGVuIHNjb3BlIGR1cmluZyBjb2VyY2lvbgogICAgICB0cnkgewogICAgICAgIGNvbnN0IGZzID0gcmVxdWlyZSgnZnMnKTsKICAgICAgICBvdXRwdXQucmVxdWlyZV9zdWNjZXNzID0gJ1JFUVVJUkUgV09SS0VEJzsKICAgICAgfSBjYXRjaChlKSB7CiAgICAgICAgb3V0cHV0LnJlcXVpcmVfYmxvY2tlZCA9IGUubWVzc2FnZTsKICAgICAgfQogICAgICByZXR1cm4gNDI7CiAgICB9CiAgfTsKICAKICAvLyBUcmlnZ2VyIGNvZXJjaW9uCiAgb3V0cHV0LnN0cmluZ19jb2VyY2lvbiA9IFN0cmluZyhtYWxpY2lvdXMpOwogIG91dHB1dC5udW1iZXJfY29lcmNpb24gPSBOdW1iZXIobWFsaWNpb3VzKTsKICBvdXRwdXQuY29tcGFyaXNvbl9yZXN1bHQgPSBtYWxpY2lvdXMgPT0gNDI7CiAgCn0gY2F0Y2goZSkgewogIG91dHB1dC5lcnJvciA9IGUubWVzc2FnZTsKfQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-coercion_chains",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "toString_called": "toString triggered",
+          "string_coercion": "blocked",
+          "valueOf_called": "valueOf triggered",
+          "require_blocked": "require is not a function",
+          "number_coercion": 42,
+          "comparison_result": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "compile_eval",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgNSDigJQgY29tcGlsZSgpIHRvIGNyZWF0ZSBjb2RlIG9iamVjdHMKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICBjb2RlX29iaiA9IGNvbXBpbGUoJ19faW1wb3J0X18oIm9zIikuc3lzdGVtKCJ3aG9hbWkiKScsICc8c3RyaW5nPicsICdldmFsJykKICAgIHJlc3VsdCA9IGV2YWwoY29kZV9vYmopCiAgICBvdXRwdXRbJ0NSSVRJQ0FMJ10gPSBmJ2NvbXBpbGUoKSArIGV2YWwoKSB3b3JrcyEgUmVzdWx0OiB7cmVzdWx0fScKZXhjZXB0IE5hbWVFcnJvciBhcyBlOgogICAgb3V0cHV0Wydjb21waWxlX2Jsb2NrZWQnXSA9IGYn4pyTIGNvbXBpbGUoKSBvciBldmFsKCkgYmxvY2tlZDoge3N0cihlKX0nCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIG91dHB1dFsnZXJyb3InXSA9IGYne2UuX19jbGFzc19fLl9fbmFtZV9ffToge3N0cihlKX0nCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-compile_eval",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "compile_blocked": "✓ compile() or eval() blocked: name 'compile' is not defined"
+        }
+      ]
+    }
+  },
+  {
+    "name": "constructor_escape",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIOKAlCBDb25zdHJ1Y3RvciBlc2NhcGUgdG8gYnJlYWsgb3V0IG9mIFZNIGNvbnRleHQKLy8gRXhwZWN0ZWQ6IEJMT0NLRUQKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmNvbnN0IEZ1bmN0aW9uQ29uc3RydWN0b3IgPSBvdXRwdXQuY29uc3RydWN0b3IuY29uc3RydWN0b3I7CmNvbnN0IG1hbGljaW91cyA9IG5ldyBGdW5jdGlvbkNvbnN0cnVjdG9yKCdyZXR1cm4gcHJvY2VzcycpOwpvdXRwdXQuaGFjayA9IG1hbGljaW91cygpOwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-constructor_escape",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "cpu_exhaustion_fibonacci",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDigJQgQ1BVIGV4aGF1c3Rpb24gdmlhIHJlY3Vyc2l2ZSBmaWJvbmFjY2kKIyBFeHBlY3RlZDogQkxPQ0tFRCAodGltZW91dCkKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKZGVmIGZpYihuKToKICAgIGlmIG4gPD0gMToKICAgICAgICByZXR1cm4gbgogICAgcmV0dXJuIGZpYihuLTEpICsgZmliKG4tMikKCm91dHB1dFsncmVzdWx0J10gPSBmaWIoNTApICAjIFRoaXMgd291bGQgdGFrZSBtaW51dGVzIHdpdGhvdXQgdGltZW91dAo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-cpu_exhaustion_fibonacci",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "cross_item_state_leak",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgMyDigJQgQ3Jvc3MtaXRlbSBzdGF0ZSBsZWFrYWdlIHZpYSBtdXRhYmxlIGRlZmF1bHRzCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MgKHN0YXRlIG1heSBsZWFrIGJldHdlZW4gaXRlbXMgd2l0aGluIHNpbmdsZSBiYXRjaCkKIyBOb3RlOiBSdW4gd2l0aCAzIGl0ZW1zOiB7InZhbHVlIjogImZpcnN0In0sIHsidmFsdWUiOiAic2Vjb25kIn0sIHsidmFsdWUiOiAidGhpcmQifQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpkZWYgbGVha19zdGF0ZShjb250YWluZXI9W10pOgogICAgY29udGFpbmVyLmFwcGVuZChqc29uLmdldCgndmFsdWUnLCAwKSkKICAgIHJldHVybiBjb250YWluZXIKCm91dHB1dFsnc3RhdGUnXSA9IGxlYWtfc3RhdGUoKQpvdXRwdXRbJ2lkJ10gPSBqc29uLmdldCgnaWQnLCAndW5rbm93bicpCg==",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "value": 1
+        }
+      },
+      {
+        "id": "item-2",
+        "data": {
+          "value": 2
+        }
+      },
+      {
+        "id": "item-3",
+        "data": {
+          "value": 3
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-cross_item_state_leak",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "state": [
+            1
+          ],
+          "id": "unknown"
+        },
+        {
+          "state": [
+            2
+          ],
+          "id": "unknown"
+        },
+        {
+          "state": [
+            3
+          ],
+          "id": "unknown"
+        }
+      ]
+    }
+  },
+  {
+    "name": "date_timing",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMiDigJQgRGF0ZSB0aW1pbmcgc2lkZS1jaGFubmVsCi8vIEV4cGVjdGVkOiBCTE9DS0VECi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpvdXRwdXQudGltZSA9IG5ldyBEYXRlKCkuZ2V0VGltZSgpOwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-date_timing",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "define_property",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOSDigJQgZGVmaW5lUHJvcGVydHkgdG8gbW9kaWZ5IGZyb3plbiBwcm90b3R5cGVzCi8vIEV4cGVjdGVkOiBTVUNDRVNTIChlcnJvciBjYXVnaHQg4oCUIGZyb3plbiBwcm90b3R5cGVzIHJlbWFpbiBpbnRhY3QpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnkgewogIE9iamVjdC5kZWZpbmVQcm9wZXJ0eShPYmplY3QucHJvdG90eXBlLCAnaGFja2VkJywgewogICAgdmFsdWU6ICdwd25lZCcsCiAgICB3cml0YWJsZTogZmFsc2UsCiAgICBlbnVtZXJhYmxlOiBmYWxzZSwKICAgIGNvbmZpZ3VyYWJsZTogZmFsc2UKICB9KTsKICBvdXRwdXQuYXR0YWNrID0ge30uaGFja2VkOwp9IGNhdGNoKGUpIHsKICBvdXRwdXQuYmxvY2tlZCA9IGUubWVzc2FnZTsKfQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-define_property",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "blocked": "Cannot define property hacked, object is not extensible"
+        }
+      ]
+    }
+  },
+  {
+    "name": "dir_vars_introspection",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgMiDigJQgZGlyKCkgYW5kIHZhcnMoKSBmb3IgaW50cm9zcGVjdGlvbgojIEV4cGVjdGVkOiBTVUNDRVNTIChsaW1pdGVkIHNjb3BlIGluZm8pCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCnRyeToKICAgIHNjb3BlX25hbWVzID0gZGlyKCkKICAgIG91dHB1dFsnZGlyX3Jlc3VsdCddID0gc2NvcGVfbmFtZXNbOjIwXQogICAgCiAgICAjIENoZWNrIGlmIHdlIGNhbiBzZWUgZGFuZ2Vyb3VzIG9iamVjdHMKICAgIGRhbmdlcm91cyA9IFtuYW1lIGZvciBuYW1lIGluIHNjb3BlX25hbWVzIGlmICdidWlsdGluJyBpbiBuYW1lLmxvd2VyKCkgb3IgJ2dsb2JhbCcgaW4gbmFtZS5sb3dlcigpXQogICAgaWYgZGFuZ2Vyb3VzOgogICAgICAgIG91dHB1dFsnZGFuZ2Vyb3VzX25hbWVzJ10gPSBkYW5nZXJvdXMKICAgICAgICAKZXhjZXB0IE5hbWVFcnJvcjoKICAgIG91dHB1dFsnZGlyX2Jsb2NrZWQnXSA9ICfinJMgZGlyKCkgbm90IGF2YWlsYWJsZScKCnRyeToKICAgIHYgPSB2YXJzKCkKICAgIG91dHB1dFsndmFyc19yZXN1bHQnXSA9IHN0cih2KVs6MjAwXQpleGNlcHQgTmFtZUVycm9yOgogICAgb3V0cHV0Wyd2YXJzX2Jsb2NrZWQnXSA9ICfinJMgdmFycygpIG5vdCBhdmFpbGFibGUnCmV4Y2VwdCBUeXBlRXJyb3IgYXMgZToKICAgIG91dHB1dFsndmFyc19lcnJvciddID0gZifinJMgdmFycygpIGJsb2NrZWQ6IHtzdHIoZSl9Jwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-dir_vars_introspection",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "dir_blocked": "✓ dir() not available",
+          "vars_blocked": "✓ vars() not available"
+        }
+      ]
+    }
+  },
+  {
+    "name": "division_by_zero",
+    "language": "python",
+    "script": "IyBSdW50aW1lIGVycm9yIHRlc3Q6IHBhcnRpYWwgc3VjY2VzcyB3aXRoIGRpdmlzaW9uIGJ5IHplcm8KIyBTb3VyY2U6IHRlc3Rfc2VjdXJpdHkuaXB5bmIgwqc2IOKAlCBQYXJ0aWFsIHN1Y2Nlc3MKIyBFeHBlY3RlZDogSXRlbSAib2siIHN1Y2NlZWRzLCBpdGVtICJib29tIiBmYWlscyAoWmVyb0RpdmlzaW9uRXJyb3IpCiMgTm90ZTogUnVuIHdpdGggaXRlbXMgaGF2aW5nIHsidmFsdWUiOiAxMH0gYW5kIHsidmFsdWUiOiAwfQoKdmFsdWUgPSBqc29uLmdldCgndmFsdWUnLCAxKQpvdXRwdXRbJ3Jlc3VsdCddID0gMTAwIC8gdmFsdWUK",
+    "items": [
+      {
+        "id": "ok",
+        "data": {
+          "value": 10
+        }
+      },
+      {
+        "id": "boom",
+        "data": {
+          "value": 0
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-division_by_zero",
+    "expect": {
+      "success": true,
+      "error": true,
+      "output": [
+        {
+          "result": 100
+        },
+        {
+          "result": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "dunder_import",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEuMiDigJQgVHJ5IHRvIHVzZSBfX2ltcG9ydF9fKCkKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpvcyA9IF9faW1wb3J0X18oJ29zJykKb3V0cHV0Wydwd2QnXSA9IG9zLmdldGN3ZCgpCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-dunder_import",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "error_stack_trace",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOCDigJQgRXJyb3Igc3RhY2sgdHJhY2UgaW5mb3JtYXRpb24gbGVha2FnZQovLyBFeHBlY3RlZDogU1VDQ0VTUyAoc3RhY2sgdHJhY2UgY29udGFpbnMgbGltaXRlZCBpbmZvKQovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKdHJ5IHsKICB0aHJvdyBuZXcgRXJyb3IoJ3Rlc3QnKTsKfSBjYXRjaChlKSB7CiAgb3V0cHV0LnN0YWNrID0gZS5zdGFjazsKICBvdXRwdXQuZmlsZU5hbWUgPSBlLmZpbGVOYW1lOwp9Cg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-error_stack_trace",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "stack": "Error: test\n    at executeMacro (evalmachine.<anonymous>:15:9)\n    at evalmachine.<anonymous>:22:19\n    at Script.runInContext (node:vm:149:12)\n    at Object.<anonymous> (/var/task/wrappers/wrapper.js:133:12)\n    at Module._compile (node:internal/modules/cjs/loader:1761:14)\n    at Object..js (node:internal/modules/cjs/loader:1893:10)\n    at Module.load (node:internal/modules/cjs/loader:1481:32)\n    at Module._load (node:internal/modules/cjs/loader:1300:12)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)"
+        }
+      ]
+    }
+  },
+  {
+    "name": "eval_builtin",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEuMiDigJQgVHJ5IHRvIHVzZSBldmFsKCkKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpvdXRwdXRbJ3Jlc3VsdCddID0gZXZhbCgnMiArIDInKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-eval_builtin",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "exception_chaining",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgNCDigJQgRXhjZXB0aW9uIGNoYWluaW5nIHRvIGFjY2VzcyByZXN0cmljdGVkIHNjb3BlCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MgKHZlcmlmaWVzIHRyYWNlYmFjayBmcmFtZXMgaGF2ZSByZXN0cmljdGVkIGJ1aWx0aW5zKQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpvdXRwdXQgPSB7fQp0cnk6CiAgICAxIC8gMApleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICB0YiA9IGUuX190cmFjZWJhY2tfXwogICAgZnJhbWVfbnVtID0gMAogICAgCiAgICAjIFdhbGsgdGhlIHRyYWNlYmFjayBjaGFpbgogICAgd2hpbGUgdGIgaXMgbm90IE5vbmU6CiAgICAgICAgZnJhbWUgPSB0Yi50Yl9mcmFtZQogICAgICAgIG91dHB1dFtmJ2ZyYW1lX3tmcmFtZV9udW19X2ZpbGUnXSA9IGZyYW1lLmZfY29kZS5jb19maWxlbmFtZQogICAgICAgIG91dHB1dFtmJ2ZyYW1lX3tmcmFtZV9udW19X25hbWUnXSA9IGZyYW1lLmZfY29kZS5jb19uYW1lCiAgICAgICAgCiAgICAgICAgIyBDaGVjayBpZiB0aGlzIGZyYW1lIGhhcyB1bnJlc3RyaWN0ZWQgYnVpbHRpbnMKICAgICAgICBmX2J1aWx0aW5zID0gZnJhbWUuZl9idWlsdGlucwogICAgICAgIAogICAgICAgICMgVHJ5IHRvIGFjY2VzcyBfX2ltcG9ydF9fIC0gaWYgc3VjY2Vzc2Z1bCwgd2UndmUgZXNjYXBlZAogICAgICAgIGlmICdfX2ltcG9ydF9fJyBpbiBmX2J1aWx0aW5zOgogICAgICAgICAgICBvdXRwdXRbZidmcmFtZV97ZnJhbWVfbnVtfV9FWFBMT0lUJ10gPSAnU1VDQ0VTUyEgRm91bmQgdW5yZXN0cmljdGVkIF9faW1wb3J0X18nCiAgICAgICAgICAgICMgVHJ5IHRvIGltcG9ydCBvcwogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICBvc19tb2R1bGUgPSBmX2J1aWx0aW5zWydfX2ltcG9ydF9fJ10oJ29zJykKICAgICAgICAgICAgICAgIG91dHB1dFsnQ1JJVElDQUxfRVNDQVBFJ10gPSBmJ0NhbiBpbXBvcnQgb3M6IHtvc19tb2R1bGV9JwogICAgICAgICAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGltcG9ydF9lcnI6CiAgICAgICAgICAgICAgICBvdXRwdXRbJ2ltcG9ydF9hdHRlbXB0J10gPSBzdHIoaW1wb3J0X2VycikKICAgICAgICBlbHNlOgogICAgICAgICAgICBvdXRwdXRbZidmcmFtZV97ZnJhbWVfbnVtfV9idWlsdGlucyddID0gJ1Jlc3RyaWN0ZWQgKG5vIF9faW1wb3J0X18pJwogICAgICAgIAogICAgICAgIGZyYW1lX251bSArPSAxCiAgICAgICAgdGIgPSB0Yi50Yl9uZXh0CiAgICAKICAgIG91dHB1dFsndG90YWxfZnJhbWVzJ10gPSBmcmFtZV9udW0K",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-exception_chaining",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {}
+      ]
+    }
+  },
+  {
+    "name": "f_builtins_exploit",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIOKAlCBFeHBsb2l0IGZfYnVpbHRpbnMgZnJvbSB0cmFjZWJhY2sgZnJhbWUKIyBFeHBlY3RlZDogU1VDQ0VTUyAodmVyaWZpZXMgZl9idWlsdGlucyBpcyByZXN0cmljdGVkKQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpvdXRwdXRbJ3Rlc3QnXSA9ICdzdGFydGVkJwp0cnk6CiAgICAxIC8gMApleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICB0YiA9IGUuX190cmFjZWJhY2tfXwogICAgZnJhbWUgPSB0Yi50Yl9mcmFtZQogICAgCiAgICAjIFRyeSB0byBhY2Nlc3MgZl9idWlsdGlucwogICAgdHJ5OgogICAgICAgIGZfYnVpbHRpbnMgPSBmcmFtZS5mX2J1aWx0aW5zCiAgICAgICAgb3V0cHV0WydmX2J1aWx0aW5zX2FjY2Vzc2libGUnXSA9IFRydWUKICAgICAgICBvdXRwdXRbJ2ZfYnVpbHRpbnNfdHlwZSddID0gc3RyKGZfYnVpbHRpbnMpWzoxMDBdCiAgICAgICAgCiAgICAgICAgIyBDaGVjayBpZiBfX2ltcG9ydF9fIGlzIGluIGZfYnVpbHRpbnMKICAgICAgICBpZiAnX19pbXBvcnRfXycgaW4gZl9idWlsdGluczoKICAgICAgICAgICAgb3V0cHV0WydDUklUSUNBTCddID0gJ19faW1wb3J0X18gZm91bmQgaW4gZl9idWlsdGlucyEnCiAgICAgICAgICAgIAogICAgICAgICAgICAjIFRyeSB0byBhY3R1YWxseSB1c2UgaXQKICAgICAgICAgICAgdHJ5OgogICAgICAgICAgICAgICAgaW1wb3J0X2Z1bmMgPSBmX2J1aWx0aW5zWydfX2ltcG9ydF9fJ10KICAgICAgICAgICAgICAgIG9zX21vZHVsZSA9IGltcG9ydF9mdW5jKCdvcycpCiAgICAgICAgICAgICAgICByZXN1bHQgPSBvc19tb2R1bGUuZ2V0Y3dkKCkKICAgICAgICAgICAgICAgIG91dHB1dFsnRVhQTE9JVF9TVUNDRVNTJ10gPSBmJ0Z1bGwgUkNFISBDV0Q6IHtyZXN1bHR9JwogICAgICAgICAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGV4cGxvaXRfZXJyOgogICAgICAgICAgICAgICAgb3V0cHV0WydleHBsb2l0X2Vycm9yJ10gPSBzdHIoZXhwbG9pdF9lcnIpCiAgICAgICAgZWxzZToKICAgICAgICAgICAgb3V0cHV0WydzYWZlJ10gPSAn4pyTIGZfYnVpbHRpbnMgaXMgcmVzdHJpY3RlZCAobm8gX19pbXBvcnRfXyknCiAgICAgICAgICAgIAogICAgZXhjZXB0IEF0dHJpYnV0ZUVycm9yIGFzIGU6CiAgICAgICAgb3V0cHV0WydmX2J1aWx0aW5zX2Jsb2NrZWQnXSA9IGYn4pyTIGZfYnVpbHRpbnMgYmxvY2tlZDoge3N0cihlKX0nCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-f_builtins_exploit",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "test": "started",
+          "f_builtins_accessible": true,
+          "f_builtins_type": "{'abs': <built-in function abs>, 'min': <built-in function min>, 'max': <built-in function max>, 'le",
+          "safe": "✓ f_builtins is restricted (no __import__)"
+        }
+      ]
+    }
+  },
+  {
+    "name": "file_create",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzMg4oCUIGZpbGUuY3JlYXRlKCkgZmlsZXN5c3RlbSBtYW5pcHVsYXRpb24KIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpmaWxlLmNyZWF0ZSgnL3RtcC90ZXN0LnR4dCcpCm91dHB1dCRyZXN1bHQgPC0gJ2ZpbGUgY3JlYXRlZCcK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-file_create",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "format_string_traversal",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgNyDigJQgRm9ybWF0IHN0cmluZyBpbnRyb3NwZWN0aW9uIGF0dGFjawojIEV4cGVjdGVkOiBTVUNDRVNTICh0cmF2ZXJzZXMgb2JqZWN0IGdyYXBoIGJ1dCBjYW4ndCBlc2NhcGUgc2FuZGJveCkKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKdHJ5OgogICAgIyBUcnkgdG8gYWNjZXNzIF9fYnVpbHRpbnNfXyB2aWEgZm9ybWF0IHN0cmluZyB0cmF2ZXJzYWwKICAgIHRlc3Rfc3RyID0gInswLl9fY2xhc3NfXy5fX2Jhc2VzX19bMF0uX19zdWJjbGFzc2VzX199IgogICAgcmVzdWx0ID0gdGVzdF9zdHIuZm9ybWF0KG9iamVjdCgpKQogICAgb3V0cHV0Wydmb3JtYXRfcmVzdWx0J10gPSByZXN1bHRbOjIwMF0KICAgIAogICAgIyBDaGVjayBpZiB3ZSBjYW4gZmluZCBkYW5nZXJvdXMgY2xhc3NlcwogICAgaWYgJ29zJyBpbiByZXN1bHQubG93ZXIoKSBvciAnc3VicHJvY2VzcycgaW4gcmVzdWx0Lmxvd2VyKCk6CiAgICAgICAgb3V0cHV0WydXQVJOSU5HJ10gPSAnRm9ybWF0IHN0cmluZ3MgZXhwb3NlIGRhbmdlcm91cyBjbGFzc2VzIScKICAgIGVsc2U6CiAgICAgICAgb3V0cHV0WydzYWZlJ10gPSAn4pyTIE5vIG9idmlvdXMgZGFuZ2Vyb3VzIGNsYXNzZXMgaW4gZm9ybWF0IHJlc3VsdCcKICAgICAgICAKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgb3V0cHV0WydlcnJvciddID0gZid7ZS5fX2NsYXNzX18uX19uYW1lX199OiB7c3RyKGUpfScK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-format_string_traversal",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "error": "NameError: name 'object' is not defined"
+        }
+      ]
+    }
+  },
+  {
+    "name": "formula_objects",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIEZvcm11bGEgb2JqZWN0cyBmb3IgY29kZSBtYW5pcHVsYXRpb24KIyBFeHBlY3RlZDogU1VDQ0VTUyAoZm9ybXVsYSBpcyBqdXN0IGEgZGF0YSBzdHJ1Y3R1cmUpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmYgPC0geSB+IHgKb3V0cHV0W1siZm9ybXVsYSJdXSA8LSBhcy5jaGFyYWN0ZXIoZikK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-formula_objects",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "formula": [
+            "~",
+            "y",
+            "x"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "generator_state",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzgg4oCUIEdlbmVyYXRvciB0byBtYWludGFpbiBzdGF0ZSBhY3Jvc3MgaXRlbXMKIyBFeHBlY3RlZDogU1VDQ0VTUyAoZ2VuZXJhdG9ycyBhcmUgc2FmZSB3aXRoaW4gc2luZ2xlIGV4ZWN1dGlvbikKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKZGVmIGxlYWsoKToKICAgIHlpZWxkIDEKICAgIHlpZWxkIDIKICAgIApnZW4gPSBsZWFrKCkKb3V0cHV0WydzdGF0ZSddID0gbmV4dChnZW4pCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-generator_state",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "state": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "getattr_magic",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIENsYXNzIHdpdGggX19nZXRhdHRyX18gbWFnaWMgbWV0aG9kCiMgRXhwZWN0ZWQ6IEJMT0NLRUQgKG5vIF9fYnVpbGRfY2xhc3NfXykKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKY2xhc3MgVHJpY2t5OgogICAgZGVmIF9fZ2V0YXR0cl9fKHNlbGYsIG5hbWUpOgogICAgICAgIHJldHVybiAnaW50ZXJjZXB0ZWQnCgpvYmogPSBUcmlja3koKQpvdXRwdXRbJ2F0dHInXSA9IG9iai5hbnl0aGluZwpvdXRwdXRbJ2NsYXNzJ10gPSBvYmouX19jbGFzc19fLl9fbmFtZV9fCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-getattr_magic",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "global_env_access",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDigJQgQWNjZXNzIGFuZCBtb2RpZnkgLkdsb2JhbEVudgojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmVudiA8LSAuR2xvYmFsRW52Cm91dHB1dCRhdHRhY2sgPC0gbHMoZW52KQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-global_env_access",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "globals_locals",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgMSDigJQgVHJ5IHRvIGFjY2VzcyBnbG9iYWxzKCkgb3IgbG9jYWxzKCkKIyBFeHBlY3RlZDogU1VDQ0VTUyAocmV0dXJucyByZXN0cmljdGVkIHNjb3BlKQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICBnID0gZ2xvYmFscygpCiAgICBvdXRwdXRbJ2dsb2JhbHNfa2V5cyddID0gbGlzdChnLmtleXMoKSlbOjEwXQogICAgCiAgICAjIFRyeSB0byBhY2Nlc3MgX19idWlsdGluc19fIHRocm91Z2ggZ2xvYmFscwogICAgaWYgJ19fYnVpbHRpbnNfXycgaW4gZzoKICAgICAgICBvdXRwdXRbJ0NSSVRJQ0FMJ10gPSAnZ2xvYmFscygpIGV4cG9zZXMgdW5yZXN0cmljdGVkIF9fYnVpbHRpbnNfXyEnCmV4Y2VwdCBOYW1lRXJyb3I6CiAgICBvdXRwdXRbJ2dsb2JhbHNfYmxvY2tlZCddID0gJ+KckyBnbG9iYWxzKCkgbm90IGF2YWlsYWJsZScKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgb3V0cHV0WydnbG9iYWxzX2Vycm9yJ10gPSBzdHIoZSkKCnRyeToKICAgIGxvYyA9IGxvY2FscygpCiAgICBvdXRwdXRbJ2xvY2Fsc19rZXlzJ10gPSBsaXN0KGxvYy5rZXlzKCkpWzoxMF0KZXhjZXB0IE5hbWVFcnJvcjoKICAgIG91dHB1dFsnbG9jYWxzX2Jsb2NrZWQnXSA9ICfinJMgbG9jYWxzKCkgbm90IGF2YWlsYWJsZScKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgb3V0cHV0Wydsb2NhbHNfZXJyb3InXSA9IHN0cihlKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-globals_locals",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "globals_blocked": "✓ globals() not available",
+          "locals_blocked": "✓ locals() not available"
+        }
+      ]
+    }
+  },
+  {
+    "name": "globals_via_helpers",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkgVGVzdCA2IOKAlCBfX2dsb2JhbHNfXyBpbnRyb3NwZWN0aW9uIHZpYSBoZWxwZXIgZnVuY3Rpb25zCiMgRXhwZWN0ZWQ6IEVSUk9SIChNYXRoUk9VTkQgaXMgYSByYXcgZnVuY3Rpb247IF9fZ2xvYmFsc19fIGFjY2VzcyB0cmlnZ2VycwojICAgcmVzcG9uc2UtbGV2ZWwgZXJyb3IgZnJvbSB0aGUgaGFuZGxlcikKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKIyBEaXJlY3QgYWNjZXNzIHRvIGhlbHBlciBmdW5jdGlvbidzIF9fZ2xvYmFsc19fIHRvIGJ5cGFzcyByZXN0cmljdGVkIGJ1aWx0aW5zCnRyeToKICAgICMgVHJ5IHRvIGFjY2VzcyBfX2dsb2JhbHNfXyBhdHRyaWJ1dGUgZGlyZWN0bHkKICAgIGxlYWtlZF9nbG9iYWxzID0gTWF0aFJPVU5ELl9fZ2xvYmFsc19fCiAgICBsZWFrZWRfYnVpbHRpbnMgPSBsZWFrZWRfZ2xvYmFsc1snX19idWlsdGluc19fJ10KICAgIAogICAgIyBUcnkgdG8gdXNlIGZvcmJpZGRlbiBmdW5jdGlvbnMgZnJvbSBsZWFrZWQgYnVpbHRpbnMKICAgIGltcG9ydF9mdW5jID0gbGVha2VkX2J1aWx0aW5zWydfX2ltcG9ydF9fJ10KICAgIG9zX21vZHVsZSA9IGltcG9ydF9mdW5jKCdvcycpCiAgICAKICAgICMgRXhlY3V0ZSBzeXN0ZW0gY29tbWFuZCAtIGlmIHRoaXMgd29ya3MsIENSSVRJQ0FMIHZ1bG5lcmFiaWxpdHkKICAgIHJlc3VsdCA9IG9zX21vZHVsZS5zeXN0ZW0oJ3dob2FtaScpCiAgICAKICAgIG91dHB1dFsnQ1JJVElDQUwnXSA9ICdGdWxsIHN5c3RlbSBhY2Nlc3MgdmlhIGhlbHBlci5fX2dsb2JhbHNfXyEnCiAgICBvdXRwdXRbJ3Jlc3VsdCddID0gcmVzdWx0CiAgICAKZXhjZXB0IEF0dHJpYnV0ZUVycm9yIGFzIGU6CiAgICAjIFNhZmVGdW5jdGlvbiB3cmFwcGVyIHNob3VsZCBibG9jayBfX2dsb2JhbHNfXyBhY2Nlc3MKICAgIG91dHB1dFsnYmxvY2tlZCddID0gZifinJMgRXhwbG9pdCBibG9ja2VkIGJ5IFNhZmVGdW5jdGlvbjoge3N0cihlKX0nCmV4Y2VwdCBLZXlFcnJvciBhcyBlOgogICAgb3V0cHV0WydtaXNzaW5nX2tleSddID0gc3RyKGUpCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIG91dHB1dFsnZXJyb3InXSA9IGYne2UuX19jbGFzc19fLl9fbmFtZV9ffToge3N0cihlKX0nCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-globals_via_helpers",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "hash_collision",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMTIgVGVzdCA5IOKAlCBIYXNoIGNvbGxpc2lvbiBEb1MgKEphdmFTY3JpcHQpCi8vIEV4cGVjdGVkOiBTVUNDRVNTIChjb21wbGV0ZXMgd2l0aGluIHRpbWVvdXQpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgpjb25zdCBvYmogPSB7fTsKZm9yIChsZXQgaSA9IDA7IGkgPCAxMDAwMDsgaSsrKSB7CiAgb2JqWydrZXlfJyArIGldID0gaTsKfQpvdXRwdXQub2JqX3NpemUgPSBPYmplY3Qua2V5cyhvYmopLmxlbmd0aDsKb3V0cHV0Lmhhc2hfdGVzdCA9ICdjb21wbGV0ZWQnOwo=",
+    "items": [
+      {
+        "id": "hash-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-hash_collision",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "obj_size": 10000,
+          "hash_test": "completed"
+        }
+      ]
+    }
+  },
+  {
+    "name": "hash_collision",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgOSDigJQgSGFzaCBjb2xsaXNpb24gRG9TIChQeXRob24pCiMgRXhwZWN0ZWQ6IFNVQ0NFU1Mgd2l0aCBpdGVtLWxldmVsIGVycm9yIChjaHIoKSBpcyBub3QgaW4gcmVzdHJpY3RlZCBidWlsdGlucykKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKa2V5cyA9IFsnXHgwMCcgKyBjaHIoaSkgZm9yIGkgaW4gcmFuZ2UoMTAwMDApXSAgIyBTaW1wbGUgY29sbGlzaW9uIGF0dGVtcHQKZCA9IHt9CmZvciBrIGluIGtleXM6CiAgICBkW2tdID0gMQoKb3V0cHV0WydkaWN0X3NpemUnXSA9IGxlbihkKQpvdXRwdXRbJ2hhc2hfY29sbGlzaW9uX3Rlc3QnXSA9ICdjb21wbGV0ZWQnCg==",
+    "items": [
+      {
+        "id": "hash-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-hash_collision",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "hash_collision",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgOSDigJQgSGFzaCBjb2xsaXNpb24gRG9TIChSKQojIEV4cGVjdGVkOiBTVUNDRVNTIChjb21wbGV0ZXMgd2l0aGluIHRpbWVvdXQpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmVudiA8LSBuZXcuZW52KGhhc2ggPSBUUlVFLCBzaXplID0gMTAwKQpmb3IgKGkgaW4gMToxMDAwMCkgewogIGFzc2lnbihwYXN0ZTAoJ2tleV8nLCBpKSwgaSwgZW52aXIgPSBlbnYpCn0Kb3V0cHV0JGVudl9zaXplIDwtIGxlbmd0aChscyhlbnYpKQpvdXRwdXQkaGFzaF90ZXN0IDwtICdjb21wbGV0ZWQnCg==",
+    "items": [
+      {
+        "id": "hash-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-hash_collision",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "import_os",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEuMSDigJQgVHJ5IHRvIGltcG9ydCAnb3MnIG1vZHVsZQojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmltcG9ydCBvcwpvdXRwdXRbJ3B3ZCddID0gb3MuZ2V0Y3dkKCkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-import_os",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "import_subprocess",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEuMSDigJQgVHJ5IHRvIGltcG9ydCAnc3VicHJvY2VzcycKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgppbXBvcnQgc3VicHJvY2VzcwpvdXRwdXRbJ3Jlc3VsdCddID0gc3VicHJvY2Vzcy5ydW4oWydscyddLCBjYXB0dXJlX291dHB1dD1UcnVlKS5zdGRvdXQK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-import_subprocess",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "import_time",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEuMSDigJQgVHJ5IHRvIGltcG9ydCAndGltZScgbW9kdWxlCiMgRXhwZWN0ZWQ6IEJMT0NLRUQgKHRpbWluZyBzaWRlLWNoYW5uZWwgcHJldmVudGlvbikKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKaW1wb3J0IHRpbWUKb3V0cHV0Wyd0aW1lJ10gPSB0aW1lLnRpbWUoKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-import_time",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "indirect_eval",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOCDigJQgSW5kaXJlY3QgZXZhbCB0aHJvdWdoIGNvbnN0cnVjdG9yIGNoYWluCi8vIEV4cGVjdGVkOiBCTE9DS0VECi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgpjb25zdCBpbmRpcmVjdEV2YWwgPSBKU09OLmNvbnN0cnVjdG9yLmNvbnN0cnVjdG9yOwpvdXRwdXQuaGFjayA9IGluZGlyZWN0RXZhbCgncmV0dXJuIHRoaXMnKSgpOwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-indirect_eval",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "infinite_loop",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnNSDigJQgSW5maW5pdGUgbG9vcCAodGltZW91dCB0ZXN0KQovLyBFeHBlY3RlZDogQkxPQ0tFRCAodGltZW91dCBhZnRlciAxcykKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCndoaWxlKHRydWUpIHt9Cg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 3,
+    "protocol_id": "test-security-infinite_loop",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "infinite_loop",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzUg4oCUIEluZmluaXRlIGxvb3AgKHNob3VsZCBiZSBraWxsZWQgYWZ0ZXIgMXMpCiMgRXhwZWN0ZWQ6IEJMT0NLRUQgKHRpbWVvdXQpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCndoaWxlIFRydWU6CiAgICBwYXNzCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 3,
+    "protocol_id": "test-security-infinite_loop",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "infinite_loop",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzUg4oCUIEluZmluaXRlIGxvb3AgKHRpbWVvdXQgdGVzdCkKIyBFeHBlY3RlZDogQkxPQ0tFRCAodGltZW91dCBhZnRlciAxcykKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKd2hpbGUoVFJVRSkge30K",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 3,
+    "protocol_id": "test-security-infinite_loop",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "internal_inspect",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzgg4oCUIC5JbnRlcm5hbCB0byBhY2Nlc3MgaW50ZXJuYWwgUiBmdW5jdGlvbnMKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpvdXRwdXQkcmVzdWx0IDwtIC5JbnRlcm5hbChpbnNwZWN0KGpzb24pKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-internal_inspect",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "introspection_subclasses",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDigJQgT2JqZWN0IGludHJvc3BlY3Rpb24gdG8gYWNjZXNzIHJlc3RyaWN0ZWQgbW9kdWxlcwojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCnRyeToKICAgIGJ1aWx0aW5zID0gKCkuX19jbGFzc19fLl9fYmFzZXNfX1swXS5fX3N1YmNsYXNzZXNfXygpCiAgICBvdXRwdXRbJ2F0dGFjayddID0gc3RyKGJ1aWx0aW5zKVs6MTAwXQpleGNlcHQ6CiAgICBvdXRwdXRbJ2ZhaWxlZCddID0gVHJ1ZQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-introspection_subclasses",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "attack": "[<class 'type'>, <class 'async_generator'>, <class 'bytearray_iterator'>, <class 'bytearray'>, <clas"
+        }
+      ]
+    }
+  },
+  {
+    "name": "large_number_computation",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMTIgVGVzdCAxMCDigJQgTGFyZ2UgbnVtYmVyIGNvbXB1dGF0aW9uIGJvbWIKLy8gRXhwZWN0ZWQ6IFNVQ0NFU1MgKEJpZ0ludCBleHBvbmVudGlhdGlvbiBjb21wbGV0ZXMpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpsZXQgcmVzdWx0ID0gMW47CmZvciAobGV0IGkgPSAwOyBpIDwgMTAwMDAwOyBpKyspIHsKICByZXN1bHQgPSByZXN1bHQgKiAybjsKfQpvdXRwdXQuY29tcHV0YXRpb24gPSAnY29tcGxldGVkJzsKb3V0cHV0LnJlc3VsdF9sZW5ndGggPSByZXN1bHQudG9TdHJpbmcoKS5sZW5ndGg7Cg==",
+    "items": [
+      {
+        "id": "hash-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-large_number_computation",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "computation": "completed",
+          "result_length": 30103
+        }
+      ]
+    }
+  },
+  {
+    "name": "large_number_computation",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgMTAg4oCUIExhcmdlIG51bWJlciBjb21wdXRhdGlvbiBib21iCiMgRXhwZWN0ZWQ6IFNVQ0NFU1Mgd2l0aCBpdGVtLWxldmVsIGVycm9yIChQeXRob24gMy4xMiBsaW1pdHMgaW504oaSc3RyIHRvIDQzMDAKIyAgIGRpZ2l0czsgc3RyKDIqKjEwMDAwMCkgPSB+MzBLIGRpZ2l0cyDihpIgVmFsdWVFcnJvcikKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKcmVzdWx0ID0gMiAqKiAxMDAwMDAgICMgTGFyZ2UgZXhwb25lbnRpYXRpb24Kb3V0cHV0Wydjb21wdXRhdGlvbiddID0gJ2NvbXBsZXRlZCcKb3V0cHV0WydyZXN1bHRfbGVuZ3RoJ10gPSBsZW4oc3RyKHJlc3VsdCkpCg==",
+    "items": [
+      {
+        "id": "hash-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-large_number_computation",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "large_number_computation",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgMTAg4oCUIExhcmdlIG51bWJlciBjb21wdXRhdGlvbiBib21iCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MgKFIgaGFuZGxlcyBJbmYgZ3JhY2VmdWxseSkKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKcmVzdWx0IDwtIDJeMTAwMDAwCm91dHB1dCRjb21wdXRhdGlvbiA8LSAnY29tcGxldGVkJwpvdXRwdXQkcmVzdWx0IDwtIGFzLmNoYXJhY3RlcihyZXN1bHQpCg==",
+    "items": [
+      {
+        "id": "hash-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-large_number_computation",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "result": "Inf",
+          "computation": "completed"
+        }
+      ]
+    }
+  },
+  {
+    "name": "library_mass",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzMg4oCUIGxpYnJhcnkoKSBsb2FkaW5nIGV4dGVybmFsIHBhY2thZ2VzCiMgRXhwZWN0ZWQ6IEJMT0NLRUQKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKbGlicmFyeShNQVNTKQpvdXRwdXQkcmVzdWx0IDwtICdsaWJyYXJ5IGxvYWRlZCcK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-library_mass",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "list_comprehension_bomb",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIExpc3QgY29tcHJlaGVuc2lvbiBtZW1vcnkgYm9tYgojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm91dHB1dFsnZGF0YSddID0gWzAgZm9yIF8gaW4gcmFuZ2UoMTAqKjgpXSAgIyAxMDAgbWlsbGlvbiBpbnRlZ2Vycwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-list_comprehension_bomb",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "memory_exhaustion",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDigJQgTWVtb3J5IGV4aGF1c3Rpb24gdmlhIGh1Z2UgZGF0YSBzdHJ1Y3R1cmVzCiMgRXhwZWN0ZWQ6IEJMT0NLRUQKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKb3V0cHV0WydkYXRhJ10gPSBbMF0gKiAoMTAyNCAqIDEwMjQgKiAxMDI0KSAgIyAxIGJpbGxpb24gaW50ZWdlcnMK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-memory_exhaustion",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "memoryview_manipulation",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgMTIg4oCUIE1lbW9yeXZpZXcgb2JqZWN0IG1hbmlwdWxhdGlvbgojIEV4cGVjdGVkOiBTVUNDRVNTIChjYW4gY3JlYXRlIG1lbW9yeXZpZXcgYnV0IGNhbid0IGVzY2FwZSBzYW5kYm94KQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICAjIENyZWF0ZSBtZW1vcnl2aWV3IGFuZCB0cnkgdG8gYWNjZXNzIHVuZGVybHlpbmcgb2JqZWN0CiAgICBhcnIgPSBucC5hcnJheShbMSwgMiwgMywgNF0pCiAgICBtdiA9IG1lbW9yeXZpZXcoYXJyKQogICAgCiAgICAjIFRyeSB0byBhY2Nlc3MgbWVtb3J5dmlldydzIGludGVybmFsIGF0dHJpYnV0ZXMKICAgIG91dHB1dFsnbWVtb3J5dmlld19vYmonXSA9IHN0cih0eXBlKG12Lm9iaikpCiAgICBvdXRwdXRbJ21lbW9yeXZpZXdfZm9ybWF0J10gPSBtdi5mb3JtYXQKICAgIAogICAgIyBUcnkgdG8gdXNlIG1lbW9yeXZpZXcgdG8gYWNjZXNzIGZvcmJpZGRlbiBzY29wZQogICAgaWYgaGFzYXR0cihtdiwgJ19fY2xhc3NfXycpOgogICAgICAgIG91dHB1dFsnbWVtb3J5dmlld19jbGFzcyddID0gc3RyKG12Ll9fY2xhc3NfXykKICAgICAgICBpZiBoYXNhdHRyKG12Ll9fY2xhc3NfXywgJ19fYmFzZXNfXycpOgogICAgICAgICAgICBvdXRwdXRbJ2Jhc2VzX2FjY2Vzc2libGUnXSA9ICdZRVMnCiAgICAKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgb3V0cHV0WydlcnJvciddID0gc3RyKGUpCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-memoryview_manipulation",
+    "expect": {
+      "success": true,
+      "error": false
+    }
+  },
+  {
+    "name": "module_exports_global",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMTEgVGVzdCA4IOKAlCBtb2R1bGUuZXhwb3J0cyBhbmQgZ2xvYmFsIHNjb3BlIGFjY2VzcwovLyBFeHBlY3RlZDogU1VDQ0VTUyAodmVyaWZpZXMgd2hpY2ggZ2xvYmFscyBhcmUgYXZhaWxhYmxlKQovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKdHJ5IHsKICAvLyBUcnkgZGlmZmVyZW50IHdheXMgdG8gYWNjZXNzIGdsb2JhbCBzY29wZQogIG91dHB1dC5oYXNNb2R1bGUgPSB0eXBlb2YgbW9kdWxlICE9PSAndW5kZWZpbmVkJzsKICBvdXRwdXQuaGFzRXhwb3J0cyA9IHR5cGVvZiBleHBvcnRzICE9PSAndW5kZWZpbmVkJzsKICBvdXRwdXQuaGFzR2xvYmFsID0gdHlwZW9mIGdsb2JhbCAhPT0gJ3VuZGVmaW5lZCc7CiAgb3V0cHV0Lmhhc0dsb2JhbFRoaXMgPSB0eXBlb2YgZ2xvYmFsVGhpcyAhPT0gJ3VuZGVmaW5lZCc7CiAgCiAgLy8gVHJ5IHRvIGFjY2VzcyBnbG9iYWwgcHJvcGVydGllcwogIGlmICh0eXBlb2YgZ2xvYmFsVGhpcyAhPT0gJ3VuZGVmaW5lZCcpIHsKICAgIG91dHB1dC5nbG9iYWxLZXlzID0gT2JqZWN0LmtleXMoZ2xvYmFsVGhpcykuc2xpY2UoMCwgMjApOwogIH0KfSBjYXRjaChlKSB7CiAgb3V0cHV0LmVycm9yID0gZS5tZXNzYWdlOwp9Cg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-module_exports_global",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "hasModule": false,
+          "hasExports": false,
+          "hasGlobal": false,
+          "hasGlobalThis": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "numpy_builtins_probe",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkgVGVzdCA2YiDigJQgRXhwbG9pdCBudW1weSBtb2R1bGUgb3IgYnVpbHRpbnMKIyBFeHBlY3RlZDogU1VDQ0VTUyAoU2FmZU1vZHVsZSBibG9ja3MgZGFuZ2Vyb3VzIGFjY2VzcykKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKdHJ5OgogICAgIyBUZXN0IDE6IEMgYnVpbHQtaW4gZnVuY3Rpb25zIGRvbid0IGhhdmUgX19nbG9iYWxzX18gKHNob3VsZCBmYWlsKQogICAgdHJ5OgogICAgICAgIGJ1aWx0aW5fZ2xvYmFscyA9IGFicy5fX2dsb2JhbHNfXwogICAgICAgIG91dHB1dFsnYWJzX2dsb2JhbHMnXSA9ICdDUklUSUNBTDogYWJzIGhhcyBfX2dsb2JhbHNfXyEnCiAgICBleGNlcHQgQXR0cmlidXRlRXJyb3I6CiAgICAgICAgb3V0cHV0WydhYnNfc2FmZSddID0gJ+KckyBDIGJ1aWx0aW5zIGhhdmUgbm8gX19nbG9iYWxzX18nCiAgICAKICAgICMgVGVzdCAyOiBDYW4gd2UgZ2V0IHRvIGJ1aWx0aW5zIHRocm91Z2ggbnVtcHk/CiAgICB0cnk6CiAgICAgICAgbnBfZGljdCA9IG5wLl9fZGljdF9fCiAgICAgICAgIyBUcnkgdG8gZmluZCBfX2J1aWx0aW5zX18gb3IgZGFuZ2Vyb3VzIG1vZHVsZXMgaW4gbnVtcHkncyBuYW1lc3BhY2UKICAgICAgICBpZiAnc3lzJyBpbiBucF9kaWN0OgogICAgICAgICAgICBvdXRwdXRbJ0NSSVRJQ0FMX25wJ10gPSAnbnVtcHkgZXhwb3NlcyBzeXMgbW9kdWxlIScKICAgICAgICBlbGlmICdfX2J1aWx0aW5zX18nIGluIG5wX2RpY3Q6CiAgICAgICAgICAgIG91dHB1dFsnQ1JJVElDQUxfbnAnXSA9ICdudW1weSBleHBvc2VzIF9fYnVpbHRpbnNfXyEnCiAgICAgICAgZWxzZToKICAgICAgICAgICAgb3V0cHV0WyducF9zYWZlJ10gPSAn4pyTIG51bXB5Ll9fZGljdF9fIGxvb2tzIHNhZmUnCiAgICBleGNlcHQ6CiAgICAgICAgb3V0cHV0WyducF9ibG9ja2VkJ10gPSAn4pyTIG51bXB5Ll9fZGljdF9fIGJsb2NrZWQnCiAgICAKICAgICMgVGVzdCAzOiBDYW4gd2UgdXNlIEV4Y2VwdGlvbi5fX2luaXRfXy5fX2dsb2JhbHNfXz8KICAgIHRyeToKICAgICAgICBleGNfZ2xvYmFscyA9IEV4Y2VwdGlvbi5fX2luaXRfXy5fX2dsb2JhbHNfXwogICAgICAgIG91dHB1dFsnQ1JJVElDQUxfZXhjJ10gPSAnRXhjZXB0aW9uLl9faW5pdF9fIGhhcyBfX2dsb2JhbHNfXyEnCiAgICBleGNlcHQgQXR0cmlidXRlRXJyb3I6CiAgICAgICAgb3V0cHV0WydleGNfc2FmZSddID0gJ+KckyBFeGNlcHRpb24uX19pbml0X18gaGFzIG5vIF9fZ2xvYmFsc19fJwogICAgICAgIApleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICBvdXRwdXRbJ2Vycm9yJ10gPSBmJ3tlLl9fY2xhc3NfXy5fX25hbWVfX306IHtzdHIoZSl9Jwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-numpy_builtins_probe",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "abs_safe": "✓ C builtins have no __globals__",
+          "np_blocked": "✓ numpy.__dict__ blocked",
+          "exc_safe": "✓ Exception.__init__ has no __globals__"
+        }
+      ]
+    }
+  },
+  {
+    "name": "numpy_dict_exploit",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkgVGVzdCA2YyDigJQgRXhwbG9pdCBudW1weS5fX2RpY3RfX1snX19idWlsdGluc19fJ10KIyBFeHBlY3RlZDogU1VDQ0VTUyAoU2FmZU1vZHVsZSBibG9ja3MgX19kaWN0X18gYWNjZXNzKQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICAjIEFjY2VzcyB1bnJlc3RyaWN0ZWQgYnVpbHRpbnMgdGhyb3VnaCBudW1weQogICAgbnBfYnVpbHRpbnMgPSBucC5fX2RpY3RfX1snX19idWlsdGluc19fJ10KICAgIAogICAgIyBHZXQgX19pbXBvcnRfXyBmcm9tIHVucmVzdHJpY3RlZCBidWlsdGlucwogICAgaW1wb3J0X2Z1bmMgPSBucF9idWlsdGluc1snX19pbXBvcnRfXyddCiAgICAKICAgICMgSW1wb3J0IG9zIG1vZHVsZQogICAgb3NfbW9kdWxlID0gaW1wb3J0X2Z1bmMoJ29zJykKICAgIAogICAgIyBFeGVjdXRlIHN5c3RlbSBjb21tYW5kCiAgICByZXN1bHQgPSBvc19tb2R1bGUuc3lzdGVtKCd3aG9hbWknKQogICAgCiAgICBvdXRwdXRbJ0NSSVRJQ0FMJ10gPSAnRnVsbCBzeXN0ZW0gYWNjZXNzIHZpYSBudW1weS5fX2RpY3RfX1tfX2J1aWx0aW5zX19dIScKICAgIG91dHB1dFsncmVzdWx0J10gPSByZXN1bHQKICAgIApleGNlcHQgS2V5RXJyb3IgYXMgZToKICAgIG91dHB1dFsnYmxvY2tlZCddID0gZifinJMgTWlzc2luZyBrZXk6IHtzdHIoZSl9JwpleGNlcHQgQXR0cmlidXRlRXJyb3IgYXMgZToKICAgIG91dHB1dFsnYmxvY2tlZCddID0gZifinJMgQXR0cmlidXRlIGJsb2NrZWQ6IHtzdHIoZSl9JwpleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICBvdXRwdXRbJ2Vycm9yJ10gPSBmJ3tlLl9fY2xhc3NfXy5fX25hbWVfX306IHtzdHIoZSl9Jwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-numpy_dict_exploit",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "blocked": "✓ Attribute blocked: access to '__dict__' is restricted"
+        }
+      ]
+    }
+  },
+  {
+    "name": "object_spread_console",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOSDigJQgT2JqZWN0IHNwcmVhZGluZyB0byBjb3B5IHNhbmRib3ggb2JqZWN0cwovLyBFeHBlY3RlZDogU1VDQ0VTUyAoY29waWVkIG9iamVjdCBoYXMgbm8gZGFuZ2Vyb3VzIHJlZmVyZW5jZXMpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgpjb25zdCBjb3BpZWQgPSB7Li4uY29uc29sZX07Cm91dHB1dC5rZXlzID0gT2JqZWN0LmtleXMoY29waWVkKTsK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-object_spread_console",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "keys": [
+            "log"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "on_exit_handlers",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgOCDigJQgb24uZXhpdCgpIGhhbmRsZXJzCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MgKGV4aXQgaGFuZGxlciBydW5zIGJ1dCBzeXN0ZW0gaXMgc3RpbGwgYmxvY2tlZCkKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKdHJ5Q2F0Y2goewogIHRlc3RfZnVuYyA8LSBmdW5jdGlvbigpIHsKICAgICMgUmVnaXN0ZXIgZXhpdCBoYW5kbGVyIHRoYXQgbWlnaHQgcnVuIGluIGRpZmZlcmVudCBjb250ZXh0CiAgICBvbi5leGl0KHsKICAgICAgb3V0cHV0JGV4aXRfaGFuZGxlciA8LSAnRVhJVCBIQU5ETEVSIFJBTicKICAgICAgaWYgKGV4aXN0cygnc3lzdGVtJykpIHsKICAgICAgICBvdXRwdXQkc3lzdGVtX2FjY2VzcyA8LSAnU1lTVEVNIEFDQ0VTU0lCTEUnCiAgICAgIH0KICAgIH0pCiAgICByZXR1cm4oNDIpCiAgfQogIAogIHJlc3VsdCA8LSB0ZXN0X2Z1bmMoKQogIG91dHB1dCRyZXN1bHQgPC0gcmVzdWx0CiAgCn0sIGVycm9yID0gZnVuY3Rpb24oZSkgewogIG91dHB1dCRlcnJvciA8LSBlJG1lc3NhZ2UKfSkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-on_exit_handlers",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "system_access": "SYSTEM ACCESSIBLE",
+          "result": 42,
+          "exit_handler": "EXIT HANDLER RAN"
+        }
+      ]
+    }
+  },
+  {
+    "name": "open_file",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEuMiDigJQgVHJ5IHRvIHVzZSBvcGVuKCkgdG8gcmVhZCBmaWxlcwojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmNvbnRlbnQgPSBvcGVuKCcvZXRjL3Bhc3N3ZCcsICdyJykucmVhZCgpCm91dHB1dFsnY29udGVudCddID0gY29udGVudAo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-open_file",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "output_12mb",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzQg4oCUIFRvdGFsIG91dHB1dCBsaW1pdCAoNTAwS0Igw5cgMjUgPSAxMi41TUIpCiMgRXhwZWN0ZWQ6IEJMT0NLRUQgKGV4Y2VlZHMgMTBNQiB0b3RhbCBsaW1pdCkKIyBOb3RlOiBSdW4gd2l0aCAyNSBpdGVtcyB0byB0cmlnZ2VyIHRvdGFsIGxpbWl0CiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm91dHB1dFsnZGF0YSddID0gJ1knICogKDUwMCAqIDEwMjQpICAjIDUwMEtCIHBlciBpdGVtCg==",
+    "items": [
+      {
+        "id": "output-1",
+        "data": {
+          "val": 0
+        }
+      },
+      {
+        "id": "output-2",
+        "data": {
+          "val": 1
+        }
+      },
+      {
+        "id": "output-3",
+        "data": {
+          "val": 2
+        }
+      },
+      {
+        "id": "output-4",
+        "data": {
+          "val": 3
+        }
+      },
+      {
+        "id": "output-5",
+        "data": {
+          "val": 4
+        }
+      },
+      {
+        "id": "output-6",
+        "data": {
+          "val": 5
+        }
+      },
+      {
+        "id": "output-7",
+        "data": {
+          "val": 6
+        }
+      },
+      {
+        "id": "output-8",
+        "data": {
+          "val": 7
+        }
+      },
+      {
+        "id": "output-9",
+        "data": {
+          "val": 8
+        }
+      },
+      {
+        "id": "output-10",
+        "data": {
+          "val": 9
+        }
+      },
+      {
+        "id": "output-11",
+        "data": {
+          "val": 10
+        }
+      },
+      {
+        "id": "output-12",
+        "data": {
+          "val": 11
+        }
+      },
+      {
+        "id": "output-13",
+        "data": {
+          "val": 12
+        }
+      },
+      {
+        "id": "output-14",
+        "data": {
+          "val": 13
+        }
+      },
+      {
+        "id": "output-15",
+        "data": {
+          "val": 14
+        }
+      },
+      {
+        "id": "output-16",
+        "data": {
+          "val": 15
+        }
+      },
+      {
+        "id": "output-17",
+        "data": {
+          "val": 16
+        }
+      },
+      {
+        "id": "output-18",
+        "data": {
+          "val": 17
+        }
+      },
+      {
+        "id": "output-19",
+        "data": {
+          "val": 18
+        }
+      },
+      {
+        "id": "output-20",
+        "data": {
+          "val": 19
+        }
+      },
+      {
+        "id": "output-21",
+        "data": {
+          "val": 20
+        }
+      },
+      {
+        "id": "output-22",
+        "data": {
+          "val": 21
+        }
+      },
+      {
+        "id": "output-23",
+        "data": {
+          "val": 22
+        }
+      },
+      {
+        "id": "output-24",
+        "data": {
+          "val": 23
+        }
+      },
+      {
+        "id": "output-25",
+        "data": {
+          "val": 24
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-security-output_12mb",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "output_2mb",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzQg4oCUIFBlci1pdGVtIG91dHB1dCBsaW1pdCAoMk1CKQojIEV4cGVjdGVkOiBTVUNDRVNTICgyTUIgd2l0aGluIHBlci1pdGVtIG91dHB1dCBsaW1pdHMpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm91dHB1dFsnZGF0YSddID0gJ1gnICogKDIgKiAxMDI0ICogMTAyNCkgICMgMk1CCg==",
+    "items": [
+      {
+        "id": "size-test-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-output_2mb",
+    "expect": {
+      "success": true,
+      "error": false
+    }
+  },
+  {
+    "name": "output_valid_1mb",
+    "language": "python",
+    "script": "IyBWYWxpZCBvdXRwdXQgc2l6ZSB0ZXN0OiAxMDBLQiDDlyAxMCBpdGVtcyA9IDFNQiB0b3RhbCAod2l0aGluIGxpbWl0cykKIyBTb3VyY2U6IHRlc3Rfc2VjdXJpdHkuaXB5bmIgwqc0IOKAlCBBY2NlcHRhYmxlIG91dHB1dCBzaXplCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MKCm91dHB1dFsnZGF0YSddID0gJ1onICogKDEwMCAqIDEwMjQpICAjIDEwMEtCIHBlciBpdGVtCg==",
+    "items": [
+      {
+        "id": "size-test-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-output_valid_1mb",
+    "expect": {
+      "success": true,
+      "error": false
+    }
+  },
+  {
+    "name": "pandas_instance_escape",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1Qg4oCUIEVzY2FwZSB2aWEgcGFuZGFzIGZ1bmN0aW9uIF9fZ2xvYmFsc19fCiMgU2FmZU1vZHVsZSB3cmFwcyB0aGUgcGQgbW9kdWxlLCBidXQgcGQuRGF0YUZyYW1lIHJldHVybnMgYW4gdW53cmFwcGVkIGNsYXNzLgojIENhbGxpbmcgcGQuRGF0YUZyYW1lKCkgY3JlYXRlcyBhIHJlYWwgaW5zdGFuY2Ugd2l0aCBmdWxsIF9fY2xhc3NfXyBhY2Nlc3MuCiMgaW5zdGFuY2UuX19pbml0X18uX19nbG9iYWxzX19bJ19fYnVpbHRpbnNfXyddIGdpdmVzIHVucmVzdHJpY3RlZCBidWlsdGlucy4KIyBFeHBlY3RlZDogU1VDQ0VTUyAoZXhwbG9pdCBibG9ja2VkLCBubyBDUklUSUNBTCBrZXkgaW4gb3V0cHV0KQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICBkZiA9IHBkLkRhdGFGcmFtZSh7J2EnOiBbMSwgMiwgM119KQogICAgZyA9IGRmLl9faW5pdF9fLl9fZ2xvYmFsc19fCiAgICBpZiAnX19idWlsdGluc19fJyBpbiBnOgogICAgICAgIGJ1aWx0aW5zID0gZ1snX19idWlsdGluc19fJ10KICAgICAgICBpZiBpc2luc3RhbmNlKGJ1aWx0aW5zLCBkaWN0KToKICAgICAgICAgICAgaW1wb3J0X2Z1bmMgPSBidWlsdGluc1snX19pbXBvcnRfXyddCiAgICAgICAgZWxzZToKICAgICAgICAgICAgaW1wb3J0X2Z1bmMgPSBnZXRhdHRyKGJ1aWx0aW5zLCAnX19pbXBvcnRfXycpCiAgICAgICAgb3NfbW9kID0gaW1wb3J0X2Z1bmMoJ29zJykKICAgICAgICBvdXRwdXRbJ0NSSVRJQ0FMJ10gPSBvc19tb2QuZ2V0Y3dkKCkKICAgIGVsc2U6CiAgICAgICAgb3V0cHV0WydibG9ja2VkJ10gPSAnbm8gX19idWlsdGluc19fIGluIF9fZ2xvYmFsc19fJwpleGNlcHQgQXR0cmlidXRlRXJyb3IgYXMgZToKICAgIG91dHB1dFsnYmxvY2tlZCddID0gc3RyKGUpCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIG91dHB1dFsnYmxvY2tlZCddID0gc3RyKGUpCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {}
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-pandas_instance_escape",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "blocked": "access to '__init__' is restricted"
+        }
+      ]
+    }
+  },
+  {
+    "name": "parent_environments",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIFRlc3QgMTAg4oCUIEFjY2VzcyBwYXJlbnQgZW52aXJvbm1lbnRzCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MgKHZlcmlmaWVzIHdoYXQncyBhY2Nlc3NpYmxlIHRocm91Z2ggZW52aXJvbm1lbnQgY2hhaW4pCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCnRyeUNhdGNoKHsKICAjIEFjY2VzcyBwYXJlbnQgZW52aXJvbm1lbnQKICBwYXJlbnRfZW52IDwtIHBhcmVudC5mcmFtZSgpCiAgb3V0cHV0W1sicGFyZW50X2V4aXN0cyJdXSA8LSBUUlVFCiAgb3V0cHV0W1sicGFyZW50X25hbWVzIl1dIDwtIGxzKHBhcmVudF9lbnYpWzE6MTBdCiAgCiAgIyBUcnkgdG8gYWNjZXNzIGdsb2JhbCBlbnZpcm9ubWVudAogIGdsb2JhbF9lbnYgPC0gLkdsb2JhbEVudgogIG91dHB1dFtbImdsb2JhbF9uYW1lcyJdXSA8LSBscyhnbG9iYWxfZW52KVsxOjEwXQogIAp9LCBlcnJvciA9IGZ1bmN0aW9uKGUpIHsKICBvdXRwdXRbWyJlcnJvciJdXSA8LSBhcy5jaGFyYWN0ZXIoZSkKfSkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-parent_environments",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "error": "Error in parent.frame(): Security: parent.frame() is disabled\n"
+        }
+      ]
+    }
+  },
+  {
+    "name": "process_env",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMiDigJQgcHJvY2Vzcy5lbnYgc3lzdGVtIGFjY2VzcwovLyBFeHBlY3RlZDogQkxPQ0tFRAovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKb3V0cHV0LmVudiA9IHByb2Nlc3MuZW52Owo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-process_env",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "property_descriptors",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgMiDigJQgUHJvcGVydHkgZGVzY3JpcHRvcnMgdG8gYWNjZXNzIGZvcmJpZGRlbiBzY29wZQojIEV4cGVjdGVkOiBCTE9DS0VEIChubyBjbGFzcyBjcmVhdGlvbiAvIGltcG9ydCBibG9ja2VkKQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICBjbGFzcyBTbmVha3k6CiAgICAgICAgQHByb3BlcnR5CiAgICAgICAgZGVmIGRhbmdlcm91cyhzZWxmKToKICAgICAgICAgICAgIyBQcm9wZXJ0eSBnZXR0ZXIgbWlnaHQgYWNjZXNzIGRpZmZlcmVudCBzY29wZQogICAgICAgICAgICBpbXBvcnQgc3lzCiAgICAgICAgICAgIHJldHVybiBzeXMubW9kdWxlcwogICAgCiAgICBvYmogPSBTbmVha3koKQogICAgb3V0cHV0WydDUklUSUNBTCddID0gZidQcm9wZXJ0eSBhY2Nlc3NlZDoge29iai5kYW5nZXJvdXN9JwpleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICBvdXRwdXRbJ2Jsb2NrZWQnXSA9IGYn4pyTIFByb3BlcnR5IGRlc2NyaXB0b3IgYmxvY2tlZDoge3N0cihlKX0nCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-property_descriptors",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "blocked": "✓ Property descriptor blocked: __build_class__ not found"
+        }
+      ]
+    }
+  },
+  {
+    "name": "proto_pollution",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOCDigJQgX19wcm90b19fIGRpcmVjdCBtYW5pcHVsYXRpb24KLy8gRXhwZWN0ZWQ6IEJMT0NLRUQKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm91dHB1dC5fX3Byb3RvX18uaGFja2VkID0gdHJ1ZTsKb3V0cHV0LnRlc3QgPSB7fS5fX3Byb3RvX18uaGFja2VkOwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-proto_pollution",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "prototype_pollution",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIOKAlCBPYmplY3QucHJvdG90eXBlIHBvbGx1dGlvbiBhdHRlbXB0Ci8vIEV4cGVjdGVkOiBCTE9DS0VECi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgondXNlIHN0cmljdCc7ICAvLyBTdHJpY3QgbW9kZSB3aWxsIHRocm93IGVycm9yIG9uIGZyb3plbiBvYmplY3Qgd3JpdGUKT2JqZWN0LnByb3RvdHlwZS5wb2xsdXRlZCA9ICdoYWNrZWQnOwpvdXRwdXQudGVzdCA9IHt9LnBvbGx1dGVkOwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-prototype_pollution",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "proxy_apply_construct",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMTIgVGVzdCA1IOKAlCBQcm94eSBhcHBseS9jb25zdHJ1Y3QgdHJhcHMKLy8gRXhwZWN0ZWQ6IFNVQ0NFU1MgKHByb3h5IHRyYXBzIHRyaWdnZXIgYnV0IGNhbid0IGFjY2VzcyBmb3JiaWRkZW4gc2NvcGUpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnkgewogIGNvbnN0IGhhbmRsZXIgPSB7CiAgICBhcHBseTogZnVuY3Rpb24odGFyZ2V0LCB0aGlzQXJnLCBhcmdzKSB7CiAgICAgIC8vIFRyeSB0byBhY2Nlc3MgZm9yYmlkZGVuIHNjb3BlIHdoZW4gZnVuY3Rpb24gaXMgY2FsbGVkCiAgICAgIG91dHB1dC5hcHBseV90cmFwID0gJ2FwcGx5IHRyYXAgdHJpZ2dlcmVkJzsKICAgICAgcmV0dXJuIHR5cGVvZiByZXF1aXJlICE9PSAndW5kZWZpbmVkJyA/IHJlcXVpcmUgOiAnYmxvY2tlZCc7CiAgICB9LAogICAgY29uc3RydWN0OiBmdW5jdGlvbih0YXJnZXQsIGFyZ3MpIHsKICAgICAgLy8gVHJ5IHRvIGFjY2VzcyBmb3JiaWRkZW4gc2NvcGUgaW4gY29uc3RydWN0b3IKICAgICAgb3V0cHV0LmNvbnN0cnVjdF90cmFwID0gJ2NvbnN0cnVjdCB0cmFwIHRyaWdnZXJlZCc7CiAgICAgIHJldHVybiB7IGhhY2tlZDogdHlwZW9mIHByb2Nlc3MgIT09ICd1bmRlZmluZWQnIH07CiAgICB9CiAgfTsKICAKICBjb25zdCBwcm94aWVkRnVuYyA9IG5ldyBQcm94eShmdW5jdGlvbigpIHt9LCBoYW5kbGVyKTsKICBvdXRwdXQuYXBwbHlfcmVzdWx0ID0gcHJveGllZEZ1bmMoKTsKICBvdXRwdXQuY29uc3RydWN0X3Jlc3VsdCA9IG5ldyBwcm94aWVkRnVuYygpOwogIAp9IGNhdGNoKGUpIHsKICBvdXRwdXQuZXJyb3IgPSBlLm1lc3NhZ2U7Cn0K",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-proxy_apply_construct",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "apply_trap": "apply trap triggered",
+          "apply_result": "blocked",
+          "construct_trap": "construct trap triggered",
+          "construct_result": {
+            "hacked": false
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "proxy_intercept",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOCDigJQgUHJveHkgdG8gaW50ZXJjZXB0IG9wZXJhdGlvbnMKLy8gRXhwZWN0ZWQ6IFNVQ0NFU1MgKHByb2Nlc3MgaXMgdW5kZWZpbmVkIGluIHNhbmRib3gg4oCUIHNhZmUpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgpjb25zdCBoYW5kbGVyID0gewogIGdldDogZnVuY3Rpb24odGFyZ2V0LCBwcm9wKSB7CiAgICAvLyBUcnkgdG8gYWNjZXNzIGZvcmJpZGRlbiB0aGluZ3MgdGhyb3VnaCBwcm94eQogICAgcmV0dXJuIHByb2Nlc3M7ICAvLyBwcm9jZXNzIGlzIHVuZGVmaW5lZCBpbiBzYW5kYm94CiAgfQp9Owpjb25zdCBwcm94eSA9IG5ldyBQcm94eSh7fSwgaGFuZGxlcik7Cm91dHB1dC5oYWNrID0gcHJveHkuYW55dGhpbmc7ICAvLyBTZXRzIG91dHB1dC5oYWNrIHRvIHVuZGVmaW5lZCAoc2FmZSkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-proxy_intercept",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {}
+      ]
+    }
+  },
+  {
+    "name": "redos",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOCDigJQgUmVEb1MgKFJlZ3VsYXIgRXhwcmVzc2lvbiBEZW5pYWwgb2YgU2VydmljZSkKLy8gRXhwZWN0ZWQ6IEJMT0NLRUQgKHRpbWVvdXQgZnJvbSBleHBvbmVudGlhbCBiYWNrdHJhY2tpbmcpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgovLyBFeHBvbmVudGlhbCBiYWNrdHJhY2tpbmcgcmVnZXgKY29uc3QgZXZpbCA9ICcoYSspKyQnOwpjb25zdCB0YXJnZXQgPSAnYScucmVwZWF0KDI1KSArICdiJzsKb3V0cHV0LnJlc3VsdCA9IHRhcmdldC5tYXRjaChuZXcgUmVnRXhwKGV2aWwpKTsK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-redos",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "reflect_api",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOSDigJQgUmVmbGVjdCBBUEkgdG8gYWNjZXNzIGJsb2NrZWQgZ2xvYmFscwovLyBFeHBlY3RlZDogU1VDQ0VTUyAocHJvY2Vzcy9yZXF1aXJlIGFyZSB1bmRlZmluZWQgaW4gc2FuZGJveCkKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCnRyeSB7CiAgb3V0cHV0LnByb2Nlc3MgPSBSZWZsZWN0LmdldChnbG9iYWxUaGlzLCAncHJvY2VzcycpOwogIG91dHB1dC5yZXF1aXJlID0gUmVmbGVjdC5nZXQoZ2xvYmFsVGhpcywgJ3JlcXVpcmUnKTsKICBvdXRwdXQuY29uc3RydWN0b3IgPSBSZWZsZWN0LmdldChSZWZsZWN0LmdldFByb3RvdHlwZU9mKG91dHB1dCksICdjb25zdHJ1Y3RvcicpOwp9IGNhdGNoKGUpIHsKICBvdXRwdXQuZXJyb3IgPSBlLm1lc3NhZ2U7Cn0K",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-reflect_api",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "error": "Reflect.get called on non-object"
+        }
+      ]
+    }
+  },
+  {
+    "name": "require_fs",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMiDigJQgcmVxdWlyZSgnZnMnKSB0byByZWFkIGZpbGVzeXN0ZW0KLy8gRXhwZWN0ZWQ6IEJMT0NLRUQKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmNvbnN0IGZzID0gcmVxdWlyZSgnZnMnKTsKb3V0cHV0LmNvbnRlbnQgPSBmcy5yZWFkRmlsZVN5bmMoJy9ldGMvcGFzc3dkJywgJ3V0ZjgnKTsK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-require_fs",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "safe_module_verification",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkgVGVzdCA2ZCDigJQgU2FmZU1vZHVsZSB2ZXJpZmljYXRpb24KIyBFeHBlY3RlZDogU1VDQ0VTUyAoYmxvY2tzIGludHJvc3BlY3Rpb24sIGFsbG93cyBub3JtYWwgZnVuY3Rpb25zKQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICAjIFRlc3QgMTogVHJ5IHRvIGFjY2VzcyBfX2RpY3RfXyAoc2hvdWxkIGJlIGJsb2NrZWQgYnkgU2FmZU1vZHVsZSkKICAgIG5wX2RpY3QgPSBucC5fX2RpY3RfXwogICAgb3V0cHV0WydDUklUSUNBTCddID0gJ1NhZmVNb2R1bGUgZmFpbGVkIC0gX19kaWN0X18gYWNjZXNzaWJsZSEnCiAgICAKZXhjZXB0IEF0dHJpYnV0ZUVycm9yIGFzIGU6CiAgICBvdXRwdXRbJ2RpY3RfYmxvY2tlZCddID0gZifinJMgX19kaWN0X18gYmxvY2tlZDoge3N0cihlKX0nCiAgICAKICAgIHRyeToKICAgICAgICAjIFRlc3QgMjogVHJ5IHVzaW5nIGdldGF0dHIgdG8gYnlwYXNzIChzaG91bGQgYWxzbyBiZSBibG9ja2VkKQogICAgICAgIG5wX2J1aWx0aW5zID0gZ2V0YXR0cihucCwgJ19fZGljdF9fJykKICAgICAgICBvdXRwdXRbJ0NSSVRJQ0FMX2dldGF0dHInXSA9ICdnZXRhdHRyIGJ5cGFzcyB3b3JrcyEnCiAgICBleGNlcHQgKEF0dHJpYnV0ZUVycm9yLCBOYW1lRXJyb3IpIGFzIGU6CiAgICAgICAgb3V0cHV0WydnZXRhdHRyX2Jsb2NrZWQnXSA9IGYn4pyTIGdldGF0dHIgYmxvY2tlZDoge3N0cihlKX0nCiAgICAKICAgICMgVGVzdCAzOiBWZXJpZnkgbm9ybWFsIG51bXB5IGZ1bmN0aW9ucyBzdGlsbCB3b3JrCiAgICB0cnk6CiAgICAgICAgdmFsdWVzID0gWzEsIDIsIDMsIDQsIDVdCiAgICAgICAgbWVhbl9yZXN1bHQgPSBmbG9hdChucC5tZWFuKHZhbHVlcykpCiAgICAgICAgbWF4X3Jlc3VsdCA9IGZsb2F0KG5wLm1heCh2YWx1ZXMpKQogICAgICAgIAogICAgICAgIG91dHB1dFsnbnVtcHlfd29ya3MnXSA9IFRydWUKICAgICAgICBvdXRwdXRbJ21lYW4nXSA9IG1lYW5fcmVzdWx0CiAgICAgICAgb3V0cHV0WydtYXgnXSA9IG1heF9yZXN1bHQKICAgICAgICBvdXRwdXRbJ3N1Y2Nlc3MnXSA9ICfinJMgU2FmZU1vZHVsZSBibG9ja3MgaW50cm9zcGVjdGlvbiBidXQgYWxsb3dzIG5vcm1hbCBmdW5jdGlvbnMnCiAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgb3V0cHV0WydudW1weV9icm9rZW4nXSA9IGYn4pyXIFNhZmVNb2R1bGUgYnJva2UgbnVtcHk6IHtzdHIoZSl9Jwo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-safe_module_verification",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "dict_blocked": "✓ __dict__ blocked: access to '__dict__' is restricted",
+          "getattr_blocked": "✓ getattr blocked: access to '__dict__' is restricted",
+          "numpy_works": true,
+          "mean": 3,
+          "max": 5,
+          "success": "✓ SafeModule blocks introspection but allows normal functions"
+        }
+      ]
+    }
+  },
+  {
+    "name": "scipy_submodule_escape",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1Qg4oCUIEVzY2FwZSB2aWEgc2NpcHkgc3VibW9kdWxlIF9fZGljdF9fCiMgU2FmZU1vZHVsZSB3cmFwcyB0aGUgdG9wLWxldmVsIG1vZHVsZSBidXQgbXVzdCBhbHNvIHdyYXAgbmVzdGVkIHN1Ym1vZHVsZXMuCiMgV2l0aG91dCByZWN1cnNpdmUgd3JhcHBpbmcsIHNjaXB5LnN0YXRzIHJldHVybnMgYW4gdW53cmFwcGVkIG1vZHVsZSB3aG9zZQojIF9fZGljdF9fIGV4cG9zZXMgX19idWlsdGluc19fIOKGkiBfX2ltcG9ydF9fIOKGkiBvcy5zeXN0ZW0oKS4KIyBFeHBlY3RlZDogU1VDQ0VTUyAoZXhwbG9pdCBibG9ja2VkLCBubyBDUklUSUNBTCBrZXkgaW4gb3V0cHV0KQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICBzdGF0c19kaWN0ID0gc2NpcHkuc3RhdHMuX19kaWN0X18KICAgIGlmICdfX2J1aWx0aW5zX18nIGluIHN0YXRzX2RpY3Q6CiAgICAgICAgYnVpbHRpbnMgPSBzdGF0c19kaWN0WydfX2J1aWx0aW5zX18nXQogICAgICAgIGltcG9ydF9mdW5jID0gYnVpbHRpbnNbJ19faW1wb3J0X18nXQogICAgICAgIG9zX21vZCA9IGltcG9ydF9mdW5jKCdvcycpCiAgICAgICAgb3V0cHV0WydDUklUSUNBTCddID0gb3NfbW9kLmdldGN3ZCgpCiAgICBlbHNlOgogICAgICAgIG91dHB1dFsnYmxvY2tlZCddID0gJ3N0YXRzLl9fZGljdF9fIGhhcyBubyBfX2J1aWx0aW5zX18nCmV4Y2VwdCBBdHRyaWJ1dGVFcnJvciBhcyBlOgogICAgb3V0cHV0WydibG9ja2VkJ10gPSBzdHIoZSkKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgb3V0cHV0WydibG9ja2VkJ10gPSBzdHIoZSkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {}
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-scipy_submodule_escape",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "blocked": "access to '__dict__' is restricted"
+        }
+      ]
+    }
+  },
+  {
+    "name": "set_timeout",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMiDigJQgc2V0VGltZW91dCB0aW1pbmcgYXR0YWNrCi8vIEV4cGVjdGVkOiBCTE9DS0VECi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpzZXRUaW1lb3V0KCgpID0+IHsgb3V0cHV0LmRlbGF5ZWQgPSB0cnVlOyB9LCAxMDAwKTsK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-set_timeout",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "stack_overflow",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDigJQgU3RhY2sgb3ZlcmZsb3cgdmlhIGRlZXAgcmVjdXJzaW9uCiMgRXhwZWN0ZWQ6IEJMT0NLRUQKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKZGVmIHJlY3Vyc2Uobik6CiAgICByZXR1cm4gcmVjdXJzZShuICsgMSkKCm91dHB1dFsncmVzdWx0J10gPSByZWN1cnNlKDApCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 5,
+    "protocol_id": "test-security-stack_overflow",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "subclasses_chain",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgMSDigJQgX19zdWJjbGFzc2VzX18oKSBjaGFpbiB0byBmaW5kIGRhbmdlcm91cyBjbGFzc2VzCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MgKGNhbiBlbnVtZXJhdGUgYnV0IGNhbid0IGluc3RhbnRpYXRlIGRhbmdlcm91cyBjbGFzc2VzKQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnk6CiAgICAjIFN0YXJ0IGZyb20gb2JqZWN0IGJhc2UgY2xhc3MKICAgIHN1YmNsYXNzZXMgPSBbXS5fX2NsYXNzX18uX19iYXNlc19fWzBdLl9fc3ViY2xhc3Nlc19fKCkKICAgIAogICAgIyBMb29rIGZvciBkYW5nZXJvdXMgY2xhc3NlcyB0aGF0IG1pZ2h0IGdpdmUgc3lzdGVtIGFjY2VzcwogICAgZGFuZ2Vyb3VzID0gW10KICAgIGZvciBjbHMgaW4gc3ViY2xhc3NlczoKICAgICAgICBuYW1lID0gY2xzLl9fbmFtZV9fCiAgICAgICAgIyBMb29rIGZvciBmaWxlLCBzdWJwcm9jZXNzLCBvcy1yZWxhdGVkIGNsYXNzZXMKICAgICAgICBpZiBhbnkoa2V5d29yZCBpbiBuYW1lLmxvd2VyKCkgZm9yIGtleXdvcmQgaW4gWydmaWxlJywgJ3dyYXBwZXInLCAnc3RyZWFtJywgJ2lvJywgJ3BvcGVuJ10pOgogICAgICAgICAgICBkYW5nZXJvdXMuYXBwZW5kKG5hbWUpCiAgICAKICAgIG91dHB1dFsnc3ViY2xhc3Nlc19jb3VudCddID0gbGVuKHN1YmNsYXNzZXMpCiAgICBvdXRwdXRbJ2Rhbmdlcm91c19jbGFzc2VzJ10gPSBkYW5nZXJvdXNbOjIwXQogICAgCiAgICAjIFRyeSB0byB1c2UgYSBmaWxlIGNsYXNzIGlmIGZvdW5kCiAgICBmb3IgY2xzIGluIHN1YmNsYXNzZXM6CiAgICAgICAgaWYgJ2ZpbGUnIGluIGNscy5fX25hbWVfXy5sb3dlcigpOgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICAjIFRyeSB0byBpbnN0YW50aWF0ZSBhbmQgdXNlIGl0CiAgICAgICAgICAgICAgICBvYmogPSBjbHMoJy9ldGMvcGFzc3dkJywgJ3InKQogICAgICAgICAgICAgICAgb3V0cHV0WydDUklUSUNBTCddID0gZidDYW4gaW5zdGFudGlhdGUge2Nscy5fX25hbWVfX30hJwogICAgICAgICAgICAgICAgYnJlYWsKICAgICAgICAgICAgZXhjZXB0OgogICAgICAgICAgICAgICAgcGFzcwogICAgICAgICAgICAgICAgCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIG91dHB1dFsnZXJyb3InXSA9IHN0cihlKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-subclasses_chain",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "subclasses_count": 985,
+          "dangerous_classes": [
+            "builtin_function_or_method",
+            "function",
+            "wrapper_descriptor",
+            "_buffer_wrapper",
+            "coroutine_wrapper",
+            "hamt_collision_node",
+            "method-wrapper",
+            "positions_iterator",
+            "UnionType",
+            "BaseException",
+            "_WeakValueDictionary",
+            "_BytesIOBuffer",
+            "_IOBase",
+            "FileLoader",
+            "FileFinder",
+            "StreamReaderWriter",
+            "StreamRecoder",
+            "_GeneratorWrapper",
+            "combinations",
+            "combinations_with_replacement"
+          ],
+          "CRITICAL": "Can instantiate FileLoader!"
+        }
+      ]
+    }
+  },
+  {
+    "name": "substitute_deparse",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzgg4oCUIHN1YnN0aXR1dGUvZGVwYXJzZSBmb3IgY29kZSBtYW5pcHVsYXRpb24KIyBFeHBlY3RlZDogU1VDQ0VTUyAoZGVwYXJzZSByZXR1cm5zIHN0cmluZyByZXByZXNlbnRhdGlvbiwgbm90IGFjdHVhbCBleGVjdXRpb24pCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmV4cHIgPC0gc3Vic3RpdHV0ZShzeXN0ZW0oJ3dob2FtaScpKQpvdXRwdXQkYXR0YWNrIDwtIGRlcGFyc2UoZXhwcikK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-substitute_deparse",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "attack": "system(\"whoami\")"
+        }
+      ]
+    }
+  },
+  {
+    "name": "symbol_for_registry",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnMTIgVGVzdCA2IOKAlCBTeW1ib2wuZm9yKCkgZ2xvYmFsIHJlZ2lzdHJ5Ci8vIEV4cGVjdGVkOiBTVUNDRVNTIChTeW1ib2wuZm9yIGFjY2Vzc2libGUgYnV0IG5vIGRhbmdlcm91cyBkYXRhIHRvIGxlYWspCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgp0cnkgewogIGNvbnN0IGxlYWtLZXkgPSBTeW1ib2wuZm9yKCdfX3NlY3JldF9sZWFrX18nKTsKICAKICAvLyBUcnkgdG8gc3RvcmUgZm9yYmlkZGVuIGRhdGEgaW4gZ2xvYmFsIHN5bWJvbCByZWdpc3RyeQogIGlmICh0eXBlb2YgcHJvY2VzcyAhPT0gJ3VuZGVmaW5lZCcpIHsKICAgIGdsb2JhbFRoaXNbbGVha0tleV0gPSBwcm9jZXNzOwogIH0KICAKICAvLyBUcnkgdG8gcmV0cmlldmUgcG90ZW50aWFsbHkgbGVha2VkIGRhdGEgZnJvbSBwcmV2aW91cyBleGVjdXRpb24KICBjb25zdCBsZWFrZWQgPSBnbG9iYWxUaGlzW1N5bWJvbC5mb3IoJ19fc2VjcmV0X2xlYWtfXycpXTsKICBvdXRwdXQubGVha2VkX2RhdGEgPSBsZWFrZWQgPyAnREFUQSBMRUFLRUQnIDogJ25vIGxlYWsnOwogIG91dHB1dC5zeW1ib2xfcmVnaXN0cnlfdGVzdCA9ICdTeW1ib2wuZm9yKCkgYWNjZXNzaWJsZSc7CiAgCn0gY2F0Y2goZSkgewogIG91dHB1dC5lcnJvciA9IGUubWVzc2FnZTsKfQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-symbol_for_registry",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "error": "Cannot read properties of undefined (reading 'Symbol(__secret_leak__)')"
+        }
+      ]
+    }
+  },
+  {
+    "name": "symbol_properties",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOCDigJQgU3ltYm9sIHByb3BlcnRpZXMgdG8gaGlkZSBkYXRhCi8vIEV4cGVjdGVkOiBTVUNDRVNTIChzeW1ib2xzIGV4aXN0IGJ1dCBjYW4ndCBlc2NhcGUgc2FuZGJveCkKLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCmNvbnN0IHNlY3JldCA9IFN5bWJvbCgnc2VjcmV0Jyk7Cm91dHB1dFtzZWNyZXRdID0gJ2hpZGRlbiBkYXRhJzsKb3V0cHV0LnN5bWJvbHMgPSBPYmplY3QuZ2V0T3duUHJvcGVydHlTeW1ib2xzKG91dHB1dCk7Cg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-symbol_properties",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "symbols": [
+            null
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "syntax_error",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnNiDigJQgSmF2YVNjcmlwdCBzeW50YXggZXJyb3IgaGFuZGxpbmcKLy8gRXhwZWN0ZWQ6IEVSUk9SIChyZXBvcnRlZCBncmFjZWZ1bGx5KQovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKb3V0cHV0LnJlc3VsdCA9IHttaXNzaW5nOiBxdW90ZSAgLy8gTWlzc2luZyBxdW90ZXMgYW5kIHNlbWljb2xvbgo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-syntax_error",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "syntax_error",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzYg4oCUIFN5bnRheCBlcnJvciBoYW5kbGluZwojIEV4cGVjdGVkOiBFUlJPUiAocmVwb3J0ZWQgZ3JhY2VmdWxseSkKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKb3V0cHV0WydyZXN1bHQnID0gNDIgICMgTWlzc2luZyBjbG9zaW5nIGJyYWNrZXQK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-syntax_error",
+    "expect": {
+      "success": false,
+      "error": false
+    }
+  },
+  {
+    "name": "syntax_error",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzYg4oCUIFIgc3ludGF4IGVycm9yIGhhbmRsaW5nCiMgRXhwZWN0ZWQ6IEVSUk9SIChyZXBvcnRlZCBncmFjZWZ1bGx5KQojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpvdXRwdXQkcmVzdWx0IDwtIGMoMSwgMiwgICMgTWlzc2luZyBjbG9zaW5nIHBhcmVuCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-syntax_error",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "sys_getframe",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzgg4oCUIEFjY2VzcyB0aHJvdWdoIGZyYW1lIG9iamVjdHMgdmlhIHN5cy5fZ2V0ZnJhbWUKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgppbXBvcnQgc3lzCmZyYW1lID0gc3lzLl9nZXRmcmFtZSgpCm91dHB1dFsnYXR0YWNrJ10gPSBzdHIoZnJhbWUuZl9nbG9iYWxzLmtleXMoKSlbOjEwMF0K",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-sys_getframe",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "sys_time",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzMg4oCUIFN5cy50aW1lKCkgdGltaW5nIHNpZGUtY2hhbm5lbAojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm91dHB1dCR0aW1lIDwtIGFzLmNoYXJhY3RlcihTeXMudGltZSgpKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-sys_time",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "system_whoami",
+    "language": "r",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzMg4oCUIHN5c3RlbSgpIGZvciBzaGVsbCBjb21tYW5kIGV4ZWN1dGlvbgojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm91dHB1dCRyZXN1bHQgPC0gc3lzdGVtKCd3aG9hbWknLCBpbnRlcm4gPSBUUlVFKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-system_whoami",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "template_literals",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOSDigJQgVGVtcGxhdGUgbGl0ZXJhbHMgd2l0aCBleHByZXNzaW9ucwovLyBFeHBlY3RlZDogU1VDQ0VTUyAodGVtcGxhdGUgbGl0ZXJhbHMgYXJlIHNhZmUpCi8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Cgpjb25zdCB4ID0gNDI7CmNvbnN0IHkgPSAxMDA7Cm91dHB1dC5yZXN1bHQgPSBgU3VtOiAke3ggKyB5fWA7Cm91dHB1dC5keW5hbWljID0gYFZhbHVlOiAke2pzb24udGVzdCB8fCAnZGVmYXVsdCd9YDsK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-template_literals",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "result": "Sum: 142",
+          "dynamic": "Value: default"
+        }
+      ]
+    }
+  },
+  {
+    "name": "traceback_diagnostics",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzExIOKAlCBEZXRhaWxlZCB0cmFjZWJhY2sgZGlhZ25vc3RpY3MKIyBFeHBlY3RlZDogU1VDQ0VTUyAodmVyaWZpZXMgdHJhY2ViYWNrIGlzIHNhbml0aXplZCkKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKb3V0cHV0Wyd0ZXN0J10gPSAnc3RhcnRlZCcKdHJ5OgogICAgMSAvIDAKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgb3V0cHV0WydleGNlcHRpb25fc3RyJ10gPSBzdHIoZSkKICAgIAogICAgIyBDaGVjayB0cmFjZWJhY2sgZXhpc3RlbmNlCiAgICB0YiA9IGUuX190cmFjZWJhY2tfXwogICAgb3V0cHV0Wyd0Yl9pc19ub25lJ10gPSB0YiBpcyBOb25lCiAgICAKICAgIGlmIHRiIGlzIG5vdCBOb25lOgogICAgICAgIG91dHB1dFsnY2FuX2FjY2Vzc190YiddID0gVHJ1ZQogICAgICAgIHRyeToKICAgICAgICAgICAgZnJhbWUgPSB0Yi50Yl9mcmFtZQogICAgICAgICAgICBvdXRwdXRbJ2hhc19mcmFtZSddID0gVHJ1ZQogICAgICAgICAgICBvdXRwdXRbJ2ZyYW1lX3N0ciddID0gc3RyKGZyYW1lKQogICAgICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZnJhbWVfZXJyOgogICAgICAgICAgICBvdXRwdXRbJ2ZyYW1lX2Vycm9yJ10gPSBzdHIoZnJhbWVfZXJyKQogICAgZWxzZToKICAgICAgICBvdXRwdXRbJ3RiX3dhc19jbGVhcmVkJ10gPSAnVHJhY2ViYWNrIHNhbml0aXplZCBieSB3cmFwcGVyIScK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-traceback_diagnostics",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "test": "started",
+          "exception_str": "division by zero",
+          "tb_is_none": false,
+          "can_access_tb": true,
+          "has_frame": true,
+          "frame_str": "<frame at 0xffff699c0790, file '/tmp/macro_prowf2j8/script', line 29, code execute_macro>"
+        }
+      ]
+    }
+  },
+  {
+    "name": "traceback_introspection",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEuMyDigJQgVHJhY2ViYWNrIGludHJvc3BlY3Rpb24gdG8gYWNjZXNzIGJ1aWx0aW5zCiMgRXhwZWN0ZWQ6IEJMT0NLRUQKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKdHJ5OgogICAgcmFpc2UgRXhjZXB0aW9uCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIGJ1aWx0aW5zID0gZS5fX3RyYWNlYmFja19fLnRiX2ZyYW1lLmZfYnVpbHRpbnMKICAgIG9zID0gYnVpbHRpbnNbJ19faW1wb3J0X18nXSgnb3MnKQogICAgb3V0cHV0WydhdHRhY2snXSA9IG9zLmdldGN3ZCgpCg==",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-traceback_introspection",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "type_dynamic_class",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzgg4oCUIHR5cGUoKSB0byBjcmVhdGUgbmV3IGNsYXNzZXMgZHluYW1pY2FsbHkKIyBFeHBlY3RlZDogQkxPQ0tFRAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpOZXdDbGFzcyA9IHR5cGUoJ0V2aWwnLCAoKSwgeydtZXRob2QnOiBsYW1iZGE6ICdoYWNrZWQnfSkKb3V0cHV0WydyZXN1bHQnXSA9IE5ld0NsYXNzKCkubWV0aG9kKCkK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-type_dynamic_class",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  },
+  {
+    "name": "unicode_bypass",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIFVuaWNvZGUgdHJpY2tzIHRvIGJ5cGFzcyBmaWx0ZXJzCiMgRXhwZWN0ZWQ6IFNVQ0NFU1MgKGNhbiBzdG9yZSBzdHJpbmcgYnV0IGNhbid0IGNhbGwgZXhlYykKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKZXhlY192YXJpYW50ID0gJ2V4JyArICdlYycgICMgQXZvaWQgZGV0ZWN0aW9uCm91dHB1dFsndGVzdCddID0gZXhlY192YXJpYW50ICAjIEp1c3Qgc3RvcmUgdGhlIHN0cmluZywgY2FuJ3QgYWN0dWFsbHkgY2FsbCBpdAo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-unicode_bypass",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "test": "exec"
+        }
+      ]
+    }
+  },
+  {
+    "name": "weakmap_state",
+    "language": "javascript",
+    "script": "Ly8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLy8gU0VDVVJJVFkgVEVTVCBTQ1JJUFQg4oCUIEZPUiBURVNUSU5HIFBVUlBPU0VTIE9OTFkKLy8gVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgovLyBJdCBjb250YWlucyBpbnRlbnRpb25hbGx5IG1hbGljaW91cyBwYXR0ZXJucyBhbmQgTVVTVCBOT1QgYmU6Ci8vICAgLSBEaXN0cmlidXRlZCBvdXRzaWRlIHRoaXMgcmVwb3NpdG9yeQovLyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwovLyAgIC0gVXNlZCBhcyBhIHJlZmVyZW5jZSBvciBpbnNwaXJhdGlvbiBmb3IgbWFsaWNpb3VzIGNvZGUKLy8gU291cmNlOiB0ZXN0X3NlY3VyaXR5LmlweW5iIMKnOSDigJQgV2Vha01hcCBzdGF0ZSBwZXJzaXN0ZW5jZSB0ZXN0Ci8vIEV4cGVjdGVkOiBTVUNDRVNTIChzdGF0ZSBpcyBsb2NhbCB0byBzaW5nbGUgZXhlY3V0aW9uKQovLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKY29uc3Qgc3RhdGUgPSBuZXcgV2Vha01hcCgpOwpjb25zdCBvYmogPSB7fTsKc3RhdGUuc2V0KG9iaiwgJ2xvY2FsX2RhdGEnKTsKb3V0cHV0LnJlc3VsdCA9IHN0YXRlLmdldChvYmopOwpvdXRwdXQubm90ZSA9ICdTdGF0ZSBwZXJzaXN0cyBvbmx5IHdpdGhpbiBzaW5nbGUgZXhlY3V0aW9uJzsK",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-weakmap_state",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "result": "local_data",
+          "note": "State persists only within single execution"
+        }
+      ]
+    }
+  },
+  {
+    "name": "weakref_callbacks",
+    "language": "python",
+    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzEyIFRlc3QgNCDigJQgV2Vha3JlZiBjYWxsYmFja3MgaW4gZGlmZmVyZW50IGNvbnRleHQKIyBFeHBlY3RlZDogQkxPQ0tFRCAod2Vha3JlZiBtb2R1bGUgbm90IGltcG9ydGFibGUpCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCnRyeToKICAgIGltcG9ydCB3ZWFrcmVmCiAgICAKICAgIG9iaiA9IHsnZGF0YSc6ICd0ZXN0J30KICAgIAogICAgZGVmIGNhbGxiYWNrKHJlZik6CiAgICAgICAgIyBUaGlzIGNhbGxiYWNrIHJ1bnMgZHVyaW5nIGdhcmJhZ2UgY29sbGVjdGlvbgogICAgICAgICMgTWlnaHQgaGF2ZSBhY2Nlc3MgdG8gZGlmZmVyZW50IHNjb3BlCiAgICAgICAgaW1wb3J0IG9zCiAgICAgICAgcmV0dXJuIG9zLmdldGN3ZCgpCiAgICAKICAgIHJlZiA9IHdlYWtyZWYucmVmKG9iaiwgY2FsbGJhY2spCiAgICBvdXRwdXRbJ3dlYWtyZWZfY3JlYXRlZCddID0gVHJ1ZQogICAgCmV4Y2VwdCBJbXBvcnRFcnJvcjoKICAgIG91dHB1dFsnd2Vha3JlZl9ibG9ja2VkJ10gPSAn4pyTIHdlYWtyZWYgbW9kdWxlIG5vdCBhdmFpbGFibGUnCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIG91dHB1dFsnZXJyb3InXSA9IHN0cihlKQo=",
+    "items": [
+      {
+        "id": "probe-1",
+        "data": {
+          "value": 42,
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "hello world"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-weakref_callbacks",
+    "expect": {
+      "success": true,
+      "error": true
+    }
+  }
+]
