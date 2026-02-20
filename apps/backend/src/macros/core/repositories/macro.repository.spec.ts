@@ -6,6 +6,8 @@ import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { CreateMacroDto } from "../models/macro.model";
 import { generateHashedFilename } from "../models/macro.model";
+import type { CachePort } from "../ports/cache.port";
+import { CACHE_PORT } from "../ports/cache.port";
 import { MacroRepository } from "./macro.repository";
 import type { MacroFilter } from "./macro.repository";
 
@@ -895,6 +897,111 @@ describe("MacroRepository", () => {
 
       // Assert
       expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("findScriptById", () => {
+    it("should return a lean MacroScript for an existing macro", async () => {
+      const createResult = await repository.create(
+        {
+          name: "Script Macro",
+          description: "Script test",
+          language: "python",
+          code: "cHJpbnQoJ2hlbGxvJyk=", // base64
+        },
+        testUserId,
+      );
+      assertSuccess(createResult);
+      const created = createResult.value[0];
+
+      const result = await repository.findScriptById(created.id);
+
+      assertSuccess(result);
+      expect(result.value).not.toBeNull();
+      expect(result.value).toMatchObject({
+        id: created.id,
+        name: "Script Macro",
+        language: "python",
+        code: "cHJpbnQoJ2hlbGxvJyk=",
+      });
+      // Should NOT have full MacroDto fields
+      expect(result.value).not.toHaveProperty("createdByName");
+      expect(result.value).not.toHaveProperty("filename");
+      expect(result.value).not.toHaveProperty("description");
+    });
+
+    it("should return null for a non-existent macro", async () => {
+      const result = await repository.findScriptById(faker.string.uuid());
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("should return cached value on second call", async () => {
+      const createResult = await repository.create(
+        {
+          name: "Cached Script",
+          description: "Caching test",
+          language: "javascript",
+          code: "Y29uc29sZS5sb2coJ2hpJyk=",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult);
+      const created = createResult.value[0];
+
+      const cachePort = testApp.module.get<CachePort>(CACHE_PORT);
+      const tryCacheSpy = vi.spyOn(cachePort, "tryCache");
+
+      // First call fills cache
+      await repository.findScriptById(created.id);
+      // Second call should still invoke tryCache (which returns from cache)
+      await repository.findScriptById(created.id);
+
+      expect(tryCacheSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("findScriptsByIds", () => {
+    it("should return a map of MacroScript for existing macros", async () => {
+      const r1 = await repository.create(
+        { name: "Batch A", description: "A", language: "python", code: "Y29kZTE=" },
+        testUserId,
+      );
+      assertSuccess(r1);
+      const r2 = await repository.create(
+        { name: "Batch B", description: "B", language: "r", code: "Y29kZTI=" },
+        testUserId,
+      );
+      assertSuccess(r2);
+
+      const ids = [r1.value[0].id, r2.value[0].id];
+      const result = await repository.findScriptsByIds(ids);
+
+      assertSuccess(result);
+      const map = result.value;
+      expect(map.size).toBe(2);
+      expect(map.get(ids[0])).toMatchObject({ name: "Batch A", language: "python" });
+      expect(map.get(ids[1])).toMatchObject({ name: "Batch B", language: "r" });
+    });
+
+    it("should return an empty map for non-existent IDs", async () => {
+      const result = await repository.findScriptsByIds([faker.string.uuid()]);
+
+      assertSuccess(result);
+      expect(result.value.size).toBe(0);
+    });
+  });
+
+  describe("invalidateCache", () => {
+    it("should call through to the cache port", async () => {
+      const cachePort = testApp.module.get<CachePort>(CACHE_PORT);
+      const invalidateSpy = vi.spyOn(cachePort, "invalidate");
+
+      const id = faker.string.uuid();
+      await repository.invalidateCache(id);
+
+      expect(invalidateSpy).toHaveBeenCalledWith(id);
     });
   });
 });

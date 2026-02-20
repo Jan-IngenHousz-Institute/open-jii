@@ -60,6 +60,8 @@ export enum ErrorCodes {
   MACRO_UPDATE_FAILED = "MACRO_UPDATE_FAILED", // Failed to update macro
   MACRO_DELETE_FAILED = "MACRO_DELETE_FAILED", // Failed to delete macro
   MACRO_NOT_FOUND = "MACRO_NOT_FOUND", // Macro not found
+  MACRO_EXECUTION_FAILED = "MACRO_EXECUTION_FAILED", // Lambda macro execution failed
+  MACRO_BATCH_VALIDATION_FAILED = "MACRO_BATCH_VALIDATION_FAILED", // Batch request validation failed
 
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/

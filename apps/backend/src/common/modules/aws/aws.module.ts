@@ -4,11 +4,12 @@ import { ConfigModule } from "@nestjs/config";
 import { AwsAdapter } from "./aws.adapter";
 import { CognitoService } from "./services/cognito/cognito.service";
 import { AwsConfigService } from "./services/config/config.service";
+import { AwsLambdaService } from "./services/lambda/lambda.service";
 import { AwsLocationService } from "./services/location/location.service";
 
 @Module({
   imports: [ConfigModule],
-  providers: [AwsConfigService, AwsLocationService, CognitoService, AwsAdapter],
+  providers: [AwsConfigService, AwsLocationService, CognitoService, AwsLambdaService, AwsAdapter],
   exports: [AwsAdapter],
 })
 export class AwsModule {}

@@ -12,4 +12,9 @@ export default registerAs("aws", () => ({
     identityPoolId: process.env.AWS_COGNITO_IDENTITY_POOL_ID,
     developerProviderName: process.env.AWS_COGNITO_DEVELOPER_PROVIDER_NAME,
   },
+  lambda: {
+    macroRunnerPythonFunctionName: process.env.AWS_LAMBDA_MACRO_RUNNER_PYTHON_FUNCTION_NAME,
+    macroRunnerJavascriptFunctionName: process.env.AWS_LAMBDA_MACRO_RUNNER_JAVASCRIPT_FUNCTION_NAME,
+    macroRunnerRFunctionName: process.env.AWS_LAMBDA_MACRO_RUNNER_R_FUNCTION_NAME,
+  },
 }));

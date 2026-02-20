@@ -3,6 +3,8 @@ import { ErrorCodes } from "../../utils/error-codes";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import { AwsAdapter } from "./aws.adapter";
 import { CognitoService } from "./services/cognito/cognito.service";
+import { AwsConfigService } from "./services/config/config.service";
+import { AwsLambdaService } from "./services/lambda/lambda.service";
 import { AwsLocationService } from "./services/location/location.service";
 
 describe("AwsAdapter", () => {
@@ -10,6 +12,8 @@ describe("AwsAdapter", () => {
   let awsAdapter: AwsAdapter;
   let awsLocationService: AwsLocationService;
   let cognitoService: CognitoService;
+  let awsLambdaService: AwsLambdaService;
+  let awsConfigService: AwsConfigService;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -20,6 +24,8 @@ describe("AwsAdapter", () => {
     awsAdapter = testApp.module.get(AwsAdapter);
     awsLocationService = testApp.module.get(AwsLocationService);
     cognitoService = testApp.module.get(CognitoService);
+    awsLambdaService = testApp.module.get(AwsLambdaService);
+    awsConfigService = testApp.module.get(AwsConfigService);
   });
 
   afterEach(() => {
@@ -189,6 +195,60 @@ describe("AwsAdapter", () => {
 
       assertFailure(result);
       expect(result.error.message).toBe("Credentials failed");
+    });
+  });
+
+  describe("invokeLambda", () => {
+    it("should delegate to AwsLambdaService.invoke and return a success result", async () => {
+      const mockResponse = {
+        statusCode: 200,
+        payload: { status: "success", results: [] },
+      };
+
+      vi.spyOn(awsLambdaService, "invoke").mockResolvedValue(success(mockResponse));
+
+      const result = await awsAdapter.invokeLambda("my-function", { data: "test" });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsLambdaService.invoke).toHaveBeenCalledWith({
+        functionName: "my-function",
+        payload: { data: "test" },
+      });
+      expect(result.isSuccess()).toBe(true);
+    });
+
+    it("should propagate failure from AwsLambdaService", async () => {
+      vi.spyOn(awsLambdaService, "invoke").mockResolvedValue(
+        failure(AppError.internal("Lambda timeout")),
+      );
+
+      const result = await awsAdapter.invokeLambda("my-function", {});
+
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("getFunctionNameForLanguage", () => {
+    it("should return the python function name for 'python'", () => {
+      const name = awsAdapter.getFunctionNameForLanguage("python");
+      expect(name).toBe(awsConfigService.lambdaConfig.macroRunnerPythonFunctionName);
+    });
+
+    it("should return the javascript function name for 'javascript'", () => {
+      const name = awsAdapter.getFunctionNameForLanguage("javascript");
+      expect(name).toBe(awsConfigService.lambdaConfig.macroRunnerJavascriptFunctionName);
+    });
+
+    it("should return the R function name for 'r'", () => {
+      const name = awsAdapter.getFunctionNameForLanguage("r");
+      expect(name).toBe(awsConfigService.lambdaConfig.macroRunnerRFunctionName);
+    });
+
+    it("should throw for an unsupported language", () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      expect(() => awsAdapter.getFunctionNameForLanguage("ruby" as any)).toThrow(
+        "No Lambda function configured for language: ruby",
+      );
     });
   });
 });
