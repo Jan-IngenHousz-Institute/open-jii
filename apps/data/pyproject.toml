@@ -12,7 +12,6 @@ pandas = "^2.0.0"
 numpy = "^1.24.0"
 scipy = "^1.10.0"
 requests = "^2.31.0"
-multispeq = { path = "src/lib/multispeq", develop = true }
 ambyte = { path = "src/lib/ambyte", develop = true }
 enrich = { path = "src/lib/enrich", develop = true }
 openjii = { path = "src/lib/openjii", develop = true }
