@@ -137,7 +137,7 @@ jobs:
           metric-name: 'DeploymentFrequency'
           value: '1'
           unit: 'Count'
-          service: 'backend'
+          service: 'databricks'
           environment: ${{ env.ENV }}
           aws-region: ${{ secrets.AWS_REGION }}
 
@@ -148,7 +148,7 @@ jobs:
           metric-name: 'LeadTime'
           value: ${{ steps.dora-metrics.outputs.lead_time_ms }}
           unit: 'Milliseconds'
-          service: 'backend'
+          service: 'databricks'
           environment: ${{ env.ENV }}
           aws-region: ${{ secrets.AWS_REGION }}
 
@@ -159,7 +159,7 @@ jobs:
           metric-name: 'DeploymentSuccess'
           value: '1'
           unit: 'Count'
-          service: 'backend'
+          service: 'databricks'
           environment: ${{ env.ENV }}
           aws-region: ${{ secrets.AWS_REGION }}
 
@@ -170,7 +170,7 @@ jobs:
           metric-name: 'DeploymentFailed'
           value: '1'
           unit: 'Count'
-          service: 'backend'
+          service: 'databricks'
           environment: ${{ env.ENV }}
           aws-region: ${{ secrets.AWS_REGION }}
 
