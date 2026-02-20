@@ -227,3 +227,9 @@ variable "additional_task_role_policy_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "cognito_identity_pool_arn" {
+  description = "Cognito Identity Pool ARN for restricting developer authentication permissions"
+  type        = string
+  default     = ""
+}

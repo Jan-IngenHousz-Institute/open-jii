@@ -8,4 +8,8 @@ export default registerAs("aws", () => ({
   location: {
     placeIndexName: process.env.AWS_LOCATION_PLACE_INDEX_NAME,
   },
+  cognito: {
+    identityPoolId: process.env.AWS_COGNITO_IDENTITY_POOL_ID,
+    developerProviderName: process.env.AWS_COGNITO_DEVELOPER_PROVIDER_NAME,
+  },
 }));
