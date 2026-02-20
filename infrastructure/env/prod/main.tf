@@ -105,7 +105,6 @@ module "vpc_endpoints" {
   private_subnet_ids      = module.vpc.private_subnets
   security_group_ids      = [module.vpc.default_sg_id]
 
-  # Macro-runner Lambda endpoints (isolated subnets, no internet)
   isolated_route_table_ids = module.vpc.isolated_rt_ids
   isolated_subnet_ids      = module.vpc.isolated_subnets
   create_ecr_api_endpoint  = true
@@ -113,7 +112,6 @@ module "vpc_endpoints" {
   create_logs_endpoint     = true
 }
 
-# Macro Runner — Lambda-based isolated code execution (Python, JS, R)
 
 module "macro_runner" {
   source = "../../modules/macro-runner"
@@ -124,7 +122,12 @@ module "macro_runner" {
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.macro_runner_lambda_security_group_id
 
-  # Prod settings — defaults are already prod-safe (IMMUTABLE, no force_delete)
+  languages = {
+    python = { memory = 1024, timeout = 65 }
+    js     = { memory = 512, timeout = 65 }
+    r      = { memory = 1024, timeout = 65 }
+    }
+
   log_retention_days      = 30
   flow_log_retention_days = 30
 
