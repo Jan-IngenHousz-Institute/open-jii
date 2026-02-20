@@ -1,13 +1,13 @@
+import type { Readable } from "stream";
+
 import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
-import type {
-  SchemaData,
-  DownloadLinksData,
-} from "../../../common/modules/databricks/services/sql/sql.types";
+import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
+import type { ExportMetadata } from "../models/experiment-data-exports.model";
 
 /**
  * Injection token for the Databricks port
@@ -19,7 +19,8 @@ export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
  * This interface defines the contract for external Databricks services
  */
 export interface DatabricksPort {
-  // Schema name
+  // Schema and catalog names
+  readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
 
   // Physical Databricks table names (only those consumed by repository)
@@ -87,40 +88,14 @@ export interface DatabricksPort {
   }): string;
 
   /**
-   * Execute a SQL query with INLINE disposition (returns data directly)
+   * Execute a SQL query in a specific schema.
+   * Uses INLINE disposition and JSON_ARRAY format.
    */
-  executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition?: "INLINE",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<SchemaData>>;
-
-  /**
-   * Execute a SQL query with EXTERNAL_LINKS disposition (returns download links)
-   */
-  executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition: "EXTERNAL_LINKS",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<DownloadLinksData>>;
-
-  /**
-   * Execute a SQL query in a specific schema with optional disposition and format.
-   * - disposition: "INLINE" (default) returns data directly, "EXTERNAL_LINKS" returns download links
-   * - format: "JSON_ARRAY" (default), "ARROW_STREAM", or "CSV" for EXTERNAL_LINKS
-   */
-  executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-    disposition?: "INLINE" | "EXTERNAL_LINKS",
-    format?: "JSON_ARRAY" | "ARROW_STREAM" | "CSV",
-  ): Promise<Result<SchemaData | DownloadLinksData>>;
+  executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
 
   /**
    * Upload data to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/centrum/data-uploads/{experimentId}/{sourceType}/{directoryName}/{fileName}
+   * Constructs the path: /Volumes/{catalogName}/centrum/data-imports/{experimentId}/{sourceType}/{directoryName}/{fileName}
    *
    * @param schemaName - Schema name (should be "centrum")
    * @param experimentId - ID of the experiment (used for subdirectory)
@@ -145,4 +120,51 @@ export interface DatabricksPort {
   triggerAmbyteProcessingJob(
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>>;
+
+  /**
+   * Trigger the data export Databricks job with the specified parameters
+   * @param experimentId - The experiment ID
+   * @param tableName - The table name to export
+   * @param format - The export format (csv, ndjson, json-array, parquet)
+   * @param userId - User ID who initiated the export
+   */
+  triggerDataExportJob(
+    experimentId: string,
+    tableName: string,
+    format: string,
+    userId: string,
+  ): Promise<Result<DatabricksJobRunResponse>>;
+
+  /**
+   * Stream an export file by export ID
+   * Fetches metadata, validates status, and streams the file
+   * @param exportId - The export ID
+   * @param experimentId - The experiment ID (for additional validation)
+   * @returns Result containing a readable stream and file path
+   */
+  streamExport(
+    exportId: string,
+    experimentId: string,
+  ): Promise<Result<{ stream: Readable; filePath: string; tableName: string }>>;
+
+  /**
+   * Get completed export metadata for an experiment table from Delta Lake
+   * Returns raw SchemaData from the database query
+   */
+  getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>>;
+
+  /**
+   * Get active (in-progress) exports from job runs
+   */
+  getActiveExports(experimentId: string, tableName: string): Promise<Result<ExportMetadata[]>>;
+
+  /**
+   * Get failed exports from completed job runs
+   * @param completedExportRunIds - Set of run IDs already in the completed exports table (to deduplicate)
+   */
+  getFailedExports(
+    experimentId: string,
+    tableName: string,
+    completedExportRunIds: Set<number>,
+  ): Promise<Result<ExportMetadata[]>>;
 }

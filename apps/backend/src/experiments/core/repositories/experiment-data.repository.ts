@@ -2,9 +2,9 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
-import { ExperimentDto } from "../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
+import { ExperimentDto } from "../models/experiment.model";
+import { DATABRICKS_PORT } from "../ports/databricks.port";
+import type { DatabricksPort } from "../ports/databricks.port";
 
 export interface SchemaDataDto {
   columns: {
@@ -108,60 +108,6 @@ export class ExperimentDataRepository {
           rowCount: metadata.rowCount,
           query: queryResult.value,
         });
-  }
-
-  /**
-   * Get table data download links for efficient large dataset downloads
-   */
-  async getTableDataForDownload(params: { experimentId: string; tableName: string }): Promise<
-    Result<{
-      externalLinks: {
-        externalLink: string;
-        expiration: string;
-        totalSize: number;
-        rowCount: number;
-      }[];
-      totalRows: number;
-    }>
-  > {
-    const { experimentId, tableName } = params;
-
-    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-      tableName,
-      includeSchemas: true,
-    });
-
-    if (metadataResult.isFailure()) return metadataResult;
-    if (metadataResult.value.length === 0) {
-      return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
-    }
-
-    const metadata = metadataResult.value[0];
-
-    const queryResult = this.buildQuery(experimentId, tableName, {
-      macroSchema: metadata.macroSchema ?? undefined,
-      questionsSchema: metadata.questionsSchema ?? undefined,
-    });
-    if (queryResult.isFailure()) return queryResult;
-
-    const dataResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      queryResult.value,
-      "EXTERNAL_LINKS",
-      "CSV",
-    );
-
-    if (dataResult.isFailure()) return dataResult;
-
-    return success({
-      externalLinks: dataResult.value.external_links.map((link) => ({
-        externalLink: link.external_link,
-        expiration: link.expiration,
-        totalSize: link.byte_count,
-        rowCount: link.row_count,
-      })),
-      totalRows: dataResult.value.totalRows,
-    });
   }
 
   /**

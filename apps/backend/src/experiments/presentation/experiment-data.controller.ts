@@ -11,11 +11,9 @@ import { contract } from "@repo/api";
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { handleFailure } from "../../common/utils/fp-utils";
-import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
-import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 
 @Controller()
 export class ExperimentDataController {
@@ -24,9 +22,7 @@ export class ExperimentDataController {
   constructor(
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
-    private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
-    private readonly downloadExperimentDataUseCase: DownloadExperimentDataUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.getExperimentTables)
@@ -376,50 +372,6 @@ export class ExperimentDataController {
         return {
           status: StatusCodes.CREATED,
           body: result.value,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
-  }
-
-  @TsRestHandler(contract.experiments.downloadExperimentData)
-  downloadExperimentData(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.downloadExperimentData, async ({ params, query }) => {
-      const { id: experimentId } = params;
-      const { tableName } = query;
-
-      this.logger.log({
-        msg: "Processing download request",
-        operation: "downloadData",
-        experimentId,
-        userId: session.user.id,
-        tableName,
-      });
-
-      const result = await this.downloadExperimentDataUseCase.execute(
-        experimentId,
-        session.user.id,
-        {
-          tableName,
-        },
-      );
-
-      if (result.isSuccess()) {
-        const data = result.value;
-
-        this.logger.log({
-          msg: "Successfully prepared download links",
-          operation: "downloadData",
-          experimentId,
-          tableName,
-          totalChunks: data.externalLinks.length,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.OK,
-          body: data,
         };
       }
 

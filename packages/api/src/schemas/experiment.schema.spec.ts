@@ -61,7 +61,15 @@ import {
   // Path params / responses
   zIdPathParam,
   zExperimentMemberPathParam,
+  zExportPathParam,
   zCreateExperimentResponse,
+  // Export schemas
+  zInitiateExportBody,
+  zInitiateExportResponse,
+  zListExportsQuery,
+  zExportRecord,
+  zListExportsResponse,
+  zDownloadExportResponse,
 } from "./experiment.schema";
 
 // -------- Helpers --------
@@ -726,8 +734,183 @@ describe("Experiment Schema", () => {
       expect(zExperimentMemberPathParam.parse(ok)).toEqual(ok);
     });
 
+    it("zExportPathParam valid and rejects bad uuid", () => {
+      const ok = { id: uuidA, exportId: uuidB };
+      expect(zExportPathParam.parse(ok)).toEqual(ok);
+      expect(() => zExportPathParam.parse({ id: uuidA, exportId: "nope" })).toThrow();
+      expect(() => zExportPathParam.parse({ id: "nope", exportId: uuidB })).toThrow();
+    });
+
     it("zCreateExperimentResponse valid", () => {
       expect(zCreateExperimentResponse.parse({ id: uuidA })).toEqual({ id: uuidA });
+    });
+  });
+
+  // ----- Export Data Schemas -----
+  describe("Export Data Schemas", () => {
+    it("zInitiateExportBody accepts valid input", () => {
+      const body = { tableName: "raw_data", format: "csv" };
+      expect(zInitiateExportBody.parse(body)).toEqual(body);
+    });
+
+    it("zInitiateExportBody accepts all valid formats", () => {
+      for (const format of ["csv", "ndjson", "json-array", "parquet"] as const) {
+        expect(zInitiateExportBody.parse({ tableName: "t1", format })).toEqual({
+          tableName: "t1",
+          format,
+        });
+      }
+    });
+
+    it("zInitiateExportBody rejects invalid format", () => {
+      expect(() => zInitiateExportBody.parse({ tableName: "t1", format: "xml" })).toThrow();
+    });
+
+    it("zInitiateExportBody rejects missing fields", () => {
+      expect(() => zInitiateExportBody.parse({ tableName: "t1" })).toThrow();
+      expect(() => zInitiateExportBody.parse({ format: "csv" })).toThrow();
+      expect(() => zInitiateExportBody.parse({})).toThrow();
+    });
+
+    it("zInitiateExportResponse valid", () => {
+      const res = { status: "pending" };
+      expect(zInitiateExportResponse.parse(res)).toEqual(res);
+    });
+
+    it("zInitiateExportResponse rejects empty status", () => {
+      expect(() => zInitiateExportResponse.parse({})).toThrow();
+    });
+
+    it("zListExportsQuery valid", () => {
+      const q = { tableName: "raw_data" };
+      expect(zListExportsQuery.parse(q)).toEqual(q);
+    });
+
+    it("zListExportsQuery rejects missing tableName", () => {
+      expect(() => zListExportsQuery.parse({})).toThrow();
+    });
+
+    it("zExportRecord accepts complete record", () => {
+      const record = {
+        exportId: uuidA,
+        experimentId: uuidB,
+        tableName: "raw_data",
+        format: "csv",
+        status: "completed",
+        filePath: "/path/to/file.csv",
+        rowCount: 1000,
+        fileSize: 50000,
+        createdBy: uuidC,
+        createdAt: isoTime,
+        completedAt: isoTime2,
+      };
+      expect(zExportRecord.parse(record)).toEqual(record);
+    });
+
+    it("zExportRecord accepts nullable fields as null", () => {
+      const record = {
+        exportId: null,
+        experimentId: uuidB,
+        tableName: "raw_data",
+        format: "ndjson",
+        status: "running",
+        filePath: null,
+        rowCount: null,
+        fileSize: null,
+        createdBy: uuidC,
+        createdAt: isoTime,
+        completedAt: null,
+      };
+      expect(zExportRecord.parse(record)).toEqual(record);
+    });
+
+    it("zExportRecord accepts all valid statuses", () => {
+      const base = {
+        exportId: null,
+        experimentId: uuidB,
+        tableName: "t1",
+        format: "csv",
+        filePath: null,
+        rowCount: null,
+        fileSize: null,
+        createdBy: uuidC,
+        createdAt: isoTime,
+        completedAt: null,
+      };
+      for (const status of ["queued", "pending", "running", "completed", "failed"] as const) {
+        expect(zExportRecord.parse({ ...base, status })).toEqual({ ...base, status });
+      }
+    });
+
+    it("zExportRecord rejects invalid status", () => {
+      const record = {
+        exportId: uuidA,
+        experimentId: uuidB,
+        tableName: "raw_data",
+        format: "csv",
+        status: "cancelled",
+        filePath: null,
+        rowCount: null,
+        fileSize: null,
+        createdBy: uuidC,
+        createdAt: isoTime,
+        completedAt: null,
+      };
+      expect(() => zExportRecord.parse(record)).toThrow();
+    });
+
+    it("zExportRecord rejects invalid format", () => {
+      const record = {
+        exportId: uuidA,
+        experimentId: uuidB,
+        tableName: "raw_data",
+        format: "xml",
+        status: "completed",
+        filePath: null,
+        rowCount: null,
+        fileSize: null,
+        createdBy: uuidC,
+        createdAt: isoTime,
+        completedAt: null,
+      };
+      expect(() => zExportRecord.parse(record)).toThrow();
+    });
+
+    it("zListExportsResponse valid with exports", () => {
+      const response = {
+        exports: [
+          {
+            exportId: uuidA,
+            experimentId: uuidB,
+            tableName: "raw_data",
+            format: "csv",
+            status: "completed",
+            filePath: "/path/to/file.csv",
+            rowCount: 100,
+            fileSize: 5000,
+            createdBy: uuidC,
+            createdAt: isoTime,
+            completedAt: isoTime2,
+          },
+        ],
+      };
+      expect(zListExportsResponse.parse(response)).toEqual(response);
+    });
+
+    it("zListExportsResponse valid with empty exports", () => {
+      const response = { exports: [] };
+      expect(zListExportsResponse.parse(response)).toEqual(response);
+    });
+
+    it("zListExportsResponse rejects missing exports key", () => {
+      expect(() => zListExportsResponse.parse({})).toThrow();
+    });
+
+    it("zDownloadExportResponse accepts any value", () => {
+      // z.unknown() accepts anything
+      expect(zDownloadExportResponse.parse("binary data")).toBe("binary data");
+      expect(zDownloadExportResponse.parse(null)).toBe(null);
+      expect(zDownloadExportResponse.parse(42)).toBe(42);
     });
   });
 });

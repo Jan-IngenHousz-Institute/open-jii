@@ -10,9 +10,12 @@ import { DatabricksConfigService } from "../config/config.service";
 import {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
+  DatabricksJobRunStatusResponse,
   DatabricksJobsListRequest,
   DatabricksJobsListResponse,
   DatabricksRunNowRequest,
+  DatabricksRunsListRequest,
+  DatabricksRunsListResponse,
   PerformanceTarget,
 } from "./jobs.types";
 
@@ -49,12 +52,6 @@ export class DatabricksJobsService {
         return result.value;
       },
       (error) => {
-        this.logger.error({
-          msg: "Failed to trigger Databricks job",
-          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
-          operation: "triggerJob",
-          error,
-        });
         return apiErrorMapper(`Databricks job trigger: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -118,7 +115,7 @@ export class DatabricksJobsService {
       queue: {
         enabled: true,
       },
-      performance_target: PerformanceTarget.STANDARD,
+      performance_target: PerformanceTarget.PERFORMANCE_OPTIMIZED,
     };
 
     if (idempotencyToken) {
@@ -180,6 +177,104 @@ export class DatabricksJobsService {
           error,
         });
         return apiErrorMapper(`Databricks service unavailable: ${getAxiosErrorMessage(error)}`);
+      },
+    );
+  }
+
+  /**
+   * Get the status of a job run
+   */
+  async getJobRunStatus(runId: number): Promise<Result<DatabricksJobRunStatusResponse>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.authService.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+        const host = this.configService.getHost();
+        const apiUrl = `${host}${DatabricksJobsService.JOBS_ENDPOINT}/runs/get`;
+
+        const response = await this.httpService.axiosRef.get<DatabricksJobRunStatusResponse>(
+          apiUrl,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            params: {
+              run_id: runId,
+            },
+            timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+          },
+        );
+
+        return response.data;
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to get job run status",
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+          operation: "getJobRunStatus",
+          runId,
+          error,
+        });
+        return apiErrorMapper(`Failed to get job run status: ${getAxiosErrorMessage(error)}`);
+      },
+    );
+  }
+
+  /**
+   * List job runs for a specific job
+   * @param jobId - The job ID to list runs for
+   * @param activeOnly - If true, only return active (non-terminal) runs
+   * @param limit - Maximum number of runs to return (default: 25)
+   * @param completedOnly - If true, only return completed (terminal) runs
+   */
+  async listRunsForJob(
+    jobId: number,
+    activeOnly = false,
+    limit = 25,
+    completedOnly = false,
+  ): Promise<Result<DatabricksRunsListResponse>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.authService.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+        const host = this.configService.getHost();
+        const apiUrl = `${host}${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`;
+
+        const requestParams: DatabricksRunsListRequest = {
+          job_id: jobId,
+          active_only: activeOnly,
+          completed_only: completedOnly,
+          limit,
+          expand_tasks: false,
+        };
+
+        const response = await this.httpService.axiosRef.get<DatabricksRunsListResponse>(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: requestParams,
+          timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+        });
+
+        return response.data;
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to list job runs",
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+          operation: "listRunsForJob",
+          jobId,
+          error,
+        });
+        return apiErrorMapper(`Failed to list job runs: ${getAxiosErrorMessage(error)}`);
       },
     );
   }
