@@ -17,9 +17,9 @@ export class ProjectTransferWebhookController {
 
   constructor(private readonly executeProjectTransferUseCase: ExecuteProjectTransferUseCase) {}
 
-  @TsRestHandler(contract.users.projectTransfer)
+  @TsRestHandler(contract.experiments.projectTransfer)
   handleProjectTransfer() {
-    return tsRestHandler(contract.users.projectTransfer, async ({ body }) => {
+    return tsRestHandler(contract.experiments.projectTransfer, async ({ body }) => {
       const result = await this.executeProjectTransferUseCase.execute(body);
 
       if (result.isSuccess()) {

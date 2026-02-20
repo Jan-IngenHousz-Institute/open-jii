@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { zMacroLanguage } from "./macro.schema";
+import { zSensorFamily } from "./protocol.schema";
+
 // --- Table Name Types ---
 /**
  * Core table names that are always present in the centrum schema
@@ -1014,3 +1017,52 @@ export type TransferRequestStatus = z.infer<typeof zTransferRequestStatus>;
 export type TransferRequest = z.infer<typeof zTransferRequest>;
 export type CreateTransferRequestBody = z.infer<typeof zCreateTransferRequestBody>;
 export type TransferRequestList = z.infer<typeof zTransferRequestList>;
+
+// --- Project Transfer Webhook Schemas ---
+export const zProjectTransferQuestionInput = z.object({
+  kind: zQuestionKind,
+  text: z.string().min(1).max(64),
+  options: z.array(z.string()).optional(),
+  required: z.boolean().optional().default(false),
+});
+
+export const zProjectTransferWebhookPayload = z.object({
+  experiment: z.object({
+    name: z.string().min(1).max(255),
+    description: z.string().optional(),
+    createdBy: z.string().uuid().describe("User ID of experiment creator/admin"),
+    locations: z.array(zLocationInput).optional(),
+  }),
+  protocol: z
+    .object({
+      name: z.string().min(1).max(255),
+      description: z.string().optional(),
+      code: z.record(z.unknown()).array(),
+      family: zSensorFamily.default("multispeq"),
+      createdBy: z.string().uuid().describe("User ID of protocol creator"),
+    })
+    .optional(),
+  macro: z
+    .object({
+      name: z.string().min(1).max(255),
+      description: z.string().optional(),
+      language: zMacroLanguage.default("javascript"),
+      code: z.string().min(1).describe("Base64 encoded macro code"),
+      createdBy: z.string().uuid().describe("User ID of macro creator"),
+    })
+    .optional(),
+  questions: z.array(zProjectTransferQuestionInput).optional(),
+});
+
+export const zProjectTransferWebhookResponse = z.object({
+  success: z.boolean(),
+  experimentId: z.string().uuid(),
+  protocolId: z.string().uuid().nullable(),
+  macroId: z.string().uuid().nullable(),
+  flowId: z.string().uuid().nullable(),
+  message: z.string().optional(),
+});
+
+export type ProjectTransferQuestionInput = z.infer<typeof zProjectTransferQuestionInput>;
+export type ProjectTransferWebhookPayload = z.infer<typeof zProjectTransferWebhookPayload>;
+export type ProjectTransferWebhookResponse = z.infer<typeof zProjectTransferWebhookResponse>;

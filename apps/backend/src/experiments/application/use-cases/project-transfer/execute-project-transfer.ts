@@ -43,76 +43,83 @@ export class ExecuteProjectTransferUseCase {
       msg: "Executing project transfer",
       operation: "executeProjectTransfer",
       experimentName: data.experiment.name,
-      protocolName: data.protocol.name,
-      macroName: data.macro.name,
+      protocolName: data.protocol?.name,
+      macroName: data.macro?.name,
     });
 
-    // 1. Create Protocol
-    const protocolResult = await this.protocolRepository.create(
-      {
-        name: data.protocol.name,
-        description: data.protocol.description ?? null,
-        code: JSON.stringify(data.protocol.code),
-        family: data.protocol.family,
-      },
-      data.protocol.createdBy,
-    );
+    // 1. Create Protocol (if provided)
+    let protocolId: string | null = null;
+    if (data.protocol) {
+      const protocolResult = await this.protocolRepository.create(
+        {
+          name: data.protocol.name,
+          description: data.protocol.description ?? null,
+          code: JSON.stringify(data.protocol.code),
+          family: data.protocol.family,
+        },
+        data.protocol.createdBy,
+      );
 
-    if (protocolResult.isFailure()) {
-      return protocolResult;
+      if (protocolResult.isFailure()) {
+        return protocolResult;
+      }
+
+      if (protocolResult.value.length === 0) {
+        this.logger.error({
+          msg: "Failed to create protocol during project transfer",
+          errorCode: ErrorCodes.PROTOCOL_CREATE_FAILED,
+          operation: "executeProjectTransfer",
+        });
+        return failure(AppError.internal("Failed to create protocol"));
+      }
+
+      protocolId = protocolResult.value[0].id;
     }
 
-    if (protocolResult.value.length === 0) {
-      this.logger.error({
-        msg: "Failed to create protocol during project transfer",
-        errorCode: ErrorCodes.PROTOCOL_CREATE_FAILED,
-        operation: "executeProjectTransfer",
+    // 2. Create Macro (if provided)
+    let macroId: string | null = null;
+    if (data.macro) {
+      const macroResult = await this.macroRepository.create(
+        {
+          name: data.macro.name,
+          description: data.macro.description ?? null,
+          language: data.macro.language,
+          code: data.macro.code,
+        },
+        data.macro.createdBy,
+      );
+
+      if (macroResult.isFailure()) {
+        return macroResult;
+      }
+
+      if (macroResult.value.length === 0) {
+        this.logger.error({
+          msg: "Failed to create macro during project transfer",
+          errorCode: ErrorCodes.MACRO_CREATE_FAILED,
+          operation: "executeProjectTransfer",
+        });
+        return failure(AppError.internal("Failed to create macro"));
+      }
+
+      const macro = macroResult.value[0];
+      macroId = macro.id;
+
+      // Upload macro code to Databricks (non-fatal)
+      const databricksResult = await this.macroDatabricksPort.uploadMacroCode({
+        filename: macro.filename,
+        code: macro.code,
+        language: macro.language,
       });
-      return failure(AppError.internal("Failed to create protocol"));
-    }
 
-    const protocol = protocolResult.value[0];
-
-    // 2. Create Macro
-    const macroResult = await this.macroRepository.create(
-      {
-        name: data.macro.name,
-        description: data.macro.description ?? null,
-        language: data.macro.language,
-        code: data.macro.code,
-      },
-      data.macro.createdBy,
-    );
-
-    if (macroResult.isFailure()) {
-      return macroResult;
-    }
-
-    if (macroResult.value.length === 0) {
-      this.logger.error({
-        msg: "Failed to create macro during project transfer",
-        errorCode: ErrorCodes.MACRO_CREATE_FAILED,
-        operation: "executeProjectTransfer",
-      });
-      return failure(AppError.internal("Failed to create macro"));
-    }
-
-    const macro = macroResult.value[0];
-
-    // Upload macro code to Databricks (non-fatal)
-    const databricksResult = await this.macroDatabricksPort.uploadMacroCode({
-      filename: macro.filename,
-      code: macro.code,
-      language: macro.language,
-    });
-
-    if (databricksResult.isFailure()) {
-      this.logger.warn({
-        msg: "Failed to upload macro to Databricks (non-fatal, can be retried)",
-        operation: "executeProjectTransfer",
-        macroId: macro.id,
-        error: databricksResult.error.message,
-      });
+      if (databricksResult.isFailure()) {
+        this.logger.warn({
+          msg: "Failed to upload macro to Databricks (non-fatal, can be retried)",
+          operation: "executeProjectTransfer",
+          macroId: macro.id,
+          error: databricksResult.error.message,
+        });
+      }
     }
 
     // 3. Create Experiment
@@ -145,22 +152,25 @@ export class ExecuteProjectTransferUseCase {
       return addMembersResult;
     }
 
-    // 5. Associate protocol with experiment
-    const addProtocolsResult = await this.experimentProtocolRepository.addProtocols(experiment.id, [
-      { protocolId: protocol.id, order: 0 },
-    ]);
-
-    if (addProtocolsResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to associate protocol with experiment",
-        errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-        operation: "executeProjectTransfer",
-        experimentId: experiment.id,
-        error: addProtocolsResult.error,
-      });
-      return failure(
-        AppError.internal(`Failed to associate protocol: ${addProtocolsResult.error.message}`),
+    // 5. Associate protocol with experiment (if protocol was created)
+    if (protocolId) {
+      const addProtocolsResult = await this.experimentProtocolRepository.addProtocols(
+        experiment.id,
+        [{ protocolId, order: 0 }],
       );
+
+      if (addProtocolsResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to associate protocol with experiment",
+          errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
+          operation: "executeProjectTransfer",
+          experimentId: experiment.id,
+          error: addProtocolsResult.error,
+        });
+        return failure(
+          AppError.internal(`Failed to associate protocol: ${addProtocolsResult.error.message}`),
+        );
+      }
     }
 
     // 6. Add locations if provided
@@ -186,101 +196,51 @@ export class ExecuteProjectTransferUseCase {
       }
     }
 
-    // 7. Create flow (non-fatal)
+    // 7. Create flow (non-fatal, requires both protocol and macro)
     let flowId: string | null = null;
-    try {
-      const flowNodes: FlowGraph["nodes"] = [];
-      const flowEdges: FlowGraph["edges"] = [];
-      let nodeIndex = 0;
+    if (protocolId && macroId) {
+      const questionNodes: FlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({
+        id: `q_${i}`,
+        type: "question" as const,
+        name: q.text.substring(0, 64),
+        content: {
+          kind: q.kind,
+          text: q.text,
+          required: q.required,
+          ...(q.kind === "multi_choice" && { options: q.options ?? [] }),
+        } as FlowGraph["nodes"][number]["content"],
+        isStart: i === 0,
+      }));
 
-      // Question nodes
-      const questionNodeIds: string[] = [];
-      if (data.questions && data.questions.length > 0) {
-        for (const question of data.questions) {
-          const nodeId = `q_${nodeIndex}`;
+      const offset = questionNodes.length;
+      const allNodes: FlowGraph["nodes"] = [
+        ...questionNodes,
+        {
+          id: `m_${offset}`,
+          type: "measurement",
+          name: "Measurement",
+          content: { protocolId },
+          isStart: offset === 0,
+        },
+        {
+          id: `a_${offset + 1}`,
+          type: "analysis",
+          name: "Analysis",
+          content: { macroId },
+          isStart: false,
+        },
+      ];
 
-          let content: FlowGraph["nodes"][number]["content"];
-          if (question.kind === "multi_choice") {
-            content = {
-              kind: "multi_choice" as const,
-              text: question.text,
-              options: question.options ?? [],
-              required: question.required,
-            };
-          } else if (question.kind === "yes_no") {
-            content = {
-              kind: "yes_no" as const,
-              text: question.text,
-              required: question.required,
-            };
-          } else if (question.kind === "number") {
-            content = {
-              kind: "number" as const,
-              text: question.text,
-              required: question.required,
-            };
-          } else {
-            content = {
-              kind: "open_ended" as const,
-              text: question.text,
-              required: question.required,
-            };
-          }
-
-          flowNodes.push({
-            id: nodeId,
-            type: "question",
-            name: question.text.substring(0, 64),
-            content,
-            isStart: nodeIndex === 0,
-          });
-          questionNodeIds.push(nodeId);
-          nodeIndex++;
-        }
-      }
-
-      // Measurement node
-      const measurementNodeId = `m_${nodeIndex}`;
-      flowNodes.push({
-        id: measurementNodeId,
-        type: "measurement",
-        name: "Measurement",
-        content: { protocolId: protocol.id },
-        isStart: questionNodeIds.length === 0,
-      });
-      nodeIndex++;
-
-      // Analysis node
-      const analysisNodeId = `a_${nodeIndex}`;
-      flowNodes.push({
-        id: analysisNodeId,
-        type: "analysis",
-        name: "Analysis",
-        content: { macroId: macro.id },
-        isStart: false,
-      });
-
-      // Edges: questions → measurement → analysis
-      let edgeIndex = 0;
-      for (let i = 0; i < questionNodeIds.length; i++) {
-        const targetId =
-          i < questionNodeIds.length - 1 ? questionNodeIds[i + 1] : measurementNodeId;
-        flowEdges.push({
-          id: `e_${edgeIndex}`,
-          source: questionNodeIds[i],
-          target: targetId,
-        });
-        edgeIndex++;
-      }
-      flowEdges.push({
-        id: `e_${edgeIndex}`,
-        source: measurementNodeId,
-        target: analysisNodeId,
-      });
+      const nodeIds = allNodes.map((n) => n.id);
+      const edges: FlowGraph["edges"] = nodeIds.slice(0, -1).map((source, i) => ({
+        id: `e_${i}`,
+        source,
+        target: nodeIds[i + 1],
+      }));
 
       const flowResult = await this.flowRepository.create(experiment.id, {
-        nodes: flowNodes,
-        edges: flowEdges,
+        nodes: allNodes,
+        edges,
       } as FlowGraph);
 
       if (flowResult.isSuccess()) {
@@ -293,29 +253,22 @@ export class ExecuteProjectTransferUseCase {
           error: flowResult.error,
         });
       }
-    } catch (error) {
-      this.logger.warn({
-        msg: "Error building flow for project transfer (non-fatal)",
-        operation: "executeProjectTransfer",
-        experimentId: experiment.id,
-        error: String(error),
-      });
     }
 
     this.logger.log({
       msg: "Project transfer completed",
       operation: "executeProjectTransfer",
       experimentId: experiment.id,
-      protocolId: protocol.id,
-      macroId: macro.id,
+      protocolId,
+      macroId,
       flowId,
     });
 
     return success({
       success: true,
       experimentId: experiment.id,
-      protocolId: protocol.id,
-      macroId: macro.id,
+      protocolId,
+      macroId,
       flowId,
     });
   }

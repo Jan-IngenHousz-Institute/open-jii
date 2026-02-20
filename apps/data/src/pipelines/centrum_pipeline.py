@@ -338,6 +338,28 @@ def clean_data():
         .withColumn("annotations", F.array())
         # Mark imported data to skip macro processing
         .withColumn("skip_macro_processing", F.lit(True))
+        .select(
+            "id",
+            "new_id",
+            "device_id",
+            "device_name",
+            "device_version",
+            "device_battery",
+            "device_firmware",
+            "sample",
+            "output",
+            "macros",
+            "questions",
+            "annotations",
+            "user_id",
+            "experiment_id",
+            "timestamp",
+            "date",
+            "hour",
+            "ingest_latency_ms",
+            "processed_timestamp",
+            "skip_macro_processing"
+        )
     )
 
     # Union bronze-sourced data with imported data
