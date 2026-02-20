@@ -106,8 +106,9 @@ resource "aws_iam_role_policy_attachment" "additional_task_role_policies" {
 
 # Allows backend to vouch for authenticated users and retrieve IoT credentials
 resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
-  name = "ecs-task-cognito-policy-${var.service_name}-${var.environment}"
-  role = aws_iam_role.ecs_task_role.id
+  count = var.enable_cognito_policy ? 1 : 0
+  name  = "ecs-task-cognito-policy-${var.service_name}-${var.environment}"
+  role  = aws_iam_role.ecs_task_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
