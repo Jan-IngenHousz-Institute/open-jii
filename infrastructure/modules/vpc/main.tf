@@ -228,7 +228,7 @@ resource "aws_security_group_rule" "server_lambda_to_aurora" {
 # Macro Runner Lambda Security Group
 # -------------------------
 # No inbound (Lambda doesn't receive connections).
-# Outbound: HTTPS to VPC CIDR only (for CloudWatch Logs VPC endpoint).
+# Outbound: HTTPS to VPC CIDR only (for ECR API, ECR DKR, and CloudWatch Logs VPC endpoints).
 resource "aws_security_group" "macro_runner_lambda" {
   count = var.create_macro_runner_resources ? 1 : 0
 
@@ -242,7 +242,7 @@ resource "aws_security_group" "macro_runner_lambda" {
   })
 }
 
-# Egress: HTTPS to VPC CIDR (CloudWatch Logs VPC endpoint)
+# Egress: HTTPS to VPC CIDR (ECR API, ECR DKR, CloudWatch Logs VPC endpoints)
 resource "aws_security_group_rule" "macro_runner_lambda_egress" {
   count = var.create_macro_runner_resources ? 1 : 0
 
@@ -252,7 +252,7 @@ resource "aws_security_group_rule" "macro_runner_lambda_egress" {
   protocol          = "tcp"
   cidr_blocks       = [aws_vpc.this.cidr_block]
   security_group_id = aws_security_group.macro_runner_lambda[0].id
-  description       = "HTTPS to VPC endpoints (CloudWatch Logs)"
+  description       = "HTTPS to VPC endpoints (ECR API, ECR DKR, CloudWatch Logs)"
 }
 
 # Allow macro-runner Lambda to reach Interface VPC endpoint ENIs (default SG)
