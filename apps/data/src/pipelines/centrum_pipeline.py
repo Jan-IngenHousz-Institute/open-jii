@@ -278,8 +278,7 @@ def clean_data():
         """)
     )
 
-    # Mark streamed data as requiring macro processing
-    df = df.withColumn("skip_macro_processing", F.lit(False))
+    df = df.withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
     
     # Select final columns for bronze-sourced silver data
     bronze_clean = df.select(
@@ -610,7 +609,7 @@ def experiment_macro_data():
         dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
-        .filter("skip_macro_processing IS NULL OR skip_macro_processing = false")
+        .filter("skip_macro_processing IS NOT TRUE")
         .select(
             "id",
             "experiment_id",
