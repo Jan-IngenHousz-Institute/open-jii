@@ -28,7 +28,14 @@ if (!file.exists(helpers_path)) {
   cat(toJSON(list(status = "error", results = list(), errors = list(paste0("Helpers file not found at: ", helpers_path))), auto_unbox = TRUE))
   quit(status = 0)
 }
-source(helpers_path)
+# Create an isolated parent environment for sandbox scopes.
+# parent.env(globalenv()) is the first package namespace on the search path
+# (e.g. package:jsonlite -> package:stats -> ... -> package:base),
+# so macros get all standard R functions (sd, lm, optim, …) but CANNOT
+# see the wrapper's own variables (batch_items, results, args, etc.).
+sandbox_parent <- new.env(parent = parent.env(globalenv()))
+source(helpers_path, local = sandbox_parent)
+lockEnvironment(sandbox_parent)
 
 # 2. READ INPUT BATCH
 if (!file.exists(input_data_path)) {
@@ -65,7 +72,7 @@ wrapped_code <- paste0(
 for (item in batch_items) {
   
   # A. Define Scope / Environment for this run
-  run_env <- new.env(parent = globalenv())
+  run_env <- new.env(parent = sandbox_parent)
   
   # Block dangerous functions by overriding them in the sandbox environment.
   # User code sees these instead of the real functions.
@@ -107,7 +114,11 @@ for (item in batch_items) {
     baseenv        = "baseenv() is disabled",
     environment    = "environment() is disabled",
     as.environment = "as.environment() is disabled",
-    new.env        = "new.env() is disabled"
+    new.env        = "new.env() is disabled",
+    # Super-assignment (<<-) would write into parent scopes
+    makeActiveBinding = "makeActiveBinding() is disabled",
+    delayedAssign     = "delayedAssign() is disabled",
+    assign            = "assign() is disabled"
   )
 
   for (fn_name in names(blocked)) {
@@ -115,6 +126,36 @@ for (item in batch_items) {
     assign(fn_name, eval(bquote(function(...) stop(paste("Security:", .(msg))))), envir = run_env)
     lockBinding(fn_name, run_env)
   }
+
+  # Block namespace-qualified access (e.g. base::system, utils::download.file).
+  # Many R functions internally use :: (e.g. lm() evals stats::model.frame in
+  # the caller's frame), so a blanket block breaks core functionality.
+  # Instead, we create a smart :: wrapper that passes through safe calls but
+  # blocks any function on the blocklist.
+  blocked_names <- names(blocked)
+  real_get <- getExportedValue  # capture before blocking
+  safe_ns <- function(pkg, name) {
+    fn <- as.character(substitute(name))
+    if (fn %in% blocked_names) {
+      stop(paste0("Security: ", as.character(substitute(pkg)), "::", fn, "() is disabled"))
+    }
+    real_get(as.character(substitute(pkg)), fn)
+  }
+  safe_ns3 <- function(pkg, name) {
+    fn <- as.character(substitute(name))
+    if (fn %in% blocked_names) {
+      stop(paste0("Security: ", as.character(substitute(pkg)), ":::", fn, "() is disabled"))
+    }
+    real_get(as.character(substitute(pkg)), fn)
+  }
+  assign("::", safe_ns, envir = run_env)
+  lockBinding("::", run_env)
+  assign(":::", safe_ns3, envir = run_env)
+  lockBinding(":::", run_env)
+  assign("getExportedValue", function(...) stop("Security: getExportedValue() is disabled"), envir = run_env)
+  lockBinding("getExportedValue", run_env)
+  assign("getFromNamespace", function(...) stop("Security: getFromNamespace() is disabled"), envir = run_env)
+  lockBinding("getFromNamespace", run_env)
 
   assign(".GlobalEnv", NULL, envir = run_env)
   lockBinding(".GlobalEnv", run_env)

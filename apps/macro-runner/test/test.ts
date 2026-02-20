@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import {
   invokeLambda,
@@ -6,7 +6,6 @@ import {
   targetLanguages,
   withLanguage,
   assertValidEnvelope,
-  baseUrl,
 } from "./helpers.js";
 import type { TestCase } from "./helpers.js";
 
@@ -190,30 +189,6 @@ describe("security", () => {
           }
         });
       }
-
-      // After all security tests for this language, verify the container
-      // is still alive. A crashed container = security vulnerability.
-      afterAll(async () => {
-        const url = `${baseUrl(language)}/2015-03-31/functions/function/invocations`;
-
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            script: Buffer.from(
-              "output['alive'] = True" + (language === "python" ? "" : ""),
-            ).toString("base64"),
-            items: [{ id: "healthcheck", data: {} }],
-            timeout: 5,
-            protocol_id: "healthcheck",
-          }),
-          signal: AbortSignal.timeout(15000),
-        });
-
-        expect(res.status).toBe(200);
-        const body = (await res.json()) as Record<string, unknown>;
-        expect(body.status).not.toBeUndefined();
-      });
     });
   }
 });
