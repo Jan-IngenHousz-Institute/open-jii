@@ -9,6 +9,13 @@ import {
   zCreateMacroRequestBody,
   zUpdateMacroRequestBody,
   zMacroErrorResponse,
+  zMacroExecutionRequestBody,
+  zMacroExecutionResponse,
+  zMacroBatchExecutionItem,
+  zMacroBatchExecutionRequestBody,
+  zMacroBatchExecutionResultItem,
+  zMacroBatchExecutionResponse,
+  zMacroBatchWebhookErrorResponse,
 } from "./macro.schema";
 
 // Reusable fixtures
@@ -271,6 +278,178 @@ describe("Macro Schema", () => {
     it("rejects missing fields", () => {
       expect(() => zMacroErrorResponse.parse({ message: "x" })).toThrow();
       expect(() => zMacroErrorResponse.parse({ statusCode: 500 })).toThrow();
+    });
+  });
+
+  // --- Single Execution ---
+  describe("zMacroExecutionRequestBody", () => {
+    it("valid body with data and timeout", () => {
+      const b = { data: { trace: [1, 2, 3] }, timeout: 30 };
+      expect(zMacroExecutionRequestBody.parse(b)).toEqual(b);
+    });
+
+    it("timeout is optional", () => {
+      const b = { data: {} };
+      expect(zMacroExecutionRequestBody.parse(b)).toEqual(b);
+    });
+
+    it("rejects timeout below 1", () => {
+      expect(() => zMacroExecutionRequestBody.parse({ data: {}, timeout: 0 })).toThrow();
+    });
+
+    it("rejects timeout above 60", () => {
+      expect(() => zMacroExecutionRequestBody.parse({ data: {}, timeout: 61 })).toThrow();
+    });
+
+    it("rejects non-integer timeout", () => {
+      expect(() => zMacroExecutionRequestBody.parse({ data: {}, timeout: 1.5 })).toThrow();
+    });
+
+    it("rejects missing data", () => {
+      expect(() => zMacroExecutionRequestBody.parse({})).toThrow();
+    });
+
+    it("accepts data as a JSON string (Databricks serialisation)", () => {
+      const b = { data: JSON.stringify({ trace: [1, 2, 3] }), timeout: 5 };
+      const parsed = zMacroExecutionRequestBody.parse(b);
+      expect(parsed.data).toEqual({ trace: [1, 2, 3] });
+    });
+
+    it("rejects data that is an invalid JSON string", () => {
+      expect(() => zMacroExecutionRequestBody.parse({ data: "{bad json" })).toThrow();
+    });
+  });
+
+  describe("zMacroExecutionResponse", () => {
+    it("valid success response", () => {
+      const r = { macro_id: uuidA, success: true, output: { result: 42 } };
+      expect(zMacroExecutionResponse.parse(r)).toEqual(r);
+    });
+
+    it("valid failure response", () => {
+      const r = { macro_id: uuidA, success: false, error: "Script failed" };
+      expect(zMacroExecutionResponse.parse(r)).toEqual(r);
+    });
+
+    it("output and error are optional", () => {
+      const r = { macro_id: uuidA, success: true };
+      expect(zMacroExecutionResponse.parse(r)).toEqual(r);
+    });
+  });
+
+  // --- Batch Execution ---
+  describe("zMacroBatchExecutionItem", () => {
+    it("valid item", () => {
+      const item = { id: "measurement-1", macro_id: uuidA, data: { trace: [1] } };
+      expect(zMacroBatchExecutionItem.parse(item)).toEqual(item);
+    });
+
+    it("rejects non-uuid macro_id", () => {
+      expect(() =>
+        zMacroBatchExecutionItem.parse({ id: "m1", macro_id: "bad", data: {} }),
+      ).toThrow();
+    });
+
+    it("rejects missing data", () => {
+      expect(() => zMacroBatchExecutionItem.parse({ id: "m1", macro_id: uuidA })).toThrow();
+    });
+
+    it("accepts data as a JSON string (Databricks serialisation)", () => {
+      const item = { id: "m1", macro_id: uuidA, data: JSON.stringify({ trace: [1] }) };
+      const parsed = zMacroBatchExecutionItem.parse(item);
+      expect(parsed.data).toEqual({ trace: [1] });
+    });
+  });
+
+  describe("zMacroBatchExecutionRequestBody", () => {
+    const validItem = { id: "m1", macro_id: uuidA, data: {} };
+
+    it("valid request with items", () => {
+      const b = { items: [validItem], timeout: 10 };
+      expect(zMacroBatchExecutionRequestBody.parse(b)).toEqual(b);
+    });
+
+    it("timeout is optional", () => {
+      const b = { items: [validItem] };
+      expect(zMacroBatchExecutionRequestBody.parse(b)).toEqual(b);
+    });
+
+    it("rejects empty items array", () => {
+      expect(() => zMacroBatchExecutionRequestBody.parse({ items: [] })).toThrow();
+    });
+
+    it("rejects items array exceeding 5000", () => {
+      const tooMany = Array.from({ length: 5001 }, (_, i) => ({
+        id: `m${i}`,
+        macro_id: uuidA,
+        data: {},
+      }));
+      expect(() => zMacroBatchExecutionRequestBody.parse({ items: tooMany })).toThrow();
+    });
+
+    it("accepts items as a JSON string (Databricks serialisation)", () => {
+      const items = [{ id: "m1", macro_id: uuidA, data: { x: 1 } }];
+      const b = { items: JSON.stringify(items), timeout: 10 };
+      const parsed = zMacroBatchExecutionRequestBody.parse(b);
+      expect(parsed.items).toEqual(items);
+    });
+
+    it("accepts items as JSON string with stringified data inside", () => {
+      const items = [{ id: "m1", macro_id: uuidA, data: JSON.stringify({ trace: [1, 2] }) }];
+      const b = { items: JSON.stringify(items), timeout: 5 };
+      const parsed = zMacroBatchExecutionRequestBody.parse(b);
+      expect(parsed.items[0].data).toEqual({ trace: [1, 2] });
+    });
+
+    it("rejects items that is an invalid JSON string", () => {
+      expect(() => zMacroBatchExecutionRequestBody.parse({ items: "not valid json" })).toThrow();
+    });
+  });
+
+  describe("zMacroBatchExecutionResultItem", () => {
+    it("valid success result", () => {
+      const r = { id: "m1", macro_id: uuidA, success: true, output: { x: 1 } };
+      expect(zMacroBatchExecutionResultItem.parse(r)).toEqual(r);
+    });
+
+    it("valid failure result", () => {
+      const r = { id: "m1", macro_id: uuidA, success: false, error: "not found" };
+      expect(zMacroBatchExecutionResultItem.parse(r)).toEqual(r);
+    });
+  });
+
+  describe("zMacroBatchExecutionResponse", () => {
+    it("valid response with results", () => {
+      const res = {
+        results: [{ id: "m1", macro_id: uuidA, success: true }],
+      };
+      expect(zMacroBatchExecutionResponse.parse(res)).toEqual(res);
+    });
+
+    it("valid response with errors array", () => {
+      const res = {
+        results: [{ id: "m1", macro_id: uuidA, success: false, error: "fail" }],
+        errors: ["Macro not found: abc"],
+      };
+      expect(zMacroBatchExecutionResponse.parse(res)).toEqual(res);
+    });
+
+    it("errors is optional", () => {
+      const res = { results: [] };
+      expect(zMacroBatchExecutionResponse.parse(res)).toEqual(res);
+    });
+  });
+
+  describe("zMacroBatchWebhookErrorResponse", () => {
+    it("valid error response", () => {
+      const err = { error: "VALIDATION_ERROR", message: "Invalid body", statusCode: 400 };
+      expect(zMacroBatchWebhookErrorResponse.parse(err)).toEqual(err);
+    });
+
+    it("rejects missing error field", () => {
+      expect(() =>
+        zMacroBatchWebhookErrorResponse.parse({ message: "x", statusCode: 400 }),
+      ).toThrow();
     });
   });
 });
