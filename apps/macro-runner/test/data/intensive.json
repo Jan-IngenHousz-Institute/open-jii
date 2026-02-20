@@ -24,18 +24,7 @@
       {
         "id": "item-1",
         "data": {
-          "values": [
-            45.2,
-            46.8,
-            44.1,
-            47.3,
-            45.9,
-            50.1,
-            43.2,
-            48,
-            42.5,
-            49.7
-          ]
+          "values": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2, 48, 42.5, 49.7]
         }
       }
     ],
@@ -55,18 +44,7 @@
           "range": 7.600000000000001,
           "median": 46.349999999999994,
           "count": 10,
-          "sorted": [
-            42.5,
-            43.2,
-            44.1,
-            45.2,
-            45.9,
-            46.8,
-            47.3,
-            48,
-            49.7,
-            50.1
-          ]
+          "sorted": [42.5, 43.2, 44.1, 45.2, 45.9, 46.8, 47.3, 48, 49.7, 50.1]
         }
       ]
     }
@@ -146,26 +124,8 @@
       {
         "id": "item-1",
         "data": {
-          "x": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8
-          ],
-          "y": [
-            2.1,
-            4,
-            5.8,
-            8.1,
-            9.9,
-            12,
-            14.2,
-            16.1
-          ]
+          "x": [1, 2, 3, 4, 5, 6, 7, 8],
+          "y": [2.1, 4, 5.8, 8.1, 9.9, 12, 14.2, 16.1]
         }
       }
     ],
@@ -188,35 +148,13 @@
   {
     "name": "py_scipy_regression",
     "language": "python",
-    "script": "eCA9IG5wLmFycmF5KGpzb24uZ2V0KCd4JywgWzEsMiwzLDQsNV0pLCBkdHlwZT1mbG9hdCkKeSA9IG5wLmFycmF5KGpzb24uZ2V0KCd5JywgWzIsNCw2LDgsMTBdKSwgZHR5cGU9ZmxvYXQpCnNsb3BlLCBpbnRlcmNlcHQsIHIsIHAsIHNlID0gc2NpcHkuc3RhdHMubGlucmVncmVzcyh4LCB5KQpvdXRwdXRbJ3Nsb3BlJ10gPSBmbG9hdChzbG9wZSkKb3V0cHV0WydpbnRlcmNlcHQnXSA9IGZsb2F0KGludGVyY2VwdCkKb3V0cHV0WydyX3NxdWFyZWQnXSA9IGZsb2F0KHIqKjIpCm91dHB1dFsncF92YWx1ZSddID0gZmxvYXQocCkKb3V0cHV0WydzdGRfZXJyb3InXSA9IGZsb2F0KHNlKQpwcmVkaWN0ZWQgPSAoc2xvcGUgKiB4ICsgaW50ZXJjZXB0KS50b2xpc3QoKQpyZXNpZHVhbHMgPSAoeSAtIHNsb3BlICogeCAtIGludGVyY2VwdCkudG9saXN0KCkKb3V0cHV0WydwcmVkaWN0ZWQnXSA9IHByZWRpY3RlZApvdXRwdXRbJ3Jlc2lkdWFscyddID0gcmVzaWR1YWxzCm91dHB1dFsncm1zZSddID0gZmxvYXQobnAuc3FydChucC5tZWFuKG5wLmFycmF5KHJlc2lkdWFscykqKjIpKSkK",
+    "script": "ZGVmIF9zcih4LCBuPTEwKToKICAgIGlmIHggPT0gMDogcmV0dXJuIDAuMAogICAgcmV0dXJuIHJvdW5kKHgsIC1pbnQobnAuZmxvb3IobnAubG9nMTAoYWJzKHgpKSkpICsgKG4gLSAxKSkKCnggPSBucC5hcnJheShqc29uLmdldCgieCIsIFsxLDIsMyw0LDVdKSwgZHR5cGU9ZmxvYXQpCnkgPSBucC5hcnJheShqc29uLmdldCgieSIsIFsyLDQsNiw4LDEwXSksIGR0eXBlPWZsb2F0KQpzbG9wZSwgaW50ZXJjZXB0LCByLCBwLCBzZSA9IHNjaXB5LnN0YXRzLmxpbnJlZ3Jlc3MoeCwgeSkKb3V0cHV0WyJzbG9wZSJdID0gX3NyKGZsb2F0KHNsb3BlKSkKb3V0cHV0WyJpbnRlcmNlcHQiXSA9IF9zcihmbG9hdChpbnRlcmNlcHQpKQpvdXRwdXRbInJfc3F1YXJlZCJdID0gX3NyKGZsb2F0KHIqKjIpKQpvdXRwdXRbInBfdmFsdWUiXSA9IF9zcihmbG9hdChwKSkKb3V0cHV0WyJzdGRfZXJyb3IiXSA9IF9zcihmbG9hdChzZSkpCnByZWRpY3RlZCA9IFtfc3IodikgZm9yIHYgaW4gKHNsb3BlICogeCArIGludGVyY2VwdCkudG9saXN0KCldCnJlc2lkdWFscyA9IFtfc3IodikgZm9yIHYgaW4gKHkgLSBzbG9wZSAqIHggLSBpbnRlcmNlcHQpLnRvbGlzdCgpXQpvdXRwdXRbInByZWRpY3RlZCJdID0gcHJlZGljdGVkCm91dHB1dFsicmVzaWR1YWxzIl0gPSByZXNpZHVhbHMKb3V0cHV0WyJybXNlIl0gPSBfc3IoZmxvYXQobnAuc3FydChucC5tZWFuKG5wLmFycmF5KHJlc2lkdWFscykqKjIpKSkpCg==",
     "items": [
       {
         "id": "item-1",
         "data": {
-          "x": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10
-          ],
-          "y": [
-            2.3,
-            4.1,
-            5.8,
-            8.2,
-            9.7,
-            12.1,
-            13.9,
-            16,
-            18.2,
-            20.1
-          ]
+          "x": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          "y": [2.3, 4.1, 5.8, 8.2, 9.7, 12.1, 13.9, 16, 18.2, 20.1]
         }
       }
     ],
@@ -227,36 +165,20 @@
       "error": false,
       "output": [
         {
-          "slope": 1.9963636363636366,
-          "intercept": 0.0600000000000005,
-          "r_squared": 0.9990188831841219,
-          "p_value": 2.534611848784049e-13,
-          "std_error": 0.022119136473810686,
+          "slope": 1.996363636,
+          "intercept": 0.06,
+          "r_squared": 0.9990188832,
+          "p_value": 2.534611849e-13,
+          "std_error": 0.02211913647,
           "predicted": [
-            2.056363636363637,
-            4.052727272727274,
-            6.049090909090911,
-            8.045454545454547,
-            10.041818181818183,
-            12.03818181818182,
-            14.034545454545457,
-            16.03090909090909,
-            18.02727272727273,
-            20.023636363636363
+            2.056363636, 4.052727273, 6.049090909, 8.045454545, 10.04181818, 12.03818182,
+            14.03454545, 16.03090909, 18.02727273, 20.02363636
           ],
           "residuals": [
-            0.24363636363636276,
-            0.04727272727272602,
-            -0.2490909090909108,
-            0.15454545454545254,
-            -0.3418181818181836,
-            0.061818181818178886,
-            -0.13454545454545652,
-            -0.030909090909092996,
-            0.17272727272727018,
-            0.07636363636363619
+            0.2436363636, 0.04727272727, -0.2490909091, 0.1545454545, -0.3418181818, 0.06181818182,
+            -0.1345454545, -0.03090909091, 0.1727272727, 0.07636363636
           ],
-          "rmse": 0.17969671419063046
+          "rmse": 0.1796967142
         }
       ]
     }
@@ -269,18 +191,7 @@
       {
         "id": "item-1",
         "data": {
-          "readings": [
-            45.2,
-            46.8,
-            44.1,
-            47.3,
-            45.9,
-            50.1,
-            43.2,
-            48,
-            42.5,
-            49.7
-          ]
+          "readings": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2, 48, 42.5, 49.7]
         }
       }
     ],
@@ -303,29 +214,11 @@
           "max": 50.1,
           "range": 7.600000000000001,
           "count": 10,
-          "sorted": [
-            42.5,
-            43.2,
-            44.1,
-            45.2,
-            45.9,
-            46.8,
-            47.3,
-            48,
-            49.7,
-            50.1
-          ],
+          "sorted": [42.5, 43.2, 44.1, 45.2, 45.9, 46.8, 47.3, 48, 49.7, 50.1],
           "normalized": [
-            -0.4394603196435684,
-            0.21159200575430945,
-            -0.8870587933546117,
-            0.415045857441147,
-            -0.1546249272819976,
-            1.5543874268874391,
-            -1.2532757263909187,
-            0.6998812498027207,
-            -1.5381111187524925,
-            1.3916243455379695
+            -0.4394603196435684, 0.21159200575430945, -0.8870587933546117, 0.415045857441147,
+            -0.1546249272819976, 1.5543874268874391, -1.2532757263909187, 0.6998812498027207,
+            -1.5381111187524925, 1.3916243455379695
           ]
         }
       ]
@@ -339,18 +232,7 @@
       {
         "id": "item-1",
         "data": {
-          "values": [
-            45.2,
-            46.8,
-            44.1,
-            47.3,
-            45.9,
-            50.1,
-            43.2,
-            48,
-            42.5,
-            49.7
-          ]
+          "values": [45.2, 46.8, 44.1, 47.3, 45.9, 50.1, 43.2, 48, 42.5, 49.7]
         }
       }
     ],
@@ -366,18 +248,7 @@
           "iqr": 3.45,
           "mean": 46.28,
           "sum": 462.8,
-          "sorted": [
-            42.5,
-            43.2,
-            44.1,
-            45.2,
-            45.9,
-            46.8,
-            47.3,
-            48,
-            49.7,
-            50.1
-          ],
+          "sorted": [42.5, 43.2, 44.1, 45.2, 45.9, 46.8, 47.3, 48, 49.7, 50.1],
           "q75": 47.825,
           "n": 10,
           "max": 50.1,
@@ -397,30 +268,8 @@
       {
         "id": "item-1",
         "data": {
-          "x": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10
-          ],
-          "y": [
-            2.3,
-            4.1,
-            5.8,
-            8.2,
-            9.7,
-            12.1,
-            13.9,
-            16,
-            18.2,
-            20.1
-          ]
+          "x": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          "y": [2.3, 4.1, 5.8, 8.2, 9.7, 12.1, 13.9, 16, 18.2, 20.1]
         }
       }
     ],
