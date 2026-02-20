@@ -897,7 +897,7 @@ module "migration_runner_ecr" {
   service_name                  = "db-migration-runner"
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE"
+  image_tag_mutability          = "IMMUTABLE"
 
   ci_cd_role_arn = module.iam_oidc.role_arn
 
@@ -984,7 +984,7 @@ module "backend_ecr" {
   max_image_count               = 10
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE"
+  image_tag_mutability          = "IMMUTABLE"
 
   ci_cd_role_arn = module.iam_oidc.role_arn
 
@@ -1085,6 +1085,7 @@ module "backend_ecs" {
   log_group_name     = "/aws/ecs/backend-service-${var.environment}"
   log_retention_days = 30
 
+  enable_cognito_policy     = true
   cognito_identity_pool_arn = module.cognito.identity_pool_arn
 
   # Secrets configuration

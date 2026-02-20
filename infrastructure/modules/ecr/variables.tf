@@ -33,13 +33,13 @@ variable "aws_region" {
 }
 
 variable "image_tag_mutability" {
-  description = "The tag mutability setting for the repository. Must be one of: MUTABLE or IMMUTABLE"
+  description = "The tag mutability setting for the repository. Must be one of: MUTABLE, IMMUTABLE, or IMMUTABLE_WITH_EXCLUSION"
   type        = string
   default     = "IMMUTABLE"
 
   validation {
-    condition     = contains(["MUTABLE", "IMMUTABLE"], var.image_tag_mutability)
-    error_message = "Image tag mutability must be either MUTABLE or IMMUTABLE."
+    condition     = contains(["MUTABLE", "IMMUTABLE", "IMMUTABLE_WITH_EXCLUSION"], var.image_tag_mutability)
+    error_message = "Image tag mutability must be either MUTABLE, IMMUTABLE, or IMMUTABLE_WITH_EXCLUSION."
   }
 }
 
