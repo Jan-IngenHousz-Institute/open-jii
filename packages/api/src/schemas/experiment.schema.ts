@@ -239,7 +239,13 @@ export const zAnnotationRowsAffected = z.object({
 });
 
 // --- Project Transfer Request Schemas ---
-export const zTransferRequestStatus = z.enum(["pending", "completed", "rejected"]);
+export const zTransferRequestStatus = z.enum([
+  "pending",
+  "approved",
+  "completed",
+  "rejected",
+  "failed",
+]);
 
 export const zTransferRequest = z.object({
   requestId: z.string().uuid(),

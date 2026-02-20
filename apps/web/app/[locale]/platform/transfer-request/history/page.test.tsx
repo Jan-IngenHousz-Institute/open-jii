@@ -187,6 +187,22 @@ describe("<TransferRequestHistoryPage />", () => {
       const rejectedLabel = screen.getByText("Rejected");
       expect(rejectedLabel).toBeInTheDocument();
     });
+
+    it("renders approved status with correct styling", () => {
+      const requests = [createMockRequest("req-1", "approved", "project-123")];
+      renderHistoryPage({ requests });
+
+      const approvedLabel = screen.getByText("Approved");
+      expect(approvedLabel).toBeInTheDocument();
+    });
+
+    it("renders failed status with correct styling", () => {
+      const requests = [createMockRequest("req-1", "failed", "project-123")];
+      renderHistoryPage({ requests });
+
+      const failedLabel = screen.getByText("Failed");
+      expect(failedLabel).toBeInTheDocument();
+    });
   });
 
   describe("Layout Structure", () => {

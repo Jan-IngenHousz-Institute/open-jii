@@ -1012,8 +1012,8 @@ describe("Experiment Schema", () => {
 
       const result = zProjectTransferWebhookPayload.parse(fullPayload);
       expect(result.experiment.locations).toHaveLength(1);
-      expect(result.protocol!.family).toBe("ambit");
-      expect(result.macro!.language).toBe("python");
+      expect(result.protocol?.family).toBe("ambit");
+      expect(result.macro?.language).toBe("python");
       expect(result.questions).toHaveLength(1);
     });
 

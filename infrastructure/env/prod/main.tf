@@ -746,8 +746,9 @@ module "project_transfer_job" {
       notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/project_transfer_task"
 
       parameters = {
-        catalog_name = module.databricks_catalog.catalog_name
-        ENVIRONMENT  = upper(var.environment)
+        catalog_name        = module.databricks_catalog.catalog_name
+        ENVIRONMENT         = upper(var.environment)
+        PHOTOSYNQ_DATA_PATH = "/Volumes/${module.databricks_catalog.catalog_name}/default/hackathon_data_volume/photosynq_data"
       }
     }
   ]
