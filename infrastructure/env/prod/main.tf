@@ -906,7 +906,7 @@ module "migration_runner_ecr" {
   service_name                  = "db-migration-runner"
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "IMMUTABLE_WITH_EXCLUSION"
+  image_tag_mutability          = "IMMUTABLE"
 
   #ci_cd_role_arn = module.iam_oidc.role_arn
 
