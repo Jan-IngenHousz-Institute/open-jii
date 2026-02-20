@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
+import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
 export default function TabLayout() {
@@ -44,7 +45,12 @@ export default function TabLayout() {
             fontWeight: "bold",
           },
           headerShadowVisible: false,
-          headerRight: () => <DeviceConnectionWidget />,
+          headerRight: () => (
+            <View style={{ alignItems: "flex-start", gap: 6, marginRight: 16 }}>
+              <DevIndicator />
+              <DeviceConnectionWidget />
+            </View>
+          ),
         }}
       >
         <Tabs.Screen
