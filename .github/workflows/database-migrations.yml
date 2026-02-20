@@ -178,14 +178,6 @@ jobs:
             exit 1
           fi
 
-          # Add latest tag using AWS ECR put-image command (no need to push again)
-          if ! aws ecr put-image --repository-name ${ECR_REPOSITORY} --image-tag latest \
-            --image-manifest "$(aws ecr batch-get-image --repository-name ${ECR_REPOSITORY} \
-            --image-ids imageTag=${IMAGE_TAG} --query 'images[].imageManifest' --output text)" \
-            --region ${AWS_REGION} &>/dev/null; then
-            echo "::warning::Failed to tag image as latest, but the version-specific tag was pushed successfully"
-          fi
-
           # Store the full image reference for later use
           echo "full_image_ref=$FULL_IMAGE_REF" >> $GITHUB_OUTPUT
 
