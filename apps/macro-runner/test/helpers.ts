@@ -137,7 +137,7 @@ export function assertValidEnvelope(response: LambdaResponse): void {
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dataDir = resolve(__dirname, "../data");
+const dataDir = resolve(__dirname, "data");
 
 export function loadTestData(file: string): TestCase[] {
   const raw = readFileSync(resolve(dataDir, file), "utf-8");

@@ -8,13 +8,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -35,13 +29,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -53,13 +41,7 @@
       "error": false,
       "output": [
         {
-          "sorted": [
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "sorted": [0, 0, 0, 0, 0]
         }
       ]
     }
@@ -73,13 +55,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -371,13 +347,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -403,13 +373,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -430,13 +394,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -457,13 +415,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -484,13 +436,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -517,13 +463,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -552,13 +492,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -589,13 +523,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -621,13 +549,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -648,13 +570,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -697,21 +613,15 @@
       "error": false,
       "output": [
         {
-          "state": [
-            1
-          ],
+          "state": [1],
           "id": "unknown"
         },
         {
-          "state": [
-            2
-          ],
+          "state": [2],
           "id": "unknown"
         },
         {
-          "state": [
-            3
-          ],
+          "state": [3],
           "id": "unknown"
         }
       ]
@@ -726,13 +636,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -753,13 +657,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -785,13 +683,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -851,13 +743,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -878,13 +764,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -910,13 +790,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -937,13 +811,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -953,9 +821,7 @@
     "expect": {
       "success": true,
       "error": false,
-      "output": [
-        {}
-      ]
+      "output": [{}]
     }
   },
   {
@@ -967,13 +833,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1002,13 +862,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1029,13 +883,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1061,13 +909,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1079,11 +921,7 @@
       "error": false,
       "output": [
         {
-          "formula": [
-            "~",
-            "y",
-            "x"
-          ]
+          "formula": ["~", "y", "x"]
         }
       ]
     }
@@ -1097,13 +935,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1129,13 +961,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1156,13 +982,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1183,13 +1003,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1216,13 +1030,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1243,13 +1051,7 @@
         "id": "hash-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1276,13 +1078,7 @@
         "id": "hash-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1303,13 +1099,7 @@
         "id": "hash-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1330,13 +1120,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1357,13 +1141,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1384,13 +1162,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1411,13 +1183,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1438,13 +1204,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1465,13 +1225,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1492,13 +1246,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1519,13 +1267,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1546,13 +1288,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1578,13 +1314,7 @@
         "id": "hash-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1611,13 +1341,7 @@
         "id": "hash-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1638,13 +1362,7 @@
         "id": "hash-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1671,13 +1389,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1690,33 +1402,6 @@
     }
   },
   {
-    "name": "list_comprehension_bomb",
-    "language": "python",
-    "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDCpzkg4oCUIExpc3QgY29tcHJlaGVuc2lvbiBtZW1vcnkgYm9tYgojIEV4cGVjdGVkOiBCTE9DS0VECiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KCm91dHB1dFsnZGF0YSddID0gWzAgZm9yIF8gaW4gcmFuZ2UoMTAqKjgpXSAgIyAxMDAgbWlsbGlvbiBpbnRlZ2Vycwo=",
-    "items": [
-      {
-        "id": "probe-1",
-        "data": {
-          "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
-          "text": "hello world"
-        }
-      }
-    ],
-    "timeout": 5,
-    "protocol_id": "test-security-list_comprehension_bomb",
-    "expect": {
-      "success": false,
-      "error": false
-    }
-  },
-  {
     "name": "memory_exhaustion",
     "language": "python",
     "script": "IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIFNFQ1VSSVRZIFRFU1QgU0NSSVBUIOKAlCBGT1IgVEVTVElORyBQVVJQT1NFUyBPTkxZCiMgVGhpcyBzY3JpcHQgaXMgZGVzaWduZWQgdG8gdGVzdCB0aGUgc2FuZGJveCBzZWN1cml0eSBvZiB0aGUgbWFjcm8tcnVubmVyLgojIEl0IGNvbnRhaW5zIGludGVudGlvbmFsbHkgbWFsaWNpb3VzIHBhdHRlcm5zIGFuZCBNVVNUIE5PVCBiZToKIyAgIC0gRGlzdHJpYnV0ZWQgb3V0c2lkZSB0aGlzIHJlcG9zaXRvcnkKIyAgIC0gQ29waWVkIG9yIGFkYXB0ZWQgZm9yIGFueSBwdXJwb3NlIG90aGVyIHRoYW4gc2VjdXJpdHkgdGVzdGluZwojICAgLSBVc2VkIGFzIGEgcmVmZXJlbmNlIG9yIGluc3BpcmF0aW9uIGZvciBtYWxpY2lvdXMgY29kZQojIFNvdXJjZTogdGVzdF9zZWN1cml0eS5pcHluYiDigJQgTWVtb3J5IGV4aGF1c3Rpb24gdmlhIGh1Z2UgZGF0YSBzdHJ1Y3R1cmVzCiMgRXhwZWN0ZWQ6IEJMT0NLRUQKIyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKb3V0cHV0WydkYXRhJ10gPSBbMF0gKiAoMTAyNCAqIDEwMjQgKiAxMDI0KSAgIyAxIGJpbGxpb24gaW50ZWdlcnMK",
@@ -1725,13 +1410,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1752,13 +1431,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1779,13 +1452,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1814,13 +1481,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1848,13 +1509,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1880,13 +1535,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1898,9 +1547,7 @@
       "error": false,
       "output": [
         {
-          "keys": [
-            "log"
-          ]
+          "keys": ["log"]
         }
       ]
     }
@@ -1914,13 +1561,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -1948,13 +1589,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2138,13 +1773,7 @@
         "id": "size-test-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2165,13 +1794,7 @@
         "id": "size-test-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2214,13 +1837,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2246,13 +1863,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2273,13 +1884,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2305,13 +1910,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2332,13 +1931,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2359,13 +1952,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2396,13 +1983,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2412,9 +1993,7 @@
     "expect": {
       "success": true,
       "error": false,
-      "output": [
-        {}
-      ]
+      "output": [{}]
     }
   },
   {
@@ -2426,13 +2005,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2453,13 +2026,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2485,13 +2052,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2512,13 +2073,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2571,13 +2126,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2598,13 +2147,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2625,13 +2168,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2680,13 +2217,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2712,13 +2243,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2744,13 +2269,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2762,9 +2281,7 @@
       "error": false,
       "output": [
         {
-          "symbols": [
-            null
-          ]
+          "symbols": [null]
         }
       ]
     }
@@ -2778,13 +2295,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2805,13 +2316,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2832,13 +2337,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2859,13 +2358,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2886,13 +2379,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2913,13 +2400,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2940,13 +2421,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -2973,13 +2448,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -3010,13 +2479,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -3037,13 +2500,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -3064,13 +2521,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -3096,13 +2547,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
@@ -3129,13 +2574,7 @@
         "id": "probe-1",
         "data": {
           "value": 42,
-          "values": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "values": [1, 2, 3, 4, 5],
           "text": "hello world"
         }
       }
