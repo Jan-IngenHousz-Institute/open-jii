@@ -164,7 +164,7 @@ jobs:
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        uses: aws-actions/amazon-ecs-render-task-definition@v
         with:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
@@ -172,7 +172,7 @@ jobs:
 
       - name: Deploy to Amazon ECS
         id: deploy-ecs
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: backend-${{ env.ENV }}
