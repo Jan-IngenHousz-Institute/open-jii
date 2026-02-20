@@ -1,1 +1,0 @@
-# Helper functions and JavaScript utilities
