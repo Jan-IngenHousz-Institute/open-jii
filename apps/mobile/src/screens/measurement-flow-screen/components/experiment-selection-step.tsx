@@ -19,7 +19,7 @@ export function ExperimentSelectionStep() {
   const { classes } = useTheme();
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
-  const { setExperimentId, setFlowNodes, nextStep } = useMeasurementFlowStore();
+  const { setExperimentId, setFlowNodes, nextStep, setShowingOverview } = useMeasurementFlowStore();
   const { data: experimentFlow } = useExperimentFlowQuery(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
 
@@ -105,6 +105,7 @@ export function ExperimentSelectionStep() {
               const orderedNodes = orderFlowNodes(nodes, edges);
               setFlowNodes(orderedNodes);
               nextStep();
+              setShowingOverview(true);
             }}
             isDisabled={!selectedExperimentId || !experimentFlow}
             style={{ width: "100%" }}
