@@ -1028,6 +1028,43 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  packages/iot:
+    dependencies:
+      react-native-ble-plx:
+        specifier: ^3.5.0
+        version: 3.5.0(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.2.9)(react@19.1.0))(react@19.1.0)
+      react-native-bluetooth-classic:
+        specifier: ^1.73.0-rc.13
+        version: 1.73.0-rc.13(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.2.9)(react@19.1.0))
+      react-native-usb-serialport-for-android:
+        specifier: ^0.5.0
+        version: 0.5.0(patch_hash=9e2d330f192bae950cb28995b520bfa3da427c7736afa4d77e62aa2b2d77fd2b)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.2.9)(react@19.1.0))(react@19.1.0)
+    devDependencies:
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../tooling/vitest-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.19.7
+      '@vitest/coverage-v8':
+        specifier: catalog:testing
+        version: 3.2.4(vitest@3.2.4)
+      eslint:
+        specifier: 'catalog:'
+        version: 9.39.2(jiti@2.6.1)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: catalog:testing
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+
   packages/transactional:
     dependencies:
       '@react-email/components':
@@ -25930,7 +25967,7 @@ snapshots:
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 22.19.7
+      '@types/node': 25.0.9
 
   '@types/bonjour@3.5.13':
     dependencies:
@@ -26110,7 +26147,7 @@ snapshots:
 
   '@types/express-serve-static-core@5.1.1':
     dependencies:
-      '@types/node': 22.19.7
+      '@types/node': 25.0.9
       '@types/qs': 6.14.0
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
@@ -26306,7 +26343,7 @@ snapshots:
   '@types/serve-static@2.2.0':
     dependencies:
       '@types/http-errors': 2.0.5
-      '@types/node': 22.19.7
+      '@types/node': 25.0.9
 
   '@types/sinon@17.0.4':
     dependencies:
@@ -26324,7 +26361,7 @@ snapshots:
     dependencies:
       '@types/cookiejar': 2.1.5
       '@types/methods': 1.1.4
-      '@types/node': 22.19.7
+      '@types/node': 25.0.9
       form-data: 4.0.5
 
   '@types/supercluster@7.1.3':

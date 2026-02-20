@@ -419,7 +419,7 @@ export class TestHarness {
     name: string;
     description?: string;
     code?: Record<string, unknown>[];
-    family?: "multispeq" | "ambit";
+    family?: "multispeq" | "ambit" | "generic";
     createdBy: string;
   }) {
     const [protocol] = await this.database
