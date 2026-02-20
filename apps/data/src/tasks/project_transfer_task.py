@@ -1,317 +1,370 @@
 # Databricks notebook source
-# DBTITLE 1,Project Transfer Task
-# Standalone task to execute a project transfer from an external platform (e.g., PhotosynQ).
-# 1. Calls the backend webhook to create experiment, protocol, and macro
-# 2. On success, saves parquet files into the data-imports volume for pipeline ingestion
+# DBTITLE 1,Project Transfer Job
+# Validates pending transfer requests, calls the backend webhook for approved ones,
+# and writes enriched measurement data as parquet into the data-imports volume
+# for centrum_pipeline ingestion.
 
 # COMMAND ----------
 
 # DBTITLE 1,Imports
 import json
 import logging
-import os
-from datetime import datetime
-from typing import Dict, Any, Optional
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, ArrayType, BooleanType, LongType, MapType
+from enrich.transfer_metadata import execute_transfers
 
-from pyspark.sql import SparkSession
-from pyspark.sql.types import (
-    StructType,
-    StructField,
-    StringType,
-    DoubleType,
-    TimestampType,
-    ArrayType,
-    BooleanType,
-)
-from pyspark.dbutils import DBUtils
-
-from enrich.backend_client import BackendClient, BackendIntegrationError
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 # COMMAND ----------
 
-# DBTITLE 1,Task Configuration
-# Required parameters
-TRANSFER_REQUEST_ID = dbutils.widgets.get("TRANSFER_REQUEST_ID")
-CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
-ENVIRONMENT = (
-    dbutils.widgets.get("ENVIRONMENT")
-    if dbutils.widgets.get("ENVIRONMENT")
-    else "dev"
-)
-
-# Backend webhook configuration (from secrets)
-BACKEND_URL = dbutils.secrets.get(
-    scope=f"project-transfer-{ENVIRONMENT}", key="backend-url"
-)
-WEBHOOK_API_KEY_ID = dbutils.secrets.get(
-    scope=f"project-transfer-{ENVIRONMENT}", key="webhook-api-key-id"
-)
-WEBHOOK_SECRET = dbutils.secrets.get(
-    scope=f"project-transfer-{ENVIRONMENT}", key="webhook-secret"
-)
-
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
-
-logger.info(f"Starting project transfer task")
-logger.info(f"Transfer request ID: {TRANSFER_REQUEST_ID}")
-logger.info(f"Catalog: {CATALOG_NAME}")
-logger.info(f"Environment: {ENVIRONMENT}")
+# DBTITLE 1,Configuration
+CATALOG_NAME = spark.conf.get("catalog_name", "open_jii_data_hackathon")
+CENTRUM_SCHEMA = "centrum"
+PHOTOSYNQ_DATA_PATH = f"/Volumes/{CATALOG_NAME}/default/hackathon_data_volume/photosynq_data"
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+VOLUME_BASE = f"/Volumes/{CATALOG_NAME}/centrum/data-imports"
+TRANSFER_TABLE = f"{CATALOG_NAME}.{CENTRUM_SCHEMA}.openjii_project_transfer_requests"
 
 # COMMAND ----------
 
-# DBTITLE 1,Build Transfer Payload
-def build_transfer_payload() -> Dict[str, Any]:
-    """
-    Build the payload for the project transfer webhook.
+# DBTITLE 1,Parquet Schemas
 
-    TODO: Populate this from the actual transfer request data.
-    This is a placeholder that should be replaced with logic to:
-    - Read the transfer request details from the source platform
-    - Extract experiment metadata, protocol code, macro code, etc.
-    - Format questions for the flow graph
+USERS_SCHEMA = StructType([
+    StructField("user_id", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("email", StringType(), True),
+    StructField("institute", StringType(), True),
+    StructField("contributions", LongType(), True),
+    StructField("is_creator", BooleanType(), True),
+    StructField("project_ids", ArrayType(StringType()), True),
+])
 
-    Returns:
-        Dictionary matching the ProjectTransferWebhookPayload schema
-    """
-    # TODO: Replace with actual data population logic
-    # This placeholder demonstrates the expected structure
-    payload = {
-        "experiment": {
-            "name": f"Transfer {TRANSFER_REQUEST_ID}",
-            "description": "Transferred project - placeholder",
-            "createdBy": "00000000-0000-0000-0000-000000000000",  # TODO: actual user ID
-            "locations": [],
-        },
-        "protocol": {
-            "name": f"Protocol for Transfer {TRANSFER_REQUEST_ID}",
-            "description": "Transferred protocol - placeholder",
-            "code": [{}],  # TODO: actual protocol code
-            "family": "multispeq",
-            "createdBy": "00000000-0000-0000-0000-000000000000",  # TODO: actual user ID
-        },
-        "macro": {
-            "name": f"Macro for Transfer {TRANSFER_REQUEST_ID}",
-            "description": "Transferred macro - placeholder",
-            "language": "javascript",
-            "code": "",  # TODO: actual base64 encoded macro code
-            "createdBy": "00000000-0000-0000-0000-000000000000",  # TODO: actual user ID
-        },
-        "questions": [],  # TODO: actual questions from the source platform
-    }
+PROJECTS_SCHEMA = StructType([
+    StructField("project_id", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("description", StringType(), True),
+    StructField("creator_id", StringType(), True),
+    StructField("created_at", StringType(), True),
+    StructField("updated_at", StringType(), True),
+    StructField("data_count", LongType(), True),
+    StructField("contributors_count", LongType(), True),
+    StructField("is_featured", BooleanType(), True),
+    StructField("is_public", BooleanType(), True),
+    StructField("beta", BooleanType(), True),
+    StructField("protocols", StringType(), True),
+    StructField("tags", ArrayType(StringType()), True),
+    StructField("directions", StringType(), True),
+])
 
-    return payload
+MEASUREMENTS_SCHEMA = StructType([
+    StructField("project_id", StringType(), True),
+    StructField("measurement_id", StringType(), True),
+    StructField("user_id", StringType(), True),
+    StructField("device_id", StringType(), True),
+    StructField("status", StringType(), True),
+    StructField("time", StringType(), True),
+    StructField("latitude", DoubleType(), True),
+    StructField("longitude", DoubleType(), True),
+    StructField("note", StringType(), True),
+    StructField("user_answers", MapType(StringType(), StringType()), True),
+    StructField("sample_processed", StringType(), True),
+    StructField("sample_raw", StringType(), True),
+])
 
+QUESTIONS_SCHEMA = StructType([
+    StructField("project_id", StringType(), True),
+    StructField("question_id", StringType(), True),
+    StructField("label", StringType(), True),
+    StructField("value_type", StringType(), True),
+    StructField("options", ArrayType(StringType()), True),
+])
 
 # COMMAND ----------
 
-# DBTITLE 1,Execute Project Transfer Webhook
-def execute_transfer_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Call the backend project transfer webhook to create experiment, protocol, and macro.
+# DBTITLE 1,Load Data Sources
 
-    Args:
-        payload: The project transfer webhook payload
+projects = spark.read.schema(PROJECTS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/projects.parquet")
+users = spark.read.schema(USERS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/users.parquet")
+measurements = spark.read.schema(MEASUREMENTS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/measurements.parquet")
+questions = spark.read.schema(QUESTIONS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/questions.parquet")
 
-    Returns:
-        Response from the backend containing experimentId, protocolId, macroId, flowId
+# COMMAND ----------
 
-    Raises:
-        BackendIntegrationError: If the webhook call fails
-    """
-    logger.info("Calling project transfer webhook")
+# DBTITLE 1,Validate Pending Requests
+projects_local = {row.project_id: row.creator_id for row in projects.collect()}
+users_local = {row.user_id: row.email for row in users.collect()}
 
-    client = BackendClient(
-        base_url=BACKEND_URL,
-        api_key_id=WEBHOOK_API_KEY_ID,
-        webhook_secret=WEBHOOK_SECRET,
-        timeout=60,
-    )
+pending = spark.table(TRANSFER_TABLE).filter("status = 'pending'").collect()
+logger.info(f"Pending requests: {len(pending)}")
 
-    endpoint = "/api/v1/webhooks/project-transfer"
+for req in pending:
+    request_id = req.request_id
+    project_id_old = req.project_id_old
+    user_email = req.user_email
 
-    try:
-        result = client._make_request(endpoint, payload)
-    except BackendIntegrationError:
-        raise
-    except Exception as e:
-        raise BackendIntegrationError(
-            f"Unexpected error during project transfer webhook: {str(e)}"
+    creator_id = projects_local.get(str(project_id_old))
+
+    if creator_id is None:
+        status = "failed"
+    else:
+        creator_email = users_local.get(str(creator_id))
+        if creator_email and creator_email.lower() == user_email.lower():
+            status = "approved"
+        else:
+            status = "rejected"
+
+    spark.sql(f"""
+        UPDATE {TRANSFER_TABLE}
+        SET status = '{status}'
+        WHERE request_id = '{request_id}'
+    """)
+    logger.info(f"  {request_id}: {status}")
+
+# COMMAND ----------
+
+# DBTITLE 1,Load Approved Requests
+
+requests = spark.table(TRANSFER_TABLE).filter(F.col("status") == "approved")
+
+if requests.count() == 0:
+    logger.info("No approved requests to process")
+    dbutils.notebook.exit(json.dumps({"status": "success", "transfers": []}))
+
+# COMMAND ----------
+
+# DBTITLE 1,Project Metadata
+questions_per_project = questions.groupBy("project_id").agg(
+    F.collect_list(
+        F.struct(
+            F.col("question_id"),
+            F.col("label").alias("question_text"),
+            F.col("value_type"),
+            F.col("options"),
         )
+    ).alias("questions")
+)
 
-    # Validate response
-    experiment_id = result.get("experimentId")
-    if not experiment_id:
-        raise BackendIntegrationError(
-            f"Backend did not return experimentId in response: {result}"
-        )
-
-    protocol_id = result.get("protocolId")
-    macro_id = result.get("macroId")
-    flow_id = result.get("flowId")
-
-    logger.info(f"Project transfer webhook successful")
-    logger.info(f"  Experiment ID: {experiment_id}")
-    logger.info(f"  Protocol ID:   {protocol_id}")
-    logger.info(f"  Macro ID:      {macro_id}")
-    logger.info(f"  Flow ID:       {flow_id}")
-
-    return {
-        "experimentId": experiment_id,
-        "protocolId": protocol_id,
-        "macroId": macro_id,
-        "flowId": flow_id,
-    }
-
+metadata = (
+    requests.alias("tr")
+    .join(projects.alias("p"), F.col("tr.project_id_old") == F.col("p.project_id"), "inner")
+    .join(questions_per_project.alias("q"), F.col("p.project_id") == F.col("q.project_id"), "left")
+    .select(
+        F.col("tr.request_id").alias("transfer_id"),
+        F.col("p.project_id"),
+        F.col("p.name"),
+        F.col("p.description"),
+        F.col("p.is_public"),
+        F.col("p.creator_id"),
+        F.col("tr.user_id").alias("creator_user_id"),
+        F.coalesce(F.col("q.questions"), F.array()).alias("questions"),
+    )
+)
 
 # COMMAND ----------
 
-# DBTITLE 1,Save Import Parquet Files
-def save_import_parquet(
-    experiment_id: str,
-    protocol_id: str,
-    macro_id: str,
-    transfer_payload: Dict[str, Any],
-):
-    """
-    Save parquet files into the data-imports volume for the pipeline to pick up.
-
-    The files are written to:
-      /Volumes/{catalog}/centrum/data-imports/{experiment_id}/photosynq_transfer/
-
-    The schema matches what raw_imported_data expects in the centrum pipeline:
-    same structure as clean_data output, with skip_macro_processing = True.
-
-    TODO: Populate the DataFrame with actual measurement data from the source platform.
-
-    Args:
-        experiment_id: The created experiment's ID
-        protocol_id: The created protocol's ID
-        macro_id: The created macro's ID
-        transfer_payload: The original transfer request payload (for metadata)
-    """
-    output_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{experiment_id}/photosynq_transfer"
-
-    logger.info(f"Saving import parquet files to: {output_path}")
-
-    # Define schema matching the imported data structure
-    # This mirrors clean_data output columns plus import metadata
-    import_schema = StructType(
-        [
-            StructField("id", StringType(), False),
-            StructField("device_id", StringType(), True),
-            StructField("device_name", StringType(), True),
-            StructField("device_version", StringType(), True),
-            StructField("device_battery", DoubleType(), True),
-            StructField("device_firmware", StringType(), True),
-            StructField("sample", StringType(), True),
-            StructField("output", StringType(), True),
-            StructField("user_id", StringType(), True),
-            StructField("experiment_id", StringType(), False),
-            StructField("protocol_id", StringType(), True),
-            StructField("macro_id", StringType(), True),
-            StructField("macro_filename", StringType(), True),
-            StructField("timestamp", TimestampType(), True),
-            StructField("date", StringType(), True),
-            StructField("questions", StringType(), True),
-            StructField("transfer_request_id", StringType(), True),
-            StructField("source_platform", StringType(), True),
-        ]
+# DBTITLE 1,Project Protocols
+protocols_exploded = (
+    projects
+    .filter(F.col("protocols").isNotNull())
+    .select(
+        F.col("project_id"),
+        F.explode(F.expr("parse_json(protocols)")).alias("proto"),
     )
+    .selectExpr(
+        "project_id",
+        "proto:id::BIGINT as protocol_id_old",
+        "proto:name::STRING as name",
+        "proto:description::STRING as description",
+        "proto:protocol_json as code",
+    )
+)
 
-    # TODO: Replace with actual measurement data from the source platform
-    # This creates an empty DataFrame with the correct schema as a placeholder.
-    # The actual data population should:
-    # 1. Read measurement data from the source (PhotosynQ API, downloaded files, etc.)
-    # 2. Transform it to match this schema
-    # 3. Write the populated DataFrame as parquet
-    df = spark.createDataFrame([], import_schema)
-
-    # Write parquet files
-    df.write.mode("overwrite").parquet(output_path)
-
-    # Also write a transfer metadata file for provenance tracking
-    metadata = {
-        "transfer_request_id": TRANSFER_REQUEST_ID,
-        "experiment_id": experiment_id,
-        "protocol_id": protocol_id,
-        "macro_id": macro_id,
-        "source_platform": "photosynq",
-        "transferred_at": datetime.now().isoformat(),
-        "catalog_name": CATALOG_NAME,
-        "environment": ENVIRONMENT,
-    }
-
-    metadata_path = f"{output_path}/_transfer_metadata.json"
-    dbutils.fs.put(metadata_path, json.dumps(metadata, indent=2), overwrite=True)
-
-    logger.info(f"Import parquet files saved successfully")
-    logger.info(f"Transfer metadata written to: {metadata_path}")
-
+protocols = (
+    metadata.alias("m")
+    .join(protocols_exploded.alias("pr"), F.col("m.project_id") == F.col("pr.project_id"), "inner")
+    .select(
+        F.col("m.transfer_id"),
+        F.col("m.project_id"),
+        F.col("m.creator_user_id"),
+        F.col("pr.protocol_id_old"),
+        F.col("pr.name"),
+        F.col("pr.description"),
+        F.col("pr.code"),
+        F.lit("multispeq").alias("family"),
+    )
+)
 
 # COMMAND ----------
 
-# DBTITLE 1,Main Execution
-def main():
-    """
-    Main execution function for the project transfer task.
-    """
-    logger.info("=" * 80)
-    logger.info("Starting project transfer task")
-    logger.info("=" * 80)
-
-    # Step 1: Build the transfer payload
-    logger.info("Step 1: Building transfer payload")
-    payload = build_transfer_payload()
-    logger.info(
-        f"Transfer payload built for experiment: {payload['experiment']['name']}"
+# DBTITLE 1,Project Macros
+macros_exploded = (
+    projects
+    .filter(F.col("protocols").isNotNull())
+    .select(
+        F.col("project_id"),
+        F.explode(F.expr("parse_json(protocols)")).alias("proto"),
     )
+    .filter(F.expr("proto:macro IS NOT NULL"))
+    .selectExpr(
+        "project_id",
+        "proto:id::BIGINT as protocol_id_old",
+        "proto:macro_id::BIGINT as macro_id_old",
+        "proto:macro:name::STRING as name",
+        "proto:macro:description::STRING as description",
+        "proto:macro:javascript_code::STRING as code",
+    )
+)
 
-    # Step 2: Call the backend webhook
-    logger.info("Step 2: Executing project transfer webhook")
-    result = execute_transfer_webhook(payload)
+macros = (
+    metadata.alias("m")
+    .join(macros_exploded.alias("mc"), F.col("m.project_id") == F.col("mc.project_id"), "inner")
+    .select(
+        F.col("m.transfer_id"),
+        F.col("m.project_id"),
+        F.col("m.creator_user_id"),
+        F.col("mc.protocol_id_old"),
+        F.col("mc.macro_id_old"),
+        F.col("mc.name"),
+        F.col("mc.description"),
+        F.lit("javascript").alias("language"),
+        F.col("mc.code"),
+    )
+)
 
-    experiment_id = result["experimentId"]
-    protocol_id = result["protocolId"]
-    macro_id = result["macroId"]
+# COMMAND ----------
 
-    if not experiment_id:
-        logger.error("No experiment ID returned from webhook - failing the job")
-        dbutils.notebook.exit(
-            json.dumps({"status": "failed", "error": "No experiment ID returned"})
-        )
-        return
+# DBTITLE 1,Project Data
+questions_map = questions.groupBy("project_id").agg(
+    F.map_from_arrays(
+        F.collect_list("question_id"),
+        F.collect_list("label"),
+    ).alias("question_labels")
+)
 
-    # Step 3: Save import data as parquet files
-    logger.info("Step 3: Saving import parquet files")
-    save_import_parquet(experiment_id, protocol_id, macro_id, payload)
+project_data = (
+    requests.alias("tr")
+    .join(measurements.alias("m"), F.col("tr.project_id_old") == F.col("m.project_id"), "inner")
+    .join(questions_map.alias("ql"), F.col("m.project_id") == F.col("ql.project_id"), "left")
+    .select(
+        F.col("m.measurement_id").alias("id"),
+        F.col("m.device_id"),
+        F.lit(None).cast("string").alias("device_name"),
+        F.lit(None).cast("string").alias("device_version"),
+        F.lit(None).cast("double").alias("device_battery"),
+        F.lit(None).cast("string").alias("device_firmware"),
+        F.col("m.sample_raw").alias("sample"),
+        F.col("m.sample_processed").alias("output"),
+        F.lit(None).cast("string").alias("user_id"),
+        F.lit(None).cast("string").alias("experiment_id"),
+        F.lit(None).cast("string").alias("protocol_id"),
+        F.lit(None).cast("string").alias("macro_id"),
+        F.lit(None).cast("string").alias("macro_filename"),
+        F.col("m.time").cast("timestamp").alias("timestamp"),
+        F.to_date(F.col("m.time").cast("timestamp")).cast("string").alias("date"),
+        F.when(
+            F.col("m.user_answers").isNotNull() & (F.size("m.user_answers") > 0),
+            F.expr("""
+                to_json(
+                    transform(
+                        map_keys(user_answers),
+                        key -> named_struct(
+                            'question_label', coalesce(question_labels[key], key),
+                            'question_text', coalesce(question_labels[key], key),
+                            'question_answer', user_answers[key]
+                        )
+                    )
+                )
+            """),
+        ).alias("questions"),
+        F.col("tr.request_id").alias("transfer_request_id"),
+        F.lit("photosynq").alias("source_platform"),
+    )
+)
 
-    # Prepare output
-    output = {
-        "status": "success",
-        "transfer_request_id": TRANSFER_REQUEST_ID,
-        "experiment_id": experiment_id,
-        "protocol_id": protocol_id,
-        "macro_id": macro_id,
-        "flow_id": result.get("flowId"),
-    }
+# COMMAND ----------
 
-    logger.info("=" * 80)
-    logger.info("Project transfer task completed successfully")
-    logger.info(f"  Experiment ID: {experiment_id}")
-    logger.info(f"  Protocol ID:   {protocol_id}")
-    logger.info(f"  Macro ID:      {macro_id}")
-    logger.info("=" * 80)
+# DBTITLE 1,Backend Transfer
+protocols_agg = protocols.groupBy("transfer_id").agg(
+    F.collect_list(
+        F.struct(F.col("name"), F.col("description"), F.col("code"), F.col("family"))
+    ).alias("protocols_list")
+)
 
-    # Return results as notebook exit value
-    dbutils.notebook.exit(json.dumps(output))
+macros_agg = macros.groupBy("transfer_id").agg(
+    F.collect_list(
+        F.struct(F.col("name"), F.col("description"), F.col("language"), F.col("code"))
+    ).alias("macros_list")
+)
 
+transfers = (
+    metadata.alias("m")
+    .join(protocols_agg.alias("p"), F.col("m.transfer_id") == F.col("p.transfer_id"), "left")
+    .join(macros_agg.alias("mc"), F.col("m.transfer_id") == F.col("mc.transfer_id"), "left")
+    .select(
+        F.col("m.transfer_id"),
+        F.col("m.project_id"),
+        F.col("m.name").alias("project_name"),
+        F.col("m.description").alias("project_description"),
+        F.col("m.creator_user_id"),
+        F.col("m.questions"),
+        F.col("p.protocols_list"),
+        F.col("mc.macros_list"),
+    )
+)
 
-# Run main
-main()
+transfer_results = execute_transfers(transfers, ENVIRONMENT, dbutils, spark)
+
+# COMMAND ----------
+
+# DBTITLE 1,Write Import Data to Volume
+successful = transfer_results.filter(F.col("success") == True)
+
+enriched = (
+    project_data.alias("d")
+    .join(successful.alias("r"), F.col("d.transfer_request_id") == F.col("r.transfer_id"), "inner")
+    .select(
+        F.col("d.id"),
+        F.col("d.device_id"),
+        F.col("d.device_name"),
+        F.col("d.device_version"),
+        F.col("d.device_battery"),
+        F.col("d.device_firmware"),
+        F.col("d.sample"),
+        F.col("d.output"),
+        F.col("d.user_id"),
+        F.col("r.experiment_id"),
+        F.col("r.protocol_id"),
+        F.col("r.macro_id"),
+        F.col("r.flow_id").alias("macro_filename"),
+        F.col("d.timestamp"),
+        F.col("d.date"),
+        F.col("d.questions"),
+        F.col("d.transfer_request_id"),
+        F.col("d.source_platform"),
+    )
+)
+
+for row in successful.select("experiment_id", "transfer_id").collect():
+    experiment_id = row["experiment_id"]
+    transfer_id = row["transfer_id"]
+    output_path = f"{VOLUME_BASE}/{experiment_id}/photosynq_transfer"
+    enriched.filter(F.col("experiment_id") == experiment_id).write.mode("overwrite").parquet(output_path)
+    logger.info(f"Wrote import data to {output_path}")
+
+    spark.sql(f"""
+        UPDATE {TRANSFER_TABLE}
+        SET status = 'completed'
+        WHERE request_id = '{transfer_id}'
+    """)
+    logger.info(f"  {transfer_id}: completed")
+
+# COMMAND ----------
+
+# DBTITLE 1,Output
+output = {
+    "status": "success",
+    "transfers": [row.asDict() for row in transfer_results.collect()],
+}
+
+logger.info(json.dumps(output, indent=2))
+dbutils.notebook.exit(json.dumps(output))
