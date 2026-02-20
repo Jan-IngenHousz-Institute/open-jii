@@ -67,6 +67,7 @@ resource "aws_iam_role_policy" "lambda_ecr" {
       {
         Effect = "Allow"
         Action = [
+          "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage"
         ]
