@@ -14,22 +14,25 @@ locals {
   dashboard_json_file = file("${path.module}/dashboard.json.tftpl")
 
   dashboard_vars = {
-    datasource_uid             = grafana_data_source.cloudwatch_source.uid
-    logs_datasource_uid        = grafana_data_source.cloudwatch_logs_source.uid
-    project                    = var.project
-    environment                = var.environment
-    aws_region                 = var.aws_region
-    cloudfront_distribution_id = var.cloudfront_distribution_id
-    load_balancer_dimension    = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
-    target_group_dimension     = element(split(":", var.target_group_arn), length(split(":", var.target_group_arn)) - 1)
-    ecs_cluster_name           = var.ecs_cluster_name
-    ecs_service_name           = var.ecs_service_name
-    server_function_name       = var.server_function_name
-    db_cluster_identifier      = var.db_cluster_identifier
-    kinesis_stream_name        = var.kinesis_stream_name
-    ecs_log_group_name         = var.ecs_log_group_name
-    iot_log_group_name         = var.iot_log_group_name
-    account_id                 = data.aws_caller_identity.current.account_id
+    datasource_uid                    = grafana_data_source.cloudwatch_source.uid
+    logs_datasource_uid               = grafana_data_source.cloudwatch_logs_source.uid
+    project                           = var.project
+    environment                       = var.environment
+    aws_region                        = var.aws_region
+    cloudfront_distribution_id        = var.cloudfront_distribution_id
+    load_balancer_dimension           = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
+    target_group_dimension            = element(split(":", var.target_group_arn), length(split(":", var.target_group_arn)) - 1)
+    ecs_cluster_name                  = var.ecs_cluster_name
+    ecs_service_name                  = var.ecs_service_name
+    server_function_name              = var.server_function_name
+    db_cluster_identifier             = var.db_cluster_identifier
+    kinesis_stream_name               = var.kinesis_stream_name
+    ecs_log_group_name                = var.ecs_log_group_name
+    iot_log_group_name                = var.iot_log_group_name
+    account_id                        = data.aws_caller_identity.current.account_id
+    macro_runner_python_function_name = lookup(var.macro_runner_function_names, "python", "")
+    macro_runner_js_function_name     = lookup(var.macro_runner_function_names, "js", "")
+    macro_runner_r_function_name      = lookup(var.macro_runner_function_names, "r", "")
   }
 }
 
@@ -754,7 +757,243 @@ EOT
   }
 }
 
-# Notification policy
+# Macro Runner Alerts
+resource "grafana_rule_group" "macro_runner_health" {
+  count = length(var.macro_runner_function_names) > 0 ? 1 : 0
+
+  provider           = grafana.amg
+  name               = "Macro Runner Health"
+  folder_uid         = grafana_folder.folder.uid
+  interval_seconds   = 60
+  disable_provenance = true
+
+  dynamic "rule" {
+    for_each = var.macro_runner_function_names
+    content {
+      name      = "Macro Runner ${rule.key} Errors"
+      condition = "C"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "A"
+          region     = var.aws_region
+          namespace  = "AWS/Lambda"
+          metricName = "Errors"
+          statistic  = "Sum"
+          dimensions = {
+            FunctionName = rule.value
+          }
+          expression = "FILL(m1, 0)"
+          id         = "m1"
+        })
+
+        relative_time_range {
+          from = 300
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B > 10"
+          type       = "math"
+          refId      = "C"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      no_data_state  = "OK"
+      exec_err_state = "OK"
+      for            = "5m"
+
+      annotations = {
+        description = "Macro runner ${rule.key} Lambda has more than 10 errors in the last 5 minutes"
+        summary     = "Macro runner ${rule.key} error rate high"
+      }
+      labels = {
+        severity = "warning"
+        service  = "macro-runner"
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.macro_runner_function_names
+    content {
+      name      = "Macro Runner ${rule.key} Throttles"
+      condition = "C"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId      = "A"
+          region     = var.aws_region
+          namespace  = "AWS/Lambda"
+          metricName = "Throttles"
+          statistic  = "Sum"
+          dimensions = {
+            FunctionName = rule.value
+          }
+          expression = "FILL(m1, 0)"
+          id         = "m1"
+        })
+
+        relative_time_range {
+          from = 300
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B > 0"
+          type       = "math"
+          refId      = "C"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      no_data_state  = "OK"
+      exec_err_state = "OK"
+      for            = "5m"
+
+      annotations = {
+        description = "Macro runner ${rule.key} Lambda is being throttled"
+        summary     = "Macro runner ${rule.key} throttling detected"
+      }
+      labels = {
+        severity = "critical"
+        service  = "macro-runner"
+      }
+    }
+  }
+
+  rule {
+    name      = "Macro Runner Rejected Traffic"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/MacroRunner"
+        metricName = "MacroRunnerRejectedTraffic"
+        statistic  = "Sum"
+        expression = "FILL(m1, 0)"
+        id         = "m1"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 100"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "High rejected traffic from macro-runner isolated subnets — potential escape attempt"
+      summary     = "Macro runner rejected VPC traffic anomaly"
+    }
+    labels = {
+      severity = "critical"
+      service  = "macro-runner"
+      category = "security"
+    }
+  }
+}
+
 resource "grafana_notification_policy" "policy" {
   provider = grafana.amg
 
