@@ -106,30 +106,20 @@ export class DeltaAdapter implements DeltaPort {
       `Getting columns [${columns.join(", ")}] from table ${tableName} in experiment ${experimentId}`,
     );
 
-    // Query the table without limits to get all data
+    // Query the table — use limitHint=0 to keep it light, no row limit needed here
     const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {});
 
     if (queryResult.isFailure()) {
       return failure(queryResult.error);
     }
 
-    // Process files and filter columns
-    const dataResult = await this.dataService.processFiles(
+    // Process files with column selection pushed into hyparquet
+    return await this.dataService.processFiles(
       queryResult.value.files,
       queryResult.value.metadata,
+      undefined,
+      { columns },
     );
-
-    if (dataResult.isFailure()) {
-      return failure(dataResult.error);
-    }
-
-    // Filter columns to only include requested ones
-    const filteredColumns = dataResult.value.columns.filter((col) => columns.includes(col.name));
-
-    return success({
-      ...dataResult.value,
-      columns: filteredColumns,
-    });
   }
 
   /**
@@ -150,21 +140,8 @@ export class DeltaAdapter implements DeltaPort {
       return failure(queryResult.error);
     }
 
-    // Estimate total rows from file statistics
-    let totalRows = 0;
-    for (const file of queryResult.value.files) {
-      if (file.stats) {
-        try {
-          const stats = JSON.parse(file.stats) as { numRecords?: number };
-          if (stats.numRecords) {
-            totalRows += stats.numRecords;
-          }
-        } catch {
-          // Ignore parsing errors, continue with other files
-        }
-      }
-    }
-
+    // Delegate to data service to avoid duplicating stats-parsing logic
+    const totalRows = this.dataService.estimateTotalRows(queryResult.value.files);
     return success(totalRows);
   }
 
