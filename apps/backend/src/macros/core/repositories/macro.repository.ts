@@ -1,6 +1,6 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
-import { and, asc, eq, ilike, macros, profiles } from "@repo/database";
+import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -12,8 +12,10 @@ import {
   CreateMacroDto,
   UpdateMacroDto,
   MacroDto,
+  MacroScript,
   generateHashedFilename,
 } from "../models/macro.model";
+import { CACHE_PORT, CachePort } from "../ports/cache.port";
 
 export interface MacroFilter {
   search?: string;
@@ -25,6 +27,7 @@ export class MacroRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    @Inject(CACHE_PORT) private readonly cachePort: CachePort,
   ) {}
 
   async create(data: CreateMacroDto, userId: string): Promise<Result<MacroDto[]>> {
@@ -113,6 +116,29 @@ export class MacroRepository {
     });
   }
 
+  /**
+   * Find a single macro script by ID with read-through caching.
+   * Lean projection — only fetches columns needed for Lambda execution.
+   */
+  async findScriptById(id: string): Promise<Result<MacroScript | null>> {
+    return tryCatch(() =>
+      this.cachePort.tryCache<MacroScript>(id, async () => {
+        const rows = await this.database
+          .select({
+            id: macros.id,
+            name: macros.name,
+            language: macros.language,
+            code: macros.code,
+          })
+          .from(macros)
+          .where(eq(macros.id, id))
+          .limit(1);
+
+        return rows.length > 0 ? rows[0] : null;
+      }),
+    );
+  }
+
   async update(id: string, data: UpdateMacroDto): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       // The filename is based on the macro ID hash and should not change during updates
@@ -125,6 +151,9 @@ export class MacroRepository {
         .where(eq(macros.id, id))
         .returning();
 
+      // Invalidate cache on update
+      await this.cachePort.invalidate(id);
+
       return results as unknown as MacroDto[];
     });
   }
@@ -133,7 +162,39 @@ export class MacroRepository {
     return tryCatch(async () => {
       const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
 
+      // Invalidate cache on delete
+      await this.cachePort.invalidate(id);
+
       return results as unknown as MacroDto[];
     });
+  }
+
+  /**
+   * Find macro scripts by IDs with read-through caching.
+   * Lean projection — only fetches columns needed for Lambda execution.
+   */
+  async findScriptsByIds(ids: string[]): Promise<Result<Map<string, MacroScript>>> {
+    return tryCatch(() =>
+      this.cachePort.tryCacheMany<MacroScript>(ids, async (missedIds) => {
+        const rows = await this.database
+          .select({
+            id: macros.id,
+            name: macros.name,
+            language: macros.language,
+            code: macros.code,
+          })
+          .from(macros)
+          .where(inArray(macros.id, missedIds));
+
+        return new Map(rows.map((r) => [r.id, r]));
+      }),
+    );
+  }
+
+  /**
+   * Invalidate cache for a macro by ID.
+   */
+  async invalidateCache(id: string): Promise<void> {
+    await this.cachePort.invalidate(id);
   }
 }

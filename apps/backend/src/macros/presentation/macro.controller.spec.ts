@@ -10,6 +10,7 @@ import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.a
 import { TestHarness } from "../../test/test-harness";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
+import { ExecuteMacroUseCase } from "../application/use-cases/execute-macro/execute-macro";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
@@ -21,6 +22,7 @@ describe("MacroController", () => {
   let testUserId: string;
   let analyticsAdapter: MockAnalyticsAdapter;
   let createMacroUseCase: CreateMacroUseCase;
+  let executeMacroUseCase: ExecuteMacroUseCase;
   let getMacroUseCase: GetMacroUseCase;
   let listMacrosUseCase: ListMacrosUseCase;
   let updateMacroUseCase: UpdateMacroUseCase;
@@ -37,6 +39,7 @@ describe("MacroController", () => {
     // Get use case instances for mocking
     analyticsAdapter = testApp.module.get(AnalyticsAdapter);
     createMacroUseCase = testApp.module.get(CreateMacroUseCase);
+    executeMacroUseCase = testApp.module.get(ExecuteMacroUseCase);
     getMacroUseCase = testApp.module.get(GetMacroUseCase);
     listMacrosUseCase = testApp.module.get(ListMacrosUseCase);
     updateMacroUseCase = testApp.module.get(UpdateMacroUseCase);
@@ -282,6 +285,19 @@ describe("MacroController", () => {
       });
     });
 
+    it("should handle use case failure", async () => {
+      // Arrange
+      vi.spyOn(listMacrosUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      // Act & Assert
+      await testApp
+        .get(contract.macros.listMacros.path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+
     it("should require authentication", async () => {
       // Act & Assert
       await testApp.get(contract.macros.listMacros.path).expect(StatusCodes.UNAUTHORIZED);
@@ -423,6 +439,102 @@ describe("MacroController", () => {
     });
   });
 
+  describe("executeMacro", () => {
+    it("should successfully execute a macro", async () => {
+      // Arrange
+      const macroId = faker.string.uuid();
+      vi.spyOn(executeMacroUseCase, "execute").mockResolvedValue(
+        success({
+          macro_id: macroId,
+          success: true,
+          output: { result: 42 },
+        }),
+      );
+
+      // Act
+      const response = await testApp
+        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .send({ data: { trace_1: [1, 2, 3] } })
+        .expect(StatusCodes.OK);
+
+      // Assert
+      expect(response.body).toMatchObject({
+        macro_id: macroId,
+        success: true,
+        output: { result: 42 },
+      });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(executeMacroUseCase.execute).toHaveBeenCalledWith(macroId, {
+        data: { trace_1: [1, 2, 3] },
+      });
+    });
+
+    it("should handle execution failure result", async () => {
+      // Arrange
+      const macroId = faker.string.uuid();
+      vi.spyOn(executeMacroUseCase, "execute").mockResolvedValue(
+        success({
+          macro_id: macroId,
+          success: false,
+          error: "Script compilation failed",
+        }),
+      );
+
+      // Act
+      const response = await testApp
+        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .send({ data: { x: 1 } })
+        .expect(StatusCodes.OK);
+
+      // Assert
+      expect(response.body).toMatchObject({
+        macro_id: macroId,
+        success: false,
+        error: "Script compilation failed",
+      });
+    });
+
+    it("should handle macro not found", async () => {
+      // Arrange
+      const macroId = faker.string.uuid();
+      vi.spyOn(executeMacroUseCase, "execute").mockResolvedValue(
+        failure(AppError.notFound("Macro not found")),
+      );
+
+      // Act & Assert
+      await testApp
+        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .send({ data: { x: 1 } })
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should handle use case internal error", async () => {
+      // Arrange
+      const macroId = faker.string.uuid();
+      vi.spyOn(executeMacroUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Failed to fetch macro script")),
+      );
+
+      // Act & Assert
+      await testApp
+        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .send({ data: {} })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+
+    it("should require authentication", async () => {
+      // Act & Assert
+      await testApp
+        .post(contract.macros.executeMacro.path.replace(":id", faker.string.uuid()))
+        .send({ data: {} })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
   describe("deleteMacro", () => {
     beforeEach(() => {
       analyticsAdapter.setFlag(FEATURE_FLAGS.MACRO_DELETION, true);
@@ -529,6 +641,11 @@ describe("MacroController", () => {
 
       await testApp
         .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .expect(StatusCodes.UNAUTHORIZED);
+
+      await testApp
+        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .send({ data: {} })
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });
