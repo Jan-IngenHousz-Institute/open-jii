@@ -22,8 +22,8 @@
     "docker:prune": "docker system prune -f"
   },
   "dependencies": {
-    "@aws-sdk/client-cognito-identity": "^3.988.0",
-    "@aws-sdk/client-location": "^3.988.0",
+    "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
+    "@aws-sdk/client-location": "catalog:aws-sdk",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.8",
     "@nestjs/config": "^4.0.3",
