@@ -1,5 +1,11 @@
 import { clsx } from "clsx";
-import { CheckCircle2, FileText, BarChart2, ChevronRight } from "lucide-react-native";
+import {
+  CheckCircle2,
+  FileText,
+  BarChart2,
+  ChevronRight,
+  MessageCircle,
+} from "lucide-react-native";
 import React, { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { View, Modal, Text, TouchableOpacity } from "react-native";
@@ -15,6 +21,8 @@ interface MeasurementResultProps {
   macro: any;
   timestamp?: string;
   experimentName?: string;
+  /** When set, shows a Comment row that calls this on press */
+  onCommentPress?: () => void;
 }
 
 export function MeasurementResult({
@@ -22,6 +30,7 @@ export function MeasurementResult({
   macro,
   timestamp,
   experimentName,
+  onCommentPress,
 }: MeasurementResultProps) {
   const { classes, colors } = useTheme();
   const [showRaw, setShowRaw] = useState(false);
@@ -84,6 +93,24 @@ export function MeasurementResult({
             </View>
             {!processingError && <ChevronRight size={16} color={colors.primary.dark} />}
           </TouchableOpacity>
+
+          {onCommentPress && (
+            <TouchableOpacity
+              className={clsx(
+                "mt-2 flex-row items-center justify-between rounded-lg border px-3 py-3",
+                classes.card,
+                classes.border,
+              )}
+              activeOpacity={0.7}
+              onPress={onCommentPress}
+            >
+              <View className="flex-row items-center gap-2">
+                <MessageCircle size={18} color={colors.primary.dark} />
+                <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
+              </View>
+              <ChevronRight size={16} color={colors.primary.dark} />
+            </TouchableOpacity>
+          )}
 
           {processingError && (
             <View className="mt-2 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">

@@ -1,8 +1,9 @@
 import { clsx } from "clsx";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
+import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useMacro } from "~/hooks/use-macro";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
@@ -39,6 +40,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
   const analysisTimestampRef = useRef<string>(new Date().toISOString());
   const { getCycleAnswers } = useFlowAnswersStore();
+  const [measurementComment, setMeasurementComment] = useState("");
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
 
@@ -85,6 +88,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         macro={macro}
         timestamp={analysisTimestampRef.current}
         experimentName={experimentName}
+        onCommentPress={() => setCommentModalVisible(true)}
       />
     );
   };
@@ -126,6 +130,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         filename: macro.filename,
       },
       questions,
+      commentText: measurementComment.trim() || undefined,
     });
     finishFlow();
   };
@@ -157,6 +162,16 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
           />
         </View>
       </View>
+
+      <CommentModal
+        visible={commentModalVisible}
+        initialText={measurementComment}
+        onSave={(text) => {
+          setMeasurementComment(text);
+          setCommentModalVisible(false);
+        }}
+        onCancel={() => setCommentModalVisible(false)}
+      />
     </View>
   );
 }
