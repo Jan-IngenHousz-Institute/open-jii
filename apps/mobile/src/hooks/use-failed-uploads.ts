@@ -5,10 +5,12 @@ import {
   getFailedUploadsWithKeys,
   removeFailedUpload,
   saveFailedUpload as rawSaveFailedUpload,
+  updateFailedUpload as rawUpdateFailedUpload,
   FailedUpload,
 } from "~/services/failed-uploads-storage";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
+import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
 
 export function useFailedUploads() {
   const queryClient = useQueryClient();
@@ -80,6 +82,17 @@ export function useFailedUploads() {
     await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
   };
 
+  const updateMeasurementComment = async (key: string, data: FailedUpload, commentText: string) => {
+    const annotations = buildAnnotationsWithComment(commentText);
+    const measurementResult = {
+      ...data.measurementResult,
+      annotations,
+    };
+    await rawUpdateFailedUpload(key, { ...data, measurementResult });
+    await queryClient.invalidateQueries({ queryKey: ["failedUploads"] });
+    await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+  };
+
   return {
     uploads,
     isUploading: uploadAsync.loading,
@@ -87,5 +100,6 @@ export function useFailedUploads() {
     uploadOne,
     saveFailedUpload,
     removeFailedUpload: handleRemoveFailedUpload,
+    updateMeasurementComment,
   };
 }

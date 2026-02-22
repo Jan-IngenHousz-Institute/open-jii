@@ -54,7 +54,6 @@ export async function applyMacro(result: object, macroCodeBase64: string): Promi
   const output: MacroOutput[] = await Promise.all(
     samples.map((sample) => executeMacro(code, sample)),
   );
-  console.log("output", JSON.stringify(output, null, 2));
 
   return output;
 }

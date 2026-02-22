@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { Button } from "~/components/Button";
+import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
 import { useAllMeasurements } from "~/hooks/use-all-measurements";
@@ -15,15 +16,17 @@ import { removeFailedUpload as removeFailedUploadFromStorage } from "~/services/
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 export function CompletedState() {
   const { colors, classes } = useTheme();
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
+  const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const { startNewIteration, resetFlow } = useMeasurementFlowStore();
   const { clearHistory } = useFlowAnswersStore();
   const { measurements, invalidate } = useAllMeasurements(filter);
-  const { uploadOne } = useFailedUploads();
+  const { uploadOne, updateMeasurementComment } = useFailedUploads();
 
   const handleFinishFlow = () => {
     resetFlow();
@@ -163,6 +166,11 @@ export function CompletedState() {
               experimentName={measurement.experimentName}
               status={measurement.status}
               onPress={() => setSelectedMeasurement(measurement)}
+              onComment={
+                measurement.status === "unsynced"
+                  ? () => setSelectedForComment(measurement)
+                  : undefined
+              }
               onDelete={() =>
                 handleDelete(measurement.key, measurement.status, measurement.experimentName)
               }
@@ -194,6 +202,20 @@ export function CompletedState() {
           visible={!!selectedMeasurement}
           measurement={selectedMeasurement}
           onClose={() => setSelectedMeasurement(null)}
+        />
+      )}
+
+      {selectedForComment && (
+        <CommentModal
+          visible={!!selectedForComment}
+          initialText={getCommentFromMeasurementResult(
+            selectedForComment.data.measurementResult as Record<string, unknown>,
+          )}
+          onSave={async (text) => {
+            await updateMeasurementComment(selectedForComment.key, selectedForComment.data, text);
+            setSelectedForComment(null);
+          }}
+          onCancel={() => setSelectedForComment(null)}
         />
       )}
     </View>

@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { UploadCloud, Trash2 } from "lucide-react-native";
+import { MessageCircle, Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -8,7 +8,8 @@ import { MeasurementItem } from "~/components/measurement-item";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
 
-const ACTION_WIDTH = 96;
+/** Width for swipe actions: Comment + Upload (if unsynced) + Delete */
+const ACTION_WIDTH = 144;
 const SPRING_CONFIG = { damping: 20, stiffness: 300 };
 /** Horizontal movement (px) before pan activates - avoids revealing on light touch */
 const ACTIVATE_OFFSET_X = 28;
@@ -19,6 +20,7 @@ interface SwipeableMeasurementRowProps {
   experimentName: string;
   status: MeasurementStatus;
   onPress?: () => void;
+  onComment?: (id: string) => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -29,6 +31,7 @@ export function SwipeableMeasurementRow({
   experimentName,
   status,
   onPress,
+  onComment,
   onSync,
   onDelete,
 }: SwipeableMeasurementRowProps) {
@@ -55,6 +58,7 @@ export function SwipeableMeasurementRow({
     transform: [{ translateX: translateX.value }],
   }));
 
+  const handleComment = () => onComment?.(id);
   const handleSync = () => onSync?.(id);
   const handleDelete = () => onDelete?.(id);
 
@@ -73,6 +77,22 @@ export function SwipeableMeasurementRow({
           gap: 4,
         }}
       >
+        {status === "unsynced" && onComment && (
+          <TouchableOpacity
+            onPress={handleComment}
+            style={{
+              flex: 1,
+              backgroundColor: colors.surface,
+              justifyContent: "center",
+              alignItems: "center",
+              borderRightWidth: 1,
+              borderRightColor: colors.border,
+            }}
+            activeOpacity={0.8}
+          >
+            <MessageCircle size={20} color={colors.onSurface} />
+          </TouchableOpacity>
+        )}
         {status === "unsynced" && onSync && (
           <TouchableOpacity
             onPress={handleSync}

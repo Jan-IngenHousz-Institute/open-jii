@@ -1,11 +1,14 @@
 import { clsx } from "clsx";
-import { X } from "lucide-react-native";
-import React from "react";
+import { MessageCircle, X } from "lucide-react-native";
+import React, { useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import type { MeasurementItem } from "~/hooks/use-all-measurements";
+import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 import type { AnswerData } from "~/utils/convert-cycle-answers-to-array";
+import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 interface MeasurementQuestionsModalProps {
   visible: boolean;
@@ -20,12 +23,22 @@ export function MeasurementQuestionsModal({
 }: MeasurementQuestionsModalProps) {
   const { colors, classes } = useTheme();
   const insets = useSafeAreaInsets();
+  const { updateMeasurementComment } = useFailedUploads();
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
 
   // Extract questions from measurementResult
-  const measurementResult = measurement.data.measurementResult as any;
-  const questions: AnswerData[] = measurementResult?.questions ?? [];
+  const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
+  const questions: AnswerData[] = (measurementResult?.questions as AnswerData[]) ?? [];
   const experimentName = measurement.experimentName;
   const timestamp = new Date(measurement.timestamp).toLocaleString();
+  const isUnsynced = measurement.status === "unsynced";
+
+  const currentComment = getCommentFromMeasurementResult(measurementResult);
+
+  const handleSaveComment = async (text: string) => {
+    await updateMeasurementComment(measurement.key, measurement.data, text);
+    setCommentModalVisible(false);
+  };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
@@ -44,14 +57,26 @@ export function MeasurementQuestionsModal({
             <Text className={clsx("text-lg font-bold", classes.text)}>{experimentName}</Text>
             <Text className={clsx("mt-1 text-xs", classes.textMuted)}>{timestamp}</Text>
           </View>
-          <TouchableOpacity
-            onPress={onClose}
-            className="ml-4 h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.surface }}
-            activeOpacity={0.7}
-          >
-            <X size={20} color={colors.onSurface} />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            {isUnsynced && (
+              <TouchableOpacity
+                onPress={() => setCommentModalVisible(true)}
+                className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
+                style={{ backgroundColor: colors.surface }}
+                activeOpacity={0.7}
+              >
+                <MessageCircle size={20} color={colors.onSurface} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={onClose}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.surface }}
+              activeOpacity={0.7}
+            >
+              <X size={20} color={colors.onSurface} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Content */}
@@ -89,6 +114,13 @@ export function MeasurementQuestionsModal({
           )}
         </ScrollView>
       </View>
+
+      <CommentModal
+        visible={commentModalVisible}
+        initialText={currentComment}
+        onSave={handleSaveComment}
+        onCancel={() => setCommentModalVisible(false)}
+      />
     </Modal>
   );
 }
