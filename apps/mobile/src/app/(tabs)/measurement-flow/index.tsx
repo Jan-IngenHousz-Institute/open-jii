@@ -6,14 +6,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/Button";
 import { RecentMeasurementsScreen } from "~/components/recent-measurements-screen/recent-measurements-screen";
 import { useTheme } from "~/hooks/use-theme";
-import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-hooks";
 
 export default function MeasureLandingScreen() {
-  const { classes, colors } = useTheme();
+  const { classes } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data: connectedDevice } = useConnectedDevice();
-  const isConnected = !!connectedDevice;
 
   return (
     <View className={clsx("flex-1", classes.background)}>
@@ -28,24 +25,6 @@ export default function MeasureLandingScreen() {
       >
         <View className="mb-2 flex-row items-center justify-between">
           <Text className={clsx("text-2xl font-bold", classes.text)}>Measure</Text>
-          <View className="flex-row items-center gap-1.5">
-            <View
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: isConnected ? colors.semantic.success : colors.semantic.error,
-              }}
-            />
-            <Text
-              className="text-sm font-medium"
-              style={{
-                color: isConnected ? colors.semantic.success : colors.semantic.error,
-              }}
-            >
-              {isConnected ? "Connected device" : "Not connected"}
-            </Text>
-          </View>
         </View>
 
         <Text className={clsx("mb-4 text-sm", classes.textSecondary)}>
