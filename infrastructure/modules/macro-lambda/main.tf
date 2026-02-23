@@ -1,12 +1,12 @@
 locals {
   default_tags = merge(var.tags, {
-    Service   = "macro-runner"
+    Service   = "macro-sandbox"
     ManagedBy = "Terraform"
   })
 }
 
 resource "aws_iam_role" "lambda" {
-  name = "macro-runner-lambda-${var.environment}"
+  name = "macro-sandbox-lambda-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -132,7 +132,7 @@ resource "aws_iam_role_policy" "lambda_deny" {
 resource "aws_cloudwatch_log_group" "lambda" {
   for_each = var.languages
 
-  name              = "/aws/lambda/macro-runner-${each.key}-${var.environment}"
+  name              = "/aws/lambda/macro-sandbox-${each.key}-${var.environment}"
   retention_in_days = var.log_retention_days
 
   tags = merge(local.default_tags, {
@@ -143,7 +143,7 @@ resource "aws_cloudwatch_log_group" "lambda" {
 resource "aws_lambda_function" "this" {
   for_each = var.languages
 
-  function_name = "macro-runner-${each.key}-${var.environment}"
+  function_name = "macro-sandbox-${each.key}-${var.environment}"
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
   image_uri     = "${each.value.ecr_repository_url}:latest"
@@ -183,8 +183,8 @@ resource "aws_lambda_function_event_invoke_config" "this" {
 }
 
 resource "aws_iam_policy" "invoke" {
-  name        = "macro-runner-invoke-${var.environment}"
-  description = "Allow invoking macro-runner Lambda functions"
+  name        = "macro-sandbox-invoke-${var.environment}"
+  description = "Allow invoking macro-sandbox Lambda functions"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -199,13 +199,13 @@ resource "aws_iam_policy" "invoke" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "rejected_traffic" {
-  name           = "macro-runner-rejected-traffic-${var.environment}"
+  name           = "macro-sandbox-rejected-traffic-${var.environment}"
   log_group_name = var.flow_log_group_name
   pattern        = "REJECT"
 
   metric_transformation {
-    name      = "MacroRunnerRejectedTraffic"
-    namespace = "OpenJII/MacroRunner"
+    name      = "MacroSandboxRejectedTraffic"
+    namespace = "OpenJII/MacroSandbox"
     value     = "1"
   }
 }

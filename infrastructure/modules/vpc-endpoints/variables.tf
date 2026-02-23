@@ -52,7 +52,7 @@ variable "create_kinesis_endpoint" {
   default     = true
 }
 
-# ---- Macro-runner Lambda endpoints ----
+# ---- Macro-sandbox Lambda endpoints ----
 
 variable "isolated_route_table_ids" {
   description = "List of isolated route table IDs (for S3 gateway — needed by Lambda image pulls)"
