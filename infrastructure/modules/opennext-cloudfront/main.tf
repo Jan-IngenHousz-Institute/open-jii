@@ -20,14 +20,12 @@ exports.handler = async (event) => {
 
   try {
     if (["POST","PUT","PATCH"].includes(request.method) && request.body) {
-      // Get the body as a buffer without modifying encoding
       const body = Buffer.from(request.body.data, request.body.encoding);
       
-      // Compute SHA256 hash of the raw body (works for both gzip and plain data)
       const hash = createHash("sha256").update(body).digest("hex");
       request.headers["x-amz-content-sha256"] = [{ key:"x-amz-content-sha256", value:hash }];
       
-      console.log('Computed hash for', request.uri, ':', hash);
+      console.log('  computed hash:', hash);
     }
     return request;
   } catch (err) {
