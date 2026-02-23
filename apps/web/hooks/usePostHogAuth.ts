@@ -8,7 +8,6 @@ import { useSession } from "@repo/auth/client";
 /**
  * Hook to identify the current user with PostHog analytics
  * Automatically identifies users when they log in and resets when they log out
- * Also tracks the user's locale preference
  */
 export function usePostHogAuth() {
   const { data: session } = useSession();
