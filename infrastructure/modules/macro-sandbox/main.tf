@@ -1,6 +1,6 @@
 locals {
   common_tags = merge(var.tags, {
-    Component = "macro-runner"
+    Component = "macro-sandbox"
   })
 }
 
@@ -10,8 +10,8 @@ module "ecr" {
 
   aws_region           = var.aws_region
   environment          = var.environment
-  repository_name      = "macro-runner-${each.key}-${var.environment}"
-  service_name         = "macro-runner-${each.key}"
+  repository_name      = "macro-sandbox-${each.key}-${var.environment}"
+  service_name         = "macro-sandbox-${each.key}"
   image_tag_mutability = var.image_tag_mutability
   force_delete         = var.force_delete
 
@@ -26,7 +26,7 @@ module "ecr" {
 module "flow_logs" {
   source = "../vpc-flow-logs"
 
-  name_prefix       = "macro-runner"
+  name_prefix       = "macro-sandbox"
   environment       = var.environment
   subnet_ids        = var.isolated_subnet_ids
   retention_in_days = var.flow_log_retention_days
