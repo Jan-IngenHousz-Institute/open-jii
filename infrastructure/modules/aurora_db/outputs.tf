@@ -34,13 +34,12 @@ output "master_user_secret_arn" {
   sensitive   = true
 }
 
-output "writer_credentials_secret_arn" {
-  value       = aws_secretsmanager_secret.writer_credentials.arn
-  description = "The ARN of the secret in AWS Secrets Manager containing writer user credentials"
-  sensitive   = true
-}
-
 output "writer_username" {
   value       = "openjii_writer"
   description = "Username for the writer application user (has full CRUD permissions)"
+}
+
+output "backend_rds_iam_connect_policy_arn" {
+  value       = aws_iam_policy.backend_rds_iam_connect.arn
+  description = "The ARN of the IAM policy allowing the backend ECS task to connect via IAM database authentication"
 }

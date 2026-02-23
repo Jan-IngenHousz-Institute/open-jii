@@ -1,26 +1,23 @@
 -- Custom migration: Create openjii_writer database user with CRUD-only permissions
--- This migration should be run with admin/master credentials
--- The actual password will be managed by AWS Secrets Manager in production
+-- and enable IAM database authentication for passwordless access in AWS.
+-- This migration should be run with admin/master credentials.
 
 DO $$
-DECLARE
-  writer_password TEXT;
 BEGIN
-  -- Get password from environment or use placeholder
-  -- In production, this will be replaced by the actual password from Secrets Manager
-  writer_password := COALESCE(
-    current_setting('app.writer_password', true),
-    'PLACEHOLDER_WILL_BE_SET_BY_SCRIPT'
-  );
-
-  -- Create writer role if it doesn't exist
+  -- Create writer role if it doesn't exist (LOGIN, no static password needed
+  -- because the backend authenticates via IAM tokens).
   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'openjii_writer') THEN
-    EXECUTE format('CREATE ROLE openjii_writer WITH LOGIN PASSWORD %L', writer_password);
+    CREATE ROLE openjii_writer WITH LOGIN;
     RAISE NOTICE 'Created openjii_writer role';
+  END IF;
+
+  -- Grant the rds_iam role so this user can authenticate with IAM tokens.
+  -- rds_iam is a built-in Aurora/RDS role that enables IAM database authentication.
+  IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'rds_iam') THEN
+    GRANT rds_iam TO openjii_writer;
+    RAISE NOTICE 'Granted rds_iam to openjii_writer';
   ELSE
-    -- Update password if user exists
-    EXECUTE format('ALTER USER openjii_writer WITH PASSWORD %L', writer_password);
-    RAISE NOTICE 'Updated openjii_writer password';
+    RAISE NOTICE 'rds_iam role not found — skipping (local dev environment)';
   END IF;
 
   -- Grant connect privilege
@@ -50,5 +47,5 @@ BEGIN
     RAISE NOTICE 'Granted drizzle schema access to openjii_writer';
   END IF;
   
-  RAISE NOTICE 'Successfully configured openjii_writer with CRUD-only permissions';
+  RAISE NOTICE 'Successfully configured openjii_writer with CRUD-only permissions + IAM auth';
 END $$;
