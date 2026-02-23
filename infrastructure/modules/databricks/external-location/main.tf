@@ -26,11 +26,8 @@ resource "databricks_grants" "this" {
 
   external_location = databricks_external_location.this.id
 
-  dynamic "grant" {
-    for_each = each.value.privileges
-    content {
-      principal  = each.value.principal
-      privileges = [grant.value]
-    }
+  grant {
+    principal  = each.value.principal
+    privileges = each.value.privileges
   }
 }
