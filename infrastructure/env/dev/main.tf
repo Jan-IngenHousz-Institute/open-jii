@@ -1215,26 +1215,6 @@ module "backend_ecs" {
       value = "enriched_experiment_macro_data"
     },
     {
-      name  = "DATABRICKS_CENTRUM_SCHEMA_NAME"
-      value = "centrum"
-    },
-    {
-      name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
-      value = "enriched_experiment_raw_data"
-    },
-    {
-      name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
-      value = "experiment_device_data"
-    },
-    {
-      name  = "DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME"
-      value = "enriched_raw_ambyte_data"
-    },
-    {
-      name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
-      value = "enriched_experiment_macro_data"
-    },
-    {
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
     },
@@ -1277,14 +1257,6 @@ module "backend_ecs" {
     {
       name  = "AWS_REGION"
       value = var.aws_region
-    },
-    {
-      name  = "AWS_COGNITO_IDENTITY_POOL_ID"
-      value = module.cognito.identity_pool_id
-    },
-    {
-      name  = "AWS_COGNITO_DEVELOPER_PROVIDER_NAME"
-      value = module.cognito.developer_provider_name
     },
     {
       name  = "AWS_COGNITO_IDENTITY_POOL_ID"

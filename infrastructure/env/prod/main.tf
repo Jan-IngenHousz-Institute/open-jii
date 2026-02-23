@@ -476,7 +476,7 @@ module "ambyte_processing_job" {
   max_concurrent_runs           = 1
   use_serverless                = true
   continuous                    = false
-  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
+  serverless_performance_target = "STANDARD"
 
   # Enable job queueing
   queue = {
