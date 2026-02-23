@@ -15,33 +15,30 @@ export function usePostHogAuth() {
   const { data: session } = useSession();
   const locale = useLocale();
 
-  // Track locale changes as a super property (sent with every event)
   useEffect(() => {
+    // Register locale as a super property first (sent with every event)
     if (locale) {
-      posthog.register({
-        locale: locale,
-      });
+      posthog.register({ locale });
     }
-  }, [locale]);
 
-  // Identify user when authenticated
-  useEffect(() => {
+    // Then handle authentication state
     if (session?.user.email) {
       posthog.identify(session.user.email, {
         email: session.user.email,
         name: session.user.name,
-        locale: locale, // Also set locale as a person property
+        locale: locale,
       });
     } else if (session === null) {
       // Session is null means unauthenticated (undefined means loading)
       posthog.reset();
-      // Re-register locale after reset
+      // Re-register locale after reset since reset clears super properties
       if (locale) {
         posthog.register({ locale });
       }
     }
   }, [session, locale]);
 }
+
 
 /**
  * Client component that calls the PostHog auth hook
