@@ -85,7 +85,7 @@ describe("ExecuteMacroBatchUseCase", () => {
         });
 
       vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockImplementation((lang) => {
-        return `test-macro-runner-${lang}`;
+        return `test-macro-sandbox-${lang}`;
       });
 
       const result = await useCase.execute({
