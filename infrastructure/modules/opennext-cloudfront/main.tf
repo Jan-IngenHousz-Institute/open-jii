@@ -19,6 +19,12 @@ exports.handler = async (event) => {
   const { request } = event.Records[0].cf;
 
   try {
+    // Skip hash computation for PostHog ingest endpoints
+    // PostHog sends gzip-compressed data that shouldn't be modified
+    if (request.uri && request.uri.startsWith('/ingest')) {
+      return request;
+    }
+
     if (["POST","PUT","PATCH"].includes(request.method)) {
       const body = Buffer.from(request.body.data, request.body.encoding);
       const hash = createHash("sha256").update(body).digest("hex");

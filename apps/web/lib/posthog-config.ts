@@ -23,7 +23,7 @@ export const POSTHOG_CLIENT_CONFIG = createPostHogClientConfig(
   env.NEXT_PUBLIC_POSTHOG_UI_HOST,
   {
     // Add any web-specific overrides here if needed
-    debug: false,
+    debug: true, // Temporarily enable to see PostHog logs
   },
 );
 
