@@ -487,7 +487,7 @@ module "ambyte_processing_job" {
     {
       environment_key = "ambyte_processing"
       spec = {
-        environment_version = "1"
+        environment_version = "4"
         dependencies = [
           "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl"
         ]
@@ -603,6 +603,19 @@ module "data_export_job" {
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
   }
+
+  # Environment configuration for serverless compute dependencies
+  environments = [
+    {
+      environment_key = "data_exporting"
+      spec = {
+        environment_version = "4"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
 
   # Configure task retries
   task_retry_config = {
