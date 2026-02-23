@@ -12,7 +12,6 @@ import type {
 } from "~/hooks/use-all-measurements";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
-import { removeFailedUpload as removeFailedUploadFromStorage } from "~/services/failed-uploads-storage";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
@@ -26,7 +25,7 @@ export function CompletedState() {
   const { startNewIteration, resetFlow } = useMeasurementFlowStore();
   const { clearHistory } = useFlowAnswersStore();
   const { measurements, invalidate } = useAllMeasurements(filter);
-  const { uploadOne, updateMeasurementComment } = useFailedUploads();
+  const { uploadOne, removeFailedUpload, updateMeasurementComment } = useFailedUploads();
 
   const handleFinishFlow = () => {
     resetFlow();
@@ -61,7 +60,7 @@ export function CompletedState() {
           if (status === "synced") {
             await removeSuccessfulUpload(id);
           } else {
-            await removeFailedUploadFromStorage(id);
+            await removeFailedUpload(id);
           }
           invalidate();
         }) as any,

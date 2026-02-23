@@ -13,7 +13,6 @@ import type {
 } from "~/hooks/use-all-measurements";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
-import { removeFailedUpload as removeFailedUploadFromStorage } from "~/services/failed-uploads-storage";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 
 export function RecentMeasurementsScreen() {
@@ -21,7 +20,7 @@ export function RecentMeasurementsScreen() {
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const { measurements, invalidate } = useAllMeasurements(filter);
-  const { uploadAll, isUploading, uploadOne } = useFailedUploads();
+  const { uploadAll, isUploading, uploadOne, removeFailedUpload } = useFailedUploads();
 
   const handleSyncAll = () => {
     Alert.alert(
@@ -82,7 +81,7 @@ export function RecentMeasurementsScreen() {
           if (status === "synced") {
             await removeSuccessfulUpload(id);
           } else {
-            await removeFailedUploadFromStorage(id);
+            await removeFailedUpload(id);
           }
           invalidate();
         }) as any,
