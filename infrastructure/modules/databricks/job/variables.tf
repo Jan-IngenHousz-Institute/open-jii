@@ -153,7 +153,7 @@ variable "environments" {
   type = list(object({
     environment_key = string
     spec = object({
-      environment_version = optional(string, "1")
+      environment_version = optional(string, "4")
       dependencies        = list(string)
     })
   }))

@@ -246,7 +246,7 @@ def clean_data():
                 F.col("timestamp"),
                 F.col("sample"),
                 F.col("ingestion_timestamp"),
-                F.expr("uuid()")
+                F.col("kinesis_sequence_number")
             )
         )
     )
@@ -907,9 +907,9 @@ def enriched_experiment_macro_data():
 )
 def raw_ambyte_data():
     """Streaming ingestion of pre-processed Ambyte trace data."""
-    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/*/processed-ambyte"
+    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/processed-ambyte"
     
-    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-uploads/_schemas/ambyte_schema"
+    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/ambyte_schema"
     
     df = (
         spark.readStream
@@ -919,6 +919,15 @@ def raw_ambyte_data():
         .option("recursiveFileLookup", "true")
         .load(processed_path)
     )
+    
+    path_experiment_id = F.regexp_extract(
+        F.col("_metadata.file_path"), r"data-imports/([^/]+)/processed-ambyte", 1
+    )
+
+    if "experiment_id" in df.columns:
+        df = df.withColumn("experiment_id", F.coalesce(F.col("experiment_id"), path_experiment_id))
+    else:
+        df = df.withColumn("experiment_id", path_experiment_id)
     
     return (
         df

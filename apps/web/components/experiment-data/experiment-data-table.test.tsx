@@ -238,9 +238,9 @@ vi.mock("@repo/ui/components", () => ({
   FormMessage: () => <div />,
 }));
 
-// Mock DataDownloadModal
-vi.mock("./data-download-modal/data-download-modal", () => ({
-  DataDownloadModal: ({
+// Mock DataExportModal
+vi.mock("./data-export-modal/data-export-modal", () => ({
+  DataExportModal: ({
     open,
     onOpenChange,
     experimentId,
@@ -252,7 +252,7 @@ vi.mock("./data-download-modal/data-download-modal", () => ({
     tableName: string;
   }) =>
     open ? (
-      <div data-testid="data-download-modal">
+      <div data-testid="data-export-modal">
         <div>
           Download Modal for {tableName} - {experimentId}
         </div>

@@ -81,9 +81,11 @@ module "iot_core" {
 }
 
 module "cognito" {
-  source             = "../../modules/cognito"
-  region             = var.aws_region
-  identity_pool_name = "open-jii-${var.environment}-iot-identity-pool"
+  source                           = "../../modules/cognito"
+  region                           = var.aws_region
+  environment                      = var.environment
+  identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
+  allow_unauthenticated_identities = false
 }
 
 module "vpc" {
@@ -490,7 +492,7 @@ module "ambyte_processing_job" {
     {
       environment_key = "ambyte_processing"
       spec = {
-        environment_version = "1"
+        environment_version = "4"
         dependencies = [
           "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl"
         ]
@@ -520,6 +522,127 @@ module "ambyte_processing_job" {
         YEAR_PREFIX       = "{{YEAR_PREFIX}}"
         CATALOG_NAME      = module.databricks_catalog.catalog_name
         ENVIRONMENT       = upper(var.environment)
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+module "data_downloads_volume" {
+  source = "../../modules/databricks/volume"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  volume_name  = "data-exports"
+  comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet)"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "data_imports_volume" {
+  source = "../../modules/databricks/volume"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  volume_name  = "data-imports"
+  comment      = "Managed volume for experiment data imports"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "data_export_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Data-Export-Job-PROD"
+  description = "Exports experiment table data in multiple formats (CSV, JSON, Parquet) to Unity Catalog volumes"
+
+  max_concurrent_runs           = 5
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Environment configuration for serverless compute dependencies
+  environments = [
+    {
+      environment_key = "data_exporting"
+      spec = {
+        environment_version = "4"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 30000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "export_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/data_export_task"
+
+      parameters = {
+        EXPERIMENT_ID = "{{EXPERIMENT_ID}}"
+        TABLE_NAME    = "{{TABLE_NAME}}"
+        FORMAT        = "{{FORMAT}}"
+        USER_ID       = "{{USER_ID}}"
+        CATALOG_NAME  = module.databricks_catalog.catalog_name
+        ENVIRONMENT   = upper(var.environment)
       }
     }
   ]
@@ -617,6 +740,7 @@ module "databricks_secrets" {
     DATABRICKS_CLIENT_ID                = module.node_service_principal.service_principal_application_id
     DATABRICKS_CLIENT_SECRET            = module.node_service_principal.service_principal_secret_value
     DATABRICKS_AMBYTE_PROCESSING_JOB_ID = module.ambyte_processing_job.job_id
+    DATABRICKS_DATA_EXPORT_JOB_ID       = module.data_export_job.job_id
     DATABRICKS_WAREHOUSE_ID             = var.backend_databricks_warehouse_id
     DATABRICKS_WEBHOOK_API_KEY_ID       = var.backend_webhook_api_key_id
     DATABRICKS_WEBHOOK_SECRET           = var.backend_webhook_secret
@@ -797,7 +921,7 @@ module "migration_runner_ecr" {
   service_name                  = "db-migration-runner"
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE"
+  image_tag_mutability          = "IMMUTABLE"
 
   #ci_cd_role_arn = module.iam_oidc.role_arn
 
@@ -884,7 +1008,7 @@ module "backend_ecr" {
   max_image_count               = 10
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE"
+  image_tag_mutability          = "IMMUTABLE"
 
   #ci_cd_role_arn = module.iam_oidc.role_arn
 
@@ -985,6 +1109,9 @@ module "backend_ecs" {
   log_group_name     = "/aws/ecs/backend-service-${var.environment}"
   log_retention_days = 30
 
+  enable_cognito_policy     = true
+  cognito_identity_pool_arn = module.cognito.identity_pool_arn
+
   # Secrets configuration
   secrets = [
     {
@@ -1030,6 +1157,10 @@ module "backend_ecs" {
     {
       name      = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_DATA_EXPORT_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
@@ -1130,6 +1261,14 @@ module "backend_ecs" {
     {
       name  = "AWS_REGION"
       value = var.aws_region
+    },
+    {
+      name  = "AWS_COGNITO_IDENTITY_POOL_ID"
+      value = module.cognito.identity_pool_id
+    },
+    {
+      name  = "AWS_COGNITO_DEVELOPER_PROVIDER_NAME"
+      value = module.cognito.developer_provider_name
     },
     {
       name  = "POSTHOG_KEY"

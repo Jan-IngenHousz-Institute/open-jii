@@ -12,12 +12,18 @@ import type {
   GeocodeLocationRequest,
   GeocodeResult,
 } from "../../../experiments/core/ports/aws.port";
+import type { AwsPort as IotAwsPort } from "../../../iot/core/ports/aws.port";
+import { CognitoService } from "./services/cognito/cognito.service";
+import type { IotCredentials } from "./services/cognito/cognito.types";
 
 @Injectable()
-export class AwsAdapter implements AwsPort {
+export class AwsAdapter implements AwsPort, IotAwsPort {
   private readonly logger = new Logger(AwsAdapter.name);
 
-  constructor(private readonly awsLocationService: AwsLocationService) {}
+  constructor(
+    private readonly awsLocationService: AwsLocationService,
+    private readonly cognitoService: CognitoService,
+  ) {}
 
   /**
    * Search for places using text query
@@ -87,5 +93,36 @@ export class AwsAdapter implements AwsPort {
 
       return failure(AppError.badRequest("Unknown error occurred during geocoding"));
     }
+  }
+
+  /**
+   * Get temporary AWS credentials for an authenticated user to access IoT Core.
+   *
+   * Orchestrates two Cognito operations:
+   * 1. Obtain an OpenID token for the developer-authenticated identity
+   * 2. Exchange the token for temporary AWS credentials
+   *
+   * @param userId - The authenticated user's ID from Better Auth session
+   * @returns Temporary AWS credentials (AccessKeyId, SecretKey, SessionToken, Expiration)
+   */
+  async getIotCredentials(userId: string): Promise<Result<IotCredentials>> {
+    const tokenResult = await this.cognitoService.getOpenIdToken(userId);
+
+    if (tokenResult.isFailure()) {
+      return failure(tokenResult.error);
+    }
+
+    const { identityId, token } = tokenResult.value;
+
+    const credentialsResult = await this.cognitoService.getCredentialsForIdentity(
+      identityId,
+      token,
+    );
+
+    if (credentialsResult.isFailure()) {
+      return failure(credentialsResult.error);
+    }
+
+    return credentialsResult;
   }
 }

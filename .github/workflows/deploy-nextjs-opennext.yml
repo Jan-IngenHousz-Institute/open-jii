@@ -10,6 +10,11 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
 
   workflow_call:
     inputs:
@@ -17,6 +22,11 @@ on:
         description: "The deployment environment (dev, staging, prod)"
         required: true
         type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -34,6 +44,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Get Checked Out SHA
+        id: get-sha
+        run: |
+          ACTUAL_SHA=$(git rev-parse HEAD)
+          echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
+          echo "Checked out SHA: $ACTUAL_SHA"
 
       - name: Capture Deployment Start Time
         id: deployment-start
@@ -43,12 +61,12 @@ jobs:
           echo "deploy_start_time=$DEPLOY_START" >> $GITHUB_OUTPUT
           
           # Get commit timestamp for lead time calculation
-          COMMIT_TIME=$(git show -s --format=%ct ${{ github.sha }})
+          COMMIT_TIME=$(git show -s --format=%ct)
           echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
           echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
           
           echo "📊 DORA Metrics Collection Started"
-          echo "  Commit SHA: ${{ github.sha }}"
+          echo "  Commit SHA: ${{ steps.get-sha.outputs.sha }}"
           echo "  Commit Time: $(date -d @$COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "  Deploy Start: $(date -d @$DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC')"
 
@@ -275,10 +293,154 @@ jobs:
           zip -r ../../server-function.zip .
           cd -
           echo "Uploading server function code to Lambda..."
-          aws lambda update-function-code \
+          UPDATE_OUTPUT=$(aws lambda update-function-code \
             --function-name "${{ env.SERVER_FUNCTION }}" \
             --zip-file fileb://apps/web/.open-next/server-function.zip \
-            --publish
+            --publish)
+          VERSION=$(echo "$UPDATE_OUTPUT" | jq -r '.Version')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get Previous Server Alias Version
+        id: get-server-alias
+        run: |
+          ALIAS_NAME="live"
+          PREV_VERSION=$(aws lambda get-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --query 'FunctionVersion' --output text || echo "")
+          echo "prev_version=$PREV_VERSION" >> $GITHUB_OUTPUT
+          echo "Current alias version: $PREV_VERSION"
+
+      - name: Wait Until Lambda Is Active
+        id: wait-lambda-active
+        run: |
+          FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
+          NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
+          echo "Waiting for Lambda $FUNCTION_NAME version $NEW_VERSION to become Active..."
+          MAX_ATTEMPTS=30
+          SLEEP_SECONDS=2
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            STATE=$(aws lambda get-function-configuration --function-name "$FUNCTION_NAME" --qualifier "$NEW_VERSION" --query 'State' --output text)
+            echo "Current state: $STATE"
+            if [[ "$STATE" == "Active" ]]; then
+              echo "Lambda is Active."
+              break
+            fi
+            sleep $SLEEP_SECONDS
+          done
+          if [[ "$STATE" != "Active" ]]; then
+            WAITED=$((MAX_ATTEMPTS * SLEEP_SECONDS))
+            echo "❌ Lambda did not become Active after waiting $WAITED seconds."
+            exit 1
+          fi
+               
+      - name: Health Check New Version (before updating alias)
+        id: healthcheck-server
+        run: |
+          FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
+          NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
+          
+          echo "Health checking new version $NEW_VERSION (before updating alias)..."
+          
+          # Invoke Lambda with a minimal test event and capture response
+          timeout 30 aws lambda invoke \
+            --function-name "$FUNCTION_NAME:$NEW_VERSION" \
+            /tmp/response.json > /tmp/invoke-metadata.json 2>&1
+          INVOKE_EXIT_CODE=$?
+          
+          if [ "$INVOKE_EXIT_CODE" -ne 0 ]; then
+            echo "❌ Lambda invoke command failed with exit code $INVOKE_EXIT_CODE"
+            echo "Invoke metadata:"
+            cat /tmp/invoke-metadata.json || true
+            echo "Response:"
+            cat /tmp/response.json || true
+            exit 1
+          fi
+          
+          echo "✅ Lambda invocation successful"
+          echo "Invoke metadata:"
+          cat /tmp/invoke-metadata.json
+          
+          echo "Response payload:"
+          cat /tmp/response.json
+          
+          # Check if Lambda executed (StatusCode 200 means it ran)
+          STATUS_CODE=$(jq -r '.StatusCode' /tmp/invoke-metadata.json 2>/dev/null || echo "unknown")
+          if [[ "$STATUS_CODE" != "200" ]]; then
+            echo "❌ Lambda did not execute, StatusCode: $STATUS_CODE"
+            exit 1
+          fi
+          
+          # Only fail if there's a critical error that means the Lambda can't start at all
+          if jq -e '.errorType == "Runtime.ImportModuleError" or .errorType == "Runtime.HandlerNotFound"' /tmp/response.json > /dev/null 2>&1; then
+            echo "❌ Critical Lambda error - code cannot load or handler not found"
+            exit 1
+          fi
+          
+          echo "✅ Health check passed - Lambda version $NEW_VERSION is operational"
+
+      - name: Update Server Alias to New Version
+        id: update-server-alias
+        if: success()
+        run: |
+          ALIAS_NAME="live"
+          echo "Updating alias '$ALIAS_NAME' to version ${{ steps.deploy-server.outputs.version }}..."
+          aws lambda update-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "${{ steps.deploy-server.outputs.version }}" || \
+          aws lambda create-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "${{ steps.deploy-server.outputs.version }}"
+          echo "✅ Alias updated successfully"
+
+      - name: Rollback on Failure
+        if: failure() && steps.get-server-alias.outputs.prev_version != ''
+        run: |
+          ALIAS_NAME="live"
+          PREV_VERSION="${{ steps.get-server-alias.outputs.prev_version }}"
+          
+          echo "❌ Deployment failed - rolling back alias to previous version $PREV_VERSION"
+          aws lambda update-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "$PREV_VERSION"
+          echo "✅ Rolled back Lambda alias to previous version"
+          
+          # Also delete the failed version to keep things clean
+          NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
+          if [[ -n "$NEW_VERSION" && "$NEW_VERSION" != "$PREV_VERSION" ]]; then
+            echo "Deleting failed version $NEW_VERSION..."
+            aws lambda delete-function --function-name "${{ env.SERVER_FUNCTION }}" --qualifier "$NEW_VERSION" || true
+          fi
+
+      - name: Revert S3 Asset Uploads on Failure
+        if: failure() && steps.upload-assets.outputs.uploaded == 'true'
+        env:
+          ASSETS_BUCKET: ${{ env.ASSETS_BUCKET }}
+        run: |
+          echo "❌ Reverting latest S3 asset versions due to failed deployment..."
+          # List all latest versions and delete them to expose previous versions
+          aws s3api list-object-versions \
+            --bucket "$ASSETS_BUCKET" \
+            --query 'Versions[?IsLatest==`true`].[Key,VersionId]' \
+            --output text | while read KEY VERSION; do
+              if [[ -n "$KEY" && -n "$VERSION" ]]; then
+                echo "Deleting latest version of $KEY ($VERSION)"
+                aws s3api delete-object \
+                  --bucket "$ASSETS_BUCKET" \
+                  --key "$KEY" \
+                  --version-id "$VERSION"
+              fi
+            done
+          echo "✅ S3 asset revert complete"
+
+      
+      - name: Prune old Lambda versions (keep 10 latest)
+        if: success()
+        run: |
+          FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
+          KEEP=10
+          echo "Pruning old Lambda versions (keeping $KEEP latest)..."
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              if [[ -n "$VERSION" ]]; then
+                echo "Deleting old version: $VERSION"
+                aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              fi
+            done
+          echo "✅ Version pruning complete"
 
       - name: Check Image Optimization Function
         id: check-image
@@ -306,6 +468,23 @@ jobs:
             --zip-file fileb://apps/web/.open-next/image-optimization-function.zip \
             --publish
 
+      - name: Prune old Lambda versions (keep 10 latest) from Image Optimization Function
+        if: success()
+        run: |
+          FUNCTION_NAME="${{ env.IMAGE_FUNCTION }}"
+          KEEP=10
+          echo "Pruning old Lambda versions (keeping $KEEP latest)..."
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              if [[ -n "$VERSION" ]]; then
+                echo "Deleting old version: $VERSION"
+                aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              fi
+            done
+          echo "✅ Version pruning complete"
+
       - name: Check Revalidation Function
         id: check-revalidation
         run: |
@@ -332,6 +511,23 @@ jobs:
             --zip-file fileb://apps/web/.open-next/revalidation-function.zip \
             --publish
 
+      - name: Prune old Lambda versions (keep 10 latest) from Revalidation Function
+        if: success()
+        run: |
+          FUNCTION_NAME="${{ env.REVALIDATION_FUNCTION }}"
+          KEEP=10
+          echo "Pruning old Lambda versions (keeping $KEEP latest)..."
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              if [[ -n "$VERSION" ]]; then
+                echo "Deleting old version: $VERSION"
+                aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              fi
+            done
+          echo "✅ Version pruning complete"
+
       - name: Check Warmer Function
         id: check-warmer
         run: |
@@ -357,6 +553,23 @@ jobs:
             --function-name "${{ env.WARMER_FUNCTION }}" \
             --zip-file fileb://apps/web/.open-next/warmer-function.zip \
             --publish
+
+      - name: Prune old Lambda versions (keep 10 latest) from Warmer Function
+        if: success()
+        run: |
+          FUNCTION_NAME="${{ env.WARMER_FUNCTION }}"
+          KEEP=10
+          echo "Pruning old Lambda versions (keeping $KEEP latest)..."
+          # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+          aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+            --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+            tr '\t' '\n' | sort -n | head -n -$KEEP | while read VERSION; do
+              if [[ -n "$VERSION" ]]; then
+                echo "Deleting old version: $VERSION"
+                aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              fi
+            done
+          echo "✅ Version pruning complete"
 
       - name: Finalize Lambda Deployments and Summarize Results
         id: update-lambdas
@@ -428,7 +641,7 @@ jobs:
           echo "  Deployment Duration: ${DEPLOY_DURATION}s"
 
       - name: Publish DORA - Deployment Frequency
-        if: success()
+        if: always()
         uses: ./.github/actions/publish-dora-metric
         with:
           metric-name: 'DeploymentFrequency'
