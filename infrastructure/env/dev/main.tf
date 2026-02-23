@@ -670,7 +670,7 @@ module "aurora_db" {
   master_username        = "openjii_${var.environment}_admin"
   db_subnet_group_name   = module.vpc.db_subnet_group_name
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
-  region = var.aws_region
+  region                 = var.aws_region
 
   environment              = var.environment
   max_capacity             = 1.0  # Conservative max for dev
