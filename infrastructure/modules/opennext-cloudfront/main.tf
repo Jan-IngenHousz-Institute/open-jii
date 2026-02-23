@@ -19,11 +19,15 @@ exports.handler = async (event) => {
   const { request } = event.Records[0].cf;
 
   try {
-    if (["POST","PUT","PATCH"].includes(request.method)) {
+    if (["POST","PUT","PATCH"].includes(request.method) && request.body) {
+      // Get the body as a buffer without modifying encoding
       const body = Buffer.from(request.body.data, request.body.encoding);
+      
+      // Compute SHA256 hash of the raw body (works for both gzip and plain data)
       const hash = createHash("sha256").update(body).digest("hex");
       request.headers["x-amz-content-sha256"] = [{ key:"x-amz-content-sha256", value:hash }];
-      console.log('  computed hash:', hash);
+      
+      console.log('Computed hash for', request.uri, ':', hash);
     }
     return request;
   } catch (err) {
@@ -246,8 +250,11 @@ resource "aws_cloudfront_distribution" "distribution" {
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
 
-    # No Lambda@Edge association - PostHog doesn't need SHA256 hashing
-    # and the edge function would corrupt the gzip-compressed payload
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
+      include_body = true
+    }
 
     function_association {
       event_type   = "viewer-request"
