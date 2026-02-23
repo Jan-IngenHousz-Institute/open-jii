@@ -30,14 +30,14 @@ export class AwsConfigService {
         "aws.cognito.developerProviderName",
       ),
       lambda: {
-        macroRunnerPythonFunctionName: this.configService.getOrThrow<string>(
-          "aws.lambda.macroRunnerPythonFunctionName",
+        macroSandboxPythonFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.macroSandboxPythonFunctionName",
         ),
-        macroRunnerJavascriptFunctionName: this.configService.getOrThrow<string>(
-          "aws.lambda.macroRunnerJavascriptFunctionName",
+        macroSandboxJavascriptFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.macroSandboxJavascriptFunctionName",
         ),
-        macroRunnerRFunctionName: this.configService.getOrThrow<string>(
-          "aws.lambda.macroRunnerRFunctionName",
+        macroSandboxRFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.macroSandboxRFunctionName",
         ),
       },
     };
@@ -95,7 +95,7 @@ export class AwsConfigService {
     return this.config.cognitoDeveloperProviderName;
   }
   /*
-   * Gets the Lambda function name for macro runner by language
+   * Gets the Lambda function name for macro sandbox by language
    */
   get lambdaConfig() {
     return this.config.lambda;

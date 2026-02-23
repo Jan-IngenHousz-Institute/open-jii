@@ -73,7 +73,7 @@ describe("ExecuteMacroUseCase", () => {
         }),
       );
       vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue(
-        "test-macro-runner-python",
+        "test-macro-sandbox-python",
       );
 
       const result = await useCase.execute(macro.id, {
@@ -143,7 +143,7 @@ describe("ExecuteMacroUseCase", () => {
       );
       const getFnSpy = vi
         .spyOn(lambdaPort, "getFunctionNameForLanguage")
-        .mockReturnValue("test-macro-runner-javascript");
+        .mockReturnValue("test-macro-sandbox-javascript");
 
       await useCase.execute(macro.id, { data: { x: 1 } });
 
