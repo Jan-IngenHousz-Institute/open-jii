@@ -231,17 +231,17 @@ describe("AwsAdapter", () => {
   describe("getFunctionNameForLanguage", () => {
     it("should return the python function name for 'python'", () => {
       const name = awsAdapter.getFunctionNameForLanguage("python");
-      expect(name).toBe(awsConfigService.lambdaConfig.macroRunnerPythonFunctionName);
+      expect(name).toBe(awsConfigService.lambdaConfig.macroSandboxPythonFunctionName);
     });
 
     it("should return the javascript function name for 'javascript'", () => {
       const name = awsAdapter.getFunctionNameForLanguage("javascript");
-      expect(name).toBe(awsConfigService.lambdaConfig.macroRunnerJavascriptFunctionName);
+      expect(name).toBe(awsConfigService.lambdaConfig.macroSandboxJavascriptFunctionName);
     });
 
     it("should return the R function name for 'r'", () => {
       const name = awsAdapter.getFunctionNameForLanguage("r");
-      expect(name).toBe(awsConfigService.lambdaConfig.macroRunnerRFunctionName);
+      expect(name).toBe(awsConfigService.lambdaConfig.macroSandboxRFunctionName);
     });
 
     it("should throw for an unsupported language", () => {

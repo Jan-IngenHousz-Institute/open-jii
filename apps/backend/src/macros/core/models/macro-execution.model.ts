@@ -1,11 +1,11 @@
 /**
  * Internal types for Lambda macro execution payloads.
  *
- * These types match the macro-runner Lambda handler event/response shapes.
+ * These types match the macro sandbox Lambda handler event/response shapes.
  * Webhook request/response schemas live in @repo/api (macro.schema.ts).
  */
 
-// ── Lambda payload shape, matching macro-runner handlers ──
+// ── Lambda payload shape, matching macro sandbox handlers ──
 
 export interface LambdaExecutionItem {
   id: string;
