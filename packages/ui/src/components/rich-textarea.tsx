@@ -49,7 +49,7 @@ export function RichTextarea({
   useEffect(() => {
     if (!quill) return;
 
-    const toolbar = quill.getModule("toolbar") as any;
+    const toolbar = quill.getModule("toolbar") as { container: HTMLElement };
 
     if (toolbar?.container) {
       toolbar.container.addEventListener("mousedown", (e: MouseEvent) => {
