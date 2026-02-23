@@ -282,7 +282,8 @@ resource "aws_cloudfront_distribution" "distribution" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimizedForUncompressedObjects
+    cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimizedForUncompressedObjects
+    response_headers_policy_id = "eaab4381-ed33-4a86-88ca-d9558dc6cd63" # Managed-CORS-with-preflight-and-SecurityHeadersPolicy
 
     function_association {
       event_type   = "viewer-request"
@@ -434,7 +435,7 @@ resource "aws_cloudfront_origin_request_policy" "posthog_passthrough" {
   headers_config {
     header_behavior = "whitelist"
     headers {
-      items = ["content-type", "origin"]
+      items = ["content-type", "origin", "authorization"]
     }
   }
   cookies_config {
