@@ -14,6 +14,11 @@ const mockQuillInstance = {
   on: vi.fn(),
   off: vi.fn(),
   enable: vi.fn(),
+  getModule: vi.fn(() => ({
+    container: {
+      addEventListener: vi.fn(),
+    },
+  })),
 };
 
 vi.mock("react-quilljs", () => ({
@@ -31,6 +36,7 @@ describe("RichTextarea", () => {
     mockQuillInstance.on.mockClear();
     mockQuillInstance.off.mockClear();
     mockQuillInstance.enable.mockClear();
+    mockQuillInstance.getModule.mockClear();
   });
 
   it("renders the editor container", () => {
