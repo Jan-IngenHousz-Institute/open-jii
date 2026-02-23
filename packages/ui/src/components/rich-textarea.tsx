@@ -49,6 +49,13 @@ export function RichTextarea({
   useEffect(() => {
     if (!quill) return;
 
+    const toolbar = quill.getModule("toolbar") as any;
+
+    if (toolbar?.container) {
+      toolbar.container.addEventListener("mousedown", (e: MouseEvent) => {
+        e.preventDefault();
+      });
+    }
     // Set initial value if provided
     if (value && quill.root.innerHTML !== value) {
       quill.root.innerHTML = value;
