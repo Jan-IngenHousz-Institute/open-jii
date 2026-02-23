@@ -19,12 +19,6 @@ exports.handler = async (event) => {
   const { request } = event.Records[0].cf;
 
   try {
-    // Skip hash computation for PostHog ingest endpoints
-    // PostHog sends gzip-compressed data that shouldn't be modified
-    if (request.uri && request.uri.startsWith('/ingest')) {
-      return request;
-    }
-
     if (["POST","PUT","PATCH"].includes(request.method)) {
       const body = Buffer.from(request.body.data, request.body.encoding);
       const hash = createHash("sha256").update(body).digest("hex");
@@ -247,16 +241,13 @@ resource "aws_cloudfront_distribution" "distribution" {
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD"]
-    compress               = true
+    compress               = false # Don't compress - PostHog sends pre-compressed gzip data
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
 
-    lambda_function_association {
-      event_type   = "origin-request"
-      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
-      include_body = true
-    }
+    # No Lambda@Edge association - PostHog doesn't need SHA256 hashing
+    # and the edge function would corrupt the gzip-compressed payload
 
     function_association {
       event_type   = "viewer-request"
