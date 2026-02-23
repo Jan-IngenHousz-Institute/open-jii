@@ -4,6 +4,7 @@ import posthog from "posthog-js";
 import { useEffect } from "react";
 
 import { useSession } from "@repo/auth/client";
+
 import { useLocale } from "./useLocale";
 
 /**
@@ -38,7 +39,6 @@ export function usePostHogAuth() {
     }
   }, [session, locale]);
 }
-
 
 /**
  * Client component that calls the PostHog auth hook
