@@ -172,12 +172,36 @@ jobs:
 
       - name: Deploy to Amazon ECS
         id: deploy-ecs
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: backend-${{ env.ENV }}
           cluster: backend-cluster-${{ env.ENV }}
           wait-for-service-stability: true
+
+      - name: Verify ECS deployment status
+        id: verify-deployment
+        run: |
+          STATES=$(aws ecs describe-services \
+            --cluster backend-cluster-${{ env.ENV }} \
+            --services backend-${{ env.ENV }} \
+            --query 'services[0].deployments[?status==`PRIMARY`].rolloutState' \
+            --output text)
+
+          echo "Detected rollout states for PRIMARY deployment: $STATES"
+
+          if [[ -z "$STATES" ]]; then
+            echo "❌ No PRIMARY deployment found — deployment likely failed or rolled back."
+            exit 1
+          fi
+
+          if [[ "$STATES" != "COMPLETED" ]]; then
+            echo "❌ Deployment failed or rolled back: $STATES"
+            exit 1
+          fi
+
+          echo "✅ Deployment completed successfully: $STATES"
+          echo "success=true" >> $GITHUB_OUTPUT
 
       - name: Roll back to previous task definition
         if: failure() && env.PREV_TASK_DEFINITION_ARN != ''
@@ -212,7 +236,7 @@ jobs:
           echo "  Deployment Duration: ${DEPLOY_DURATION}s"
 
       - name: Publish DORA - Deployment Frequency
-        if: success()
+        if: always()
         uses: ./.github/actions/publish-dora-metric
         with:
           metric-name: 'DeploymentFrequency'

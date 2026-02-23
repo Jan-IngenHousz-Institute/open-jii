@@ -81,9 +81,11 @@ module "iot_core" {
 }
 
 module "cognito" {
-  source             = "../../modules/cognito"
-  region             = var.aws_region
-  identity_pool_name = "open-jii-${var.environment}-iot-identity-pool"
+  source                           = "../../modules/cognito"
+  region                           = var.aws_region
+  environment                      = var.environment
+  identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
+  allow_unauthenticated_identities = false
 }
 
 module "vpc" {
@@ -919,7 +921,7 @@ module "migration_runner_ecr" {
   service_name                  = "db-migration-runner"
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE"
+  image_tag_mutability          = "IMMUTABLE"
 
   #ci_cd_role_arn = module.iam_oidc.role_arn
 
@@ -1006,7 +1008,7 @@ module "backend_ecr" {
   max_image_count               = 10
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE"
+  image_tag_mutability          = "IMMUTABLE"
 
   #ci_cd_role_arn = module.iam_oidc.role_arn
 
@@ -1106,6 +1108,9 @@ module "backend_ecs" {
   # Logs configuration
   log_group_name     = "/aws/ecs/backend-service-${var.environment}"
   log_retention_days = 30
+
+  enable_cognito_policy     = true
+  cognito_identity_pool_arn = module.cognito.identity_pool_arn
 
   # Secrets configuration
   secrets = [
@@ -1256,6 +1261,14 @@ module "backend_ecs" {
     {
       name  = "AWS_REGION"
       value = var.aws_region
+    },
+    {
+      name  = "AWS_COGNITO_IDENTITY_POOL_ID"
+      value = module.cognito.identity_pool_id
+    },
+    {
+      name  = "AWS_COGNITO_DEVELOPER_PROVIDER_NAME"
+      value = module.cognito.developer_provider_name
     },
     {
       name  = "POSTHOG_KEY"
