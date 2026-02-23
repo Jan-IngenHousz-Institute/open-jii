@@ -37,8 +37,8 @@ export function MeasurementResult({
   const [showProcessed, setShowProcessed] = useState(false);
 
   const { result: processedMeasurement, error: processingError } = useAsync(async () => {
-    return await applyMacro(rawMeasurement, macro.code);
-  }, [rawMeasurement, macro.code]);
+    return await applyMacro(rawMeasurement, macro);
+  }, [rawMeasurement, macro]);
 
   const messageGroups: MacroMessageGroup[] =
     processedMeasurement
