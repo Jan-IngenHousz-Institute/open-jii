@@ -18,10 +18,69 @@ resource "aws_wafv2_web_acl" "main" {
     allow {}
   }
 
+  # Allow rule for excluded path prefixes (e.g. PostHog /ingest proxy)
+  # These paths proxy to third-party services and should not be evaluated by WAF
+  dynamic "rule" {
+    for_each = length(var.excluded_path_prefixes) > 0 ? [1] : []
+    content {
+      name     = "AllowExcludedPaths"
+      priority = 0
+
+      action {
+        allow {}
+      }
+
+      statement {
+        dynamic "or_statement" {
+          for_each = length(var.excluded_path_prefixes) >= 2 ? [1] : []
+          content {
+            dynamic "statement" {
+              for_each = var.excluded_path_prefixes
+              content {
+                byte_match_statement {
+                  search_string         = statement.value
+                  positional_constraint = "STARTS_WITH"
+                  field_to_match {
+                    uri_path {}
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "NONE"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        dynamic "byte_match_statement" {
+          for_each = length(var.excluded_path_prefixes) == 1 ? [var.excluded_path_prefixes[0]] : []
+          content {
+            search_string         = byte_match_statement.value
+            positional_constraint = "STARTS_WITH"
+            field_to_match {
+              uri_path {}
+            }
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "AllowExcludedPathsMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
   # Rule to block requests for sensitive paths like .git
   rule {
     name     = "BlockSensitivePaths"
-    priority = 0 # Highest priority to block these requests first
+    priority = 1
 
     action {
       block {}
@@ -53,7 +112,7 @@ resource "aws_wafv2_web_acl" "main" {
   # Maintained and updated by AWS security team - reduces management overhead
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
-    priority = 1
+    priority = 2
 
     # override_action "none" means apply all rules in the group as-is
     # Use "count" for monitoring mode without blocking
@@ -92,7 +151,7 @@ resource "aws_wafv2_web_acl" "main" {
   # Complements the Core Rule Set with additional threat intelligence
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 2
+    priority = 3
 
     override_action {
       none {}
@@ -117,7 +176,7 @@ resource "aws_wafv2_web_acl" "main" {
   # aggregate_key_type = "IP" means rate limit is per source IP address
   rule {
     name     = "RateLimitRule"
-    priority = 3
+    priority = 4
 
     action {
       block {} # Block requests that exceed the rate limit
@@ -149,7 +208,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.blocked_countries) > 0 ? [1] : []
     content {
       name     = "GeoBlockRule"
-      priority = 6
+      priority = 7
 
       action {
         block {}
@@ -175,7 +234,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
     content {
       name     = "AllowLargeBodyRule"
-      priority = 5 # Run after security checks but before geographic blocking
+      priority = 6 # Run after security checks but before geographic blocking
 
       action {
         allow {}

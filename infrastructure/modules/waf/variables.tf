@@ -75,3 +75,9 @@ variable "large_body_max_size" {
     error_message = "large_body_max_size must be less than or equal to 20GB (21474836480 bytes) due to CloudFront limits."
   }
 }
+
+variable "excluded_path_prefixes" {
+  description = "List of URI path prefixes to exclude from WAF evaluation (e.g. [\"/ingest\"] for PostHog proxy)"
+  type        = list(string)
+  default     = []
+}
