@@ -920,6 +920,15 @@ def raw_ambyte_data():
         .load(processed_path)
     )
     
+    path_experiment_id = F.regexp_extract(
+        F.col("_metadata.file_path"), r"data-imports/([^/]+)/processed-ambyte", 1
+    )
+
+    if "experiment_id" in df.columns:
+        df = df.withColumn("experiment_id", F.coalesce(F.col("experiment_id"), path_experiment_id))
+    else:
+        df = df.withColumn("experiment_id", path_experiment_id)
+    
     return (
         df
         .withColumn(
