@@ -76,8 +76,3 @@ variable "large_body_max_size" {
   }
 }
 
-variable "excluded_path_prefixes" {
-  description = "List of URI path prefixes to exclude from WAF evaluation (e.g. [\"/ingest\"] for PostHog proxy)"
-  type        = list(string)
-  default     = []
-}

@@ -837,8 +837,6 @@ module "opennext_waf" {
   rate_limit         = 500
   log_retention_days = 30
 
-  excluded_path_prefixes = ["/ingest"]
-
   tags = {
     Environment = var.environment
     Project     = "open-jii"
