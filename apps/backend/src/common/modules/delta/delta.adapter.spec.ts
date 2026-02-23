@@ -7,6 +7,8 @@ import { DeltaAdapter } from "./delta.adapter";
 describe("DeltaAdapter", () => {
   const testApp = TestHarness.App;
   const deltaEndpoint = process.env.DELTA_ENDPOINT || "https://delta.example.com";
+  const shareName = process.env.DELTA_SHARE_NAME || "open_jii_test";
+  const schemaName = process.env.DELTA_SCHEMA_NAME || "centrum";
 
   let deltaAdapter: DeltaAdapter;
 
@@ -33,8 +35,6 @@ describe("DeltaAdapter", () => {
     it("should successfully list tables for an experiment", async () => {
       const experimentName = "Test Experiment";
       const experimentId = "exp-123";
-      const shareName = "exp_test_experiment_exp-123";
-      const schemaName = "default";
 
       const mockTablesResponse = {
         items: [
@@ -69,23 +69,22 @@ describe("DeltaAdapter", () => {
       expect(result.value.tables[1].name).toBe("measurements");
     });
 
-    it("should handle experiment name with spaces", async () => {
+    it("should use configured share name regardless of experiment name", async () => {
       const experimentName = "My Test Experiment";
       const experimentId = "exp-456";
-      const expectedShareName = "exp_my_test_experiment_exp-456";
 
       const mockTablesResponse = {
         items: [
           {
             name: "data_table",
-            schema: "default",
-            share: expectedShareName,
+            schema: schemaName,
+            share: shareName,
           },
         ],
       };
 
       nock(deltaEndpoint)
-        .get(`/shares/${expectedShareName}/schemas/default/tables`)
+        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
         .reply(200, mockTablesResponse);
 
       const result = await deltaAdapter.listTables(experimentName, experimentId);
@@ -131,8 +130,6 @@ describe("DeltaAdapter", () => {
       const experimentName = "Test Experiment";
       const experimentId = "exp-123";
       const tableName = "sensor_data";
-      const shareName = "exp_test_experiment_exp-123";
-      const schemaName = "default";
 
       const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
 {"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{\\"type\\":\\"struct\\",\\"fields\\":[{\\"name\\":\\"id\\",\\"type\\":\\"integer\\",\\"nullable\\":false},{\\"name\\":\\"value\\",\\"type\\":\\"double\\",\\"nullable\\":true}]}","partitionColumns":[]}}
@@ -166,8 +163,6 @@ describe("DeltaAdapter", () => {
       const experimentName = "Test Experiment";
       const experimentId = "exp-123";
       const tableName = "sensor_data";
-      const shareName = "exp_test_experiment_exp-123";
-      const schemaName = "default";
 
       const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
 {"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{\\"type\\":\\"struct\\",\\"fields\\":[]}","partitionColumns":[]}}`;
@@ -204,8 +199,6 @@ describe("DeltaAdapter", () => {
       const experimentId = "exp-123";
       const tableName = "sensor_data";
       const columns = ["id", "value"];
-      const shareName = "exp_test_experiment_exp-123";
-      const schemaName = "default";
 
       const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
 {"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{\\"type\\":\\"struct\\",\\"fields\\":[{\\"name\\":\\"id\\",\\"type\\":\\"integer\\",\\"nullable\\":false},{\\"name\\":\\"value\\",\\"type\\":\\"double\\",\\"nullable\\":true},{\\"name\\":\\"timestamp\\",\\"type\\":\\"string\\",\\"nullable\\":true}]}","partitionColumns":[]}}`;
@@ -256,8 +249,6 @@ describe("DeltaAdapter", () => {
       const experimentName = "Test Experiment";
       const experimentId = "exp-123";
       const tableName = "sensor_data";
-      const shareName = "exp_test_experiment_exp-123";
-      const schemaName = "default";
 
       const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
 {"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{}","partitionColumns":[]}}
@@ -338,19 +329,19 @@ describe("DeltaAdapter", () => {
         items: [
           {
             name: "sensor_data",
-            schema: "default",
-            share: "exp_test_experiment_exp-123",
+            schema: schemaName,
+            share: shareName,
           },
           {
             name: "other_table",
-            schema: "default",
-            share: "exp_test_experiment_exp-123",
+            schema: schemaName,
+            share: shareName,
           },
         ],
       };
 
       nock(deltaEndpoint)
-        .get(/\/shares\/.*\/schemas\/.*\/tables/)
+        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
         .reply(200, mockTablesResponse);
 
       const result = await deltaAdapter.tableExists(experimentName, experimentId, tableName);
@@ -368,14 +359,14 @@ describe("DeltaAdapter", () => {
         items: [
           {
             name: "sensor_data",
-            schema: "default",
-            share: "exp_test_experiment_exp-123",
+            schema: schemaName,
+            share: shareName,
           },
         ],
       };
 
       nock(deltaEndpoint)
-        .get(/\/shares\/.*\/schemas\/.*\/tables/)
+        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
         .reply(200, mockTablesResponse);
 
       const result = await deltaAdapter.tableExists(experimentName, experimentId, tableName);
@@ -390,33 +381,12 @@ describe("DeltaAdapter", () => {
       const tableName = "sensor_data";
 
       nock(deltaEndpoint)
-        .get(/\/shares\/.*\/schemas\/.*\/tables/)
+        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
         .reply(403, { error: "Forbidden" });
 
       const result = await deltaAdapter.tableExists(experimentName, experimentId, tableName);
 
       assertFailure(result);
-    });
-  });
-
-  describe("buildShareSchema", () => {
-    it("should correctly build share name from experiment info", async () => {
-      const experimentName = "PhotoPhys Experiment";
-      const experimentId = "exp-abc-123";
-      const expectedShareName = "exp_photophys_experiment_exp-abc-123";
-
-      // Test indirectly through listTables
-      const mockTablesResponse = {
-        items: [],
-      };
-
-      nock(deltaEndpoint)
-        .get(`/shares/${expectedShareName}/schemas/default/tables`)
-        .reply(200, mockTablesResponse);
-
-      const result = await deltaAdapter.listTables(experimentName, experimentId);
-
-      assertSuccess(result);
     });
   });
 });

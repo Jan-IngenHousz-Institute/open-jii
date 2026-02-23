@@ -32,19 +32,6 @@ variable "sharing_code" {
   sensitive   = true
 }
 
-variable "allowed_ip_addresses" {
-  description = "Optional list of IP addresses (CIDR notation) that are allowed to access the share. Empty list means no restrictions."
-  type        = list(string)
-  default     = []
-
-  validation {
-    condition = alltrue([
-      for ip in var.allowed_ip_addresses : can(cidrhost(ip, 0))
-    ])
-    error_message = "Each IP address must be in valid CIDR notation (e.g., '192.168.1.0/24' or '10.0.0.1/32')."
-  }
-}
-
 variable "properties" {
   description = "Optional map of properties for the recipient. Used for metadata and custom attributes."
   type        = map(string)

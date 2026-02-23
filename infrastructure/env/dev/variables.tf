@@ -180,3 +180,4 @@ variable "grafana_auth_service_token" {
   type        = string
   sensitive   = true
 }
+

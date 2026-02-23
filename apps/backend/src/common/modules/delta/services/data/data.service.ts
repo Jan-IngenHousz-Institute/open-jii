@@ -56,46 +56,26 @@ export class DeltaDataService {
   ) {}
 
   /**
-   * Process Delta files and metadata to create SchemaData
-   * Downloads and parses Parquet files using hyparquet, preserving native data types
+   * Process Delta files and metadata to create SchemaData.
+   *
+   * Column metadata is derived from the first parquet file's real schema
+   * (same path as `readLocalParquetFile`) rather than from the Delta Sharing
+   * JSON `schemaString`, ensuring type names and variant detection are identical.
    */
   async processFiles(
     files: DeltaFile[],
-    metadata: DeltaMetadata,
+    _metadata: DeltaMetadata,
     limitHint?: number,
     options?: ParquetReadOptions,
   ): Promise<Result<SchemaData>> {
     try {
-      this.logger.debug(`Processing ${files.length} Delta files with metadata schema`);
+      this.logger.debug(`Processing ${files.length} Delta files`);
 
-      // Parse the schema string to get column information
-      const schema = JSON.parse(metadata.schemaString) as {
-        type: string;
-        fields: {
-          name: string;
-          type: string;
-          nullable: boolean;
-          metadata: Record<string, any>;
-        }[];
-      };
-
-      // Filter columns if requested
-      const requestedColumns = options?.columns;
-      const schemaFields = requestedColumns
-        ? schema.fields.filter((f) => requestedColumns.includes(f.name))
-        : schema.fields;
-
-      const columns = schemaFields.map((field, index) => ({
-        name: field.name,
-        type_name: field.type,
-        type_text: field.type,
-        position: index,
-      }));
-
-      // Download and parse all Parquet files
       const allRows: Record<string, unknown>[] = [];
       let totalRows = 0;
       let truncated = false;
+      let columns: { name: string; type_name: string; type_text: string; position: number }[] = [];
+      let columnsResolved = false;
 
       for (const file of files) {
         this.logger.debug(`Processing file: ${file.id}`);
@@ -106,7 +86,18 @@ export class DeltaDataService {
           continue; // Skip failed files but continue processing others
         }
 
-        const fileRows = fileResult.value;
+        const { rows: fileRows, schema: parquetSchema } = fileResult.value;
+
+        // Derive column metadata from the first successfully-parsed file
+        if (!columnsResolved) {
+          const allCols = this.extractTopLevelColumns(parquetSchema);
+          const requestedColumns = options?.columns;
+          columns = requestedColumns
+            ? allCols.filter((c) => requestedColumns.includes(c.name))
+            : allCols;
+          columnsResolved = true;
+        }
+
         allRows.push(...fileRows);
         totalRows += fileRows.length;
 
@@ -208,13 +199,15 @@ export class DeltaDataService {
   }
 
   /**
-   * Download and parse a single Parquet file using hyparquet
-   * Returns native Parquet data objects without type conversion
+   * Download and parse a single Parquet file using hyparquet.
+   * Returns the parsed rows **and** the raw parquet schema so the caller can
+   * derive column metadata from the real file rather than from the Delta
+   * Sharing JSON schemaString (which uses Spark type names).
    */
   private async downloadAndParseParquetFile(
     file: DeltaFile,
     options?: ParquetReadOptions,
-  ): Promise<Result<Record<string, unknown>[]>> {
+  ): Promise<Result<{ rows: Record<string, unknown>[]; schema: ParquetSchemaNode[] }>> {
     try {
       this.logger.debug(`Downloading and parsing file: ${file.id} from ${file.url}`);
 
@@ -226,8 +219,13 @@ export class DeltaDataService {
 
       const arrayBuffer = response.data as ArrayBuffer;
 
-      const { parquetReadObjects } = await import("hyparquet");
+      const { parquetReadObjects, parquetMetadata } = await import("hyparquet");
       const { compressors } = await import("hyparquet-compressors");
+
+      const fileMeta = parquetMetadata(arrayBuffer) as {
+        schema: ParquetSchemaNode[];
+        num_rows: bigint;
+      };
 
       // Parse Parquet file using hyparquet with compressors and column selection
       const objects = (await parquetReadObjects({
@@ -242,21 +240,14 @@ export class DeltaDataService {
 
       this.logger.debug(`Successfully parsed file ${file.id}: ${objects.length} rows`);
 
-      // Best-effort variant decoding for remote files
-      try {
-        const { parquetMetadata } = await import("hyparquet");
-        const fileMeta = parquetMetadata(arrayBuffer) as { schema: ParquetSchemaNode[] };
-        const variantCols = this.detectVariantColumns(fileMeta.schema);
-        if (variantCols.size > 0) {
-          await this.decodeVariantRows(objects, variantCols);
-        }
-        // Convert remaining Uint8Array fields to strings
-        this.convertBytesToStrings(objects);
-      } catch {
-        // Non-critical: variant columns will stay as raw bytes
+      // Variant detection + decode + byte conversion
+      const variantCols = this.detectVariantColumns(fileMeta.schema);
+      if (variantCols.size > 0) {
+        await this.decodeVariantRows(objects, variantCols);
       }
+      this.convertBytesToStrings(objects);
 
-      return success(objects);
+      return success({ rows: objects, schema: fileMeta.schema });
     } catch (error) {
       this.logger.error(`Failed to download/parse file ${file.id}:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);

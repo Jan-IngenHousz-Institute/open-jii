@@ -179,3 +179,4 @@ variable "posthog_host" {
   type        = string
   default     = "https://eu.i.posthog.com"
 }
+

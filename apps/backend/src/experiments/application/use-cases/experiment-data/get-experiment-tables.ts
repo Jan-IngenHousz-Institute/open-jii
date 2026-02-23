@@ -5,8 +5,8 @@ import { ExperimentTableName } from "@repo/api";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { DELTA_PORT } from "../../../core/ports/delta.port";
+import type { DeltaPort } from "../../../core/ports/delta.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 export interface TableMetadataDto {
@@ -31,7 +31,7 @@ export class GetExperimentTablesUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    @Inject(DELTA_PORT) private readonly deltaPort: DeltaPort,
   ) {
     // Initialize table properties using logical table names from ExperimentTableName
     this.tableProperties = {
@@ -92,42 +92,39 @@ export class GetExperimentTablesUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-          includeSchemas: false,
-        });
+        const tablesResult = await this.deltaPort.listTables(experiment.name, experimentId);
 
-        if (metadataResult.isFailure()) {
+        if (tablesResult.isFailure()) {
           this.logger.error({
-            msg: "Failed to get experiment table metadata",
+            msg: "Failed to list experiment tables",
             operation: "getExperimentTables",
             experimentId,
-            error: metadataResult.error.message,
+            error: tablesResult.error.message,
           });
           return failure(AppError.internal("Failed to retrieve table metadata"));
         }
 
-        const tables = metadataResult.value.map(({ tableName, rowCount }) => {
-          const isKnownTable = tableName in this.tableProperties;
-          const properties = this.tableProperties[tableName];
+        const tables: TableMetadataDto[] = [];
 
-          if (isKnownTable) {
-            return {
-              name: tableName,
-              displayName: properties.displayName,
-              totalRows: rowCount,
-              defaultSortColumn: properties.defaultSortColumn,
-              errorColumn: properties.errorColumn,
-            };
-          }
+        for (const table of tablesResult.value.tables) {
+          const rowCountResult = await this.deltaPort.getTableRowCount(
+            experiment.name,
+            experimentId,
+            table.name,
+          );
+          const totalRows = rowCountResult.isSuccess() ? rowCountResult.value : 0;
 
-          return {
-            name: tableName,
-            displayName: `Processed Data (${tableName})`,
-            totalRows: rowCount,
-            defaultSortColumn: "timestamp",
-            errorColumn: "macro_error",
-          };
-        });
+          const isKnownTable = table.name in this.tableProperties;
+          const properties = this.tableProperties[table.name];
+
+          tables.push({
+            name: table.name,
+            displayName: isKnownTable ? properties.displayName : `Processed Data (${table.name})`,
+            totalRows,
+            defaultSortColumn: isKnownTable ? properties.defaultSortColumn : "timestamp",
+            errorColumn: isKnownTable ? properties.errorColumn : "macro_error",
+          });
+        }
 
         return success(tables);
       },

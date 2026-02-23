@@ -4,6 +4,7 @@ import type { DeltaPort } from "../../../experiments/core/ports/delta.port";
 import { Result, success, failure } from "../../utils/fp-utils";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
 import type { ListTablesResponse } from "../databricks/services/tables/tables.types";
+import { DeltaConfigService } from "./services/config/config.service";
 import { DeltaDataService } from "./services/data/data.service";
 import { DeltaSharesService } from "./services/shares/shares.service";
 import type { Table } from "./services/shares/shares.types";
@@ -14,6 +15,7 @@ export class DeltaAdapter implements DeltaPort {
   private readonly logger = new Logger(DeltaAdapter.name);
 
   constructor(
+    private readonly configService: DeltaConfigService,
     private readonly sharesService: DeltaSharesService,
     private readonly tablesService: DeltaTablesService,
     private readonly dataService: DeltaDataService,
@@ -21,13 +23,14 @@ export class DeltaAdapter implements DeltaPort {
 
   /**
    * List tables available for an experiment using Delta Sharing
-   * Maps experiment to share/schema and lists tables
+   * Uses the configured share and centrum schema
    */
   async listTables(
     experimentName: string,
     experimentId: string,
   ): Promise<Result<ListTablesResponse>> {
-    const { shareName, schemaName } = this.buildShareSchema(experimentName, experimentId);
+    const shareName = this.configService.getShareName();
+    const schemaName = this.configService.getSchemaName();
 
     this.logger.debug(
       `Listing tables for experiment ${experimentId} using share: ${shareName}.${schemaName}`,
@@ -63,32 +66,40 @@ export class DeltaAdapter implements DeltaPort {
     page = 1,
     pageSize = 100,
   ): Promise<Result<SchemaData>> {
-    const { shareName, schemaName } = this.buildShareSchema(experimentName, experimentId);
+    const shareName = this.configService.getShareName();
+    const schemaName = this.configService.getSchemaName();
 
     this.logger.debug(
       `Getting table data for ${tableName} in experiment ${experimentId} (page ${page}, size ${pageSize})`,
     );
 
-    // Apply pagination using limitHint (best effort)
-    const limitHint = pageSize;
-
-    const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {
-      limitHint,
-    });
+    // Query all files to get accurate total row count
+    const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {});
 
     if (queryResult.isFailure()) {
       return failure(queryResult.error);
     }
 
+    const allFiles = queryResult.value.files;
+    const estimatedTotal = this.dataService.estimateTotalRows(allFiles);
+
     // Apply client-side pagination using file selection
-    const selectedFiles = this.dataService.applyLimitHint(queryResult.value.files, limitHint);
+    const selectedFiles = this.dataService.applyLimitHint(allFiles, pageSize);
 
     // Process the files to create SchemaData
-    return await this.dataService.processFiles(
+    const result = await this.dataService.processFiles(
       selectedFiles,
       queryResult.value.metadata,
-      limitHint,
+      pageSize,
     );
+
+    // Fix totalRows to reflect the full table, not just the returned page
+    if (result.isSuccess()) {
+      result.value.totalRows = estimatedTotal;
+      result.value.truncated = estimatedTotal > result.value.rows.length;
+    }
+
+    return result;
   }
 
   /**
@@ -100,7 +111,8 @@ export class DeltaAdapter implements DeltaPort {
     tableName: string,
     columns: string[],
   ): Promise<Result<SchemaData>> {
-    const { shareName, schemaName } = this.buildShareSchema(experimentName, experimentId);
+    const shareName = this.configService.getShareName();
+    const schemaName = this.configService.getSchemaName();
 
     this.logger.debug(
       `Getting columns [${columns.join(", ")}] from table ${tableName} in experiment ${experimentId}`,
@@ -130,7 +142,8 @@ export class DeltaAdapter implements DeltaPort {
     experimentId: string,
     tableName: string,
   ): Promise<Result<number>> {
-    const { shareName, schemaName } = this.buildShareSchema(experimentName, experimentId);
+    const shareName = this.configService.getShareName();
+    const schemaName = this.configService.getSchemaName();
 
     this.logger.debug(`Getting row count for table ${tableName} in experiment ${experimentId}`);
 
@@ -161,20 +174,5 @@ export class DeltaAdapter implements DeltaPort {
 
     const exists = tablesResult.value.tables.some((table) => table.name === tableName);
     return success(exists);
-  }
-
-  /**
-   * Build share and schema names from experiment information
-   * Following the pattern: share = exp_{experimentName}_{experimentId}, schema = default
-   */
-  private buildShareSchema(
-    experimentName: string,
-    experimentId: string,
-  ): { shareName: string; schemaName: string } {
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const shareName = `exp_${cleanName}_${experimentId}`;
-    const schemaName = "default"; // Use default schema for simplicity
-
-    return { shareName, schemaName };
   }
 }

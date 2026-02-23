@@ -44,6 +44,11 @@ module "databricks_metastore" {
   # Workspace IDs derived from workspaces map
   workspace_ids = [for ws in var.workspaces : ws.workspace_id]
 
+  # Enable Delta Sharing for external recipients (backend service)
+  delta_sharing_scope                                = "INTERNAL_AND_EXTERNAL"
+  delta_sharing_recipient_token_lifetime_in_seconds  = 0 # No expiry — tokens managed via rotation
+  delta_sharing_organization_name                    = "open-jii"
+
   providers = {
     databricks.mws = databricks.mws
   }

@@ -26,27 +26,21 @@ variable "comment" {
 
 variable "schemas" {
   description = <<-EOT
-    List of schemas to include in the share initially. Each schema will share all tables, views, and volumes within it.
-    
-    Note: Additional schemas can be added programmatically at runtime (e.g., experiment schemas).
-    This list should contain schemas that are known at Terraform plan time (e.g., 'central').
-    
+    List of schemas to include in the share. Each schema will share all tables, views, and volumes within it.
+    Once a schema is shared, all future tables in that schema are automatically visible to recipients.
+
     Required:
     - name: Schema name within the catalog
-    
+
     Optional:
     - comment: Description of what's being shared from this schema
-    
-    Dynamic Updates:
-    - Once a schema is shared, all future tables in that schema are automatically visible to recipients
-    - New schemas can be added via Databricks SDK without Terraform reapplication
   EOT
   type = list(object({
     name    = string
     comment = optional(string)
   }))
-  
-  default = []  # Allow empty list - schemas can be added programmatically
+
+  default = []
 
   validation {
     condition = alltrue([

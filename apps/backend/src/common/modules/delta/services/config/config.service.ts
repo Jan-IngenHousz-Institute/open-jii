@@ -4,6 +4,8 @@ import { ConfigService } from "@nestjs/config";
 interface DeltaConfig {
   endpoint: string;
   bearerToken: string;
+  shareName: string;
+  schemaName: string;
   requestTimeout: number;
   maxRetries: number;
 }
@@ -29,6 +31,8 @@ export class DeltaConfigService {
 
     const endpoint = this.configService.get<string>("delta.endpoint");
     const bearerToken = this.configService.get<string>("delta.bearerToken");
+    const shareName = this.configService.get<string>("delta.shareName");
+    const schemaName = this.configService.get<string>("delta.schemaName");
     const requestTimeoutStr = this.configService.get<string>("delta.requestTimeout");
     const maxRetriesStr = this.configService.get<string>("delta.maxRetries");
 
@@ -53,6 +57,8 @@ export class DeltaConfigService {
     return {
       endpoint: endpoint ?? "",
       bearerToken: bearerToken ?? "",
+      shareName: shareName ?? "",
+      schemaName: schemaName ?? "centrum",
       requestTimeout,
       maxRetries,
     };
@@ -62,10 +68,10 @@ export class DeltaConfigService {
    * Validates the loaded configuration
    */
   private validateConfig(): void {
-    if (!this.config.endpoint || !this.config.bearerToken) {
+    if (!this.config.endpoint || !this.config.bearerToken || !this.config.shareName) {
       this.logger.error("Invalid Delta Sharing configuration");
       throw new Error(
-        "Invalid Delta Sharing configuration: DELTA_ENDPOINT and DELTA_BEARER_TOKEN are required",
+        "Invalid Delta Sharing configuration: DELTA_ENDPOINT, DELTA_BEARER_TOKEN, and DELTA_SHARE_NAME are required",
       );
     }
     this.logger.debug("Delta Sharing configuration validated successfully");
@@ -100,5 +106,19 @@ export class DeltaConfigService {
    */
   getMaxRetries(): number {
     return this.config.maxRetries;
+  }
+
+  /**
+   * Get the Delta Sharing share name (e.g. "open_jii_dev")
+   */
+  getShareName(): string {
+    return this.config.shareName;
+  }
+
+  /**
+   * Get the schema name within the share (e.g. "centrum")
+   */
+  getSchemaName(): string {
+    return this.config.schemaName;
   }
 }

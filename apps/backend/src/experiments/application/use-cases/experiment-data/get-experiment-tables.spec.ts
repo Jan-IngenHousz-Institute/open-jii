@@ -10,15 +10,15 @@ import {
   assertFailure,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import type { DeltaPort } from "../../../core/ports/delta.port";
+import { DELTA_PORT } from "../../../core/ports/delta.port";
 import { GetExperimentTablesUseCase } from "./get-experiment-tables";
 
 describe("GetExperimentTablesUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: GetExperimentTablesUseCase;
-  let databricksPort: DatabricksPort;
+  let deltaPort: DeltaPort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -28,7 +28,7 @@ describe("GetExperimentTablesUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(GetExperimentTablesUseCase);
-    databricksPort = testApp.module.get(DATABRICKS_PORT);
+    deltaPort = testApp.module.get(DELTA_PORT);
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
@@ -50,16 +50,39 @@ describe("GetExperimentTablesUseCase", () => {
         userId: testUserId,
       });
 
-      // Mock getExperimentTableMetadata response
-      const mockMetadata = [
-        { tableName: ExperimentTableName.RAW_DATA, rowCount: 100 },
-        { tableName: ExperimentTableName.DEVICE, rowCount: 50 },
-        { tableName: "some_macro", rowCount: 25 },
-      ];
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
+      // Mock Delta Sharing responses
+      vi.spyOn(deltaPort, "listTables").mockResolvedValue(
+        success({
+          tables: [
+            {
+              name: ExperimentTableName.RAW_DATA,
+              catalog_name: "",
+              schema_name: "default",
+              table_type: "TABLE",
+              created_at: Date.now(),
+            },
+            {
+              name: ExperimentTableName.DEVICE,
+              catalog_name: "",
+              schema_name: "default",
+              table_type: "TABLE",
+              created_at: Date.now(),
+            },
+            {
+              name: "some_macro",
+              catalog_name: "",
+              schema_name: "default",
+              table_type: "TABLE",
+              created_at: Date.now(),
+            },
+          ],
+        }),
       );
+
+      vi.spyOn(deltaPort, "getTableRowCount")
+        .mockResolvedValueOnce(success(100))
+        .mockResolvedValueOnce(success(50))
+        .mockResolvedValueOnce(success(25));
 
       // Execute the use case
       const result = await useCase.execute(experiment.id, testUserId);
@@ -93,11 +116,9 @@ describe("GetExperimentTablesUseCase", () => {
         },
       ]);
 
-      // Verify Databricks adapter calls
+      // Verify Delta port calls
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksPort.getExperimentTableMetadata).toHaveBeenCalledWith(experiment.id, {
-        includeSchemas: false,
-      });
+      expect(deltaPort.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
     });
 
     it("should return not found error when experiment does not exist", async () => {
@@ -135,11 +156,21 @@ describe("GetExperimentTablesUseCase", () => {
         visibility: "public",
       });
 
-      const mockMetadata = [{ tableName: ExperimentTableName.RAW_DATA, rowCount: 100 }];
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
+      vi.spyOn(deltaPort, "listTables").mockResolvedValue(
+        success({
+          tables: [
+            {
+              name: ExperimentTableName.RAW_DATA,
+              catalog_name: "",
+              schema_name: "default",
+              table_type: "TABLE",
+              created_at: Date.now(),
+            },
+          ],
+        }),
       );
+
+      vi.spyOn(deltaPort, "getTableRowCount").mockResolvedValue(success(100));
 
       const result = await useCase.execute(experiment.id, testUserId);
 
@@ -148,13 +179,13 @@ describe("GetExperimentTablesUseCase", () => {
       expect(result.value).toHaveLength(1);
     });
 
-    it("should handle getExperimentTableMetadata failure", async () => {
+    it("should handle listTables failure", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
         userId: testUserId,
       });
 
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+      vi.spyOn(deltaPort, "listTables").mockResolvedValue(
         failure(AppError.internal("Failed to fetch metadata")),
       );
 
@@ -172,7 +203,7 @@ describe("GetExperimentTablesUseCase", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
+      vi.spyOn(deltaPort, "listTables").mockResolvedValue(success({ tables: [] }));
 
       const result = await useCase.execute(experiment.id, testUserId);
 

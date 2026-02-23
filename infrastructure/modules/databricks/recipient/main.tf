@@ -20,14 +20,9 @@ resource "databricks_recipient" "this" {
   # Optional sharing code for recipient activation
   sharing_code = var.sharing_code
 
-  # Optional IP access list for additional security
-  ip_access_list {
-    allowed_ip_addresses = var.allowed_ip_addresses
-  }
-
   # Optional recipient properties for metadata
   dynamic "properties_kvpairs" {
-    for_each = var.properties
+    for_each = length(var.properties) > 0 ? [var.properties] : []
     content {
       properties = properties_kvpairs.value
     }

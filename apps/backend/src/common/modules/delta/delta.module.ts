@@ -2,7 +2,6 @@ import { HttpModule } from "@nestjs/axios";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
-import { DeltaMockController } from "./delta-mock.controller";
 import { DeltaAdapter } from "./delta.adapter";
 import { DeltaConfigService } from "./services/config/config.service";
 import { DeltaDataService } from "./services/data/data.service";
@@ -11,7 +10,6 @@ import { DeltaTablesService } from "./services/tables/tables.service";
 
 @Module({
   imports: [HttpModule, ConfigModule],
-  controllers: [DeltaMockController],
   providers: [
     DeltaConfigService,
     DeltaSharesService,
