@@ -61,12 +61,12 @@ graph LR
 module "flow_logs" {
   source = "../vpc-flow-logs"
 
-  name_prefix       = "macro-runner"
+  name_prefix       = "macro-sandbox"
   environment       = var.environment
   subnet_ids        = var.isolated_subnet_ids
   retention_in_days = 14
 
-  tags = { Component = "macro-runner" }
+  tags = { Component = "macro-sandbox" }
 }
 
 # Feed into a metric filter for alerting
@@ -81,7 +81,7 @@ resource "aws_cloudwatch_log_metric_filter" "rejected" {
 
 | Name                       | Description                                      | Type           | Default | Required |
 | -------------------------- | ------------------------------------------------ | -------------- | ------- | :------: |
-| `name_prefix`              | Prefix for resource names (e.g., `macro-runner`) | `string`       | —       |  ✅ Yes  |
+| `name_prefix`              | Prefix for resource names (e.g., `macro-sandbox`) | `string`       | —       |  ✅ Yes  |
 | `environment`              | Environment name (e.g., dev, staging, prod)      | `string`       | —       |  ✅ Yes  |
 | `subnet_ids`               | Subnet IDs to attach flow logs to                | `list(string)` | —       |  ✅ Yes  |
 | `retention_in_days`        | CloudWatch log retention (days)                  | `number`       | `14`    |  ❌ No   |

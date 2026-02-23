@@ -34,7 +34,7 @@ graph TB
     SG -->|"HTTPS only"| VPCE["VPC Endpoints<br/>CloudWatch Logs / ECR"]
     SG -.-x|"❌ blocked"| INTERNET["🌐 Internet"]
 
-    FN -->|"writes logs"| CW["📋 CloudWatch Log Group<br/>/aws/lambda/macro-runner-{lang}-{env}"]
+    FN -->|"writes logs"| CW["📋 CloudWatch Log Group<br/>/aws/lambda/macro-sandbox-{lang}-{env}"]
     FLOWLOGS["📊 VPC Flow Logs"] -->|"pattern: REJECT"| METRIC["📈 Rejected Traffic<br/>Metric Filter"]
 
     style ISOLATED fill:#fce4e4,stroke:#a94442,stroke-width:2px,color:#333
@@ -61,7 +61,7 @@ graph TB
 | Resource                                                                                                                                                     | Description                                                | Docs                                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | [`aws_iam_role`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                                       | Shared Lambda execution role with 4 inline policies        | [Lambda Execution Role](https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html) |
-| [`aws_cloudwatch_log_group`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group)                               | One per language (`/aws/lambda/macro-runner-{lang}-{env}`) | [CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/)                           |
+| [`aws_cloudwatch_log_group`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group)                               | One per language (`/aws/lambda/macro-sandbox-{lang}-{env}`) | [CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/)                           |
 | [`aws_lambda_function`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function)                                         | Container-image Lambda, one per language                   | [Lambda Container Images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)             |
 | [`aws_lambda_function_event_invoke_config`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function_event_invoke_config) | Zero retries, 60s max event age                            | [Async Invocation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html)                 |
 | [`aws_iam_policy`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy)                                                   | Consumer policy granting `lambda:InvokeFunction`           | [IAM Policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)                  |
@@ -69,7 +69,7 @@ graph TB
 
 ## ⚙️ Usage
 
-This module is not called directly — it is composed by the [`macro-runner`](../macro-runner) module, which creates ECR repositories and injects their URLs/ARNs:
+This module is not called directly — it is composed by the [`macro-sandbox`](../macro-sandbox) module, which creates ECR repositories and injects their URLs/ARNs:
 
 ```hcl
 module "lambda" {

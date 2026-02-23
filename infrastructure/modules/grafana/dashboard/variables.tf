@@ -69,8 +69,8 @@ variable "iot_log_group_name" {
   default     = "AWSIotLogsV2"
 }
 
-variable "macro_runner_function_names" {
-  description = "Lambda function names for macro-runner, keyed by language (python, javascript, r)"
+variable "macro_sandbox_function_names" {
+  description = "Lambda function names for macro-sandbox, keyed by language (python, javascript, r)"
   type        = map(string)
   default     = {}
 }

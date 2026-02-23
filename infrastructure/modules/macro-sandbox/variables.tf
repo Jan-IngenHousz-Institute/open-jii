@@ -19,7 +19,7 @@ variable "isolated_subnet_ids" {
 }
 
 variable "lambda_sg_id" {
-  description = "Security group ID for macro-runner Lambda functions (created by VPC module)"
+  description = "Security group ID for macro-sandbox Lambda functions (created by VPC module)"
   type        = string
 }
 
