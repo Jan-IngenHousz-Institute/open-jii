@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { DateTime } from "luxon";
 import React, { useRef, useState } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
@@ -38,7 +39,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";
 
-  const analysisTimestampRef = useRef<string>(new Date().toISOString());
+  // Local time with offset (plant timezone) for display and backend
+  const analysisTimestampRef = useRef<string>(DateTime.now().toISO() ?? "");
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
   const [commentModalVisible, setCommentModalVisible] = useState(false);
