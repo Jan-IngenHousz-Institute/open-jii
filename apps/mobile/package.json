@@ -16,7 +16,7 @@
     "postinstall": "cd ../../packages/api && pnpm run build && cd - &&  cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd -"
   },
   "dependencies": {
-    "@aws-sdk/client-cognito-identity": "^3.806.0",
+    "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
