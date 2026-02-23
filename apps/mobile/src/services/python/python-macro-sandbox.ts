@@ -26,13 +26,22 @@ export const pythonMacroSandboxHtml = `
 
   async function runMacro(requestId, code, json) {
     try {
+      var resultHolder = {};
+      pyodide.globals.set('__result_holder__', resultHolder);
       var jsonB64 = btoa(unescape(encodeURIComponent(JSON.stringify(json))));
       var wrapped =
         'import base64, json\\n' +
         '__json_input__ = json.loads(base64.b64decode("' + jsonB64 + '").decode("utf-8"))\\n' +
-        'def __macro__(json):\\n' + indent(code) + '\\n\\n__result__ = __macro__(__json_input__)\\n';
-      var result = await pyodide.runPythonAsync(wrapped);
-      var jsResult = result && result.toJs ? result.toJs() : result;
+        'def __macro__(json):\\n' + indent(code) + '\\n\\n' +
+        '__result__ = __macro__(__json_input__)\\n' +
+        '__result_holder__.result = json.dumps(__result__)\\n';
+      await pyodide.runPythonAsync(wrapped);
+      var raw = resultHolder.result;
+      var str = (typeof raw === 'string') ? raw : (raw != null ? String(raw) : '');
+      var jsResult = {};
+      if (str) {
+        try { jsResult = JSON.parse(str); } catch (e) {}
+      }
       send({ requestId: requestId, result: jsResult });
     } catch (err) {
       send({ requestId: requestId, error: err.message || String(err) });

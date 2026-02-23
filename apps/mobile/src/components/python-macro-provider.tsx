@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { View } from "react-native";
 import WebView from "react-native-webview";
-import { registerPythonMacroRunner } from "~/utils/process-scan/python-macro-runner";
-import type { MacroOutput } from "~/utils/process-scan/process-scan";
 import { pythonMacroSandboxHtml } from "~/services/python/python-macro-sandbox";
+import type { MacroOutput } from "~/utils/process-scan/process-scan";
+import { registerPythonMacroRunner } from "~/utils/process-scan/python-macro-runner";
 
-type Pending = { resolve: (value: MacroOutput) => void; reject: (err: Error) => void };
+interface Pending {
+  resolve: (value: MacroOutput) => void;
+  reject: (err: Error) => void;
+}
 
 export function PythonMacroProvider({ children }: { children: React.ReactNode }) {
   const pendingRef = useRef<Map<string, Pending>>(new Map());
@@ -19,7 +22,7 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
       const payload = { requestId, code, json };
       const msg = JSON.stringify(payload);
       webViewRef.current?.injectJavaScript(
-        `window.postMessage(${JSON.stringify(msg)}, '*'); true;`
+        `window.postMessage(${JSON.stringify(msg)}, '*'); true;`,
       );
     });
   }, []);

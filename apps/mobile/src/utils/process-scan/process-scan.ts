@@ -1,8 +1,8 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
 
-import { getPythonMacroRunner } from "./python-macro-runner";
 import mathLibResource from "./math.lib.js.txt";
+import { getPythonMacroRunner } from "./python-macro-runner";
 
 interface MacroOutputMessages {
   messages?: {
