@@ -148,9 +148,9 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     const config = this.awsConfigService.lambdaConfig;
 
     const functionNameMap: Record<string, string> = {
-      python: config.macroRunnerPythonFunctionName,
-      javascript: config.macroRunnerJavascriptFunctionName,
-      r: config.macroRunnerRFunctionName,
+      python: config.macroSandboxPythonFunctionName,
+      javascript: config.macroSandboxJavascriptFunctionName,
+      r: config.macroSandboxRFunctionName,
     };
 
     const functionName = functionNameMap[language];

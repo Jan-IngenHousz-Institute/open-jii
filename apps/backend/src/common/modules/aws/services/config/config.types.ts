@@ -6,9 +6,9 @@ export interface AwsConfig {
   cognitoIdentityPoolId: string;
   cognitoDeveloperProviderName: string;
   lambda: {
-    macroRunnerPythonFunctionName: string;
-    macroRunnerJavascriptFunctionName: string;
-    macroRunnerRFunctionName: string;
+    macroSandboxPythonFunctionName: string;
+    macroSandboxJavascriptFunctionName: string;
+    macroSandboxRFunctionName: string;
   };
 }
 
@@ -18,8 +18,8 @@ export const awsConfigSchema = z.object({
   cognitoIdentityPoolId: z.string().min(1),
   cognitoDeveloperProviderName: z.string().min(1),
   lambda: z.object({
-    macroRunnerPythonFunctionName: z.string().min(1),
-    macroRunnerJavascriptFunctionName: z.string().min(1),
-    macroRunnerRFunctionName: z.string().min(1),
+    macroSandboxPythonFunctionName: z.string().min(1),
+    macroSandboxJavascriptFunctionName: z.string().min(1),
+    macroSandboxRFunctionName: z.string().min(1),
   }),
 });
