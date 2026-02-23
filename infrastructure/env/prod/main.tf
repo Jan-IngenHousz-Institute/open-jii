@@ -516,7 +516,7 @@ module "data_export_job" {
     {
       environment_key = "ambyte_processing"
       spec = {
-        environment_version = "1"
+        environment_version = "4"
         dependencies = [
           "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl"
         ]
@@ -637,7 +637,7 @@ module "data_export_job" {
     {
       environment_key = "data_exporting"
       spec = {
-        environment_version = "1"
+        environment_version = "4"
         dependencies = [
           "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
         ]
