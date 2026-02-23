@@ -1,5 +1,5 @@
 variable "name_prefix" {
-  description = "Prefix for resource names (e.g., 'macro-runner')"
+  description = "Prefix for resource names (e.g., 'macro-sandbox')"
   type        = string
 }
 

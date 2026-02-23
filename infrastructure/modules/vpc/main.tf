@@ -225,47 +225,47 @@ resource "aws_security_group_rule" "server_lambda_to_aurora" {
 }
 
 # -------------------------
-# Macro Runner Lambda Security Group
+# Macro Sandbox Lambda Security Group
 # -------------------------
 # No inbound (Lambda doesn't receive connections).
 # Outbound: HTTPS to VPC CIDR only (for ECR API, ECR DKR, and CloudWatch Logs VPC endpoints).
-resource "aws_security_group" "macro_runner_lambda" {
-  count = var.create_macro_runner_resources ? 1 : 0
+resource "aws_security_group" "macro_sandbox_lambda" {
+  count = var.create_macro_sandbox_resources ? 1 : 0
 
-  name        = "${var.environment}-macro-runner-lambda-sg"
+  name        = "${var.environment}-macro-sandbox-lambda-sg"
   description = "Lambda macro execution — no inbound, HTTPS to VPC endpoints only"
   vpc_id      = aws_vpc.this.id
 
   tags = merge(var.tags, {
-    Name     = "${var.environment}-macro-runner-lambda-sg"
+    Name     = "${var.environment}-macro-sandbox-lambda-sg"
     Security = "isolated"
   })
 }
 
 # Egress: HTTPS to VPC CIDR (ECR API, ECR DKR, CloudWatch Logs VPC endpoints)
-resource "aws_security_group_rule" "macro_runner_lambda_egress" {
-  count = var.create_macro_runner_resources ? 1 : 0
+resource "aws_security_group_rule" "macro_sandbox_lambda_egress" {
+  count = var.create_macro_sandbox_resources ? 1 : 0
 
   type              = "egress"
   from_port         = 443
   to_port           = 443
   protocol          = "tcp"
   cidr_blocks       = [aws_vpc.this.cidr_block]
-  security_group_id = aws_security_group.macro_runner_lambda[0].id
+  security_group_id = aws_security_group.macro_sandbox_lambda[0].id
   description       = "HTTPS to VPC endpoints (ECR API, ECR DKR, CloudWatch Logs)"
 }
 
-# Allow macro-runner Lambda to reach Interface VPC endpoint ENIs (default SG)
-resource "aws_security_group_rule" "vpc_endpoint_ingress_from_macro_runner" {
-  count = var.create_macro_runner_resources ? 1 : 0
+# Allow macro-sandbox Lambda to reach Interface VPC endpoint ENIs (default SG)
+resource "aws_security_group_rule" "vpc_endpoint_ingress_from_macro_sandbox" {
+  count = var.create_macro_sandbox_resources ? 1 : 0
 
   type                     = "ingress"
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.macro_runner_lambda[0].id
+  source_security_group_id = aws_security_group.macro_sandbox_lambda[0].id
   security_group_id        = aws_security_group.default.id
-  description              = "Allow Lambda macro-runner to reach VPC endpoints"
+  description              = "Allow Lambda macro-sandbox to reach VPC endpoints"
 }
 
 # ---------------

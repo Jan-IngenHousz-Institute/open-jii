@@ -71,8 +71,8 @@ variable "create_lambda_resources" {
   default     = true
 }
 
-variable "create_macro_runner_resources" {
-  description = "Whether to create macro-runner Lambda security group and rules"
+variable "create_macro_sandbox_resources" {
+  description = "Whether to create macro-sandbox Lambda security group and rules"
   type        = bool
   default     = true
 }

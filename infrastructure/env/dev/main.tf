@@ -110,14 +110,14 @@ module "vpc_endpoints" {
   create_logs_endpoint     = true
 }
 
-module "macro_runner" {
-  source = "../../modules/macro-runner"
+module "macro_sandbox" {
+  source = "../../modules/macro-sandbox"
 
   aws_region          = var.aws_region
   environment         = var.environment
   ci_cd_role_arn      = module.iam_oidc.role_arn
   isolated_subnet_ids = module.vpc.isolated_subnets
-  lambda_sg_id        = module.vpc.macro_runner_lambda_security_group_id
+  lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
 
   languages = {
     python = { memory = 1024, timeout = 65 }
@@ -1348,7 +1348,7 @@ module "backend_ecs" {
   # Additional IAM policies for the task role
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn,
-    module.macro_runner.invoke_policy_arn,
+    module.macro_sandbox.invoke_policy_arn,
   ]
 
   tags = {
@@ -1668,7 +1668,7 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
-  macro_runner_function_names = module.macro_runner.function_names
+  macro_sandbox_function_names = module.macro_sandbox.function_names
 
   providers = {
     grafana.amg = grafana.amg

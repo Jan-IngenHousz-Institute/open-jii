@@ -4,6 +4,6 @@ output "function_names" {
 }
 
 output "invoke_policy_arn" {
-  description = "IAM policy ARN granting lambda:InvokeFunction on all macro-runner functions — attach to backend task role"
+  description = "IAM policy ARN granting lambda:InvokeFunction on all macro-sandbox functions — attach to backend task role"
   value       = aws_iam_policy.invoke.arn
 }

@@ -1,10 +1,10 @@
-# 🏃 Macro Runner Module
+# 🏃 Macro Sandbox Module
 
 This module orchestrates **isolated Lambda-based code execution** for user-submitted macros. It composes ECR repositories, VPC flow logs, and Lambda functions into a single deployable unit — one entry point for the complete macro execution infrastructure.
 
 ## 📖 Overview
 
-The macro runner is an **orchestrator module** that wires together three sub-modules:
+The macro sandbox is an **orchestrator module** that wires together three sub-modules:
 
 1. **ECR** (×N) — one container image registry per language
 2. **VPC Flow Logs** — subnet-level traffic auditing for isolated subnets
@@ -21,7 +21,7 @@ graph LR
         VPC_CFG["var.isolated_subnet_ids<br/>var.lambda_sg_id"]
     end
 
-    subgraph RUNNER["macro-runner module"]
+    subgraph RUNNER["macro-sandbox module"]
         direction TB
 
         subgraph ECR_MOD["module.ecr — for_each = var.languages"]
@@ -74,14 +74,14 @@ graph LR
 ## ⚙️ Usage
 
 ```hcl
-module "macro_runner" {
-  source = "../../modules/macro-runner"
+module "macro_sandbox" {
+  source = "../../modules/macro-sandbox"
 
   aws_region          = var.aws_region
   environment         = var.environment
   ci_cd_role_arn      = module.iam_oidc.role_arn
   isolated_subnet_ids = module.vpc.isolated_subnets
-  lambda_sg_id        = module.vpc.macro_runner_lambda_security_group_id
+  lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
 
   languages = {
     python = { memory = 1024, timeout = 65 } # numpy/scipy need ~1 GB
@@ -100,10 +100,10 @@ module "macro_runner" {
   }
 }
 
-# Grant backend the ability to invoke macro-runner functions
+# Grant backend the ability to invoke macro-sandbox functions
 resource "aws_iam_role_policy_attachment" "backend_invoke" {
   role       = module.backend_ecs.task_role_name
-  policy_arn = module.macro_runner.invoke_policy_arn
+  policy_arn = module.macro_sandbox.invoke_policy_arn
 }
 ```
 
@@ -142,5 +142,5 @@ This creates a new ECR repo, Lambda function, CloudWatch log group, and updates 
 
 | Name                | Description                                                                              |
 | ------------------- | ---------------------------------------------------------------------------------------- |
-| `function_names`    | Lambda function names keyed by language (e.g., `{ python = "macro-runner-python-dev" }`) |
+| `function_names`    | Lambda function names keyed by language (e.g., `{ python = "macro-sandbox-python-dev" }`) |
 | `invoke_policy_arn` | IAM policy ARN granting `lambda:InvokeFunction` — attach to backend task role            |
