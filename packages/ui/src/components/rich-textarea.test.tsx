@@ -8,6 +8,7 @@ import { RichTextarea } from "./rich-textarea";
 
 const mockToolbarContainer = {
   addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
 };
 
 // Mock react-quilljs
@@ -39,6 +40,8 @@ describe("RichTextarea", () => {
     mockQuillInstance.off.mockClear();
     mockQuillInstance.enable.mockClear();
     mockQuillInstance.getModule.mockClear();
+    mockToolbarContainer.addEventListener.mockClear();
+    mockToolbarContainer.removeEventListener.mockClear();
   });
 
   it("renders the editor container", () => {
@@ -214,5 +217,22 @@ describe("RichTextarea", () => {
       // Verify preventDefault was called
       expect(mockEvent.preventDefault).toHaveBeenCalled();
     }
+  });
+  it("removes toolbar mousedown listener on unmount", () => {
+    const removeEventListener = vi.fn();
+
+    // Override container to include removeEventListener
+    mockToolbarContainer.removeEventListener = removeEventListener;
+
+    const { unmount } = render(<RichTextarea value="" onChange={mockOnChange} />);
+
+    // Get the registered handler
+    const mousedownHandler = mockToolbarContainer.addEventListener.mock.calls.find(
+      (call) => call[0] === "mousedown",
+    )?.[1];
+
+    unmount();
+
+    expect(removeEventListener).toHaveBeenCalledWith("mousedown", mousedownHandler);
   });
 });

@@ -50,9 +50,20 @@ export function RichTextarea({
     if (!quill) return;
 
     const toolbar = quill.getModule("toolbar") as { container: HTMLElement };
-    toolbar.container.addEventListener("mousedown", (e) => {
+
+    const preventFocus = (e: MouseEvent) => {
       e.preventDefault();
-    });
+    };
+
+    toolbar.container.addEventListener("mousedown", preventFocus);
+
+    return () => {
+      toolbar.container.removeEventListener("mousedown", preventFocus);
+    };
+  }, [quill]);
+
+  useEffect(() => {
+    if (!quill) return;
 
     // Set initial value if provided
     if (value && quill.root.innerHTML !== value) {
