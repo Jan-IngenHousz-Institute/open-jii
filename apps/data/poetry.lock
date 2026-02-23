@@ -240,20 +240,6 @@ test = ["flufl.flake8", "jaraco.test (>=5.4)", "packaging", "pyfakefs", "pytest 
 type = ["mypy (<1.19) ; platform_python_implementation == \"PyPy\"", "pytest-mypy (>=1.0.1)"]
 
 [[package]]
-name = "multispeq"
-version = "0.1.0"
-description = "MultispeQ Data Processing Package for openJII"
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-files = []
-develop = true
-
-[package.source]
-type = "directory"
-url = "src/lib/multispeq"
-
-[[package]]
 name = "numpy"
 version = "1.26.4"
 description = "Fundamental package for array computing in Python"
@@ -755,4 +741,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "c164e9d8c3e1b5762c5be587fcf20c6b59d76b0ae2ce8c20abb483b3b1068032"
+content-hash = "26a9a98cd9e635d69c5f539596f5437b81964ca662863cbbfdd0e09baa84622c"
