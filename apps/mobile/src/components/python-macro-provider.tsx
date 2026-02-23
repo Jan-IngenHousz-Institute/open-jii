@@ -42,17 +42,17 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
         return;
       }
       if (data.requestId != null && pendingRef.current.has(data.requestId)) {
-        const pending = pendingRef.current.get(data.requestId)!;
+        const pending = pendingRef.current.get(data.requestId);
         pendingRef.current.delete(data.requestId);
         if (data.error) {
           console.error("[macro] (Python) sandbox error:", data.error);
-          pending.reject(new Error(data.error));
+          pending?.reject(new Error(data.error));
         } else {
           console.log("[macro] (Python) sandbox result:", JSON.stringify(data.result));
-          pending.resolve((data.result ?? {}) as MacroOutput);
+          pending?.resolve((data.result ?? {}) as MacroOutput);
         }
       }
-    } catch (_) {
+    } catch {
       // ignore parse errors for non-JSON messages
     }
   }, []);

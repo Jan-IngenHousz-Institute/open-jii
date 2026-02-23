@@ -1,14 +1,6 @@
 import { clsx } from "clsx";
 import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { Modal, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 

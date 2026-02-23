@@ -56,7 +56,7 @@ export function QuestionsOverview() {
         keyboardShouldPersistTaps="handled"
       >
         {questionEntries.map(({ node, index }) => {
-          const label = node.name || node.content?.text || "Question";
+          const label = node.name ?? node.content?.text ?? "Question";
           const answer = getAnswer(iterationCount, node.id);
           const hasAnswer = !!answer?.trim();
 
