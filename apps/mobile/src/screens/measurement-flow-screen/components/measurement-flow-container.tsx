@@ -25,19 +25,26 @@ export function MeasurementFlowContainer() {
   const isFlowInitialized = flowNodes.length > 0;
 
   const currentNode = flowNodes[currentFlowStep];
-  const currentAnswer =
-    currentNode?.type === "question" ? getAnswer(iterationCount, currentNode.id) : undefined;
-  const shouldSkipQuestion =
-    !showingOverview &&
-    !returnToOverviewAfterEdit &&
-    currentNode?.type === "question" &&
-    !!currentAnswer?.trim();
 
+  // Auto-skip a question only when we first land on it and it already has an answer
+  // (e.g. from "remember answer" or when revisiting). Do not skip when the user
+  // is typing — so we only depend on step/iteration/node, not on currentAnswer.
   useEffect(() => {
-    if (shouldSkipQuestion) {
+    if (showingOverview || returnToOverviewAfterEdit) return;
+    if (currentNode?.type !== "question") return;
+    const answer = getAnswer(iterationCount, currentNode.id);
+    if (answer?.trim()) {
       nextStep();
     }
-  }, [shouldSkipQuestion, nextStep]);
+  }, [
+    currentFlowStep,
+    iterationCount,
+    currentNode?.id,
+    showingOverview,
+    returnToOverviewAfterEdit,
+    getAnswer,
+    nextStep,
+  ]);
 
   if (!isFlowInitialized) {
     return <LoadingState />;
