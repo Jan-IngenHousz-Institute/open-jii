@@ -83,11 +83,6 @@ module "cognito" {
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
   allow_unauthenticated_identities = false
-  source                           = "../../modules/cognito"
-  region                           = var.aws_region
-  environment                      = var.environment
-  identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
-  allow_unauthenticated_identities = false
 }
 
 module "vpc" {
@@ -362,7 +357,6 @@ module "centrum_pipeline" {
 
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum_pipeline"
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum_pipeline"
   ]
 
   configuration = {
@@ -375,25 +369,10 @@ module "centrum_pipeline" {
     "ENVIRONMENT"                = var.environment
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
-    "BRONZE_TABLE"               = "raw_data"
-    "SILVER_TABLE"               = "clean_data"
-    "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"        = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME"    = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"            = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"                = var.environment
-    "MONITORING_SLACK_CHANNEL"   = var.slack_channel
-    "pipelines.trigger.interval" = "120 seconds"
   }
 
   continuous_mode  = true
-  continuous_mode  = true
   development_mode = true
-  serverless       = false
-
-  node_type_id = "r5d.large"
-  num_workers  = 1
-  policy_id    = module.node_cluster_policy.policy_id
   serverless       = false
 
   node_type_id = "r5d.large"
@@ -414,8 +393,6 @@ module "centrum_pipeline" {
   providers = {
     databricks.workspace = databricks.workspace
   }
-
-  depends_on = [module.node_cluster_policy]
 
   depends_on = [module.node_cluster_policy]
 }
@@ -451,7 +428,6 @@ module "centrum_backup_job" {
       key           = "backup_centrum_raw_data"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/centrum_backup_task"
       notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/centrum_backup_task"
 
       parameters = {
@@ -533,7 +509,6 @@ module "ambyte_processing_job" {
       key           = "process_ambyte_data"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/ambyte_processing_task"
       notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/ambyte_processing_task"
 
       parameters = {
@@ -1260,6 +1235,29 @@ module "backend_ecs" {
       value = "enriched_experiment_macro_data"
     },
     {
+<<<<<<< HEAD
+      name  = "DATABRICKS_CENTRUM_SCHEMA_NAME"
+      value = "centrum"
+    },
+    {
+      name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
+      value = "enriched_experiment_raw_data"
+    },
+    {
+      name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
+      value = "experiment_device_data"
+    },
+    {
+      name  = "DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME"
+      value = "enriched_raw_ambyte_data"
+    },
+    {
+      name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
+      value = "enriched_experiment_macro_data"
+    },
+    {
+=======
+>>>>>>> origin/main
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
     },
@@ -1320,6 +1318,17 @@ module "backend_ecs" {
       value = module.cognito.developer_provider_name
     },
     {
+<<<<<<< HEAD
+      name  = "AWS_COGNITO_IDENTITY_POOL_ID"
+      value = module.cognito.identity_pool_id
+    },
+    {
+      name  = "AWS_COGNITO_DEVELOPER_PROVIDER_NAME"
+      value = module.cognito.developer_provider_name
+    },
+    {
+=======
+>>>>>>> origin/main
       name  = "EMAIL_BASE_URL"
       value = "https://${module.route53.environment_domain}"
     },

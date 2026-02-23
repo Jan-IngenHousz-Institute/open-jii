@@ -86,11 +86,6 @@ module "cognito" {
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
   allow_unauthenticated_identities = false
-  source                           = "../../modules/cognito"
-  region                           = var.aws_region
-  environment                      = var.environment
-  identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
-  allow_unauthenticated_identities = false
 }
 
 module "vpc" {
@@ -365,7 +360,6 @@ module "centrum_pipeline" {
 
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum_pipeline"
-    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum_pipeline"
   ]
 
   configuration = {
@@ -378,25 +372,10 @@ module "centrum_pipeline" {
     "ENVIRONMENT"                = upper(var.environment)
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
-    "BRONZE_TABLE"               = "raw_data"
-    "SILVER_TABLE"               = "clean_data"
-    "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"        = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME"    = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"            = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"                = upper(var.environment)
-    "MONITORING_SLACK_CHANNEL"   = var.slack_channel
-    "pipelines.trigger.interval" = "120 seconds"
   }
 
   continuous_mode  = true
-  continuous_mode  = true
   development_mode = true
-  serverless       = false
-
-  node_type_id = "r5d.large"
-  num_workers  = 1
-  policy_id    = module.node_cluster_policy.policy_id
   serverless       = false
 
   node_type_id = "r5d.large"
@@ -417,8 +396,6 @@ module "centrum_pipeline" {
   providers = {
     databricks.workspace = databricks.workspace
   }
-
-  depends_on = [module.node_cluster_policy]
 
   depends_on = [module.node_cluster_policy]
 }
@@ -455,7 +432,6 @@ module "centrum_backup_job" {
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/centrum_backup_task"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/centrum_backup_task"
 
       parameters = {
         "CATALOG_NAME"    = module.databricks_catalog.catalog_name
@@ -491,11 +467,11 @@ module "centrum_backup_job" {
   depends_on = [module.centrum_pipeline]
 }
 
-module "data_export_job" {
+module "ambyte_processing_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Data-Export-Job-PROD"
-  description = "Exports experiment table data in multiple formats (CSV, JSON, Parquet) to Unity Catalog volumes"
+  name        = "Ambyte-Processing-Job-PROD"
+  description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
 
   max_concurrent_runs           = 1
   use_serverless                = true
@@ -527,24 +503,25 @@ module "data_export_job" {
   # Configure task retries
   task_retry_config = {
     retries                   = 2
-    min_retry_interval_millis = 30000
+    min_retry_interval_millis = 60000
     retry_on_timeout          = true
   }
 
   tasks = [
     {
-      key           = "export_data"
+      key           = "process_ambyte_data"
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/ambyte_processing_task"
 
       parameters = {
-        EXPERIMENT_ID = "{{EXPERIMENT_ID}}"
-        TABLE_NAME    = "{{TABLE_NAME}}"
-        FORMAT        = "{{FORMAT}}"
-        USER_ID       = "{{USER_ID}}"
-        CATALOG_NAME  = module.databricks_catalog.catalog_name
-        ENVIRONMENT   = upper(var.environment)
+        EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
+        EXPERIMENT_NAME   = "{{EXPERIMENT_NAME}}"
+        EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
+        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
+        YEAR_PREFIX       = "{{YEAR_PREFIX}}"
+        CATALOG_NAME      = module.databricks_catalog.catalog_name
+        ENVIRONMENT       = upper(var.environment)
       }
     }
   ]
@@ -1243,26 +1220,6 @@ module "backend_ecs" {
       value = "enriched_experiment_macro_data"
     },
     {
-      name  = "DATABRICKS_CENTRUM_SCHEMA_NAME"
-      value = "centrum"
-    },
-    {
-      name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
-      value = "enriched_experiment_raw_data"
-    },
-    {
-      name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
-      value = "experiment_device_data"
-    },
-    {
-      name  = "DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME"
-      value = "enriched_raw_ambyte_data"
-    },
-    {
-      name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
-      value = "enriched_experiment_macro_data"
-    },
-    {
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
     },
@@ -1309,14 +1266,6 @@ module "backend_ecs" {
     {
       name  = "AWS_REGION"
       value = var.aws_region
-    },
-    {
-      name  = "AWS_COGNITO_IDENTITY_POOL_ID"
-      value = module.cognito.identity_pool_id
-    },
-    {
-      name  = "AWS_COGNITO_DEVELOPER_PROVIDER_NAME"
-      value = module.cognito.developer_provider_name
     },
     {
       name  = "AWS_COGNITO_IDENTITY_POOL_ID"
