@@ -1,8 +1,8 @@
 # ============================================================
-# Lambda Function: JavaScript Macro Runner
+# Lambda Function: JavaScript Macro Sandbox
 # ============================================================
-# Build context: apps/macro-runner/
-#   docker build -f functions/javascript/Dockerfile -t macro-runner-js .
+# Build context: apps/macro-sandbox/
+#   docker build -f functions/javascript/Dockerfile -t macro-sandbox-js .
 # ============================================================
 
 FROM public.ecr.aws/lambda/nodejs:24

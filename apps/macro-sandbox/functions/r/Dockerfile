@@ -1,8 +1,8 @@
 # ============================================================
-# Lambda Function: R Macro Runner
+# Lambda Function: R Macro Sandbox
 # ============================================================
-# Build context: apps/macro-runner/
-#   docker build -f functions/r/Dockerfile -t macro-runner-r .
+# Build context: apps/macro-sandbox/
+#   docker build -f functions/r/Dockerfile -t macro-sandbox-r .
 #
 # Uses a custom container image with R and a shell-based Lambda
 # Runtime API bootstrap (no official AWS Lambda R runtime exists).

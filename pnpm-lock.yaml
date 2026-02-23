@@ -368,7 +368,7 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  apps/macro-runner:
+  apps/macro-sandbox:
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*

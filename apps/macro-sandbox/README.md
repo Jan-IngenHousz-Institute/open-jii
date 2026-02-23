@@ -1,4 +1,4 @@
-# Macro Runner
+# Macro Sandbox
 
 Sandboxed execution environment for running user-authored plant science macros (chlorophyll, SPAD, etc.) as AWS Lambda functions. Supports **Python**, **JavaScript**, and **R** runtimes, each running in its own Lambda container with language-specific helper libraries pre-loaded.
 
@@ -84,7 +84,7 @@ The per-item timeout prevents a single bad item from consuming the entire handle
 ## Project Structure
 
 ```
-apps/macro-runner/
+apps/macro-sandbox/
 ├── functions/                  # Lambda entry points (one per language)
 │   ├── javascript/
 │   │   ├── Dockerfile

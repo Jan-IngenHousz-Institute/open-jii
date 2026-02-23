@@ -13,7 +13,7 @@
  * new entries are appended. If generate/ is empty the JSONs are untouched.
  *
  * Run:
- *   pnpm test:generate               # from apps/macro-runner
+ *   pnpm test:generate               # from apps/macro-sandbox
  *   npx tsx test/data/generate.ts     # direct
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";

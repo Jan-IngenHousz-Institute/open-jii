@@ -101,7 +101,7 @@ output$result <- json$value
 // ── main ─────────────────────────────────────────────────────
 
 async function main() {
-  header("New macro-runner test case");
+  header("New macro-sandbox test case");
   console.log();
 
   // 1. Name

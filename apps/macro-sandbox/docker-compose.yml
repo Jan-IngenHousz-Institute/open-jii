@@ -1,7 +1,7 @@
 # ============================================================
 # Local Development — Lambda Runtime Interface Emulator
 # ============================================================
-# Runs all three macro-runner Lambda functions locally.
+# Runs all three macro-sandbox Lambda functions locally.
 # Each exposes the Lambda invoke endpoint on a different port.
 #
 # Usage:

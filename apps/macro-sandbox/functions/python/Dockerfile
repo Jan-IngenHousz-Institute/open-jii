@@ -1,8 +1,8 @@
 # ============================================================
-# Lambda Function: Python Macro Runner
+# Lambda Function: Python Macro Sandbox
 # ============================================================
-# Build context: apps/macro-runner/
-#   docker build -f functions/python/Dockerfile -t macro-runner-python .
+# Build context: apps/macro-sandbox/
+#   docker build -f functions/python/Dockerfile -t macro-sandbox-python .
 #
 # Runs plant science macros (chlorophyll, SPAD, etc.) using
 # numpy, pandas, and scipy. Each invocation = own Firecracker VM.
