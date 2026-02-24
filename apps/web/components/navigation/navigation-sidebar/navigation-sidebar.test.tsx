@@ -44,6 +44,34 @@ function renderSidebar() {
   );
 }
 
+const navigationData = {
+  navDashboard: [{ title: "Dashboard", url: "/en/platform", icon: "Home", items: [] }],
+  navExperiments: [
+    { title: "Experiments", url: "/en/platform/experiments", icon: "Microscope", items: [] },
+  ],
+  navProtocols: [
+    { title: "Protocols", url: "/en/platform/protocols", icon: "FileSliders", items: [] },
+  ],
+  navMacros: [{ title: "Macros", url: "/en/platform/macros", icon: "Code", items: [] }],
+};
+
+const translations = {
+  openJII: "openJII",
+  logoAlt: "openJII Logo",
+  signIn: "Sign in",
+  experimentsTitle: "Experiments",
+  protocolTitle: "Protocols",
+  macrosTitle: "Macros",
+};
+
+function renderSidebar() {
+  return render(
+    <SidebarProvider>
+      <AppSidebar locale="en" navigationData={navigationData} translations={translations} />
+    </SidebarProvider>,
+  );
+}
+
 describe("AppSidebar", () => {
   it("renders navigation items", () => {
     renderSidebar();
