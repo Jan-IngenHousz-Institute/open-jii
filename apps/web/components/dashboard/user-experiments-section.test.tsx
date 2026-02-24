@@ -1,53 +1,34 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, expect, it, vi } from "vitest";
 
 import { UserExperimentsSection } from "./user-experiments-section";
 
-globalThis.React = React;
-
-// --- Mocks ---
 const mockUseExperiments = vi.fn();
-
 vi.mock("~/hooks/experiment/useExperiments/useExperiments", () => ({
-  useExperiments: (): { data?: { body: { id: string; title: string }[] } } =>
-    mockUseExperiments() as { data?: { body: { id: string; title: string }[] } },
+  useExperiments: (...args: unknown[]) => mockUseExperiments(...args),
 }));
 
-// --- Tests ---
-describe("<UserExperimentsSection />", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+vi.mock("~/components/experiment-overview-cards", () => ({
+  ExperimentOverviewCards: (props: { experiments?: unknown[] }) => (
+    <div data-testid="experiment-cards">{props.experiments?.length ?? 0} experiments</div>
+  ),
+}));
 
-  it("renders loading state when no data is available", () => {
+describe("UserExperimentsSection", () => {
+  it("shows skeletons while loading", () => {
     mockUseExperiments.mockReturnValue({ data: undefined });
+    render(<UserExperimentsSection />);
 
-    const { container } = render(<UserExperimentsSection />);
-
-    // Should render some loading indication
-    expect(container.firstChild).toBeTruthy();
+    expect(screen.queryByTestId("experiment-cards")).not.toBeInTheDocument();
   });
 
-  it("renders only first 3 experiments when data is available", () => {
-    const experiments = [
-      { id: "1", title: "Experiment 1" },
-      { id: "2", title: "Experiment 2" },
-      { id: "3", title: "Experiment 3" },
-      { id: "4", title: "Experiment 4" }, // should be sliced off
-    ];
-    mockUseExperiments.mockReturnValue({ data: { body: experiments } });
+  it("shows first 3 experiments", () => {
+    mockUseExperiments.mockReturnValue({
+      data: { body: [{ id: "1" }, { id: "2" }, { id: "3" }, { id: "4" }] },
+    });
 
     render(<UserExperimentsSection />);
 
-    // Each experiment card is wrapped in a link
-    const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(3);
-
-    // The hrefs are correct for the first 3
-    expect(links[0]).toHaveAttribute("href", "/platform/experiments/1");
-    expect(links[1]).toHaveAttribute("href", "/platform/experiments/2");
-    expect(links[2]).toHaveAttribute("href", "/platform/experiments/3");
+    expect(screen.getByTestId("experiment-cards")).toHaveTextContent("3 experiments");
   });
 });

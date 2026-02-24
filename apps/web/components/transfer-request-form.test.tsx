@@ -2,85 +2,119 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { TransferRequestForm } from "./transfer-request-form";
 
-globalThis.React = React;
-
-// Mock ResizeObserver
+// ResizeObserver polyfill for Radix UI
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
 
-// -------------------
-// Mocks
-// -------------------
-
 let savedOnSuccess: (() => void) | undefined;
 const mockMutate = vi.fn();
-const mockUseTransferRequestCreate = vi.fn();
 
 vi.mock("~/hooks/useTransferRequestCreate/useTransferRequestCreate", () => ({
-  useTransferRequestCreate: (options?: { onSuccess?: () => void }) => {
-    savedOnSuccess = options?.onSuccess;
-    return mockUseTransferRequestCreate(options);
+  useTransferRequestCreate: (opts?: { onSuccess?: () => void }) => {
+    savedOnSuccess = opts?.onSuccess;
+    return { mutate: mockMutate, isPending: false };
   },
 }));
 
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// -------------------
-// Helpers
-// -------------------
-function renderTransferRequestForm({
-  isPending = false,
-  mutate = mockMutate,
-}: {
-  isPending?: boolean;
-  mutate?: typeof mockMutate;
-} = {}) {
-  mockUseTransferRequestCreate.mockReturnValue({
-    mutate,
-    isPending,
-  });
-
-  return render(<TransferRequestForm />);
-}
-
-function triggerSuccess() {
-  if (savedOnSuccess) {
-    savedOnSuccess();
-  }
-}
-
-// -------------------
-// Tests
-// -------------------
-describe("<TransferRequestForm />", () => {
+describe("TransferRequestForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("Form Rendering", () => {
-    it("renders all form fields", () => {
-      renderTransferRequestForm();
+  it("renders form fields and submit button", () => {
+    render(<TransferRequestForm />);
 
-      expect(screen.getByText("transferRequest.projectIdLabel")).toBeInTheDocument();
-      expect(screen.getByText("transferRequest.projectUrlLabel")).toBeInTheDocument();
-      expect(screen.getByText("transferRequest.consentLabel")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("transferRequest.projectIdPlaceholder")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    expect(screen.getByText("transferRequest.submitButton")).toBeInTheDocument();
+  });
+
+  it("validates empty submission", async () => {
+    render(<TransferRequestForm />);
+
+    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/required/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("requires consent checkbox", async () => {
+    const user = userEvent.setup();
+    render(<TransferRequestForm />);
+
+    await user.type(screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"), "123");
+    await user.type(
+      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
+      "https://example.com",
+    );
+    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/ownership or permission/i)).toBeInTheDocument();
+    });
+  });
+
+  it("submits valid form data", async () => {
+    const user = userEvent.setup();
+    render(<TransferRequestForm />);
+
+    await user.type(
+      screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"),
+      "project-123",
+    );
+    await user.type(
+      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
+      "https://photosynq.com/projects/123",
+    );
+    await user.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith({
+        body: {
+          projectIdOld: "project-123",
+          projectUrlOld: "https://photosynq.com/projects/123",
+          consent: true,
+        },
+      });
+    });
+  });
+
+  it("shows success state and allows submitting another", async () => {
+    const user = userEvent.setup();
+    render(<TransferRequestForm />);
+
+    await user.type(
+      screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"),
+      "test",
+    );
+    await user.type(
+      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
+      "https://test.com",
+    );
+    await user.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    savedOnSuccess?.();
+
+    await waitFor(() => {
+      expect(screen.getByText("transferRequest.successTitle")).toBeInTheDocument();
     });
 
-    it("renders submit button", () => {
-      renderTransferRequestForm();
+    await user.click(screen.getByText("transferRequest.submitAnother"));
 
+    await waitFor(() => {
       expect(screen.getByText("transferRequest.submitButton")).toBeInTheDocument();
     });
 
