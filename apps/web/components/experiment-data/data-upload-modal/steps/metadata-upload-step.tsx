@@ -23,7 +23,7 @@ import {
   type MetadataColumn,
   type MetadataRow,
 } from "@/components/metadata-table";
-import { parseClipboardText } from "@/components/metadata-table/utils/parse-data";
+import { parseClipboardText } from "@/components/metadata-table/utils/parse-metadata-import";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 
 interface MetadataUploadStepProps {
