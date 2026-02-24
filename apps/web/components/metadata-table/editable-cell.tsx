@@ -91,7 +91,7 @@ export function EditableCell({
       className={cn(
         "cursor-text px-2 py-1.5 text-sm",
         "hover:bg-muted/50 min-h-[32px]",
-        type === "number" && "text-right tabular-nums"
+        type === "number" && "tabular-nums"
       )}
       onClick={() => setIsEditing(true)}
       onKeyDown={(e) => {
