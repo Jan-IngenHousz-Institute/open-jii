@@ -51,9 +51,7 @@ describe("Breadcrumbs", () => {
 
   it("handles dashed segments as title case", () => {
     mockUseBreadcrumbs.mockReturnValue({
-      data: [
-        { segment: "my-project", href: "/en-US/platform/my-project", title: "my-project" },
-      ],
+      data: [{ segment: "my-project", href: "/en-US/platform/my-project", title: "my-project" }],
     });
 
     render(<Breadcrumbs locale="en-US" />);
