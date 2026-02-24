@@ -218,7 +218,6 @@ resource "aws_wafv2_web_acl" "main" {
           }
 
           # Single route case: flatten method + URI match into the outer and_statement
-          # (AWS WAF forbids nesting and_statement inside and_statement)
           dynamic "statement" {
             for_each = length(var.large_body_bypass_routes) == 1 ? [var.large_body_bypass_routes[0]] : []
             content {
@@ -254,7 +253,6 @@ resource "aws_wafv2_web_acl" "main" {
           }
 
           # Multiple routes case: use or_statement wrapping and_statements
-          # (and_statement → or_statement → and_statement is valid because types alternate)
           dynamic "statement" {
             for_each = length(var.large_body_bypass_routes) >= 2 ? [1] : []
             content {
