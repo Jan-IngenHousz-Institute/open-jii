@@ -1,9 +1,11 @@
+import type { MetadataContextValue, MetadataTableState } from "@/components/metadata-table";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MetadataContextValue, MetadataTableState } from "@/components/metadata-table";
+// Import the component under test *after* mocks are set up
+import { MetadataUploadStep } from "./metadata-upload-step";
 
 globalThis.React = React;
 
@@ -100,9 +102,6 @@ vi.mock("lucide-react", () => ({
   Upload: () => <span />,
 }));
 
-// Import the component under test *after* mocks are set up
-import { MetadataUploadStep } from "./metadata-upload-step";
-
 const sampleColumns = [
   { id: "col_1", name: "ID", type: "string" as const },
   { id: "col_2", name: "Location", type: "string" as const },
@@ -124,11 +123,14 @@ describe("MetadataUploadStep – Save Metadata button", () => {
         experimentId="test-experiment"
         onBack={vi.fn()}
         onUploadSuccess={vi.fn()}
-      />
+      />,
     );
 
-  const getSaveButton = () =>
-    screen.getByText("uploadModal.metadata.saveMetadata").closest("button")!;
+  const getSaveButton = () => {
+    const el = screen.getByText("uploadModal.metadata.saveMetadata").closest("button");
+    if (!el) throw new Error("Save button not found");
+    return el;
+  };
 
   it("is disabled when no data is loaded", () => {
     mockContextValue = buildMockContext();
@@ -180,7 +182,8 @@ describe("MetadataUploadStep – Save Metadata button", () => {
     };
     renderStep();
     // When saving, the button text changes to the uploading key
-    const saveButton = screen.getByText("uploadModal.fileUpload.uploading").closest("button")!;
+    const saveButton = screen.getByText("uploadModal.fileUpload.uploading").closest("button");
+    if (!saveButton) throw new Error("Save button not found");
     expect(saveButton).toBeDisabled();
   });
 });
