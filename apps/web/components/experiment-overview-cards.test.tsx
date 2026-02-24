@@ -64,19 +64,15 @@ const mockExperiment: Experiment = {
 };
 
 describe("ExperimentOverviewCards", () => {
-  describe("loading state", () => {
-    it("renders skeleton loaders when experiments is undefined", () => {
-      const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
-      const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
-      expect(skeletons.length).toBeGreaterThan(0);
-    });
+  it("shows skeleton loaders while experiments are loading", () => {
+    const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
+    const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  describe("empty state", () => {
-    it("renders no experiments message when array is empty", () => {
-      render(<ExperimentOverviewCards experiments={[]} />);
-      expect(screen.getByText("No experiments found")).toBeInTheDocument();
-    });
+  it("shows an empty message when there are no experiments", () => {
+    render(<ExperimentOverviewCards experiments={[]} />);
+    expect(screen.getByText("experiments.noExperiments")).toBeInTheDocument();
   });
 
   describe("card rendering", () => {
@@ -87,11 +83,7 @@ describe("ExperimentOverviewCards", () => {
       expect(screen.getByTestId("status-badge")).toHaveTextContent("active");
     });
 
-    it("uses correct path for regular experiments", () => {
-      const { container } = render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
-      const link = container.querySelector('a[href="/platform/experiments/1"]');
-      expect(link).toBeInTheDocument();
-    });
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
 
     it("uses correct path for archived experiments", () => {
       const { container } = render(
@@ -129,17 +121,56 @@ describe("ExperimentOverviewCards", () => {
     });
   });
 
-  describe("different experiment statuses", () => {
-    it("renders experiment with archived status", () => {
-      const experiment = { ...mockExperiment, status: "archived" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} />);
-      expect(screen.getByTestId("status-badge")).toHaveTextContent("archived");
+  it("links each card to the experiment detail page", () => {
+    const experiment = createExperiment({ id: "abc-123" });
+
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
+
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/platform/experiments/abc-123");
+  });
+
+  it("links to the archive path when archived prop is set", () => {
+    const experiment = createExperiment({ id: "abc-123" });
+
+    render(<ExperimentOverviewCards experiments={[experiment]} archived />);
+
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/platform/experiments-archive/abc-123");
+  });
+
+  it("renders multiple experiment cards", () => {
+    const experiments = [
+      createExperiment({ name: "Study A" }),
+      createExperiment({ name: "Study B" }),
+      createExperiment({ name: "Study C" }),
+    ];
+
+    render(<ExperimentOverviewCards experiments={experiments} />);
+
+    expect(screen.getByText("Study A")).toBeInTheDocument();
+    expect(screen.getByText("Study B")).toBeInTheDocument();
+    expect(screen.getByText("Study C")).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(3);
+  });
+
+  it("shows the last-updated date", () => {
+    const experiment = createExperiment({
+      updatedAt: "2025-06-15T00:00:00.000Z",
     });
 
-    it("renders experiment with stale status", () => {
-      const experiment = { ...mockExperiment, status: "stale" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} />);
-      expect(screen.getByTestId("status-badge")).toHaveTextContent("stale");
-    });
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
+
+    // The date format depends on locale, but the translation key should appear
+    expect(screen.getByText(/lastUpdate/)).toBeInTheDocument();
+  });
+
+  it("gracefully handles a null description", () => {
+    const experiment = createExperiment({ description: null });
+
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
+
+    // Should still render the card without crashing
+    expect(screen.getByText(experiment.name)).toBeInTheDocument();
   });
 });

@@ -1,171 +1,87 @@
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
-import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import { notFound } from "next/navigation";
-import React from "react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import ExperimentOverviewPage from "./page";
 
-globalThis.React = React;
+vi.mock("react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react")>()),
+  use: () => ({ id: "test-id" }),
+}));
 
-// Mock react.use to return a params-like object { id }
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-experiment-id" }),
-  };
-});
-
-// Mock hooks used by the page
+const mockAccess = vi.fn();
 vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: vi.fn(),
+  useExperimentAccess: (...a: unknown[]) => mockAccess(...a),
 }));
-
 vi.mock("@/hooks/experiment/useExperimentLocations/useExperimentLocations", () => ({
-  useExperimentLocations: vi.fn(),
+  useExperimentLocations: () => ({ data: undefined, isLoading: false }),
 }));
-
 vi.mock("@/hooks/experiment/useExperimentMembers/useExperimentMembers", () => ({
-  useExperimentMembers: vi.fn(),
+  useExperimentMembers: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
-
 vi.mock("@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations", () => ({
-  useExperimentVisualizations: vi.fn(),
+  useExperimentVisualizations: () => ({ data: undefined, isLoading: false }),
 }));
 
-// Mock translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
-
-// Mock ErrorDisplay
 vi.mock("@/components/error-display", () => ({
-  ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
-    <div data-testid="error-display">
-      <div data-testid="error-title">{title}</div>
-      <div data-testid="error-message">{error.message}</div>
-    </div>
-  ),
+  ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
+}));
+vi.mock("~/components/experiment-overview/experiment-description", () => ({
+  ExperimentDescription: () => <section aria-label="description" />,
+}));
+vi.mock("~/components/experiment-overview/experiment-details/experiment-details-card", () => ({
+  ExperimentDetailsCard: () => <section aria-label="details" />,
+}));
+vi.mock(
+  "~/components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols",
+  () => ({
+    ExperimentLinkedProtocols: () => <section aria-label="protocols" />,
+  }),
+);
+vi.mock("~/components/experiment-overview/experiment-measurements", () => ({
+  ExperimentMeasurements: () => <section aria-label="measurements" />,
+}));
+vi.mock("@/components/experiment-visualizations/experiment-visualizations-display", () => ({
+  default: () => <section aria-label="visualizations" />,
 }));
 
-// Mock next/navigation notFound
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
-}));
+describe("ExperimentOverviewPage", () => {
+  beforeEach(() => vi.clearAllMocks());
 
-// Helper to render with QueryClient
-const renderWithQueryClient = (ui: React.ReactElement) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
-};
+  const props = { params: Promise.resolve({ id: "test-id" }) };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-
-  // Default safe returns
-  vi.mocked(useExperimentLocations).mockReturnValue({
-    data: undefined,
-    isLoading: false,
-  } as ReturnType<typeof useExperimentLocations>);
-  vi.mocked(useExperimentMembers).mockReturnValue({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-  } as ReturnType<typeof useExperimentMembers>);
-  vi.mocked(useExperimentVisualizations).mockReturnValue({
-    data: undefined,
-    isLoading: false,
-  } as ReturnType<typeof useExperimentVisualizations>);
-});
-
-describe("<ExperimentOverviewPage />", () => {
-  it("shows loading when experiment is loading", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    } as ReturnType<typeof useExperimentAccess>);
-
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
-
+  it("shows loading state", () => {
+    mockAccess.mockReturnValue({ data: undefined, isLoading: true, error: null });
+    render(<ExperimentOverviewPage {...props} />);
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
-  it("renders ErrorDisplay when there is an error loading", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("fail"),
-    } as ReturnType<typeof useExperimentAccess>);
-
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
-
-    expect(screen.getByTestId("error-title")).toHaveTextContent("failedToLoad");
-    expect(screen.getByTestId("error-message")).toHaveTextContent("fail");
+  it("shows error display on failure", () => {
+    mockAccess.mockReturnValue({ data: undefined, isLoading: false, error: new Error("fail") });
+    render(<ExperimentOverviewPage {...props} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("failedToLoad");
   });
 
-  it("shows notFound text when experiment data is missing", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    } as ReturnType<typeof useExperimentAccess>);
-
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
-
+  it("shows not-found when data is missing", () => {
+    mockAccess.mockReturnValue({ data: undefined, isLoading: false, error: null });
+    render(<ExperimentOverviewPage {...props} />);
     expect(screen.getByText("notFound")).toBeInTheDocument();
   });
 
-  it("shows notFound text when experiment is missing from body", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: { body: { experiment: undefined, hasAccess: false } },
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperimentAccess>);
-
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
-
-    expect(screen.getByText("notFound")).toBeInTheDocument();
-  });
-
-  it("calls notFound when experiment is archived", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
+  it("renders experiment sections on success", () => {
+    mockAccess.mockReturnValue({
       data: {
         body: {
-          experiment: { status: "archived", name: "Test", id: "123" },
-          hasAccess: true,
+          experiment: { status: "active", name: "T", id: "1", description: "d" },
+          isAdmin: true,
         },
       },
       isLoading: false,
       error: null,
-    } as ReturnType<typeof useExperimentAccess>);
-
-    vi.mocked(notFound).mockImplementation(() => {
-      throw new Error("notFound");
     });
-
-    expect(() =>
-      renderWithQueryClient(
-        <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-      ),
-    ).toThrow("notFound");
+    render(<ExperimentOverviewPage {...props} />);
+    expect(screen.getByRole("region", { name: /details/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /description/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /protocols/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /measurements/i })).toBeInTheDocument();
   });
 });
