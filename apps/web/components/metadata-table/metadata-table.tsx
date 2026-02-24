@@ -1,17 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import {
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
   flexRender,
-  type ColumnDef,
-  type PaginationState,
 } from "@tanstack/react-table";
-import { useMetadata } from "./metadata-context";
-import { EditableCell } from "./editable-cell";
-import type { MetadataRow } from "./types";
+import type { ColumnDef, PaginationState } from "@tanstack/react-table";
+import { KeyRound, MoreHorizontal, PencilIcon, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+
 import {
   Button,
   DropdownMenu,
@@ -31,7 +29,10 @@ import {
   TableRow,
 } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
-import { KeyRound, MoreHorizontal, PencilIcon, Trash2 } from "lucide-react";
+
+import { EditableCell } from "./editable-cell";
+import { useMetadata } from "./metadata-context";
+import type { MetadataRow } from "./types";
 
 interface MetadataTableProps {
   pageSize?: number;
@@ -39,7 +40,8 @@ interface MetadataTableProps {
 }
 
 export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTableProps) {
-  const { state, updateCell, deleteRow, deleteColumn, renameColumn, setIdentifierColumnId } = useMetadata();
+  const { state, updateCell, deleteRow, deleteColumn, renameColumn, setIdentifierColumnId } =
+    useMetadata();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize,
@@ -52,10 +54,12 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
         id: col.id,
         accessorKey: col.id,
         header: () => (
-          <div className={cn(
-            "flex items-center justify-between gap-2",
-            isIdentifier && "text-primary"
-          )}>
+          <div
+            className={cn(
+              "flex items-center justify-between gap-2",
+              isIdentifier && "text-primary",
+            )}
+          >
             <span className="flex items-center gap-1.5 font-medium">
               {isIdentifier && <KeyRound className="h-3.5 w-3.5" />}
               {col.name}
@@ -127,7 +131,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+            className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
             onClick={() => deleteRow(row.original._id)}
           >
             <Trash2 className="h-4 w-4" />
@@ -137,7 +141,16 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
     }
 
     return cols;
-  }, [state.columns, state.identifierColumnId, updateCell, deleteRow, deleteColumn, renameColumn, setIdentifierColumnId, disabled]);
+  }, [
+    state.columns,
+    state.identifierColumnId,
+    updateCell,
+    deleteRow,
+    deleteColumn,
+    renameColumn,
+    setIdentifierColumnId,
+    disabled,
+  ]);
 
   const table = useReactTable({
     data: state.rows,
@@ -176,8 +189,8 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
                       style={{ width: header.column.columnDef.size }}
                       className={cn(
                         isActionsColumn &&
-                          "sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]",
-                        isIdentifierColumn && "bg-primary/10"
+                          "bg-background sticky right-0 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+                        isIdentifierColumn && "bg-primary/10",
                       )}
                     >
                       {header.isPlaceholder
@@ -194,7 +207,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
+                  className="text-muted-foreground h-24 text-center"
                 >
                   No rows. Add a row to get started.
                 </TableCell>
@@ -211,8 +224,8 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
                         className={cn(
                           "p-0",
                           isActionsColumn &&
-                            "sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]",
-                          isIdentifierColumn && "bg-primary/5"
+                            "bg-background sticky right-0 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+                          isIdentifierColumn && "bg-primary/5",
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -238,7 +251,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
                   className={cn(
                     "border",
                     !table.getCanPreviousPage() &&
-                      "pointer-events-none cursor-not-allowed opacity-50"
+                      "pointer-events-none cursor-not-allowed opacity-50",
                   )}
                   onClick={() => table.previousPage()}
                 />
@@ -252,8 +265,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
                 <PaginationNext
                   className={cn(
                     "border",
-                    !table.getCanNextPage() &&
-                      "pointer-events-none cursor-not-allowed opacity-50"
+                    !table.getCanNextPage() && "pointer-events-none cursor-not-allowed opacity-50",
                   )}
                   onClick={() => table.nextPage()}
                 />

@@ -8,10 +8,7 @@ import type { MetadataColumn, MetadataRow } from "../types";
  * check typeof. Dates still need a pattern check since PapaParse
  * doesn't auto-detect them.
  */
-function inferColumnType(
-  rows: MetadataRow[],
-  columnId: string
-): "string" | "number" | "date" {
+function inferColumnType(rows: MetadataRow[], columnId: string): "string" | "number" | "date" {
   const values = rows
     .map((row) => row[columnId])
     .filter((v) => v !== null && v !== undefined && v !== "");
@@ -21,11 +18,7 @@ function inferColumnType(
   if (values.every((v) => typeof v === "number")) return "number";
 
   const datePattern = /^\d{4}-\d{2}-\d{2}|^\d{2}[/-]\d{2}[/-]\d{4}/;
-  if (
-    values.every(
-      (v) => typeof v === "string" && datePattern.test(v) && !isNaN(Date.parse(v))
-    )
-  )
+  if (values.every((v) => typeof v === "string" && datePattern.test(v) && !isNaN(Date.parse(v))))
     return "date";
 
   return "string";
@@ -48,17 +41,14 @@ function toMetadata(parsed: Papa.ParseResult<Record<string, unknown>>): {
     type: "string" as const,
   }));
 
-  const fieldToColId = new Map(
-    parsed.meta.fields.map((name, index) => [name, `col_${index}`])
-  );
+  const fieldToColId = new Map(parsed.meta.fields.map((name, index) => [name, `col_${index}`]));
 
   const rows: MetadataRow[] = [];
   for (let i = 0; i < parsed.data.length; i++) {
     const record = parsed.data[i];
     // Skip rows where every value is empty
     const vals = Object.values(record);
-    if (vals.length === 0 || vals.every((v) => v === "" || v === null || v === undefined))
-      continue;
+    if (vals.length === 0 || vals.every((v) => v === "" || v === null || v === undefined)) continue;
 
     const row: MetadataRow = { _id: `row_${i}_${Date.now()}` };
     for (const [field, colId] of fieldToColId) {
@@ -80,10 +70,10 @@ function toMetadata(parsed: Papa.ParseResult<Record<string, unknown>>): {
  */
 export function parseDelimitedText(
   text: string,
-  delimiter?: "," | "\t" | ";" | "|"
+  delimiter?: "," | "\t" | ";" | "|",
 ): { columns: MetadataColumn[]; rows: MetadataRow[] } {
   const parsed = Papa.parse<Record<string, unknown>>(text.trim(), {
-    delimiter: delimiter || "",
+    delimiter: delimiter ?? "",
     header: true,
     dynamicTyping: true,
     skipEmptyLines: true,
@@ -96,7 +86,7 @@ export function parseDelimitedText(
  * Read and parse a File (CSV or Excel)
  */
 export async function parseFile(
-  file: File
+  file: File,
 ): Promise<{ columns: MetadataColumn[]; rows: MetadataRow[] }> {
   const extension = file.name.split(".").pop()?.toLowerCase();
 
@@ -119,7 +109,6 @@ export async function parseFile(
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) return { columns: [], rows: [] };
     const firstSheet = workbook.Sheets[sheetName];
-    if (!firstSheet) return { columns: [], rows: [] };
 
     // Convert sheet to CSV and let PapaParse handle parsing
     const csv = XLSX.utils.sheet_to_csv(firstSheet);
@@ -128,7 +117,6 @@ export async function parseFile(
 
   throw new Error(`Unsupported file type: ${extension}`);
 }
-
 
 /**
  * Try to read clipboard using execCommand fallback
@@ -163,15 +151,13 @@ export async function parseClipboard(): Promise<{
 }> {
   let text: string | null = null;
 
-  if (navigator.clipboard?.readText) {
-    try {
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("timeout")), 3000);
-      });
-      text = await Promise.race([navigator.clipboard.readText(), timeoutPromise]);
-    } catch {
-      text = null;
-    }
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("timeout")), 3000);
+    });
+    text = await Promise.race([navigator.clipboard.readText(), timeoutPromise]);
+  } catch {
+    text = null;
   }
 
   if (!text) {
@@ -179,14 +165,14 @@ export async function parseClipboard(): Promise<{
       text = await readClipboardWithExecCommand();
     } catch {
       throw new Error(
-        "Could not read clipboard. Please try pressing Ctrl+V / Cmd+V to paste directly."
+        "Could not read clipboard. Please try pressing Ctrl+V / Cmd+V to paste directly.",
       );
     }
   }
 
-  if (!text || text.trim() === "") {
+  if (text.trim() === "") {
     throw new Error(
-      "Clipboard is empty. Please copy some data (CSV, TSV, or tab-separated) and try again."
+      "Clipboard is empty. Please copy some data (CSV, TSV, or tab-separated) and try again.",
     );
   }
 
@@ -194,7 +180,7 @@ export async function parseClipboard(): Promise<{
 
   if (result.columns.length === 0) {
     throw new Error(
-      "Could not parse clipboard data. Please copy tabular data (CSV, TSV, or tab-separated) with headers."
+      "Could not parse clipboard data. Please copy tabular data (CSV, TSV, or tab-separated) with headers.",
     );
   }
 
@@ -210,7 +196,7 @@ export function parseClipboardText(text: string): {
 } {
   if (!text || text.trim() === "") {
     throw new Error(
-      "Clipboard is empty. Please copy some data (CSV, TSV, or tab-separated) and try again."
+      "Clipboard is empty. Please copy some data (CSV, TSV, or tab-separated) and try again.",
     );
   }
 
@@ -218,7 +204,7 @@ export function parseClipboardText(text: string): {
 
   if (result.columns.length === 0) {
     throw new Error(
-      "Could not parse clipboard data. Please copy tabular data (CSV, TSV, or tab-separated) with headers."
+      "Could not parse clipboard data. Please copy tabular data (CSV, TSV, or tab-separated) with headers.",
     );
   }
 

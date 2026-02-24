@@ -27,7 +27,12 @@ interface DataUploadModalProps {
   initialStep?: UploadStep;
 }
 
-export function DataUploadModal({ experimentId, open, onOpenChange, initialStep = "selection" }: DataUploadModalProps) {
+export function DataUploadModal({
+  experimentId,
+  open,
+  onOpenChange,
+  initialStep = "selection",
+}: DataUploadModalProps) {
   const { t } = useTranslation("experiments");
   const [step, setStep] = React.useState<UploadStep>(initialStep);
   const [selectedOption, setSelectedOption] = React.useState<DataOption | null>(null);
@@ -111,10 +116,7 @@ export function DataUploadModal({ experimentId, open, onOpenChange, initialStep 
         </DialogHeader>
 
         {step === "selection" && (
-          <DataSelectionStep
-            selectedOption={selectedOption}
-            onOptionSelect={handleOptionSelect}
-          />
+          <DataSelectionStep selectedOption={selectedOption} onOptionSelect={handleOptionSelect} />
         )}
 
         {step === "file-upload" && (
@@ -134,10 +136,7 @@ export function DataUploadModal({ experimentId, open, onOpenChange, initialStep 
         )}
 
         {step === "success" && (
-          <SuccessStep
-            onClose={handleClose}
-            isMetadata={selectedOption?.id === "metadata"}
-          />
+          <SuccessStep onClose={handleClose} isMetadata={selectedOption?.id === "metadata"} />
         )}
       </DialogContent>
     </Dialog>

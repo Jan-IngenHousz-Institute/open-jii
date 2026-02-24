@@ -12,8 +12,8 @@ const mockParseClipboard = vi.fn();
 const mockParseFile = vi.fn();
 
 vi.mock("./utils/parse-metadata-import", () => ({
-  parseClipboard: (...args: unknown[]) => mockParseClipboard(...args),
-  parseFile: (...args: unknown[]) => mockParseFile(...args),
+  parseClipboard: (...args: unknown[]): unknown => mockParseClipboard(...args),
+  parseFile: (...args: unknown[]): unknown => mockParseFile(...args),
 }));
 
 /* -------------------------------- Helpers -------------------------------- */
@@ -44,7 +44,9 @@ describe("MetadataProvider & useMetadata", () => {
 
   it("throws when useMetadata is used outside MetadataProvider", () => {
     // Suppress console.error from React for the expected error
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* noop */
+    });
     expect(() => renderHook(() => useMetadata())).toThrow(
       "useMetadata must be used within a MetadataProvider",
     );
@@ -296,10 +298,7 @@ describe("MetadataProvider & useMetadata", () => {
       });
 
       act(() => {
-        result.current.setData(
-          [{ id: "col1", name: "Name", type: "string" }],
-          [],
-        );
+        result.current.setData([{ id: "col1", name: "Name", type: "string" }], []);
       });
 
       act(() => {

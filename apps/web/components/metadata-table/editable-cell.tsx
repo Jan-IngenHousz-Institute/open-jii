@@ -1,16 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { Input } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
+
 import { useMetadata } from "./metadata-context";
 
 interface EditableCellProps {
-  value: unknown;
+  value: string | number | null | undefined;
   rowId: string;
   columnId: string;
   type: "string" | "number" | "date";
-  onUpdate: (rowId: string, columnId: string, value: unknown) => void;
+  onUpdate: (rowId: string, columnId: string, value: string | number | null) => void;
   disabled?: boolean;
 }
 
@@ -45,8 +47,7 @@ export function EditableCell({
 
   const handleBlur = useCallback(() => {
     setIsEditing(false);
-    const newValue =
-      type === "number" ? (editValue === "" ? null : Number(editValue)) : editValue;
+    const newValue = type === "number" ? (editValue === "" ? null : Number(editValue)) : editValue;
     if (newValue !== value) {
       onUpdate(rowId, columnId, newValue);
     }
@@ -61,15 +62,11 @@ export function EditableCell({
         setIsEditing(false);
       }
     },
-    [handleBlur, value]
+    [handleBlur, value],
   );
 
   if (disabled) {
-    return (
-      <div className="px-2 py-1.5 text-sm">
-        {String(value ?? "")}
-      </div>
-    );
+    return <div className="px-2 py-1.5 text-sm">{String(value ?? "")}</div>;
   }
 
   if (isEditing) {
@@ -91,7 +88,7 @@ export function EditableCell({
       className={cn(
         "cursor-text px-2 py-1.5 text-sm",
         "hover:bg-muted/50 min-h-[32px]",
-        type === "number" && "tabular-nums"
+        type === "number" && "tabular-nums",
       )}
       onClick={() => setIsEditing(true)}
       onKeyDown={(e) => {
