@@ -15,7 +15,7 @@ const { updateProfileSpy, deleteAccountSpy, mockSignOutMutateAsync, toastSpy } =
 }));
 
 vi.mock("@repo/ui/hooks", () => ({
-  toast: (arg: { description: string; variant?: string }) => toastSpy(arg),
+  toast: toastSpy,
 }));
 
 vi.mock("~/hooks/auth/useSignOut/useSignOut", () => ({
@@ -92,7 +92,7 @@ function renderCard(props: { profile?: CreateUserProfileBody | null; userId?: st
 }
 
 /** Open dialog, type confirmation, return the confirm button */
-async function confirmAction(
+async function _confirmAction(
   buttonName: string,
   placeholder: string,
   confirmWord: string,
@@ -103,14 +103,12 @@ async function confirmAction(
   const input = screen.getByPlaceholderText(placeholder);
   await user.type(input, confirmWord);
   const contents = screen.getAllByTestId("dialog-content");
-  const confirmBtn = contents[dialogIndex].querySelector(
-    `button:not([data-testid])`,
-  ) as HTMLButtonElement;
   // Find the actual confirm button by name within dialog content
   const allBtns = Array.from(contents[dialogIndex].querySelectorAll("button"));
   const btn =
-    allBtns.find((b) => !b.disabled && b.textContent?.includes("Confirm")) ??
+    allBtns.find((b) => !b.disabled && b.textContent.includes("Confirm")) ??
     allBtns.find((b) => !b.disabled && b.textContent !== "dangerZone.cancel");
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return { user, btn: btn!, input };
 }
 

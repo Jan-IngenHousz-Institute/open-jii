@@ -1,4 +1,4 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import MacroCodeEditor from "./macro-code-editor";

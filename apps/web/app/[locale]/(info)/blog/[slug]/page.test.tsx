@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockBlogDetail = vi.fn();
 vi.mock("~/lib/contentful", () => ({
   getContentfulClients: vi.fn().mockResolvedValue({
-    client: { pageBlogDetail: (...a: unknown[]) => mockBlogDetail(...a) },
-    previewClient: { pageBlogDetail: (...a: unknown[]) => mockBlogDetail(...a) },
+    client: { pageBlogDetail: mockBlogDetail },
+    previewClient: { pageBlogDetail: mockBlogDetail },
   }),
 }));
 
@@ -65,7 +65,7 @@ describe("BlogDetailPage", () => {
       pageLandingCollection: { items: [{}] },
     });
     const { default: Page } = await import("./page");
-    await Page(params).catch(() => {});
+    await Page(params).catch(() => undefined);
     expect(notFound).toHaveBeenCalled();
   });
 

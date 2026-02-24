@@ -1,29 +1,46 @@
 /**
  * MSW server instance for Vitest.
  *
- * Import and use this in tests that need to intercept HTTP requests.
- * The server is automatically started/stopped/reset via the global
- * test setup in `test/setup.ts`.
+ * Automatically started/stopped/reset via `test/setup.ts`.
  *
- * For per-test overrides, use `server.use(...)` within individual tests.
+ * Tests override endpoints with `server.mount()`:
  *
  * @example
  * ```ts
  * import { server } from "@/test/msw/server";
- * import { http, HttpResponse } from "msw";
+ * import { contract } from "@repo/api";
+ * import { createExperiment } from "@/test/factories";
  *
- * it("handles an error", async () => {
- *   server.use(
- *     http.get("http://localhost:3020/api/v1/experiments", () => {
- *       return HttpResponse.json({ message: "Internal Server Error" }, { status: 500 });
- *     }),
- *   );
- *   // ... rest of test
+ * // Return specific data
+ * server.mount(contract.experiments.getExperiment, {
+ *   body: createExperiment({ id: "exp-1", name: "Custom" }),
+ * });
+ *
+ * // Error
+ * server.mount(contract.experiments.getExperiment, { status: 404 });
+ *
+ * // Capture request body / params
+ * const spy = server.mount(contract.macros.createMacro, {
+ *   body: createMacro({ id: "new-1" }),
+ * });
+ * // … trigger action …
+ * expect(spy.body).toMatchObject({ name: "Test" });
+ *
+ * // Delay (observe optimistic UI)
+ * server.mount(contract.experiments.updateExperiment, {
+ *   body: createExperiment({ id: "exp-1" }),
+ *   delay: 100,
  * });
  * ```
  */
 import { setupServer } from "msw/node";
 
 import { handlers } from "./handlers";
+import { createMount } from "./mount";
 
-export const server = setupServer(...handlers);
+const _server = setupServer(...handlers);
+
+/** MSW server extended with `mount()` for concise per-test overrides. */
+export const server = Object.assign(_server, {
+  mount: createMount(_server),
+});

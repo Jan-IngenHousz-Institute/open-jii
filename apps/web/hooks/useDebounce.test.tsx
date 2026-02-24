@@ -19,7 +19,7 @@ describe("useDebounce", () => {
     expect(result.current[0]).toBe("hello");
     expect(result.current[1]).toBe(false);
 
-    act(() => vi.advanceTimersByTime(300));
+    void act(() => vi.advanceTimersByTime(300));
 
     expect(result.current[0]).toBe("hello");
     expect(result.current[1]).toBe(true);
@@ -34,7 +34,7 @@ describe("useDebounce", () => {
     expect(result.current[0]).toBe("a");
     expect(result.current[1]).toBe(false);
 
-    act(() => vi.advanceTimersByTime(300));
+    void act(() => vi.advanceTimersByTime(300));
     expect(result.current[0]).toBe("b");
     expect(result.current[1]).toBe(true);
   });
@@ -45,13 +45,13 @@ describe("useDebounce", () => {
     });
 
     rerender({ v: "b" });
-    act(() => vi.advanceTimersByTime(100));
+    void act(() => vi.advanceTimersByTime(100));
 
     rerender({ v: "c" });
-    act(() => vi.advanceTimersByTime(200));
+    void act(() => vi.advanceTimersByTime(200));
     expect(result.current[0]).toBe("a"); // still waiting
 
-    act(() => vi.advanceTimersByTime(100));
+    void act(() => vi.advanceTimersByTime(100));
     expect(result.current[0]).toBe("c"); // skipped "b"
     expect(result.current[1]).toBe(true);
   });
@@ -62,10 +62,10 @@ describe("useDebounce", () => {
     });
 
     rerender({ v: "y" });
-    act(() => vi.advanceTimersByTime(300));
+    void act(() => vi.advanceTimersByTime(300));
     expect(result.current[0]).toBe("x");
 
-    act(() => vi.advanceTimersByTime(200));
+    void act(() => vi.advanceTimersByTime(200));
     expect(result.current[0]).toBe("y");
   });
 

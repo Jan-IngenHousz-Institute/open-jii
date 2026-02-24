@@ -150,6 +150,7 @@ describe("UnifiedNavbar", () => {
   it("shows nav links and marks current page active", () => {
     renderNavbar({ pathname: "/en-US/blog/some-post" });
     const nav = screen.getByRole("navigation");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const desktop = nav.querySelector(".md\\:flex")!;
     const utils = within(desktop as HTMLElement);
 
@@ -160,7 +161,8 @@ describe("UnifiedNavbar", () => {
   it("shows Platform link for guests", () => {
     renderNavbar();
     const nav = screen.getByRole("navigation");
-    const desktop = within(nav.querySelector(".md\\:flex") as HTMLElement);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const desktop = within(nav.querySelector(".md\\:flex")!);
     expect(desktop.getByRole("link", { name: /Platform/i })).toHaveAttribute(
       "href",
       "/en-US/platform",
@@ -330,7 +332,7 @@ describe("UnifiedNavbar", () => {
 
     vi.stubGlobal(
       "IntersectionObserver",
-      vi.fn((cb: IntersectionObserverCallback) => ({
+      vi.fn((_cb: IntersectionObserverCallback) => ({
         observe: observeMock,
         unobserve: unobserveMock,
         disconnect: vi.fn(),

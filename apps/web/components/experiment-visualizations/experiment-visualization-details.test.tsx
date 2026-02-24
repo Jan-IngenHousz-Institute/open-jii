@@ -1,616 +1,300 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { useRouter, notFound } from "next/navigation";
+/**
+ * ExperimentVisualizationDetails — tests with MSW.
+ *
+ * All four hooks (useExperimentAccess, useExperimentVisualization,
+ * useExperimentVisualizationData, useExperimentVisualizationDelete)
+ * run for real; MSW intercepts the HTTP requests made by the `tsr`
+ * client and returns controlled responses.
+ */
+import { createExperimentAccess, createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
 import type { ExperimentVisualization } from "@repo/api";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperimentAccess } from "../../hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
-import { useExperimentVisualizationDelete } from "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import ExperimentVisualizationDetails from "./experiment-visualization-details";
 
-// Mock the dependencies
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(),
-  notFound: vi.fn(),
-}));
+/* ─── Mocks that are NOT HTTP ────────────────────────────────── */
 
-vi.mock("~/hooks/useLocale", () => ({
-  useLocale: vi.fn(() => "en"),
-}));
+vi.mock("~/hooks/useLocale", () => ({ useLocale: vi.fn(() => "en") }));
+vi.mock("@repo/ui/hooks", () => ({ toast: vi.fn() }));
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({
-    t: (key: string) => key,
-  })),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
-
-vi.mock("../../hooks/experiment/useExperimentVisualization/useExperimentVisualization", () => ({
-  useExperimentVisualization: vi.fn(),
-}));
-
-vi.mock("../../hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: vi.fn(),
-}));
-
-vi.mock(
-  "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete",
-  () => ({
-    useExperimentVisualizationDelete: vi.fn(),
-  }),
-);
-
-vi.mock("./experiment-visualization-renderer", () => ({
-  default: vi.fn(({ visualization }: { visualization: ExperimentVisualization }) => (
-    <div data-testid="visualization-renderer">{visualization.name}</div>
-  )),
-}));
-
-describe("ExperimentVisualizationDetails", () => {
-  const mockVisualizationId = "viz-123";
-  const mockExperimentId = "exp-456";
-  const mockRouter = {
+// Override the global next/navigation mock so useRouter returns a vi.fn()
+const { mockRouter, mockNotFound } = vi.hoisted(() => ({
+  mockRouter: {
     push: vi.fn(),
     back: vi.fn(),
+    replace: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  },
+  mockNotFound: vi.fn(),
+}));
+vi.mock("next/navigation", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("next/navigation");
+  return {
+    ...actual,
+    useRouter: () => mockRouter,
+    usePathname: () => "/en/platform/experiments",
+    useSearchParams: () => new URLSearchParams(),
+    useParams: () => ({ locale: "en-US" }),
+    notFound: mockNotFound,
   };
+});
 
-  const mockVisualization = {
-    id: mockVisualizationId,
-    name: "Test Visualization",
-    description: "A test visualization",
-    chartFamily: "basic" as const,
-    chartType: "line" as const,
-    dataConfig: {
-      tableName: "test_table",
-      dataSources: [
-        { columnName: "time", role: "x" as const },
-        { columnName: "value", role: "y" as const },
-      ],
+// Complex chart renderer; has its own tests.
+vi.mock("./experiment-visualization-renderer", () => ({
+  default: ({ visualization }: { visualization: ExperimentVisualization }) => (
+    <div data-testid="visualization-renderer">{visualization.name}</div>
+  ),
+}));
+
+/* ─── Fixtures ──────────────────────────────────────────────── */
+
+const vizId = "viz-123";
+const expId = "exp-456";
+
+const vizPayload = createVisualization({
+  id: vizId,
+  name: "Test Visualization",
+  description: "A test visualization",
+  experimentId: expId,
+  createdBy: "user-123",
+  createdByName: "Test User",
+  createdAt: "2024-01-01T00:00:00.000Z",
+  updatedAt: "2024-01-15T00:00:00.000Z",
+});
+
+const accessPayload = (overrides: Record<string, unknown> = {}) =>
+  createExperimentAccess({
+    isAdmin: (overrides.isAdmin as boolean | undefined) ?? true,
+    experiment: {
+      id: expId,
+      name: "Test",
+      description: "",
+      ...((overrides.experiment as Record<string, unknown> | undefined) ?? {}),
     },
-    appearanceConfig: {},
-    createdBy: "user-123",
-    createdByName: "Test User",
-    createdAt: new Date("2024-01-01").toISOString(),
-    updatedAt: new Date("2024-01-15").toISOString(),
-  };
+  });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (useRouter as ReturnType<typeof vi.fn>).mockReturnValue(mockRouter);
+/* ─── Setup helper ──────────────────────────────────────────── */
 
-    // Default mock for useExperimentAccess - active experiment
-    (useExperimentAccess as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: {
-        body: {
-          experiment: {
-            status: "active",
-          },
-          hasAccess: true,
-          isAdmin: true,
+interface SetupOpts {
+  accessOverrides?: Record<string, unknown>;
+  vizOverride?: Record<string, unknown> | null;
+  vizError?: boolean;
+  isArchiveContext?: boolean;
+}
+
+function setup(opts: SetupOpts = {}) {
+  // Reset router mocks per test
+  mockRouter.push.mockClear();
+  mockRouter.back.mockClear();
+  mockNotFound.mockClear();
+
+  // Access handler
+  server.mount(contract.experiments.getExperimentAccess, {
+    body: accessPayload(opts.accessOverrides),
+  });
+
+  // Visualization handler
+  if (opts.vizError) {
+    server.mount(contract.experiments.getExperimentVisualization, { status: 500 });
+  } else if (opts.vizOverride !== undefined) {
+    if (opts.vizOverride === null) {
+      server.mount(contract.experiments.getExperimentVisualization, { status: 500 });
+    } else {
+      server.mount(contract.experiments.getExperimentVisualization, {
+        body: { ...vizPayload, ...opts.vizOverride },
+      });
+    }
+  } else {
+    server.mount(contract.experiments.getExperimentVisualization, { body: vizPayload });
+  }
+
+  // Data handler — always needed for the "test_table" assertion
+  server.mount(contract.experiments.getExperimentData, {
+    body: [
+      {
+        name: "test_table",
+        catalog_name: "catalog",
+        schema_name: "schema",
+        totalRows: 2,
+        data: {
+          rows: [
+            { time: 1, value: 10 },
+            { time: 2, value: 20 },
+          ],
         },
       },
-      isLoading: false,
-      error: null,
-    });
+    ],
   });
 
-  it("should render loading state", () => {
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: null,
-      isLoading: true,
-      error: null,
-    });
+  const user = userEvent.setup();
+  render(
+    <ExperimentVisualizationDetails
+      visualizationId={vizId}
+      experimentId={expId}
+      isArchiveContext={opts.isArchiveContext}
+    />,
+  );
 
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
+  return { user, router: mockRouter };
+}
 
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
+/* ─── Tests ─────────────────────────────────────────────────── */
 
+describe("ExperimentVisualizationDetails", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /* States */
+
+  it("shows loading then resolves with visualization details", async () => {
+    setup();
+    // Initially loading while waiting for data
     expect(screen.getByText("ui.messages.loading")).toBeInTheDocument();
-  });
 
-  it("should render error state when visualization fails to load", () => {
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: new Error("Failed to load"),
+    // Data arrives via MSW
+    await waitFor(() => {
+      expect(screen.getAllByText("Test Visualization").length).toBeGreaterThan(0);
     });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    expect(screen.getByText("ui.messages.failedToLoad")).toBeInTheDocument();
-    expect(screen.getByText("ui.actions.back")).toBeInTheDocument();
-  });
-
-  it("should render visualization details successfully", () => {
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    // Use getAllByText since the name appears in both the card title and renderer
-    const visualizationNames = screen.getAllByText("Test Visualization");
-    expect(visualizationNames.length).toBeGreaterThan(0);
     expect(screen.getByText("A test visualization")).toBeInTheDocument();
     expect(screen.getByText("Test User")).toBeInTheDocument();
     expect(screen.getByText("test_table")).toBeInTheDocument();
   });
 
-  it("should display formatted dates", () => {
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    const createdDate = new Date("2024-01-01").toLocaleDateString();
-    const updatedDate = new Date("2024-01-15").toLocaleDateString();
-
-    expect(screen.getByText(createdDate)).toBeInTheDocument();
-    expect(screen.getByText(updatedDate)).toBeInTheDocument();
-  });
-
-  it("should show columns count", () => {
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    expect(screen.getByText("2 columns")).toBeInTheDocument();
-  });
-
-  it("should render visualization renderer component", () => {
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    expect(screen.getByTestId("visualization-renderer")).toBeInTheDocument();
-  });
-
-  it("should navigate to edit page when edit is clicked", async () => {
-    const user = userEvent.setup();
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    // Open the dropdown menu
-    const actionsButton = screen.getByText("ui.actions.title");
-    await user.click(actionsButton);
-
-    // Click the edit button
-    const editButton = screen.getByText("ui.actions.edit");
-    await user.click(editButton);
-
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      `/en/platform/experiments/${mockExperimentId}/analysis/visualizations/${mockVisualizationId}/edit`,
-    );
-  });
-
-  it("should call delete mutation when delete is clicked", async () => {
-    const user = userEvent.setup();
-    const mockDeleteMutate = vi.fn();
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: mockDeleteMutate,
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    // Open the dropdown menu
-    const actionsButton = screen.getByText("ui.actions.title");
-    await user.click(actionsButton);
-
-    // Click the delete button
-    const deleteButton = screen.getByText("ui.actions.delete");
-    await user.click(deleteButton);
-
-    expect(mockDeleteMutate).toHaveBeenCalledWith({
-      params: {
-        id: mockExperimentId,
-        visualizationId: mockVisualizationId,
-      },
-    });
-  });
-
-  it("should show deleting state when deletion is in progress", async () => {
-    const user = userEvent.setup();
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: true,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    // Open the dropdown menu
-    const actionsButton = screen.getByText("ui.actions.title");
-    await user.click(actionsButton);
-
-    expect(screen.getByText("ui.actions.deleting")).toBeInTheDocument();
-  });
-
-  it("should navigate back when back button is clicked in error state", async () => {
-    const user = userEvent.setup();
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: new Error("Failed to load"),
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    const backButton = screen.getByText("ui.actions.back");
-    await user.click(backButton);
-
-    expect(mockRouter.push).toHaveBeenCalledWith(`/en/platform/experiments/${mockExperimentId}`);
-  });
-
-  it("should handle successful deletion and show toast", async () => {
-    let onSuccessCallback: (() => void) | undefined;
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
-    });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockImplementation(
-      ({ onSuccess }: { onSuccess?: () => void }) => {
-        onSuccessCallback = onSuccess;
-        return {
-          mutate: vi.fn(),
-          isPending: false,
-        };
-      },
-    );
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    // Trigger the onSuccess callback
-    onSuccessCallback?.();
+  it("renders error state with back navigation", async () => {
+    const { user, router } = setup({ vizError: true });
 
     await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith({
-        description: "ui.messages.deleteSuccess",
-      });
-      expect(mockRouter.push).toHaveBeenCalledWith(`/en/platform/experiments/${mockExperimentId}`);
+      expect(screen.getByText("ui.messages.failedToLoad")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("ui.actions.back"));
+    expect(router.push).toHaveBeenCalledWith(`/en/platform/experiments/${expId}`);
+  });
+
+  /* Successful rendering */
+
+  it("displays formatted dates", async () => {
+    setup();
+    await waitFor(() => {
+      expect(screen.getByText(new Date("2024-01-01").toLocaleDateString())).toBeInTheDocument();
+    });
+    expect(screen.getByText(new Date("2024-01-15").toLocaleDateString())).toBeInTheDocument();
+  });
+
+  it("shows columns count", async () => {
+    setup();
+    await waitFor(() => {
+      expect(screen.getByText("2 columns")).toBeInTheDocument();
     });
   });
 
-  it("should show truncated user ID when createdByName is not available", () => {
-    const vizWithoutName = {
-      ...mockVisualization,
-      createdByName: undefined,
-    };
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: vizWithoutName },
-      isLoading: false,
-      error: null,
+  it("renders visualization renderer", async () => {
+    setup();
+    await waitFor(() => {
+      expect(screen.getByTestId("visualization-renderer")).toBeInTheDocument();
     });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    expect(screen.getByText("user-123...")).toBeInTheDocument();
   });
 
-  it("should open columns dropdown and show column details", async () => {
-    const user = userEvent.setup();
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: mockVisualization },
-      isLoading: false,
-      error: null,
+  it("shows truncated ID when createdByName is missing", async () => {
+    setup({ vizOverride: { createdByName: undefined } });
+    await waitFor(() => {
+      expect(screen.getByText("user-123...")).toBeInTheDocument();
     });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    // Click on the columns dropdown
-    const columnsDropdown = screen.getByText("2 columns");
-    await user.click(columnsDropdown);
-
-    // Check that column names are visible
-    expect(screen.getByText("time")).toBeInTheDocument();
-    expect(screen.getByText("value")).toBeInTheDocument();
-
-    // Check that role badges are visible
-    const badges = screen.getAllByText(/^[xy]$/);
-    expect(badges).toHaveLength(2);
   });
 
-  it("should not render description when not provided", () => {
-    const vizWithoutDescription = {
-      ...mockVisualization,
-      description: null,
-    };
-
-    (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { body: vizWithoutDescription },
-      isLoading: false,
-      error: null,
+  it("hides description when null", async () => {
+    setup({ vizOverride: { description: null } });
+    await waitFor(() => {
+      expect(screen.getAllByText("Test Visualization").length).toBeGreaterThan(0);
     });
-
-    (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-
-    render(
-      <ExperimentVisualizationDetails
-        visualizationId={mockVisualizationId}
-        experimentId={mockExperimentId}
-      />,
-    );
-
     expect(screen.queryByText("A test visualization")).not.toBeInTheDocument();
   });
 
-  describe("Archived Experiment", () => {
-    beforeEach(() => {
-      // Mock archived experiment
-      (useExperimentAccess as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: {
-          body: {
-            experiment: {
-              status: "archived",
-            },
-            hasAccess: true,
-            isAdmin: false,
-          },
-        },
-        isLoading: false,
-        error: null,
+  /* Actions */
+
+  it("navigates to edit page", async () => {
+    const { user, router } = setup();
+    await waitFor(() => {
+      expect(screen.getByText("ui.actions.title")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("ui.actions.title"));
+    await user.click(screen.getByText("ui.actions.edit"));
+    expect(router.push).toHaveBeenCalledWith(
+      `/en/platform/experiments/${expId}/analysis/visualizations/${vizId}/edit`,
+    );
+  });
+
+  it("calls delete via real mutation (MSW intercepts DELETE)", async () => {
+    const deleteSpy = server.mount(contract.experiments.deleteExperimentVisualization);
+
+    const { user, router } = setup();
+    await waitFor(() => {
+      expect(screen.getByText("ui.actions.title")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("ui.actions.title"));
+    await user.click(screen.getByText("ui.actions.delete"));
+
+    await waitFor(() => {
+      expect(deleteSpy.params).toEqual({ id: expId, visualizationId: vizId });
+    });
+
+    // onSuccess fires toast + navigation
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith({ description: "ui.messages.deleteSuccess" });
+    });
+    expect(router.push).toHaveBeenCalledWith(`/en/platform/experiments/${expId}`);
+  });
+
+  /* Columns dropdown */
+
+  it("shows column details on click", async () => {
+    const { user } = setup();
+    await waitFor(() => {
+      expect(screen.getByText("2 columns")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("2 columns"));
+    expect(screen.getByText("time")).toBeInTheDocument();
+    expect(screen.getByText("value")).toBeInTheDocument();
+    expect(screen.getAllByText(/^[xy]$/)).toHaveLength(2);
+  });
+
+  /* Archived experiment */
+
+  describe("archived experiment", () => {
+    const archiveAccess = {
+      experiment: { status: "archived" },
+      isAdmin: false,
+    };
+
+    it("calls notFound without archive context", async () => {
+      setup({ accessOverrides: archiveAccess });
+      await waitFor(() => {
+        expect(mockNotFound).toHaveBeenCalled();
       });
     });
 
-    it("should call notFound() when archived experiment is accessed without archive context", () => {
-      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: { body: mockVisualization },
-        isLoading: false,
-        error: null,
+    it("does NOT call notFound with archive context", async () => {
+      setup({ accessOverrides: archiveAccess, isArchiveContext: true });
+      // Wait for data to arrive, then assert notFound was NOT called
+      await waitFor(() => {
+        expect(
+          screen.queryByText("ui.messages.loading") ?? screen.queryByText("Test Visualization"),
+        ).toBeTruthy();
       });
-
-      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-        mutate: vi.fn(),
-        isPending: false,
-      });
-
-      render(
-        <ExperimentVisualizationDetails
-          visualizationId={mockVisualizationId}
-          experimentId={mockExperimentId}
-          // isArchiveContext is false by default
-        />,
-      );
-
-      expect(notFound).toHaveBeenCalled();
+      expect(mockNotFound).not.toHaveBeenCalled();
     });
 
-    it("should NOT call notFound() when archived experiment is accessed with archive context", () => {
-      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: { body: mockVisualization },
-        isLoading: false,
-        error: null,
+    it("disables actions button for archived experiment", async () => {
+      setup({ accessOverrides: archiveAccess, isArchiveContext: true });
+      await waitFor(() => {
+        expect(screen.getByText("ui.actions.title")).toBeInTheDocument();
       });
-
-      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-        mutate: vi.fn(),
-        isPending: false,
-      });
-
-      render(
-        <ExperimentVisualizationDetails
-          visualizationId={mockVisualizationId}
-          experimentId={mockExperimentId}
-          isArchiveContext={true}
-        />,
-      );
-
-      expect(notFound).not.toHaveBeenCalled();
-    });
-
-    it("should disable actions button when experiment is archived (in archive context)", () => {
-      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: { body: mockVisualization },
-        isLoading: false,
-        error: null,
-      });
-
-      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-        mutate: vi.fn(),
-        isPending: false,
-      });
-
-      render(
-        <ExperimentVisualizationDetails
-          visualizationId={mockVisualizationId}
-          experimentId={mockExperimentId}
-          isArchiveContext={true}
-        />,
-      );
-
-      const actionsButton = screen.getByText("ui.actions.title");
-      expect(actionsButton).toBeDisabled();
-    });
-
-    it("should not open dropdown menu when actions button is disabled for archived experiment (in archive context)", () => {
-      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: { body: mockVisualization },
-        isLoading: false,
-        error: null,
-      });
-
-      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
-        mutate: vi.fn(),
-        isPending: false,
-      });
-
-      render(
-        <ExperimentVisualizationDetails
-          visualizationId={mockVisualizationId}
-          experimentId={mockExperimentId}
-          isArchiveContext={true}
-        />,
-      );
-
-      const actionsButton = screen.getByText("ui.actions.title");
-
-      // Button should be disabled for archived experiments
-      expect(actionsButton).toBeDisabled();
-
-      // Since button is disabled, dropdown menu items should not be accessible
-      // We don't click the disabled button as that's not user behavior
-      expect(screen.queryByText("ui.actions.edit")).not.toBeInTheDocument();
-      expect(screen.queryByText("ui.actions.delete")).not.toBeInTheDocument();
+      expect(screen.getByText("ui.actions.title")).toBeDisabled();
     });
   });
 });

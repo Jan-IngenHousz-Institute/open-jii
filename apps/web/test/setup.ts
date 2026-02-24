@@ -42,6 +42,7 @@ beforeAll(() => {
 afterEach(() => {
   server.resetHandlers();
   cleanup();
+  vi.clearAllMocks();
 });
 
 afterAll(() => {
@@ -106,21 +107,27 @@ vi.mock("posthog-js", () => ({
 }));
 
 // next/navigation — safe defaults; override per-test with vi.mocked()
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
+// Uses stable refs so tests can spy on router methods:
+//   import { useRouter } from "next/navigation";
+//   expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/foo");
+vi.mock("next/navigation", () => {
+  const router = {
     push: vi.fn(),
     replace: vi.fn(),
     back: vi.fn(),
     forward: vi.fn(),
     refresh: vi.fn(),
     prefetch: vi.fn(),
-  }),
-  usePathname: () => "/platform/experiments",
-  useSearchParams: () => new URLSearchParams(),
-  useParams: () => ({ locale: "en-US" }),
-  redirect: vi.fn(),
-  notFound: vi.fn(),
-}));
+  };
+  return {
+    useRouter: vi.fn(() => router),
+    usePathname: vi.fn(() => "/platform/experiments"),
+    useSearchParams: vi.fn(() => new URLSearchParams()),
+    useParams: vi.fn(() => ({ locale: "en-US" })),
+    redirect: vi.fn(),
+    notFound: vi.fn(),
+  };
+});
 
 // next/headers — safe defaults for server component tests
 vi.mock("next/headers", () => ({
@@ -151,4 +158,15 @@ vi.mock("~/env", () => ({
     NEXT_PUBLIC_POSTHOG_HOST: "https://test.posthog.com",
     NEXT_PUBLIC_POSTHOG_UI_HOST: "https://test.ui.posthog.com",
   },
+}));
+
+// toast — UI side-effect, not HTTP; global mock avoids per-file boilerplate
+vi.mock("@repo/ui/hooks", () => ({
+  toast: vi.fn(),
+}));
+
+// useLocale — reads i18n.language (already mocked above); keep as a vi.fn()
+// so tests can override: vi.mocked(useLocale).mockReturnValue("de-DE")
+vi.mock("@/hooks/useLocale", () => ({
+  useLocale: vi.fn(() => "en-US"),
 }));

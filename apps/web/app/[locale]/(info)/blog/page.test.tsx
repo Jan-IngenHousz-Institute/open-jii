@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockPageBlog = vi.fn();
 vi.mock("~/lib/contentful", () => ({
   getContentfulClients: vi.fn().mockResolvedValue({
-    client: { pageBlog: (...a: unknown[]) => mockPageBlog(...a) },
-    previewClient: { pageBlog: (...a: unknown[]) => mockPageBlog(...a) },
+    client: { pageBlog: mockPageBlog },
+    previewClient: { pageBlog: mockPageBlog },
   }),
 }));
 
@@ -66,14 +66,14 @@ describe("BlogLandingPage", () => {
       pageBlogPostCollection: { items: [] },
     });
     const { default: Page } = await import("./page");
-    await Page(params)?.catch?.(() => {});
+    await Page(params).catch(() => undefined);
     expect(notFound).toHaveBeenCalled();
   });
 
   it("renders featured hero and post grid", async () => {
     const { default: Page } = await import("./page");
     const ui = await Page(params);
-    render(ui!);
+    render(ui);
     expect(screen.getByRole("region", { name: /featured hero/i })).toHaveTextContent(
       "Featured Post",
     );

@@ -61,6 +61,7 @@ describe("enrichPathSegments", () => {
   ])(
     "fetches $entityKey name for entity ID segments",
     async ({ path, method, entityKey, id, name }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       mockClient[entityKey][method].mockResolvedValue({ status: 200, body: { id, name } });
 
       const result = await enrichPathSegments(path, "en");

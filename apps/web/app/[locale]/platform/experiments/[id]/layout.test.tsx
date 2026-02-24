@@ -17,16 +17,16 @@ vi.mock("next/navigation", () => ({
     refresh: vi.fn(),
     prefetch: vi.fn(),
   }),
-  usePathname: () => mockUsePathname(),
-  useParams: () => mockUseParams(),
+  usePathname: mockUsePathname,
+  useParams: mockUseParams,
   useSearchParams: () => new URLSearchParams(),
   redirect: vi.fn(),
-  notFound: (...args: unknown[]) => mockNotFound(...args),
+  notFound: mockNotFound,
 }));
 
 const mockUseExperimentAccess = vi.fn();
 vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: (...args: unknown[]) => mockUseExperimentAccess(...args),
+  useExperimentAccess: mockUseExperimentAccess,
 }));
 
 vi.mock("@/hooks/useLocale", () => ({ useLocale: () => "en-US" }));
