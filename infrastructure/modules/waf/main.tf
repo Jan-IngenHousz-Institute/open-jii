@@ -218,48 +218,47 @@ resource "aws_wafv2_web_acl" "main" {
           }
 
           # Third condition: Request matches one of the bypass routes
-          # For single route: add method and path match directly as additional AND conditions
-          # For multiple routes: use OR statement wrapping AND statements per route
-
-          dynamic "statement" {
-            for_each = length(var.large_body_bypass_routes) == 1 ? [1] : []
-            content {
-              byte_match_statement {
-                search_string         = var.large_body_bypass_routes[0].method
-                positional_constraint = "EXACTLY"
-                field_to_match {
-                  method {}
+          statement {
+            # Handle single route case with AND statement
+            dynamic "and_statement" {
+              for_each = length(var.large_body_bypass_routes) == 1 ? [1] : []
+              content {
+                # Match the HTTP method for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.large_body_bypass_routes[0].method
+                    positional_constraint = "EXACTLY"
+                    field_to_match {
+                      method {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
                 }
-                text_transformation {
-                  priority = 0
-                  type     = "NONE"
+
+                # Match the URI path for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.large_body_bypass_routes[0].search_string
+                    positional_constraint = var.large_body_bypass_routes[0].positional_constraint
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                  }
                 }
               }
             }
-          }
 
-          dynamic "statement" {
-            for_each = length(var.large_body_bypass_routes) == 1 ? [1] : []
-            content {
-              byte_match_statement {
-                search_string         = var.large_body_bypass_routes[0].search_string
-                positional_constraint = var.large_body_bypass_routes[0].positional_constraint
-                field_to_match {
-                  uri_path {}
-                }
-                text_transformation {
-                  priority = 0
-                  type     = "LOWERCASE"
-                }
-              }
-            }
-          }
-
-          # Handle multiple routes case with OR statement
-          dynamic "statement" {
-            for_each = length(var.large_body_bypass_routes) >= 2 ? [1] : []
-            content {
-              or_statement {
+            # Handle multiple routes case with OR statement
+            dynamic "or_statement" {
+              for_each = length(var.large_body_bypass_routes) >= 2 ? [1] : []
+              content {
                 # Create a statement for each configured route
                 dynamic "statement" {
                   for_each = var.large_body_bypass_routes
