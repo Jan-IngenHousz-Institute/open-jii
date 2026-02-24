@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
+import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
 import { useAllMeasurements } from "~/hooks/use-all-measurements";
@@ -14,13 +15,16 @@ import type {
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
+import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
+  const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const { measurements, invalidate } = useAllMeasurements(filter);
-  const { uploadAll, isUploading, uploadOne, removeFailedUpload } = useFailedUploads();
+  const { uploadAll, isUploading, uploadOne, removeFailedUpload, updateMeasurementComment } =
+    useFailedUploads();
 
   const handleSyncAll = () => {
     Alert.alert(
@@ -197,6 +201,11 @@ export function RecentMeasurementsScreen() {
               experimentName={measurement.experimentName}
               status={measurement.status}
               onPress={() => handleItemPress(measurement)}
+              onComment={
+                measurement.status === "unsynced"
+                  ? () => setSelectedForComment(measurement)
+                  : undefined
+              }
               onDelete={() =>
                 handleDelete(measurement.key, measurement.status, measurement.experimentName)
               }
@@ -215,6 +224,21 @@ export function RecentMeasurementsScreen() {
           visible={!!selectedMeasurement}
           measurement={selectedMeasurement}
           onClose={() => setSelectedMeasurement(null)}
+        />
+      )}
+
+      {selectedForComment && (
+        <CommentModal
+          visible={!!selectedForComment}
+          initialText={getCommentFromMeasurementResult(
+            selectedForComment.data.measurementResult as Record<string, unknown>,
+          )}
+          onSave={async (text) => {
+            await updateMeasurementComment(selectedForComment.key, selectedForComment.data, text);
+            invalidate();
+            setSelectedForComment(null);
+          }}
+          onCancel={() => setSelectedForComment(null)}
         />
       )}
     </View>
