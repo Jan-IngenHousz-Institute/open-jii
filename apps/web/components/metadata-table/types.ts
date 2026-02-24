@@ -1,5 +1,3 @@
-import type { ColumnDef } from "@tanstack/react-table";
-
 export interface MetadataColumn {
   id: string;
   name: string;
@@ -59,5 +57,3 @@ export interface MetadataContextValue {
   isEditingCell: boolean;
   setIsEditingCell: (editing: boolean) => void;
 }
-
-export type MetadataColumnDef = ColumnDef<MetadataRow, unknown>;
