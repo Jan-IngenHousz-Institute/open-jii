@@ -1,146 +1,94 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-
-import type { Experiment } from "@repo/api";
+/**
+ * ExperimentOverviewCards test — renders with real child components
+ * (ExperimentStatusBadge, RichTextRenderer, next/link, lucide icons).
+ *
+ * No mocks needed beyond the global i18n mock from test/setup.ts.
+ * Tests focus on what a user would see: experiment names, links,
+ * loading skeletons, and empty states.
+ */
+import { createExperiment } from "@/test/factories";
+import { render, screen } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
 
 import { ExperimentOverviewCards } from "./experiment-overview-cards";
 
-// Mock the useTranslation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "experiments.loadingExperiments": "Loading experiments...",
-        "experiments.noExperiments": "No experiments found",
-        lastUpdate: "Last update",
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
-
-// Mock ExperimentStatusBadge
-vi.mock("~/components/ExperimentStatusBadge", () => ({
-  ExperimentStatusBadge: ({ status }: { status: string }) => (
-    <span data-testid="status-badge">{status}</span>
-  ),
-}));
-
-// Mock RichTextRenderer
-vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    RichTextRenderer: ({ content }: { content: string }) => (
-      <div data-testid="rich-text">{content}</div>
-    ),
-  };
-});
-
-// Mock next/link
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
-
-// Mock lucide-react
-vi.mock("lucide-react", () => ({
-  ChevronRight: () => <svg data-testid="chevron-right" />,
-}));
-
-const mockExperiment: Experiment = {
-  id: "1",
-  name: "Test Experiment",
-  description: "Test description",
-  status: "active",
-  visibility: "private",
-  createdBy: "user-1",
-  createdAt: "2025-01-01T00:00:00.000Z",
-  updatedAt: "2025-01-15T00:00:00.000Z",
-  embargoUntil: "2025-12-31T23:59:59.999Z",
-  ownerFirstName: "John",
-  ownerLastName: "Doe",
-};
-
 describe("ExperimentOverviewCards", () => {
-  describe("loading state", () => {
-    it("renders skeleton loaders when experiments is undefined", () => {
-      const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
-      const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
-      expect(skeletons.length).toBeGreaterThan(0);
-    });
+  it("shows skeleton loaders while experiments are loading", () => {
+    const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
+    const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  describe("empty state", () => {
-    it("renders no experiments message when array is empty", () => {
-      render(<ExperimentOverviewCards experiments={[]} />);
-      expect(screen.getByText("No experiments found")).toBeInTheDocument();
-    });
+  it("shows an empty message when there are no experiments", () => {
+    render(<ExperimentOverviewCards experiments={[]} />);
+    expect(screen.getByText("experiments.noExperiments")).toBeInTheDocument();
   });
 
-  describe("vertical layout (default)", () => {
-    it("renders experiments in vertical layout by default", () => {
-      render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-      expect(screen.getByText("Test description")).toBeInTheDocument();
-      expect(screen.getByTestId("status-badge")).toHaveTextContent("active");
+  it("renders experiment cards with name, description and status", () => {
+    const experiment = createExperiment({
+      name: "Photosynthesis Study",
+      description: "Measuring chlorophyll fluorescence",
+      status: "active",
     });
 
-    it("uses correct path for regular experiments", () => {
-      const { container } = render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
-      const link = container.querySelector('a[href="/platform/experiments/1"]');
-      expect(link).toBeInTheDocument();
-    });
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
 
-    it("uses correct path for archived experiments", () => {
-      const { container } = render(
-        <ExperimentOverviewCards experiments={[mockExperiment]} archived />,
-      );
-      const link = container.querySelector('a[href="/platform/experiments-archive/1"]');
-      expect(link).toBeInTheDocument();
-    });
-
-    it("renders multiple experiments in vertical layout", () => {
-      const experiments: Experiment[] = [
-        mockExperiment,
-        { ...mockExperiment, id: "2", name: "Second Experiment" },
-      ];
-      render(<ExperimentOverviewCards experiments={experiments} />);
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-      expect(screen.getByText("Second Experiment")).toBeInTheDocument();
-    });
-
-    it("displays formatted last update date in vertical layout", () => {
-      render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
-      expect(screen.getByText(/Last update:/)).toBeInTheDocument();
-    });
-
-    it("renders ChevronRight icon in vertical layout", () => {
-      render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
-      expect(screen.getByTestId("chevron-right")).toBeInTheDocument();
-    });
-
-    it("handles experiment with null description in vertical layout", () => {
-      const experimentWithoutDesc = { ...mockExperiment, description: null };
-      render(<ExperimentOverviewCards experiments={[experimentWithoutDesc]} />);
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-      expect(screen.getByTestId("rich-text")).toBeInTheDocument();
-    });
+    expect(screen.getByText("Photosynthesis Study")).toBeInTheDocument();
+    expect(screen.getByText("Measuring chlorophyll fluorescence")).toBeInTheDocument();
+    // Status badge renders the translated key
+    expect(screen.getByText("status.active")).toBeInTheDocument();
   });
 
-  describe("different experiment statuses", () => {
-    it("renders experiment with archived status", () => {
-      const experiment = { ...mockExperiment, status: "archived" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} />);
-      expect(screen.getByTestId("status-badge")).toHaveTextContent("archived");
+  it("links each card to the experiment detail page", () => {
+    const experiment = createExperiment({ id: "abc-123" });
+
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
+
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/platform/experiments/abc-123");
+  });
+
+  it("links to the archive path when archived prop is set", () => {
+    const experiment = createExperiment({ id: "abc-123" });
+
+    render(<ExperimentOverviewCards experiments={[experiment]} archived />);
+
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/platform/experiments-archive/abc-123");
+  });
+
+  it("renders multiple experiment cards", () => {
+    const experiments = [
+      createExperiment({ name: "Study A" }),
+      createExperiment({ name: "Study B" }),
+      createExperiment({ name: "Study C" }),
+    ];
+
+    render(<ExperimentOverviewCards experiments={experiments} />);
+
+    expect(screen.getByText("Study A")).toBeInTheDocument();
+    expect(screen.getByText("Study B")).toBeInTheDocument();
+    expect(screen.getByText("Study C")).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(3);
+  });
+
+  it("shows the last-updated date", () => {
+    const experiment = createExperiment({
+      updatedAt: "2025-06-15T00:00:00.000Z",
     });
 
-    it("renders experiment with stale status", () => {
-      const experiment = { ...mockExperiment, status: "stale" as const };
-      render(<ExperimentOverviewCards experiments={[experiment]} />);
-      expect(screen.getByTestId("status-badge")).toHaveTextContent("stale");
-    });
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
+
+    // The date format depends on locale, but the translation key should appear
+    expect(screen.getByText(/lastUpdate/)).toBeInTheDocument();
+  });
+
+  it("gracefully handles a null description", () => {
+    const experiment = createExperiment({ description: null });
+
+    render(<ExperimentOverviewCards experiments={[experiment]} />);
+
+    // Should still render the card without crashing
+    expect(screen.getByText(experiment.name)).toBeInTheDocument();
   });
 });

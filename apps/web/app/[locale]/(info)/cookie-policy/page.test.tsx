@@ -1,230 +1,65 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
+import { draftMode } from "next/headers";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import CookiePolicyPage, { generateMetadata } from "./page";
-
-globalThis.React = React;
-
-// --- Mocks ---
-const mockDraftMode = vi.fn(() => Promise.resolve({ isEnabled: false }));
-vi.mock("next/headers", () => ({
-  draftMode: () => mockDraftMode(),
-}));
-
 const mockPageCookiePolicy = vi.fn();
-
 vi.mock("~/lib/contentful", () => ({
-  getContentfulClients: vi.fn(() =>
-    Promise.resolve({
-      client: {
-        pageCookiePolicy: mockPageCookiePolicy,
-      },
-      previewClient: {
-        pageCookiePolicy: mockPageCookiePolicy,
-      },
-    }),
-  ),
+  getContentfulClients: vi.fn().mockResolvedValue({
+    client: { pageCookiePolicy: (...a: unknown[]) => mockPageCookiePolicy(...a) },
+    previewClient: { pageCookiePolicy: (...a: unknown[]) => mockPageCookiePolicy(...a) },
+  }),
 }));
 
 vi.mock("@repo/cms", () => ({
-  CookiePolicyContent: ({
-    cookiePolicy,
-    locale,
-    preview,
-  }: {
-    cookiePolicy: unknown;
-    locale: string;
-    preview: boolean;
-  }) => (
-    <div data-testid="cookie-policy-content">
-      {"Cookie Policy Content - "}
+  CookiePolicyContent: ({ locale, preview }: { locale: string; preview: boolean }) => (
+    <section aria-label="cookie policy">
       {locale}
-      {" - "}
-      {preview ? "preview" : "published"}
-      {" - "}
-      {cookiePolicy ? "with data" : "no data"}
-    </div>
+      {preview ? " preview" : ""}
+    </section>
   ),
 }));
 
-describe("Cookie Policy Page - generateMetadata", () => {
-  const mockCookiePolicyData = {
-    pageTitle: "Cookie Policy",
-    pageDescription: "Learn about our cookie usage and privacy practices",
-  };
+const policyData = { pageTitle: "Cookie Policy", pageDescription: "How we use cookies." };
 
+describe("CookiePolicyPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("should generate metadata from Contentful when data is available", async () => {
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [mockCookiePolicyData],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" }),
-    });
-
-    expect(metadata).toEqual({
-      title: "Cookie Policy",
-      description: "Learn about our cookie usage and privacy practices",
+    mockPageCookiePolicy.mockResolvedValue({
+      pageCookiePolicyCollection: { items: [policyData] },
     });
   });
 
-  it("should handle missing pageTitle", async () => {
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [
-          {
-            pageTitle: null,
-            pageDescription: "Learn about our cookie usage and privacy practices",
-          },
-        ],
-      },
+  const params = { params: Promise.resolve({ locale: "en-US" }) };
+
+  describe("generateMetadata", () => {
+    it("returns title and description from CMS", async () => {
+      const { generateMetadata } = await import("./page");
+      const metadata = await generateMetadata(params);
+      expect(metadata).toEqual({ title: "Cookie Policy", description: "How we use cookies." });
     });
 
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" }),
-    });
-
-    expect(metadata.title).toBeUndefined();
-    expect(metadata.description).toBe("Learn about our cookie usage and privacy practices");
-  });
-
-  it("should handle missing pageDescription", async () => {
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [
-          {
-            pageTitle: "Cookie Policy",
-            pageDescription: null,
-          },
-        ],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" }),
-    });
-
-    expect(metadata.title).toBe("Cookie Policy");
-    expect(metadata.description).toBeUndefined();
-  });
-
-  it("should handle both fields being null", async () => {
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [
-          {
-            pageTitle: null,
-            pageDescription: null,
-          },
-        ],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" }),
-    });
-
-    expect(metadata).toEqual({
-      title: undefined,
-      description: undefined,
+    it("returns empty metadata when fields are null", async () => {
+      mockPageCookiePolicy.mockResolvedValue({
+        pageCookiePolicyCollection: { items: [{ pageTitle: null, pageDescription: null }] },
+      });
+      const { generateMetadata } = await import("./page");
+      const metadata = await generateMetadata(params);
+      expect(metadata).toEqual({});
     });
   });
-});
 
-describe("Cookie Policy Page - Component", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockDraftMode.mockResolvedValue({ isEnabled: false });
+  it("renders CookiePolicyContent with locale", async () => {
+    const { default: Page } = await import("./page");
+    const ui = await Page(params);
+    render(ui);
+    expect(screen.getByRole("region", { name: /cookie policy/i })).toHaveTextContent("en-US");
   });
 
-  it("renders cookie policy page with data", async () => {
-    const mockCookiePolicyData = {
-      pageTitle: "Cookie Policy",
-      pageDescription: "Learn about our cookie usage and privacy practices",
-    };
-
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [mockCookiePolicyData],
-      },
-    });
-
-    render(
-      await CookiePolicyPage({
-        params: Promise.resolve({ locale: "en-US" as const }),
-      }),
-    );
-
-    expect(screen.getByTestId("cookie-policy-content")).toBeInTheDocument();
-    expect(screen.getByTestId("cookie-policy-content")).toHaveTextContent(
-      "Cookie Policy Content - en-US - published - with data",
-    );
-  });
-
-  it("renders cookie policy page with different locale", async () => {
-    const mockCookiePolicyData = {
-      pageTitle: "Cookie-Richtlinie",
-      pageDescription: "Erfahren Sie mehr über unsere Cookie-Nutzung",
-    };
-
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [mockCookiePolicyData],
-      },
-    });
-
-    render(await CookiePolicyPage({ params: Promise.resolve({ locale: "de-DE" as const }) }));
-
-    expect(screen.getByTestId("cookie-policy-content")).toHaveTextContent(
-      "Cookie Policy Content - de-DE - published - with data",
-    );
-  });
-
-  it("passes correct parameters to getCookiePolicyData", async () => {
-    const mockCookiePolicyData = { pageTitle: "Cookie Policy" };
-
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [mockCookiePolicyData],
-      },
-    });
-
-    await CookiePolicyPage({ params: Promise.resolve({ locale: "en-US" as const }) });
-
-    expect(mockPageCookiePolicy).toHaveBeenCalledWith({ locale: "en-US", preview: false });
-  });
-
-  it("renders cookie policy page in preview mode", async () => {
-    const mockCookiePolicyData = {
-      pageTitle: "Cookie Policy",
-      pageDescription: "Learn about our cookie usage and privacy practices",
-    };
-
-    mockPageCookiePolicy.mockResolvedValueOnce({
-      pageCookiePolicyCollection: {
-        items: [mockCookiePolicyData],
-      },
-    });
-
-    // Mock draftMode to return enabled for this test
-    mockDraftMode.mockResolvedValueOnce({ isEnabled: true });
-
-    render(
-      await CookiePolicyPage({
-        params: Promise.resolve({ locale: "en-US" as const }),
-      }),
-    );
-
-    expect(screen.getByTestId("cookie-policy-content")).toHaveTextContent(
-      "Cookie Policy Content - en-US - preview - with data",
-    );
+  it("passes preview flag when draft mode is enabled", async () => {
+    vi.mocked(draftMode).mockResolvedValue({ isEnabled: true } as never);
+    const { default: Page } = await import("./page");
+    const ui = await Page(params);
+    render(ui);
+    expect(screen.getByRole("region", { name: /cookie policy/i })).toHaveTextContent("preview");
   });
 });

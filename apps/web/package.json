@@ -60,6 +60,7 @@
     "eslint": "catalog:",
     "jsdom": "catalog:testing",
     "monaco-editor": "0.52.0",
+    "msw": "^2.12.10",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:testing"

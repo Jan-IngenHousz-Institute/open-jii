@@ -1,82 +1,53 @@
-import "@testing-library/jest-dom";
-import { render } from "@testing-library/react";
-import React from "react";
-import { vi, describe, it, expect } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { notFound } from "next/navigation";
+import { describe, it, expect, vi } from "vitest";
 
-import LocaleLayout from "../[locale]/layout";
-
-// Mock PostHog server feature flag utility
-vi.mock("~/lib/posthog-server", () => ({
-  isFeatureFlagEnabled: vi.fn((flagKey: string) => {
-    // Default: enable multi-language for tests
-    if (flagKey === "multi-language") return true;
-    return false;
-  }),
-}));
-
-// Mock env variables first - must be before imports
-vi.mock("~/env", () => ({
-  env: {
-    NODE_ENV: "test",
-    NEXT_PUBLIC_BASE_URL: "http://localhost:3000",
-    NEXT_PUBLIC_ENABLE_DEVTOOLS: "false",
-  },
-}));
-
-// Mock Next.js fonts
 vi.mock("next/font/google", () => ({
-  Poppins: () => ({
-    className: "font-poppins",
-    style: {},
-    variable: "--font-poppins",
-  }),
-  Overpass: () => ({
-    className: "font-overpass",
-    style: {},
-    variable: "--font-overpass",
-  }),
-  Inter: () => ({
-    className: "font-inter",
-    style: {},
-    variable: "--font-inter",
-  }),
-  Noto_Sans: () => ({
-    className: "font-noto-sans",
-    style: {},
-    variable: "--font-noto-sans",
-  }),
+  Poppins: () => ({ variable: "--font-poppins" }),
+  Overpass: () => ({ variable: "--font-overpass" }),
+  Inter: () => ({ variable: "--font-inter" }),
+  Noto_Sans: () => ({ variable: "--font-noto-sans" }),
 }));
 
-vi.mock("next/headers", () => ({
-  draftMode: vi.fn(() => ({ isEnabled: false })),
+vi.mock("~/lib/posthog-server", () => ({
+  isFeatureFlagEnabled: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("@repo/i18n/server", () => ({
-  default: () => Promise.resolve({ t: (key: string) => key }),
+vi.mock("@repo/cms/contentful", () => ({
+  ContentfulPreviewProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-describe("LocaleLayout Component", () => {
-  const mockProps = {
-    children: <div>Test Content</div>,
-    params: Promise.resolve({ locale: "en-US" as const }),
-  };
+vi.mock("@/components/translations-provider", () => ({
+  TranslationsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
-  it("should render without crashing", async () => {
-    const { container } = render(await LocaleLayout(mockProps));
-    expect(container).toBeInTheDocument();
+vi.mock("../../hooks/usePostHogAuth", () => ({
+  PostHogIdentifier: () => null,
+}));
+
+vi.mock("../../providers/QueryProvider", () => ({
+  QueryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+describe("LocaleLayout", () => {
+  it("renders children within providers", async () => {
+    const { default: Layout } = await import("../[locale]/layout");
+    const ui = await Layout({
+      children: <div>Content</div>,
+      params: Promise.resolve({ locale: "en-US" }),
+    });
+    render(ui);
+    expect(screen.getByText("Content")).toBeInTheDocument();
   });
 
-  it("should handle different locales", async () => {
-    const propsWithDifferentLocale = {
-      children: <div>Test Content</div>,
-      params: Promise.resolve({ locale: "de-DE" as const }),
-    };
-    const { container } = render(await LocaleLayout(propsWithDifferentLocale));
-    expect(container).toBeInTheDocument();
-  });
-
-  it("should render basic structure", async () => {
-    const result = render(await LocaleLayout(mockProps));
-    expect(result.container.firstChild).toBeTruthy();
+  it("calls notFound for non-default locale when multi-language is disabled", async () => {
+    const mod = await import("~/lib/posthog-server");
+    vi.mocked(mod.isFeatureFlagEnabled).mockResolvedValue(false);
+    const { default: Layout } = await import("../[locale]/layout");
+    await Layout({
+      children: <div />,
+      params: Promise.resolve({ locale: "de-DE" }),
+    }).catch(() => {});
+    expect(notFound).toHaveBeenCalled();
   });
 });

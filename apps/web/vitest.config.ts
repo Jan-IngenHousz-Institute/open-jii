@@ -18,7 +18,7 @@ const aliasConfig = defineConfig({
 // Web-specific configuration
 const webConfig = defineConfig({
   test: {
-    setupFiles: ["./components/question-card/test-setup.ts"],
+    setupFiles: ["./test/setup.ts"],
     env: {
       NODE_ENV: "test",
       NEXT_PUBLIC_POSTHOG_KEY: "test-posthog-key",

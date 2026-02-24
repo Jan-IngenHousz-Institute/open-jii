@@ -70,7 +70,7 @@ describe("<BlogPostsSection />", () => {
     const ui = await BlogPostsSection({ locale: "en-US" });
     render(ui);
 
-    expect(screen.getByText(/No blog posts available/i)).toBeInTheDocument();
+    expect(screen.getByText(/dashboard\.noBlogPosts/)).toBeInTheDocument();
   });
 
   it("renders error state when fetch throws", async () => {
@@ -79,7 +79,7 @@ describe("<BlogPostsSection />", () => {
     const ui = await BlogPostsSection({ locale: "en-US" });
     render(ui);
 
-    expect(screen.getByText(/Error loading blog posts/i)).toBeInTheDocument();
+    expect(screen.getByText(/dashboard\.errorLoadingBlogPosts/)).toBeInTheDocument();
   });
 
   it("uses previewClient when draft mode is enabled", async () => {
