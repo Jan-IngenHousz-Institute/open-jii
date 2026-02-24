@@ -15,7 +15,7 @@ import type {
   MetadataRow,
   MetadataTableState,
 } from "./types";
-import { parseClipboard, parseFile } from "./utils/parse-data";
+import { parseClipboard, parseFile } from "./utils/parse-metadata-import";
 
 const MetadataContext = createContext<MetadataContextValue | null>(null);
 

@@ -10,4 +10,4 @@ export type {
   MetadataImportConfig,
   MetadataContextValue,
 } from "./types";
-export { parseDelimitedText, parseFile, parseClipboard } from "./utils/parse-data";
+export { parseDelimitedText, parseFile, parseClipboard } from "./utils/parse-metadata-import";
