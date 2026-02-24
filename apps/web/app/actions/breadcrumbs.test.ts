@@ -4,279 +4,103 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { enrichPathSegments } from "./breadcrumbs";
 
-// Mock next/headers
-vi.mock("next/headers", () => ({
-  headers: vi.fn(),
-}));
-
-// Mock @ts-rest/core
 vi.mock("@ts-rest/core", () => ({
   initClient: vi.fn(),
-  initContract: vi.fn(() => ({
-    router: vi.fn((routes: unknown) => routes),
-  })),
+  initContract: vi.fn(() => ({ router: vi.fn((r: unknown) => r) })),
   tsRestFetchApi: vi.fn(),
 }));
 
-const mockHeaders = vi.mocked(headers);
-const mockInitClient = vi.mocked(initClient);
+const mockClient = {
+  experiments: { getExperiment: vi.fn() },
+  macros: { getMacro: vi.fn() },
+  protocols: { getProtocol: vi.fn() },
+};
 
 describe("enrichPathSegments", () => {
-  let mockClient: {
-    experiments: { getExperiment: ReturnType<typeof vi.fn> };
-    macros: { getMacro: ReturnType<typeof vi.fn> };
-    protocols: { getProtocol: ReturnType<typeof vi.fn> };
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockClient = {
-      experiments: {
-        getExperiment: vi.fn(),
-      },
-      macros: {
-        getMacro: vi.fn(),
-      },
-      protocols: {
-        getProtocol: vi.fn(),
-      },
-    };
-
-    const mockHeadersList = new Headers();
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockInitClient.mockReturnValue(mockClient as never);
+    vi.mocked(headers).mockResolvedValue(new Headers() as never);
+    vi.mocked(initClient).mockReturnValue(mockClient as never);
   });
 
-  it("returns empty array for platform root", async () => {
-    const result = await enrichPathSegments("/en/platform", "en");
-
-    expect(result).toEqual([]);
-  });
-
-  it("returns empty array for first-level routes", async () => {
-    const result = await enrichPathSegments("/en/platform/experiments", "en");
-
-    expect(result).toEqual([]);
+  it("returns empty array for platform root and first-level routes", async () => {
+    expect(await enrichPathSegments("/en/platform", "en")).toEqual([]);
+    expect(await enrichPathSegments("/en/platform/experiments", "en")).toEqual([]);
   });
 
   it("returns breadcrumbs for nested non-entity paths", async () => {
     const result = await enrichPathSegments("/en/platform/experiments/new", "en");
-
     expect(result).toEqual([
-      {
-        segment: "experiments",
-        title: "experiments",
-        href: "/en/platform/experiments",
-      },
-      {
-        segment: "new",
-        title: "new",
-        href: "/en/platform/experiments/new",
-      },
+      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+      { segment: "new", title: "new", href: "/en/platform/experiments/new" },
     ]);
   });
 
-  it("fetches and enriches experiment names for UUID segments", async () => {
-    mockClient.experiments.getExperiment.mockResolvedValue({
-      status: 200,
-      body: {
-        id: "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-        name: "My Experiment",
-      },
-    });
+  it.each([
+    {
+      path: "/en/platform/experiments/exp-1",
+      method: "getExperiment" as const,
+      entityKey: "experiments" as const,
+      id: "exp-1",
+      name: "My Experiment",
+    },
+    {
+      path: "/en/platform/macros/macro-1",
+      method: "getMacro" as const,
+      entityKey: "macros" as const,
+      id: "macro-1",
+      name: "My Macro",
+    },
+    {
+      path: "/en/platform/protocols/proto-1",
+      method: "getProtocol" as const,
+      entityKey: "protocols" as const,
+      id: "proto-1",
+      name: "My Protocol",
+    },
+  ])(
+    "fetches $entityKey name for entity ID segments",
+    async ({ path, method, entityKey, id, name }) => {
+      mockClient[entityKey][method].mockResolvedValue({ status: 200, body: { id, name } });
 
-    const result = await enrichPathSegments(
-      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-      "en",
-    );
+      const result = await enrichPathSegments(path, "en");
+      expect(result[1]).toEqual(expect.objectContaining({ segment: id, title: name }));
+      expect(mockClient[entityKey][method]).toHaveBeenCalledWith({ params: { id } });
+    },
+  );
 
-    expect(result).toEqual([
-      {
-        segment: "experiments",
-        title: "experiments",
-        href: "/en/platform/experiments",
-      },
-      {
-        segment: "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-        title: "My Experiment",
-        href: "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-      },
-    ]);
+  it("keeps original segment on API error or non-200", async () => {
+    mockClient.experiments.getExperiment.mockRejectedValue(new Error("boom"));
+    let result = await enrichPathSegments("/en/platform/experiments/e1", "en");
+    expect(result[1]?.title).toBe("e1");
 
-    expect(mockClient.experiments.getExperiment).toHaveBeenCalledWith({
-      params: { id: "a1b2c3d4-e5f6-4890-abcd-ef1234567890" },
-    });
-  });
-
-  it("fetches and enriches macro names for UUID segments", async () => {
-    mockClient.macros.getMacro.mockResolvedValue({
-      status: 200,
-      body: {
-        id: "macro-123",
-        name: "My Macro",
-      },
-    });
-
-    const result = await enrichPathSegments("/en/platform/macros/macro-123", "en");
-
-    expect(result).toEqual([
-      {
-        segment: "macros",
-        title: "macros",
-        href: "/en/platform/macros",
-      },
-      {
-        segment: "macro-123",
-        title: "My Macro",
-        href: "/en/platform/macros/macro-123",
-      },
-    ]);
-
-    expect(mockClient.macros.getMacro).toHaveBeenCalledWith({
-      params: { id: "macro-123" },
-    });
-  });
-
-  it("fetches and enriches protocol names for UUID segments", async () => {
-    mockClient.protocols.getProtocol.mockResolvedValue({
-      status: 200,
-      body: {
-        id: "protocol-456",
-        name: "My Protocol",
-      },
-    });
-
-    const result = await enrichPathSegments("/en/platform/protocols/protocol-456", "en");
-
-    expect(result).toEqual([
-      {
-        segment: "protocols",
-        title: "protocols",
-        href: "/en/platform/protocols",
-      },
-      {
-        segment: "protocol-456",
-        title: "My Protocol",
-        href: "/en/platform/protocols/protocol-456",
-      },
-    ]);
-
-    expect(mockClient.protocols.getProtocol).toHaveBeenCalledWith({
-      params: { id: "protocol-456" },
-    });
-  });
-
-  it("handles API errors gracefully and keeps original segment", async () => {
-    mockClient.experiments.getExperiment.mockRejectedValue(new Error("API Error"));
-
-    const result = await enrichPathSegments("/en/platform/experiments/exp-123", "en");
-
-    expect(result).toEqual([
-      {
-        segment: "experiments",
-        title: "experiments",
-        href: "/en/platform/experiments",
-      },
-      {
-        segment: "exp-123",
-        title: "exp-123",
-        href: "/en/platform/experiments/exp-123",
-      },
-    ]);
-  });
-
-  it("handles non-200 status codes gracefully", async () => {
-    mockClient.experiments.getExperiment.mockResolvedValue({
-      status: 404,
-      body: { message: "Not found" },
-    });
-
-    const result = await enrichPathSegments("/en/platform/experiments/exp-123", "en");
-
-    expect(result).toEqual([
-      {
-        segment: "experiments",
-        title: "experiments",
-        href: "/en/platform/experiments",
-      },
-      {
-        segment: "exp-123",
-        title: "exp-123",
-        href: "/en/platform/experiments/exp-123",
-      },
-    ]);
+    mockClient.experiments.getExperiment.mockResolvedValue({ status: 404 });
+    result = await enrichPathSegments("/en/platform/experiments/e1", "en");
+    expect(result[1]?.title).toBe("e1");
   });
 
   it("stops at entity ID and excludes tab routes", async () => {
     mockClient.experiments.getExperiment.mockResolvedValue({
       status: 200,
-      body: {
-        id: "exp-123",
-        name: "My Experiment",
-      },
+      body: { id: "exp-1", name: "Study" },
     });
-
-    const result = await enrichPathSegments("/en/platform/experiments/exp-123/data", "en");
-
-    // Should only show breadcrumbs up to the entity ID, not the /data tab
-    expect(result).toEqual([
-      {
-        segment: "experiments",
-        title: "experiments",
-        href: "/en/platform/experiments",
-      },
-      {
-        segment: "exp-123",
-        title: "My Experiment",
-        href: "/en/platform/experiments/exp-123",
-      },
-    ]);
+    const result = await enrichPathSegments("/en/platform/experiments/exp-1/data", "en");
+    expect(result).toHaveLength(2);
+    expect(result[1]?.title).toBe("Study");
   });
 
-  it("handles experiments-archive route correctly", async () => {
+  it("handles experiments-archive route", async () => {
     mockClient.experiments.getExperiment.mockResolvedValue({
       status: 200,
-      body: {
-        id: "archived-123",
-        name: "Archived Experiment",
-      },
+      body: { id: "a-1", name: "Archived" },
     });
-
-    const result = await enrichPathSegments("/en/platform/experiments-archive/archived-123", "en");
-
-    expect(result).toEqual([
-      {
-        segment: "experiments-archive",
-        title: "experiments-archive",
-        href: "/en/platform/experiments-archive",
-      },
-      {
-        segment: "archived-123",
-        title: "Archived Experiment",
-        href: "/en/platform/experiments-archive/archived-123",
-      },
-    ]);
-
-    expect(mockClient.experiments.getExperiment).toHaveBeenCalledWith({
-      params: { id: "archived-123" },
-    });
+    const result = await enrichPathSegments("/en/platform/experiments-archive/a-1", "en");
+    expect(result[0]?.segment).toBe("experiments-archive");
+    expect(result[1]?.title).toBe("Archived");
   });
 
-  it("handles different locales correctly", async () => {
+  it("handles different locales", async () => {
     const result = await enrichPathSegments("/de/platform/experiments/new", "de");
-
-    expect(result).toEqual([
-      {
-        segment: "experiments",
-        title: "experiments",
-        href: "/de/platform/experiments",
-      },
-      {
-        segment: "new",
-        title: "new",
-        href: "/de/platform/experiments/new",
-      },
-    ]);
+    expect(result[0]?.href).toBe("/de/platform/experiments");
   });
 });

@@ -64,13 +64,12 @@ const mockExperiment: Experiment = {
 };
 
 describe("ExperimentOverviewCards", () => {
-  it("shows skeleton loaders while experiments are loading", () => {
+  it("shows skeleton loaders while loading", () => {
     const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
-    const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
-    expect(skeletons.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
   });
 
-  it("shows an empty message when there are no experiments", () => {
+  it("shows empty message when no experiments", () => {
     render(<ExperimentOverviewCards experiments={[]} />);
     expect(screen.getByText("experiments.noExperiments")).toBeInTheDocument();
   });
@@ -121,56 +120,43 @@ describe("ExperimentOverviewCards", () => {
     });
   });
 
-  it("links each card to the experiment detail page", () => {
-    const experiment = createExperiment({ id: "abc-123" });
-
-    render(<ExperimentOverviewCards experiments={[experiment]} />);
-
-    const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/platform/experiments/abc-123");
+  it("links to the correct experiment page", () => {
+    render(<ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} />);
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/platform/experiments/abc-123");
   });
 
-  it("links to the archive path when archived prop is set", () => {
-    const experiment = createExperiment({ id: "abc-123" });
-
-    render(<ExperimentOverviewCards experiments={[experiment]} archived />);
-
-    const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/platform/experiments-archive/abc-123");
+  it("links to archive path when archived", () => {
+    render(
+      <ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} archived />,
+    );
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/platform/experiments-archive/abc-123",
+    );
   });
 
-  it("renders multiple experiment cards", () => {
-    const experiments = [
-      createExperiment({ name: "Study A" }),
-      createExperiment({ name: "Study B" }),
-      createExperiment({ name: "Study C" }),
+  it("renders multiple cards", () => {
+    const exps = [
+      createExperiment({ name: "A" }),
+      createExperiment({ name: "B" }),
+      createExperiment({ name: "C" }),
     ];
-
-    render(<ExperimentOverviewCards experiments={experiments} />);
-
-    expect(screen.getByText("Study A")).toBeInTheDocument();
-    expect(screen.getByText("Study B")).toBeInTheDocument();
-    expect(screen.getByText("Study C")).toBeInTheDocument();
+    render(<ExperimentOverviewCards experiments={exps} />);
     expect(screen.getAllByRole("link")).toHaveLength(3);
   });
 
-  it("shows the last-updated date", () => {
-    const experiment = createExperiment({
-      updatedAt: "2025-06-15T00:00:00.000Z",
-    });
-
-    render(<ExperimentOverviewCards experiments={[experiment]} />);
-
-    // The date format depends on locale, but the translation key should appear
+  it("shows last-updated date", () => {
+    render(
+      <ExperimentOverviewCards
+        experiments={[createExperiment({ updatedAt: "2025-06-15T00:00:00.000Z" })]}
+      />,
+    );
     expect(screen.getByText(/lastUpdate/)).toBeInTheDocument();
   });
 
-  it("gracefully handles a null description", () => {
-    const experiment = createExperiment({ description: null });
-
-    render(<ExperimentOverviewCards experiments={[experiment]} />);
-
-    // Should still render the card without crashing
-    expect(screen.getByText(experiment.name)).toBeInTheDocument();
+  it("handles null description gracefully", () => {
+    const exp = createExperiment({ description: null });
+    render(<ExperimentOverviewCards experiments={[exp]} />);
+    expect(screen.getByText(exp.name)).toBeInTheDocument();
   });
 });

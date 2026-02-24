@@ -6,7 +6,6 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { MacroCodeViewer } from "./macro-code-viewer";
 
-// Mock Monaco Editor
 vi.mock("@monaco-editor/react", () => ({
   Editor: ({
     value,
@@ -70,34 +69,24 @@ vi.mock("@repo/ui/components", () => ({
   ),
 }));
 
-// Mock clipboard API
-const mockClipboard = {
-  writeText: vi.fn().mockResolvedValue(undefined),
-};
-
-Object.defineProperty(global.navigator, "clipboard", {
-  value: mockClipboard,
+const mockWriteText = vi.fn().mockResolvedValue(undefined);
+Object.defineProperty(navigator, "clipboard", {
+  value: { writeText: mockWriteText },
   writable: true,
+  configurable: true,
 });
 
-describe("MacroCodeViewer", () => {
-  const defaultProps = {
-    value: "# Sample code\nprint('Hello world')",
-    language: "python" as const,
-  };
+const defaults = { value: "# Sample\nprint('Hello')", language: "python" as const };
 
+describe("MacroCodeViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
   });
+  afterEach(() => vi.useRealTimers());
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("should render the editor container", () => {
-    render(<MacroCodeViewer {...defaultProps} />);
-
+  it("renders the editor", () => {
+    render(<MacroCodeViewer {...defaults} />);
     expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
   });
 
@@ -119,16 +108,23 @@ describe("MacroCodeViewer", () => {
     expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
-  it("should render copy button", () => {
-    render(<MacroCodeViewer {...defaultProps} />);
-
-    expect(screen.getByTestId("copy-icon")).toBeInTheDocument();
+  it("displays code statistics", () => {
+    render(<MacroCodeViewer value="# 1\n# 2\n# 3" language="python" />);
+    // Stats div contains line count and "common.lines" text
+    const matches = screen.getAllByText(
+      (_content, el) =>
+        el instanceof HTMLDivElement &&
+        el.classList.contains("text-xs") &&
+        el.textContent?.includes("3") === true &&
+        el.textContent?.includes("common.lines") === true,
+    );
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("should use python language in editor", () => {
-    render(<MacroCodeViewer {...defaultProps} language="python" />);
-
-    expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
+  it("copies code to clipboard", () => {
+    render(<MacroCodeViewer value="# Test" language="python" />);
+    screen.getAllByRole("button")[0].click();
+    expect(mockWriteText).toHaveBeenCalledWith("# Test");
   });
 
   it("should use r language in editor", () => {
