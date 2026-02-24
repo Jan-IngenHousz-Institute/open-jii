@@ -139,33 +139,6 @@ vi.mock("next/headers", () => ({
   draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
 }));
 
-// next/link — render as simple anchor in tests
-vi.mock("next/link", () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const React = require("react");
-  return {
-    __esModule: true,
-    default: React.forwardRef(function MockLink(
-      { children, href, ...rest }: Record<string, unknown>,
-      ref: unknown,
-    ) {
-      return React.createElement("a", { href, ref, ...rest }, children);
-    }),
-  };
-});
-
-// next/image — render as plain img in tests
-vi.mock("next/image", () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const React = require("react");
-  return {
-    __esModule: true,
-    default: function MockImage(props: Record<string, unknown>) {
-      return React.createElement("img", props);
-    },
-  };
-});
-
 // env — deterministic test values
 vi.mock("~/env", () => ({
   env: {
