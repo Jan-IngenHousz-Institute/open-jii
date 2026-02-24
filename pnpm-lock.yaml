@@ -696,9 +696,6 @@ importers:
       '@types/paho-mqtt':
         specifier: ^1.0.10
         version: 1.0.10
-      '@types/pako':
-        specifier: ^2.0.4
-        version: 2.0.4
       '@types/react':
         specifier: catalog:react19
         version: 19.2.14
@@ -5053,6 +5050,10 @@ packages:
       monaco-editor: '>= 0.25.0 < 1'
       react: 19.2.4
       react-dom: 19.2.4
+
+  '@mswjs/interceptors@0.41.3':
+    resolution: {integrity: sha512-cXu86tF4VQVfwz8W1SPbhoRyHJkti6mjH/XJIxp40jhO4j2k1m4KYrEykxqWPkFF3vrK4rgQppBh//AwyGSXPA==}
+    engines: {node: '>=18'}
 
   '@mswjs/interceptors@0.41.3':
     resolution: {integrity: sha512-cXu86tF4VQVfwz8W1SPbhoRyHJkti6mjH/XJIxp40jhO4j2k1m4KYrEykxqWPkFF3vrK4rgQppBh//AwyGSXPA==}
@@ -23757,6 +23758,15 @@ snapshots:
       monaco-editor: 0.52.0
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
+
+  '@mswjs/interceptors@0.41.3':
+    dependencies:
+      '@open-draft/deferred-promise': 2.2.0
+      '@open-draft/logger': 0.3.0
+      '@open-draft/until': 2.1.0
+      is-node-process: 1.2.0
+      outvariant: 1.4.3
+      strict-event-emitter: 0.5.1
 
   '@mswjs/interceptors@0.41.3':
     dependencies:
