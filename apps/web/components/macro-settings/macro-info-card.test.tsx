@@ -1,7 +1,7 @@
 import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import { useFeatureFlagEnabled } from "posthog-js/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { MacroInfoCard } from "./macro-info-card";
 
