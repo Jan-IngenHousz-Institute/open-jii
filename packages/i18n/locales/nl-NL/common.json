@@ -140,7 +140,20 @@
     "noEmail": "Geen e-mail",
     "joined": "Toegetreden",
     "cannotRemoveLastAdmin": "Kan laatste admin niet verwijderen",
-    "removeMember": "Lid verwijderen"
+    "removeMember": "Lid verwijderen",
+    "roleMember": "Lid",
+    "roleAdmin": "Admin",
+    "roleUpdated": "Rol succesvol bijgewerkt",
+    "pendingInvitations": "Uitgenodigd",
+    "invitationRevoked": "Uitnodiging succesvol ingetrokken",
+    "revoke": "Intrekken",
+    "collaborators": "Medewerkers",
+    "collaboratorsDescription": "Beheer wie toegang heeft tot dit experiment",
+    "memberAdded": "Lid succesvol toegevoegd",
+    "invitationSent": "Uitnodiging succesvol verzonden",
+    "memberRemoved": "Lid succesvol verwijderd",
+    "memberManagementError": "Fout bij het laden van leden. Probeer het opnieuw.",
+    "currentMembers": "Huidige leden"
   },
   "jii": {
     "institute": "Jan IngenHousz Instituut",

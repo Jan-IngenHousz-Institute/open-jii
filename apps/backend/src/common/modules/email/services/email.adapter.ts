@@ -1,11 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { EmailPort } from "../../../../experiments/core/ports/email.port";
+import { EmailPort as ExperimentsEmailPort } from "../../../../experiments/core/ports/email.port";
+import { EmailPort as UsersEmailPort } from "../../../../users/core/ports/email.port";
 import { Result } from "../../../utils/fp-utils";
 import { NotificationsService } from "./notifications/notifications.service";
 
 @Injectable()
-export class EmailAdapter implements EmailPort {
+export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort {
   private readonly logger = new Logger(EmailAdapter.name);
 
   constructor(private readonly notificationService: NotificationsService) {}
@@ -49,6 +50,29 @@ export class EmailAdapter implements EmailPort {
       email,
       projectIdOld,
       projectUrlOld,
+    );
+  }
+
+  async sendInvitationNotification(
+    resourceId: string,
+    resourceName: string,
+    actor: string,
+    role: string,
+    email: string,
+  ): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending invitation notification email",
+      operation: "sendInvitationNotification",
+      resourceId,
+      email,
+    });
+
+    return this.notificationService.sendAddedUserNotification(
+      resourceId,
+      resourceName,
+      actor,
+      role,
+      email,
     );
   }
 }

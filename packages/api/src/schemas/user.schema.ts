@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { zExperimentMemberRole } from "./experiment.schema";
+
 export const zUser = z.object({
   id: z.string().uuid(),
   name: z.string().nullable(),
@@ -111,3 +113,57 @@ export type UserMetadata = z.infer<typeof zUserMetadata>;
 export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookResponse>;
 export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
 export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
+
+// --- Invitation Schemas ---
+export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);
+export const zInvitationResourceType = z.enum(["platform", "experiment"]);
+
+export const zInvitation = z.object({
+  id: z.string().uuid(),
+  resourceType: zInvitationResourceType,
+  resourceId: z.string().uuid().nullable(),
+  email: z.string().email(),
+  role: z.string(),
+  status: zInvitationStatus,
+  invitedBy: z.string().uuid(),
+  invitedByName: z.string().optional(),
+  resourceName: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zInvitationList = z.array(zInvitation);
+
+export const zCreateInvitationBody = z.object({
+  resourceType: zInvitationResourceType,
+  resourceId: z.string().uuid(),
+  email: z.string().email("Must be a valid email address"),
+  role: zExperimentMemberRole.optional().default("member"),
+});
+
+export const zCreateInvitationsBody = z.object({
+  invitations: z.array(zCreateInvitationBody).min(1).max(50),
+});
+
+export const zUpdateInvitationRoleBody = z.object({
+  role: zExperimentMemberRole.describe("New role to assign to the invitation"),
+});
+
+export const zInvitationIdPathParam = z.object({
+  invitationId: z.string().uuid().describe("ID of the invitation"),
+});
+
+export const zListInvitationsQuery = z.object({
+  resourceType: zInvitationResourceType,
+  resourceId: z.string().uuid(),
+});
+
+// Invitation types
+export type InvitationStatus = z.infer<typeof zInvitationStatus>;
+export type InvitationResourceType = z.infer<typeof zInvitationResourceType>;
+export type Invitation = z.infer<typeof zInvitation>;
+export type CreateInvitationBody = z.infer<typeof zCreateInvitationBody>;
+export type CreateInvitationsBody = z.infer<typeof zCreateInvitationsBody>;
+export type UpdateInvitationRoleBody = z.infer<typeof zUpdateInvitationRoleBody>;
+export type InvitationIdPathParam = z.infer<typeof zInvitationIdPathParam>;
+export type ListInvitationsQuery = z.infer<typeof zListInvitationsQuery>;

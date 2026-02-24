@@ -261,4 +261,121 @@ describe("EmailAdapter", () => {
       );
     });
   });
+
+  describe("sendInvitationNotification", () => {
+    const MOCK_RESOURCE_ID = "res-123";
+    const MOCK_RESOURCE_NAME = "Test Experiment";
+    const MOCK_ACTOR = "John Doe";
+    const MOCK_ROLE = "member";
+    const MOCK_EMAIL = "invite@example.com";
+
+    it("should successfully delegate to NotificationsService and return success", async () => {
+      // Arrange
+      const mockResult = success(undefined);
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendAddedUserNotification")
+        .mockResolvedValue(mockResult);
+
+      // Act
+      const result = await adapter.sendInvitationNotification(
+        MOCK_RESOURCE_ID,
+        MOCK_RESOURCE_NAME,
+        MOCK_ACTOR,
+        MOCK_ROLE,
+        MOCK_EMAIL,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      expect(notificationSpy).toHaveBeenCalledOnce();
+      expect(notificationSpy).toHaveBeenCalledWith(
+        MOCK_RESOURCE_ID,
+        MOCK_RESOURCE_NAME,
+        MOCK_ACTOR,
+        MOCK_ROLE,
+        MOCK_EMAIL,
+      );
+    });
+
+    it("should delegate to NotificationsService and return failure when service fails", async () => {
+      // Arrange
+      const mockError = failure({
+        name: "InternalError",
+        code: "INTERNAL_ERROR",
+        message: "Email service failed",
+        statusCode: 500,
+      });
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendAddedUserNotification")
+        .mockResolvedValue(mockError);
+
+      // Act
+      const result = await adapter.sendInvitationNotification(
+        MOCK_RESOURCE_ID,
+        MOCK_RESOURCE_NAME,
+        MOCK_ACTOR,
+        MOCK_ROLE,
+        MOCK_EMAIL,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Email service failed");
+
+      expect(notificationSpy).toHaveBeenCalledOnce();
+    });
+
+    it("should handle exceptions from NotificationsService", async () => {
+      // Arrange
+      const mockError = new Error("Unexpected service error");
+      vi.spyOn(notificationsService, "sendAddedUserNotification").mockRejectedValue(mockError);
+
+      // Act & Assert
+      await expect(
+        adapter.sendInvitationNotification(
+          MOCK_RESOURCE_ID,
+          MOCK_RESOURCE_NAME,
+          MOCK_ACTOR,
+          MOCK_ROLE,
+          MOCK_EMAIL,
+        ),
+      ).rejects.toThrow("Unexpected service error");
+    });
+
+    it("should pass through all parameters correctly", async () => {
+      // Arrange
+      const customResourceId = "custom-res-456";
+      const customResourceName = "Custom Experiment";
+      const customActor = "Jane Smith";
+      const customRole = "admin";
+      const customEmail = "custom-invite@example.com";
+
+      const mockResult = success(undefined);
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendAddedUserNotification")
+        .mockResolvedValue(mockResult);
+
+      // Act
+      await adapter.sendInvitationNotification(
+        customResourceId,
+        customResourceName,
+        customActor,
+        customRole,
+        customEmail,
+      );
+
+      // Assert
+      expect(notificationSpy).toHaveBeenCalledWith(
+        customResourceId,
+        customResourceName,
+        customActor,
+        customRole,
+        customEmail,
+      );
+    });
+  });
 });

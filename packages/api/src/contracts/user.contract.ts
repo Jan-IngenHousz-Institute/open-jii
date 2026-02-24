@@ -13,6 +13,12 @@ import {
   zUserMetadataWebhookPayload,
   zUserMetadataWebhookResponse,
   zWebhookErrorResponse,
+  zInvitation,
+  zInvitationList,
+  zCreateInvitationsBody,
+  zUpdateInvitationRoleBody,
+  zInvitationIdPathParam,
+  zListInvitationsQuery,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -93,5 +99,60 @@ export const userContract = c.router({
     summary: "Get user metadata for Databricks pipelines",
     description:
       "Fetches user profile metadata (firstName, lastName, avatarUrl) for multiple user IDs to populate Databricks pipeline tables",
+  },
+
+  createInvitations: {
+    method: "POST",
+    path: "/api/v1/invitations",
+    body: zCreateInvitationsBody,
+    responses: {
+      201: zInvitationList,
+      400: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Create invitations",
+    description: "Creates one or more invitations for users to join a resource. Skips duplicates.",
+  },
+
+  listInvitations: {
+    method: "GET",
+    path: "/api/v1/invitations",
+    query: zListInvitationsQuery,
+    responses: {
+      200: zInvitationList,
+      400: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "List invitations",
+    description: "Returns all pending invitations for a given resource.",
+  },
+
+  updateInvitationRole: {
+    method: "PATCH",
+    path: "/api/v1/invitations/:invitationId",
+    pathParams: zInvitationIdPathParam,
+    body: zUpdateInvitationRoleBody,
+    responses: {
+      200: zInvitation,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update invitation role",
+    description: "Updates the role on a pending invitation.",
+  },
+
+  revokeInvitation: {
+    method: "DELETE",
+    path: "/api/v1/invitations/:invitationId",
+    pathParams: zInvitationIdPathParam,
+    responses: {
+      204: null,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Revoke invitation",
+    description: "Revokes a pending invitation so it can no longer be accepted.",
   },
 });
