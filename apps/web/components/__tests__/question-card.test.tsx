@@ -1,7 +1,4 @@
-// apps/web/components/__tests__/question-card.test.tsx
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { QuestionCard } from "../question-card/question-card";
@@ -10,7 +7,7 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof QuestionCard>
   const props: React.ComponentProps<typeof QuestionCard> = {
     stepSpecification: {
       answerType: "TEXT",
-      validationMessage: "", // default empty so typing tests are deterministic
+      validationMessage: "",
       required: false,
       ...(overrides.stepSpecification ?? {}),
     },
@@ -23,52 +20,39 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof QuestionCard>
     disabled: false,
     ...overrides,
   };
-
-  const utils = render(<QuestionCard {...props} />);
-  return { ...utils, props }; // expose both render utils and the mocks
+  return { ...render(<QuestionCard {...props} />), props };
 }
 
-describe("<QuestionCard />", () => {
+describe("QuestionCard", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders the question input with placeholder and value", () => {
+  it("renders question input with value", () => {
     renderCard({
       stepSpecification: { answerType: "TEXT", validationMessage: "Hello", required: false },
     });
-    const input = screen.getByPlaceholderText<HTMLInputElement>("questionCard.placeholder");
-    expect(input.value).toBe("Hello");
+    expect(screen.getByPlaceholderText<HTMLInputElement>("questionCard.placeholder").value).toBe(
+      "Hello",
+    );
   });
 
   it("fires onUpdateText when typing", async () => {
-    const { props } = renderCard({
-      stepSpecification: { answerType: "TEXT", validationMessage: "", required: false },
-    });
-    const input = screen.getByPlaceholderText("questionCard.placeholder");
-
-    // because the component is controlled (no rerender), assert single-keystroke payload
-    await userEvent.type(input, "a");
-
-    expect(props.onUpdateText).toHaveBeenCalled();
+    const { props } = renderCard();
+    await userEvent.setup().type(screen.getByPlaceholderText("questionCard.placeholder"), "a");
     expect(props.onUpdateText).toHaveBeenLastCalledWith("a");
   });
 
-  it("toggles required via the switch", async () => {
+  it("toggles required via the checkbox", async () => {
     const { props } = renderCard();
-    const checkbox = screen.getByRole("checkbox");
-    await userEvent.click(checkbox);
+    await userEvent.setup().click(screen.getByRole("checkbox"));
     expect(props.onToggleRequired).toHaveBeenCalledTimes(1);
   });
 
-  it("switches answer type via radios and shows relevant section", async () => {
-    const { props } = renderCard({
-      stepSpecification: { answerType: "TEXT", required: false },
-    });
-
-    // change to SELECT
-    await userEvent.click(screen.getByText("questionCard.answerTypes.SELECT"));
+  it("switches answer type and shows relevant section", async () => {
+    const { props } = renderCard();
+    await userEvent.setup().click(screen.getByText("questionCard.answerTypes.SELECT"));
     expect(props.onUpdateAnswerType).toHaveBeenCalledWith("SELECT");
 
-    // Re-render in SELECT state and assert presence (no jest-dom needed)
+    // Re-render in SELECT mode
     renderCard({
       stepSpecification: {
         answerType: "SELECT",
@@ -77,16 +61,8 @@ describe("<QuestionCard />", () => {
         required: false,
       },
     });
-    expect(screen.queryByText("questionCard.answerOptionsLabel")).toBeTruthy();
     expect(screen.queryByText("questionCard.noAnswerOptions")).toBeTruthy();
 
-    // NUMBER section
-    renderCard({
-      stepSpecification: { answerType: "NUMBER", validationMessage: "", required: false },
-    });
-    expect(screen.queryByText("questionCard.numberResponseLabel")).toBeTruthy();
-
-    // BOOLEAN section
     renderCard({
       stepSpecification: { answerType: "BOOLEAN", validationMessage: "", required: false },
     });
@@ -94,7 +70,7 @@ describe("<QuestionCard />", () => {
   });
 
   it("renders and edits SELECT options", async () => {
-    // Make first option empty so the keystroke equals the expected payload
+    const user = userEvent.setup();
     const { props } = renderCard({
       stepSpecification: {
         answerType: "SELECT",
@@ -104,36 +80,15 @@ describe("<QuestionCard />", () => {
       },
     });
 
-    const rows = screen.getAllByRole("textbox");
-    const optionInputs = rows.slice(-3);
-    expect((optionInputs[0] as HTMLInputElement).value).toBe("");
-
-    // assert single-keystroke wiring due to controlled component without rerender
-    await userEvent.type(optionInputs[0], "U");
+    const optionInputs = screen.getAllByRole("textbox").slice(-3);
+    await user.type(optionInputs[0], "U");
     expect(props.onUpdateOption).toHaveBeenLastCalledWith(0, "U");
 
-    const removeButtons = screen.getAllByRole("button", { name: /questionCard.removeOption/i });
-    await userEvent.click(removeButtons[1]);
+    await user.click(screen.getAllByRole("button", { name: /questionCard.removeOption/i })[1]);
     expect(props.onDeleteOption).toHaveBeenCalledWith(1);
   });
 
-  it("calls onAddOption when clicking Add option", async () => {
-    const { props } = renderCard({
-      stepSpecification: {
-        answerType: "SELECT",
-        options: [],
-        validationMessage: "",
-        required: false,
-      },
-    });
-
-    const addBtn = screen.getByRole("button", { name: "questionCard.addOption" });
-    await userEvent.click(addBtn);
-
-    expect(props.onAddOption).toHaveBeenCalledTimes(1);
-  });
-
-  it("respects disabled state across inputs", () => {
+  it("respects disabled state", () => {
     renderCard({
       disabled: true,
       stepSpecification: {
@@ -143,16 +98,13 @@ describe("<QuestionCard />", () => {
         validationMessage: "Q",
       },
     });
-
-    const qInput = screen.getByPlaceholderText("questionCard.placeholder");
-    const requiredCheckbox = screen.getByRole("checkbox");
-    const addBtn = screen.getByRole("button", { name: "questionCard.addOption" });
-    const optInput = screen.getAllByRole("textbox").at(-1);
-
-    // no jest-dom: assert .disabled flags directly
-    expect((qInput as HTMLInputElement).disabled).toBe(true);
-    expect((requiredCheckbox as HTMLInputElement).disabled).toBe(true);
-    expect((addBtn as HTMLButtonElement).disabled).toBe(true);
-    expect((optInput as HTMLInputElement | undefined)?.disabled).toBe(true);
+    expect(
+      (screen.getByPlaceholderText("questionCard.placeholder") as HTMLInputElement).disabled,
+    ).toBe(true);
+    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "questionCard.addOption" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 });

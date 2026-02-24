@@ -1,30 +1,10 @@
-/**
- * Home page test — tests the Server Component that fetches CMS data
- * and composes the landing page.
- *
- * CMS child components (@repo/cms) are mocked since they have their
- * own rendering logic and Contentful dependencies. The navbar is also
- * mocked since it's tested separately.
- *
- * What we test here:
- * - Page renders all expected sections
- * - Authenticated vs unauthenticated navbar state
- * - Resilience when CMS returns empty data
- * - Metadata generation
- *
- * Global mocks (next/headers, i18n, etc.) come from test/setup.ts.
- */
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import Home, { generateMetadata } from "./page";
 
-// ── Mocks specific to this page ────────────────────────────────
-
 const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  auth: () => mockAuth(),
-}));
+vi.mock("~/app/actions/auth", () => ({ auth: () => mockAuth() }));
 
 const mockPageHome = vi.fn();
 vi.mock("~/lib/contentful", () => ({
@@ -41,7 +21,6 @@ vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   ),
 }));
 
-// CMS section components — render a landmark so we can find them
 vi.mock("@repo/cms", () => ({
   HomeHero: () => <section aria-label="hero" />,
   HomeAboutMission: () => <section aria-label="mission" />,
@@ -50,29 +29,16 @@ vi.mock("@repo/cms", () => ({
   HomeFooter: () => <footer aria-label="footer" />,
 }));
 
-// ── Fixtures ────────────────────────────────────────────────────
-
 const contentfulData = {
   pageHomeHeroCollection: { items: [{ title: "Hero" }] },
   pageHomeMissionCollection: { items: [{ title: "Mission" }] },
   pageHomeFeaturesCollection: { items: [{ title: "Features" }] },
   pageHomePartnersCollection: { items: [{ title: "Partners" }] },
   footerCollection: { items: [{ title: "Footer" }] },
-  landingMetadataCollection: { items: [{ title: "Page Title", description: "Page description" }] },
-};
-
-const emptyContentfulData = {
-  pageHomeHeroCollection: { items: [] },
-  pageHomeMissionCollection: { items: [] },
-  pageHomeFeaturesCollection: { items: [] },
-  pageHomePartnersCollection: { items: [] },
-  footerCollection: { items: [] },
-  landingMetadataCollection: { items: [] },
+  landingMetadataCollection: { items: [{ title: "Page Title", description: "Page desc" }] },
 };
 
 const defaultProps = { params: Promise.resolve({ locale: "en-US" }) };
-
-// ── Tests ───────────────────────────────────────────────────────
 
 describe("Home page", () => {
   beforeEach(() => {
@@ -92,26 +58,29 @@ describe("Home page", () => {
     expect(screen.getByRole("contentinfo", { name: /footer/i })).toBeInTheDocument();
   });
 
-  it("shows 'Not logged in' for unauthenticated visitors", async () => {
-    mockAuth.mockResolvedValue(null);
-
-    render(await Home(defaultProps));
-
-    expect(screen.getByText("Not logged in")).toBeInTheDocument();
-  });
-
-  it("shows 'Logged in' for authenticated users", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "123", name: "Test" } });
-
+  it("shows authenticated state in navbar when user is logged in", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "1", name: "Test" } });
     render(await Home(defaultProps));
 
     expect(screen.getByText("Logged in")).toBeInTheDocument();
   });
 
-  it("still renders when Contentful returns empty collections", async () => {
-    mockPageHome.mockResolvedValue(emptyContentfulData);
+  it("shows unauthenticated state when no session", async () => {
+    render(await Home(defaultProps));
 
-    // Should not throw
+    expect(screen.getByText("Not logged in")).toBeInTheDocument();
+  });
+
+  it("handles empty Contentful collections", async () => {
+    mockPageHome.mockResolvedValue({
+      pageHomeHeroCollection: { items: [] },
+      pageHomeMissionCollection: { items: [] },
+      pageHomeFeaturesCollection: { items: [] },
+      pageHomePartnersCollection: { items: [] },
+      footerCollection: { items: [] },
+      landingMetadataCollection: { items: [] },
+    });
+
     render(await Home(defaultProps));
 
     expect(screen.getByRole("navigation")).toBeInTheDocument();
@@ -128,10 +97,10 @@ describe("generateMetadata", () => {
     const metadata = await generateMetadata(defaultProps);
 
     expect(metadata.title).toBe("Page Title");
-    expect(metadata.description).toBe("Page description");
+    expect(metadata.description).toBe("Page desc");
   });
 
-  it("returns empty metadata when CMS fields are null", async () => {
+  it("returns undefined when CMS fields are null", async () => {
     mockPageHome.mockResolvedValue({
       ...contentfulData,
       landingMetadataCollection: { items: [{ title: null, description: null }] },
