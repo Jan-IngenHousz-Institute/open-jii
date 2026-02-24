@@ -36,9 +36,7 @@ describe("ExperimentInfoCard", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
     render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={members} />);
 
-    expect(
-      screen.getByText("experimentSettings.dangerZoneNote_deleteAllowed"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.dangerZoneNote_deleteAllowed")).toBeInTheDocument();
   });
 
   it("hides archive for non-admin", () => {

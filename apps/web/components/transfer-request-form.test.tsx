@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
 import { fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { TransferRequestForm } from "./transfer-request-form";
@@ -31,7 +31,9 @@ describe("TransferRequestForm", () => {
     render(<TransferRequestForm />);
 
     expect(screen.getByPlaceholderText("transferRequest.projectIdPlaceholder")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
     expect(screen.getByText("transferRequest.submitButton")).toBeInTheDocument();
   });
@@ -92,10 +94,7 @@ describe("TransferRequestForm", () => {
     const user = userEvent.setup();
     render(<TransferRequestForm />);
 
-    await user.type(
-      screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"),
-      "test",
-    );
+    await user.type(screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"), "test");
     await user.type(
       screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
       "https://test.com",

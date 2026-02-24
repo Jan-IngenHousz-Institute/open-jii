@@ -51,8 +51,6 @@ describe("ListMacros", () => {
 
     await user.type(screen.getByPlaceholderText("macros.searchPlaceholder"), "test");
 
-    expect(mockUseMacros).toHaveBeenLastCalledWith(
-      expect.objectContaining({ search: "test" }),
-    );
+    expect(mockUseMacros).toHaveBeenLastCalledWith(expect.objectContaining({ search: "test" }));
   });
 });
