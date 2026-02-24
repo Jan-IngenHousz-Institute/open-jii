@@ -1,14 +1,12 @@
-import { render, screen } from "@/test/test-utils";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { ListMacros } from "./list-macros";
-
-const mockUseMacros = vi.fn();
-
-vi.mock("~/hooks/macro/useMacros/useMacros", () => ({
-  useMacros: (...args: unknown[]) => mockUseMacros(...args),
-}));
 
 vi.mock("~/components/macro-overview-cards", () => ({
   MacroOverviewCards: (props: { macros?: unknown[]; isLoading: boolean }) => (
@@ -19,38 +17,44 @@ vi.mock("~/components/macro-overview-cards", () => ({
 }));
 
 describe("ListMacros", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseMacros.mockReturnValue({ data: [], isLoading: false, error: null });
-  });
-
   it("renders search input and language filter", () => {
+    server.mount(contract.macros.listMacros, { body: [] });
     render(<ListMacros />);
 
     expect(screen.getByPlaceholderText("macros.searchPlaceholder")).toBeInTheDocument();
     expect(screen.getByText("macros.allLanguages")).toBeInTheDocument();
   });
 
-  it("passes data to MacroOverviewCards", () => {
-    mockUseMacros.mockReturnValue({ data: [{ id: "1" }], isLoading: false, error: null });
+  it("passes data to MacroOverviewCards", async () => {
+    server.mount(contract.macros.listMacros, {
+      body: [createMacro({ id: "1", name: "M1" })],
+    });
     render(<ListMacros />);
 
-    expect(screen.getByTestId("macro-cards")).toHaveTextContent("1 macros");
+    await waitFor(() => {
+      expect(screen.getByTestId("macro-cards")).toHaveTextContent("1 macros");
+    });
   });
 
-  it("shows error state", () => {
-    mockUseMacros.mockReturnValue({ data: undefined, isLoading: false, error: new Error("fail") });
+  it("shows error state when API fails", async () => {
+    server.mount(contract.macros.listMacros, { status: 500 });
     render(<ListMacros />);
 
-    expect(screen.getByText("macros.errorLoading")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("macros.errorLoading")).toBeInTheDocument();
+    });
   });
 
-  it("updates search filter", async () => {
+  it("sends search query to the API", async () => {
+    const spy = server.mount(contract.macros.listMacros, { body: [] });
     const user = userEvent.setup();
     render(<ListMacros />);
 
     await user.type(screen.getByPlaceholderText("macros.searchPlaceholder"), "test");
 
-    expect(mockUseMacros).toHaveBeenLastCalledWith(expect.objectContaining({ search: "test" }));
+    await waitFor(() => {
+      const lastCall = spy.calls[spy.calls.length - 1];
+      expect(lastCall.query.search).toBe("test");
+    });
   });
 });

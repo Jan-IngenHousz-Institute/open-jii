@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import LoginPage from "./page";
 
 const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({ auth: () => mockAuth(), providerMap: [] }));
+vi.mock("~/app/actions/auth", () => ({ auth: mockAuth, providerMap: [] }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,

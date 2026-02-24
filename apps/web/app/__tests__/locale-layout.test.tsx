@@ -47,7 +47,7 @@ describe("LocaleLayout", () => {
     await Layout({
       children: <div />,
       params: Promise.resolve({ locale: "de-DE" }),
-    }).catch(() => {});
+    }).catch(() => undefined);
     expect(notFound).toHaveBeenCalled();
   });
 });

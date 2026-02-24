@@ -1,38 +1,48 @@
-import { renderHook } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+/**
+ * useExperimentAccess hook test — MSW-based.
+ *
+ * The real hook calls `tsr.experiments.getExperimentAccess.useQuery` which
+ * issues `GET /api/v1/experiments/:id/access`. MSW intercepts that request.
+ */
+import { createExperimentAccess } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, expect, it } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentAccess } from "./useExperimentAccess";
 
-const mockUseQuery = vi.fn();
-
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    experiments: {
-      getExperimentAccess: { useQuery: (...args: unknown[]) => mockUseQuery(...args) },
-    },
-  },
-}));
-
 describe("useExperimentAccess", () => {
-  it("passes correct query params and key", () => {
-    mockUseQuery.mockReturnValue({ data: undefined, isLoading: true, error: null });
-
-    renderHook(() => useExperimentAccess("exp-123"));
-
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: "exp-123" } },
-      queryKey: ["experimentAccess", "exp-123"],
-      retry: expect.any(Function),
+  it("returns experiment access data from MSW", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({ isAdmin: true }),
     });
-  });
-
-  it("returns query result directly", () => {
-    const mockData = { status: 200, body: { hasAccess: true, isAdmin: false } };
-    mockUseQuery.mockReturnValue({ data: mockData, isLoading: false, error: null });
 
     const { result } = renderHook(() => useExperimentAccess("exp-123"));
 
-    expect(result.current.data).toEqual(mockData);
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    // Default MSW handler returns hasAccess: true, isAdmin: true
+    expect(result.current.data?.body).toMatchObject({
+      hasAccess: true,
+      isAdmin: true,
+    });
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles 404 error", async () => {
+    server.mount(contract.experiments.getExperimentAccess, { status: 404 });
+
+    const { result } = renderHook(() => useExperimentAccess("bad-id"));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // On 404, the retry function from shouldRetryQuery returns false
+    expect(result.current.data?.body).toBeUndefined();
   });
 });

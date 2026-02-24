@@ -1,171 +1,72 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import { usePathname } from "next/navigation";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook } from "@/test/test-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { enrichPathSegments } from "~/app/actions/breadcrumbs";
 
 import { useBreadcrumbs } from "./useBreadcrumbs";
 
-// Mock next/navigation
-const mockPathname = "/en/platform/experiments/new";
-vi.mock("next/navigation", () => ({
-  usePathname: vi.fn(),
-}));
-
-// Mock enrichPathSegments action
 vi.mock("~/app/actions/breadcrumbs", () => ({
   enrichPathSegments: vi.fn(),
 }));
 
-const mockEnrichPathSegments = vi.mocked(enrichPathSegments);
-const mockUsePathname = vi.mocked(usePathname);
+const { mockPathname } = vi.hoisted(() => ({
+  mockPathname: vi.fn(() => "/en/platform/experiments/new"),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: mockPathname,
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({ locale: "en-US" }),
+  redirect: vi.fn(),
+  notFound: vi.fn(),
+}));
+
+const mockEnrich = vi.mocked(enrichPathSegments);
 
 describe("useBreadcrumbs", () => {
-  let queryClient: QueryClient;
-
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
-
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUsePathname.mockReturnValue(mockPathname);
+    mockPathname.mockReturnValue("/en/platform/experiments/new");
   });
 
-  it("should call enrichPathSegments with pathname and locale", () => {
-    mockEnrichPathSegments.mockResolvedValue([
-      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
-      { segment: "new", title: "new", href: "/en/platform/experiments/new" },
-    ]);
-
-    renderHook(() => useBreadcrumbs("en"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith(mockPathname, "en");
+  it("calls enrichPathSegments with pathname and locale", () => {
+    mockEnrich.mockResolvedValue([]);
+    renderHook(() => useBreadcrumbs("en"));
+    expect(mockEnrich).toHaveBeenCalledWith("/en/platform/experiments/new", "en");
   });
 
-  it("should return breadcrumb data", () => {
-    const mockData = [
-      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
-      { segment: "new", title: "new", href: "/en/platform/experiments/new" },
-    ];
-
-    mockEnrichPathSegments.mockResolvedValue(mockData);
-
-    renderHook(() => useBreadcrumbs("en"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith(mockPathname, "en");
-  });
-
-  it("should handle loading state", () => {
-    mockEnrichPathSegments.mockResolvedValue([]);
-
-    const { result } = renderHook(() => useBreadcrumbs("en"), {
-      wrapper: createWrapper(),
-    });
-
+  it("returns loading state initially", () => {
+    mockEnrich.mockResolvedValue([]);
+    const { result } = renderHook(() => useBreadcrumbs("en"));
     expect(result.current.isLoading).toBe(true);
     expect(result.current.data).toBeUndefined();
   });
 
-  it("should handle errors", () => {
-    const mockError = new Error("Failed to fetch breadcrumbs");
-    mockEnrichPathSegments.mockRejectedValue(mockError);
-
-    renderHook(() => useBreadcrumbs("en"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith(mockPathname, "en");
+  it("handles different locales", () => {
+    mockEnrich.mockResolvedValue([]);
+    renderHook(() => useBreadcrumbs("de"));
+    expect(mockEnrich).toHaveBeenCalledWith("/en/platform/experiments/new", "de");
   });
 
-  it("should use correct query key with pathname and locale", () => {
-    mockEnrichPathSegments.mockResolvedValue([]);
-    mockUsePathname.mockReturnValue("/de/platform/protocols");
-
-    renderHook(() => useBreadcrumbs("de"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith("/de/platform/protocols", "de");
+  it("uses correct pathname", () => {
+    mockPathname.mockReturnValue("/en/platform");
+    mockEnrich.mockResolvedValue([]);
+    renderHook(() => useBreadcrumbs("en"));
+    expect(mockEnrich).toHaveBeenCalledWith("/en/platform", "en");
   });
 
-  it("should return empty array for platform root", () => {
-    mockUsePathname.mockReturnValue("/en/platform");
-    mockEnrichPathSegments.mockResolvedValue([]);
-
-    renderHook(() => useBreadcrumbs("en"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith("/en/platform", "en");
-  });
-
-  it("should update when pathname changes", () => {
-    mockEnrichPathSegments.mockResolvedValue([
-      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
-    ]);
-
-    renderHook(() => useBreadcrumbs("en"), {
-      wrapper: createWrapper(),
-      initialProps: { pathname: "/en/platform/experiments" },
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith(mockPathname, "en");
-
-    // Change pathname
-    mockUsePathname.mockReturnValue("/en/platform/protocols");
-    mockEnrichPathSegments.mockResolvedValue([
-      { segment: "protocols", title: "protocols", href: "/en/platform/protocols" },
-    ]);
-  });
-
-  it("should handle different locales", () => {
-    mockEnrichPathSegments.mockResolvedValue([
-      { segment: "experiments", title: "experiments", href: "/de/platform/experiments" },
-    ]);
-
-    renderHook(() => useBreadcrumbs("de"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith(mockPathname, "de");
-  });
-
-  it("should handle entity paths with UUIDs", () => {
-    mockUsePathname.mockReturnValue(
-      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-    );
-    mockEnrichPathSegments.mockResolvedValue([
-      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
-      {
-        segment: "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-        title: "My Experiment",
-        href: "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-      },
-    ]);
-
-    renderHook(() => useBreadcrumbs("en"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockEnrichPathSegments).toHaveBeenCalledWith(
-      "/en/platform/experiments/a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-      "en",
-    );
+  it("handles entity paths with UUIDs", () => {
+    const uuid = "a1b2c3d4-e5f6-4890-abcd-ef1234567890";
+    mockPathname.mockReturnValue(`/en/platform/experiments/${uuid}`);
+    mockEnrich.mockResolvedValue([]);
+    renderHook(() => useBreadcrumbs("en"));
+    expect(mockEnrich).toHaveBeenCalledWith(`/en/platform/experiments/${uuid}`, "en");
   });
 });

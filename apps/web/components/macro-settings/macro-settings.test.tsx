@@ -1,15 +1,11 @@
-import { render, screen } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { MacroSettings } from "./macro-settings";
-
-const mockUseMacro = vi.fn();
-vi.mock("../../hooks/macro/useMacro/useMacro", () => ({
-  useMacro: (...args: [string]) => {
-    mockUseMacro(...args);
-    return mockUseMacro();
-  },
-}));
 
 vi.mock("./macro-details-card", () => ({
   MacroDetailsCard: (props: Record<string, unknown>) => (
@@ -22,39 +18,42 @@ vi.mock("./macro-info-card", () => ({
   ),
 }));
 
-const mockMacro = {
-  id: "m-1",
-  name: "Test Macro",
-  description: "Desc",
-  language: "python" as const,
-  code: btoa("print('hi')"),
-};
-
 describe("MacroSettings", () => {
-  beforeEach(() => vi.clearAllMocks());
+  it("shows loading then resolves to cards", async () => {
+    const macro = createMacro({ id: "m-1", name: "Test Macro", description: "Desc" });
+    server.mount(contract.macros.getMacro, { body: macro });
 
-  it("shows loading state", () => {
-    mockUseMacro.mockReturnValue({ data: null, isLoading: true });
     render(<MacroSettings macroId="m-1" />);
+
+    // Initially shows loading
     expect(screen.getByText("macroSettings.loading")).toBeInTheDocument();
-  });
 
-  it("shows not-found when no data", () => {
-    mockUseMacro.mockReturnValue({ data: null, isLoading: false });
-    render(<MacroSettings macroId="m-1" />);
-    expect(screen.getByText("macroSettings.notFound")).toBeInTheDocument();
-  });
-
-  it("renders detail and info cards when data is available", () => {
-    mockUseMacro.mockReturnValue({ data: mockMacro, isLoading: false });
-    render(<MacroSettings macroId="m-1" />);
-    expect(screen.getByTestId("macro-details-card")).toBeInTheDocument();
+    // After MSW responds, shows the detail cards
+    await waitFor(() => {
+      expect(screen.getByTestId("macro-details-card")).toBeInTheDocument();
+    });
     expect(screen.getByTestId("macro-info-card")).toBeInTheDocument();
   });
 
-  it("calls useMacro with the provided macroId", () => {
-    mockUseMacro.mockReturnValue({ data: mockMacro, isLoading: false });
-    render(<MacroSettings macroId="test-id" />);
-    expect(mockUseMacro).toHaveBeenCalledWith("test-id");
+  it("shows not-found when API returns 404", async () => {
+    server.mount(contract.macros.getMacro, { status: 404 });
+
+    render(<MacroSettings macroId="bad-id" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("macroSettings.notFound")).toBeInTheDocument();
+    });
+  });
+
+  it("passes macroId to child cards", async () => {
+    const macro = createMacro({ id: "m-1" });
+    server.mount(contract.macros.getMacro, { body: macro });
+
+    render(<MacroSettings macroId="m-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("macro-details-card")).toHaveAttribute("data-macro-id", "m-1");
+    });
+    expect(screen.getByTestId("macro-info-card")).toHaveAttribute("data-macro-id", "m-1");
   });
 });

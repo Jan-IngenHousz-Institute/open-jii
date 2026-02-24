@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockPageAbout = vi.fn();
 vi.mock("~/lib/contentful", () => ({
   getContentfulClients: vi.fn().mockResolvedValue({
-    client: { pageAbout: (...a: unknown[]) => mockPageAbout(...a) },
-    previewClient: { pageAbout: (...a: unknown[]) => mockPageAbout(...a) },
+    client: { pageAbout: mockPageAbout },
+    previewClient: { pageAbout: mockPageAbout },
   }),
 }));
 

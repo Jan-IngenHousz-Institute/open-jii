@@ -60,8 +60,8 @@ describe("MacroCodeViewer", () => {
       (_content, el) =>
         el instanceof HTMLDivElement &&
         el.classList.contains("text-xs") &&
-        el.textContent?.includes("3") === true &&
-        el.textContent?.includes("common.lines") === true,
+        el.textContent.includes("3") === true &&
+        el.textContent.includes("common.lines") === true,
     );
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });

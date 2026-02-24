@@ -7,7 +7,7 @@ const mockUsePathname = vi.fn().mockReturnValue("/en-US/platform");
 
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal()),
-  usePathname: () => mockUsePathname(),
+  usePathname: mockUsePathname,
 }));
 
 const items = [

@@ -9,8 +9,9 @@
 import { createTransferRequest, resetFactories } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
-import { http, HttpResponse } from "msw";
 import { describe, it, expect, beforeEach } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useTransferRequests } from "./useTransferRequests";
 
@@ -25,11 +26,7 @@ describe("useTransferRequests", () => {
       createTransferRequest({ status: "completed" }),
     ];
 
-    server.use(
-      http.get("http://localhost:3020/api/v1/transfer-requests", () => {
-        return HttpResponse.json(transferRequests);
-      }),
-    );
+    server.mount(contract.experiments.listTransferRequests, { body: transferRequests });
 
     const { result } = renderHook(() => useTransferRequests());
 
@@ -48,11 +45,7 @@ describe("useTransferRequests", () => {
   });
 
   it("returns an empty list when there are no transfer requests", async () => {
-    server.use(
-      http.get("http://localhost:3020/api/v1/transfer-requests", () => {
-        return HttpResponse.json([]);
-      }),
-    );
+    server.mount(contract.experiments.listTransferRequests, { body: [] });
 
     const { result } = renderHook(() => useTransferRequests());
 
@@ -64,11 +57,7 @@ describe("useTransferRequests", () => {
   });
 
   it("exposes an error when the API returns a server error", async () => {
-    server.use(
-      http.get("http://localhost:3020/api/v1/transfer-requests", () => {
-        return HttpResponse.json({ message: "Internal Server Error" }, { status: 500 });
-      }),
-    );
+    server.mount(contract.experiments.listTransferRequests, { status: 500 });
 
     const { result } = renderHook(() => useTransferRequests());
 

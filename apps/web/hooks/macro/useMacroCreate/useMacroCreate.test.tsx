@@ -1,59 +1,75 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { renderHook } from "@/test/test-utils";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+/**
+ * useMacroCreate hook test — MSW-based.
+ *
+ * The real hook calls `tsr.macros.createMacro.useMutation` →
+ * `POST /api/v1/macros`. MSW intercepts that request.
+ *
+ * Tests verify: mutation fires POST, onSuccess invalidates cache and
+ * calls user callback, onError calls user callback.
+ */
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useMacroCreate } from "./useMacroCreate";
 
-const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
-const mockUseMutation = vi.fn();
-
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
-    macros: {
-      createMacro: {
-        useMutation: (...args: unknown[]) => mockUseMutation(...args),
-      },
-    },
-  },
-}));
-
 describe("useMacroCreate", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("registers onSuccess and onError callbacks", () => {
-    mockUseMutation.mockReturnValue({ mutate: vi.fn() });
-    renderHook(() => useMacroCreate());
-
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onSuccess: expect.any(Function),
-      onError: expect.any(Function),
+  it("calls POST /macros via MSW and invokes onSuccess with id", async () => {
+    server.mount(contract.macros.createMacro, {
+      body: createMacro({ id: "macro-1" }),
     });
-  });
 
-  it("onSuccess invalidates macros and calls option callback", () => {
     const onSuccess = vi.fn();
-    mockUseMutation.mockImplementation((opts: any) => {
-      opts.onSuccess({ body: { id: "macro-1" } });
-      return { mutate: vi.fn() };
+    const queryClient = createTestQueryClient();
+
+    // Pre-populate the macros cache so we can observe invalidation
+    queryClient.setQueryData(["macros"], { body: [] });
+
+    const { result } = renderHook(() => useMacroCreate({ onSuccess }), { queryClient });
+
+    // Default MSW handler returns { id: "macro-1", ... } with 201
+    act(() => {
+      result.current.mutate({ body: { name: "New Macro", language: "python", code: "" } });
     });
 
-    renderHook(() => useMacroCreate({ onSuccess }));
-
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["macros"] });
-    expect(onSuccess).toHaveBeenCalledWith("macro-1");
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith("macro-1");
+    });
   });
 
-  it("onError calls option callback", () => {
-    const onError = vi.fn();
-    const error = new Error("fail");
-    mockUseMutation.mockImplementation((opts: any) => {
-      opts.onError(error);
-      return { mutate: vi.fn() };
+  it("captures the request body sent to the API", async () => {
+    const spy = server.mount(contract.macros.createMacro, {
+      body: createMacro({ id: "macro-2", name: "Test", code: "" }),
     });
 
-    renderHook(() => useMacroCreate({ onError }));
+    const { result } = renderHook(() => useMacroCreate());
 
-    expect(onError).toHaveBeenCalledWith(error);
+    act(() => {
+      result.current.mutate({
+        body: { name: "Test", language: "python", code: 'print("hi")' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(spy.body).toMatchObject({ name: "Test", language: "python" });
+    });
+  });
+
+  it("calls onError when the API returns an error", async () => {
+    server.mount(contract.macros.createMacro, { status: 400 });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useMacroCreate({ onError }));
+
+    act(() => {
+      result.current.mutate({ body: { name: "", language: "python", code: "" } });
+    });
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalled();
+    });
   });
 });

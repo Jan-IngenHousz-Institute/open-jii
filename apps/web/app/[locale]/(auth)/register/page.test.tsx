@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import RegisterPage from "./page";
 
 const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({ auth: () => mockAuth(), providerMap: [] }));
+vi.mock("~/app/actions/auth", () => ({ auth: mockAuth, providerMap: [] }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
@@ -45,7 +45,7 @@ describe("RegisterPage", () => {
 
   it("redirects to login when unauthenticated", async () => {
     mockAuth.mockResolvedValue(null);
-    await RegisterPage(props).catch(() => {});
+    await RegisterPage(props).catch(() => undefined);
     expect(redirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
   });
 
