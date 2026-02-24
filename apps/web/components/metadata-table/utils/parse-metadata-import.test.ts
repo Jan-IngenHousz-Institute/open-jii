@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { parseDelimitedText, parseClipboard, parseClipboardText } from "./parse-data";
+import { parseDelimitedText, parseClipboard, parseClipboardText } from "./parse-metadata-import";
 
 describe("parseDelimitedText", () => {
   describe("delimiter detection", () => {
