@@ -13,7 +13,6 @@ export function usePostHogAuth() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    // Then handle authentication state
     if (session?.user.email) {
       posthog.identify(session.user.email, {
         email: session.user.email,
