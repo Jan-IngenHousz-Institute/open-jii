@@ -21,9 +21,13 @@
  * ```
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render as rtlRender, type RenderOptions, type RenderResult } from "@testing-library/react";
+import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
+import type { RenderOptions, RenderResult } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React, { type ReactElement } from "react";
+import React from "react";
+import type { ReactElement } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import type { DefaultValues, FieldValues, UseFormProps } from "react-hook-form";
 
 // ── Provider wrapper ────────────────────────────────────────────
 
@@ -85,7 +89,6 @@ function render(ui: ReactElement, options?: CustomRenderOptions): RenderResult {
  * Custom renderHook that wraps hooks in all required providers.
  */
 function renderHook<TResult>(hook: () => TResult, options?: { queryClient?: QueryClient }) {
-  const { renderHook: rtlRenderHook } = require("@testing-library/react");
   const { queryClient } = options ?? {};
 
   function Wrapper({ children }: WrapperProps) {
@@ -100,10 +103,116 @@ function renderHook<TResult>(hook: () => TResult, options?: { queryClient?: Quer
   };
 }
 
+// ── renderWithForm ──────────────────────────────────────────────
+
+/**
+ * Renders a component that depends on react-hook-form's `FormProvider` context.
+ *
+ * Instead of mocking form-aware UI primitives (`FormField`, `FormLabel`, etc.),
+ * this helper creates a *real* `useForm` instance wrapped in a `FormProvider`,
+ * following the react-hook-form testing guide:
+ * https://react-hook-form.com/advanced-usage#TestingForm
+ *
+ * @param renderFn - receives the `UseFormReturn` instance, returns the JSX to render.
+ * @param options  - optional `useFormProps` (defaultValues, resolver, …) plus
+ *                   any standard RTL render options.
+ *
+ * @example
+ * ```tsx
+ * import { renderWithForm, screen } from "@/test/test-utils";
+ *
+ * renderWithForm<CreateUserProfileBody>(
+ *   (form) => <ProfileCard form={form} />,
+ *   { useFormProps: { defaultValues: { firstName: "", lastName: "" } } },
+ * );
+ * ```
+ */
+interface RenderWithFormOptions<T extends FieldValues> extends CustomRenderOptions {
+  useFormProps?: UseFormProps<T>;
+}
+
+function renderWithForm<T extends FieldValues>(
+  renderFn: (form: ReturnType<typeof useForm<T>>) => ReactElement,
+  options?: RenderWithFormOptions<T>,
+): RenderResult {
+  const { useFormProps, ...renderOptions } = options ?? {};
+
+  function FormWrapper() {
+    const form = useForm<T>(useFormProps);
+    return <FormProvider {...form}>{renderFn(form)}</FormProvider>;
+  }
+
+  return render(<FormWrapper />, renderOptions);
+}
+
 // ── Re-exports ──────────────────────────────────────────────────
 
-// Re-export everything from RTL so tests only import from test-utils
-export * from "@testing-library/react";
+// Re-export everything from RTL except render and renderHook (we provide custom versions)
+export {
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+  act,
+  cleanup,
+  fireEvent,
+  prettyDOM,
+  logRoles,
+  isInaccessible,
+  configure,
+  getDefaultNormalizer,
+  queryHelpers,
+  buildQueries,
+  queries,
+  queryAllByRole,
+  queryByRole,
+  getAllByRole,
+  getByRole,
+  findAllByRole,
+  findByRole,
+  queryAllByLabelText,
+  queryByLabelText,
+  getAllByLabelText,
+  getByLabelText,
+  findAllByLabelText,
+  findByLabelText,
+  queryAllByPlaceholderText,
+  queryByPlaceholderText,
+  getAllByPlaceholderText,
+  getByPlaceholderText,
+  findAllByPlaceholderText,
+  findByPlaceholderText,
+  queryAllByText,
+  queryByText,
+  getAllByText,
+  getByText,
+  findAllByText,
+  findByText,
+  queryAllByDisplayValue,
+  queryByDisplayValue,
+  getAllByDisplayValue,
+  getByDisplayValue,
+  findAllByDisplayValue,
+  findByDisplayValue,
+  queryAllByAltText,
+  queryByAltText,
+  getAllByAltText,
+  getByAltText,
+  findAllByAltText,
+  findByAltText,
+  queryAllByTitle,
+  queryByTitle,
+  getAllByTitle,
+  getByTitle,
+  findAllByTitle,
+  findByTitle,
+  queryAllByTestId,
+  queryByTestId,
+  getAllByTestId,
+  getByTestId,
+  findAllByTestId,
+  findByTestId,
+} from "@testing-library/react";
 
-// Override RTL's render/renderHook with our custom versions
-export { render, renderHook, userEvent, AllProviders, createTestQueryClient };
+// Export our custom versions
+export { render, renderHook, renderWithForm, userEvent, AllProviders, createTestQueryClient };
