@@ -1,50 +1,22 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, createTestQueryClient } from "@/test/test-utils";
+import { describe, expect, it, vi } from "vitest";
 
 import { authClient } from "@repo/auth/client";
 
 import { useUpdateUser } from "./useUpdateUser";
 
-// Mock the auth client
 vi.mock("@repo/auth/client", () => ({
-  authClient: {
-    updateUser: vi.fn(),
-  },
+  authClient: { updateUser: vi.fn() },
 }));
 
 describe("useUpdateUser", () => {
-  let queryClient: QueryClient;
+  it("calls updateUser and invalidates auth queries", async () => {
+    vi.mocked(authClient.updateUser).mockResolvedValue({ data: { success: true }, error: null });
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should call updateUser and invalidate queries on success", async () => {
-    vi.mocked(authClient.updateUser).mockResolvedValue({
-      data: { success: true },
-      error: null,
-    });
-
-    const wrapper = createWrapper();
+    const queryClient = createTestQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    const { result } = renderHook(() => useUpdateUser(), { wrapper });
-
+    const { result } = renderHook(() => useUpdateUser(), { queryClient });
     await result.current.mutateAsync({ name: "New Name" });
 
     expect(authClient.updateUser).toHaveBeenCalledWith({ name: "New Name" });
