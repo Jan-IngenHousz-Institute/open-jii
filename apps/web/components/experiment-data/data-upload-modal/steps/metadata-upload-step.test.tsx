@@ -48,7 +48,7 @@ vi.mock("@/components/metadata-table", () => ({
   MetadataTable: () => <div data-testid="metadata-table">Table</div>,
 }));
 
-vi.mock("@/components/metadata-table/utils/parse-data", () => ({
+vi.mock("@/components/metadata-table/utils/parse-metadata-import", () => ({
   parseClipboardText: vi.fn(),
 }));
 
