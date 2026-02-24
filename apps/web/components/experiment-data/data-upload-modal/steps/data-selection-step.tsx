@@ -1,11 +1,11 @@
 "use client";
 
+import { Database, FileSpreadsheet } from "lucide-react";
 import * as React from "react";
 
 import { useTranslation } from "@repo/i18n/client";
 import { Label, RadioGroup, RadioGroupItem, Separator } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
-import { Database, FileSpreadsheet } from "lucide-react";
 
 export interface DataOption {
   id: "multispeq" | "ambyte" | "metadata";
@@ -58,7 +58,7 @@ const optionCardVariants = cva(
     defaultVariants: {
       state: "available",
     },
-  }
+  },
 );
 
 interface DataSelectionStepProps {
@@ -92,9 +92,7 @@ export const DataSelectionStep: React.FC<DataSelectionStepProps> = ({
         {/* Sensor Data Section */}
         <div className="space-y-3">
           <div>
-            <Label className="text-base font-medium">
-              {t("uploadModal.sections.sensorData")}
-            </Label>
+            <Label className="text-base font-medium">{t("uploadModal.sections.sensorData")}</Label>
             <p className="text-muted-foreground mt-0.5 text-sm">
               {t("uploadModal.sections.sensorDataDescription")}
             </p>
@@ -122,18 +120,14 @@ export const DataSelectionStep: React.FC<DataSelectionStepProps> = ({
                 <div className="text-muted-foreground mt-0.5">{option.icon}</div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <Label className="cursor-pointer font-medium">
-                      {t(option.labelKey)}
-                    </Label>
+                    <Label className="cursor-pointer font-medium">{t(option.labelKey)}</Label>
                     {option.disabled && (
                       <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs">
                         {t("uploadModal.comingSoon")}
                       </span>
                     )}
                   </div>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {t(option.descriptionKey)}
-                  </p>
+                  <p className="text-muted-foreground mt-1 text-sm">{t(option.descriptionKey)}</p>
                 </div>
               </div>
             ))}
@@ -145,9 +139,7 @@ export const DataSelectionStep: React.FC<DataSelectionStepProps> = ({
         {/* Metadata Section */}
         <div className="space-y-3">
           <div>
-            <Label className="text-base font-medium">
-              {t("uploadModal.sections.metadata")}
-            </Label>
+            <Label className="text-base font-medium">{t("uploadModal.sections.metadata")}</Label>
             <p className="text-muted-foreground mt-0.5 text-sm">
               {t("uploadModal.sections.metadataDescription")}
             </p>
@@ -174,12 +166,8 @@ export const DataSelectionStep: React.FC<DataSelectionStepProps> = ({
                 />
                 <div className="text-muted-foreground mt-0.5">{option.icon}</div>
                 <div className="flex-1">
-                  <Label className="cursor-pointer font-medium">
-                    {t(option.labelKey)}
-                  </Label>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {t(option.descriptionKey)}
-                  </p>
+                  <Label className="cursor-pointer font-medium">{t(option.labelKey)}</Label>
+                  <p className="text-muted-foreground mt-1 text-sm">{t(option.descriptionKey)}</p>
                 </div>
               </div>
             ))}

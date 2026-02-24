@@ -638,7 +638,8 @@ export const experimentContract = c.router({
       404: zErrorResponse,
     },
     summary: "Create or update experiment metadata",
-    description: "Creates or replaces the metadata for an experiment with the provided columns and rows",
+    description:
+      "Creates or replaces the metadata for an experiment with the provided columns and rows",
   },
 
   deleteExperimentMetadata: {

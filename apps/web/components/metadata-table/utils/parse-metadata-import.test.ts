@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import { parseDelimitedText, parseClipboard, parseClipboardText } from "./parse-metadata-import";
 
 describe("parseDelimitedText", () => {
@@ -183,7 +184,7 @@ describe("parseClipboardText", () => {
 
 describe("parseClipboard", () => {
   const originalNavigator = global.navigator;
-  const originalDocument = global.document;
+  const _originalDocument = global.document;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -222,7 +223,12 @@ describe("parseClipboard", () => {
 
   it("should timeout and fallback when clipboard API hangs", async () => {
     // Mock clipboard API that never resolves
-    const mockReadText = vi.fn().mockImplementation(() => new Promise(() => {}));
+    const mockReadText = vi.fn().mockImplementation(
+      () =>
+        new Promise(() => {
+          /* never resolves */
+        }),
+    );
 
     Object.defineProperty(global, "navigator", {
       value: {
@@ -257,10 +263,10 @@ describe("parseClipboard", () => {
     });
 
     const resultPromise = parseClipboard();
-    
+
     // Advance past the timeout
     await vi.advanceTimersByTimeAsync(3500);
-    
+
     const result = await resultPromise;
 
     expect(mockExecCommand).toHaveBeenCalledWith("paste");
@@ -354,10 +360,6 @@ describe("parseClipboard", () => {
   });
 
   it("should throw 'Clipboard is empty' when both methods return valid but empty text", async () => {
-    // When clipboard API returns empty string, it's treated as falsy and triggers fallback
-    // When execCommand also returns empty, it rejects (because success && text is falsy)
-    // So we need to test the case where execCommand succeeds with actual text
-    // but that text is whitespace-only
     const mockReadText = vi.fn().mockResolvedValue("   ");
 
     Object.defineProperty(global, "navigator", {

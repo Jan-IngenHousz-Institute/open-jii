@@ -165,14 +165,7 @@ describe("EditableCell", () => {
     it("converts string input to number on commit", async () => {
       const onUpdate = vi.fn();
       const user = userEvent.setup();
-      render(
-        <EditableCell
-          {...defaultProps}
-          type="number"
-          value={42}
-          onUpdate={onUpdate}
-        />,
-      );
+      render(<EditableCell {...defaultProps} type="number" value={42} onUpdate={onUpdate} />);
 
       await user.click(screen.getByRole("button"));
       const input = screen.getByRole("spinbutton");
@@ -187,14 +180,7 @@ describe("EditableCell", () => {
     it("converts empty number to null", async () => {
       const onUpdate = vi.fn();
       const user = userEvent.setup();
-      render(
-        <EditableCell
-          {...defaultProps}
-          type="number"
-          value={42}
-          onUpdate={onUpdate}
-        />,
-      );
+      render(<EditableCell {...defaultProps} type="number" value={42} onUpdate={onUpdate} />);
 
       await user.click(screen.getByRole("button"));
       const input = screen.getByRole("spinbutton");

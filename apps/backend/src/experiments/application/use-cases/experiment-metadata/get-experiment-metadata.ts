@@ -30,7 +30,7 @@ export class GetExperimentMetadataUseCase {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
-      async ({
+      ({
         experiment,
         hasAccess,
       }: {
@@ -58,9 +58,7 @@ export class GetExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        const metadataResult = await this.experimentMetadataRepository.findByExperimentId(
-          experimentId
-        );
+        const metadataResult = this.experimentMetadataRepository.findByExperimentId(experimentId);
 
         if (metadataResult.isFailure()) {
           this.logger.error({

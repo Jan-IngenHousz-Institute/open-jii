@@ -7,10 +7,10 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api";
 
 import { handleFailure } from "../../common/utils/fp-utils";
-import { toApiResponse } from "../core/models/experiment-metadata.model";
 import { DeleteExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/get-experiment-metadata";
 import { UpsertExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/upsert-experiment-metadata";
+import { toApiResponse } from "../core/models/experiment-metadata.model";
 
 @Controller()
 export class ExperimentMetadataController {
@@ -34,10 +34,7 @@ export class ExperimentMetadataController {
         userId: session.user.id,
       });
 
-      const result = await this.getExperimentMetadataUseCase.execute(
-        experimentId,
-        session.user.id
-      );
+      const result = await this.getExperimentMetadataUseCase.execute(experimentId, session.user.id);
 
       if (result.isSuccess()) {
         this.logger.log({
@@ -59,41 +56,44 @@ export class ExperimentMetadataController {
 
   @TsRestHandler(contract.experiments.upsertExperimentMetadata)
   upsertExperimentMetadata(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.upsertExperimentMetadata, async ({ params, body }) => {
-      const { id: experimentId } = params;
+    return tsRestHandler(
+      contract.experiments.upsertExperimentMetadata,
+      async ({ params, body }) => {
+        const { id: experimentId } = params;
 
-      this.logger.log({
-        msg: "Processing upsert metadata request",
-        operation: "upsertMetadata",
-        experimentId,
-        userId: session.user.id,
-        columnCount: body.columns?.length ?? 0,
-        rowCount: body.rows?.length ?? 0,
-      });
-
-      const result = await this.upsertExperimentMetadataUseCase.execute(
-        experimentId,
-        body,
-        session.user.id
-      );
-
-      if (result.isSuccess()) {
         this.logger.log({
-          msg: "Successfully upserted metadata",
+          msg: "Processing upsert metadata request",
           operation: "upsertMetadata",
           experimentId,
-          metadataId: result.value.id,
-          status: "success",
+          userId: session.user.id,
+          columnCount: body.columns.length,
+          rowCount: body.rows.length,
         });
 
-        return {
-          status: StatusCodes.OK as const,
-          body: toApiResponse(result.value),
-        };
-      }
+        const result = await this.upsertExperimentMetadataUseCase.execute(
+          experimentId,
+          body,
+          session.user.id,
+        );
 
-      return handleFailure(result, this.logger);
-    });
+        if (result.isSuccess()) {
+          this.logger.log({
+            msg: "Successfully upserted metadata",
+            operation: "upsertMetadata",
+            experimentId,
+            metadataId: result.value.id,
+            status: "success",
+          });
+
+          return {
+            status: StatusCodes.OK as const,
+            body: toApiResponse(result.value),
+          };
+        }
+
+        return handleFailure(result, this.logger);
+      },
+    );
   }
 
   @TsRestHandler(contract.experiments.deleteExperimentMetadata)
@@ -110,7 +110,7 @@ export class ExperimentMetadataController {
 
       const result = await this.deleteExperimentMetadataUseCase.execute(
         experimentId,
-        session.user.id
+        session.user.id,
       );
 
       if (result.isSuccess()) {

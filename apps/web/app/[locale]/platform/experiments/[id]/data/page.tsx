@@ -41,7 +41,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     queryData: { params: { id } },
     queryKey: ["experiment", id, "metadata"],
   });
-  const hasMetadata = metadataResponse?.body != null && metadataResponse.body.columns?.length > 0;
+  const hasMetadata = metadataResponse?.body != null && metadataResponse.body.columns.length > 0;
 
   const openMetadataUpload = () => {
     setUploadModalStep("metadata-upload");

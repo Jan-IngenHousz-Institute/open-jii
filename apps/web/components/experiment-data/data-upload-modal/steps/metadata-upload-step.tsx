@@ -1,5 +1,10 @@
 "use client";
 
+import { MetadataProvider, MetadataTable, useMetadata } from "@/components/metadata-table";
+import type { MetadataColumn, MetadataRow } from "@/components/metadata-table";
+import { parseClipboardText } from "@/components/metadata-table/utils/parse-metadata-import";
+import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
+import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Trash2, Upload } from "lucide-react";
 import * as React from "react";
 import { useRef, useState, useEffect } from "react";
 
@@ -14,17 +19,6 @@ import {
   SelectValue,
 } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
-import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Trash2, Upload } from "lucide-react";
-
-import {
-  MetadataProvider,
-  MetadataTable,
-  useMetadata,
-  type MetadataColumn,
-  type MetadataRow,
-} from "@/components/metadata-table";
-import { parseClipboardText } from "@/components/metadata-table/utils/parse-metadata-import";
-import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 
 interface MetadataUploadStepProps {
   experimentId: string;
@@ -37,15 +31,22 @@ export function MetadataUploadStep({
   onBack,
   onUploadSuccess,
 }: MetadataUploadStepProps) {
-  const handleSave = async (
+  const handleSave = (
     columns: MetadataColumn[],
     rows: MetadataRow[],
     identifierColumnId: string | null,
     experimentQuestionId: string | null,
-  ) => {
+  ): Promise<void> => {
     // TODO: Implement API call to save metadata
-    console.log("Saving metadata:", { experimentId, columns, rows, identifierColumnId, experimentQuestionId });
+    console.log("Saving metadata:", {
+      experimentId,
+      columns,
+      rows,
+      identifierColumnId,
+      experimentQuestionId,
+    });
     onUploadSuccess();
+    return Promise.resolve();
   };
 
   return (
@@ -60,9 +61,24 @@ interface QuestionOption {
   name: string;
 }
 
-function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: string; onBack: () => void }) {
+function MetadataUploadStepContent({
+  experimentId,
+  onBack,
+}: {
+  experimentId: string;
+  onBack: () => void;
+}) {
   const { t } = useTranslation("experiments");
-  const { state, importFromClipboard, importFromFile, save, isSaving, isEditingCell, setData, setExperimentQuestionId } = useMetadata();
+  const {
+    state,
+    importFromClipboard,
+    importFromFile,
+    save,
+    isSaving,
+    isEditingCell,
+    setData,
+    setExperimentQuestionId,
+  } = useMetadata();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [isPasting, setIsPasting] = useState(false);
@@ -71,11 +87,11 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
   const { data: flowData } = useExperimentFlow(experimentId);
 
   const questionOptions: QuestionOption[] = React.useMemo(() => {
-    const nodes = flowData?.body?.graph?.nodes;
+    const nodes = flowData?.body.graph.nodes;
     if (!nodes) return [];
     return nodes
-      .filter((node) => node.type === "question")
-      .map((node) => ({
+      .filter((node: { type: string }) => node.type === "question")
+      .map((node: { id: string; name: string }) => ({
         id: node.id,
         name: node.name,
       }));
@@ -101,7 +117,7 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
     const handlePasteEvent = (e: ClipboardEvent) => {
       // Only handle if we don't have data yet and not editing a cell
       if (state.columns.length > 0 || isEditingCell) return;
-      
+
       const text = e.clipboardData?.getData("text/plain");
       if (text) {
         try {
@@ -110,9 +126,7 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
           setData(columns, rows);
           e.preventDefault();
         } catch (error) {
-          setImportError(
-            error instanceof Error ? error.message : "Failed to paste from clipboard"
-          );
+          setImportError(error instanceof Error ? error.message : "Failed to paste from clipboard");
         }
       }
     };
@@ -128,9 +142,7 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
         setImportError(null);
         await importFromFile(file);
       } catch (error) {
-        setImportError(
-          error instanceof Error ? error.message : "Failed to import file"
-        );
+        setImportError(error instanceof Error ? error.message : "Failed to import file");
       }
     }
     if (fileInputRef.current) {
@@ -144,9 +156,7 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
     try {
       await importFromClipboard();
     } catch (error) {
-      setImportError(
-        error instanceof Error ? error.message : "Failed to paste from clipboard"
-      );
+      setImportError(error instanceof Error ? error.message : "Failed to paste from clipboard");
     } finally {
       setIsPasting(false);
     }
@@ -155,40 +165,37 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
   const hasData = state.columns.length > 0;
 
   return (
-    <div className="space-y-6 max-full overflow-x-scroll">
+    <div className="max-full space-y-6 overflow-x-scroll">
       {!hasData ? (
         <div className="space-y-4">
           <div
             className={cn(
               "flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8",
-              "hover:border-primary/50 hover:bg-muted/50 transition-colors"
+              "hover:border-primary/50 hover:bg-muted/50 transition-colors",
             )}
           >
             <FileSpreadsheet className="text-muted-foreground h-12 w-12" />
             <div className="text-center">
-              <p className="font-medium">
-                {t("uploadModal.metadata.importPrompt")}
-              </p>
+              <p className="font-medium">{t("uploadModal.metadata.importPrompt")}</p>
               <p className="text-muted-foreground mt-1 text-sm">
                 {t("uploadModal.metadata.supportedFormats")}
               </p>
               <p className="text-muted-foreground mt-1 text-xs">
                 {t("uploadModal.metadata.pasteHint", {
-                  shortcut: navigator?.platform?.includes("Mac") ? "⌘V" : "Ctrl+V",
+                  shortcut: navigator.platform.includes("Mac") ? "⌘V" : "Ctrl+V",
                 })}
               </p>
             </div>
             <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="mr-2 h-4 w-4" />
                 {t("uploadModal.metadata.uploadFile")}
               </Button>
               <Button variant="outline" onClick={handlePaste} disabled={isPasting}>
                 <ClipboardPaste className="mr-2 h-4 w-4" />
-                {isPasting ? t("uploadModal.metadata.pasting") : t("uploadModal.metadata.pasteClipboard")}
+                {isPasting
+                  ? t("uploadModal.metadata.pasting")
+                  : t("uploadModal.metadata.pasteClipboard")}
               </Button>
             </div>
           </div>
@@ -201,9 +208,7 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
             className="hidden"
           />
 
-          {importError && (
-            <p className="text-destructive text-sm">{importError}</p>
-          )}
+          {importError && <p className="text-destructive text-sm">{importError}</p>}
         </div>
       ) : (
         <div className="space-y-4">
@@ -212,11 +217,7 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
               {t("uploadModal.metadata.rowCount", { count: state.rows.length })}
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setData([], [])}
-              >
+              <Button variant="outline" size="sm" onClick={() => setData([], [])}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 {t("uploadModal.metadata.clearData")}
               </Button>
@@ -242,10 +243,12 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
             <p className="text-muted-foreground text-xs">
               {questionOptions.length > 0
                 ? t("uploadModal.metadata.experimentQuestionHint", {
-                    defaultValue: "Select the experiment question whose answers should match the metadata identifier column (e.g., a plot question).",
+                    defaultValue:
+                      "Select the experiment question whose answers should match the metadata identifier column (e.g., a plot question).",
                   })
                 : t("uploadModal.metadata.experimentQuestionNoQuestions", {
-                    defaultValue: "No questions found. Add question nodes to the experiment flow first.",
+                    defaultValue:
+                      "No questions found. Add question nodes to the experiment flow first.",
                   })}
             </p>
             <Select
@@ -283,7 +286,12 @@ function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: str
           <ArrowLeft className="mr-2 h-4 w-4" />
           {t("uploadModal.fileUpload.back")}
         </Button>
-        <Button onClick={save} disabled={!hasData || isSaving || !state.identifierColumnId || !state.experimentQuestionId}>
+        <Button
+          onClick={save}
+          disabled={
+            !hasData || isSaving || !state.identifierColumnId || !state.experimentQuestionId
+          }
+        >
           {isSaving
             ? t("uploadModal.fileUpload.uploading")
             : t("uploadModal.metadata.saveMetadata")}

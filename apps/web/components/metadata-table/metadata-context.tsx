@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+
 import type {
   MetadataColumn,
   MetadataContextValue,
@@ -22,14 +17,15 @@ const MetadataContext = createContext<MetadataContextValue | null>(null);
 interface MetadataProviderProps {
   children: ReactNode;
   experimentId: string;
-  onSave?: (columns: MetadataColumn[], rows: MetadataRow[], identifierColumnId: string | null, experimentQuestionId: string | null) => Promise<void>;
+  onSave?: (
+    columns: MetadataColumn[],
+    rows: MetadataRow[],
+    identifierColumnId: string | null,
+    experimentQuestionId: string | null,
+  ) => Promise<void>;
 }
 
-export function MetadataProvider({
-  children,
-  experimentId,
-  onSave,
-}: MetadataProviderProps) {
+export function MetadataProvider({ children, onSave }: MetadataProviderProps) {
   const [state, setState] = useState<MetadataTableState>({
     columns: [],
     rows: [],
@@ -37,31 +33,27 @@ export function MetadataProvider({
     identifierColumnId: null,
     experimentQuestionId: null,
   });
-  const [mergeConfig, setMergeConfig] = useState<MetadataImportConfig | null>(
-    null
-  );
+  const [mergeConfig, setMergeConfig] = useState<MetadataImportConfig | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingCell, setIsEditingCell] = useState(false);
 
-  const setData = useCallback(
-    (columns: MetadataColumn[], rows: MetadataRow[]) => {
-      setState({ columns, rows, isDirty: true, identifierColumnId: null, experimentQuestionId: null });
-    },
-    []
-  );
+  const setData = useCallback((columns: MetadataColumn[], rows: MetadataRow[]) => {
+    setState({
+      columns,
+      rows,
+      isDirty: true,
+      identifierColumnId: null,
+      experimentQuestionId: null,
+    });
+  }, []);
 
-  const updateCell = useCallback(
-    (rowId: string, columnId: string, value: unknown) => {
-      setState((prev) => ({
-        ...prev,
-        isDirty: true,
-        rows: prev.rows.map((row) =>
-          row._id === rowId ? { ...row, [columnId]: value } : row
-        ),
-      }));
-    },
-    []
-  );
+  const updateCell = useCallback((rowId: string, columnId: string, value: unknown) => {
+    setState((prev) => ({
+      ...prev,
+      isDirty: true,
+      rows: prev.rows.map((row) => (row._id === rowId ? { ...row, [columnId]: value } : row)),
+    }));
+  }, []);
 
   const addRow = useCallback(() => {
     setState((prev) => {
@@ -117,9 +109,7 @@ export function MetadataProvider({
     setState((prev) => ({
       ...prev,
       isDirty: true,
-      columns: prev.columns.map((col) =>
-        col.id === columnId ? { ...col, name: newName } : col
-      ),
+      columns: prev.columns.map((col) => (col.id === columnId ? { ...col, name: newName } : col)),
     }));
   }, []);
 
@@ -149,7 +139,7 @@ export function MetadataProvider({
       const { columns, rows } = await parseFile(file);
       setData(columns, rows);
     },
-    [setData]
+    [setData],
   );
 
   const save = useCallback(async () => {
@@ -202,14 +192,10 @@ export function MetadataProvider({
       save,
       isSaving,
       isEditingCell,
-    ]
+    ],
   );
 
-  return (
-    <MetadataContext.Provider value={value}>
-      {children}
-    </MetadataContext.Provider>
-  );
+  return <MetadataContext.Provider value={value}>{children}</MetadataContext.Provider>;
 }
 
 export function useMetadata() {
