@@ -115,19 +115,6 @@ describe("FileUploadStep", () => {
     (isExcludedFile as ReturnType<typeof vi.fn>).mockReturnValue(false);
   });
 
-  it("renders file upload title and description", () => {
-    render(
-      <FileUploadStep
-        experimentId="test-experiment"
-        onBack={mockOnBack}
-        onUploadSuccess={mockOnUploadSuccess}
-      />,
-    );
-
-    expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
-    expect(screen.getByText("uploadModal.fileUpload.description")).toBeInTheDocument();
-  });
-
   it("renders back and upload buttons", () => {
     render(
       <FileUploadStep

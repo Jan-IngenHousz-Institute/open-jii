@@ -76,7 +76,10 @@
     "description": "Anzeigen und Verwalten von Daten, die mit diesem Experiment verbunden sind.",
     "uploadData": "Daten hochladen",
     "noData": "Noch keine Messungen aufgezeichnet. Verwenden Sie die openJII-App, um Messungen hinzuzufügen.",
-    "readMore": "Mehr erfahren"
+    "readMore": "Mehr erfahren",
+    "uploadMetadata": "Metadaten hochladen",
+    "editMetadata": "Metadaten bearbeiten",
+    "uploadSensorData": "Sensordaten hochladen"
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",

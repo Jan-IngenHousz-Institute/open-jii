@@ -94,7 +94,10 @@
     "description": "View, download and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
     "uploadData": "Upload Data",
     "noData": "No measurements recorded yet. Use the openJII mobile app to add measurements.",
-    "readMore": "Read more"
+    "readMore": "Read more",
+    "uploadMetadata": "Upload Metadata",
+    "editMetadata": "Edit Metadata",
+    "uploadSensorData": "Upload Sensor Data"
   },
   "experiment": "Experiment",
   "detailsTitle": "Details",
@@ -292,6 +295,7 @@
       "pasting": "Pasting...",
       "rowCount": "{{count}} rows imported",
       "replaceData": "Replace Data",
+      "clearData": "Clear Data",
       "saveMetadata": "Save Metadata"
     },
     "uploading": {

@@ -1033,6 +1033,8 @@ export const zExperimentMetadata = z.object({
   experimentId: z.string().uuid(),
   columns: z.array(zMetadataColumn),
   rows: z.array(zMetadataRow),
+  identifierColumnId: z.string().nullable().optional(),
+  experimentQuestionId: z.string().nullable().optional(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -1042,6 +1044,8 @@ export const zExperimentMetadata = z.object({
 export const zUpsertExperimentMetadataBody = z.object({
   columns: z.array(zMetadataColumn).min(1, "At least one column is required"),
   rows: z.array(zMetadataRow),
+  identifierColumnId: z.string().nullable().optional(),
+  experimentQuestionId: z.string().nullable().optional(),
 });
 
 // Metadata types

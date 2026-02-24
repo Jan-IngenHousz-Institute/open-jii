@@ -14,6 +14,8 @@ export interface ExperimentMetadataDto {
   experimentId: string;
   columns: MetadataColumn[];
   rows: MetadataRow[];
+  identifierColumnId?: string | null;
+  experimentQuestionId?: string | null;
   createdBy: string;
   createdByName?: string;
   createdAt: Date;

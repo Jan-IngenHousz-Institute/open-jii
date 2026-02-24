@@ -4,9 +4,17 @@ import * as React from "react";
 import { useRef, useState, useEffect } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
-import { Button, Label } from "@repo/ui/components";
+import {
+  Button,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
-import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Upload } from "lucide-react";
+import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Trash2, Upload } from "lucide-react";
 
 import {
   MetadataProvider,
@@ -16,6 +24,7 @@ import {
   type MetadataRow,
 } from "@/components/metadata-table";
 import { parseClipboardText } from "@/components/metadata-table/utils/parse-data";
+import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 
 interface MetadataUploadStepProps {
   experimentId: string;
@@ -28,25 +37,49 @@ export function MetadataUploadStep({
   onBack,
   onUploadSuccess,
 }: MetadataUploadStepProps) {
-  const handleSave = async (columns: MetadataColumn[], rows: MetadataRow[]) => {
+  const handleSave = async (
+    columns: MetadataColumn[],
+    rows: MetadataRow[],
+    identifierColumnId: string | null,
+    experimentQuestionId: string | null,
+  ) => {
     // TODO: Implement API call to save metadata
-    console.log("Saving metadata:", { experimentId, columns, rows });
+    console.log("Saving metadata:", { experimentId, columns, rows, identifierColumnId, experimentQuestionId });
     onUploadSuccess();
   };
 
   return (
     <MetadataProvider experimentId={experimentId} onSave={handleSave}>
-      <MetadataUploadStepContent onBack={onBack} />
+      <MetadataUploadStepContent experimentId={experimentId} onBack={onBack} />
     </MetadataProvider>
   );
 }
 
-function MetadataUploadStepContent({ onBack }: { onBack: () => void }) {
+interface QuestionOption {
+  id: string;
+  name: string;
+}
+
+function MetadataUploadStepContent({ experimentId, onBack }: { experimentId: string; onBack: () => void }) {
   const { t } = useTranslation("experiments");
-  const { state, importFromClipboard, importFromFile, save, isSaving, isEditingCell, setData } = useMetadata();
+  const { state, importFromClipboard, importFromFile, save, isSaving, isEditingCell, setData, setExperimentQuestionId } = useMetadata();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [isPasting, setIsPasting] = useState(false);
+
+  // Fetch experiment flow to get question nodes
+  const { data: flowData } = useExperimentFlow(experimentId);
+
+  const questionOptions: QuestionOption[] = React.useMemo(() => {
+    const nodes = flowData?.body?.graph?.nodes;
+    if (!nodes) return [];
+    return nodes
+      .filter((node) => node.type === "question")
+      .map((node) => ({
+        id: node.id,
+        name: node.name,
+      }));
+  }, [flowData]);
 
   // Prevent dialog from closing when editing a cell
   useEffect(() => {
@@ -123,15 +156,6 @@ function MetadataUploadStepContent({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="space-y-6 max-full overflow-x-scroll">
-      <div>
-        <Label className="text-base font-medium">
-          {t("uploadModal.metadata.title")}
-        </Label>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {t("uploadModal.metadata.description")}
-        </p>
-      </div>
-
       {!hasData ? (
         <div className="space-y-4">
           <div
@@ -191,10 +215,10 @@ function MetadataUploadStepContent({ onBack }: { onBack: () => void }) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => setData([], [])}
               >
-                <Upload className="mr-2 h-4 w-4" />
-                {t("uploadModal.metadata.replaceData")}
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("uploadModal.metadata.clearData")}
               </Button>
             </div>
           </div>
@@ -208,6 +232,49 @@ function MetadataUploadStepContent({ onBack }: { onBack: () => void }) {
           />
 
           <MetadataTable pageSize={10} />
+
+          <div className="grid gap-2">
+            <Label htmlFor="experiment-question">
+              {t("uploadModal.metadata.experimentQuestionLabel", {
+                defaultValue: "Identifier column from experiment question",
+              })}
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              {questionOptions.length > 0
+                ? t("uploadModal.metadata.experimentQuestionHint", {
+                    defaultValue: "Select the experiment question whose answers should match the metadata identifier column (e.g., a plot question).",
+                  })
+                : t("uploadModal.metadata.experimentQuestionNoQuestions", {
+                    defaultValue: "No questions found. Add question nodes to the experiment flow first.",
+                  })}
+            </p>
+            <Select
+              value={state.experimentQuestionId ?? ""}
+              onValueChange={(val) => setExperimentQuestionId(val || null)}
+              disabled={questionOptions.length === 0}
+            >
+              <SelectTrigger id="experiment-question">
+                <SelectValue
+                  placeholder={
+                    questionOptions.length === 0
+                      ? t("uploadModal.metadata.experimentQuestionNoQuestionsPlaceholder", {
+                          defaultValue: "No questions available",
+                        })
+                      : t("uploadModal.metadata.experimentQuestionPlaceholder", {
+                          defaultValue: "Select a question",
+                        })
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {questionOptions.map((q) => (
+                  <SelectItem key={q.id} value={q.id}>
+                    {q.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 
@@ -216,7 +283,7 @@ function MetadataUploadStepContent({ onBack }: { onBack: () => void }) {
           <ArrowLeft className="mr-2 h-4 w-4" />
           {t("uploadModal.fileUpload.back")}
         </Button>
-        <Button onClick={save} disabled={!hasData || isSaving}>
+        <Button onClick={save} disabled={!hasData || isSaving || !state.identifierColumnId || !state.experimentQuestionId}>
           {isSaving
             ? t("uploadModal.fileUpload.uploading")
             : t("uploadModal.metadata.saveMetadata")}

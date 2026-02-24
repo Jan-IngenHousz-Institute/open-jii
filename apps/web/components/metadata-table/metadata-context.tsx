@@ -22,7 +22,7 @@ const MetadataContext = createContext<MetadataContextValue | null>(null);
 interface MetadataProviderProps {
   children: ReactNode;
   experimentId: string;
-  onSave?: (columns: MetadataColumn[], rows: MetadataRow[]) => Promise<void>;
+  onSave?: (columns: MetadataColumn[], rows: MetadataRow[], identifierColumnId: string | null, experimentQuestionId: string | null) => Promise<void>;
 }
 
 export function MetadataProvider({
@@ -34,6 +34,8 @@ export function MetadataProvider({
     columns: [],
     rows: [],
     isDirty: false,
+    identifierColumnId: null,
+    experimentQuestionId: null,
   });
   const [mergeConfig, setMergeConfig] = useState<MetadataImportConfig | null>(
     null
@@ -43,7 +45,7 @@ export function MetadataProvider({
 
   const setData = useCallback(
     (columns: MetadataColumn[], rows: MetadataRow[]) => {
-      setState({ columns, rows, isDirty: true });
+      setState({ columns, rows, isDirty: true, identifierColumnId: null, experimentQuestionId: null });
     },
     []
   );
@@ -103,6 +105,7 @@ export function MetadataProvider({
       ...prev,
       isDirty: true,
       columns: prev.columns.filter((col) => col.id !== columnId),
+      identifierColumnId: prev.identifierColumnId === columnId ? null : prev.identifierColumnId,
       rows: prev.rows.map((row) => {
         const { [columnId]: _, ...rest } = row;
         return rest as MetadataRow;
@@ -117,6 +120,22 @@ export function MetadataProvider({
       columns: prev.columns.map((col) =>
         col.id === columnId ? { ...col, name: newName } : col
       ),
+    }));
+  }, []);
+
+  const setIdentifierColumnId = useCallback((columnId: string | null) => {
+    setState((prev) => ({
+      ...prev,
+      isDirty: true,
+      identifierColumnId: columnId,
+    }));
+  }, []);
+
+  const setExperimentQuestionId = useCallback((questionId: string | null) => {
+    setState((prev) => ({
+      ...prev,
+      isDirty: true,
+      experimentQuestionId: questionId,
     }));
   }, []);
 
@@ -137,12 +156,12 @@ export function MetadataProvider({
     if (!onSave) return;
     setIsSaving(true);
     try {
-      await onSave(state.columns, state.rows);
+      await onSave(state.columns, state.rows, state.identifierColumnId, state.experimentQuestionId);
       setState((prev) => ({ ...prev, isDirty: false }));
     } finally {
       setIsSaving(false);
     }
-  }, [onSave, state.columns, state.rows]);
+  }, [onSave, state.columns, state.rows, state.identifierColumnId, state.experimentQuestionId]);
 
   const value = useMemo<MetadataContextValue>(
     () => ({
@@ -154,6 +173,8 @@ export function MetadataProvider({
       addColumn,
       deleteColumn,
       renameColumn,
+      setIdentifierColumnId,
+      setExperimentQuestionId,
       importFromClipboard,
       importFromFile,
       mergeConfig,
@@ -172,6 +193,8 @@ export function MetadataProvider({
       addColumn,
       deleteColumn,
       renameColumn,
+      setIdentifierColumnId,
+      setExperimentQuestionId,
       importFromClipboard,
       importFromFile,
       mergeConfig,

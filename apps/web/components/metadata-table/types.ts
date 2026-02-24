@@ -15,6 +15,8 @@ export interface MetadataTableState {
   columns: MetadataColumn[];
   rows: MetadataRow[];
   isDirty: boolean;
+  identifierColumnId: string | null;
+  experimentQuestionId: string | null;
 }
 
 export interface MetadataImportConfig {
@@ -34,6 +36,12 @@ export interface MetadataContextValue {
   addColumn: (column: Omit<MetadataColumn, "id">) => void;
   deleteColumn: (columnId: string) => void;
   renameColumn: (columnId: string, newName: string) => void;
+  
+  // Identifier column
+  setIdentifierColumnId: (columnId: string | null) => void;
+  
+  // Experiment question identifier
+  setExperimentQuestionId: (questionId: string | null) => void;
   
   // Import
   importFromClipboard: () => Promise<void>;

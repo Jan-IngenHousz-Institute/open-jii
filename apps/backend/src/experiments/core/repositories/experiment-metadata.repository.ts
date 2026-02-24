@@ -50,6 +50,8 @@ export class ExperimentMetadataRepository {
       experimentId,
       columns: dto.columns,
       rows: dto.rows,
+      identifierColumnId: dto.identifierColumnId ?? null,
+      experimentQuestionId: dto.experimentQuestionId ?? null,
       createdBy,
       createdAt: now,
       updatedAt: now,
@@ -78,6 +80,8 @@ export class ExperimentMetadataRepository {
       ...existing,
       ...(dto.columns && { columns: dto.columns }),
       ...(dto.rows && { rows: dto.rows }),
+      ...(dto.identifierColumnId !== undefined && { identifierColumnId: dto.identifierColumnId }),
+      ...(dto.experimentQuestionId !== undefined && { experimentQuestionId: dto.experimentQuestionId }),
       updatedAt: new Date(),
     };
 
