@@ -91,11 +91,9 @@ describe("parseDelimitedText", () => {
   });
 
   describe("edge cases", () => {
-    it("should return single empty column for empty text", () => {
-      // Empty string still produces one empty column from the split
+    it("should return empty columns and rows for empty text", () => {
       const result = parseDelimitedText("");
-      expect(result.columns).toHaveLength(1);
-      expect(result.columns[0].name).toBe("");
+      expect(result.columns).toHaveLength(0);
       expect(result.rows).toHaveLength(0);
     });
 
