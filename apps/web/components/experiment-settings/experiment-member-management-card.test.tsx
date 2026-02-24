@@ -364,7 +364,7 @@ describe("<ExperimentMemberManagement />", () => {
 
     // Wait for the "invite by email" button to appear in the popover
     const inviteButton = await screen.findByRole("button", {
-      name: /experiments\.inviteByEmail/i,
+      name: /experiments\.sendInviteByEmail/i,
     });
     fireEvent.click(inviteButton);
 

@@ -142,6 +142,7 @@ function SearchInput({
   selectedRole,
   onRoleChange,
   t,
+  ref,
 }: {
   displayValue: string | null;
   handleSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -154,9 +155,13 @@ function SearchInput({
   selectedRole: string;
   onRoleChange?: (role: string) => void;
   t: (key: string) => string;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   return (
-    <div className="border-input bg-background relative flex items-center gap-1 rounded-md border">
+    <div
+      ref={ref}
+      className="border-input bg-background relative flex items-center gap-1 rounded-md border"
+    >
       <div className="relative flex-1">
         <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <Input
@@ -203,18 +208,27 @@ function SearchInput({
   );
 }
 
-function InviteByEmailButton({ onClick, label }: { onClick: () => void; label: string }) {
+function InviteByEmailButton({
+  onClick,
+  email,
+  t,
+}: {
+  onClick: () => void;
+  email: string;
+  t: (key: string) => string;
+}) {
   return (
     <Button
       variant="ghost"
       type="button"
       onClick={onClick}
       onMouseDown={(e) => e.preventDefault()}
-      className="hover:bg-surface flex w-full items-center gap-2 px-3 text-left"
+      className="hover:bg-surface flex h-auto w-full items-center gap-2 px-3 py-2 text-left"
     >
       <Mail className="text-muted-foreground h-4 w-4 shrink-0" />
-      <div className="flex-1 overflow-hidden">
-        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm">{label}</div>
+      <div className="flex-1">
+        <div className="text-sm">{email}</div>
+        <div className="text-muted-foreground text-xs">{t("experiments.sendInviteByEmail")}</div>
       </div>
     </Button>
   );
@@ -243,7 +257,7 @@ function PopoverResults({
     );
   }
 
-  const inviteLabel = t("experiments.inviteByEmail", { email: searchValue.trim() });
+  const email = searchValue.trim();
 
   if (availableUsers.length > 0) {
     return (
@@ -268,7 +282,7 @@ function PopoverResults({
           </Button>
         ))}
         {canInviteByEmail && (
-          <InviteByEmailButton onClick={handleSelectEmail} label={inviteLabel} />
+          <InviteByEmailButton onClick={handleSelectEmail} email={email} t={t} />
         )}
       </div>
     );
@@ -277,7 +291,7 @@ function PopoverResults({
   if (canInviteByEmail) {
     return (
       <div className="py-1">
-        <InviteByEmailButton onClick={handleSelectEmail} label={inviteLabel} />
+        <InviteByEmailButton onClick={handleSelectEmail} email={email} t={t} />
       </div>
     );
   }

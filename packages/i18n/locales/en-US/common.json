@@ -110,6 +110,7 @@
     "searchUsersPlaceholder": "Enter name or email...",
     "noUsersFound": "No users found for \"{{search}}\"",
     "inviteByEmail": "Invite {{email}} by email",
+    "sendInviteByEmail": "Send invite by email",
     "searchExperiments": "Search experiments...",
     "startTypingToSearch": "Start typing to search",
     "searchProtocols": "Search protocols...",

@@ -103,6 +103,7 @@
     "searchUsers": "Benutzer suchen",
     "noUsersFound": "Keine Benutzer gefunden für \"{{search}}\"",
     "inviteByEmail": "{{email}} per E-Mail einladen",
+    "sendInviteByEmail": "Einladung per E-Mail senden",
     "searchExperiments": "Experimente suchen...",
     "startTypingToSearch": "Tippen Sie, um zu suchen",
     "searchProtocols": "Protokolle suchen...",
