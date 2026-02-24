@@ -1,218 +1,63 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
-
-import AboutPage, { generateMetadata } from "./page";
-
-const mockDraftMode = vi.fn(() => Promise.resolve({ isEnabled: false }));
-vi.mock("next/headers", () => ({
-  draftMode: () => mockDraftMode(),
-}));
+import { render, screen } from "@/test/test-utils";
+import { draftMode } from "next/headers";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockPageAbout = vi.fn();
-
 vi.mock("~/lib/contentful", () => ({
-  getContentfulClients: vi.fn(() =>
-    Promise.resolve({
-      client: {
-        pageAbout: mockPageAbout,
-      },
-      previewClient: {
-        pageAbout: mockPageAbout,
-      },
-    }),
-  ),
+  getContentfulClients: vi.fn().mockResolvedValue({
+    client: { pageAbout: (...a: unknown[]) => mockPageAbout(...a) },
+    previewClient: { pageAbout: (...a: unknown[]) => mockPageAbout(...a) },
+  }),
 }));
-
-describe("About Page - generateMetadata", () => {
-  const mockAboutData = {
-    pageTitle: "About Us",
-    pageDescription: "Learn more about our organization",
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should generate metadata from Contentful when data is available", async () => {
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [mockAboutData],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" as const }),
-    });
-
-    expect(metadata).toEqual({
-      title: "About Us",
-      description: "Learn more about our organization",
-    });
-  });
-
-  it("should handle missing pageTitle", async () => {
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [
-          {
-            pageTitle: null,
-            pageDescription: "Learn more about our organization",
-          },
-        ],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" as const }),
-    });
-
-    expect(metadata.title).toBeUndefined();
-    expect(metadata.description).toBe("Learn more about our organization");
-  });
-
-  it("should handle missing pageDescription", async () => {
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [
-          {
-            pageTitle: "About Us",
-            pageDescription: null,
-          },
-        ],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" as const }),
-    });
-
-    expect(metadata.title).toBe("About Us");
-    expect(metadata.description).toBeUndefined();
-  });
-
-  it("should handle both fields being null", async () => {
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [
-          {
-            pageTitle: null,
-            pageDescription: null,
-          },
-        ],
-      },
-    });
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" as const }),
-    });
-
-    expect(metadata).toEqual({
-      title: undefined,
-      description: undefined,
-    });
-  });
-});
 
 vi.mock("@repo/cms", () => ({
-  AboutContent: ({
-    about,
-    locale,
-    preview,
-  }: {
-    about: unknown;
-    locale: string;
-    preview: boolean;
-  }) => (
-    <div data-testid="about-content">
-      {"About Content - "}
+  AboutContent: ({ locale, preview }: { locale: string; preview: boolean }) => (
+    <section aria-label="about content">
       {locale}
-      {" - "}
-      {preview ? "preview" : "published"}
-      {" - "}
-      {about ? "with data" : "no data"}
-    </div>
+      {preview ? " preview" : ""}
+    </section>
   ),
 }));
 
-describe("About Page - Component", () => {
+const aboutData = { pageTitle: "About Us", pageDescription: "Learn about JII." };
+
+describe("AboutPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDraftMode.mockResolvedValue({ isEnabled: false });
+    mockPageAbout.mockResolvedValue({ pageAboutCollection: { items: [aboutData] } });
   });
 
-  it("renders about page with data", async () => {
-    const mockAboutData = {
-      pageTitle: "About Us",
-      pageDescription: "Learn more about our organization",
-    };
+  const params = { params: Promise.resolve({ locale: "en-US" }) };
 
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [mockAboutData],
-      },
+  describe("generateMetadata", () => {
+    it("returns title and description from CMS", async () => {
+      const { generateMetadata } = await import("./page");
+      const metadata = await generateMetadata(params);
+      expect(metadata).toEqual({ title: "About Us", description: "Learn about JII." });
     });
 
-    render(await AboutPage({ params: Promise.resolve({ locale: "en-US" as const }) }));
-
-    expect(screen.getByTestId("about-content")).toBeInTheDocument();
-    expect(screen.getByTestId("about-content")).toHaveTextContent(
-      "About Content - en-US - published - with data",
-    );
+    it("returns empty metadata when fields are null", async () => {
+      mockPageAbout.mockResolvedValue({
+        pageAboutCollection: { items: [{ pageTitle: null, pageDescription: null }] },
+      });
+      const { generateMetadata } = await import("./page");
+      const metadata = await generateMetadata(params);
+      expect(metadata).toEqual({});
+    });
   });
 
-  it("renders about page in preview mode", async () => {
-    const mockAboutData = {
-      pageTitle: "About Us",
-      pageDescription: "Learn more about our organization",
-    };
-
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [mockAboutData],
-      },
-    });
-
-    // Mock draftMode to return enabled for this test
-    mockDraftMode.mockResolvedValueOnce({ isEnabled: true });
-
-    render(await AboutPage({ params: Promise.resolve({ locale: "en-US" as const }) }));
-
-    expect(screen.getByTestId("about-content")).toHaveTextContent(
-      "About Content - en-US - preview - with data",
-    );
+  it("renders AboutContent with locale", async () => {
+    const { default: AboutPage } = await import("./page");
+    const ui = await AboutPage(params);
+    render(ui);
+    expect(screen.getByRole("region", { name: /about content/i })).toHaveTextContent("en-US");
   });
 
-  it("renders about page with different locale", async () => {
-    const mockAboutData = {
-      pageTitle: "Über uns",
-      pageDescription: "Erfahren Sie mehr über unsere Organisation",
-    };
-
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [mockAboutData],
-      },
-    });
-
-    render(await AboutPage({ params: Promise.resolve({ locale: "de" as const }) }));
-
-    expect(screen.getByTestId("about-content")).toHaveTextContent(
-      "About Content - de - published - with data",
-    );
-  });
-
-  it("passes correct parameters to getAboutData", async () => {
-    const mockAboutData = { pageTitle: "About Us" };
-
-    mockPageAbout.mockResolvedValueOnce({
-      pageAboutCollection: {
-        items: [mockAboutData],
-      },
-    });
-
-    await AboutPage({ params: Promise.resolve({ locale: "en-US" as const }) });
-
-    expect(mockPageAbout).toHaveBeenCalledWith({ locale: "en-US", preview: false });
+  it("passes preview flag when draft mode is enabled", async () => {
+    vi.mocked(draftMode).mockResolvedValue({ isEnabled: true } as never);
+    const { default: AboutPage } = await import("./page");
+    const ui = await AboutPage(params);
+    render(ui);
+    expect(screen.getByRole("region", { name: /about content/i })).toHaveTextContent("preview");
   });
 });

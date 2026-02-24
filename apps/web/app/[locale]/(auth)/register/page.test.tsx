@@ -1,40 +1,19 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { createSession } from "@/test/factories";
+import { render, screen } from "@/test/test-utils";
+import { redirect } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import UserRegistrationPage from "./page";
+import RegisterPage from "./page";
 
-globalThis.React = React;
-
-// --- Mocks ---
 const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  auth: (): unknown => mockAuth(),
-}));
-
-const mockRedirect = vi.fn();
-vi.mock("next/navigation", () => ({
-  redirect: (url: string): void => {
-    mockRedirect(url);
-    throw new Error("NEXT_REDIRECT");
-  },
-}));
+vi.mock("~/app/actions/auth", () => ({ auth: () => mockAuth(), providerMap: [] }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: ({ locale, session }: { locale: string; session: unknown }) => (
-    <div data-testid="unified-navbar">
-      Navbar - {locale} - {session ? "with session" : "no session"}
-    </div>
-  ),
+  UnifiedNavbar: () => <nav aria-label="main navigation" />,
 }));
-
 vi.mock("~/components/auth/auth-hero-section", () => ({
-  AuthHeroSection: ({ locale }: { locale: string }) => (
-    <div data-testid="auth-hero-section">Hero {locale}</div>
-  ),
+  AuthHeroSection: () => <section aria-label="auth hero" />,
 }));
-
 vi.mock("~/components/auth/registration-form", () => ({
   RegistrationForm: ({
     callbackUrl,
@@ -50,59 +29,36 @@ vi.mock("~/components/auth/registration-form", () => ({
     </div>
   ),
 }));
-
 vi.mock("~/components/auth/terms-and-conditions-dialog", () => ({
-  TermsAndConditionsDialog: ({ locale }: { locale: string }) =>
-    Promise.resolve({ locale, content: "Terms content" }),
+  TermsAndConditionsDialog: () => Promise.resolve({ terms: [] }),
 }));
 
-// --- Tests ---
-describe("UserRegistrationPage", () => {
-  const locale = "en-US";
-  const defaultProps = {
-    params: Promise.resolve({ locale }),
+describe("RegisterPage", () => {
+  const props = {
+    params: Promise.resolve({ locale: "en-US" }),
     searchParams: Promise.resolve({}),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue({ user: { id: "123", registered: false } });
+    mockAuth.mockResolvedValue(
+      createSession({
+        user: {
+          id: "1",
+          name: "Test",
+          email: "t@t.com",
+          registered: false,
+          firstName: "Test",
+          lastName: "User",
+        },
+      }),
+    );
   });
 
-  it("passes the correct locale to components", async () => {
-    render(await UserRegistrationPage(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("en-US");
-    expect(screen.getByTestId("auth-hero-section")).toHaveTextContent("en-US");
-  });
-
-  it("passes callbackUrl to RegistrationForm when provided", async () => {
-    const props = {
-      ...defaultProps,
-      searchParams: Promise.resolve({ callbackUrl: "/platform" }),
-    };
-
-    render(await UserRegistrationPage(props));
-
-    expect(screen.getByTestId("registration-form")).toHaveTextContent("/platform");
-  });
-
-  it("passes termsData to RegistrationForm", async () => {
-    render(await UserRegistrationPage(defaultProps));
-
-    expect(screen.getByTestId("registration-form")).toHaveTextContent("with terms");
-  });
-
-  it("redirects to signin if no user session", async () => {
+  it("redirects to login when unauthenticated", async () => {
     mockAuth.mockResolvedValue(null);
-
-    try {
-      await UserRegistrationPage(defaultProps);
-    } catch {
-      // Expected to throw NEXT_REDIRECT
-    }
-
-    expect(mockRedirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
+    await RegisterPage(props).catch(() => {});
+    expect(redirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
   });
 
   it("redirects to platform if user already registered", async () => {

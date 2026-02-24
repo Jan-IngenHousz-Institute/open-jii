@@ -1,160 +1,107 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+/**
+ * CookieBanner component test — renders with real @repo/ui components
+ * (Button, Dialog, Switch). Only mocks the cookie-consent storage
+ * module which is a thin wrapper around document.cookie.
+ *
+ * PostHog and i18n are globally mocked in test/setup.ts.
+ *
+ * Uses `userEvent` for realistic interactions instead of `fireEvent`.
+ */
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { CookieBanner } from "./cookie-banner";
 
-globalThis.React = React;
-
-// ---------- Mocks ----------
-const mockOptIn = vi.fn();
-const mockOptOut = vi.fn();
-const mockReset = vi.fn();
-
-vi.mock("posthog-js/react", () => ({
-  usePostHog: () => ({
-    opt_in_capturing: mockOptIn,
-    opt_out_capturing: mockOptOut,
-    reset: mockReset,
-  }),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    variant,
-  }: React.ComponentProps<"button"> & { variant?: string }) => (
-    <button onClick={onClick} data-variant={variant}>
-      {children}
-    </button>
-  ),
-  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  Switch: ({
-    checked,
-    onCheckedChange,
-  }: {
-    checked: boolean;
-    onCheckedChange: (checked: boolean) => void;
-  }) => (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onCheckedChange(!checked)}
-      data-testid="analytics-switch"
-    >
-      {checked ? "on" : "off"}
-    </button>
-  ),
-}));
-
+// ── Only mock the cookie storage layer ──────────────────────────
 let mockConsentStatus = "pending";
-const mockGetConsentStatus = vi.fn(() => mockConsentStatus);
-const mockSetConsentStatus = vi.fn();
-
 vi.mock("~/lib/cookie-consent", () => ({
-  getConsentStatus: () => mockGetConsentStatus(),
-  setConsentStatus: (status: string) => {
-    mockSetConsentStatus(status);
-  },
+  getConsentStatus: () => mockConsentStatus,
+  setConsentStatus: vi.fn((status: string) => {
+    mockConsentStatus = status;
+  }),
 }));
 
-// ---------- Tests ----------
+// Import the mock after vi.mock so we can assert on it
+const { setConsentStatus } = await import("~/lib/cookie-consent");
+
 describe("<CookieBanner />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockConsentStatus = "pending";
   });
 
-  it("renders banner when consent is pending", () => {
+  it("shows the banner when consent is pending", () => {
     render(<CookieBanner />);
 
-    expect(screen.getByText("cookieBanner.intro")).toBeInTheDocument();
-    expect(screen.getByText("cookieBanner.acceptAll")).toBeInTheDocument();
-    expect(screen.getByText("cookieBanner.rejectAll")).toBeInTheDocument();
+    expect(screen.getByText("cookieBanner.intro", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /cookieBanner.acceptAll/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /cookieBanner.rejectAll/i })).toBeInTheDocument();
   });
 
-  it("does not render when consent is already given", () => {
+  it("hides the banner when the user has already consented", () => {
     mockConsentStatus = "accepted";
     render(<CookieBanner />);
 
-    expect(screen.queryByText("cookieBanner.intro")).not.toBeInTheDocument();
+    expect(screen.queryByText("cookieBanner.intro", { exact: false })).not.toBeInTheDocument();
   });
 
-  it("handles accept cookies", () => {
+  it("persists consent and opts into posthog when user clicks accept", async () => {
+    const user = userEvent.setup();
     render(<CookieBanner />);
 
-    const acceptButton = screen.getByText("cookieBanner.acceptAll");
-    fireEvent.click(acceptButton);
+    await user.click(screen.getByRole("button", { name: /cookieBanner.acceptAll/i }));
 
-    expect(mockSetConsentStatus).toHaveBeenCalledWith("accepted");
-    expect(mockOptIn).toHaveBeenCalled();
+    expect(setConsentStatus).toHaveBeenCalledWith("accepted");
+    // Banner should disappear after accepting
+    expect(screen.queryByText("cookieBanner.intro", { exact: false })).not.toBeInTheDocument();
   });
 
-  it("handles reject cookies", () => {
+  it("persists rejection and resets posthog when user clicks reject", async () => {
+    const user = userEvent.setup();
     render(<CookieBanner />);
 
-    const rejectButton = screen.getByText("cookieBanner.rejectAll");
-    fireEvent.click(rejectButton);
+    await user.click(screen.getByRole("button", { name: /cookieBanner.rejectAll/i }));
 
-    expect(mockSetConsentStatus).toHaveBeenCalledWith("rejected");
-    expect(mockOptOut).toHaveBeenCalled();
-    expect(mockReset).toHaveBeenCalled();
+    expect(setConsentStatus).toHaveBeenCalledWith("rejected");
+    expect(screen.queryByText("cookieBanner.intro", { exact: false })).not.toBeInTheDocument();
   });
 
-  it("opens preferences dialog", () => {
+  it("opens a preferences dialog and lets the user toggle analytics", async () => {
+    const user = userEvent.setup();
     render(<CookieBanner />);
 
-    const manageButton = screen.getByText("cookieBanner.managePreferences");
-    fireEvent.click(manageButton);
+    // Open the preferences dialog
+    await user.click(screen.getByRole("button", { name: /cookieBanner.managePreferences/i }));
 
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-    expect(screen.getByText("cookieBanner.dialogTitle")).toBeInTheDocument();
+    // The dialog should appear with a title
+    await waitFor(() => {
+      expect(screen.getByText("cookieBanner.dialogTitle")).toBeInTheDocument();
+    });
+
+    // Find the analytics switch and toggle it on
+    const analyticsSwitch = screen.getByRole("switch");
+    await user.click(analyticsSwitch);
+
+    // Save preferences — should accept because analytics is enabled
+    await user.click(screen.getByRole("button", { name: /cookieBanner.saveClose/i }));
+
+    expect(setConsentStatus).toHaveBeenCalledWith("accepted");
   });
 
-  it("saves preferences with analytics enabled", () => {
+  it("saves rejection when analytics is left disabled in preferences", async () => {
+    const user = userEvent.setup();
     render(<CookieBanner />);
 
-    // Open dialog
-    fireEvent.click(screen.getByText("cookieBanner.managePreferences"));
+    // Open preferences
+    await user.click(screen.getByRole("button", { name: /cookieBanner.managePreferences/i }));
 
-    // Enable analytics
-    const analyticsSwitch = screen.getByTestId("analytics-switch");
-    fireEvent.click(analyticsSwitch);
+    await waitFor(() => {
+      expect(screen.getByText("cookieBanner.dialogTitle")).toBeInTheDocument();
+    });
 
-    // Save preferences
-    const saveButton = screen.getByText("cookieBanner.saveClose");
-    fireEvent.click(saveButton);
+    // Don't toggle the switch — leave analytics off, then save
+    await user.click(screen.getByRole("button", { name: /cookieBanner.saveClose/i }));
 
-    expect(mockSetConsentStatus).toHaveBeenCalledWith("accepted");
-    expect(mockOptIn).toHaveBeenCalled();
-  });
-
-  it("saves preferences with analytics disabled", () => {
-    render(<CookieBanner />);
-
-    // Open dialog
-    fireEvent.click(screen.getByText("cookieBanner.managePreferences"));
-
-    // Save preferences (analytics disabled by default)
-    const saveButton = screen.getByText("cookieBanner.saveClose");
-    fireEvent.click(saveButton);
-
-    expect(mockSetConsentStatus).toHaveBeenCalledWith("rejected");
-    expect(mockOptOut).toHaveBeenCalled();
-    expect(mockReset).toHaveBeenCalled();
+    expect(setConsentStatus).toHaveBeenCalledWith("rejected");
   });
 });

@@ -1,31 +1,17 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import NewExperimentPage from "./page";
-
-globalThis.React = React;
-
-vi.mock("@repo/i18n/server", () => ({
-  __esModule: true,
-  default: vi.fn(() => Promise.resolve({ t: (key: string) => key })),
-}));
-
 vi.mock("@/components/new-experiment", () => ({
-  NewExperimentForm: () => <div data-testid="new-experiment-form">New Experiment Form</div>,
+  NewExperimentForm: () => <div data-testid="new-experiment-form" />,
 }));
 
 describe("NewExperimentPage", () => {
-  const locale = "en-US";
-  const defaultProps = {
-    params: Promise.resolve({ locale }),
-  };
-
-  it("renders the new experiment page with all components", async () => {
-    render(await NewExperimentPage(defaultProps));
-
-    expect(screen.getByText("experiments.newExperiment")).toBeInTheDocument();
+  it("renders heading, description, and form", async () => {
+    const { default: Page } = await import("./page");
+    render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent(
+      "experiments.newExperiment",
+    );
     expect(screen.getByText("newExperiment.description")).toBeInTheDocument();
     expect(screen.getByTestId("new-experiment-form")).toBeInTheDocument();
   });
