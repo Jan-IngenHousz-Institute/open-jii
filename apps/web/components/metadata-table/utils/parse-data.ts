@@ -1,137 +1,12 @@
+import Papa from "papaparse";
+
 import type { MetadataColumn, MetadataRow } from "../types";
 
-type Delimiter = "," | "\t" | ";" | "|";
-
 /**
- * Detect the most likely delimiter in a text by analyzing the first row.
- * Tries common delimiters and picks the one that produces the most columns.
- * Falls back to comma if no clear winner.
- */
-function detectDelimiter(text: string): Delimiter {
-  const firstLine = text.trim().split(/\r?\n/)[0];
-  if (!firstLine) return ",";
-
-  const delimiters: Delimiter[] = [",", ";", "\t", "|"];
-
-  // Count columns each delimiter would produce on the first row
-  const results = delimiters.map((d) => {
-    const columns = parseRowForDetection(firstLine, d);
-    return { delimiter: d, columnCount: columns.length };
-  });
-
-  // Pick delimiter that produces the most columns (minimum 2 to be valid)
-  const best = results
-    .filter((r) => r.columnCount >= 2)
-    .sort((a, b) => b.columnCount - a.columnCount)[0];
-
-  return best?.delimiter ?? ",";
-}
-
-/**
- * Simple row parser for delimiter detection (handles quoted values)
- */
-function parseRowForDetection(line: string, delimiter: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (const char of line) {
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (!inQuotes && char === delimiter) {
-      result.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
-}
-
-
-
-/**
- * Parse CSV/TSV text into columns and rows
- */
-export function parseDelimitedText(
-  text: string,
-  delimiter?: Delimiter
-): { columns: MetadataColumn[]; rows: MetadataRow[] } {
-  const effectiveDelimiter = delimiter ?? detectDelimiter(text);
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length === 0) {
-    return { columns: [], rows: [] };
-  }
-
-  // Parse header row
-  const headers = parseRow(lines[0], effectiveDelimiter);
-  const columns: MetadataColumn[] = headers.map((header, index) => ({
-    id: `col_${index}`,
-    name: header.trim(),
-    type: "string",
-  }));
-
-  // Parse data rows
-  const rows: MetadataRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseRow(lines[i], effectiveDelimiter);
-    if (values.length === 0 || (values.length === 1 && values[0] === "")) continue;
-
-    const row: MetadataRow = { _id: `row_${i - 1}_${Date.now()}` };
-    columns.forEach((col, colIndex) => {
-      row[col.id] = values[colIndex] ?? "";
-    });
-    rows.push(row);
-  }
-
-  // Infer column types from data
-  columns.forEach((col) => {
-    col.type = inferColumnType(rows, col.id);
-  });
-
-  return { columns, rows };
-}
-
-/**
- * Parse a single row, handling quoted values
- */
-function parseRow(line: string, delimiter: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    const nextChar = line[i + 1];
-
-    if (inQuotes) {
-      if (char === '"' && nextChar === '"') {
-        current += '"';
-        i++; // Skip next quote
-      } else if (char === '"') {
-        inQuotes = false;
-      } else {
-        current += char;
-      }
-    } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === delimiter) {
-        result.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-  }
-  result.push(current);
-
-  return result;
-}
-
-/**
- * Infer column type from values
+ * Infer column type by inspecting the actual JS types of values.
+ * PapaParse's dynamicTyping handles number conversion, so we just
+ * check typeof. Dates still need a pattern check since PapaParse
+ * doesn't auto-detect them.
  */
 function inferColumnType(
   rows: MetadataRow[],
@@ -143,22 +18,78 @@ function inferColumnType(
 
   if (values.length === 0) return "string";
 
-  // Check if all values are numbers
-  const allNumbers = values.every((v) => {
-    const num = Number(v);
-    return !isNaN(num) && isFinite(num);
-  });
-  if (allNumbers) return "number";
+  if (values.every((v) => typeof v === "number")) return "number";
 
-  // Check if all values are dates (ISO format or common formats)
   const datePattern = /^\d{4}-\d{2}-\d{2}|^\d{2}[/-]\d{2}[/-]\d{4}/;
-  const allDates = values.every((v) => {
-    if (typeof v !== "string") return false;
-    return datePattern.test(v) && !isNaN(Date.parse(v));
-  });
-  if (allDates) return "date";
+  if (
+    values.every(
+      (v) => typeof v === "string" && datePattern.test(v) && !isNaN(Date.parse(v))
+    )
+  )
+    return "date";
 
   return "string";
+}
+
+/**
+ * Convert PapaParse header-mode result into our MetadataColumn/MetadataRow format.
+ */
+function toMetadata(parsed: Papa.ParseResult<Record<string, unknown>>): {
+  columns: MetadataColumn[];
+  rows: MetadataRow[];
+} {
+  if (!parsed.meta.fields?.length) {
+    return { columns: [], rows: [] };
+  }
+
+  const columns: MetadataColumn[] = parsed.meta.fields.map((name, index) => ({
+    id: `col_${index}`,
+    name: name.trim(),
+    type: "string" as const,
+  }));
+
+  const fieldToColId = new Map(
+    parsed.meta.fields.map((name, index) => [name, `col_${index}`])
+  );
+
+  const rows: MetadataRow[] = [];
+  for (let i = 0; i < parsed.data.length; i++) {
+    const record = parsed.data[i];
+    // Skip rows where every value is empty
+    const vals = Object.values(record);
+    if (vals.length === 0 || vals.every((v) => v === "" || v === null || v === undefined))
+      continue;
+
+    const row: MetadataRow = { _id: `row_${i}_${Date.now()}` };
+    for (const [field, colId] of fieldToColId) {
+      row[colId] = record[field] ?? "";
+    }
+    rows.push(row);
+  }
+
+  columns.forEach((col) => {
+    col.type = inferColumnType(rows, col.id);
+  });
+
+  return { columns, rows };
+}
+
+/**
+ * Parse CSV/TSV text into columns and rows using PapaParse.
+ * Auto-detects delimiters and dynamically types numeric values.
+ */
+export function parseDelimitedText(
+  text: string,
+  delimiter?: "," | "\t" | ";" | "|"
+): { columns: MetadataColumn[]; rows: MetadataRow[] } {
+  const parsed = Papa.parse<Record<string, unknown>>(text.trim(), {
+    delimiter: delimiter || "",
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+  });
+
+  return toMetadata(parsed);
 }
 
 /**
@@ -170,60 +101,34 @@ export async function parseFile(
   const extension = file.name.split(".").pop()?.toLowerCase();
 
   if (extension === "csv" || extension === "tsv" || extension === "txt") {
-    const text = await file.text();
-    // Auto-detect delimiter for all text-based files
-    return parseDelimitedText(text);
+    return new Promise((resolve, reject) => {
+      Papa.parse<Record<string, unknown>>(file, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: (results) => resolve(toMetadata(results)),
+        error: (err: Error) => reject(err),
+      });
+    });
   }
 
   if (extension === "xlsx" || extension === "xls") {
-    // Dynamic import for xlsx library
     const XLSX = await import("xlsx");
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
     const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
-      return { columns: [], rows: [] };
-    }
+    if (!sheetName) return { columns: [], rows: [] };
     const firstSheet = workbook.Sheets[sheetName];
-    if (!firstSheet) {
-      return { columns: [], rows: [] };
-    }
-    const data = XLSX.utils.sheet_to_json(firstSheet, {
-      header: 1,
-    }) as unknown[][];
+    if (!firstSheet) return { columns: [], rows: [] };
 
-    if (data.length === 0) {
-      return { columns: [], rows: [] };
-    }
-
-    const headers = (data[0] as string[]).map((h) => String(h ?? ""));
-    const columns: MetadataColumn[] = headers.map((header, index) => ({
-      id: `col_${index}`,
-      name: header.trim(),
-      type: "string",
-    }));
-
-    const rows: MetadataRow[] = [];
-    for (let i = 1; i < data.length; i++) {
-      const rowData = data[i] as unknown[];
-      if (!rowData || rowData.length === 0) continue;
-
-      const row: MetadataRow = { _id: `row_${i - 1}_${Date.now()}` };
-      columns.forEach((col, colIndex) => {
-        row[col.id] = rowData[colIndex] ?? "";
-      });
-      rows.push(row);
-    }
-
-    columns.forEach((col) => {
-      col.type = inferColumnType(rows, col.id);
-    });
-
-    return { columns, rows };
+    // Convert sheet to CSV and let PapaParse handle parsing
+    const csv = XLSX.utils.sheet_to_csv(firstSheet);
+    return parseDelimitedText(csv, ",");
   }
 
   throw new Error(`Unsupported file type: ${extension}`);
 }
+
 
 /**
  * Try to read clipboard using execCommand fallback
@@ -236,11 +141,11 @@ function readClipboardWithExecCommand(): Promise<string> {
     textarea.style.top = "0";
     document.body.appendChild(textarea);
     textarea.focus();
-    
+
     const success = document.execCommand("paste");
     const text = textarea.value;
     document.body.removeChild(textarea);
-    
+
     if (success && text) {
       resolve(text);
     } else {
@@ -258,24 +163,17 @@ export async function parseClipboard(): Promise<{
 }> {
   let text: string | null = null;
 
-  // Try clipboard API first
   if (navigator.clipboard?.readText) {
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("timeout")), 3000);
       });
-      
-      text = await Promise.race([
-        navigator.clipboard.readText(),
-        timeoutPromise
-      ]);
+      text = await Promise.race([navigator.clipboard.readText(), timeoutPromise]);
     } catch {
-      // Clipboard API failed, will try fallback
       text = null;
     }
   }
 
-  // Fallback to execCommand
   if (!text) {
     try {
       text = await readClipboardWithExecCommand();
