@@ -1,43 +1,26 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, expect, it } from "vitest";
 
 import { ExperimentStatusBadge } from "./ExperimentStatusBadge";
-
-// Mock the useTranslation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <span data-testid="badge" className={className}>
-      {children}
-    </span>
-  ),
-}));
 
 describe("ExperimentStatusBadge", () => {
   it("renders active status", () => {
     render(<ExperimentStatusBadge status="active" />);
-    expect(screen.getByTestId("badge")).toHaveTextContent("status.active");
+    expect(screen.getByText("status.active")).toBeInTheDocument();
   });
 
   it("renders archived status", () => {
     render(<ExperimentStatusBadge status="archived" />);
-    expect(screen.getByTestId("badge")).toHaveTextContent("status.archived");
+    expect(screen.getByText("status.archived")).toBeInTheDocument();
   });
 
   it("renders stale status", () => {
     render(<ExperimentStatusBadge status="stale" />);
-    expect(screen.getByTestId("badge")).toHaveTextContent("status.stale");
+    expect(screen.getByText("status.stale")).toBeInTheDocument();
   });
 
-  it("renders unknown status with fallback", () => {
+  it("renders unknown status as fallback text", () => {
     render(<ExperimentStatusBadge status="unknown" />);
-    expect(screen.getByTestId("badge")).toHaveTextContent("unknown");
+    expect(screen.getByText("unknown")).toBeInTheDocument();
   });
 });

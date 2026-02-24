@@ -1,34 +1,25 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { DashboardSection } from "./dashboard-section";
 
-globalThis.React = React;
-
-describe("<DashboardSection />", () => {
+describe("DashboardSection", () => {
   it("renders title and children", () => {
     render(
-      <DashboardSection
-        title="Recent Posts"
-        seeAllLabel="See all"
-        seeAllHref="/all-posts"
-        locale="en-US"
-      >
-        <div data-testid="child">Hello Child</div>
+      <DashboardSection title="Recent" seeAllLabel="See all" seeAllHref="/all" locale="en-US">
+        <p>Child content</p>
       </DashboardSection>,
     );
 
-    expect(screen.getByText("Recent Posts")).toBeInTheDocument();
-    expect(screen.getByTestId("child")).toHaveTextContent("Hello Child");
+    expect(screen.getByRole("heading", { name: "Recent" })).toBeInTheDocument();
+    expect(screen.getByText("Child content")).toBeInTheDocument();
   });
 
-  it("renders link(s) with correct href and label", () => {
+  it("renders see-all links with correct href", () => {
     render(
       <DashboardSection
         title="Projects"
-        seeAllLabel="View all projects"
+        seeAllLabel="View all"
         seeAllHref="/projects"
         locale="en-US"
       >
@@ -36,10 +27,10 @@ describe("<DashboardSection />", () => {
       </DashboardSection>,
     );
 
-    const links = screen.getAllByRole("link", { name: "View all projects" });
+    const links = screen.getAllByRole("link", { name: "View all" });
     expect(links.length).toBeGreaterThan(0);
-    links.forEach((link) => {
+    for (const link of links) {
       expect(link).toHaveAttribute("href", "/projects");
-    });
+    }
   });
 });

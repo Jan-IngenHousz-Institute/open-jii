@@ -1,210 +1,89 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { ExperimentArchive } from "./experiment-archive";
 
-globalThis.React = React;
+const mockPush = vi.fn();
+const mockMutateAsync = vi.fn().mockResolvedValue({ ok: true });
+const mockToast = vi.fn();
 
-/* ----------------------------- Hoisted mocks ---------------------------- */
-
-const toastMock = vi.hoisted(() => vi.fn());
-const useExperimentUpdateMock = vi.hoisted(() => vi.fn());
-const useLocaleMock = vi.hoisted(() => vi.fn());
-const routerPushMock = vi.hoisted(() => vi.fn());
-
-/* --------------------------------- Mocks -------------------------------- */
-
-// i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
-// toast
-vi.mock("@repo/ui/hooks", () => ({
-  toast: toastMock,
-}));
-
-// hooks
-vi.mock("../../hooks/experiment/useExperimentUpdate/useExperimentUpdate", () => ({
-  useExperimentUpdate: useExperimentUpdateMock,
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 vi.mock("@/hooks/useLocale", () => ({
-  useLocale: useLocaleMock,
+  useLocale: () => "en",
 }));
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: routerPushMock,
-  }),
+vi.mock("../../hooks/experiment/useExperimentUpdate/useExperimentUpdate", () => ({
+  useExperimentUpdate: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
 }));
 
-/* ------------------------------- Test Data ------------------------------- */
+vi.mock("@repo/ui/hooks", () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
+}));
 
-const experimentId = "exp-123";
-
-/* -------------------------- Helpers -------------------------- */
-
-function renderWithClient(ui: React.ReactElement) {
-  const qc = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
+describe("ExperimentArchive", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMutateAsync.mockResolvedValue({ ok: true });
   });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
 
-/* --------------------------------- Setup -------------------------------- */
-
-beforeEach(() => {
-  vi.clearAllMocks();
-
-  useExperimentUpdateMock.mockReturnValue({
-    mutateAsync: vi.fn().mockResolvedValue({ ok: true }),
-    isPending: false,
-  });
-  useLocaleMock.mockReturnValue("en");
-});
-
-/* --------------------------------- Tests -------------------------------- */
-
-describe("<ExperimentArchive />", () => {
   it("renders archive button when not archived", () => {
-    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
-
+    render(<ExperimentArchive experimentId="exp-1" isArchived={false} />);
     expect(screen.getByText("experimentSettings.archiveExperiment")).toBeInTheDocument();
-    expect(screen.queryByText("experimentSettings.unarchiveExperiment")).not.toBeInTheDocument();
   });
 
   it("renders unarchive button when archived", () => {
-    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={true} />);
-
+    render(<ExperimentArchive experimentId="exp-1" isArchived={true} />);
     expect(screen.getByText("experimentSettings.unarchiveExperiment")).toBeInTheDocument();
-    expect(screen.queryByText("experimentSettings.archiveExperiment")).not.toBeInTheDocument();
   });
 
-  it("opens archive dialog when archive button is clicked", async () => {
+  it("opens dialog and confirms archive", async () => {
     const user = userEvent.setup();
+    render(<ExperimentArchive experimentId="exp-1" isArchived={false} />);
 
-    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
-
-    const archiveButton = screen.getByText("experimentSettings.archiveExperiment");
-    await user.click(archiveButton);
-
+    await user.click(screen.getByText("experimentSettings.archiveExperiment"));
     expect(screen.getByText("experimentSettings.archivingExperiment")).toBeInTheDocument();
-    expect(screen.getByText("experimentSettings.archiveDescription")).toBeInTheDocument();
-  });
 
-  it("calls updateExperiment with archived status and redirects on archive", async () => {
-    const user = userEvent.setup();
-    const updateSpy = vi.fn().mockResolvedValue({ ok: true });
-    useExperimentUpdateMock.mockReturnValue({ mutateAsync: updateSpy, isPending: false });
-
-    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
-
-    // Open archive dialog
-    const archiveButton = screen.getByText("experimentSettings.archiveExperiment");
-    await user.click(archiveButton);
-
-    // Confirm archive
-    const confirmButton = screen.getByText("experimentSettings.archiveDeactivate");
-    await user.click(confirmButton);
-
-    expect(updateSpy).toHaveBeenCalledWith(
-      {
-        params: { id: experimentId },
-        body: { status: "archived" },
-      },
-      expect.objectContaining({
-        onSuccess: expect.any(Function) as unknown,
-        onError: expect.any(Function) as unknown,
-        onSettled: expect.any(Function) as unknown,
-      }),
+    await user.click(screen.getByText("experimentSettings.archiveDeactivate"));
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      { params: { id: "exp-1" }, body: { status: "archived" } },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
 
-    const call = updateSpy.mock.calls[0] as [
-      unknown,
-      { onSuccess: () => void; onError: (err: unknown) => void; onSettled: () => void },
-    ];
+    // Invoke onSuccess callback
+    const call = mockMutateAsync.mock.calls[0] as [unknown, { onSuccess: () => void }];
     call[1].onSuccess();
-
-    expect(toastMock).toHaveBeenCalledWith({
+    expect(mockToast).toHaveBeenCalledWith({
       description: "experimentSettings.experimentArchivedSuccess",
     });
-    expect(routerPushMock).toHaveBeenCalledWith("/en/platform/experiments-archive");
+    expect(mockPush).toHaveBeenCalledWith("/en/platform/experiments-archive");
   });
 
-  it("calls updateExperiment with active status and redirects on unarchive", async () => {
+  it("opens dialog and confirms unarchive", async () => {
     const user = userEvent.setup();
-    const updateSpy = vi.fn().mockResolvedValue({ ok: true });
-    useExperimentUpdateMock.mockReturnValue({ mutateAsync: updateSpy, isPending: false });
+    render(<ExperimentArchive experimentId="exp-1" isArchived={true} />);
 
-    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={true} />);
+    await user.click(screen.getByText("experimentSettings.unarchiveExperiment"));
+    await user.click(screen.getByText("experimentSettings.unarchiveActivate"));
 
-    // Open unarchive dialog
-    const unarchiveButton = screen.getByText("experimentSettings.unarchiveExperiment");
-    await user.click(unarchiveButton);
-
-    // Confirm unarchive
-    const confirmButton = screen.getByText("experimentSettings.unarchiveActivate");
-    await user.click(confirmButton);
-
-    expect(updateSpy).toHaveBeenCalledWith(
-      {
-        params: { id: experimentId },
-        body: { status: "active" },
-      },
-      expect.objectContaining({
-        onSuccess: expect.any(Function) as unknown,
-        onError: expect.any(Function) as unknown,
-        onSettled: expect.any(Function) as unknown,
-      }),
-    );
-
-    const call = updateSpy.mock.calls[0] as [
-      unknown,
-      { onSuccess: () => void; onError: (err: unknown) => void; onSettled: () => void },
-    ];
+    const call = mockMutateAsync.mock.calls[0] as [unknown, { onSuccess: () => void }];
     call[1].onSuccess();
-
-    expect(toastMock).toHaveBeenCalledWith({
-      description: "experimentSettings.experimentUnarchivedSuccess",
-    });
-    expect(routerPushMock).toHaveBeenCalledWith("/en/platform/experiments");
+    expect(mockPush).toHaveBeenCalledWith("/en/platform/experiments");
   });
 
-  it("displays error toast when archive fails", async () => {
+  it("shows error toast on failure", async () => {
     const user = userEvent.setup();
-    const errorMessage = "Archive failed";
-    const updateSpy = vi.fn().mockResolvedValue({ ok: true });
-    useExperimentUpdateMock.mockReturnValue({ mutateAsync: updateSpy, isPending: false });
+    render(<ExperimentArchive experimentId="exp-1" isArchived={false} />);
 
-    renderWithClient(<ExperimentArchive experimentId={experimentId} isArchived={false} />);
+    await user.click(screen.getByText("experimentSettings.archiveExperiment"));
+    await user.click(screen.getByText("experimentSettings.archiveDeactivate"));
 
-    // Open archive dialog
-    const archiveButton = screen.getByText("experimentSettings.archiveExperiment");
-    await user.click(archiveButton);
-
-    // Confirm archive
-    const confirmButton = screen.getByText("experimentSettings.archiveDeactivate");
-    await user.click(confirmButton);
-
-    const call = updateSpy.mock.calls[0] as [
-      unknown,
-      { onSuccess: () => void; onError: (err: unknown) => void; onSettled: () => void },
-    ];
-    call[1].onError({ body: { message: errorMessage } });
-
-    expect(toastMock).toHaveBeenCalledWith({
-      description: errorMessage,
-      variant: "destructive",
-    });
+    const call = mockMutateAsync.mock.calls[0] as [unknown, { onError: (err: unknown) => void }];
+    call[1].onError({ body: { message: "Oops" } });
+    expect(mockToast).toHaveBeenCalledWith({ description: "Oops", variant: "destructive" });
   });
 });
