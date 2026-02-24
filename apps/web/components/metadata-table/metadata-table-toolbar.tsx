@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/ui/components";
-import { ClipboardPaste, Download, Plus, Save, Upload } from "lucide-react";
+import { ClipboardPaste, Download, KeyRound, Plus, Save, Upload } from "lucide-react";
 
 interface MetadataTableToolbarProps {
   disabled?: boolean;
@@ -26,6 +26,8 @@ export function MetadataTableToolbar({ disabled = false }: MetadataTableToolbarP
     isSaving,
   } = useMetadata();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasIdentifier = state.identifierColumnId != null;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,15 +85,24 @@ export function MetadataTableToolbar({ disabled = false }: MetadataTableToolbarP
       </DropdownMenu>
 
       {state.isDirty && (
-        <Button
-          variant="default"
-          size="sm"
-          onClick={save}
-          disabled={isSaving || disabled}
-        >
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? "Saving..." : "Save"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {!hasIdentifier && (
+            <span className="flex items-center gap-1 text-xs text-amber-600">
+              <KeyRound className="h-3 w-3" />
+              Select an identifier column to save
+            </span>
+          )}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={save}
+            disabled={isSaving || disabled || !hasIdentifier}
+            title={!hasIdentifier ? "Please select an identifier column first" : undefined}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+        </div>
       )}
     </div>
   );
