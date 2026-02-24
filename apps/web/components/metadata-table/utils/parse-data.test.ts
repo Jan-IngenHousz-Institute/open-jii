@@ -346,9 +346,11 @@ describe("parseClipboard", () => {
     });
 
     const resultPromise = parseClipboard();
+    // Attach the rejection handler BEFORE advancing timers to avoid unhandled rejection
+    const assertion = expect(resultPromise).rejects.toThrow("Could not read clipboard");
     await vi.runAllTimersAsync();
 
-    await expect(resultPromise).rejects.toThrow("Could not read clipboard");
+    await assertion;
   });
 
   it("should throw 'Clipboard is empty' when both methods return valid but empty text", async () => {
@@ -368,10 +370,12 @@ describe("parseClipboard", () => {
     });
 
     const resultPromise = parseClipboard();
+    // Attach the rejection handler BEFORE advancing timers to avoid unhandled rejection
+    const assertion = expect(resultPromise).rejects.toThrow("Clipboard is empty");
     await vi.runAllTimersAsync();
 
     // Whitespace-only text triggers "Clipboard is empty" error
-    await expect(resultPromise).rejects.toThrow("Clipboard is empty");
+    await assertion;
   });
 
   it("should work when clipboard API is not available", async () => {
