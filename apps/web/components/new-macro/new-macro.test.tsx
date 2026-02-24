@@ -8,6 +8,9 @@ import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
+import { contract } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
+
 import { NewMacroForm } from "./new-macro";
 
 vi.mock("@hookform/resolvers/zod", () => ({
@@ -47,6 +50,11 @@ describe("NewMacroForm", () => {
       expect(screen.getByTestId("code-editor")).toBeInTheDocument();
     });
     expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
+
+    // Code editor shows once user profile resolves from MSW
+    await waitFor(() => {
+      expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    });
   });
 
   it("renders cancel and submit buttons", () => {
