@@ -17,12 +17,9 @@ Editable table component for managing plot/plant metadata in experiments.
 import {
   MetadataProvider,
   MetadataTable,
-  MetadataTableToolbar,
-  MergeConfigDialog,
 } from "@/components/metadata-table";
 
 function ExperimentMetadataPage({ experimentId }: { experimentId: string }) {
-  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const isAdmin = useIsProjectAdmin(); // your auth hook
 
   const handleSave = async (columns, rows) => {
@@ -30,34 +27,14 @@ function ExperimentMetadataPage({ experimentId }: { experimentId: string }) {
     await api.experiments.saveMetadata({ experimentId, columns, rows });
   };
 
-  const handleMerge = async () => {
-    // Merge metadata with experiment data
-    // Access mergeConfig from context for identifier columns
-  };
-
   return (
     <MetadataProvider experimentId={experimentId} onSave={handleSave}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2>Plot Metadata</h2>
-          <MetadataTableToolbar disabled={!isAdmin} />
         </div>
         
         <MetadataTable disabled={!isAdmin} />
-        
-        <Button onClick={() => setMergeDialogOpen(true)}>
-          Configure Merge
-        </Button>
-        
-        <MergeConfigDialog
-          open={mergeDialogOpen}
-          onOpenChange={setMergeDialogOpen}
-          experimentColumns={[
-            { id: "plot", name: "Plot" },
-            { id: "plant_id", name: "Plant ID" },
-          ]}
-          onConfirm={handleMerge}
-        />
       </div>
     </MetadataProvider>
   );
