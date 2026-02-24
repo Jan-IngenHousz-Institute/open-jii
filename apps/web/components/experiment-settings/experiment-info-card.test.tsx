@@ -1,104 +1,52 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import type { Experiment, ExperimentMember } from "@repo/api";
+import { render, screen } from "@/test/test-utils";
+import { useFeatureFlagEnabled } from "posthog-js/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { ExperimentInfoCard } from "./experiment-info-card";
 
-globalThis.React = React;
-
-/* ----------------------------- Hoisted mocks ---------------------------- */
-
-const useLocaleMock = vi.hoisted(() => vi.fn());
-
-/* --------------------------------- Mocks -------------------------------- */
-
-// i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
-// auth
 vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({
-    data: { user: { id: "user-admin" } },
-  }),
+  useSession: () => ({ data: { user: { id: "user-1" } } }),
 }));
 
-// sub-components
 vi.mock("./experiment-archive", () => ({
-  ExperimentArchive: () => <div data-testid="experiment-archive">Experiment Archive</div>,
+  ExperimentArchive: (props: { experimentId: string }) => (
+    <div data-testid="archive">{props.experimentId}</div>
+  ),
 }));
 
 vi.mock("./experiment-delete", () => ({
-  ExperimentDelete: () => <div data-testid="experiment-delete">Experiment Delete</div>,
+  ExperimentDelete: (props: { experimentName: string }) => (
+    <div data-testid="delete">{props.experimentName}</div>
+  ),
 }));
 
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: useLocaleMock,
-}));
+const experiment = { id: "exp-1", name: "Test", status: "active" } as never;
+const members = [{ user: { id: "user-1" }, role: "admin" }] as never;
 
-/* ------------------------------- Test Data ------------------------------- */
+describe("ExperimentInfoCard", () => {
+  it("renders archive and delete for admin", () => {
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+    render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={members} />);
 
-const experimentId = "exp-123";
-
-const mockExperiment: Experiment = {
-  id: experimentId,
-  name: "Test Experiment",
-  description: "Test Description",
-  status: "active",
-  visibility: "private",
-  createdBy: "user-admin",
-  createdAt: "2024-01-01T00:00:00.000Z",
-  updatedAt: "2024-01-15T00:00:00.000Z",
-  embargoUntil: "2025-12-31T23:59:59.999Z",
-};
-
-/* -------------------------- Helpers -------------------------- */
-
-function renderWithClient(ui: React.ReactElement) {
-  const qc = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
+    expect(screen.getByTestId("archive")).toBeInTheDocument();
+    expect(screen.getByTestId("delete")).toBeInTheDocument();
   });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
 
-/* --------------------------------- Setup -------------------------------- */
+  it("shows danger zone note", () => {
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+    render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={members} />);
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  useLocaleMock.mockReturnValue("en");
-});
+    expect(
+      screen.getByText("experimentSettings.dangerZoneNote_deleteAllowed"),
+    ).toBeInTheDocument();
+  });
 
-/* --------------------------------- Tests -------------------------------- */
-
-const membersData: ExperimentMember[] = [
-  {
-    role: "admin",
-    user: { id: "user-admin", firstName: "Ada", lastName: "Lovelace", email: "ada@example.com" },
-    joinedAt: "2024-01-01T00:00:00.000Z",
-  },
-];
-
-describe("<ExperimentInfoCard />", () => {
-  it("renders sub-components", () => {
-    renderWithClient(
-      <ExperimentInfoCard
-        experimentId={experimentId}
-        experiment={mockExperiment}
-        members={membersData}
-      />,
+  it("hides archive for non-admin", () => {
+    const nonAdminMembers = [{ user: { id: "user-1" }, role: "member" }] as never;
+    render(
+      <ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={nonAdminMembers} />,
     );
 
-    expect(screen.getByTestId("experiment-archive")).toBeInTheDocument();
-    expect(screen.getByTestId("experiment-delete")).toBeInTheDocument();
+    expect(screen.queryByTestId("archive")).not.toBeInTheDocument();
   });
 });
