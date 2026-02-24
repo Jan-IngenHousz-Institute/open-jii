@@ -1,9 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { renderHook } from "@/test/test-utils";
+import { describe, expect, it, vi } from "vitest";
 
-import { tsr } from "../../../lib/tsr";
 import { useMacros } from "./useMacros";
 
 // Mock next/navigation
@@ -19,9 +16,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../../lib/tsr", () => ({
   tsr: {
     macros: {
-      listMacros: {
-        useQuery: vi.fn(),
-      },
+      listMacros: { useQuery: (...args: unknown[]) => mockUseQuery(...args) },
     },
   },
 }));
@@ -34,16 +29,10 @@ vi.mock("../../useDebounce", () => ({
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
 
 describe("useMacros", () => {
-  let queryClient: QueryClient;
+  it("passes empty filter by default", () => {
+    mockUseQuery.mockReturnValue({ data: { body: [] }, isLoading: false, error: null });
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
+    renderHook(() => useMacros());
 
     return ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
