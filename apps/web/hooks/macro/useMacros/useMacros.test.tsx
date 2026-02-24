@@ -1,5 +1,15 @@
-import { renderHook } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+/**
+ * useMacros hook test — MSW-based.
+ *
+ * The real hook calls `tsr.macros.listMacros.useQuery` →
+ * `GET /api/v1/macros`. MSW intercepts that request.
+ */
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, expect, it } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useMacros } from "./useMacros";
 
@@ -205,5 +215,38 @@ describe("useMacros", () => {
     const lastCall = mockUseQuery.mock.calls[mockUseQuery.mock.calls.length - 1] as unknown[];
     const callArg = lastCall[0] as { queryData: { query: Record<string, unknown> } };
     expect(callArg.queryData.query.language).toBe("python");
+  });
+
+  it("returns macros list from MSW", async () => {
+    server.mount(contract.macros.listMacros, {
+      body: [
+        createMacro({ id: "1", name: "M1" }),
+        createMacro({ id: "2", name: "M2", language: "javascript" }),
+      ],
+    });
+
+    const { result } = renderHook(() => useMacros());
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(2);
+    });
+
+    const first = result.current.data?.[0];
+    const second = result.current.data?.[1];
+    expect(first?.name).toBe("M1");
+    expect(second?.name).toBe("M2");
+  });
+
+  it("passes filter as query parameters", async () => {
+    const spy = server.mount(contract.macros.listMacros, { body: [] });
+
+    const { result } = renderHook(() => useMacros({ search: "test", language: "python" }));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(spy.url).toContain("search=test");
+    expect(spy.url).toContain("language=python");
   });
 });

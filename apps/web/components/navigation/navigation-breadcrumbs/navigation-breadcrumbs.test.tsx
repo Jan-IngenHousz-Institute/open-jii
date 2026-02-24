@@ -5,7 +5,7 @@ import { Breadcrumbs } from "./navigation-breadcrumbs";
 
 const mockUseBreadcrumbs = vi.fn();
 vi.mock("@/hooks/breadcrumbs/useBreadcrumbs", () => ({
-  useBreadcrumbs: (...args: unknown[]) => mockUseBreadcrumbs(...args),
+  useBreadcrumbs: mockUseBreadcrumbs,
 }));
 
 describe("Breadcrumbs", () => {

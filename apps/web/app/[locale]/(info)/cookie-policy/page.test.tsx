@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockPageCookiePolicy = vi.fn();
 vi.mock("~/lib/contentful", () => ({
   getContentfulClients: vi.fn().mockResolvedValue({
-    client: { pageCookiePolicy: (...a: unknown[]) => mockPageCookiePolicy(...a) },
-    previewClient: { pageCookiePolicy: (...a: unknown[]) => mockPageCookiePolicy(...a) },
+    client: { pageCookiePolicy: mockPageCookiePolicy },
+    previewClient: { pageCookiePolicy: mockPageCookiePolicy },
   }),
 }));
 

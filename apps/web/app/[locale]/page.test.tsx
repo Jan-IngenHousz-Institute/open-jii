@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import Home, { generateMetadata } from "./page";
 
 const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({ auth: () => mockAuth() }));
+vi.mock("~/app/actions/auth", () => ({ auth: mockAuth }));
 
 const mockPageHome = vi.fn();
 vi.mock("~/lib/contentful", () => ({

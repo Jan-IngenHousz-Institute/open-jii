@@ -1,16 +1,18 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
 
+import { contract } from "@repo/api";
 import { SidebarProvider } from "@repo/ui/components";
 
 import { NavUser } from "./nav-user";
 
-// Hoisted mocks
-const { mockSignOutMutateAsync, mockPush, useGetUserProfileMock } = vi.hoisted(() => ({
+// Hoisted mocks — non-HTTP concerns only
+const { mockSignOutMutateAsync, mockPush } = vi.hoisted(() => ({
   mockSignOutMutateAsync: vi.fn(),
   mockPush: vi.fn(),
-  useGetUserProfileMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -21,29 +23,23 @@ vi.mock("~/hooks/auth", () => ({
   useSignOut: () => ({ mutateAsync: mockSignOutMutateAsync, isPending: false }),
 }));
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    users: {
-      getUserProfile: {
-        useQuery: (config: { queryData: { params: { id: string } } }) =>
-          useGetUserProfileMock(config.queryData.params.id),
-      },
-    },
-  },
-}));
-
 const baseUser = { id: "u-1", email: "ada@example.com", avatar: "https://example.com/a.png" };
 
-function renderNav(
-  opts: {
-    profile?: { firstName?: string; lastName?: string };
-    locale?: string;
-    compact?: boolean;
-  } = {},
-) {
-  useGetUserProfileMock.mockReturnValue({
-    data: { body: opts.profile ?? undefined },
-  });
+/** Override the user profile MSW handler for a specific test. */
+function useProfileOverride(profile: { firstName?: string; lastName?: string } | null) {
+  if (profile === null) {
+    server.mount(contract.users.getUserProfile, { status: 404 });
+  } else {
+    server.mount(contract.users.getUserProfile, {
+      body: createUserProfile({
+        firstName: profile.firstName ?? "",
+        lastName: profile.lastName ?? "",
+      }),
+    });
+  }
+}
+
+function renderNav(opts: { locale?: string; compact?: boolean } = {}) {
   return render(
     <SidebarProvider>
       <NavUser user={baseUser} locale={opts.locale ?? "en-US"} compact={opts.compact} />
@@ -54,20 +50,30 @@ function renderNav(
 describe("NavUser", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders avatar button with user name", () => {
-    renderNav({ profile: { firstName: "Ada", lastName: "Lovelace" } });
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+  it("renders avatar button with user name", async () => {
+    useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
+    renderNav();
+    await waitFor(() => {
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    });
     expect(screen.getByRole("button")).not.toBeDisabled();
   });
 
-  it("renders without profile (empty fallback)", () => {
+  it("renders without profile (empty fallback)", async () => {
+    useProfileOverride(null);
     renderNav();
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button")).toBeInTheDocument();
+    });
   });
 
   it("renders dropdown with account, support, faq, logout", async () => {
+    useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
     const user = userEvent.setup();
-    renderNav({ profile: { firstName: "Ada", lastName: "Lovelace" } });
+    renderNav();
+    await waitFor(() => {
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    });
     await user.click(screen.getByRole("button"));
 
     expect(screen.getByRole("menuitem", { name: "auth.account" })).toHaveAttribute(
@@ -83,8 +89,12 @@ describe("NavUser", () => {
   });
 
   it("calls signOut and navigates home on logout click", async () => {
+    useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
     const user = userEvent.setup();
-    renderNav({ profile: { firstName: "Ada", lastName: "Lovelace" } });
+    renderNav();
+    await waitFor(() => {
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    });
     await user.click(screen.getByRole("button"));
     await user.click(screen.getByRole("menuitem", { name: "navigation.logout" }));
     expect(mockSignOutMutateAsync).toHaveBeenCalled();
@@ -92,9 +102,13 @@ describe("NavUser", () => {
   });
 
   it("uses docs URL from environment for support link", async () => {
+    useProfileOverride({ firstName: "Test", lastName: "User" });
     env.NEXT_PUBLIC_DOCS_URL = "https://docs.openjii.org";
     const user = userEvent.setup();
     renderNav();
+    await waitFor(() => {
+      expect(screen.getByRole("button")).toBeInTheDocument();
+    });
     await user.click(screen.getByRole("button"));
     expect(screen.getByRole("menuitem", { name: "navigation.support" })).toHaveAttribute(
       "href",
@@ -103,16 +117,21 @@ describe("NavUser", () => {
   });
 
   it("shows menu when dropdown is opened (compact mode)", async () => {
+    useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
     const user = userEvent.setup();
-    renderNav({ profile: { firstName: "Ada", lastName: "Lovelace" } });
+    renderNav();
+    await waitFor(() => {
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    });
     await user.click(screen.getByRole("button"));
     expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
-  it("renders in non-compact (sidebar) mode", () => {
-    renderNav({
-      profile: { firstName: "Ada", lastName: "Lovelace" },
-      compact: false,
+  it("renders in non-compact (sidebar) mode", async () => {
+    useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
+    renderNav({ compact: false });
+    await waitFor(() => {
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     });
     expect(screen.getByRole("button")).toBeInTheDocument();
   });

@@ -98,13 +98,12 @@ describe("QuestionCard", () => {
         validationMessage: "Q",
       },
     });
+    expect(screen.getByPlaceholderText("questionCard.placeholder").hasAttribute("disabled")).toBe(
+      true,
+    );
+    expect(screen.getByRole("checkbox").hasAttribute("disabled")).toBe(true);
     expect(
-      (screen.getByPlaceholderText("questionCard.placeholder") as HTMLInputElement).disabled,
-    ).toBe(true);
-    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(true);
-    expect(
-      (screen.getByRole("button", { name: "questionCard.addOption" }) as HTMLButtonElement)
-        .disabled,
+      screen.getByRole("button", { name: "questionCard.addOption" }).hasAttribute("disabled"),
     ).toBe(true);
   });
 });

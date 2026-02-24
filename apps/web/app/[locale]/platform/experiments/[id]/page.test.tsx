@@ -4,13 +4,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import ExperimentOverviewPage from "./page";
 
 vi.mock("react", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("react")>()),
+  ...(await importOriginal()),
   use: () => ({ id: "test-id" }),
 }));
 
 const mockAccess = vi.fn();
 vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: (...a: unknown[]) => mockAccess(...a),
+  useExperimentAccess: mockAccess,
 }));
 vi.mock("@/hooks/experiment/useExperimentLocations/useExperimentLocations", () => ({
   useExperimentLocations: () => ({ data: undefined, isLoading: false }),

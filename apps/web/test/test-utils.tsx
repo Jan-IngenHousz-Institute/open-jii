@@ -20,14 +20,17 @@
  * });
  * ```
  */
+import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
 import type { RenderOptions, RenderResult } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { useRouter } from "next/navigation";
 import React from "react";
 import type { ReactElement } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import type { DefaultValues, FieldValues, UseFormProps } from "react-hook-form";
+import type { FieldValues, UseFormProps } from "react-hook-form";
 
 // ── Provider wrapper ────────────────────────────────────────────
 
@@ -72,15 +75,26 @@ interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
 }
 
-function render(ui: ReactElement, options?: CustomRenderOptions): RenderResult {
+interface CustomRenderResult extends RenderResult {
+  router: AppRouterInstance;
+}
+
+function render(ui: ReactElement, options?: CustomRenderOptions): CustomRenderResult {
   const { queryClient, ...renderOptions } = options ?? {};
 
   function Wrapper({ children }: WrapperProps) {
     const client = queryClient ?? createTestQueryClient();
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>
+        <tsr.ReactQueryProvider>{children}</tsr.ReactQueryProvider>
+      </QueryClientProvider>
+    );
   }
 
-  return rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
+  const result = rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- useRouter is globally mocked in setup.ts
+  const router = useRouter();
+  return { ...result, router };
 }
 
 // ── Custom renderHook ───────────────────────────────────────────
@@ -93,7 +107,11 @@ function renderHook<TResult>(hook: () => TResult, options?: { queryClient?: Quer
 
   function Wrapper({ children }: WrapperProps) {
     const client = queryClient ?? createTestQueryClient();
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>
+        <tsr.ReactQueryProvider>{children}</tsr.ReactQueryProvider>
+      </QueryClientProvider>
+    );
   }
 
   return rtlRenderHook(hook, { wrapper: Wrapper }) as {

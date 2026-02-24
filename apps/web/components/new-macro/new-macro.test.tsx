@@ -1,3 +1,19 @@
+/**
+ * NewMacroForm — MSW-based test.
+ *
+ * `useMacroCreate` (POST /api/v1/macros) and `useGetUserProfile`
+ * (GET /api/v1/users/:id/profile) run for real with MSW intercepting
+ * the HTTP requests.
+ *
+ * Legitimately mocked:
+ *  - Children (NewMacroDetailsCard, MacroCodeEditor) — tested separately
+ *  - zodResolver — children are mocked so form fields aren't interactive
+ *  - next/navigation, @repo/auth/client — framework / auth, not HTTP via tsr
+ *  - @repo/ui/hooks (toast), @/util/base64 — side-effects / utilities
+ */
+import { createMacro, createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import * as base64Utils from "@/util/base64";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
@@ -5,21 +21,17 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
+
 import { NewMacroForm } from "./new-macro";
 
-// Type definitions for mock components
-interface MockFormProps {
-  children: React.ReactNode;
-  [key: string]: unknown;
-}
+/* ─── Hoisted mock refs ──────────────────────────────────────── */
 
-interface MockButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  type?: "button" | "submit" | "reset";
-  disabled?: boolean;
-  [key: string]: unknown;
-}
+const { mockPush, mockBack } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockBack: vi.fn(),
+}));
 
 interface MockFormFieldProps {
   name: string;
@@ -92,13 +104,9 @@ const mockMutate = vi.fn();
 let macroCreateOnSuccess: ((data: { body: { id: string } }) => void) | undefined;
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    back: mockBack,
-  }),
+  useRouter: () => ({ push: mockPush, back: mockBack }),
 }));
 
-const sessionUserId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 vi.mock("@repo/auth/client", () => ({
   useSession: () => ({
     data: { user: { id: sessionUserId } },
@@ -175,77 +183,18 @@ vi.mock("@repo/i18n", () => ({
 }));
 
 vi.mock("@repo/ui/hooks");
+vi.mock("@hookform/resolvers/zod", () => ({
+  zodResolver: () => (values: Record<string, unknown>) => ({ values, errors: {} }),
+}));
 
-vi.mock("@repo/ui/components", () => ({
-  Form: ({ children, ...props }: MockFormProps) => <div {...props}>{children}</div>,
-  Button: ({ children, onClick, type, disabled, ...props }: MockButtonProps) => (
-    <button onClick={onClick} type={type} disabled={disabled} {...props}>
-      {children}
-    </button>
-  ),
-  FormField: ({ name, render }: MockFormFieldProps) => {
-    return (
-      <div data-testid="form-field">
-        {render({ field: { name, value: "", onChange: vi.fn() }, fieldState: {} })}
-      </div>
-    );
-  },
-  FormItem: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="form-item">{children}</div>
-  ),
-  FormLabel: ({ children }: { children: React.ReactNode }) => (
-    <label data-testid="form-label">{children}</label>
-  ),
-  FormControl: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="form-control">{children}</div>
-  ),
-  FormMessage: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="form-message">{children}</div>
-  ),
-  Input: ({ placeholder, ...props }: MockInputProps) => (
-    <input data-testid="input" placeholder={placeholder} {...props} />
-  ),
-  Label: ({ children, htmlFor }: MockLabelProps) => <label htmlFor={htmlFor}>{children}</label>,
-  Textarea: ({ placeholder, rows, ...props }: MockTextareaProps) => (
-    <textarea data-testid="textarea" placeholder={placeholder} rows={rows} {...props} />
-  ),
-  RichTextarea: ({ placeholder, ...props }: MockTextareaProps) => (
-    <textarea data-testid="rich-textarea" placeholder={placeholder} {...props} />
-  ),
-  Select: ({ children, onValueChange }: MockSelectProps) => (
-    <select data-testid="select" onChange={(e) => onValueChange?.(e.target.value)}>
-      {children}
-    </select>
-  ),
-  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ value, children, disabled }: MockSelectItemProps) => (
-    <option value={value} disabled={disabled}>
-      {children}
-    </option>
-  ),
-  SelectTrigger: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="select-trigger">{children}</div>
-  ),
-  SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
-  Card: ({ children, className }: MockCardProps) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-header">{children}</div>
-  ),
-  CardTitle: ({ children }: { children: React.ReactNode }) => (
-    <h2 data-testid="card-title">{children}</h2>
-  ),
-  CardDescription: ({ children }: { children: React.ReactNode }) => (
-    <p data-testid="card-description">{children}</p>
-  ),
-  CardContent: ({ children, className }: MockCardProps) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
+vi.mock("@/util/base64", () => ({
+  encodeBase64: vi.fn((s: string) => Buffer.from(s).toString("base64")),
+}));
+
+/* ─── Children — mocked, they have their own tests ───────────── */
+
+vi.mock("./new-macro-details-card", () => ({
+  NewMacroDetailsCard: () => <div data-testid="details-card" />,
 }));
 
 vi.mock("../macro-code-editor", () => ({
@@ -285,46 +234,7 @@ vi.mock("../components/macro-code-editor", () => ({
   ),
 }));
 
-// Mock react-hook-form
-vi.mock("react-hook-form", () => {
-  const mockSetValue = vi.fn();
-  const mockWatch = vi.fn().mockImplementation((key?: string) => {
-    if (key === "name") return "Test Macro";
-    if (key === "language") return "python";
-    if (key === "code") return "print('hello world')";
-    return "python"; // Default fallback value
-  });
-
-  return {
-    useForm: () => ({
-      handleSubmit: (fn: (data: Record<string, string>) => void) => (e: Event) => {
-        e.preventDefault();
-        fn({
-          name: "Test Macro",
-          description: "Test Description",
-          language: "python",
-          code: "print('hello world')",
-        });
-      },
-      setValue: mockSetValue,
-      watch: mockWatch,
-      formState: { errors: {} },
-      control: {},
-    }),
-    Controller: ({ render }: MockControllerProps) => render({ field: {} }),
-  };
-});
-
-// Mock zod resolver
-vi.mock("@hookform/resolvers/zod", () => ({
-  zodResolver: () => vi.fn(),
-}));
-
-// Mock base64 utilities
-vi.mock("@/util/base64", () => ({
-  encodeBase64: vi.fn((str: string) => Buffer.from(str).toString("base64")),
-  decodeBase64: vi.fn((str: string) => Buffer.from(str, "base64").toString()),
-}));
+/* ─── Tests ──────────────────────────────────────────────────── */
 
 describe("NewMacroForm", () => {
   beforeEach(() => {
@@ -337,78 +247,67 @@ describe("NewMacroForm", () => {
     });
   });
 
-  it("should render form elements", () => {
-    // Act
     render(<NewMacroForm />);
 
-    // Assert
+    // Children render immediately (mocked)
     expect(screen.getByTestId("details-card")).toBeInTheDocument();
-    expect(screen.getByTestId("code-editor")).toBeInTheDocument();
     expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
+
+    // Code editor shows once user profile resolves from MSW
+    await waitFor(() => {
+      expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    });
   });
 
-  it("should render form buttons", () => {
-    // Act
+  it("renders cancel and submit buttons", () => {
     render(<NewMacroForm />);
-
-    // Assert
     expect(screen.getByText("newMacro.cancel")).toBeInTheDocument();
     expect(screen.getByText("newMacro.finalizeSetup")).toBeInTheDocument();
   });
 
-  it("should call router.back when cancel button is clicked", async () => {
-    // Arrange
+  it("navigates back on cancel", async () => {
     const user = userEvent.setup();
     render(<NewMacroForm />);
-    const cancelButton = screen.getByText("newMacro.cancel");
-
-    // Act
-    await user.click(cancelButton);
-
-    // Assert
+    await user.click(screen.getByText("newMacro.cancel"));
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it("should submit form with base64 encoded code", async () => {
-    // Arrange
+  it("submits form — POST /api/v1/macros via MSW", async () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
+
+    const spy = server.mount(contract.macros.createMacro, {
+      body: createMacro({ id: "macro-42", name: "New Macro", code: "" }),
+    });
+
     const user = userEvent.setup();
     render(<NewMacroForm />);
-    const submitButton = screen.getByText("newMacro.finalizeSetup");
+    await user.click(screen.getByText("newMacro.finalizeSetup"));
 
-    // Act
-    await user.click(submitButton);
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
+    });
+    expect(vi.mocked(base64Utils.encodeBase64)).toHaveBeenCalled();
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ description: "macros.macroCreated" });
 
-    // Assert
-    expect(mockMutate).toHaveBeenCalledWith({
-      body: {
-        name: "Test Macro",
-        description: "Test Description",
-        language: "python",
-        code: Buffer.from("print('hello world')").toString("base64"),
-      },
+    // onSuccess navigates to the new macro
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalled();
     });
   });
 
-  it("should call mutate on submit", async () => {
-    // Arrange
-    const user = userEvent.setup();
+  it("renders code editor with default language", async () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
+
     render(<NewMacroForm />);
-    const submitButton = screen.getByText("newMacro.finalizeSetup");
-
-    // Act
-    await user.click(submitButton);
-
-    // Assert
-    expect(mockMutate).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("code-editor")).toHaveAttribute("data-language", "python");
   });
 
-  it("should render code editor with correct language", () => {
-    // Act
+  it("uses correct form layout", () => {
     render(<NewMacroForm />);
-    const codeEditor = screen.getByTestId("code-editor");
-
-    // Assert
-    expect(codeEditor).toHaveAttribute("data-language", "python");
+    expect(document.querySelector("form")).toHaveClass("space-y-8");
   });
 
   it("should render the code editor with title", () => {

@@ -3,13 +3,13 @@ import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({ auth: () => mockAuth() }));
+vi.mock("~/app/actions/auth", () => ({ auth: mockAuth }));
 
 const mockFooter = vi.fn();
 vi.mock("~/lib/contentful", () => ({
   getContentfulClients: vi.fn().mockResolvedValue({
-    client: { footer: (...a: unknown[]) => mockFooter(...a) },
-    previewClient: { footer: (...a: unknown[]) => mockFooter(...a) },
+    client: { footer: mockFooter },
+    previewClient: { footer: mockFooter },
   }),
 }));
 

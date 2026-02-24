@@ -1,37 +1,15 @@
-import { render, screen } from "@/test/test-utils";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useFeatureFlagEnabled } from "posthog-js/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 import { ExperimentDelete } from "./experiment-delete";
 
-const mockPush = vi.fn();
-const mockMutateAsync = vi.fn().mockResolvedValue({ ok: true });
-const mockToast = vi.fn();
-
-vi.mock("next/navigation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("next/navigation")>()),
-  useRouter: () => ({ push: mockPush }),
-}));
-
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
-vi.mock("../../hooks/experiment/useExperimentDelete/useExperimentDelete", () => ({
-  useExperimentDelete: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: (...args: unknown[]) => mockToast(...args),
-}));
-
 describe("ExperimentDelete", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockMutateAsync.mockResolvedValue({ ok: true });
-  });
-
   it("does not render when feature flag is disabled", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
     const { container } = render(<ExperimentDelete experimentId="exp-1" experimentName="Test" />);
@@ -46,28 +24,32 @@ describe("ExperimentDelete", () => {
 
   it("opens dialog, confirms delete, redirects on success", async () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+    const spy = server.mount(contract.experiments.deleteExperiment);
     const user = userEvent.setup();
 
-    render(<ExperimentDelete experimentId="exp-1" experimentName="Test" />);
+    const { router } = render(<ExperimentDelete experimentId="exp-1" experimentName="Test" />);
 
     await user.click(screen.getByText("experimentSettings.deleteExperiment"));
     await user.click(screen.getByText("experimentSettings.delete"));
 
-    expect(mockMutateAsync).toHaveBeenCalledWith(
-      { params: { id: "exp-1" } },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
-    );
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.params).toMatchObject({ id: "exp-1" });
 
-    const call = mockMutateAsync.mock.calls[0] as [unknown, { onSuccess: () => void }];
-    call[1].onSuccess();
-    expect(mockToast).toHaveBeenCalledWith({
-      description: "experimentSettings.experimentDeletedSuccess",
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith({
+        description: "experimentSettings.experimentDeletedSuccess",
+      });
     });
-    expect(mockPush).toHaveBeenCalledWith("/en/platform/experiments");
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments");
   });
 
   it("shows error toast on failure", async () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+    server.mount(contract.experiments.deleteExperiment, {
+      status: 500,
+      body: { message: "Nope" },
+    });
     const user = userEvent.setup();
 
     render(<ExperimentDelete experimentId="exp-1" experimentName="Test" />);
@@ -75,8 +57,8 @@ describe("ExperimentDelete", () => {
     await user.click(screen.getByText("experimentSettings.deleteExperiment"));
     await user.click(screen.getByText("experimentSettings.delete"));
 
-    const call = mockMutateAsync.mock.calls[0] as [unknown, { onError: (err: unknown) => void }];
-    call[1].onError({ body: { message: "Nope" } });
-    expect(mockToast).toHaveBeenCalledWith({ description: "Nope", variant: "destructive" });
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));
+    });
   });
 });
