@@ -48,9 +48,7 @@ describe("MetadataTable", () => {
   it("shows empty state when no columns exist", () => {
     render(<MetadataTable />);
 
-    expect(
-      screen.getByText(/no metadata yet/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no metadata yet/i)).toBeInTheDocument();
   });
 
   it("renders table with columns and rows", () => {

@@ -19,24 +19,22 @@ export class ExperimentMetadataRepository {
   // Temporary in-memory storage - replace with actual database implementation
   private readonly storage = new Map<string, ExperimentMetadataDto>();
 
-  async findByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto | null>> {
+  findByExperimentId(experimentId: string): Result<ExperimentMetadataDto | null> {
     this.logger.debug({
       msg: "Finding metadata by experiment ID",
       experimentId,
     });
 
-    const metadata = Array.from(this.storage.values()).find(
-      (m) => m.experimentId === experimentId
-    );
+    const metadata = Array.from(this.storage.values()).find((m) => m.experimentId === experimentId);
 
     return success(metadata ?? null);
   }
 
-  async create(
+  create(
     experimentId: string,
     dto: CreateExperimentMetadataDto,
     createdBy: string,
-  ): Promise<Result<ExperimentMetadataDto>> {
+  ): Result<ExperimentMetadataDto> {
     this.logger.debug({
       msg: "Creating metadata for experiment",
       experimentId,
@@ -62,10 +60,7 @@ export class ExperimentMetadataRepository {
     return success(metadata);
   }
 
-  async update(
-    id: string,
-    dto: UpdateExperimentMetadataDto,
-  ): Promise<Result<ExperimentMetadataDto | null>> {
+  update(id: string, dto: UpdateExperimentMetadataDto): Result<ExperimentMetadataDto | null> {
     this.logger.debug({
       msg: "Updating metadata",
       id,
@@ -81,7 +76,9 @@ export class ExperimentMetadataRepository {
       ...(dto.columns && { columns: dto.columns }),
       ...(dto.rows && { rows: dto.rows }),
       ...(dto.identifierColumnId !== undefined && { identifierColumnId: dto.identifierColumnId }),
-      ...(dto.experimentQuestionId !== undefined && { experimentQuestionId: dto.experimentQuestionId }),
+      ...(dto.experimentQuestionId !== undefined && {
+        experimentQuestionId: dto.experimentQuestionId,
+      }),
       updatedAt: new Date(),
     };
 
@@ -90,7 +87,7 @@ export class ExperimentMetadataRepository {
     return success(updated);
   }
 
-  async delete(id: string): Promise<Result<boolean>> {
+  delete(id: string): Result<boolean> {
     this.logger.debug({
       msg: "Deleting metadata",
       id,
@@ -100,15 +97,13 @@ export class ExperimentMetadataRepository {
     return success(deleted);
   }
 
-  async deleteByExperimentId(experimentId: string): Promise<Result<boolean>> {
+  deleteByExperimentId(experimentId: string): Result<boolean> {
     this.logger.debug({
       msg: "Deleting metadata by experiment ID",
       experimentId,
     });
 
-    const metadata = Array.from(this.storage.values()).find(
-      (m) => m.experimentId === experimentId
-    );
+    const metadata = Array.from(this.storage.values()).find((m) => m.experimentId === experimentId);
 
     if (metadata) {
       this.storage.delete(metadata.id);
