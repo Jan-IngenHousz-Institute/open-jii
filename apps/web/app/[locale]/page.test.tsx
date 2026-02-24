@@ -21,7 +21,6 @@ vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   ),
 }));
 
-// CMS section components — render a landmark so we can find them
 vi.mock("@repo/cms", () => ({
   HomeHero: () => <section aria-label="hero" />,
   HomeAboutMission: () => <section aria-label="mission" />,
