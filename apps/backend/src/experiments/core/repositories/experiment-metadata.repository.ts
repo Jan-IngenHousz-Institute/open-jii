@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
-import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
+import { Result, failure, success, AppError } from "../../../common/utils/fp-utils";
 import type {
   ExperimentMetadataDto,
   CreateExperimentMetadataDto,
@@ -11,7 +11,7 @@ import type { DatabricksPort } from "../ports/databricks.port";
 
 /**
  * Repository for experiment metadata operations.
- * Persists metadata to Databricks Delta Lake.
+ * Persists metadata to Databricks Delta Lake using parameterized queries.
  */
 @Injectable()
 export class ExperimentMetadataRepository {
@@ -24,71 +24,73 @@ export class ExperimentMetadataRepository {
   }
 
   async findByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto | null>> {
-    this.logger.debug({
-      msg: "Finding metadata by experiment ID",
-      experimentId,
-    });
+      this.logger.debug({
+        msg: "Finding metadata by experiment ID",
+        experimentId,
+      });
 
-    return tryCatch(async () => {
-      const escapedId = experimentId.replace(/'/g, "''");
-      const query = `SELECT id, experiment_id, columns, rows, identifier_column_id, experiment_question_id, created_by, created_at, updated_at FROM ${this.metadataTable} WHERE experiment_id = '${escapedId}' LIMIT 1`;
+      const query = `SELECT id, experiment_id, columns, rows, identifier_column_id, experiment_question_id, created_by, created_at, updated_at FROM ${this.metadataTable} WHERE experiment_id = :experiment_id LIMIT 1`;
 
       const result = await this.databricksPort.executeSqlQuery(
         this.databricksPort.CENTRUM_SCHEMA_NAME,
         query,
+        [{ name: "experiment_id", value: experimentId }],
       );
 
       if (result.isFailure()) {
-        throw new Error(result.error.message);
+        return failure(AppError.internal(`Failed to find metadata: ${result.error.message}`));
       }
 
       if (result.value.rows.length === 0) {
-        return null;
+        return success(null);
       }
 
-      return this.mapRowToDto(result.value.columns, result.value.rows[0]);
-    });
-  }
+      return success(this.mapRowToDto(result.value.columns, result.value.rows[0]));
+    }
 
   async create(
-    experimentId: string,
-    dto: CreateExperimentMetadataDto,
-    createdBy: string,
-  ): Promise<Result<ExperimentMetadataDto>> {
-    this.logger.debug({
-      msg: "Creating metadata for experiment",
-      experimentId,
-      columnCount: dto.columns.length,
-      rowCount: dto.rows.length,
-    });
+      experimentId: string,
+      dto: CreateExperimentMetadataDto,
+      createdBy: string,
+    ): Promise<Result<ExperimentMetadataDto>> {
+      this.logger.debug({
+        msg: "Creating metadata for experiment",
+        experimentId,
+        columnCount: dto.columns.length,
+        rowCount: dto.rows.length,
+      });
 
-    return tryCatch(async () => {
       const id = crypto.randomUUID();
       const now = new Date();
-      const columnsJson = JSON.stringify(dto.columns).replace(/'/g, "''");
-      const rowsJson = JSON.stringify(dto.rows).replace(/'/g, "''");
-      const escapedExperimentId = experimentId.replace(/'/g, "''");
-      const escapedCreatedBy = createdBy.replace(/'/g, "''");
-      const identifierColumnId = dto.identifierColumnId
-        ? `'${dto.identifierColumnId.replace(/'/g, "''")}'`
-        : "NULL";
-      const experimentQuestionId = dto.experimentQuestionId
-        ? `'${dto.experimentQuestionId.replace(/'/g, "''")}'`
-        : "NULL";
       const isoNow = now.toISOString();
+      const columnsJson = JSON.stringify(dto.columns);
+      const rowsJson = JSON.stringify(dto.rows);
 
-      const query = `INSERT INTO ${this.metadataTable} (id, experiment_id, columns, rows, identifier_column_id, experiment_question_id, created_by, created_at, updated_at) VALUES ('${id}', '${escapedExperimentId}', '${columnsJson}', '${rowsJson}', ${identifierColumnId}, ${experimentQuestionId}, '${escapedCreatedBy}', '${isoNow}', '${isoNow}')`;
+      const query = `INSERT INTO ${this.metadataTable} (id, experiment_id, columns, rows, identifier_column_id, experiment_question_id, created_by, created_at, updated_at) VALUES (:id, :experiment_id, :columns, :rows, :identifier_column_id, :experiment_question_id, :created_by, :created_at, :updated_at)`;
+
+      const parameters = [
+        { name: "id", value: id },
+        { name: "experiment_id", value: experimentId },
+        { name: "columns", value: columnsJson },
+        { name: "rows", value: rowsJson },
+        { name: "identifier_column_id", value: dto.identifierColumnId ?? null },
+        { name: "experiment_question_id", value: dto.experimentQuestionId ?? null },
+        { name: "created_by", value: createdBy },
+        { name: "created_at", value: isoNow },
+        { name: "updated_at", value: isoNow },
+      ];
 
       const result = await this.databricksPort.executeSqlQuery(
         this.databricksPort.CENTRUM_SCHEMA_NAME,
         query,
+        parameters,
       );
 
       if (result.isFailure()) {
-        throw new Error(result.error.message);
+        return failure(AppError.internal(`Failed to create metadata: ${result.error.message}`));
       }
 
-      return {
+      return success({
         id,
         experimentId,
         columns: dto.columns,
@@ -98,32 +100,30 @@ export class ExperimentMetadataRepository {
         createdBy,
         createdAt: now,
         updatedAt: now,
-      };
-    });
-  }
+      });
+    }
 
   async update(id: string, dto: UpdateExperimentMetadataDto): Promise<Result<ExperimentMetadataDto | null>> {
-    this.logger.debug({
-      msg: "Updating metadata",
-      id,
-    });
+      this.logger.debug({
+        msg: "Updating metadata",
+        id,
+      });
 
-    return tryCatch(async () => {
       // First fetch existing to merge
-      const escapedId = id.replace(/'/g, "''");
-      const selectQuery = `SELECT id, experiment_id, columns, rows, identifier_column_id, experiment_question_id, created_by, created_at, updated_at FROM ${this.metadataTable} WHERE id = '${escapedId}' LIMIT 1`;
+      const selectQuery = `SELECT id, experiment_id, columns, rows, identifier_column_id, experiment_question_id, created_by, created_at, updated_at FROM ${this.metadataTable} WHERE id = :id LIMIT 1`;
 
       const selectResult = await this.databricksPort.executeSqlQuery(
         this.databricksPort.CENTRUM_SCHEMA_NAME,
         selectQuery,
+        [{ name: "id", value: id }],
       );
 
       if (selectResult.isFailure()) {
-        throw new Error(selectResult.error.message);
+        return failure(AppError.internal(`Failed to fetch metadata for update: ${selectResult.error.message}`));
       }
 
       if (selectResult.value.rows.length === 0) {
-        return null;
+        return success(null);
       }
 
       const existing = this.mapRowToDto(selectResult.value.columns, selectResult.value.rows[0]);
@@ -139,82 +139,78 @@ export class ExperimentMetadataRepository {
           ? dto.experimentQuestionId
           : existing.experimentQuestionId;
 
-      const columnsJson = JSON.stringify(updatedColumns).replace(/'/g, "''");
-      const rowsJson = JSON.stringify(updatedRows).replace(/'/g, "''");
-      const identifierVal = updatedIdentifierColumnId
-        ? `'${updatedIdentifierColumnId.replace(/'/g, "''")}'`
-        : "NULL";
-      const questionVal = updatedExperimentQuestionId
-        ? `'${updatedExperimentQuestionId.replace(/'/g, "''")}'`
-        : "NULL";
+      const updateQuery = `UPDATE ${this.metadataTable} SET columns = :columns, rows = :rows, identifier_column_id = :identifier_column_id, experiment_question_id = :experiment_question_id, updated_at = :updated_at WHERE id = :id`;
 
-      const updateQuery = `UPDATE ${this.metadataTable} SET columns = '${columnsJson}', rows = '${rowsJson}', identifier_column_id = ${identifierVal}, experiment_question_id = ${questionVal}, updated_at = '${isoNow}' WHERE id = '${escapedId}'`;
+      const parameters = [
+        { name: "columns", value: JSON.stringify(updatedColumns) },
+        { name: "rows", value: JSON.stringify(updatedRows) },
+        { name: "identifier_column_id", value: updatedIdentifierColumnId ?? null },
+        { name: "experiment_question_id", value: updatedExperimentQuestionId ?? null },
+        { name: "updated_at", value: isoNow },
+        { name: "id", value: id },
+      ];
 
       const updateResult = await this.databricksPort.executeSqlQuery(
         this.databricksPort.CENTRUM_SCHEMA_NAME,
         updateQuery,
+        parameters,
       );
 
       if (updateResult.isFailure()) {
-        throw new Error(updateResult.error.message);
+        return failure(AppError.internal(`Failed to update metadata: ${updateResult.error.message}`));
       }
 
-      return {
+      return success({
         ...existing,
         columns: updatedColumns,
         rows: updatedRows,
         identifierColumnId: updatedIdentifierColumnId ?? null,
         experimentQuestionId: updatedExperimentQuestionId ?? null,
         updatedAt: now,
-      };
-    });
-  }
+      });
+    }
 
   async delete(id: string): Promise<Result<boolean>> {
-    this.logger.debug({
-      msg: "Deleting metadata",
-      id,
-    });
+      this.logger.debug({
+        msg: "Deleting metadata",
+        id,
+      });
 
-    return tryCatch(async () => {
-      const escapedId = id.replace(/'/g, "''");
-      const query = `DELETE FROM ${this.metadataTable} WHERE id = '${escapedId}'`;
+      const query = `DELETE FROM ${this.metadataTable} WHERE id = :id`;
 
       const result = await this.databricksPort.executeSqlQuery(
         this.databricksPort.CENTRUM_SCHEMA_NAME,
         query,
+        [{ name: "id", value: id }],
       );
 
       if (result.isFailure()) {
-        throw new Error(result.error.message);
+        return failure(AppError.internal(`Failed to delete metadata: ${result.error.message}`));
       }
 
-      return true;
-    });
-  }
+      return success(true);
+    }
 
   async deleteByExperimentId(experimentId: string): Promise<Result<boolean>> {
-    this.logger.debug({
-      msg: "Deleting metadata by experiment ID",
-      experimentId,
-    });
+      this.logger.debug({
+        msg: "Deleting metadata by experiment ID",
+        experimentId,
+      });
 
-    return tryCatch(async () => {
-      const escapedId = experimentId.replace(/'/g, "''");
-      const query = `DELETE FROM ${this.metadataTable} WHERE experiment_id = '${escapedId}'`;
+      const query = `DELETE FROM ${this.metadataTable} WHERE experiment_id = :experiment_id`;
 
       const result = await this.databricksPort.executeSqlQuery(
         this.databricksPort.CENTRUM_SCHEMA_NAME,
         query,
+        [{ name: "experiment_id", value: experimentId }],
       );
 
       if (result.isFailure()) {
-        throw new Error(result.error.message);
+        return failure(AppError.internal(`Failed to delete metadata by experiment ID: ${result.error.message}`));
       }
 
-      return true;
-    });
-  }
+      return success(true);
+    }
 
   /**
    * Map a raw Databricks row to ExperimentMetadataDto

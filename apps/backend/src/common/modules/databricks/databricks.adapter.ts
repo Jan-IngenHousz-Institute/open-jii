@@ -684,13 +684,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Execute a SQL query in a specific schema.
    * Uses INLINE disposition and JSON_ARRAY format.
    */
-  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    parameters?: { name: string; value?: string | null; type?: string }[],
+  ): Promise<Result<SchemaData>> {
     this.logger.debug({
       msg: "Executing SQL query",
       operation: "executeSqlQuery",
       schemaName,
     });
-    return this.sqlService.executeSqlQuery(schemaName, sqlStatement);
+    return this.sqlService.executeSqlQuery(schemaName, sqlStatement, parameters);
   }
 
   /**
