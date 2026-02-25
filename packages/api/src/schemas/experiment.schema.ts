@@ -789,11 +789,19 @@ export const zExperimentDataQuery = z.object({
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
 });
 
+export const zLinkedMetadataRow = z.object({
+  dataRowId: z.string().describe("The value from the data row used for matching"),
+  metadata: z.record(z.string(), z.unknown()).describe("Metadata key-value pairs for this row"),
+});
+
 export const zExperimentDataTable = z.object({
   name: z.string().describe("Technical name of the table used for queries and operations"),
   catalog_name: z.string().describe("Catalog name"),
   schema_name: z.string().describe("Schema name"),
   data: zExperimentData.optional(),
+  linkedMetadata: z.array(zLinkedMetadataRow).optional().describe(
+    "Metadata rows linked to data rows via identifierColumnId and experimentQuestionId",
+  ),
   page: z.number().int(),
   pageSize: z.number().int(),
   totalPages: z.number().int(),
@@ -970,6 +978,7 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
+export type LinkedMetadataRow = z.infer<typeof zLinkedMetadataRow>;
 export type ColumnInfo = z.infer<typeof zColumnInfo>;
 export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
 export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
