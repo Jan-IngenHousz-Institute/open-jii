@@ -89,10 +89,17 @@ export class WebSerialAdapter implements ITransportAdapter {
         const { value, done } = await this.reader.read();
 
         if (done) {
+          console.log("[WebSerial] Read stream done");
           break;
         }
 
         const text = decoder.decode(value, { stream: true });
+        console.log(
+          "[WebSerial] Received data, length:",
+          text.length,
+          "preview:",
+          text.substring(0, 200),
+        );
         this.dataCallback?.(text);
       }
     } catch (error) {
@@ -114,9 +121,16 @@ export class WebSerialAdapter implements ITransportAdapter {
       throw new Error("Writer not initialized");
     }
 
+    console.log(
+      "[WebSerial] Sending data, length:",
+      data.length,
+      "preview:",
+      data.substring(0, 200),
+    );
     const encoder = new TextEncoder();
     const encoded = encoder.encode(data);
     await this.writer.write(encoded);
+    console.log("[WebSerial] Data sent successfully, bytes:", encoded.length);
   }
 
   onDataReceived(callback: (data: string) => void): void {

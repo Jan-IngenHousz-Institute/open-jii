@@ -29,16 +29,23 @@ export class MultispeqProtocol extends DeviceProtocol {
 
   initialize(transport: ITransportAdapter): void {
     super.initialize(transport);
+    console.log("[MultispeqProtocol] Initializing with transport");
 
     // Set up transport data handler
     transport.onDataReceived((data) => this.handleDataReceived(data));
   }
 
   private handleDataReceived(data: string): void {
+    console.log("[MultispeqProtocol] Raw data chunk received:", JSON.stringify(data));
+
     // Buffer data until we receive a complete message (ends with newline)
     this.dataBuffer.push(data);
 
     if (!data.endsWith("\n")) {
+      console.log(
+        "[MultispeqProtocol] Buffering incomplete message, chunks so far:",
+        this.dataBuffer.length,
+      );
       return;
     }
 
@@ -46,11 +53,18 @@ export class MultispeqProtocol extends DeviceProtocol {
     const fullData = this.dataBuffer.join("");
     this.dataBuffer = [];
 
+    console.log("[MultispeqProtocol] Complete message received, length:", fullData.length);
+
     const cleanData = removeLineEnding(fullData);
     const { data: jsonData, checksum } = extractChecksum(cleanData, 8);
 
+    console.log("[MultispeqProtocol] Extracted checksum:", checksum);
+    console.log("[MultispeqProtocol] JSON data (first 500 chars):", jsonData.substring(0, 500));
+
     // Try to parse as JSON, fall back to raw string
     const parsedData: unknown = tryParseJson(jsonData);
+
+    console.log("[MultispeqProtocol] Parsed data type:", typeof parsedData);
 
     // Emit response event
     void this.emitter.emit("receivedReplyFromDevice", {
@@ -62,26 +76,35 @@ export class MultispeqProtocol extends DeviceProtocol {
   async execute<T = unknown>(command: string | object): Promise<CommandResult<T>> {
     this.ensureInitialized();
 
+    const commandStr = stringifyIfObject(command);
+    console.log("[MultispeqProtocol] Executing command:", commandStr.substring(0, 500));
+
     try {
       // Send command
-      const commandStr = stringifyIfObject(command);
       const commandWithEnding = addLineEnding(commandStr);
 
       if (!this.transport) {
         throw new Error("Transport not initialized");
       }
 
+      console.log("[MultispeqProtocol] Sending to transport, length:", commandWithEnding.length);
       await this.transport.send(commandWithEnding);
+      console.log("[MultispeqProtocol] Command sent, waiting for response...");
 
       // Wait for response
       const response = await this.waitForResponse();
 
+      console.log(
+        "[MultispeqProtocol] Response received, success: true, data type:",
+        typeof response.data,
+      );
       return {
         success: true,
         data: response.data as T,
         checksum: response.checksum,
       };
     } catch (error) {
+      console.error("[MultispeqProtocol] Command failed:", error);
       return {
         success: false,
         error: error instanceof Error ? error : new Error(String(error)),
@@ -108,6 +131,7 @@ export class MultispeqProtocol extends DeviceProtocol {
   private waitForResponse(): Promise<MultispeqCommandResult> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
+        console.error("[MultispeqProtocol] Command timed out after 30s");
         this.emitter.off("receivedReplyFromDevice", handler);
         reject(new Error("Command timeout"));
       }, 30000); // 30 second timeout

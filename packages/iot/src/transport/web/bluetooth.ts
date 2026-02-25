@@ -128,19 +128,35 @@ export class WebBluetoothAdapter implements ITransportAdapter {
       const decoder = new TextDecoder();
       const text = decoder.decode(value);
 
+      console.log(
+        "[WebBluetooth] Notification chunk received, length:",
+        text.length,
+        "preview:",
+        text.substring(0, 200),
+      );
       this.dataBuffer.push(text);
 
       // Check for end-of-message marker
       if (!text.endsWith("__EOM__")) {
+        console.log(
+          "[WebBluetooth] Buffering incomplete message, chunks so far:",
+          this.dataBuffer.length,
+        );
         return;
       }
 
       // Process complete message
       const fullData = this.dataBuffer.join("").slice(0, -7); // Remove __EOM__
       this.dataBuffer = [];
+      console.log(
+        "[WebBluetooth] Complete message received, length:",
+        fullData.length,
+        "preview:",
+        fullData.substring(0, 500),
+      );
       this.dataCallback?.(fullData);
     } catch (error) {
-      console.error("Error processing notification:", error);
+      console.error("[WebBluetooth] Error processing notification:", error);
     }
   }
 
@@ -154,10 +170,17 @@ export class WebBluetoothAdapter implements ITransportAdapter {
     }
 
     const stringData = stringifyIfObject(data);
+    console.log(
+      "[WebBluetooth] Sending data, length:",
+      stringData.length,
+      "preview:",
+      stringData.substring(0, 200),
+    );
     const encoder = new TextEncoder();
     const encoded = encoder.encode(stringData);
 
     await this.writeCharacteristic.writeValueWithResponse(encoded);
+    console.log("[WebBluetooth] Data sent successfully, bytes:", encoded.length);
   }
 
   onDataReceived(callback: (data: string) => void): void {
