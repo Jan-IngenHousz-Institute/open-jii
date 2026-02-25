@@ -104,10 +104,14 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
 
   startNewIteration: () =>
     set((state) => {
+      const nextIterationCount = state.iterationCount + 1;
       const newState = {
         currentFlowStep: 0,
-        iterationCount: state.iterationCount + 1,
+        iterationCount: nextIterationCount,
         scanResult: undefined, // Clear scan result for new iteration
+        // Show overview at the start of each new iteration (non-first iteration)
+        showingOverview: true,
+        returnToOverviewAfterEdit: false,
       };
 
       // Check if first step is instruction and skip it

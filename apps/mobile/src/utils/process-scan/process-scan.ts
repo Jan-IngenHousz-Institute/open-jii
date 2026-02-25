@@ -25,7 +25,7 @@ async function loadMathLib() {
 const mathLibSourcePromise = loadMathLib();
 
 async function executeMacro(code: string, json: object): Promise<MacroOutput> {
-  console.log("[macro] (JS) input:", JSON.stringify(json));
+  // console.log("[macro] (JS) input:", JSON.stringify(json));
   const mathLibSource = await mathLibSourcePromise;
   // Wrap the macro code in an IIFE to isolate its scope from mathLibSource variables
   // This prevents variable name conflicts while still allowing access to mathLib functions
@@ -37,7 +37,7 @@ async function executeMacro(code: string, json: object): Promise<MacroOutput> {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const fn = new Function("json", macroSource);
     const output = fn(json);
-    console.log("[macro] (JS) output:", JSON.stringify(output));
+    // console.log("[macro] (JS) output:", JSON.stringify(output));
     return output;
   } catch (err) {
     console.error("[macro] (JS) error:", err);
