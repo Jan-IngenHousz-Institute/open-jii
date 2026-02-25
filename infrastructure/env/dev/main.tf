@@ -83,7 +83,7 @@ module "cognito" {
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
   allow_unauthenticated_identities = false
-  auth_role = true
+  auth_role                        = true
 }
 
 module "vpc" {
