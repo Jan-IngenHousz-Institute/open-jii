@@ -23,6 +23,12 @@ This means:
 | `next/navigation`                  | Yes          | Global setup — override per-test via `vi.mocked()` |
 | `next/headers`                     | Yes          | Global setup — override per-test via `vi.mocked()` |
 | `~/env`                            | Yes          | Global setup — deterministic test values           |
+| `@repo/ui/hooks` (toast)           | Yes          | Global setup — noop stub                           |
+| `@/hooks/useLocale`                | Yes          | Global setup — returns `"en-US"`                   |
+| `React.use`                        | Yes          | Global setup — spy wrapping real impl              |
+| `~/app/actions/auth`               | Yes          | Global setup — returns `null` (unauthenticated)    |
+| `~/app/actions/revalidate`         | Yes          | Global setup — noop stub                           |
+| `@repo/auth/client`                | Yes          | Global setup — authClient methods + useSession     |
 | `@repo/ui/components`              | **No**       | Render real components                             |
 | `next/link`, `next/image`          | **No**       | Render real components (work in jsdom)             |
 | `lucide-react` icons               | **No**       | Render real SVGs                                   |
@@ -74,9 +80,9 @@ Loaded automatically via `setupFiles` in `vitest.config.ts`. Provides:
 - **React cleanup** — `afterEach(() => cleanup())`
 - **MSW lifecycle** — `beforeAll(server.listen)`, `afterEach(server.resetHandlers)`, `afterAll(server.close)`
 - **jsdom polyfills** — `window.matchMedia` for Radix UI components
-- **Global mocks** — i18n, PostHog, next/navigation, next/headers, env
+- **Global mocks** — i18n, PostHog, next/navigation, next/headers, env, toast, useLocale, React.use, auth action, revalidateAuth, authClient, useSession
 
-Because these are global, **test files should not re-declare** `vi.mock("@repo/i18n")` or `vi.mock("next/navigation")`. Instead, override specific return values per-test:
+Because these are global, **test files should not re-declare** `vi.mock("@repo/i18n")`, `vi.mock("next/navigation")`, `vi.mock("~/app/actions/auth")`, `vi.mock("@repo/auth/client")`, etc. Instead, override specific return values per-test:
 
 ```tsx
 import { redirect } from "next/navigation";
@@ -88,6 +94,52 @@ it("redirects unauthenticated users", async () => {
   });
   // ...
 });
+```
+
+#### Overriding auth state
+
+```tsx
+import { createSession } from "@/test/factories";
+import { auth } from "~/app/actions/auth";
+
+it("shows dashboard for logged-in user", async () => {
+  vi.mocked(auth).mockResolvedValue(createSession());
+  // ...
+});
+```
+
+#### Overriding `React.use` for client components with `Promise` params
+
+The global mock wraps the real `React.use` as a spy, so it works normally by default. For client components that call `use(params)` where `params` is a `Promise`, override in `beforeEach`:
+
+```tsx
+import { use } from "react";
+
+beforeEach(() => {
+  vi.mocked(use).mockReturnValue({ id: "test-id", locale: "en-US" });
+});
+```
+
+#### Overriding `authClient` methods
+
+```tsx
+import { authClient } from "@repo/auth/client";
+
+beforeEach(() => {
+  vi.mocked(authClient.signIn.emailOtp).mockResolvedValue({
+    error: null,
+    data: { user: { registered: true } },
+  });
+});
+```
+
+#### Testing files that _implement_ a globally mocked module
+
+If your test file tests the **real** `auth()` or `revalidateAuth()` function (i.e., the unit test for that module itself), use `vi.unmock()` to bypass the global stub:
+
+```tsx
+vi.unmock("~/app/actions/auth");
+// Now `import { auth } from "./auth"` gives the real function
 ```
 
 ### `test/test-utils.tsx`
@@ -176,19 +228,26 @@ it("renders the page", async () => {
 
 ### Testing pages (with auth)
 
-Use `vi.mocked()` to control auth state per-test:
+Use `vi.mocked()` to control auth state per-test. The `auth` action is globally mocked (returns `null` by default), so no per-file `vi.mock()` is needed:
 
 ```tsx
+import { createSession } from "@/test/factories";
 import { auth } from "~/app/actions/auth";
 
-vi.mock("~/app/actions/auth");
-
 it("redirects to login when unauthenticated", async () => {
-  vi.mocked(auth).mockResolvedValue(null);
+  // auth already returns null by default
   const Page = (await import("./page")).default;
   const ui = await Page({ params: { locale: "en-US" } });
   render(ui);
   expect(redirect).toHaveBeenCalledWith("/en-US/login");
+});
+
+it("shows content when authenticated", async () => {
+  vi.mocked(auth).mockResolvedValue(createSession());
+  const Page = (await import("./page")).default;
+  const ui = await Page({ params: { locale: "en-US" } });
+  render(ui);
+  expect(screen.getByText("Welcome")).toBeInTheDocument();
 });
 ```
 
@@ -255,9 +314,18 @@ npx vitest run --coverage
 When refactoring existing tests, follow this checklist:
 
 - [ ] Remove local `vi.mock("@repo/i18n")` — handled by global setup
+- [ ] Remove local `vi.mock("@repo/i18n/server")` — handled by global setup
 - [ ] Remove local `vi.mock("next/navigation")` — handled by global setup
+- [ ] Remove local `vi.mock("next/headers")` — handled by global setup
 - [ ] Remove local `vi.mock("posthog-js/react")` — handled by global setup
+- [ ] Remove local `vi.mock("posthog-js")` — handled by global setup
 - [ ] Remove local `vi.mock("~/env")` — handled by global setup
+- [ ] Remove local `vi.mock("@repo/ui/hooks")` — handled by global setup
+- [ ] Remove local `vi.mock("@/hooks/useLocale")` — handled by global setup
+- [ ] Remove local `vi.mock("~/app/actions/auth")` — handled by global setup
+- [ ] Remove local `vi.mock("~/app/actions/revalidate")` — handled by global setup
+- [ ] Remove local `vi.mock("@repo/auth/client")` — handled by global setup
+- [ ] Remove local `vi.mock("react")` for `React.use` — handled by global setup; override with `vi.mocked(use).mockReturnValue(...)` in `beforeEach`
 - [ ] Remove mocks for `@repo/ui/components` — render real components
 - [ ] Remove mocks for `next/link` — renders fine in jsdom
 - [ ] Remove mocks for `lucide-react` — renders fine in jsdom

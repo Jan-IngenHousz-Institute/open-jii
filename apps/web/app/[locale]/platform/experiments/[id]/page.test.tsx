@@ -1,16 +1,12 @@
 import { createExperimentAccess } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
+import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 
 import ExperimentOverviewPage from "./page";
-
-vi.mock("react", async (importOriginal) => ({
-  ...(await importOriginal()),
-  use: () => ({ id: "test-id" }),
-}));
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
@@ -47,7 +43,10 @@ function mountDefaults() {
 }
 
 describe("ExperimentOverviewPage", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(use).mockReturnValue({ id: "test-id" });
+  });
 
   const props = { params: Promise.resolve({ id: "test-id" }) };
 

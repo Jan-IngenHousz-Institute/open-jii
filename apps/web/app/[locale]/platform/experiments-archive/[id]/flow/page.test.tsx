@@ -6,21 +6,12 @@ import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpd
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { notFound } from "next/navigation";
-import React, { useEffect, useImperativeHandle, forwardRef } from "react";
+import React, { useEffect, useImperativeHandle, forwardRef, use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import ExperimentFlowPage from "./page";
 
 globalThis.React = React;
-
-// Mock react.use to return a params-like object { id }
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-experiment-id" }),
-  };
-});
 
 // Mocks for hooks used by the page
 vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
@@ -90,6 +81,7 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(use).mockReturnValue({ id: "test-experiment-id" });
   mockGetFlowData.mockReturnValue({ nodes: [{ id: "n1" }] });
 
   vi.spyOn(console, "error").mockImplementation(() => {

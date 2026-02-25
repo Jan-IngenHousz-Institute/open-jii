@@ -1,9 +1,7 @@
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({ auth: mockAuth }));
+import { auth } from "~/app/actions/auth";
 
 const mockFooter = vi.fn();
 vi.mock("~/lib/contentful", () => ({
@@ -26,12 +24,12 @@ vi.mock("@repo/cms", () => ({
 describe("InfoGroupLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
     mockFooter.mockResolvedValue({ footerCollection: { items: [{ links: [] }] } });
   });
 
   const renderLayout = async (session: unknown = null) => {
-    mockAuth.mockResolvedValue(session);
+    vi.mocked(auth).mockResolvedValue(session as never);
     const { default: Layout } = await import("./layout");
     const ui = await Layout({
       children: <div data-testid="child">Child content</div>,

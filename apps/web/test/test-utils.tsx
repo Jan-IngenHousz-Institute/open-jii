@@ -115,10 +115,14 @@ function renderHook<TResult>(hook: () => TResult, options?: { queryClient?: Quer
     );
   }
 
-  return rtlRenderHook(hook, { wrapper: Wrapper }) as {
+  const hookResult = rtlRenderHook(hook, { wrapper: Wrapper });
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- useRouter is globally mocked in setup.ts
+  const router = useRouter();
+  return { ...hookResult, router } as {
     result: { current: TResult };
     rerender: () => void;
     unmount: () => void;
+    router: AppRouterInstance;
   };
 }
 

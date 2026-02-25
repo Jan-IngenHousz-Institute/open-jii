@@ -2,17 +2,13 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import AccountSettingsPage from "./page";
 
 globalThis.React = React;
 
 // --- Mocks ---
-const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  auth: (): unknown => mockAuth(),
-}));
-
 vi.mock("~/components/account-settings/account-settings", () => ({
   AccountSettings: ({ session }: { session: unknown }) => (
     <div data-testid="account-settings">
@@ -29,7 +25,7 @@ describe("AccountSettingsPage", () => {
 
   it("renders the account settings page with session", async () => {
     const mockSession = { user: { id: "123", name: "Test User" } };
-    mockAuth.mockResolvedValue(mockSession);
+    vi.mocked(auth).mockResolvedValue(mockSession as never);
 
     render(await AccountSettingsPage());
 
@@ -38,7 +34,7 @@ describe("AccountSettingsPage", () => {
   });
 
   it("renders the account settings page without session", async () => {
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
 
     render(await AccountSettingsPage());
 
@@ -48,7 +44,7 @@ describe("AccountSettingsPage", () => {
 
   it("renders with correct structure and spacing", async () => {
     const mockSession = { user: { id: "123", name: "Test User" } };
-    mockAuth.mockResolvedValue(mockSession);
+    vi.mocked(auth).mockResolvedValue(mockSession as never);
 
     const { container } = render(await AccountSettingsPage());
 
@@ -58,16 +54,16 @@ describe("AccountSettingsPage", () => {
 
   it("calls auth function to get session", async () => {
     const mockSession = { user: { id: "123", name: "Test User" } };
-    mockAuth.mockResolvedValue(mockSession);
+    vi.mocked(auth).mockResolvedValue(mockSession as never);
 
     await AccountSettingsPage();
 
-    expect(mockAuth).toHaveBeenCalledTimes(1);
+    expect(auth).toHaveBeenCalledTimes(1);
   });
 
   it("passes session to AccountSettings component", async () => {
     const mockSession = { user: { id: "123", name: "Test User", email: "test@example.com" } };
-    mockAuth.mockResolvedValue(mockSession);
+    vi.mocked(auth).mockResolvedValue(mockSession as never);
 
     render(await AccountSettingsPage());
 
@@ -76,7 +72,7 @@ describe("AccountSettingsPage", () => {
   });
 
   it("handles undefined session", async () => {
-    mockAuth.mockResolvedValue(undefined);
+    vi.mocked(auth).mockResolvedValue(undefined as never);
 
     render(await AccountSettingsPage());
 
@@ -84,7 +80,7 @@ describe("AccountSettingsPage", () => {
   });
 
   it("handles auth function throwing error", async () => {
-    mockAuth.mockRejectedValue(new Error("Auth failed"));
+    vi.mocked(auth).mockRejectedValue(new Error("Auth failed"));
 
     await expect(AccountSettingsPage()).rejects.toThrow("Auth failed");
   });

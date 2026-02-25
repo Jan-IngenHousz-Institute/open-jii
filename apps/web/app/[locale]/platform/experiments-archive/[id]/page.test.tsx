@@ -6,21 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { notFound } from "next/navigation";
-import React from "react";
+import React, { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import ExperimentOverviewPage from "./page";
 
 globalThis.React = React;
-
-// Mock react.use to return a params-like object { id }
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-experiment-id" }),
-  };
-});
 
 // Mock hooks used by the page
 vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
@@ -71,6 +62,7 @@ const renderWithQueryClient = (ui: React.ReactElement) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(use).mockReturnValue({ id: "test-experiment-id" });
 
   // Default safe returns
   vi.mocked(useExperimentLocations).mockReturnValue({

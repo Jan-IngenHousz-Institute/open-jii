@@ -6,10 +6,14 @@
  * run for real; MSW intercepts the HTTP requests made by the `tsr`
  * client and returns controlled responses.
  */
-import { createExperimentAccess, createVisualization } from "@/test/factories";
+import {
+  createExperimentAccess,
+  createExperimentDataTable,
+  createVisualization,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
-import { useRouter, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -31,84 +35,43 @@ vi.mock("./experiment-visualization-renderer", () => ({
 const vizId = "viz-123";
 const expId = "exp-456";
 
-const vizPayload = createVisualization({
-  id: vizId,
-  name: "Test Visualization",
-  description: "A test visualization",
-  experimentId: expId,
-  createdBy: "user-123",
-  createdByName: "Test User",
-  createdAt: "2024-01-01T00:00:00.000Z",
-  updatedAt: "2024-01-15T00:00:00.000Z",
-});
-
-const accessPayload = (overrides: Record<string, unknown> = {}) =>
-  createExperimentAccess({
-    isAdmin: (overrides.isAdmin as boolean | undefined) ?? true,
-    experiment: {
-      id: expId,
-      name: "Test",
-      description: "",
-      ...((overrides.experiment as Record<string, unknown> | undefined) ?? {}),
-    },
-  });
+const defaultViz = createVisualization({ id: vizId, experimentId: expId });
+const defaultDataTable = createExperimentDataTable({ name: defaultViz.dataConfig.tableName });
+const defaultColumns = defaultDataTable.data?.columns ?? [];
 
 /* ─── Setup helper ──────────────────────────────────────────── */
 
 interface SetupOpts {
-  accessOverrides?: Record<string, unknown>;
-  vizOverride?: Record<string, unknown> | null;
-  vizError?: boolean;
+  access?: Parameters<typeof createExperimentAccess>[0];
+  visualization?: Partial<ExperimentVisualization> | false;
   isArchiveContext?: boolean;
 }
 
 function setup(opts: SetupOpts = {}) {
-  // Reset router mocks per test
-  const router = vi.mocked(useRouter)();
-  router.push.mockClear();
-  router.back.mockClear();
   vi.mocked(notFound).mockClear();
 
-  // Access handler
   server.mount(contract.experiments.getExperimentAccess, {
-    body: accessPayload(opts.accessOverrides),
+    body: createExperimentAccess({
+      isAdmin: true,
+      experiment: { id: expId },
+      ...opts.access,
+    }),
   });
 
-  // Visualization handler
-  if (opts.vizError) {
+  if (opts.visualization === false) {
     server.mount(contract.experiments.getExperimentVisualization, { status: 500 });
-  } else if (opts.vizOverride !== undefined) {
-    if (opts.vizOverride === null) {
-      server.mount(contract.experiments.getExperimentVisualization, { status: 500 });
-    } else {
-      server.mount(contract.experiments.getExperimentVisualization, {
-        body: { ...vizPayload, ...opts.vizOverride },
-      });
-    }
   } else {
-    server.mount(contract.experiments.getExperimentVisualization, { body: vizPayload });
+    server.mount(contract.experiments.getExperimentVisualization, {
+      body: { ...defaultViz, ...opts.visualization },
+    });
   }
 
-  // Data handler — always needed for the "test_table" assertion
   server.mount(contract.experiments.getExperimentData, {
-    body: [
-      {
-        name: "test_table",
-        catalog_name: "catalog",
-        schema_name: "schema",
-        totalRows: 2,
-        data: {
-          rows: [
-            { time: 1, value: 10 },
-            { time: 2, value: 20 },
-          ],
-        },
-      },
-    ],
+    body: [defaultDataTable],
   });
 
   const user = userEvent.setup();
-  render(
+  const { router } = render(
     <ExperimentVisualizationDetails
       visualizationId={vizId}
       experimentId={expId}
@@ -116,7 +79,7 @@ function setup(opts: SetupOpts = {}) {
     />,
   );
 
-  return { user, router: vi.mocked(useRouter)() };
+  return { user, router };
 }
 
 /* ─── Tests ─────────────────────────────────────────────────── */
@@ -133,20 +96,21 @@ describe("ExperimentVisualizationDetails", () => {
 
     // Data arrives via MSW
     await waitFor(() => {
-      expect(screen.getAllByText("Test Visualization").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(defaultViz.name).length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("A test visualization")).toBeInTheDocument();
-    expect(screen.getByText("Test User")).toBeInTheDocument();
-    expect(screen.getByText("test_table")).toBeInTheDocument();
+    expect(screen.getByText(defaultViz.description ?? "")).toBeInTheDocument();
+    expect(screen.getByText(defaultViz.createdByName ?? "")).toBeInTheDocument();
+    expect(screen.getByText(defaultDataTable.name)).toBeInTheDocument();
   });
 
   it("renders error state with back navigation", async () => {
-    const { user, router } = setup({ vizError: true });
+    const { user, router } = setup({ visualization: false });
 
     await waitFor(() => {
       expect(screen.getByText("ui.messages.failedToLoad")).toBeInTheDocument();
     });
     await user.click(screen.getByText("ui.actions.back"));
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
 
@@ -155,15 +119,19 @@ describe("ExperimentVisualizationDetails", () => {
   it("displays formatted dates", async () => {
     setup();
     await waitFor(() => {
-      expect(screen.getByText(new Date("2024-01-01").toLocaleDateString())).toBeInTheDocument();
+      expect(
+        screen.getByText(new Date(defaultViz.createdAt).toLocaleDateString()),
+      ).toBeInTheDocument();
     });
-    expect(screen.getByText(new Date("2024-01-15").toLocaleDateString())).toBeInTheDocument();
+    expect(
+      screen.getByText(new Date(defaultViz.updatedAt).toLocaleDateString()),
+    ).toBeInTheDocument();
   });
 
   it("shows columns count", async () => {
     setup();
     await waitFor(() => {
-      expect(screen.getByText("2 columns")).toBeInTheDocument();
+      expect(screen.getByText(`${defaultColumns.length} columns`)).toBeInTheDocument();
     });
   });
 
@@ -175,18 +143,18 @@ describe("ExperimentVisualizationDetails", () => {
   });
 
   it("shows truncated ID when createdByName is missing", async () => {
-    setup({ vizOverride: { createdByName: undefined } });
+    setup({ visualization: { createdByName: undefined } });
     await waitFor(() => {
-      expect(screen.getByText("user-123...")).toBeInTheDocument();
+      expect(screen.getByText(`${defaultViz.createdBy.substring(0, 8)}...`)).toBeInTheDocument();
     });
   });
 
   it("hides description when null", async () => {
-    setup({ vizOverride: { description: null } });
+    setup({ visualization: { description: null } });
     await waitFor(() => {
-      expect(screen.getAllByText("Test Visualization").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(defaultViz.name).length).toBeGreaterThan(0);
     });
-    expect(screen.queryByText("A test visualization")).not.toBeInTheDocument();
+    expect(screen.queryByText(defaultViz.description ?? "")).not.toBeInTheDocument();
   });
 
   /* Actions */
@@ -198,6 +166,7 @@ describe("ExperimentVisualizationDetails", () => {
     });
     await user.click(screen.getByText("ui.actions.title"));
     await user.click(screen.getByText("ui.actions.edit"));
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(
       `/en-US/platform/experiments/${expId}/analysis/visualizations/${vizId}/edit`,
     );
@@ -221,50 +190,54 @@ describe("ExperimentVisualizationDetails", () => {
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "ui.messages.deleteSuccess" });
     });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
 
   /* Columns dropdown */
 
   it("shows column details on click", async () => {
+    const columnsLabel = `${defaultColumns.length} columns`;
+
     const { user } = setup();
     await waitFor(() => {
-      expect(screen.getByText("2 columns")).toBeInTheDocument();
+      expect(screen.getByText(columnsLabel)).toBeInTheDocument();
     });
-    await user.click(screen.getByText("2 columns"));
-    expect(screen.getByText("time")).toBeInTheDocument();
-    expect(screen.getByText("value")).toBeInTheDocument();
-    expect(screen.getAllByText(/^[xy]$/)).toHaveLength(2);
+    await user.click(screen.getByText(columnsLabel));
+    for (const col of defaultColumns) {
+      expect(screen.getByText(col.name)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText(/^[xy]$/)).toHaveLength(defaultColumns.length);
   });
 
   /* Archived experiment */
 
   describe("archived experiment", () => {
     const archiveAccess = {
-      experiment: { status: "archived" },
+      experiment: { status: "archived" as const },
       isAdmin: false,
     };
 
     it("calls notFound without archive context", async () => {
-      setup({ accessOverrides: archiveAccess });
+      setup({ access: archiveAccess });
       await waitFor(() => {
         expect(vi.mocked(notFound)).toHaveBeenCalled();
       });
     });
 
     it("does NOT call notFound with archive context", async () => {
-      setup({ accessOverrides: archiveAccess, isArchiveContext: true });
+      setup({ access: archiveAccess, isArchiveContext: true });
       // Wait for data to arrive, then assert notFound was NOT called
       await waitFor(() => {
         expect(
-          screen.queryByText("ui.messages.loading") ?? screen.queryByText("Test Visualization"),
+          screen.queryByText("ui.messages.loading") ?? screen.queryByText(defaultViz.name),
         ).toBeTruthy();
       });
       expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
     it("disables actions button for archived experiment", async () => {
-      setup({ accessOverrides: archiveAccess, isArchiveContext: true });
+      setup({ access: archiveAccess, isArchiveContext: true });
       await waitFor(() => {
         expect(screen.getByText("ui.actions.title")).toBeInTheDocument();
       });

@@ -1,7 +1,6 @@
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
@@ -47,7 +46,7 @@ describe("MacroInfoCard", () => {
     const spy = server.mount(contract.macros.deleteMacro);
     const user = userEvent.setup();
 
-    render(<MacroInfoCard macroId="macro-1" macro={macro as never} />);
+    const { router } = render(<MacroInfoCard macroId="macro-1" macro={macro as never} />);
 
     await user.click(screen.getByText("macroSettings.deleteMacro"));
     await user.click(screen.getByText("macroSettings.delete"));
@@ -56,6 +55,7 @@ describe("MacroInfoCard", () => {
       expect(spy.called).toBe(true);
     });
     expect(spy.params).toMatchObject({ id: "macro-1" });
-    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/en-US/platform/macros");
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).toHaveBeenCalledWith("/en-US/platform/macros");
   });
 });

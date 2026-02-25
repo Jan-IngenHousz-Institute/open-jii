@@ -14,7 +14,7 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -90,17 +90,19 @@ describe("useExperiments", () => {
   /* State updates */
 
   it("updates filter and URL", () => {
-    const { result } = renderHook(() => useExperiments({}));
+    const { result, router } = renderHook(() => useExperiments({}));
 
     act(() => result.current.setFilter("all"));
     expect(result.current.filter).toBe("all");
-    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/platform/experiments?filter=all", {
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).toHaveBeenCalledWith("/platform/experiments?filter=all", {
       scroll: false,
     });
 
     act(() => result.current.setFilter("member"));
     expect(result.current.filter).toBe("member");
-    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/platform/experiments", {
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
       scroll: false,
     });
   });
@@ -122,8 +124,9 @@ describe("useExperiments", () => {
   it("cleans up invalid URL filter", () => {
     mockSearchParams.get.mockReturnValue("invalid");
     mockSearchParams.toString.mockReturnValue("filter=invalid");
-    renderHook(() => useExperiments({}));
-    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/platform/experiments", {
+    const { router } = renderHook(() => useExperiments({}));
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
       scroll: false,
     });
   });
@@ -131,8 +134,9 @@ describe("useExperiments", () => {
   it("does not clean up valid 'all' filter in URL", () => {
     mockSearchParams.get.mockReturnValue("all");
     mockSearchParams.toString.mockReturnValue("filter=all");
-    renderHook(() => useExperiments({}));
-    expect(vi.mocked(useRouter)().push).not.toHaveBeenCalled();
+    const { router } = renderHook(() => useExperiments({}));
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   /* Error handling */
