@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { RichTextarea } from "./rich-textarea";
+
+const mockToolbarContainer = {
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+};
 
 // Mock react-quilljs
 const mockQuillInstance = {
@@ -14,6 +19,9 @@ const mockQuillInstance = {
   on: vi.fn(),
   off: vi.fn(),
   enable: vi.fn(),
+  getModule: vi.fn(() => ({
+    container: mockToolbarContainer,
+  })),
 };
 
 vi.mock("react-quilljs", () => ({
@@ -31,6 +39,9 @@ describe("RichTextarea", () => {
     mockQuillInstance.on.mockClear();
     mockQuillInstance.off.mockClear();
     mockQuillInstance.enable.mockClear();
+    mockQuillInstance.getModule.mockClear();
+    mockToolbarContainer.addEventListener.mockClear();
+    mockToolbarContainer.removeEventListener.mockClear();
   });
 
   it("renders the editor container", () => {
@@ -68,52 +79,42 @@ describe("RichTextarea", () => {
 
     render(<RichTextarea value={testValue} onChange={mockOnChange} />);
 
-    waitFor(() => {
-      expect(mockQuillInstance.root.innerHTML).toBe(testValue);
-    });
+    expect(mockQuillInstance.root.innerHTML).toBe(testValue);
   });
 
   it("enables editor by default", () => {
     render(<RichTextarea value="" onChange={mockOnChange} />);
 
-    waitFor(() => {
-      expect(mockQuillInstance.enable).toHaveBeenCalledWith(true);
-    });
+    expect(mockQuillInstance.enable).toHaveBeenCalledWith(true);
   });
 
   it("disables editor when isDisabled is true", () => {
     render(<RichTextarea value="" onChange={mockOnChange} isDisabled />);
 
-    waitFor(() => {
-      expect(mockQuillInstance.enable).toHaveBeenCalledWith(false);
-    });
+    expect(mockQuillInstance.enable).toHaveBeenCalledWith(false);
   });
 
   it("registers text-change event handler", () => {
     render(<RichTextarea value="" onChange={mockOnChange} />);
 
-    waitFor(() => {
-      expect(mockQuillInstance.on).toHaveBeenCalledWith("text-change", expect.any(Function));
-    });
+    expect(mockQuillInstance.on).toHaveBeenCalledWith("text-change", expect.any(Function));
   });
 
   it("calls onChange when content changes", () => {
     render(<RichTextarea value="" onChange={mockOnChange} />);
 
-    waitFor(() => {
-      // Get the text-change handler
-      const textChangeHandler = mockQuillInstance.on.mock.calls.find(
-        (call) => call[0] === "text-change",
-      )?.[1];
+    // Get the text-change handler
+    const textChangeHandler = mockQuillInstance.on.mock.calls.find(
+      (call) => call[0] === "text-change",
+    )?.[1];
 
-      if (textChangeHandler) {
-        // Simulate content change
-        mockQuillInstance.root.innerHTML = "<p>New content</p>";
-        textChangeHandler();
+    if (textChangeHandler) {
+      // Simulate content change
+      mockQuillInstance.root.innerHTML = "<p>New content</p>";
+      textChangeHandler();
 
-        expect(mockOnChange).toHaveBeenCalledWith("<p>New content</p>");
-      }
-    });
+      expect(mockOnChange).toHaveBeenCalledWith("<p>New content</p>");
+    }
   });
 
   it("does not call onChange if content is unchanged", () => {
@@ -122,19 +123,17 @@ describe("RichTextarea", () => {
 
     render(<RichTextarea value={testValue} onChange={mockOnChange} />);
 
-    waitFor(() => {
-      // Get the text-change handler
-      const textChangeHandler = mockQuillInstance.on.mock.calls.find(
-        (call) => call[0] === "text-change",
-      )?.[1];
+    // Get the text-change handler
+    const textChangeHandler = mockQuillInstance.on.mock.calls.find(
+      (call) => call[0] === "text-change",
+    )?.[1];
 
-      if (textChangeHandler) {
-        // Simulate text change but content is same
-        textChangeHandler();
+    if (textChangeHandler) {
+      // Simulate text change but content is same
+      textChangeHandler();
 
-        expect(mockOnChange).not.toHaveBeenCalled();
-      }
-    });
+      expect(mockOnChange).not.toHaveBeenCalled();
+    }
   });
 
   it("unregisters event handler on unmount", () => {
@@ -142,9 +141,7 @@ describe("RichTextarea", () => {
 
     unmount();
 
-    waitFor(() => {
-      expect(mockQuillInstance.off).toHaveBeenCalledWith("text-change", expect.any(Function));
-    });
+    expect(mockQuillInstance.off).toHaveBeenCalledWith("text-change", expect.any(Function));
   });
 
   it("applies correct styling classes", () => {
@@ -164,25 +161,19 @@ describe("RichTextarea", () => {
 
     rerender(<RichTextarea value={newValue} onChange={mockOnChange} />);
 
-    waitFor(() => {
-      expect(mockQuillInstance.root.innerHTML).toBe(newValue);
-    });
+    expect(mockQuillInstance.root.innerHTML).toBe(newValue);
   });
 
   it("handles disabled state changes", () => {
     const { rerender } = render(<RichTextarea value="" onChange={mockOnChange} />);
 
-    waitFor(() => {
-      expect(mockQuillInstance.enable).toHaveBeenCalledWith(true);
-    });
+    expect(mockQuillInstance.enable).toHaveBeenCalledWith(true);
 
     mockQuillInstance.enable.mockClear();
 
     rerender(<RichTextarea value="" onChange={mockOnChange} isDisabled />);
 
-    waitFor(() => {
-      expect(mockQuillInstance.enable).toHaveBeenCalledWith(false);
-    });
+    expect(mockQuillInstance.enable).toHaveBeenCalledWith(false);
   });
 
   it("re-registers event handlers when onChange changes", () => {
@@ -194,11 +185,54 @@ describe("RichTextarea", () => {
 
     rerender(<RichTextarea value="" onChange={newOnChange} />);
 
-    waitFor(() => {
-      // Should unregister old handler
-      expect(mockQuillInstance.off).toHaveBeenCalledWith("text-change", expect.any(Function));
-      // Should register new handler
-      expect(mockQuillInstance.on).toHaveBeenCalledWith("text-change", expect.any(Function));
-    });
+    // Should unregister old handler
+    expect(mockQuillInstance.off).toHaveBeenCalledWith("text-change", expect.any(Function));
+    // Should register new handler
+    expect(mockQuillInstance.on).toHaveBeenCalledWith("text-change", expect.any(Function));
+  });
+
+  it("prevents default on toolbar mousedown events", () => {
+    render(<RichTextarea value="" onChange={mockOnChange} />);
+
+    expect(mockQuillInstance.getModule).toHaveBeenCalledWith("toolbar");
+
+    expect(mockToolbarContainer.addEventListener).toHaveBeenCalledWith(
+      "mousedown",
+      expect.any(Function),
+    );
+
+    // Get the mousedown handler
+    const mousedownHandler = mockToolbarContainer.addEventListener.mock.calls.find(
+      (call) => call[0] === "mousedown",
+    )?.[1];
+
+    if (mousedownHandler) {
+      // Create a mock event
+      const mockEvent = {
+        preventDefault: vi.fn(),
+      };
+
+      mousedownHandler(mockEvent);
+
+      // Verify preventDefault was called
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
+    }
+  });
+  it("removes toolbar mousedown listener on unmount", () => {
+    const removeEventListener = vi.fn();
+
+    // Override container to include removeEventListener
+    mockToolbarContainer.removeEventListener = removeEventListener;
+
+    const { unmount } = render(<RichTextarea value="" onChange={mockOnChange} />);
+
+    // Get the registered handler
+    const mousedownHandler = mockToolbarContainer.addEventListener.mock.calls.find(
+      (call) => call[0] === "mousedown",
+    )?.[1];
+
+    unmount();
+
+    expect(removeEventListener).toHaveBeenCalledWith("mousedown", mousedownHandler);
   });
 });
