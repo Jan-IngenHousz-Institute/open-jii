@@ -1,13 +1,15 @@
 import { eq, experiments } from "@repo/database";
 
-import { assertFailure } from "../../../../common/utils/fp-utils";
+import { assertFailure, failure, AppError, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { DeleteExperimentUseCase } from "./delete-experiment";
 
 describe("DeleteExperimentUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: DeleteExperimentUseCase;
+  let metadataRepository: ExperimentMetadataRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -17,6 +19,8 @@ describe("DeleteExperimentUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(DeleteExperimentUseCase);
+    metadataRepository = testApp.module.get(ExperimentMetadataRepository);
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -78,5 +82,47 @@ describe("DeleteExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
+  });
+
+  it("should attempt to delete metadata from Databricks before deleting the experiment", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Metadata Cleanup Test",
+      userId: testUserId,
+    });
+
+    const deleteByExperimentIdSpy = vi
+      .spyOn(metadataRepository, "deleteByExperimentId")
+      .mockResolvedValue(success(true));
+
+    const result = await useCase.execute(experiment.id, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+    expect(deleteByExperimentIdSpy).toHaveBeenCalledWith(experiment.id);
+  });
+
+  it("should still delete the experiment even if metadata cleanup fails", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Metadata Cleanup Failure Test",
+      userId: testUserId,
+    });
+
+    // Simulate Databricks metadata deletion failure
+    vi.spyOn(metadataRepository, "deleteByExperimentId").mockResolvedValue(
+      failure(AppError.internal("Databricks connection failed")),
+    );
+
+    // The experiment should still be deleted successfully
+    const result = await useCase.execute(experiment.id, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+
+    // Verify the experiment is actually gone from Postgres
+    const experimentCheck = await testApp.database
+      .select()
+      .from(experiments)
+      .where(eq(experiments.id, experiment.id))
+      .limit(1);
+
+    expect(experimentCheck.length).toBe(0);
   });
 });
