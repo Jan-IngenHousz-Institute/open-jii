@@ -22,15 +22,11 @@ import { toast } from "@repo/ui/hooks";
 
 import ExperimentVisualizationDetails from "./experiment-visualization-details";
 
-/* ─── Mocks that are NOT HTTP ────────────────────────────────── */
-
 vi.mock("./experiment-visualization-renderer", () => ({
   default: ({ visualization }: { visualization: ExperimentVisualization }) => (
     <div data-testid="visualization-renderer">{visualization.name}</div>
   ),
 }));
-
-/* ─── Fixtures ──────────────────────────────────────────────── */
 
 const vizId = "viz-123";
 const expId = "exp-456";
@@ -38,8 +34,6 @@ const expId = "exp-456";
 const defaultViz = createVisualization({ id: vizId, experimentId: expId });
 const defaultDataTable = createExperimentDataTable({ name: defaultViz.dataConfig.tableName });
 const defaultColumns = defaultDataTable.data?.columns ?? [];
-
-/* ─── Setup helper ──────────────────────────────────────────── */
 
 interface SetupOpts {
   access?: Parameters<typeof createExperimentAccess>[0];
@@ -82,12 +76,8 @@ function setup(opts: SetupOpts = {}) {
   return { user, router };
 }
 
-/* ─── Tests ─────────────────────────────────────────────────── */
-
 describe("ExperimentVisualizationDetails", () => {
   beforeEach(() => vi.clearAllMocks());
-
-  /* States */
 
   it("shows loading then resolves with visualization details", async () => {
     setup();
@@ -110,11 +100,8 @@ describe("ExperimentVisualizationDetails", () => {
       expect(screen.getByText("ui.messages.failedToLoad")).toBeInTheDocument();
     });
     await user.click(screen.getByText("ui.actions.back"));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
-
-  /* Successful rendering */
 
   it("displays formatted dates", async () => {
     setup();
@@ -157,8 +144,6 @@ describe("ExperimentVisualizationDetails", () => {
     expect(screen.queryByText(defaultViz.description ?? "")).not.toBeInTheDocument();
   });
 
-  /* Actions */
-
   it("navigates to edit page", async () => {
     const { user, router } = setup();
     await waitFor(() => {
@@ -166,7 +151,6 @@ describe("ExperimentVisualizationDetails", () => {
     });
     await user.click(screen.getByText("ui.actions.title"));
     await user.click(screen.getByText("ui.actions.edit"));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(
       `/en-US/platform/experiments/${expId}/analysis/visualizations/${vizId}/edit`,
     );
@@ -190,11 +174,8 @@ describe("ExperimentVisualizationDetails", () => {
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "ui.messages.deleteSuccess" });
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
-
-  /* Columns dropdown */
 
   it("shows column details on click", async () => {
     const columnsLabel = `${defaultColumns.length} columns`;
@@ -209,8 +190,6 @@ describe("ExperimentVisualizationDetails", () => {
     }
     expect(screen.getAllByText(/^[xy]$/)).toHaveLength(defaultColumns.length);
   });
-
-  /* Archived experiment */
 
   describe("archived experiment", () => {
     const archiveAccess = {

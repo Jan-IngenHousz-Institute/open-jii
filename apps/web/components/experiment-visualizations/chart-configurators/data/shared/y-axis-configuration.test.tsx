@@ -1,28 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import YAxisConfiguration from "./y-axis-configuration";
 
-// Mock jsdom APIs needed by Radix UI components
-beforeAll(() => {
-  global.ResizeObserver = class ResizeObserver {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    observe() {}
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    unobserve() {}
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    disconnect() {}
-  };
-
-  HTMLElement.prototype.hasPointerCapture = () => false;
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  HTMLElement.prototype.scrollIntoView = () => {};
-});
+HTMLElement.prototype.hasPointerCapture = () => false;
+HTMLElement.prototype.scrollIntoView = () => {};
 
 // Mock table data
 const mockColumns: DataColumn[] = [

@@ -1,8 +1,7 @@
-import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import {
   Command,
@@ -16,16 +15,7 @@ import {
   CommandSeparator,
 } from "./command";
 
-// Mock ResizeObserver
-beforeAll(() => {
-  global.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-
-  Element.prototype.scrollIntoView = vi.fn();
-});
+Element.prototype.scrollIntoView = vi.fn();
 
 describe("Command", () => {
   describe("Command (Root)", () => {

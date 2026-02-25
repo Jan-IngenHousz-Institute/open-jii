@@ -118,7 +118,6 @@ describe("EmailLoginForm", () => {
     const { router } = render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
     submitOTP();
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/platform"));
   });
 
@@ -139,7 +138,6 @@ describe("EmailLoginForm", () => {
     await submitEmail();
     submitOTP();
     await waitFor(() => expect(authClient.signIn.emailOtp).toHaveBeenCalled());
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).not.toHaveBeenCalled();
   });
 

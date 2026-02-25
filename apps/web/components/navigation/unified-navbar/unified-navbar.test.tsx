@@ -185,7 +185,6 @@ describe("UnifiedNavbar", () => {
     const dropdown = screen.getAllByTestId("dropdown-content")[0];
     await user.click(within(dropdown).getByRole("menuitem", { name: /Sign Out/i }));
     await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/");
   });
 

@@ -179,8 +179,6 @@ vi.mock("@/util/base64", () => ({
   encodeBase64: vi.fn((s: string) => Buffer.from(s).toString("base64")),
 }));
 
-/* ─── Children — mocked, they have their own tests ───────────── */
-
 vi.mock("./new-macro-details-card", () => ({
   NewMacroDetailsCard: () => <div data-testid="details-card" />,
 }));
@@ -222,8 +220,6 @@ vi.mock("../components/macro-code-editor", () => ({
   ),
 }));
 
-/* ─── Tests ──────────────────────────────────────────────────── */
-
 describe("NewMacroForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -252,7 +248,6 @@ describe("NewMacroForm", () => {
     const user = userEvent.setup();
     const { router } = render(<NewMacroForm />);
     await user.click(screen.getByText("newMacro.cancel"));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.back).toHaveBeenCalled();
   });
 
@@ -275,7 +270,6 @@ describe("NewMacroForm", () => {
 
     // onSuccess navigates to the new macro
     await waitFor(() => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(router.push).toHaveBeenCalled();
     });
   });

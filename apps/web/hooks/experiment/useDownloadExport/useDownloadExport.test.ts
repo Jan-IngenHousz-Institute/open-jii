@@ -92,12 +92,10 @@ describe("useDownloadExport", () => {
       { credentials: "include" },
     );
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(document.createElement).toHaveBeenCalledWith("a");
     expect(mockLink.href).toBe("blob:test-url");
     expect(mockLink.download).toBe("export-456.csv");
     expect(mockLink.click).toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test-url");
   });
 

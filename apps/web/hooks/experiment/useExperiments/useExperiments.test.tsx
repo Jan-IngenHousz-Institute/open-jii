@@ -21,8 +21,6 @@ import { contract } from "@repo/api";
 
 import { useExperiments } from "./useExperiments";
 
-/* ─── Non-HTTP mocks ─────────────────────────────────────────── */
-
 vi.mock("../../useDebounce", () => ({
   useDebounce: vi.fn((v: string) => [v]),
 }));
@@ -32,8 +30,6 @@ const mockSearchParams = {
   toString: vi.fn().mockReturnValue(""),
 };
 
-/* ─── Tests ──────────────────────────────────────────────────── */
-
 describe("useExperiments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,8 +38,6 @@ describe("useExperiments", () => {
     mockSearchParams.get.mockReturnValue(null);
     mockSearchParams.toString.mockReturnValue("");
   });
-
-  /* Initialization */
 
   it("initializes with defaults and fetches experiments", async () => {
     server.mount(contract.experiments.listExperiments, { body: [] });
@@ -72,8 +66,6 @@ describe("useExperiments", () => {
     expect(result.current.search).toBe("test search");
   });
 
-  /* Data */
-
   it("returns experiment data from API", async () => {
     server.mount(contract.experiments.listExperiments, {
       body: [createExperiment({ id: "exp-1" }), createExperiment({ id: "exp-2" })],
@@ -87,21 +79,17 @@ describe("useExperiments", () => {
     expect(result.current.data?.body).toHaveLength(2);
   });
 
-  /* State updates */
-
   it("updates filter and URL", () => {
     const { result, router } = renderHook(() => useExperiments({}));
 
     act(() => result.current.setFilter("all"));
     expect(result.current.filter).toBe("all");
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/platform/experiments?filter=all", {
       scroll: false,
     });
 
     act(() => result.current.setFilter("member"));
     expect(result.current.filter).toBe("member");
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
       scroll: false,
     });
@@ -113,8 +101,6 @@ describe("useExperiments", () => {
     expect(result.current.search).toBe("new search");
   });
 
-  /* URL initialization */
-
   it("reads filter from URL params", () => {
     mockSearchParams.get.mockReturnValue("all");
     const { result } = renderHook(() => useExperiments({}));
@@ -125,7 +111,6 @@ describe("useExperiments", () => {
     mockSearchParams.get.mockReturnValue("invalid");
     mockSearchParams.toString.mockReturnValue("filter=invalid");
     const { router } = renderHook(() => useExperiments({}));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
       scroll: false,
     });
@@ -135,11 +120,8 @@ describe("useExperiments", () => {
     mockSearchParams.get.mockReturnValue("all");
     mockSearchParams.toString.mockReturnValue("filter=all");
     const { router } = renderHook(() => useExperiments({}));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).not.toHaveBeenCalled();
   });
-
-  /* Error handling */
 
   it("handles API error gracefully", async () => {
     server.mount(contract.experiments.listExperiments, { status: 500 });

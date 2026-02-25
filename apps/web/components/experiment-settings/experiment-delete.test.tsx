@@ -40,7 +40,6 @@ describe("ExperimentDelete", () => {
         description: "experimentSettings.experimentDeletedSuccess",
       });
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments");
   });
 
