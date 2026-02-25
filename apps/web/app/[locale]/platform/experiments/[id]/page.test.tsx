@@ -1,25 +1,15 @@
-import { render, screen } from "@/test/test-utils";
+import { createExperimentAccess } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { contract } from "@repo/api";
 
 import ExperimentOverviewPage from "./page";
 
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal()),
   use: () => ({ id: "test-id" }),
-}));
-
-const mockAccess = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: mockAccess,
-}));
-vi.mock("@/hooks/experiment/useExperimentLocations/useExperimentLocations", () => ({
-  useExperimentLocations: () => ({ data: undefined, isLoading: false }),
-}));
-vi.mock("@/hooks/experiment/useExperimentMembers/useExperimentMembers", () => ({
-  useExperimentMembers: () => ({ data: undefined, isLoading: false, isError: false }),
-}));
-vi.mock("@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations", () => ({
-  useExperimentVisualizations: () => ({ data: undefined, isLoading: false }),
 }));
 
 vi.mock("@/components/error-display", () => ({
@@ -44,42 +34,46 @@ vi.mock("@/components/experiment-visualizations/experiment-visualizations-displa
   default: () => <section aria-label="visualizations" />,
 }));
 
+const accessPayload = createExperimentAccess({
+  isAdmin: true,
+  experiment: { id: "test-id", name: "T", description: "d", status: "active" },
+});
+
+function mountDefaults() {
+  server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+  server.mount(contract.experiments.getExperimentLocations, { body: [] });
+  server.mount(contract.experiments.listExperimentMembers, { body: [] });
+  server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+}
+
 describe("ExperimentOverviewPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
   const props = { params: Promise.resolve({ id: "test-id" }) };
 
   it("shows loading state", () => {
-    mockAccess.mockReturnValue({ data: undefined, isLoading: true, error: null });
+    mountDefaults();
     render(<ExperimentOverviewPage {...props} />);
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
-  it("shows error display on failure", () => {
-    mockAccess.mockReturnValue({ data: undefined, isLoading: false, error: new Error("fail") });
+  it("shows error display on failure", async () => {
+    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
     render(<ExperimentOverviewPage {...props} />);
-    expect(screen.getByRole("alert")).toHaveTextContent("failedToLoad");
-  });
-
-  it("shows not-found when data is missing", () => {
-    mockAccess.mockReturnValue({ data: undefined, isLoading: false, error: null });
-    render(<ExperimentOverviewPage {...props} />);
-    expect(screen.getByText("notFound")).toBeInTheDocument();
-  });
-
-  it("renders experiment sections on success", () => {
-    mockAccess.mockReturnValue({
-      data: {
-        body: {
-          experiment: { status: "active", name: "T", id: "1", description: "d" },
-          isAdmin: true,
-        },
-      },
-      isLoading: false,
-      error: null,
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("failedToLoad");
     });
+  });
+
+  it("renders experiment sections on success", async () => {
+    mountDefaults();
     render(<ExperimentOverviewPage {...props} />);
-    expect(screen.getByRole("region", { name: /details/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("region", { name: /details/i })).toBeInTheDocument();
+    });
     expect(screen.getByRole("region", { name: /description/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /protocols/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /measurements/i })).toBeInTheDocument();

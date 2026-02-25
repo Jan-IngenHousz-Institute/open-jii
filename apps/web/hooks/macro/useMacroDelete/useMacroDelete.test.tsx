@@ -10,6 +10,7 @@
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api";
@@ -32,7 +33,10 @@ describe("useMacroDelete", () => {
   });
 
   it("optimistically removes macro from the list cache", async () => {
-    const queryClient = createTestQueryClient();
+    // Use Infinity gcTime so cache entries survive without active observers
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+    });
 
     // Pre-populate the macros list cache
     queryClient.setQueryData(["macros"], {

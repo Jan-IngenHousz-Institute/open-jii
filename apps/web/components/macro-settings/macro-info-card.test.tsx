@@ -1,20 +1,13 @@
-import { render, screen } from "@/test/test-utils";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
+import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+
 import { MacroInfoCard } from "./macro-info-card";
-
-const mockPush = vi.fn();
-vi.mock("next/navigation", async (importOriginal) => ({
-  ...(await importOriginal()),
-  useRouter: () => ({ push: mockPush }),
-}));
-
-const mockDeleteMacro = vi.fn();
-vi.mock("@/hooks/macro/useMacroDelete/useMacroDelete", () => ({
-  useMacroDelete: () => ({ mutateAsync: mockDeleteMacro, isPending: false }),
-}));
 
 const macro = {
   id: "macro-1",
@@ -51,7 +44,7 @@ describe("MacroInfoCard", () => {
 
   it("opens delete dialog and deletes macro", async () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    mockDeleteMacro.mockResolvedValue({});
+    const spy = server.mount(contract.macros.deleteMacro);
     const user = userEvent.setup();
 
     render(<MacroInfoCard macroId="macro-1" macro={macro as never} />);
@@ -59,7 +52,10 @@ describe("MacroInfoCard", () => {
     await user.click(screen.getByText("macroSettings.deleteMacro"));
     await user.click(screen.getByText("macroSettings.delete"));
 
-    expect(mockDeleteMacro).toHaveBeenCalledWith({ params: { id: "macro-1" } });
-    expect(mockPush).toHaveBeenCalledWith("/en-US/platform/macros");
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
+    });
+    expect(spy.params).toMatchObject({ id: "macro-1" });
+    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/en-US/platform/macros");
   });
 });

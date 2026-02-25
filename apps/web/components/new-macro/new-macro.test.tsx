@@ -101,12 +101,6 @@ const mockPush = vi.fn();
 const mockBack = vi.fn();
 const mockMutate = vi.fn();
 
-let macroCreateOnSuccess: ((data: { body: { id: string } }) => void) | undefined;
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, back: mockBack }),
-}));
-
 vi.mock("@repo/auth/client", () => ({
   useSession: () => ({
     data: { user: { id: sessionUserId } },
@@ -182,7 +176,6 @@ vi.mock("@repo/i18n", () => ({
   useLocale: () => "en",
 }));
 
-vi.mock("@repo/ui/hooks");
 vi.mock("@hookform/resolvers/zod", () => ({
   zodResolver: () => (values: Record<string, unknown>) => ({ values, errors: {} }),
 }));
@@ -269,7 +262,7 @@ describe("NewMacroForm", () => {
     const user = userEvent.setup();
     render(<NewMacroForm />);
     await user.click(screen.getByText("newMacro.cancel"));
-    expect(mockBack).toHaveBeenCalled();
+    expect(vi.mocked(useRouter)().back).toHaveBeenCalled();
   });
 
   it("submits form — POST /api/v1/macros via MSW", async () => {
@@ -291,7 +284,7 @@ describe("NewMacroForm", () => {
 
     // onSuccess navigates to the new macro
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalled();
+      expect(vi.mocked(useRouter)().push).toHaveBeenCalled();
     });
   });
 
