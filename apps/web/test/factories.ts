@@ -13,6 +13,8 @@ import type {
   Experiment,
   TransferRequest,
   ExperimentAccess,
+  ExperimentDataResponse,
+  Location,
   Macro,
   Protocol,
   UserProfile,
@@ -65,7 +67,9 @@ export function createTransferRequest(overrides: Partial<TransferRequest> = {}):
 // ── Experiment Access ───────────────────────────────────────────
 
 export function createExperimentAccess(
-  overrides: Partial<ExperimentAccess> & { experiment?: Partial<Experiment> } = {},
+  overrides: Omit<Partial<ExperimentAccess>, "experiment"> & {
+    experiment?: Partial<Experiment>;
+  } = {},
 ): ExperimentAccess {
   const { experiment: experimentOverrides, ...accessOverrides } = overrides;
   return {
@@ -228,6 +232,62 @@ export function createPlace(overrides: Partial<PlaceSearchResult> = {}): PlaceSe
   };
 }
 
+// ── Location ────────────────────────────────────────────────────
+
+let locationSeq = 0;
+
+export function createLocation(overrides: Partial<Location> = {}): Location {
+  locationSeq++;
+  return {
+    id: `loc-${locationSeq}-${crypto.randomUUID().slice(0, 8)}`,
+    name: `Location ${locationSeq}`,
+    latitude: 42.36 + locationSeq * 0.01,
+    longitude: -71.06 + locationSeq * 0.01,
+    country: "US",
+    region: "Massachusetts",
+    municipality: "Boston",
+    postalCode: undefined,
+    addressLabel: undefined,
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+// ── Experiment Data Table (with data) ───────────────────────────
+
+type ExperimentDataTable = ExperimentDataResponse[number];
+
+let dataTableSeq = 0;
+
+export function createExperimentDataTable(
+  overrides: Partial<ExperimentDataTable> = {},
+): ExperimentDataTable {
+  dataTableSeq++;
+  return {
+    name: `table_${dataTableSeq}`,
+    catalog_name: "catalog",
+    schema_name: "schema",
+    totalRows: 2,
+    page: 1,
+    pageSize: 100,
+    totalPages: 1,
+    data: {
+      columns: [
+        { name: "time", type_name: "DOUBLE", type_text: "DOUBLE" },
+        { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ],
+      rows: [
+        { time: 1, value: 10 },
+        { time: 2, value: 20 },
+      ],
+      totalRows: 2,
+      truncated: false,
+    },
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 /** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
@@ -239,4 +299,6 @@ export function resetFactories() {
   vizSeq = 0;
   tableSeq = 0;
   placeSeq = 0;
+  locationSeq = 0;
+  dataTableSeq = 0;
 }

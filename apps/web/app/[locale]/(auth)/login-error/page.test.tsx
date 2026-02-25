@@ -1,11 +1,9 @@
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import LoginErrorPage from "./page";
-
-const { mockAuth } = vi.hoisted(() => ({ mockAuth: vi.fn() }));
-vi.mock("~/app/actions/auth", () => ({ auth: mockAuth, providerMap: [] }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
@@ -22,7 +20,7 @@ vi.mock("~/components/auth/error-content", () => ({
 describe("LoginErrorPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
   });
 
   const renderPage = async (searchParams: Record<string, string> = { error: "OAuthError" }) => {

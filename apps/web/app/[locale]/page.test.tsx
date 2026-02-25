@@ -1,13 +1,12 @@
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import Home, { generateMetadata } from "./page";
 
-const { mockAuth, mockPageHome } = vi.hoisted(() => ({
-  mockAuth: vi.fn(),
+const { mockPageHome } = vi.hoisted(() => ({
   mockPageHome: vi.fn(),
 }));
-vi.mock("~/app/actions/auth", () => ({ auth: mockAuth }));
 vi.mock("~/lib/contentful", () => ({
   getContentfulClients: () =>
     Promise.resolve({
@@ -44,7 +43,7 @@ const defaultProps = { params: Promise.resolve({ locale: "en-US" }) };
 describe("Home page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
     mockPageHome.mockResolvedValue(contentfulData);
   });
 
@@ -60,7 +59,7 @@ describe("Home page", () => {
   });
 
   it("shows authenticated state in navbar when user is logged in", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "1", name: "Test" } });
+    vi.mocked(auth).mockResolvedValue({ user: { id: "1", name: "Test" } } as never);
     render(await Home(defaultProps));
 
     expect(screen.getByText("Logged in")).toBeInTheDocument();

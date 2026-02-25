@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
-import React from "react";
+import React, { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import DataLayout from "../layout";
@@ -14,14 +14,6 @@ globalThis.React = React;
 // -------------------
 
 // Mock React's use function for async params
-const mockUse = vi.fn();
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: (promise: Promise<unknown>) => mockUse(promise),
-  };
-});
 
 // Mock useExperiment hook
 const mockUseExperiment = vi.fn();
@@ -80,7 +72,7 @@ function renderDataLayout({
   error?: Error | null;
 } = {}) {
   // Mock the async params
-  mockUse.mockReturnValue(mockParams);
+  vi.mocked(use).mockReturnValue(mockParams);
 
   // Mock useExperiment hook response
   if (error) {
@@ -133,7 +125,7 @@ describe("<DataLayout />", () => {
 
   describe("No Data State", () => {
     it("shows not found message when no data is returned", () => {
-      mockUse.mockReturnValue(mockParams);
+      vi.mocked(use).mockReturnValue(mockParams);
       mockUseExperiment.mockReturnValue({
         data: null,
         isLoading: false,
@@ -151,7 +143,7 @@ describe("<DataLayout />", () => {
     });
 
     it("shows not found message when experiment body is missing", () => {
-      mockUse.mockReturnValue(mockParams);
+      vi.mocked(use).mockReturnValue(mockParams);
       mockUseExperiment.mockReturnValue({
         data: { body: null },
         isLoading: false,
@@ -200,7 +192,7 @@ describe("<DataLayout />", () => {
     it("calls use function with params promise", () => {
       renderDataLayout();
 
-      expect(mockUse).toHaveBeenCalledWith(expect.any(Promise));
+      expect(vi.mocked(use)).toHaveBeenCalledWith(expect.any(Promise));
     });
   });
 });

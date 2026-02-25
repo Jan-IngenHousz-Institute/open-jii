@@ -5,6 +5,9 @@ import { authClient } from "@repo/auth/client";
 
 import { auth } from "./auth";
 
+// This file tests the real auth() function — unmock the global stub.
+vi.unmock("~/app/actions/auth");
+
 vi.mock("@repo/auth/client", () => ({
   authClient: { getSession: vi.fn() },
 }));

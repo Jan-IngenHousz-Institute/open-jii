@@ -1,20 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import React from "react";
+import React, { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import ExperimentFlowPage from "./page";
 
 globalThis.React = React;
-
-// Mock React.use
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn(() => ({ id: "exp-123", locale: "en-US" })),
-  };
-});
 
 // --- Mocks ---
 vi.mock("next/navigation", () => ({
@@ -149,6 +140,7 @@ describe("ExperimentFlowPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(use).mockReturnValue({ id: "exp-123", locale: "en-US" } as never);
     mockUseExperiment.mockReturnValue(mockExperimentData);
     mockUseExperimentAccess.mockReturnValue(mockAccessData);
     mockUseExperimentFlow.mockReturnValue(mockFlowData);
