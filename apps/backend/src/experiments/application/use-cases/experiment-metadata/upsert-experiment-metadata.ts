@@ -47,7 +47,7 @@ export class UpsertExperimentMetadataUseCase {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
-      ({
+      async ({
         experiment,
         hasArchiveAccess,
       }: {
@@ -77,7 +77,8 @@ export class UpsertExperimentMetadataUseCase {
         }
 
         // Check if metadata already exists
-        const existingResult = this.experimentMetadataRepository.findByExperimentId(experimentId);
+        const existingResult =
+          await this.experimentMetadataRepository.findByExperimentId(experimentId);
 
         if (existingResult.isFailure()) {
           this.logger.error({
@@ -101,7 +102,7 @@ export class UpsertExperimentMetadataUseCase {
             metadataId: existing.id,
           });
 
-          const updateResult = this.experimentMetadataRepository.update(existing.id, data);
+          const updateResult = await this.experimentMetadataRepository.update(existing.id, data);
 
           if (updateResult.isFailure() || !updateResult.value) {
             this.logger.error({
@@ -131,7 +132,11 @@ export class UpsertExperimentMetadataUseCase {
           experimentId,
         });
 
-        const createResult = this.experimentMetadataRepository.create(experimentId, data, userId);
+        const createResult = await this.experimentMetadataRepository.create(
+          experimentId,
+          data,
+          userId,
+        );
 
         if (createResult.isFailure()) {
           this.logger.error({

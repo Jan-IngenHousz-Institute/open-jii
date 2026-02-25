@@ -26,7 +26,7 @@ export class DeleteExperimentMetadataUseCase {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
-      ({
+      async ({
         experiment,
         hasArchiveAccess,
       }: {
@@ -56,7 +56,8 @@ export class DeleteExperimentMetadataUseCase {
         }
 
         // Check if metadata exists
-        const existingResult = this.experimentMetadataRepository.findByExperimentId(experimentId);
+        const existingResult =
+          await this.experimentMetadataRepository.findByExperimentId(experimentId);
 
         if (existingResult.isFailure()) {
           this.logger.error({
@@ -80,7 +81,8 @@ export class DeleteExperimentMetadataUseCase {
         }
 
         // Delete metadata
-        const deleteResult = this.experimentMetadataRepository.deleteByExperimentId(experimentId);
+        const deleteResult =
+          await this.experimentMetadataRepository.deleteByExperimentId(experimentId);
 
         if (deleteResult.isFailure()) {
           this.logger.error({
