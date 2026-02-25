@@ -5,6 +5,8 @@ import { setConsentStatus } from "~/lib/cookie-consent";
 
 import { toast } from "@repo/ui/hooks";
 
+import { toast } from "@repo/ui/hooks";
+
 import CookieSettingsPage from "./page";
 
 let mockConsentStatus = "pending";
