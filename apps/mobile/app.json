@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.openjii.app"
     },
     "android": {
-      "versionCode": 42,
+      "versionCode": 43,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#D3D3D3"
