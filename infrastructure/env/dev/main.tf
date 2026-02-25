@@ -837,6 +837,14 @@ module "opennext_waf" {
   rate_limit         = 500
   log_retention_days = 30
 
+  large_body_bypass_routes = [
+    {
+      search_string         = "/ingest"
+      positional_constraint = "STARTS_WITH"
+      method                = "POST"
+    }
+  ]
+
   tags = {
     Environment = var.environment
     Project     = "open-jii"
