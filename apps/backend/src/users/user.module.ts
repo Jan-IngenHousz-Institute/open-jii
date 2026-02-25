@@ -6,7 +6,7 @@ import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { AcceptPendingInvitationsUseCase } from "./application/use-cases/accept-pending-invitations/accept-pending-invitations";
-import { CreateInvitationsUseCase } from "./application/use-cases/create-invitations/create-invitations";
+import { CreateInvitationUseCase } from "./application/use-cases/create-invitation/create-invitation";
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
 import { DeleteUserUseCase } from "./application/use-cases/delete-user/delete-user";
 import { GetInvitationsUseCase } from "./application/use-cases/get-invitations/get-invitations";
@@ -52,7 +52,7 @@ import { UserController } from "./presentation/user.controller";
     GetUserProfileUseCase,
     GetUsersMetadataUseCase,
     AcceptPendingInvitationsUseCase,
-    CreateInvitationsUseCase,
+    CreateInvitationUseCase,
     GetInvitationsUseCase,
     RevokeInvitationUseCase,
     UpdateInvitationRoleUseCase,
@@ -64,7 +64,7 @@ import { UserController } from "./presentation/user.controller";
     UserRepository,
     GetUsersMetadataUseCase,
     InvitationRepository,
-    CreateInvitationsUseCase,
+    CreateInvitationUseCase,
     GetInvitationsUseCase,
     RevokeInvitationUseCase,
     UpdateInvitationRoleUseCase,

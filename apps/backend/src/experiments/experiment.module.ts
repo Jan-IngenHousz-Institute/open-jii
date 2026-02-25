@@ -1,4 +1,4 @@
-import { forwardRef, Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
@@ -80,13 +80,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 
 @Module({
-  imports: [
-    DatabricksModule,
-    AwsModule,
-    EmailModule,
-    AnalyticsModule,
-    forwardRef(() => UserModule),
-  ],
+  imports: [DatabricksModule, AwsModule, EmailModule, AnalyticsModule, UserModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,

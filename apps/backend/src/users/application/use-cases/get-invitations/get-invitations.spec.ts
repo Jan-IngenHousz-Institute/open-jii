@@ -2,14 +2,14 @@ import { assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
-import { CreateInvitationsUseCase } from "../create-invitations/create-invitations";
+import { CreateInvitationUseCase } from "../create-invitation/create-invitation";
 import { GetInvitationsUseCase } from "./get-invitations";
 
 describe("GetInvitationsUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: GetInvitationsUseCase;
-  let createUseCase: CreateInvitationsUseCase;
+  let createUseCase: CreateInvitationUseCase;
   let emailPort: EmailPort;
 
   beforeAll(async () => {
@@ -20,7 +20,7 @@ describe("GetInvitationsUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(GetInvitationsUseCase);
-    createUseCase = testApp.module.get(CreateInvitationsUseCase);
+    createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
 
     vi.restoreAllMocks();
@@ -52,7 +52,7 @@ describe("GetInvitationsUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
     await createUseCase.execute(
       "experiment",
@@ -82,7 +82,7 @@ describe("GetInvitationsUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
     await createUseCase.execute(
       "experiment",
@@ -111,7 +111,7 @@ describe("GetInvitationsUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
     await createUseCase.execute(
       "experiment",

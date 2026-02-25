@@ -141,10 +141,6 @@ export const zCreateInvitationBody = z.object({
   role: zExperimentMemberRole.optional().default("member"),
 });
 
-export const zCreateInvitationsBody = z.object({
-  invitations: z.array(zCreateInvitationBody).min(1).max(50),
-});
-
 export const zUpdateInvitationRoleBody = z.object({
   role: zExperimentMemberRole.describe("New role to assign to the invitation"),
 });
@@ -163,7 +159,6 @@ export type InvitationStatus = z.infer<typeof zInvitationStatus>;
 export type InvitationResourceType = z.infer<typeof zInvitationResourceType>;
 export type Invitation = z.infer<typeof zInvitation>;
 export type CreateInvitationBody = z.infer<typeof zCreateInvitationBody>;
-export type CreateInvitationsBody = z.infer<typeof zCreateInvitationsBody>;
 export type UpdateInvitationRoleBody = z.infer<typeof zUpdateInvitationRoleBody>;
 export type InvitationIdPathParam = z.infer<typeof zInvitationIdPathParam>;
 export type ListInvitationsQuery = z.infer<typeof zListInvitationsQuery>;

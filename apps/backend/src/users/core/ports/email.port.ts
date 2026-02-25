@@ -10,7 +10,7 @@ export const EMAIL_PORT = Symbol("USERS_EMAIL_PORT");
  */
 export interface EmailPort {
   /**
-   * Sends an invitation notification email when a user is invited to a resource.
+   * Sends an invitation notification email.
    *
    * @param resourceId - The ID of the resource
    * @param resourceName - The human-readable name of the resource
@@ -18,7 +18,7 @@ export interface EmailPort {
    * @param role - The role assigned to the invitee
    * @param email - The email address of the invitee
    */
-  sendInvitationNotification(
+  sendInvitationEmail(
     resourceId: string,
     resourceName: string,
     actor: string,

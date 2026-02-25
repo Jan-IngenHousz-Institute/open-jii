@@ -7,7 +7,7 @@ import { contract } from "@repo/api";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
-import { CreateInvitationsUseCase } from "../application/use-cases/create-invitations/create-invitations";
+import { CreateInvitationUseCase } from "../application/use-cases/create-invitation/create-invitation";
 import { GetInvitationsUseCase } from "../application/use-cases/get-invitations/get-invitations";
 import type { EmailPort } from "../core/ports/email.port";
 import { EMAIL_PORT } from "../core/ports/email.port";
@@ -16,7 +16,7 @@ describe("InvitationController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let emailPort: EmailPort;
-  let createUseCase: CreateInvitationsUseCase;
+  let createUseCase: CreateInvitationUseCase;
   let getUseCase: GetInvitationsUseCase;
 
   beforeAll(async () => {
@@ -27,7 +27,7 @@ describe("InvitationController", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     emailPort = testApp.module.get(EMAIL_PORT);
-    createUseCase = testApp.module.get(CreateInvitationsUseCase);
+    createUseCase = testApp.module.get(CreateInvitationUseCase);
     getUseCase = testApp.module.get(GetInvitationsUseCase);
 
     vi.restoreAllMocks();
@@ -41,40 +41,29 @@ describe("InvitationController", () => {
     await testApp.teardown();
   });
 
-  describe("createInvitations", () => {
-    it("should create invitations and return 201", async () => {
+  describe("createInvitation", () => {
+    it("should create an invitation and return 201", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Controller Create Test",
         userId: testUserId,
       });
 
-      vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const path = testApp.resolvePath(contract.users.createInvitations.path, {});
+      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
 
-      const response: SuperTestResponse<Invitation[]> = await testApp
+      const response: SuperTestResponse<Invitation> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send({
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: experiment.id,
-              email: "user1@example.com",
-              role: "member",
-            },
-            {
-              resourceType: "experiment",
-              resourceId: experiment.id,
-              email: "user2@example.com",
-              role: "admin",
-            },
-          ],
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          email: "user1@example.com",
+          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
-      expect(response.body).toHaveLength(2);
-      expect(response.body[0]).toMatchObject({
+      expect(response.body).toMatchObject({
         email: "user1@example.com",
         role: "member",
         status: "pending",
@@ -84,32 +73,24 @@ describe("InvitationController", () => {
     });
 
     it("should return 401 if not authenticated", async () => {
-      const path = testApp.resolvePath(contract.users.createInvitations.path, {});
+      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
 
       await testApp
         .post(path)
         .withoutAuth()
         .send({
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: faker.string.uuid(),
-              email: "user@example.com",
-              role: "member",
-            },
-          ],
+          resourceType: "experiment",
+          resourceId: faker.string.uuid(),
+          email: "user@example.com",
+          role: "member",
         })
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
     it("should return 400 for invalid body", async () => {
-      const path = testApp.resolvePath(contract.users.createInvitations.path, {});
+      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
 
-      await testApp
-        .post(path)
-        .withAuth(testUserId)
-        .send({ invitations: [] })
-        .expect(StatusCodes.BAD_REQUEST);
+      await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 500 when use case returns failure", async () => {
@@ -117,20 +98,16 @@ describe("InvitationController", () => {
         failure(AppError.internal("Unexpected error")),
       );
 
-      const path = testApp.resolvePath(contract.users.createInvitations.path, {});
+      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
 
       await testApp
         .post(path)
         .withAuth(testUserId)
         .send({
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: faker.string.uuid(),
-              email: "test@example.com",
-              role: "member",
-            },
-          ],
+          resourceType: "experiment",
+          resourceId: faker.string.uuid(),
+          email: "test@example.com",
+          role: "member",
         })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
@@ -143,22 +120,18 @@ describe("InvitationController", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
       // Create an invitation first
-      const createPath = testApp.resolvePath(contract.users.createInvitations.path, {});
+      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
       await testApp
         .post(createPath)
         .withAuth(testUserId)
         .send({
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: experiment.id,
-              email: "listed@example.com",
-              role: "member",
-            },
-          ],
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          email: "listed@example.com",
+          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
@@ -213,27 +186,23 @@ describe("InvitationController", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const createPath = testApp.resolvePath(contract.users.createInvitations.path, {});
-      const createResponse: SuperTestResponse<Invitation[]> = await testApp
+      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const createResponse: SuperTestResponse<Invitation> = await testApp
         .post(createPath)
         .withAuth(testUserId)
         .send({
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: experiment.id,
-              email: "update-role@example.com",
-              role: "member",
-            },
-          ],
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          email: "update-role@example.com",
+          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
       vi.restoreAllMocks();
 
-      const invitationId = createResponse.body[0].id;
+      const invitationId = createResponse.body.id;
       const updatePath = testApp.resolvePath(contract.users.updateInvitationRole.path, {
         invitationId,
       });
@@ -279,27 +248,23 @@ describe("InvitationController", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const createPath = testApp.resolvePath(contract.users.createInvitations.path, {});
-      const createResponse: SuperTestResponse<Invitation[]> = await testApp
+      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const createResponse: SuperTestResponse<Invitation> = await testApp
         .post(createPath)
         .withAuth(testUserId)
         .send({
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: experiment.id,
-              email: "revoke@example.com",
-              role: "member",
-            },
-          ],
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          email: "revoke@example.com",
+          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
       vi.restoreAllMocks();
 
-      const invitationId = createResponse.body[0].id;
+      const invitationId = createResponse.body.id;
       const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {
         invitationId,
       });
@@ -321,27 +286,23 @@ describe("InvitationController", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const createPath = testApp.resolvePath(contract.users.createInvitations.path, {});
-      const createResponse: SuperTestResponse<Invitation[]> = await testApp
+      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const createResponse: SuperTestResponse<Invitation> = await testApp
         .post(createPath)
         .withAuth(testUserId)
         .send({
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: experiment.id,
-              email: "double-revoke@example.com",
-              role: "member",
-            },
-          ],
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          email: "double-revoke@example.com",
+          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
       vi.restoreAllMocks();
 
-      const invitationId = createResponse.body[0].id;
+      const invitationId = createResponse.body.id;
       const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {
         invitationId,
       });

@@ -15,7 +15,7 @@ import {
   zWebhookErrorResponse,
   zInvitation,
   zInvitationList,
-  zCreateInvitationsBody,
+  zCreateInvitationBody,
   zUpdateInvitationRoleBody,
   zInvitationIdPathParam,
   zListInvitationsQuery,
@@ -101,17 +101,17 @@ export const userContract = c.router({
       "Fetches user profile metadata (firstName, lastName, avatarUrl) for multiple user IDs to populate Databricks pipeline tables",
   },
 
-  createInvitations: {
+  createInvitation: {
     method: "POST",
     path: "/api/v1/invitations",
-    body: zCreateInvitationsBody,
+    body: zCreateInvitationBody,
     responses: {
-      201: zInvitationList,
+      201: zInvitation,
       400: zErrorResponse,
       403: zErrorResponse,
     },
-    summary: "Create invitations",
-    description: "Creates one or more invitations for users to join a resource. Skips duplicates.",
+    summary: "Create invitation",
+    description: "Creates an invitation for a user to join a resource.",
   },
 
   listInvitations: {

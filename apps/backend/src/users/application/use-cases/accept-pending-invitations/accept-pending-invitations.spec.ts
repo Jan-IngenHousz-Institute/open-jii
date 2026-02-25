@@ -9,14 +9,14 @@ import { TestHarness } from "../../../../test/test-harness";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
-import { CreateInvitationsUseCase } from "../create-invitations/create-invitations";
+import { CreateInvitationUseCase } from "../create-invitation/create-invitation";
 import { AcceptPendingInvitationsUseCase } from "./accept-pending-invitations";
 
 describe("AcceptPendingInvitationsUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: AcceptPendingInvitationsUseCase;
-  let createUseCase: CreateInvitationsUseCase;
+  let createUseCase: CreateInvitationUseCase;
   let emailPort: EmailPort;
   let invitationRepo: InvitationRepository;
 
@@ -28,7 +28,7 @@ describe("AcceptPendingInvitationsUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(AcceptPendingInvitationsUseCase);
-    createUseCase = testApp.module.get(CreateInvitationsUseCase);
+    createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
 
@@ -57,14 +57,9 @@ describe("AcceptPendingInvitationsUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-    await createUseCase.execute(
-      "experiment",
-      experiment.id,
-      [{ email: inviteeEmail, role: "member" }],
-      testUserId,
-    );
+    await createUseCase.execute("experiment", experiment.id, inviteeEmail, "member", testUserId);
 
     vi.restoreAllMocks();
 
@@ -88,20 +83,10 @@ describe("AcceptPendingInvitationsUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-    await createUseCase.execute(
-      "experiment",
-      exp1.id,
-      [{ email: inviteeEmail, role: "member" }],
-      testUserId,
-    );
-    await createUseCase.execute(
-      "experiment",
-      exp2.id,
-      [{ email: inviteeEmail, role: "admin" }],
-      testUserId,
-    );
+    await createUseCase.execute("experiment", exp1.id, inviteeEmail, "member", testUserId);
+    await createUseCase.execute("experiment", exp2.id, inviteeEmail, "admin", testUserId);
 
     vi.restoreAllMocks();
 
@@ -119,14 +104,9 @@ describe("AcceptPendingInvitationsUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-    await createUseCase.execute(
-      "experiment",
-      experiment.id,
-      [{ email: inviteeEmail, role: "member" }],
-      testUserId,
-    );
+    await createUseCase.execute("experiment", experiment.id, inviteeEmail, "member", testUserId);
 
     vi.restoreAllMocks();
 
@@ -164,20 +144,10 @@ describe("AcceptPendingInvitationsUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-    await createUseCase.execute(
-      "experiment",
-      exp1.id,
-      [{ email: inviteeEmail, role: "member" }],
-      testUserId,
-    );
-    await createUseCase.execute(
-      "experiment",
-      exp2.id,
-      [{ email: inviteeEmail, role: "admin" }],
-      testUserId,
-    );
+    await createUseCase.execute("experiment", exp1.id, inviteeEmail, "member", testUserId);
+    await createUseCase.execute("experiment", exp2.id, inviteeEmail, "admin", testUserId);
 
     vi.restoreAllMocks();
 

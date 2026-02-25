@@ -11,7 +11,7 @@ import { TestHarness } from "../../../../test/test-harness";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
-import { CreateInvitationsUseCase } from "../create-invitations/create-invitations";
+import { CreateInvitationUseCase } from "../create-invitation/create-invitation";
 import { RevokeInvitationUseCase } from "../revoke-invitation/revoke-invitation";
 import { UpdateInvitationRoleUseCase } from "./update-invitation-role";
 
@@ -19,7 +19,7 @@ describe("UpdateInvitationRoleUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: UpdateInvitationRoleUseCase;
-  let createUseCase: CreateInvitationsUseCase;
+  let createUseCase: CreateInvitationUseCase;
   let revokeUseCase: RevokeInvitationUseCase;
   let emailPort: EmailPort;
   let invitationRepo: InvitationRepository;
@@ -32,7 +32,7 @@ describe("UpdateInvitationRoleUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(UpdateInvitationRoleUseCase);
-    createUseCase = testApp.module.get(CreateInvitationsUseCase);
+    createUseCase = testApp.module.get(CreateInvitationUseCase);
     revokeUseCase = testApp.module.get(RevokeInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
@@ -49,19 +49,20 @@ describe("UpdateInvitationRoleUseCase", () => {
   });
 
   async function createPendingInvitation(experimentId: string, email: string) {
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
     const result = await createUseCase.execute(
       "experiment",
       experimentId,
-      [{ email, role: "member" }],
+      email,
+      "member",
       testUserId,
     );
 
     vi.restoreAllMocks();
 
     assertSuccess(result);
-    return result.value[0];
+    return result.value;
   }
 
   it("should update the role on a pending invitation", async () => {

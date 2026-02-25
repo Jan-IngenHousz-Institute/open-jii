@@ -154,7 +154,11 @@ export class InvitationRepository {
         .where(eq(experiments.id, resourceId))
         .limit(1);
 
-      return result.length > 0 ? result[0].name : "an experiment";
+      if (result.length === 0) {
+        throw new Error(`Resource not found: ${resourceId}`);
+      }
+
+      return result[0].name;
     });
   }
 

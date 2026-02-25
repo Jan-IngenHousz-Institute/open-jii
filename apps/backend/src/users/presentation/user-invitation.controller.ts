@@ -8,7 +8,7 @@ import { contract } from "@repo/api";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
-import { CreateInvitationsUseCase } from "../application/use-cases/create-invitations/create-invitations";
+import { CreateInvitationUseCase } from "../application/use-cases/create-invitation/create-invitation";
 import { GetInvitationsUseCase } from "../application/use-cases/get-invitations/get-invitations";
 import { RevokeInvitationUseCase } from "../application/use-cases/revoke-invitation/revoke-invitation";
 import { UpdateInvitationRoleUseCase } from "../application/use-cases/update-invitation-role/update-invitation-role";
@@ -18,35 +18,27 @@ export class InvitationController {
   private readonly logger = new Logger(InvitationController.name);
 
   constructor(
-    private readonly createInvitationsUseCase: CreateInvitationsUseCase,
+    private readonly createInvitationUseCase: CreateInvitationUseCase,
     private readonly getInvitationsUseCase: GetInvitationsUseCase,
     private readonly revokeInvitationUseCase: RevokeInvitationUseCase,
     private readonly updateInvitationRoleUseCase: UpdateInvitationRoleUseCase,
   ) {}
 
-  @TsRestHandler(contract.users.createInvitations)
-  createInvitations(@Session() session: UserSession) {
-    return tsRestHandler(contract.users.createInvitations, async ({ body }) => {
-      const entries = body.invitations.map((inv) => ({
-        email: inv.email,
-        role: inv.role,
-      }));
-
-      // Group by resource for the use case (currently all same resource expected)
-      const first = body.invitations[0];
-      const result = await this.createInvitationsUseCase.execute(
-        first.resourceType as "experiment",
-        first.resourceId,
-        entries,
+  @TsRestHandler(contract.users.createInvitation)
+  createInvitation(@Session() session: UserSession) {
+    return tsRestHandler(contract.users.createInvitation, async ({ body }) => {
+      const result = await this.createInvitationUseCase.execute(
+        body.resourceType as "experiment",
+        body.resourceId,
+        body.email,
+        body.role,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        this.logger.log(`Created ${result.value.length} invitation(s) by user ${session.user.id}`);
-
         return {
           status: StatusCodes.CREATED as 201,
-          body: formatDatesList(result.value),
+          body: formatDates(result.value),
         };
       }
 

@@ -68,7 +68,7 @@ export function ExperimentMemberManagement({
 
   const { mutateAsync: addMember, isPending: isAddingMember } = useExperimentMemberAdd();
   const { mutateAsync: removeMember, isPending: isRemovingMember } = useExperimentMemberRemove();
-  const { mutateAsync: createInvitations, isPending: isCreatingInvitation } =
+  const { mutateAsync: createInvitation, isPending: isCreatingInvitation } =
     useUserInvitationCreate();
   const { mutate: revokeInvitation } = useUserInvitationRevoke();
   const { mutate: updateInvitationRole } = useUserInvitationRoleUpdate();
@@ -106,25 +106,33 @@ export function ExperimentMemberManagement({
     if (!selection) return;
 
     if (selection.type === "user") {
-      await addMember({
-        params: { id: experimentId },
-        body: { members: [{ userId: selection.user.userId, role: selectedRole }] },
-      });
-      toast({ description: t("experimentSettings.memberAdded") });
-    } else {
-      await createInvitations({
-        body: {
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: experimentId,
-              email: selection.email,
-              role: selectedRole,
-            },
-          ],
+      await addMember(
+        {
+          params: { id: experimentId },
+          body: { members: [{ userId: selection.user.userId, role: selectedRole }] },
         },
-      });
-      toast({ description: t("experimentSettings.invitationSent") });
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.memberAdded") });
+          },
+        },
+      );
+    } else {
+      await createInvitation(
+        {
+          body: {
+            resourceType: "experiment",
+            resourceId: experimentId,
+            email: selection.email,
+            role: selectedRole,
+          },
+        },
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.invitationSent") });
+          },
+        },
+      );
     }
 
     resetSelection();
@@ -135,14 +143,19 @@ export function ExperimentMemberManagement({
     setRemovingMemberId(memberId);
 
     try {
-      await removeMember({
-        params: {
-          id: experimentId,
-          memberId,
+      await removeMember(
+        {
+          params: {
+            id: experimentId,
+            memberId,
+          },
         },
-      });
-
-      toast({ description: t("experimentSettings.memberRemoved") });
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.memberRemoved") });
+          },
+        },
+      );
     } finally {
       setRemovingMemberId(null);
     }

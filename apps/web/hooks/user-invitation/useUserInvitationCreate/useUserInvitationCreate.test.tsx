@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-argument */
 import { tsr } from "@/lib/tsr";
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -10,14 +9,14 @@ vi.mock("@/lib/tsr", () => ({
   tsr: {
     useQueryClient: vi.fn(),
     users: {
-      createInvitations: {
+      createInvitation: {
         useMutation: vi.fn(),
       },
     },
   },
 }));
 
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
+const mockTsr = tsr;
 
 describe("useUserInvitationCreate", () => {
   const mockQueryClient = {
@@ -26,7 +25,9 @@ describe("useUserInvitationCreate", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient as any);
+    mockTsr.useQueryClient = vi
+      .fn()
+      .mockReturnValue(mockQueryClient as unknown as ReturnType<typeof tsr.useQueryClient>);
   });
 
   it("should call useMutation with onSuccess callback", () => {
@@ -35,12 +36,12 @@ describe("useUserInvitationCreate", () => {
       isPending: false,
       error: null,
     });
-    mockTsr.users.createInvitations.useMutation = mockUseMutation;
+    (mockTsr.users.createInvitation.useMutation as unknown) = mockUseMutation;
 
     renderHook(() => useUserInvitationCreate());
 
     expect(mockUseMutation).toHaveBeenCalledWith({
-      onSuccess: expect.any(Function),
+      onSuccess: expect.any(Function) as () => void,
     });
   });
 
@@ -53,7 +54,7 @@ describe("useUserInvitationCreate", () => {
     };
 
     const mockUseMutation = vi.fn().mockReturnValue(mockMutationResult);
-    mockTsr.users.createInvitations.useMutation = mockUseMutation;
+    (mockTsr.users.createInvitation.useMutation as unknown) = mockUseMutation;
 
     const { result } = renderHook(() => useUserInvitationCreate());
 
@@ -69,7 +70,7 @@ describe("useUserInvitationCreate", () => {
     };
 
     const mockUseMutation = vi.fn().mockReturnValue(mockMutationResult);
-    mockTsr.users.createInvitations.useMutation = mockUseMutation;
+    (mockTsr.users.createInvitation.useMutation as unknown) = mockUseMutation;
 
     const { result } = renderHook(() => useUserInvitationCreate());
 
@@ -86,7 +87,7 @@ describe("useUserInvitationCreate", () => {
     };
 
     const mockUseMutation = vi.fn().mockReturnValue(mockMutationResult);
-    mockTsr.users.createInvitations.useMutation = mockUseMutation;
+    (mockTsr.users.createInvitation.useMutation as unknown) = mockUseMutation;
 
     const { result } = renderHook(() => useUserInvitationCreate());
 
@@ -94,18 +95,18 @@ describe("useUserInvitationCreate", () => {
   });
 
   it("should invalidate experiment-invitations queries on success", () => {
-    let capturedOnSuccess: any;
-    const mockUseMutation = vi.fn((opts: any) => {
-      capturedOnSuccess = opts.onSuccess;
-      return { mutate: vi.fn() };
-    });
-
-    mockTsr.users.createInvitations.useMutation = mockUseMutation as any;
+    let capturedOnSuccess: (() => void) | undefined;
+    (mockTsr.users.createInvitation.useMutation as unknown) = vi.fn(
+      (opts: { onSuccess: () => void }) => {
+        capturedOnSuccess = opts.onSuccess;
+        return { mutate: vi.fn() };
+      },
+    );
 
     renderHook(() => useUserInvitationCreate());
 
     // Call onSuccess
-    capturedOnSuccess();
+    capturedOnSuccess?.();
 
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["experiment-invitations"],

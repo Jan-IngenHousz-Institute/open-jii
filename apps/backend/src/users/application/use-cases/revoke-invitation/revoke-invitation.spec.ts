@@ -11,14 +11,14 @@ import { TestHarness } from "../../../../test/test-harness";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
-import { CreateInvitationsUseCase } from "../create-invitations/create-invitations";
+import { CreateInvitationUseCase } from "../create-invitation/create-invitation";
 import { RevokeInvitationUseCase } from "./revoke-invitation";
 
 describe("RevokeInvitationUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: RevokeInvitationUseCase;
-  let createUseCase: CreateInvitationsUseCase;
+  let createUseCase: CreateInvitationUseCase;
   let emailPort: EmailPort;
   let invitationRepo: InvitationRepository;
 
@@ -30,7 +30,7 @@ describe("RevokeInvitationUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(RevokeInvitationUseCase);
-    createUseCase = testApp.module.get(CreateInvitationsUseCase);
+    createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
 
@@ -46,19 +46,20 @@ describe("RevokeInvitationUseCase", () => {
   });
 
   async function createPendingInvitation(experimentId: string, email: string) {
-    vi.spyOn(emailPort, "sendInvitationNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
     const result = await createUseCase.execute(
       "experiment",
       experimentId,
-      [{ email, role: "member" }],
+      email,
+      "member",
       testUserId,
     );
 
     vi.restoreAllMocks();
 
     assertSuccess(result);
-    return result.value[0];
+    return result.value;
   }
 
   it("should revoke a pending invitation", async () => {
