@@ -6,6 +6,8 @@ import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+
 import { TransferRequestForm } from "./transfer-request-form";
 
 // ResizeObserver polyfill for Radix UI
@@ -13,16 +15,6 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
-}));
-
-let savedOnSuccess: (() => void) | undefined;
-const mockMutate = vi.fn();
-
-vi.mock("~/hooks/useTransferRequestCreate/useTransferRequestCreate", () => ({
-  useTransferRequestCreate: (opts?: { onSuccess?: () => void }) => {
-    savedOnSuccess = opts?.onSuccess;
-    return { mutate: mockMutate, isPending: false };
-  },
 }));
 
 describe("TransferRequestForm", () => {
@@ -68,6 +60,9 @@ describe("TransferRequestForm", () => {
   });
 
   it("submits valid form data", async () => {
+    const spy = server.mount(contract.experiments.createTransferRequest, {
+      body: { requestId: "req-1" },
+    });
     const user = userEvent.setup();
     render(<TransferRequestForm />);
 
@@ -83,17 +78,19 @@ describe("TransferRequestForm", () => {
     fireEvent.click(screen.getByText("transferRequest.submitButton"));
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith({
-        body: {
-          projectIdOld: "project-123",
-          projectUrlOld: "https://photosynq.com/projects/123",
-          consent: true,
-        },
-      });
+      expect(spy.called).toBe(true);
+    });
+    expect(spy.body).toMatchObject({
+      projectIdOld: "project-123",
+      projectUrlOld: "https://photosynq.com/projects/123",
+      consent: true,
     });
   });
 
   it("shows success state and allows submitting another", async () => {
+    server.mount(contract.experiments.createTransferRequest, {
+      body: { requestId: "req-2" },
+    });
     const user = userEvent.setup();
     render(<TransferRequestForm />);
 
@@ -104,9 +101,6 @@ describe("TransferRequestForm", () => {
     );
     await user.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByText("transferRequest.submitButton"));
-
-    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
-    savedOnSuccess?.();
 
     await waitFor(() => {
       expect(screen.getByText("transferRequest.successTitle")).toBeInTheDocument();

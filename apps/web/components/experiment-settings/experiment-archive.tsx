@@ -44,27 +44,31 @@ export function ExperimentArchive({ experimentId, isArchived }: ExperimentArchiv
       ? `/${locale}/platform/experiments`
       : `/${locale}/platform/experiments-archive`;
 
-    await updateExperiment(
-      {
-        params: { id: experimentId },
-        body: { status: newStatus },
-      },
-      {
-        onSuccess: () => {
-          toast({ description: successMessage });
-          router.push(redirectPath);
+    try {
+      await updateExperiment(
+        {
+          params: { id: experimentId },
+          body: { status: newStatus },
         },
-        onError: (err) => {
-          toast({
-            description: parseApiError(err)?.message ?? errorMessage,
-            variant: "destructive",
-          });
+        {
+          onSuccess: () => {
+            toast({ description: successMessage });
+            router.push(redirectPath);
+          },
+          onError: (err) => {
+            toast({
+              description: parseApiError(err)?.message ?? errorMessage,
+              variant: "destructive",
+            });
+          },
+          onSettled: () => {
+            setIsArchiveDialogOpen(false);
+          },
         },
-        onSettled: () => {
-          setIsArchiveDialogOpen(false);
-        },
-      },
-    );
+      );
+    } catch {
+      // Error already handled by onError callback
+    }
   };
 
   return (

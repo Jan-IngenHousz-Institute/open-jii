@@ -43,6 +43,7 @@ function createTestQueryClient() {
     defaultOptions: {
       queries: {
         retry: false,
+        retryDelay: 0,
         gcTime: 0,
         staleTime: 0,
       },

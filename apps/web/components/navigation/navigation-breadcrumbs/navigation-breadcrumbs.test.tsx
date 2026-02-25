@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Breadcrumbs } from "./navigation-breadcrumbs";
 
-const mockUseBreadcrumbs = vi.fn();
+const { mockUseBreadcrumbs } = vi.hoisted(() => ({ mockUseBreadcrumbs: vi.fn() }));
 vi.mock("@/hooks/breadcrumbs/useBreadcrumbs", () => ({
   useBreadcrumbs: mockUseBreadcrumbs,
 }));

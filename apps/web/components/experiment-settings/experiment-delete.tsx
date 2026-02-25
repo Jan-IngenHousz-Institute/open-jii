@@ -40,27 +40,31 @@ export function ExperimentDelete({ experimentId, experimentName }: ExperimentDel
   }
 
   const handleDeleteExperiment = async () => {
-    await deleteExperiment(
-      {
-        params: { id: experimentId },
-      },
-      {
-        onSuccess: () => {
-          toast({ description: t("experimentSettings.experimentDeletedSuccess") });
-          router.push(`/${locale}/platform/experiments`);
+    try {
+      await deleteExperiment(
+        {
+          params: { id: experimentId },
         },
-        onError: (err) => {
-          toast({
-            description:
-              parseApiError(err)?.message ?? t("experimentSettings.experimentDeletedError"),
-            variant: "destructive",
-          });
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.experimentDeletedSuccess") });
+            router.push(`/${locale}/platform/experiments`);
+          },
+          onError: (err) => {
+            toast({
+              description:
+                parseApiError(err)?.message ?? t("experimentSettings.experimentDeletedError"),
+              variant: "destructive",
+            });
+          },
+          onSettled: () => {
+            setIsDeleteDialogOpen(false);
+          },
         },
-        onSettled: () => {
-          setIsDeleteDialogOpen(false);
-        },
-      },
-    );
+      );
+    } catch {
+      // Error already handled by onError callback
+    }
   };
 
   return (

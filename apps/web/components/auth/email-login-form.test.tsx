@@ -1,5 +1,6 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { fireEvent, waitFor } from "@testing-library/react";
+import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { EmailLoginForm } from "./email-login-form";
@@ -8,19 +9,13 @@ import { EmailLoginForm } from "./email-login-form";
 const {
   mockSignInEmailMutate,
   mockVerifyEmailMutate,
-  mockPush,
   mockSignInIsPendingRef,
   mockVerifyIsPendingRef,
 } = vi.hoisted(() => ({
   mockSignInEmailMutate: vi.fn(),
   mockVerifyEmailMutate: vi.fn(),
-  mockPush: vi.fn(),
   mockSignInIsPendingRef: { current: false },
   mockVerifyIsPendingRef: { current: false },
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
 }));
 
 vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
@@ -147,7 +142,7 @@ describe("EmailLoginForm", () => {
     render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
     submitOTP();
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/platform"));
+    await waitFor(() => expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/platform"));
   });
 
   it("handles OTP verification error", async () => {
@@ -164,7 +159,7 @@ describe("EmailLoginForm", () => {
     await submitEmail();
     submitOTP();
     await waitFor(() => expect(mockVerifyEmailMutate).toHaveBeenCalled());
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(vi.mocked(useRouter)().push).not.toHaveBeenCalled();
   });
 
   it("works without onShowOTPChange callback", async () => {

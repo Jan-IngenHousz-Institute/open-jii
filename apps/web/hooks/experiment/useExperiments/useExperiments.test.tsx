@@ -14,6 +14,7 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -26,23 +27,18 @@ vi.mock("../../useDebounce", () => ({
   useDebounce: vi.fn((v: string) => [v]),
 }));
 
-const mockPush = vi.fn();
 const mockSearchParams = {
   get: vi.fn().mockReturnValue(null),
   toString: vi.fn().mockReturnValue(""),
 };
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
-  useSearchParams: () => mockSearchParams,
-  usePathname: () => "/platform/experiments",
-}));
 
 /* ─── Tests ──────────────────────────────────────────────────── */
 
 describe("useExperiments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useSearchParams).mockReturnValue(mockSearchParams as never);
+    vi.mocked(usePathname).mockReturnValue("/platform/experiments");
     mockSearchParams.get.mockReturnValue(null);
     mockSearchParams.toString.mockReturnValue("");
   });
@@ -98,11 +94,15 @@ describe("useExperiments", () => {
 
     act(() => result.current.setFilter("all"));
     expect(result.current.filter).toBe("all");
-    expect(mockPush).toHaveBeenCalledWith("/platform/experiments?filter=all", { scroll: false });
+    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/platform/experiments?filter=all", {
+      scroll: false,
+    });
 
     act(() => result.current.setFilter("member"));
     expect(result.current.filter).toBe("member");
-    expect(mockPush).toHaveBeenCalledWith("/platform/experiments", { scroll: false });
+    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/platform/experiments", {
+      scroll: false,
+    });
   });
 
   it("updates search state", () => {
@@ -123,14 +123,16 @@ describe("useExperiments", () => {
     mockSearchParams.get.mockReturnValue("invalid");
     mockSearchParams.toString.mockReturnValue("filter=invalid");
     renderHook(() => useExperiments({}));
-    expect(mockPush).toHaveBeenCalledWith("/platform/experiments", { scroll: false });
+    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/platform/experiments", {
+      scroll: false,
+    });
   });
 
   it("does not clean up valid 'all' filter in URL", () => {
     mockSearchParams.get.mockReturnValue("all");
     mockSearchParams.toString.mockReturnValue("filter=all");
     renderHook(() => useExperiments({}));
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(vi.mocked(useRouter)().push).not.toHaveBeenCalled();
   });
 
   /* Error handling */

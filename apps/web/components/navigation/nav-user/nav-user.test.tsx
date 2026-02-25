@@ -1,6 +1,7 @@
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
 
@@ -9,14 +10,8 @@ import { SidebarProvider } from "@repo/ui/components";
 
 import { NavUser } from "./nav-user";
 
-// Hoisted mocks — non-HTTP concerns only
-const { mockSignOutMutateAsync, mockPush } = vi.hoisted(() => ({
+const { mockSignOutMutateAsync } = vi.hoisted(() => ({
   mockSignOutMutateAsync: vi.fn(),
-  mockPush: vi.fn(),
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
 }));
 
 vi.mock("~/hooks/auth", () => ({
@@ -98,7 +93,7 @@ describe("NavUser", () => {
     await user.click(screen.getByRole("button"));
     await user.click(screen.getByRole("menuitem", { name: "navigation.logout" }));
     expect(mockSignOutMutateAsync).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith("/");
+    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/");
   });
 
   it("uses docs URL from environment for support link", async () => {
