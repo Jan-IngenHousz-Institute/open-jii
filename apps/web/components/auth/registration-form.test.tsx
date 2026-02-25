@@ -2,6 +2,8 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { authClient } from "@repo/auth/client";
+
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
@@ -224,8 +226,9 @@ describe("RegistrationForm", () => {
   });
 
   it("handles updateUser error after profile creation", async () => {
-    mockUpdateUserMutate.mockResolvedValue({
+    vi.mocked(authClient.updateUser).mockResolvedValue({
       error: { message: "Update failed" },
+      data: null,
     });
 
     render(<RegistrationForm {...defaultProps} />);
@@ -239,7 +242,7 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
-      expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
+      expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
     });
 
     // Should not navigate on error
