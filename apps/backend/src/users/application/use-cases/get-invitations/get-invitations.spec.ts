@@ -57,10 +57,15 @@ describe("GetInvitationsUseCase", () => {
     await createUseCase.execute(
       "experiment",
       experiment.id,
-      [
-        { email: "invite1@example.com", role: "member" },
-        { email: "invite2@example.com", role: "admin" },
-      ],
+      "invite1@example.com",
+      "member",
+      testUserId,
+    );
+    await createUseCase.execute(
+      "experiment",
+      experiment.id,
+      "invite2@example.com",
+      "admin",
       testUserId,
     );
 
@@ -87,7 +92,8 @@ describe("GetInvitationsUseCase", () => {
     await createUseCase.execute(
       "experiment",
       experiment.id,
-      [{ email: "enriched@example.com", role: "member" }],
+      "enriched@example.com",
+      "member",
       testUserId,
     );
 
@@ -116,7 +122,8 @@ describe("GetInvitationsUseCase", () => {
     await createUseCase.execute(
       "experiment",
       exp1.id,
-      [{ email: "exp1only@example.com", role: "member" }],
+      "exp1only@example.com",
+      "member",
       testUserId,
     );
 

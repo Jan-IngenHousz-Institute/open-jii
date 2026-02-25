@@ -253,10 +253,13 @@ describe("<ExperimentMemberManagement />", () => {
     fireEvent.click(addBtn);
 
     await waitFor(() => {
-      expect(addSpy).toHaveBeenCalledWith({
-        params: { id: experimentId },
-        body: { members: [{ userId: "u-free", role: "member" }] },
-      });
+      expect(addSpy).toHaveBeenCalledWith(
+        {
+          params: { id: experimentId },
+          body: { members: [{ userId: "u-free", role: "member" }] },
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
       expect(toastMock).toHaveBeenCalled();
     });
   });
@@ -273,9 +276,12 @@ describe("<ExperimentMemberManagement />", () => {
     fireEvent.click(removeButtons[0]);
 
     await waitFor(() => {
-      expect(removeSpy).toHaveBeenCalledWith({
-        params: { id: experimentId, memberId: "u-admin" },
-      });
+      expect(removeSpy).toHaveBeenCalledWith(
+        {
+          params: { id: experimentId, memberId: "u-admin" },
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
       expect(toastMock).toHaveBeenCalled();
     });
   });
@@ -372,18 +378,17 @@ describe("<ExperimentMemberManagement />", () => {
     fireEvent.click(addBtn);
 
     await waitFor(() => {
-      expect(inviteSpy).toHaveBeenCalledWith({
-        body: {
-          invitations: [
-            {
-              resourceType: "experiment",
-              resourceId: experimentId,
-              email: "newhire@example.com",
-              role: "member",
-            },
-          ],
+      expect(inviteSpy).toHaveBeenCalledWith(
+        {
+          body: {
+            resourceType: "experiment",
+            resourceId: experimentId,
+            email: "newhire@example.com",
+            role: "member",
+          },
         },
-      });
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
       expect(toastMock).toHaveBeenCalled();
     });
   });

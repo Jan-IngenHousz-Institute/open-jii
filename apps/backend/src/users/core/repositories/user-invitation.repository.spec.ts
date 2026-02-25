@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { assertSuccess } from "../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { InvitationRepository } from "./user-invitation.repository";
 
@@ -428,11 +428,10 @@ describe("InvitationRepository", () => {
       expect(result.value).toBe("My Experiment Name");
     });
 
-    it("should return fallback when experiment is not found", async () => {
+    it("should return failure when experiment is not found", async () => {
       const result = await repository.findResourceName("experiment", faker.string.uuid());
 
-      assertSuccess(result);
-      expect(result.value).toBe("an experiment");
+      assertFailure(result);
     });
   });
 
