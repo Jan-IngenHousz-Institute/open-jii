@@ -14,4 +14,4 @@ runs:
       shell: bash
       working-directory: infrastructure/env/${{ env.environment }}
       run: tofu fmt -check
-      continue-on-error: ${{ inputs.continue-on-error }}
+      continue-on-error: ${{ inputs.continue-on-error == 'true' }}

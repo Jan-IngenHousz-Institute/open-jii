@@ -673,6 +673,7 @@ module "aurora_db" {
   master_username        = "openjii_${var.environment}_admin"
   db_subnet_group_name   = module.vpc.db_subnet_group_name
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
+  region                 = var.aws_region
 
   environment              = var.environment
   max_capacity             = 1.0
@@ -993,9 +994,13 @@ module "migration_runner_ecs" {
       value = module.aurora_db.cluster_port
     },
     {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    },
+    {
       name  = "LOG_LEVEL"
       value = "debug"
-    },
+    }
   ]
 
   tags = {
@@ -1187,10 +1192,6 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_SECRET::"
     },
     {
-      name      = "DB_CREDENTIALS"
-      valueFrom = module.aurora_db.master_user_secret_arn
-    },
-    {
       name      = "EMAIL_SERVER"
       valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_SERVER::"
     },
@@ -1237,6 +1238,10 @@ module "backend_ecs" {
     {
       name  = "DB_PORT"
       value = module.aurora_db.cluster_port
+    },
+    {
+      name  = "DB_USER"
+      value = module.aurora_db.writer_username
     },
     {
       name  = "LOG_LEVEL"
@@ -1298,7 +1303,8 @@ module "backend_ecs" {
 
   # Additional IAM policies for the task role
   additional_task_role_policy_arns = [
-    module.location_service.iam_policy_arn
+    module.location_service.iam_policy_arn,
+    module.aurora_db.backend_rds_iam_connect_policy_arn
   ]
 
   tags = {

@@ -1,0 +1,17 @@
+{
+    "id": "0019_create_writer_user",
+    "prevId": "0018_loving_deathstrike",
+    "version": "7",
+    "dialect": "postgresql",
+    "tables": {},
+    "enums": {},
+    "schemas": {},
+    "_meta": {
+        "schemas": {},
+        "tables": {},
+        "columns": {}
+    },
+    "internal": {
+        "tables": {}
+    }
+}

@@ -4,6 +4,11 @@ variable "cluster_identifier" {
   type        = string
 }
 
+variable "region" {
+  description = "AWS region where the Aurora cluster will be deployed"
+  type        = string
+}
+
 variable "database_name" {
   description = "Name of the database"
   type        = string

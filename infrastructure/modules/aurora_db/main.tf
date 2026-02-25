@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 # KMS key for Aurora DB encryption
 resource "aws_kms_key" "aurora_key" {
   description             = "KMS key for Aurora DB encryption"
@@ -237,4 +239,28 @@ resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
   count      = var.enable_enhanced_monitoring ? 1 : 0
   role       = aws_iam_role.rds_enhanced_monitoring[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
+
+
+# IAM policy allowing the backend ECS task to connect via IAM database authentication
+resource "aws_iam_policy" "backend_rds_iam_connect" {
+  name        = "openjii-backend-rds-iam-connect-${var.environment}"
+  description = "Allows backend ECS task to authenticate to Aurora via IAM"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "rds-db:connect"
+        Resource = "arn:aws:rds-db:${var.region}:${data.aws_caller_identity.current.account_id}:dbuser:${aws_rds_cluster.rds_cluster_aurora.cluster_resource_id}/openjii_writer"
+      }
+    ]
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    Component   = "backend"
+  }
 }
