@@ -9,6 +9,9 @@ vi.mock("../../shared/display-options-section", () => ({
   default: vi.fn(() => <div data-testid="display-options-section">Display Options</div>),
 }));
 
+HTMLElement.prototype.hasPointerCapture = () => false;
+HTMLElement.prototype.scrollIntoView = () => {};
+
 describe("LineChartAppearanceConfigurator", () => {
   it("should render display options section", () => {
     function TestComponent() {

@@ -33,7 +33,6 @@ vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
       if (result instanceof Promise) {
         await result;
       }
-      // simulate success callback
       await Promise.resolve(opts.onSuccess());
       return Promise.resolve();
     },
@@ -153,16 +152,11 @@ describe("RegistrationForm", () => {
   });
 
   it("pushes to default '/' when callbackUrl is undefined", async () => {
-    // Note: RegistrationForm component defaults to /platform if callbackUrl is undefined, not /
-    // let's check code: `router.push(callbackUrl ?? "/platform");`
-    // So if callbackUrl is undefined, it goes to /platform.
-    // The test below expects "/" which contradicts the code I read.
-    // BUT the old test said: `expect(pushMock).toHaveBeenCalledWith("/");`
-    // If I pass termsData but no callbackUrl...
+    const user = userEvent.setup();
+    const { router } = render(<RegistrationForm termsData={termsData} />);
 
-    // I will pass empty string or undefined and expect /platform or whatever the code does.
-    // My previous read said `router.push(callbackUrl ?? "/platform")`
-    // So expectation should be `/platform`.
+    await user.type(screen.getByLabelText("registration.firstName"), "No");
+    await user.type(screen.getByLabelText("registration.lastName"), "Callback");
 
     // Let's stick to what the code says.
 
@@ -177,7 +171,8 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
-      expect(pushMock).toHaveBeenCalledWith("/platform");
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(router.push).toHaveBeenCalledWith("/platform");
     });
   });
 
@@ -210,7 +205,6 @@ describe("RegistrationForm", () => {
     const termsTrigger = screen.getByText("auth.terms");
     const closestAnchorOrButton = termsTrigger.closest("a,button");
     expect(closestAnchorOrButton).toBeTruthy();
-    // It should have the cursor-pointer and underline classes regardless of tag
     expect(closestAnchorOrButton).toHaveClass("cursor-pointer", "underline");
   });
 
@@ -245,12 +239,11 @@ describe("RegistrationForm", () => {
       expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
     });
 
-    // Should not navigate on error
-    expect(pushMock).not.toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it("handles form submission error and resets pending state", async () => {
-    // Create a mock that throws an error
     createUserProfileMock.mockRejectedValue(new Error("Network error"));
 
     render(<RegistrationForm {...defaultProps} />);
@@ -266,12 +259,10 @@ describe("RegistrationForm", () => {
 
     await user.click(submitButton);
 
-    // Button should be disabled during submission
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
     });
 
-    // After error, button should be enabled again (finally block)
     await waitFor(() => {
       expect(submitButton).not.toBeDisabled();
     });
