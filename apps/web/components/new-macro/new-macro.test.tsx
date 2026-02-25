@@ -15,6 +15,7 @@ import { createMacro, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import * as base64Utils from "@/util/base64";
+import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -22,24 +23,12 @@ import { toast } from "@repo/ui/hooks";
 
 import { NewMacroForm } from "./new-macro";
 
-/* ─── Hoisted mock refs ──────────────────────────────────────── */
-
-const { mockPush, mockBack } = vi.hoisted(() => ({
-  mockPush: vi.fn(),
-  mockBack: vi.fn(),
-}));
-
 /* ─── Non-HTTP mocks ─────────────────────────────────────────── */
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, back: mockBack }),
-}));
 
 vi.mock("@repo/auth/client", () => ({
   useSession: () => ({ data: { user: { id: "user-1" } } }),
 }));
 
-vi.mock("@repo/ui/hooks");
 vi.mock("@hookform/resolvers/zod", () => ({
   zodResolver: () => (values: Record<string, unknown>) => ({ values, errors: {} }),
 }));
@@ -94,7 +83,7 @@ describe("NewMacroForm", () => {
     const user = userEvent.setup();
     render(<NewMacroForm />);
     await user.click(screen.getByText("newMacro.cancel"));
-    expect(mockBack).toHaveBeenCalled();
+    expect(vi.mocked(useRouter)().back).toHaveBeenCalled();
   });
 
   it("submits form — POST /api/v1/macros via MSW", async () => {
@@ -116,7 +105,7 @@ describe("NewMacroForm", () => {
 
     // onSuccess navigates to the new macro
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalled();
+      expect(vi.mocked(useRouter)().push).toHaveBeenCalled();
     });
   });
 

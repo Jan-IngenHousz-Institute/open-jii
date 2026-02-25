@@ -1,48 +1,21 @@
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { waitFor } from "@testing-library/react";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { CreateUserProfileBody } from "@repo/api";
+import { contract } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 import { DangerZoneCard } from "./danger-zone-card";
 
-// Hoisted spies
-const { updateProfileSpy, deleteAccountSpy, mockSignOutMutateAsync, toastSpy } = vi.hoisted(() => ({
-  updateProfileSpy: vi.fn(),
-  deleteAccountSpy: vi.fn(),
+const { mockSignOutMutateAsync } = vi.hoisted(() => ({
   mockSignOutMutateAsync: vi.fn(),
-  toastSpy: vi.fn(),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: toastSpy,
 }));
 
 vi.mock("~/hooks/auth/useSignOut/useSignOut", () => ({
   useSignOut: () => ({ mutateAsync: mockSignOutMutateAsync }),
-}));
-
-let isPendingUpdate = false;
-vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
-  useCreateUserProfile: (cfg: { onSuccess?: () => Promise<void> | void }) => ({
-    mutate: (arg: { body: CreateUserProfileBody }, opts?: { onSuccess?: () => void }) => {
-      updateProfileSpy(arg);
-      void cfg.onSuccess?.();
-      opts?.onSuccess?.();
-    },
-    isPending: isPendingUpdate,
-  }),
-}));
-
-let isDeletingUser = false;
-vi.mock("~/hooks/profile/useDeleteUser/useDeleteUser", () => ({
-  useDeleteUser: (cfg: { onSuccess?: () => Promise<void> | void }) => ({
-    mutateAsync: async (arg: { params: { id: string } }) => {
-      await deleteAccountSpy(arg);
-      if (cfg.onSuccess) await cfg.onSuccess();
-    },
-    isPending: isDeletingUser,
-  }),
 }));
 
 // We need mock Dialog because real radix Dialog relies on portal/overlay
@@ -115,8 +88,6 @@ async function _confirmAction(
 describe("DangerZoneCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    isPendingUpdate = false;
-    isDeletingUser = false;
   });
 
   describe("rendering", () => {
@@ -171,6 +142,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("calls updateProfile with activated: false", async () => {
+      const spy = server.mount(contract.users.createUserProfile);
       const user = userEvent.setup();
       const profile = {
         firstName: "Ada",
@@ -190,12 +162,15 @@ describe("DangerZoneCard", () => {
       });
       await user.click(confirmBtn);
 
-      expect(updateProfileSpy).toHaveBeenCalledWith({
-        body: { ...profile, activated: false },
+      await waitFor(() => expect(spy.called).toBe(true));
+      expect(spy.body).toMatchObject({
+        ...profile,
+        activated: false,
       });
     });
 
     it("shows success toast and signs out after deactivation", async () => {
+      server.mount(contract.users.createUserProfile);
       const user = userEvent.setup();
       renderCard();
 
@@ -207,7 +182,7 @@ describe("DangerZoneCard", () => {
       await user.click(screen.getByRole("button", { name: "dangerZone.deactivate.buttonConfirm" }));
 
       await waitFor(() =>
-        expect(toastSpy).toHaveBeenCalledWith({
+        expect(toast).toHaveBeenCalledWith({
           description: "dangerZone.deactivate.successMessage",
         }),
       );
@@ -215,7 +190,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows saving state when pending", async () => {
-      isPendingUpdate = true;
+      server.mount(contract.users.createUserProfile, { delay: 999_999 });
       const user = userEvent.setup();
       renderCard();
 
@@ -224,10 +199,13 @@ describe("DangerZoneCard", () => {
         screen.getByPlaceholderText("dangerZone.deactivate.confirmPlaceholder"),
         "dangerZone.deactivate.confirmWord",
       );
+      await user.click(screen.getByRole("button", { name: "dangerZone.deactivate.buttonConfirm" }));
 
-      expect(
-        screen.getByRole("button", { name: "dangerZone.deactivate.buttonSaving" }),
-      ).toBeDisabled();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "dangerZone.deactivate.buttonSaving" }),
+        ).toBeDisabled(),
+      );
     });
   });
 
@@ -257,6 +235,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("calls deleteAccount with correct userId", async () => {
+      const spy = server.mount(contract.users.deleteUser);
       const user = userEvent.setup();
       renderCard({ userId: "user-456" });
 
@@ -267,12 +246,12 @@ describe("DangerZoneCard", () => {
       );
       await user.click(screen.getByRole("button", { name: "dangerZone.delete.buttonConfirm" }));
 
-      await waitFor(() =>
-        expect(deleteAccountSpy).toHaveBeenCalledWith({ params: { id: "user-456" } }),
-      );
+      await waitFor(() => expect(spy.called).toBe(true));
+      expect(spy.params).toMatchObject({ id: "user-456" });
     });
 
     it("shows success toast and signs out after deletion", async () => {
+      server.mount(contract.users.deleteUser);
       const user = userEvent.setup();
       renderCard();
 
@@ -284,7 +263,7 @@ describe("DangerZoneCard", () => {
       await user.click(screen.getByRole("button", { name: "dangerZone.delete.buttonConfirm" }));
 
       await waitFor(() =>
-        expect(toastSpy).toHaveBeenCalledWith({
+        expect(toast).toHaveBeenCalledWith({
           description: "dangerZone.delete.successMessage",
         }),
       );
@@ -292,8 +271,9 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows destructive toast on deletion error", async () => {
-      deleteAccountSpy.mockRejectedValueOnce({
-        body: { message: "Network error", code: "NETWORK_ERROR" },
+      server.mount(contract.users.deleteUser, {
+        status: 403,
+        body: { message: "Network error" },
       });
       const user = userEvent.setup();
       renderCard();
@@ -306,7 +286,7 @@ describe("DangerZoneCard", () => {
       await user.click(screen.getByRole("button", { name: "dangerZone.delete.buttonConfirm" }));
 
       await waitFor(() =>
-        expect(toastSpy).toHaveBeenCalledWith({
+        expect(toast).toHaveBeenCalledWith({
           description: "Network error",
           variant: "destructive",
         }),
@@ -314,7 +294,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows deleting state when pending", async () => {
-      isDeletingUser = true;
+      server.mount(contract.users.deleteUser, { delay: 999_999 });
       const user = userEvent.setup();
       renderCard();
 
@@ -323,10 +303,13 @@ describe("DangerZoneCard", () => {
         screen.getByPlaceholderText("dangerZone.delete.confirmPlaceholder"),
         "dangerZone.delete.confirmWord",
       );
+      await user.click(screen.getByRole("button", { name: "dangerZone.delete.buttonConfirm" }));
 
-      expect(
-        screen.getByRole("button", { name: "dangerZone.delete.buttonDeleting" }),
-      ).toBeDisabled();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "dangerZone.delete.buttonDeleting" }),
+        ).toBeDisabled(),
+      );
     });
   });
 

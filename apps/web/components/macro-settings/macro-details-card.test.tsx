@@ -1,4 +1,5 @@
 import { render, screen } from "@/test/test-utils";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { MacroDetailsCard } from "./macro-details-card";
@@ -20,11 +21,6 @@ vi.mock("../macro-code-editor", () => ({
       <span data-testid="editor-name">{macroName}</span>
     </div>
   ),
-}));
-
-// Mock the mutation hook to avoid API calls
-vi.mock("../../hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
-  useMacroUpdate: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 const defaultProps = {

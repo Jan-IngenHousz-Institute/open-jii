@@ -1,19 +1,18 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { toast } from "@repo/ui/hooks";
+
 import CookieSettingsPage from "./page";
 
 // --- Mocks (all hoisted since they're used in vi.mock factories) ---
-const { mockOptIn, mockOptOut, mockReset, mockToast, mockGetConsent, mockSetConsent } = vi.hoisted(
-  () => ({
-    mockOptIn: vi.fn(),
-    mockOptOut: vi.fn(),
-    mockReset: vi.fn(),
-    mockToast: vi.fn(),
-    mockGetConsent: vi.fn(() => "pending"),
-    mockSetConsent: vi.fn(),
-  }),
-);
+const { mockOptIn, mockOptOut, mockReset, mockGetConsent, mockSetConsent } = vi.hoisted(() => ({
+  mockOptIn: vi.fn(),
+  mockOptOut: vi.fn(),
+  mockReset: vi.fn(),
+  mockGetConsent: vi.fn(() => "pending"),
+  mockSetConsent: vi.fn(),
+}));
 
 vi.mock("posthog-js/react", () => ({
   usePostHog: () => ({
@@ -22,8 +21,6 @@ vi.mock("posthog-js/react", () => ({
     reset: mockReset,
   }),
 }));
-
-vi.mock("@repo/ui/hooks", () => ({ toast: mockToast }));
 
 vi.mock("../../../../lib/cookie-consent", () => ({
   getConsentStatus: mockGetConsent,
@@ -69,7 +66,7 @@ describe("CookieSettingsPage", () => {
 
     expect(mockOptIn).toHaveBeenCalled();
     expect(mockSetConsent).toHaveBeenCalledWith("accepted");
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(toast).toHaveBeenCalledWith({
       description: "cookieSettings.analyticsEnabledToast",
     });
   });
@@ -84,7 +81,7 @@ describe("CookieSettingsPage", () => {
     expect(mockOptOut).toHaveBeenCalled();
     expect(mockReset).toHaveBeenCalled();
     expect(mockSetConsent).toHaveBeenCalledWith("rejected");
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(toast).toHaveBeenCalledWith({
       description: "cookieSettings.analyticsDisabledToast",
     });
   });

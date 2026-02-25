@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import AppLayout from "./layout";
 
-const mockAuth = vi.fn();
+const { mockAuth } = vi.hoisted(() => ({ mockAuth: vi.fn() }));
 vi.mock("~/app/actions/auth", () => ({ auth: mockAuth }));
 
 vi.mock("@/components/navigation/navigation-breadcrumbs/navigation-breadcrumbs", () => ({

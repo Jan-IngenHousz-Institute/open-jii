@@ -9,6 +9,7 @@
 import { createExperimentAccess, createVisualization } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
+import { useRouter, notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -19,34 +20,6 @@ import ExperimentVisualizationDetails from "./experiment-visualization-details";
 
 /* ─── Mocks that are NOT HTTP ────────────────────────────────── */
 
-vi.mock("~/hooks/useLocale", () => ({ useLocale: vi.fn(() => "en") }));
-vi.mock("@repo/ui/hooks", () => ({ toast: vi.fn() }));
-
-// Override the global next/navigation mock so useRouter returns a vi.fn()
-const { mockRouter, mockNotFound } = vi.hoisted(() => ({
-  mockRouter: {
-    push: vi.fn(),
-    back: vi.fn(),
-    replace: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    prefetch: vi.fn(),
-  },
-  mockNotFound: vi.fn(),
-}));
-vi.mock("next/navigation", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("next/navigation");
-  return {
-    ...actual,
-    useRouter: () => mockRouter,
-    usePathname: () => "/en/platform/experiments",
-    useSearchParams: () => new URLSearchParams(),
-    useParams: () => ({ locale: "en-US" }),
-    notFound: mockNotFound,
-  };
-});
-
-// Complex chart renderer; has its own tests.
 vi.mock("./experiment-visualization-renderer", () => ({
   default: ({ visualization }: { visualization: ExperimentVisualization }) => (
     <div data-testid="visualization-renderer">{visualization.name}</div>
@@ -91,9 +64,10 @@ interface SetupOpts {
 
 function setup(opts: SetupOpts = {}) {
   // Reset router mocks per test
-  mockRouter.push.mockClear();
-  mockRouter.back.mockClear();
-  mockNotFound.mockClear();
+  const router = vi.mocked(useRouter)();
+  router.push.mockClear();
+  router.back.mockClear();
+  vi.mocked(notFound).mockClear();
 
   // Access handler
   server.mount(contract.experiments.getExperimentAccess, {
@@ -142,7 +116,7 @@ function setup(opts: SetupOpts = {}) {
     />,
   );
 
-  return { user, router: mockRouter };
+  return { user, router: vi.mocked(useRouter)() };
 }
 
 /* ─── Tests ─────────────────────────────────────────────────── */
@@ -173,7 +147,7 @@ describe("ExperimentVisualizationDetails", () => {
       expect(screen.getByText("ui.messages.failedToLoad")).toBeInTheDocument();
     });
     await user.click(screen.getByText("ui.actions.back"));
-    expect(router.push).toHaveBeenCalledWith(`/en/platform/experiments/${expId}`);
+    expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
 
   /* Successful rendering */
@@ -225,7 +199,7 @@ describe("ExperimentVisualizationDetails", () => {
     await user.click(screen.getByText("ui.actions.title"));
     await user.click(screen.getByText("ui.actions.edit"));
     expect(router.push).toHaveBeenCalledWith(
-      `/en/platform/experiments/${expId}/analysis/visualizations/${vizId}/edit`,
+      `/en-US/platform/experiments/${expId}/analysis/visualizations/${vizId}/edit`,
     );
   });
 
@@ -247,7 +221,7 @@ describe("ExperimentVisualizationDetails", () => {
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "ui.messages.deleteSuccess" });
     });
-    expect(router.push).toHaveBeenCalledWith(`/en/platform/experiments/${expId}`);
+    expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
 
   /* Columns dropdown */
@@ -274,7 +248,7 @@ describe("ExperimentVisualizationDetails", () => {
     it("calls notFound without archive context", async () => {
       setup({ accessOverrides: archiveAccess });
       await waitFor(() => {
-        expect(mockNotFound).toHaveBeenCalled();
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
       });
     });
 
@@ -286,7 +260,7 @@ describe("ExperimentVisualizationDetails", () => {
           screen.queryByText("ui.messages.loading") ?? screen.queryByText("Test Visualization"),
         ).toBeTruthy();
       });
-      expect(mockNotFound).not.toHaveBeenCalled();
+      expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
     it("disables actions button for archived experiment", async () => {

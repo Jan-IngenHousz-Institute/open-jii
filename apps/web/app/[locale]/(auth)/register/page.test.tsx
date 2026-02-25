@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import RegisterPage from "./page";
 
-const mockAuth = vi.fn();
+const { mockAuth } = vi.hoisted(() => ({ mockAuth: vi.fn() }));
 vi.mock("~/app/actions/auth", () => ({ auth: mockAuth, providerMap: [] }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({

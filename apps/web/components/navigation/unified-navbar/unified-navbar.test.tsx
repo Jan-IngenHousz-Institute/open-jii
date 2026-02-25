@@ -1,32 +1,23 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { within } from "@testing-library/react";
+import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
 import type { Session } from "@repo/auth/types";
 
 import { UnifiedNavbar } from "./unified-navbar";
 
 // Hoisted mocks
-const { mockPush, usePathnameMock, mockSignOutMutateAsync, mockProfileRef } = vi.hoisted(() => ({
-  mockPush: vi.fn(),
-  usePathnameMock: vi.fn(() => "/en-US"),
+const { mockSignOutMutateAsync } = vi.hoisted(() => ({
   mockSignOutMutateAsync: vi.fn(),
-  mockProfileRef: { current: undefined as { firstName?: string; lastName?: string } | undefined },
-}));
-
-vi.mock("next/navigation", () => ({
-  usePathname: () => usePathnameMock(),
-  useRouter: () => ({ push: mockPush }),
 }));
 
 vi.mock("~/hooks/auth", () => ({
   useSignOut: () => ({ mutateAsync: mockSignOutMutateAsync, isPending: false }),
-}));
-
-vi.mock("@/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
-  useGetUserProfile: () =>
-    mockProfileRef.current ? { data: { body: mockProfileRef.current } } : { data: undefined },
 }));
 
 // unified-navbar uses react-i18next directly (not @repo/i18n)
@@ -128,10 +119,12 @@ const makeSession = (over: Partial<Session> = {}): Session =>
 function renderNavbar(
   opts: { locale?: string; pathname?: string; session?: Session | null; isHomePage?: boolean } = {},
 ) {
-  usePathnameMock.mockReturnValue(opts.pathname ?? "/en-US");
-  mockProfileRef.current = opts.session?.user
-    ? { firstName: "Ada", lastName: "Lovelace" }
-    : undefined;
+  vi.mocked(usePathname).mockReturnValue(opts.pathname ?? "/en-US");
+  if (opts.session?.user) {
+    server.mount(contract.users.getUserProfile, {
+      body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
+    });
+  }
   return render(
     <UnifiedNavbar
       locale={opts.locale ?? "en-US"}
@@ -173,13 +166,15 @@ describe("UnifiedNavbar", () => {
     expect(link).toHaveAttribute("aria-current", "page");
   });
 
-  it("renders user trigger and display name when authenticated", () => {
+  it("renders user trigger and display name when authenticated", async () => {
     renderNavbar({ session: makeSession() });
     // The trigger button should exist with aria-label
     expect(screen.getByRole("button", { name: "User menu" })).toBeInTheDocument();
-    // Display name shown in dropdown content
+    // Display name shown in dropdown content (async — MSW resolves profile)
     const content = screen.getAllByTestId("dropdown-content")[0];
-    expect(within(content).getByText("Ada Lovelace")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(content).getByText("Ada Lovelace")).toBeInTheDocument();
+    });
   });
 
   it("renders account and sign out in desktop dropdown", () => {
@@ -198,7 +193,7 @@ describe("UnifiedNavbar", () => {
     const dropdown = screen.getAllByTestId("dropdown-content")[0];
     await user.click(within(dropdown).getByRole("menuitem", { name: /Sign Out/i }));
     expect(mockSignOutMutateAsync).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith("/");
+    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/");
   });
 
   it("has mobile menu trigger button", () => {

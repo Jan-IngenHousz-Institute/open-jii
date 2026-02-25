@@ -89,7 +89,7 @@ resource "aws_iot_policy" "iot_policy" {
 # -----------------------------------------------
 resource "aws_iam_role" "iot_timestream_role" {
   name = var.iot_timestream_role_name
-  assume_role_policy = jsonencode({
+assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
       Effect    = "Allow",

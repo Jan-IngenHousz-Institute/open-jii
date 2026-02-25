@@ -3,10 +3,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import Home, { generateMetadata } from "./page";
 
-const mockAuth = vi.fn();
+const { mockAuth, mockPageHome } = vi.hoisted(() => ({
+  mockAuth: vi.fn(),
+  mockPageHome: vi.fn(),
+}));
 vi.mock("~/app/actions/auth", () => ({ auth: mockAuth }));
-
-const mockPageHome = vi.fn();
 vi.mock("~/lib/contentful", () => ({
   getContentfulClients: () =>
     Promise.resolve({

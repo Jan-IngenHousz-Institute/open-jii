@@ -1,35 +1,12 @@
-import { render, screen } from "@/test/test-utils";
+import { createExperimentAccess } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { usePathname, useParams, notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+
 import ExperimentLayout from "./layout";
-
-// Override global next/navigation mock with customisable fns
-const mockUsePathname = vi.fn().mockReturnValue("/en-US/platform/experiments/test-id");
-const mockUseParams = vi.fn().mockReturnValue({ id: "test-id" });
-const mockNotFound = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    prefetch: vi.fn(),
-  }),
-  usePathname: mockUsePathname,
-  useParams: mockUseParams,
-  useSearchParams: () => new URLSearchParams(),
-  redirect: vi.fn(),
-  notFound: mockNotFound,
-}));
-
-const mockUseExperimentAccess = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: mockUseExperimentAccess,
-}));
-
-vi.mock("@/hooks/useLocale", () => ({ useLocale: () => "en-US" }));
 
 vi.mock("~/components/experiment-overview/experiment-title", () => ({
   ExperimentTitle: ({ name }: { name: string }) => <h1>{name}</h1>,
@@ -39,65 +16,84 @@ vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
 }));
 
-const experiment = {
-  id: "test-id",
-  name: "Test Experiment",
-  status: "active",
-  visibility: "private",
-};
-
 describe("ExperimentLayout", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id");
+    vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+  });
 
-  const renderLayout = (hookOverrides: Record<string, unknown> = {}) => {
-    mockUseExperimentAccess.mockReturnValue({
-      data: { body: { experiment, isAdmin: true } },
-      isLoading: false,
-      error: null,
-      ...hookOverrides,
-    });
-    return render(
+  const renderLayout = () =>
+    render(
       <ExperimentLayout>
         <div data-testid="child">Child</div>
       </ExperimentLayout>,
     );
-  };
 
   it("shows loading state", () => {
-    renderLayout({ data: null, isLoading: true });
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess(),
+      delay: 999_999,
+    });
+    renderLayout();
     expect(screen.getByText("loading")).toBeInTheDocument();
     expect(screen.queryByTestId("child")).not.toBeInTheDocument();
   });
 
-  it("shows access denied for 403 errors", () => {
-    renderLayout({ data: null, error: { status: 403 } });
-    expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
+  it("shows access denied for 403 errors", async () => {
+    server.mount(contract.experiments.getExperimentAccess, { status: 403 });
+    renderLayout();
+    await waitFor(() => {
+      expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
+    });
   });
 
-  it("shows generic error for server errors", () => {
-    renderLayout({ data: null, error: { status: 500 } });
-    expect(screen.getByText("errors.error")).toBeInTheDocument();
-  });
-
-  it("calls notFound for 404 errors", () => {
-    renderLayout({ data: null, error: { status: 404 } });
-    expect(mockNotFound).toHaveBeenCalled();
-  });
-
-  it("shows not-found when experiment data is missing", () => {
-    mockUseExperimentAccess.mockReturnValue({ data: null, isLoading: false, error: null });
-    render(
-      <ExperimentLayout>
-        <div />
-      </ExperimentLayout>,
+  it("shows generic error for server errors", async () => {
+    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+    renderLayout();
+    await waitFor(
+      () => {
+        expect(screen.getByText("errors.error")).toBeInTheDocument();
+      },
+      { timeout: 5000 },
     );
-    expect(screen.getByText("errors.notFound")).toBeInTheDocument();
+  });
+
+  it("calls notFound for 404 errors", async () => {
+    server.mount(contract.experiments.getExperimentAccess, { status: 404 });
+    renderLayout();
+    await waitFor(() => {
+      expect(vi.mocked(notFound)).toHaveBeenCalled();
+    });
+  });
+
+  it("shows not-found when experiment data is missing", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: { experiment: null, hasAccess: false, isAdmin: false },
+    });
+    renderLayout();
+    await waitFor(() => {
+      expect(screen.getByText("errors.notFound")).toBeInTheDocument();
+    });
     expect(screen.getByText("experimentNotFound")).toBeInTheDocument();
   });
 
-  it("renders title, tabs, and children on success", () => {
+  it("renders title, tabs, and children on success", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: {
+          id: "test-id",
+          name: "Test Experiment",
+          status: "active",
+          visibility: "private",
+        },
+        isAdmin: true,
+      }),
+    });
     renderLayout();
-    expect(screen.getByText("Test Experiment")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
+    });
     expect(screen.getByText("overview")).toBeInTheDocument();
     expect(screen.getByText("data")).toBeInTheDocument();
     expect(screen.getByText("analysis.title")).toBeInTheDocument();
