@@ -61,6 +61,12 @@ export class WebSerialAdapter implements ITransportAdapter {
 
   constructor(port: SerialPort) {
     this.port = port;
+    console.log(
+      "[WebSerial] Adapter created, port readable:",
+      !!port.readable,
+      "writable:",
+      !!port.writable,
+    );
     this.setupDisconnectListener();
   }
 
@@ -77,10 +83,19 @@ export class WebSerialAdapter implements ITransportAdapter {
   }
 
   private async startReading(): Promise<void> {
-    if (!this.port?.readable || this.reading) return;
+    if (!this.port?.readable || this.reading) {
+      console.warn(
+        "[WebSerial] startReading skipped: readable:",
+        !!this.port?.readable,
+        "already reading:",
+        this.reading,
+      );
+      return;
+    }
 
     this.reading = true;
     this.reader = this.port.readable.getReader();
+    console.log("[WebSerial] Read loop started, hasDataCallback:", !!this.dataCallback);
 
     try {
       const decoder = new TextDecoder();
@@ -103,9 +118,10 @@ export class WebSerialAdapter implements ITransportAdapter {
         this.dataCallback?.(text);
       }
     } catch (error) {
-      console.error("Error reading from serial port:", error);
+      console.error("[WebSerial] Error reading from serial port:", error);
       this.statusCallback?.(false, error as Error);
     } finally {
+      console.log("[WebSerial] Read loop ended, reading:", this.reading);
       this.reader.releaseLock();
       this.reader = null;
       this.reading = false;
@@ -134,6 +150,7 @@ export class WebSerialAdapter implements ITransportAdapter {
   }
 
   onDataReceived(callback: (data: string) => void): void {
+    console.log("[WebSerial] Data callback registered");
     this.dataCallback = callback;
   }
 

@@ -87,12 +87,16 @@ export class MultispeqProtocol extends DeviceProtocol {
         throw new Error("Transport not initialized");
       }
 
+      // Register response listener BEFORE sending to avoid race condition
+      // (fast serial responses can arrive before the listener is set up)
+      const responsePromise = this.waitForResponse();
+
       console.log("[MultispeqProtocol] Sending to transport, length:", commandWithEnding.length);
       await this.transport.send(commandWithEnding);
       console.log("[MultispeqProtocol] Command sent, waiting for response...");
 
       // Wait for response
-      const response = await this.waitForResponse();
+      const response = await responsePromise;
 
       console.log(
         "[MultispeqProtocol] Response received, success: true, data type:",
@@ -130,13 +134,25 @@ export class MultispeqProtocol extends DeviceProtocol {
 
   private waitForResponse(): Promise<MultispeqCommandResult> {
     return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      console.log("[MultispeqProtocol] waitForResponse: listener registered, waiting...");
+
       const timeout = setTimeout(() => {
-        console.error("[MultispeqProtocol] Command timed out after 30s");
+        const elapsed = Date.now() - startTime;
+        console.error("[MultispeqProtocol] Command timed out after", elapsed, "ms");
+        console.error("[MultispeqProtocol] Timeout debug state:", {
+          dataBufferLength: this.dataBuffer.length,
+          dataBufferPreview: this.dataBuffer.join("").substring(0, 500),
+          transportConnected: this.transport?.isConnected(),
+          initialized: this.initialized,
+        });
         this.emitter.off("receivedReplyFromDevice", handler);
         reject(new Error("Command timeout"));
       }, 30000); // 30 second timeout
 
       const handler = (payload: MultispeqCommandResult) => {
+        const elapsed = Date.now() - startTime;
+        console.log("[MultispeqProtocol] Response handler fired after", elapsed, "ms");
         clearTimeout(timeout);
         this.emitter.off("receivedReplyFromDevice", handler);
         resolve(payload);

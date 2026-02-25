@@ -57,36 +57,53 @@ export function useIotCommunication(
       if (connectionType === "bluetooth") {
         // Bluetooth connection
         const uuids = sensorFamily === "multispeq" ? MULTISPEQ_BLE_UUIDS : GENERIC_BLE_UUIDS;
+        console.log(
+          "[useIotCommunication] Connecting via Bluetooth, sensorFamily:",
+          sensorFamily,
+          "uuids:",
+          uuids,
+        );
         adapter = await WebBluetoothAdapter.requestAndConnect({
           serviceUUID: uuids.SERVICE,
           writeUUID: uuids.WRITE,
           notifyUUID: uuids.NOTIFY,
         });
+        console.log("[useIotCommunication] Bluetooth adapter connected");
       } else {
         // Serial connection
+        console.log("[useIotCommunication] Connecting via Serial, sensorFamily:", sensorFamily);
         adapter = await WebSerialAdapter.requestAndConnect(GENERIC_SERIAL_DEFAULTS);
+        console.log("[useIotCommunication] Serial adapter connected");
       }
 
       // Initialize protocol based on sensor family
       if (sensorFamily === "multispeq") {
+        console.log("[useIotCommunication] Initializing MultispeQ protocol");
         const multispeqProtocol = new MultispeqProtocol();
         multispeqProtocol.initialize(adapter);
         setProtocol(multispeqProtocol);
 
+        console.log("[useIotCommunication] Fetching MultispeQ device info...");
         const info = await multispeqProtocol.getDeviceInfo();
+        console.log("[useIotCommunication] MultispeQ device info:", info);
         setDeviceInfo(info as DeviceInfo);
       } else {
         // Generic or Ambit devices
+        console.log("[useIotCommunication] Initializing Generic protocol");
         const genericProtocol = new GenericDeviceProtocol();
         genericProtocol.initialize(adapter);
         setProtocol(genericProtocol);
 
+        console.log("[useIotCommunication] Fetching Generic device info...");
         const info = await genericProtocol.getDeviceInfo();
+        console.log("[useIotCommunication] Generic device info:", info);
         setDeviceInfo(info as DeviceInfo);
       }
 
       setIsConnected(true);
+      console.log("[useIotCommunication] Connection complete, isConnected: true");
     } catch (err) {
+      console.error("[useIotCommunication] Connection error:", err);
       // Clean up the adapter/port so the port is released for retry
       if (adapter) {
         try {
