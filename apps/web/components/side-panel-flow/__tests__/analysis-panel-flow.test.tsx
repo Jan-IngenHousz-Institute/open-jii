@@ -1,35 +1,10 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
 
-// Keep React on global for JSX in some deps
-globalThis.React = React;
-
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
-// Mock scrollIntoView
 Element.prototype.scrollIntoView = vi.fn();
-
-// Minimal i18n mock (keeps labels predictable)
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
-// Mock useLocale hook
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en-US",
-}));
 
 // Mock useDebounce hook
 vi.mock("@/hooks/useDebounce", () => ({

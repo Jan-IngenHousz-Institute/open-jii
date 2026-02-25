@@ -41,7 +41,6 @@ describe("ExperimentArchive", () => {
         description: "experimentSettings.experimentArchivedSuccess",
       });
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments-archive");
   });
 
@@ -56,7 +55,6 @@ describe("ExperimentArchive", () => {
     await user.click(screen.getByText("experimentSettings.unarchiveActivate"));
 
     await waitFor(() => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments");
     });
   });

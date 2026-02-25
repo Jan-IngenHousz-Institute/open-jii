@@ -22,13 +22,9 @@ import type { LocationPoint } from "@repo/ui/components/map";
 
 import { NewExperimentLocationsCard } from "./new-experiment-locations-card";
 
-/* ─── useDebounce — timing, not HTTP ─────────────────────────── */
-
 vi.mock("../../hooks/useDebounce", () => ({
   useDebounce: vi.fn((v: string) => [v, false]),
 }));
-
-/* ─── Map mock (captures props for assertions) ──────────────── */
 
 let lastMapProps: Record<string, unknown> | null = null;
 
@@ -58,8 +54,6 @@ vi.mock("../map", () => ({
   }),
 }));
 
-/* ─── Form mock ──────────────────────────────────────────────── */
-
 const mockWatch = vi.fn();
 const mockSetValue = vi.fn();
 
@@ -71,8 +65,6 @@ const mockForm = {
   control: {},
   formState: { errors: {} },
 } as unknown as UseFormReturn<CreateExperimentBody>;
-
-/* ─── Tests ──────────────────────────────────────────────────── */
 
 describe("NewExperimentLocationsCard", () => {
   const user = userEvent.setup();

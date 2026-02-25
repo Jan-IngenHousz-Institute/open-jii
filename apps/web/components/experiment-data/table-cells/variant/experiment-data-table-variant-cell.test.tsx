@@ -250,7 +250,6 @@ describe("VariantExpandedContent", () => {
 
     // Check that clipboard.writeText was called
     await waitFor(() => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(vi.mocked(navigator.clipboard.writeText)).toHaveBeenCalledWith(jsonData);
     });
   });

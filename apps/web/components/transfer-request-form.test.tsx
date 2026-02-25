@@ -8,13 +8,6 @@ import { contract } from "@repo/api";
 
 import { TransferRequestForm } from "./transfer-request-form";
 
-// ResizeObserver polyfill for Radix UI
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
 describe("TransferRequestForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();

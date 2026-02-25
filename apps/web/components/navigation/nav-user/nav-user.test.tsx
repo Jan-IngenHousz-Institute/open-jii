@@ -85,7 +85,6 @@ describe("NavUser", () => {
     await user.click(screen.getByRole("button"));
     await user.click(screen.getByRole("menuitem", { name: "navigation.logout" }));
     await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/");
   });
 
