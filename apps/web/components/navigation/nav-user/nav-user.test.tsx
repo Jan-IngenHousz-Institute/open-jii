@@ -1,6 +1,7 @@
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
 
