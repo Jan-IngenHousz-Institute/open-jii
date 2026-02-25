@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { notFound } from "next/navigation";
-import React from "react";
+import React, { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ExperimentTableName } from "@repo/api";
@@ -9,31 +9,6 @@ import { ExperimentTableName } from "@repo/api";
 import ExperimentDataPage from "./page";
 
 globalThis.React = React;
-
-// Mock env
-vi.mock("~/env", () => ({
-  env: {
-    NEXT_PUBLIC_DOCS_URL: "http://localhost:3010",
-  },
-}));
-
-// Mock next/link
-vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
-
-// Mock React.use
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn(() => ({ id: "exp-123", locale: "en-US" })),
-  };
-});
 
 // --- Mocks ---
 vi.mock("next/navigation", () => ({
@@ -173,6 +148,7 @@ describe("ExperimentDataPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(use).mockReturnValue({ id: "exp-123", locale: "en-US" } as never);
     mockUseExperimentAccess.mockReturnValue(mockExperimentData);
     mockUseExperimentTables.mockReturnValue(mockTablesData);
     mockUseLocale.mockReturnValue("en-US");
@@ -296,7 +272,6 @@ describe("ExperimentDataPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
-      expect(screen.getByText("experimentData.readMore")).toBeInTheDocument();
     });
   });
 

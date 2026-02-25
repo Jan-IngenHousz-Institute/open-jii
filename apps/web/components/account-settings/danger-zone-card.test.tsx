@@ -6,17 +6,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { CreateUserProfileBody } from "@repo/api";
 import { contract } from "@repo/api";
+import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import { DangerZoneCard } from "./danger-zone-card";
-
-const { mockSignOutMutateAsync } = vi.hoisted(() => ({
-  mockSignOutMutateAsync: vi.fn(),
-}));
-
-vi.mock("~/hooks/auth/useSignOut/useSignOut", () => ({
-  useSignOut: () => ({ mutateAsync: mockSignOutMutateAsync }),
-}));
 
 // We need mock Dialog because real radix Dialog relies on portal/overlay
 // which doesn't render content visibly in jsdom without pointer events
@@ -186,7 +179,7 @@ describe("DangerZoneCard", () => {
           description: "dangerZone.deactivate.successMessage",
         }),
       );
-      await waitFor(() => expect(mockSignOutMutateAsync).toHaveBeenCalled());
+      await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
     });
 
     it("shows saving state when pending", async () => {
@@ -267,7 +260,7 @@ describe("DangerZoneCard", () => {
           description: "dangerZone.delete.successMessage",
         }),
       );
-      await waitFor(() => expect(mockSignOutMutateAsync).toHaveBeenCalled());
+      await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
     });
 
     it("shows destructive toast on deletion error", async () => {

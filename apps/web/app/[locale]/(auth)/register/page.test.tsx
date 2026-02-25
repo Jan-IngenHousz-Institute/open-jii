@@ -2,11 +2,9 @@ import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { redirect } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import RegisterPage from "./page";
-
-const { mockAuth } = vi.hoisted(() => ({ mockAuth: vi.fn() }));
-vi.mock("~/app/actions/auth", () => ({ auth: mockAuth, providerMap: [] }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
@@ -29,7 +27,7 @@ describe("RegisterPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(
+    vi.mocked(auth).mockResolvedValue(
       createSession({
         user: {
           id: "1",
@@ -44,13 +42,13 @@ describe("RegisterPage", () => {
   });
 
   it("redirects to login when unauthenticated", async () => {
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
     await RegisterPage(props).catch(() => undefined);
     expect(redirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
   });
 
   it("redirects to platform when already registered", async () => {
-    mockAuth.mockResolvedValue(createSession());
+    vi.mocked(auth).mockResolvedValue(createSession());
     await RegisterPage(props);
     expect(redirect).toHaveBeenCalledWith("/en-US/platform");
   });

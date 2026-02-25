@@ -5,25 +5,14 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
+import { authClient } from "@repo/auth/client";
+
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
 const pushMock = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
-}));
-
-// Mock useAuth
-const mockUpdateUserMutate = vi.fn();
-vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
-  useUpdateUser: () => ({
-    mutateAsync: mockUpdateUserMutate,
-  }),
-}));
-
-const handleRegisterMock = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  handleRegister: (): unknown => handleRegisterMock(),
 }));
 
 const createUserProfileMock = vi.fn();
@@ -38,12 +27,6 @@ vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
       await Promise.resolve(opts.onSuccess());
       return Promise.resolve();
     },
-  }),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key, // return translation keys directly
   }),
 }));
 
@@ -89,7 +72,7 @@ describe("RegistrationForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUpdateUserMutate.mockResolvedValue({});
+    vi.mocked(authClient.updateUser).mockResolvedValue({ data: {}, error: null });
   });
 
   it("renders the registration form with title and description", () => {
@@ -178,7 +161,7 @@ describe("RegistrationForm", () => {
       // Check component: it uses useCreateUserProfile -> onSuccess -> useUpdateUser.
       // It does NOT use handleRegister. It uses updateUser
       // expect(handleRegisterMock).toHaveBeenCalled(); // REMOVE this expectation if component doesn't use it
-      expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
+      expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
       expect(pushMock).toHaveBeenCalledWith("/dashboard");
     });
   });
@@ -257,8 +240,9 @@ describe("RegistrationForm", () => {
   });
 
   it("handles updateUser error after profile creation", async () => {
-    mockUpdateUserMutate.mockResolvedValue({
+    vi.mocked(authClient.updateUser).mockResolvedValue({
       error: { message: "Update failed" },
+      data: null,
     });
 
     render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
@@ -271,7 +255,7 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
-      expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
+      expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
     });
 
     // Should not navigate on error

@@ -15,7 +15,6 @@ import { createMacro, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import * as base64Utils from "@/util/base64";
-import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -81,9 +80,10 @@ describe("NewMacroForm", () => {
 
   it("navigates back on cancel", async () => {
     const user = userEvent.setup();
-    render(<NewMacroForm />);
+    const { router } = render(<NewMacroForm />);
     await user.click(screen.getByText("newMacro.cancel"));
-    expect(vi.mocked(useRouter)().back).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.back).toHaveBeenCalled();
   });
 
   it("submits form — POST /api/v1/macros via MSW", async () => {
@@ -94,7 +94,7 @@ describe("NewMacroForm", () => {
     });
 
     const user = userEvent.setup();
-    render(<NewMacroForm />);
+    const { router } = render(<NewMacroForm />);
     await user.click(screen.getByText("newMacro.finalizeSetup"));
 
     await waitFor(() => {
@@ -105,7 +105,8 @@ describe("NewMacroForm", () => {
 
     // onSuccess navigates to the new macro
     await waitFor(() => {
-      expect(vi.mocked(useRouter)().push).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(router.push).toHaveBeenCalled();
     });
   });
 

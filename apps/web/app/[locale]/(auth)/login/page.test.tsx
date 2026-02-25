@@ -1,11 +1,9 @@
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import LoginPage from "./page";
-
-const { mockAuth } = vi.hoisted(() => ({ mockAuth: vi.fn() }));
-vi.mock("~/app/actions/auth", () => ({ auth: mockAuth, providerMap: [] }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
@@ -25,7 +23,7 @@ vi.mock("~/components/auth/terms-and-conditions-dialog", () => ({
 describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
   });
 
   const renderPage = async (searchParams = {}) => {
@@ -50,7 +48,7 @@ describe("LoginPage", () => {
   });
 
   it("renders with an authenticated session", async () => {
-    mockAuth.mockResolvedValue(createSession());
+    vi.mocked(auth).mockResolvedValue(createSession());
     await renderPage();
     expect(screen.getByRole("form", { name: /login/i })).toBeInTheDocument();
   });

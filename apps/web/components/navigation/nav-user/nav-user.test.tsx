@@ -1,22 +1,14 @@
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
 
 import { contract } from "@repo/api";
+import { authClient } from "@repo/auth/client";
 import { SidebarProvider } from "@repo/ui/components";
 
 import { NavUser } from "./nav-user";
-
-const { mockSignOutMutateAsync } = vi.hoisted(() => ({
-  mockSignOutMutateAsync: vi.fn(),
-}));
-
-vi.mock("~/hooks/auth", () => ({
-  useSignOut: () => ({ mutateAsync: mockSignOutMutateAsync, isPending: false }),
-}));
 
 const baseUser = { id: "u-1", email: "ada@example.com", avatar: "https://example.com/a.png" };
 
@@ -86,14 +78,15 @@ describe("NavUser", () => {
   it("calls signOut and navigates home on logout click", async () => {
     useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
     const user = userEvent.setup();
-    renderNav();
+    const { router } = renderNav();
     await waitFor(() => {
       expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     });
     await user.click(screen.getByRole("button"));
     await user.click(screen.getByRole("menuitem", { name: "navigation.logout" }));
-    expect(mockSignOutMutateAsync).toHaveBeenCalled();
-    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/");
+    await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).toHaveBeenCalledWith("/");
   });
 
   it("uses docs URL from environment for support link", async () => {

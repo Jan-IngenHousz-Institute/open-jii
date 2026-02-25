@@ -2,23 +2,15 @@ import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { within } from "@testing-library/react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
+import { authClient } from "@repo/auth/client";
 import type { Session } from "@repo/auth/types";
 
 import { UnifiedNavbar } from "./unified-navbar";
-
-// Hoisted mocks
-const { mockSignOutMutateAsync } = vi.hoisted(() => ({
-  mockSignOutMutateAsync: vi.fn(),
-}));
-
-vi.mock("~/hooks/auth", () => ({
-  useSignOut: () => ({ mutateAsync: mockSignOutMutateAsync, isPending: false }),
-}));
 
 // unified-navbar uses react-i18next directly (not @repo/i18n)
 vi.mock("react-i18next", () => ({
@@ -189,11 +181,12 @@ describe("UnifiedNavbar", () => {
 
   it("calls signOut on Sign Out click", async () => {
     const user = userEvent.setup();
-    renderNavbar({ pathname: "/en-US/blog", session: makeSession() });
+    const { router } = renderNavbar({ pathname: "/en-US/blog", session: makeSession() });
     const dropdown = screen.getAllByTestId("dropdown-content")[0];
     await user.click(within(dropdown).getByRole("menuitem", { name: /Sign Out/i }));
-    expect(mockSignOutMutateAsync).toHaveBeenCalled();
-    expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith("/");
+    await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(router.push).toHaveBeenCalledWith("/");
   });
 
   it("has mobile menu trigger button", () => {

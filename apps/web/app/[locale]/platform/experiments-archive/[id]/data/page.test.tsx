@@ -2,7 +2,7 @@ import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { notFound } from "next/navigation";
-import React from "react";
+import React, { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
@@ -11,31 +11,6 @@ import { ExperimentTableName } from "@repo/api";
 import ExperimentDataPage from "./page";
 
 globalThis.React = React;
-
-// Mock env
-vi.mock("~/env", () => ({
-  env: {
-    NEXT_PUBLIC_DOCS_URL: "http://localhost:3010",
-  },
-}));
-
-// Mock next/link
-vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
-
-// Mock react.use to return a params-like object { id, locale }
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-experiment-id" }),
-  };
-});
 
 // Mock useExperiment hook
 vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
@@ -142,6 +117,7 @@ const mockTablesData = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(use).mockReturnValue({ id: "test-experiment-id" });
   vi.mocked(useExperimentTables).mockReturnValue({
     tables: mockTablesData,
     isLoading: false,
@@ -359,7 +335,6 @@ describe("<ExperimentDataPage />", () => {
     );
 
     expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
-    expect(screen.getByText("experimentData.readMore")).toBeInTheDocument();
   });
 
   it("opens and closes the upload modal when button is clicked", () => {

@@ -2,11 +2,9 @@ import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { redirect } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import AppLayout from "./layout";
-
-const { mockAuth } = vi.hoisted(() => ({ mockAuth: vi.fn() }));
-vi.mock("~/app/actions/auth", () => ({ auth: mockAuth }));
 
 vi.mock("@/components/navigation/navigation-breadcrumbs/navigation-breadcrumbs", () => ({
   Breadcrumbs: () => <nav aria-label="breadcrumbs">Breadcrumbs</nav>,
@@ -30,7 +28,7 @@ describe("AppLayout", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(createSession());
+    vi.mocked(auth).mockResolvedValue(createSession());
   });
 
   it("renders children inside the layout when authenticated", async () => {
@@ -43,7 +41,7 @@ describe("AppLayout", () => {
   });
 
   it("redirects to login when there is no session", async () => {
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
     mockRedirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
@@ -53,7 +51,7 @@ describe("AppLayout", () => {
   });
 
   it("redirects to registration when user is not registered", async () => {
-    mockAuth.mockResolvedValue(
+    vi.mocked(auth).mockResolvedValue(
       createSession({
         user: {
           id: "1",

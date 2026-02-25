@@ -1,19 +1,10 @@
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
-import React from "react";
+import React, { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import MacroOverviewPage from "../page";
-
-// Mock React's use function
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-macro-id" }),
-  };
-});
 
 // Mock the useMacro hook
 vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
@@ -106,6 +97,7 @@ describe("MacroOverviewPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(use).mockReturnValue({ id: "test-macro-id" });
   });
 
   describe("Loading State", () => {

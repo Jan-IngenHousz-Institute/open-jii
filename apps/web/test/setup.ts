@@ -170,3 +170,44 @@ vi.mock("@repo/ui/hooks", () => ({
 vi.mock("@/hooks/useLocale", () => ({
   useLocale: vi.fn(() => "en-US"),
 }));
+
+// React.use — spy wrapping the real implementation so tests that don't
+// override it get normal React behaviour (context reads, promise resolution).
+// Override per file in beforeEach:
+//   import { use } from "react";
+//   vi.mocked(use).mockReturnValue({ id: "exp-123", locale: "en-US" });
+vi.mock("react", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const actual = await vi.importActual<typeof import("react")>("react");
+  return { ...actual, use: vi.fn(actual.use) };
+});
+
+// auth server action — returns Session | null. Default: null (unauthenticated).
+// Override per test: vi.mocked(auth).mockResolvedValue(createSession())
+vi.mock("~/app/actions/auth", () => ({
+  auth: vi.fn().mockResolvedValue(null),
+  providerMap: [],
+  handleRegister: vi.fn(),
+}));
+
+// revalidateAuth — server action used by auth hooks' onSuccess callbacks
+vi.mock("~/app/actions/revalidate", () => ({
+  revalidateAuth: vi.fn(),
+}));
+
+// authClient — better-auth HTTP client; auth hooks (useSignOut etc.) call these.
+// Mocked globally so hooks work without real HTTP requests.
+vi.mock("@repo/auth/client", () => ({
+  authClient: {
+    signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
+    emailOtp: {
+      sendVerificationOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
+    signIn: {
+      emailOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
+    updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
+    getSession: vi.fn().mockResolvedValue({ data: null, error: null }),
+  },
+  useSession: vi.fn(() => ({ data: null, isPending: false })),
+}));
