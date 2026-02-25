@@ -232,9 +232,12 @@ describe("<ExperimentMemberManagement />", () => {
   });
 
   it("adds a member successfully", async () => {
-    const addSpy = vi.fn().mockResolvedValue({
-      status: 200,
-      body: { members: [membersData[0]], invitations: [] },
+    const addSpy = vi.fn().mockImplementation((_body, options?: { onSuccess?: () => void }) => {
+      options?.onSuccess?.();
+      return Promise.resolve({
+        status: 200,
+        body: { members: [membersData[0]], invitations: [] },
+      });
     });
     useExperimentMemberAddMock.mockReturnValue({ mutateAsync: addSpy, isPending: false });
 
@@ -258,14 +261,17 @@ describe("<ExperimentMemberManagement />", () => {
           params: { id: experimentId },
           body: { members: [{ userId: "u-free", role: "member" }] },
         },
-        expect.objectContaining({ onSuccess: expect.any(Function) }),
+        expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
       );
       expect(toastMock).toHaveBeenCalled();
     });
   });
 
   it("removes a member successfully", async () => {
-    const removeSpy = vi.fn().mockResolvedValue({ ok: true });
+    const removeSpy = vi.fn().mockImplementation((_body, options?: { onSuccess?: () => void }) => {
+      options?.onSuccess?.();
+      return Promise.resolve({ ok: true });
+    });
     useExperimentMemberRemoveMock.mockReturnValue({ mutateAsync: removeSpy, isPending: false });
 
     renderWithClient();
@@ -280,7 +286,7 @@ describe("<ExperimentMemberManagement />", () => {
         {
           params: { id: experimentId, memberId: "u-admin" },
         },
-        expect.objectContaining({ onSuccess: expect.any(Function) }),
+        expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
       );
       expect(toastMock).toHaveBeenCalled();
     });
@@ -354,7 +360,10 @@ describe("<ExperimentMemberManagement />", () => {
   });
 
   it("invites a user by email when no matching user is found", async () => {
-    const inviteSpy = vi.fn().mockResolvedValue({ status: 201, body: [] });
+    const inviteSpy = vi.fn().mockImplementation((_body, options?: { onSuccess?: () => void }) => {
+      options?.onSuccess?.();
+      return Promise.resolve({ status: 201, body: [] });
+    });
     useUserInvitationCreateMock.mockReturnValue({ mutateAsync: inviteSpy, isPending: false });
 
     // No matching users for the email search
@@ -387,7 +396,7 @@ describe("<ExperimentMemberManagement />", () => {
             role: "member",
           },
         },
-        expect.objectContaining({ onSuccess: expect.any(Function) }),
+        expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
       );
       expect(toastMock).toHaveBeenCalled();
     });
