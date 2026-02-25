@@ -1,337 +1,162 @@
-# Testing Guide — `apps/web`
+# Testing — `apps/web`
 
-## Philosophy
+Test behaviour, not implementation. Query by role/text, render real components, mock only system boundaries (network, auth, env).
 
-Tests should **resemble how users interact with the application**. We follow the [Testing Library guiding principles](https://testing-library.com/docs/guiding-principles/):
-
-> The more your tests resemble the way your software is used, the more confidence they can give you.
-
-This means:
-
-- **Query by role, label, or text** — not by `data-testid` or CSS class
-- **Test behaviour, not implementation** — assert what the user sees, not which internal function was called
-- **Render real components** — don't mock UI primitives from `@repo/ui/components`; only mock true system boundaries (network, storage, env)
-- **Prefer fewer, meaningful tests** over many shallow "renders X" assertions
-
-### What to mock
-
-| Layer                              | Mock?        | How                                                |
-| ---------------------------------- | ------------ | -------------------------------------------------- |
-| Network (API calls)                | Yes          | MSW request handlers                               |
-| `@repo/i18n` / `@repo/i18n/server` | Yes          | Global setup — returns translation keys            |
-| `posthog-js/react` / `posthog-js`  | Yes          | Global setup — noop stubs                          |
-| `next/navigation`                  | Yes          | Global setup — override per-test via `vi.mocked()` |
-| `next/headers`                     | Yes          | Global setup — override per-test via `vi.mocked()` |
-| `~/env`                            | Yes          | Global setup — deterministic test values           |
-| `@repo/ui/hooks` (toast)           | Yes          | Global setup — noop stub                           |
-| `@/hooks/useLocale`                | Yes          | Global setup — returns `"en-US"`                   |
-| `React.use`                        | Yes          | Global setup — spy wrapping real impl              |
-| `~/app/actions/auth`               | Yes          | Global setup — returns `null` (unauthenticated)    |
-| `~/app/actions/revalidate`         | Yes          | Global setup — noop stub                           |
-| `@repo/auth/client`                | Yes          | Global setup — authClient methods + useSession     |
-| `@repo/ui/components`              | **No**       | Render real components                             |
-| `next/link`, `next/image`          | **No**       | Render real components (work in jsdom)             |
-| `lucide-react` icons               | **No**       | Render real SVGs                                   |
-| `@repo/cms` components             | Case-by-case | Mock when they make external CMS calls             |
-
-### What makes a good test
-
-```tsx
-// ✅ Good — tests what the user experiences
-it("shows experiment name and links to detail page", () => {
-  render(<ExperimentCard experiment={createExperiment({ name: "Study A", id: "1" })} />);
-  const link = screen.getByRole("link", { name: /Study A/i });
-  expect(link).toHaveAttribute("href", "/platform/experiments/1");
-});
-
-// ❌ Bad — tests implementation details
-it("calls useExperiment with correct id", () => {
-  render(<ExperimentCard id="1" />);
-  expect(useExperiment).toHaveBeenCalledWith("1");
-});
-
-// ❌ Bad — mocks the component under indirect test
-vi.mock("@repo/ui/components", () => ({
-  Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
-}));
-```
-
----
-
-## Infrastructure
-
-All shared testing utilities live under `test/`:
+## File structure
 
 ```
 test/
-├── setup.ts          # Global setup (MSW lifecycle, polyfills, global mocks)
-├── test-utils.tsx     # Custom render/renderHook with providers, re-exports RTL
-├── factories.ts       # Test data factories (createExperiment, createSession, etc.)
+├── setup.ts        # Global mocks + MSW lifecycle (loaded via vitest setupFiles)
+├── test-utils.tsx   # render() / renderHook() wrapped in QueryClientProvider
+├── factories.ts     # createExperiment(), createSession(), etc.
 └── msw/
-    ├── handlers.ts    # Default MSW request handlers
-    └── server.ts      # MSW server instance
+    ├── handlers.ts  # Empty — each test mounts its own endpoints
+    ├── mount.ts     # server.mount() implementation
+    └── server.ts    # MSW server + mount()
 ```
 
-### `test/setup.ts`
+## Global mocks (`test/setup.ts`)
 
-Loaded automatically via `setupFiles` in `vitest.config.ts`. Provides:
+These are already mocked globally. **Do not re-declare them in test files.**
 
-- **jest-dom matchers** — `toBeInTheDocument()`, `toHaveTextContent()`, etc.
-- **React cleanup** — `afterEach(() => cleanup())`
-- **MSW lifecycle** — `beforeAll(server.listen)`, `afterEach(server.resetHandlers)`, `afterAll(server.close)`
-- **jsdom polyfills** — `window.matchMedia` for Radix UI components
-- **Global mocks** — i18n, PostHog, next/navigation, next/headers, env, toast, useLocale, React.use, auth action, revalidateAuth, authClient, useSession
+| Module                            | Default                                                                                                                            |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `@repo/i18n`, `@repo/i18n/server` | `t(key)` returns the key                                                                                                           |
+| `next/navigation`                 | `useRouter()` returns spied router, `usePathname()` returns `"/platform/experiments"`, `useParams()` returns `{ locale: "en-US" }` |
+| `next/headers`                    | `headers()`, `cookies()`, `draftMode()` stubs                                                                                      |
+| `~/app/actions/auth`              | `auth()` resolves to `null` (unauthenticated)                                                                                      |
+| `~/app/actions/revalidate`        | `revalidateAuth()` noop                                                                                                            |
+| `@repo/auth/client`               | `authClient` methods resolve `{ data: null, error: null }`, `useSession()` returns `{ data: null, isPending: false }`              |
+| `~/env`                           | Deterministic test values                                                                                                          |
+| `@repo/ui/hooks`                  | `toast()` noop spy                                                                                                                 |
+| `@/hooks/useLocale`               | Returns `"en-US"`                                                                                                                  |
+| `posthog-js`, `posthog-js/react`  | Noop stubs                                                                                                                         |
+| `React.use`                       | Spy wrapping real implementation                                                                                                   |
 
-Because these are global, **test files should not re-declare** `vi.mock("@repo/i18n")`, `vi.mock("next/navigation")`, `vi.mock("~/app/actions/auth")`, `vi.mock("@repo/auth/client")`, etc. Instead, override specific return values per-test:
+**Do not mock** `@repo/ui/components`, `next/link`, `next/image`, `lucide-react` — they work fine in jsdom.
+
+## Per-test overrides
+
+Override return values with `vi.mocked()`. No need for another `vi.mock()` call.
 
 ```tsx
-import { redirect } from "next/navigation";
-import { vi } from "vitest";
+// Auth
+vi.mocked(auth).mockResolvedValue(createSession());
 
-it("redirects unauthenticated users", async () => {
-  vi.mocked(redirect).mockImplementation(() => {
-    throw new Error("NEXT_REDIRECT");
-  });
-  // ...
+// Router
+const { router } = render(<MyComponent />);
+expect(router.push).toHaveBeenCalledWith("/somewhere");
+
+// React.use (for client components with Promise params)
+vi.mocked(use).mockReturnValue({ id: "exp-1", locale: "en-US" });
+
+// authClient
+vi.mocked(authClient.signIn.emailOtp).mockResolvedValue({
+  data: { user: { registered: true } },
+  error: null,
 });
-```
 
-#### Overriding auth state
-
-```tsx
-import { createSession } from "@/test/factories";
-import { auth } from "~/app/actions/auth";
-
-it("shows dashboard for logged-in user", async () => {
-  vi.mocked(auth).mockResolvedValue(createSession());
-  // ...
-});
-```
-
-#### Overriding `React.use` for client components with `Promise` params
-
-The global mock wraps the real `React.use` as a spy, so it works normally by default. For client components that call `use(params)` where `params` is a `Promise`, override in `beforeEach`:
-
-```tsx
-import { use } from "react";
-
-beforeEach(() => {
-  vi.mocked(use).mockReturnValue({ id: "test-id", locale: "en-US" });
-});
-```
-
-#### Overriding `authClient` methods
-
-```tsx
-import { authClient } from "@repo/auth/client";
-
-beforeEach(() => {
-  vi.mocked(authClient.signIn.emailOtp).mockResolvedValue({
-    error: null,
-    data: { user: { registered: true } },
-  });
-});
-```
-
-#### Testing files that _implement_ a globally mocked module
-
-If your test file tests the **real** `auth()` or `revalidateAuth()` function (i.e., the unit test for that module itself), use `vi.unmock()` to bypass the global stub:
-
-```tsx
+// Testing a globally mocked module's real implementation
 vi.unmock("~/app/actions/auth");
-// Now `import { auth } from "./auth"` gives the real function
 ```
 
-### `test/test-utils.tsx`
+## MSW + `server.mount()`
 
-Custom `render()` and `renderHook()` that wrap components in `QueryClientProvider` (with retry disabled, gcTime 0). Eliminates boilerplate wrapper setup.
-
-```tsx
-import { render, screen, userEvent } from "@/test/test-utils";
-
-it("submits on click", async () => {
-  const user = userEvent.setup();
-  render(<MyForm />);
-  await user.click(screen.getByRole("button", { name: /submit/i }));
-});
-```
-
-### `test/factories.ts`
-
-Typed factory functions that return valid default objects. Use partial overrides:
-
-```tsx
-import { createExperiment, createSession } from "@/test/factories";
-
-const experiment = createExperiment({ name: "My Study", status: "archived" });
-const session = createSession({ user: { firstName: "Jane" } });
-```
-
-Available factories: `createExperiment`, `createTransferRequest`, `createExperimentAccess`, `createSession`, `resetFactories`.
-
-### `test/msw/handlers.ts`
-
-Default handlers for common API endpoints. Override per-test with `server.use()`:
+Every test mounts exactly the endpoints it needs using `server.mount()` with the ts-rest contract:
 
 ```tsx
 import { server } from "@/test/msw/server";
-import { http, HttpResponse } from "msw";
 
-it("shows error when API fails", async () => {
-  server.use(
-    http.get("http://localhost:3020/api/v1/experiments", () => {
-      return new HttpResponse(null, { status: 500 });
-    }),
-  );
-  // ...
+import { contract } from "@repo/api";
+
+// Return data
+server.mount(contract.experiments.listExperiments, {
+  body: [createExperiment(), createExperiment()],
 });
+
+// Return error
+server.mount(contract.experiments.getExperiment, { status: 404 });
+
+// Capture request params/body
+const spy = server.mount(contract.macros.createMacro, {
+  body: createMacro({ id: "new-1" }),
+});
+// ... trigger action ...
+expect(spy.body).toMatchObject({ name: "Test" });
+expect(spy.params.id).toBe("new-1");
 ```
 
----
+## Factories (`test/factories.ts`)
 
-## Patterns
-
-### Testing hooks
-
-Use `renderHook` from `test-utils` + MSW for API hooks:
+Return valid defaults. Override only what the test cares about.
 
 ```tsx
-import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
-import { http, HttpResponse } from "msw";
-
-it("fetches transfer requests", async () => {
-  server.use(
-    http.get("http://localhost:3020/api/v1/transfer-requests", () => {
-      return HttpResponse.json([{ requestId: "1", status: "pending" }]);
-    }),
-  );
-
-  const { result } = renderHook(() => useTransferRequests());
-  await waitFor(() => expect(result.current.data).toBeDefined());
-  expect(result.current.data).toHaveLength(1);
-});
+createExperiment({ name: "Study A", status: "archived" });
+createSession({ user: { firstName: "Jane" } });
+createVisualization({ experimentId: "exp-1" });
 ```
 
-### Testing pages (server components)
+Available: `createExperiment`, `createTransferRequest`, `createExperimentAccess`, `createSession`, `createMacro`, `createProtocol`, `createUserProfile`, `createVisualization`, `createExperimentTable`, `createExperimentDataTable`, `createPlace`, `createLocation`.
 
-Server components are `async` functions. Render them with `await`:
+## `render()` and `renderHook()`
+
+Both from `@/test/test-utils`. They wrap in `QueryClientProvider` + `tsr.ReactQueryProvider` (retry disabled, gcTime 0) and return a `router` alongside the RTL result.
+
+```tsx
+import { render, screen, userEvent, waitFor, renderHook } from "@/test/test-utils";
+
+const user = userEvent.setup();
+const { router } = render(<MyComponent />);
+await user.click(screen.getByRole("button", { name: /save/i }));
+```
+
+## Common patterns
+
+**Server component (page/layout):**
 
 ```tsx
 it("renders the page", async () => {
-  const Page = await import("./page").then((m) => m.default);
-  const ui = await Page({ params: { locale: "en-US" } });
-  render(ui);
+  const Page = (await import("./page")).default;
+  render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
   expect(screen.getByRole("heading")).toBeInTheDocument();
 });
 ```
 
-### Testing pages (with auth)
-
-Use `vi.mocked()` to control auth state per-test. The `auth` action is globally mocked (returns `null` by default), so no per-file `vi.mock()` is needed:
+**Authenticated page:**
 
 ```tsx
-import { createSession } from "@/test/factories";
-import { auth } from "~/app/actions/auth";
-
-it("redirects to login when unauthenticated", async () => {
-  // auth already returns null by default
+it("redirects when unauthenticated", async () => {
+  // auth returns null by default
   const Page = (await import("./page")).default;
-  const ui = await Page({ params: { locale: "en-US" } });
-  render(ui);
+  render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
   expect(redirect).toHaveBeenCalledWith("/en-US/login");
 });
 
 it("shows content when authenticated", async () => {
   vi.mocked(auth).mockResolvedValue(createSession());
   const Page = (await import("./page")).default;
-  const ui = await Page({ params: { locale: "en-US" } });
-  render(ui);
-  expect(screen.getByText("Welcome")).toBeInTheDocument();
+  render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
+  expect(screen.getByText("settings.title")).toBeInTheDocument();
 });
 ```
 
-### Testing layouts
-
-Same pattern as pages — layouts are functions that accept `{ children, params }`:
+**Hook with API call:**
 
 ```tsx
-it("renders children when authenticated", async () => {
-  vi.mocked(auth).mockResolvedValue(createSession());
-  const Layout = (await import("./layout")).default;
-  const ui = await Layout({
-    children: <div>Test Content</div>,
-    params: Promise.resolve({ locale: "en-US" }),
-  });
-  render(ui);
-  expect(screen.getByText("Test Content")).toBeInTheDocument();
+it("fetches locations", async () => {
+  const locations = [createLocation(), createLocation()];
+  server.mount(contract.experiments.getExperimentLocations, { body: locations });
+
+  const { result } = renderHook(() => useExperimentLocations("exp-1"));
+  await waitFor(() => expect(result.current.data?.body).toHaveLength(2));
 });
 ```
-
-### Overriding global mocks per-test
-
-```tsx
-import { usePathname } from "next/navigation";
-
-beforeEach(() => {
-  vi.mocked(usePathname).mockReturnValue("/en-US/about");
-});
-```
-
----
 
 ## Running tests
 
 ```bash
-# Run all tests
-pnpm test
-
-# Run specific test file
-npx vitest run "my-component.test"
-
-# Run with verbose output
-npx vitest run --reporter=verbose
-
-# Run in watch mode
-npx vitest
-
-# Run with coverage
-npx vitest run --coverage
+pnpm test                                        # all tests
+pnpm test -- --run "my-component.test"            # single file
+pnpm test -- --coverage                           # with coverage
+pnpm test -- --watch                              # watch mode
 ```
-
----
-
-## Coverage targets
-
-- **North star:** 100% line/statement coverage for source files that have tests
-- **Exception:** Dead/unreachable code paths that don't affect user behaviour can be left uncovered
-- **New code:** Every new component, hook, or page should ship with tests
-
----
-
-## Migration from old patterns
-
-When refactoring existing tests, follow this checklist:
-
-- [ ] Remove local `vi.mock("@repo/i18n")` — handled by global setup
-- [ ] Remove local `vi.mock("@repo/i18n/server")` — handled by global setup
-- [ ] Remove local `vi.mock("next/navigation")` — handled by global setup
-- [ ] Remove local `vi.mock("next/headers")` — handled by global setup
-- [ ] Remove local `vi.mock("posthog-js/react")` — handled by global setup
-- [ ] Remove local `vi.mock("posthog-js")` — handled by global setup
-- [ ] Remove local `vi.mock("~/env")` — handled by global setup
-- [ ] Remove local `vi.mock("@repo/ui/hooks")` — handled by global setup
-- [ ] Remove local `vi.mock("@/hooks/useLocale")` — handled by global setup
-- [ ] Remove local `vi.mock("~/app/actions/auth")` — handled by global setup
-- [ ] Remove local `vi.mock("~/app/actions/revalidate")` — handled by global setup
-- [ ] Remove local `vi.mock("@repo/auth/client")` — handled by global setup
-- [ ] Remove local `vi.mock("react")` for `React.use` — handled by global setup; override with `vi.mocked(use).mockReturnValue(...)` in `beforeEach`
-- [ ] Remove mocks for `@repo/ui/components` — render real components
-- [ ] Remove mocks for `next/link` — renders fine in jsdom
-- [ ] Remove mocks for `lucide-react` — renders fine in jsdom
-- [ ] Replace `@testing-library/react` imports with `@/test/test-utils`
-- [ ] Replace `fireEvent` with `userEvent.setup()` + `user.click()`
-- [ ] Replace inline test data with factories from `@/test/factories`
-- [ ] Replace `container.querySelector` with `screen.getByRole` / `screen.getByText`
-- [ ] Remove "renders without crashing" tests — they add no value
-- [ ] Merge redundant "renders X" tests into meaningful behaviour tests

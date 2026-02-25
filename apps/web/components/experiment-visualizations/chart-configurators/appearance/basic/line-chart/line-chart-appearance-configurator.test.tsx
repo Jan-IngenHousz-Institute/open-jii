@@ -1,46 +1,19 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { userEvent } from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import LineChartAppearanceConfigurator from "./line-chart-appearance-configurator";
 
-// Mock the display options section
 vi.mock("../../shared/display-options-section", () => ({
   default: vi.fn(() => <div data-testid="display-options-section">Display Options</div>),
 }));
 
+HTMLElement.prototype.hasPointerCapture = () => false;
+HTMLElement.prototype.scrollIntoView = () => {};
+
 describe("LineChartAppearanceConfigurator", () => {
-  beforeAll(() => {
-    // Mock ResizeObserver for Radix UI components
-    global.ResizeObserver = class ResizeObserver {
-      observe() {
-        // Mock implementation
-      }
-      unobserve() {
-        // Mock implementation
-      }
-      disconnect() {
-        // Mock implementation
-      }
-    };
-
-    // Mock PointerEvent methods for Radix UI Select
-    Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
-      value: () => false,
-      writable: true,
-    });
-
-    // Mock scrollIntoView for Radix UI Select
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-      value: () => {
-        // Mock implementation
-      },
-      writable: true,
-    });
-  });
-
   it("should render display options section", () => {
     function TestComponent() {
       const form = useForm<ChartFormValues>({

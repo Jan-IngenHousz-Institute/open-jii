@@ -55,7 +55,6 @@ describe("MacroInfoCard", () => {
       expect(spy.called).toBe(true);
     });
     expect(spy.params).toMatchObject({ id: "macro-1" });
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/macros");
   });
 });

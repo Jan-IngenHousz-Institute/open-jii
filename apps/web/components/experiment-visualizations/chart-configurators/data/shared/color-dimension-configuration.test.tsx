@@ -1,37 +1,15 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import ColorDimensionConfiguration from "./color-dimension-configuration";
 
-// Mock the translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Setup required jsdom APIs
-beforeAll(() => {
-  global.ResizeObserver = class ResizeObserver {
-    observe() {
-      // empty
-    }
-    unobserve() {
-      // empty
-    }
-    disconnect() {
-      // empty
-    }
-  };
-
-  HTMLElement.prototype.hasPointerCapture = vi.fn();
-  HTMLElement.prototype.scrollIntoView = vi.fn();
-});
+HTMLElement.prototype.hasPointerCapture = vi.fn();
+HTMLElement.prototype.scrollIntoView = vi.fn();
 
 // Sample table data
 const mockColumns = [

@@ -1,5 +1,6 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { setConsentStatus } from "~/lib/cookie-consent";
 
 import { CookieBanner } from "./cookie-banner";
 
@@ -10,8 +11,6 @@ vi.mock("~/lib/cookie-consent", () => ({
     mockConsentStatus = s;
   }),
 }));
-
-const { setConsentStatus } = await import("~/lib/cookie-consent");
 
 describe("CookieBanner", () => {
   beforeEach(() => {
