@@ -3,13 +3,7 @@
  */
 import type { ITransportAdapter } from "../../transport/interface";
 import { Emitter } from "../../utils/emitter";
-import {
-  stringifyIfObject,
-  tryParseJson,
-  extractChecksum,
-  addLineEnding,
-  removeLineEnding,
-} from "../../utils/framing";
+import { stringifyIfObject, tryParseJson, addLineEnding } from "../../utils/framing";
 import { DeviceProtocol } from "../base";
 import type { CommandResult } from "../base";
 import type {
@@ -55,8 +49,11 @@ export class MultispeqProtocol extends DeviceProtocol {
 
     console.log("[MultispeqProtocol] Complete message received, length:", fullData.length);
 
-    const cleanData = removeLineEnding(fullData);
-    const { data: jsonData, checksum } = extractChecksum(cleanData, 8);
+    // Strip trailing newline, then extract the 8-char checksum before it.
+    // Format from firmware: <json_or_string><8-char checksum>\n
+    // Match mobile: jsonData = totalData.slice(0, -9), checksum = totalData.slice(-9, -1)
+    const jsonData = fullData.slice(0, -9);
+    const checksum = fullData.slice(-9, -1);
 
     console.log("[MultispeqProtocol] Extracted checksum:", checksum);
     console.log("[MultispeqProtocol] JSON data (first 500 chars):", jsonData.substring(0, 500));
@@ -121,14 +118,24 @@ export class MultispeqProtocol extends DeviceProtocol {
 
     const info: MultispeqDeviceInfo = {};
 
-    if (batteryResult.success && typeof batteryResult.data === "string") {
-      const batteryStr = batteryResult.data.replace("battery:", "");
-      const battery = parseInt(batteryStr, 10);
-      if (!isNaN(battery)) {
-        info.device_battery = battery;
+    if (batteryResult.success) {
+      // The battery response is the full raw string from the device (e.g. "battery:91")
+      // after checksum extraction. Parse the number from it.
+      const raw =
+        typeof batteryResult.data === "string"
+          ? batteryResult.data
+          : String(batteryResult.data ?? "");
+      console.log("[MultispeqProtocol] getDeviceInfo raw battery data:", JSON.stringify(raw));
+      const match = raw.match(/(\d+)/);
+      if (match) {
+        const battery = parseInt(match[1], 10);
+        if (!isNaN(battery)) {
+          info.device_battery = battery;
+        }
       }
     }
 
+    console.log("[MultispeqProtocol] getDeviceInfo result:", info);
     return info;
   }
 

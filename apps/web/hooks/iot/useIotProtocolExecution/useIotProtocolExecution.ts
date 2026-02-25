@@ -19,47 +19,24 @@ export function useIotProtocolExecution(protocol: IDeviceProtocol | null, isConn
         throw new Error("Not connected to device");
       }
 
-      // Load protocol definition on the device
+      // Send protocol code directly to the device and wait for measurement result.
+      // The MultispeQ firmware expects the raw protocol JSON array — NOT a command envelope.
+      // This matches the mobile app behavior (see scan-manager.ts → executeCommand).
       console.log(
-        "[useIotProtocolExecution] Step 1/3: SET_CONFIG - loading protocol on device, protocol length:",
+        "[useIotProtocolExecution] Sending protocol code to device, length:",
         JSON.stringify(protocolCode).length,
       );
-      const setResult = await protocol.execute({
-        command: "SET_CONFIG",
-        params: { protocol: protocolCode },
+      const result = await protocol.execute(protocolCode);
+      console.log("[useIotProtocolExecution] Protocol result:", {
+        success: result.success,
+        error: result.error?.message,
+        dataType: typeof result.data,
       });
-      console.log("[useIotProtocolExecution] SET_CONFIG result:", {
-        success: setResult.success,
-        error: setResult.error?.message,
-      });
-      if (!setResult.success) {
-        throw new Error(setResult.error?.message ?? "Failed to load protocol on device");
+      if (!result.success) {
+        throw new Error(result.error?.message ?? "Failed to execute protocol on device");
       }
 
-      // Execute the loaded protocol
-      console.log("[useIotProtocolExecution] Step 2/3: RUN - executing protocol");
-      const runResult = await protocol.execute({ command: "RUN" });
-      console.log("[useIotProtocolExecution] RUN result:", {
-        success: runResult.success,
-        error: runResult.error?.message,
-      });
-      if (!runResult.success) {
-        throw new Error(runResult.error?.message ?? "Failed to run protocol");
-      }
-
-      // Retrieve measurement results
-      console.log("[useIotProtocolExecution] Step 3/3: GET_DATA - retrieving results");
-      const dataResult = await protocol.execute({ command: "GET_DATA" });
-      console.log("[useIotProtocolExecution] GET_DATA result:", {
-        success: dataResult.success,
-        error: dataResult.error?.message,
-        dataType: typeof dataResult.data,
-      });
-      if (!dataResult.success) {
-        throw new Error(dataResult.error?.message ?? "Failed to get measurement data");
-      }
-
-      let data = dataResult.data;
+      let data = result.data;
       if (typeof data === "string") {
         console.log("[useIotProtocolExecution] Parsing string data, length:", data.length);
         try {
