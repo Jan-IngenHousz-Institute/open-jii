@@ -91,7 +91,6 @@ describe("ExperimentVisualizationDetails", () => {
       expect(screen.getByText("ui.messages.failedToLoad")).toBeInTheDocument();
     });
     await user.click(screen.getByText("ui.actions.back"));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
 
@@ -143,7 +142,6 @@ describe("ExperimentVisualizationDetails", () => {
     });
     await user.click(screen.getByText("ui.actions.title"));
     await user.click(screen.getByText("ui.actions.edit"));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(
       `/en-US/platform/experiments/${expId}/analysis/visualizations/${vizId}/edit`,
     );
@@ -167,7 +165,6 @@ describe("ExperimentVisualizationDetails", () => {
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "ui.messages.deleteSuccess" });
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).toHaveBeenCalledWith(`/en-US/platform/experiments/${expId}`);
   });
 
