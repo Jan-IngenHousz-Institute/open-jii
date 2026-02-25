@@ -3,13 +3,17 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
+import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
 export class DeleteExperimentUseCase {
   private readonly logger = new Logger(DeleteExperimentUseCase.name);
 
-  constructor(private readonly experimentRepository: ExperimentRepository) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly experimentMetadataRepository: ExperimentMetadataRepository,
+  ) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
     this.logger.log({
@@ -49,6 +53,21 @@ export class DeleteExperimentUseCase {
             userId,
           });
           return failure(AppError.forbidden("Only experiment members can delete experiments"));
+        }
+
+        // Clean up metadata in Databricks before deleting the experiment from Postgres.
+        // This is best-effort — we log but don't block the delete if metadata cleanup fails,
+        // since the experiment record is the source of truth.
+        const metadataDeleteResult =
+          await this.experimentMetadataRepository.deleteByExperimentId(id);
+
+        if (metadataDeleteResult.isFailure()) {
+          this.logger.warn({
+            msg: "Failed to delete experiment metadata from Databricks, proceeding with experiment deletion",
+            operation: "deleteExperiment",
+            experimentId: id,
+            error: metadataDeleteResult.error.message,
+          });
         }
 
         this.logger.debug({

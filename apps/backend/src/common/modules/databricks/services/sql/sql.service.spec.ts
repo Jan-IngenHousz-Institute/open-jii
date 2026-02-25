@@ -595,5 +595,92 @@ describe("DatabricksSqlService", () => {
       assertSuccess(result);
       expect(result.value).toEqual(mockTableData);
     });
+
+    it("should include parameters in the request body when provided", async () => {
+      const parameterizedQuery = "SELECT * FROM test_table WHERE id = :id AND name = :name";
+      const parameters = [
+        { name: "id", value: "123" },
+        { name: "name", value: "test" },
+      ];
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution and capture the request body
+      let capturedBody: Record<string, unknown> | undefined;
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/", (body: Record<string, unknown>) => {
+          capturedBody = body;
+          return true;
+        })
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 1,
+              columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+            },
+            total_row_count: 1,
+            truncated: false,
+          },
+          result: {
+            data_array: [["123"]],
+            chunk_index: 0,
+            row_count: 1,
+            row_offset: 0,
+          },
+        });
+
+      const result = await sqlService.executeSqlQuery(schemaName, parameterizedQuery, parameters);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      // Verify parameters were included in the request body
+      expect(capturedBody).toBeDefined();
+      expect(capturedBody!.parameters).toEqual(parameters);
+      expect(capturedBody!.statement).toBe(parameterizedQuery);
+    });
+
+    it("should not include parameters field when no parameters are provided", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      let capturedBody: Record<string, unknown> | undefined;
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/", (body: Record<string, unknown>) => {
+          capturedBody = body;
+          return true;
+        })
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: { column_count: 0 },
+            total_row_count: 0,
+            truncated: false,
+          },
+          result: {
+            data_array: [],
+            chunk_index: 0,
+            row_count: 0,
+            row_offset: 0,
+          },
+        });
+
+      await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      expect(capturedBody).toBeDefined();
+      expect(capturedBody!.parameters).toBeUndefined();
+    });
   });
 });
