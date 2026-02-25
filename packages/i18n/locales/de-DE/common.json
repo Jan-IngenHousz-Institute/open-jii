@@ -187,6 +187,7 @@
     "roleAdmin": "Admin",
     "roleUpdated": "Rolle erfolgreich aktualisiert",
     "pendingInvitations": "Eingeladen",
+    "pendingInvite": "Einladung ausstehend",
     "invitationRevoked": "Einladung erfolgreich widerrufen",
     "revoke": "Widerrufen",
     "collaborators": "Mitarbeiter",

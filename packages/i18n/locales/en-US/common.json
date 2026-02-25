@@ -316,6 +316,7 @@
     "leave": "Leave",
     "remove": "Remove",
     "pendingInvitations": "Invited",
+    "pendingInvite": "Invite pending",
     "invitationRevoked": "Invitation revoked successfully",
     "revoke": "Revoke",
     "collaborators": "Collaborators",

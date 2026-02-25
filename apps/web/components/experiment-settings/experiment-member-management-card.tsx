@@ -1,5 +1,6 @@
 "use client";
 
+import { Mail } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { UserProfile, ExperimentMemberRole, ExperimentMember, Invitation } from "@repo/api";
@@ -272,6 +273,12 @@ export function ExperimentMemberManagement({
                 <div key={invitation.id} className="flex items-center justify-between rounded">
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="text-foreground text-sm font-medium">{invitation.email}</span>
+                    <span className="flex items-center gap-x-1">
+                      <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+                      <span className="text-muted-foreground text-sm">
+                        {t("experimentSettings.pendingInvite")}
+                      </span>
+                    </span>
                   </div>
                   <div className="flex flex-shrink-0 pl-4">
                     <Select
