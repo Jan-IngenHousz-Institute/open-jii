@@ -83,7 +83,7 @@ module "cognito" {
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
   allow_unauthenticated_identities = true # change after mobile app is ready and we want to disable unauthenticated access
-  create_auth_role                  = true
+  create_auth_role                 = true
 }
 
 module "vpc" {
