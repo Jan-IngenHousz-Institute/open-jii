@@ -82,9 +82,9 @@ resource "aws_iam_role" "auth" {
 
 resource "aws_cognito_identity_pool_roles_attachment" "this" {
   identity_pool_id = aws_cognito_identity_pool.this.id
-
+  
   roles = {
-    authenticated   = var.auth_role ? aws_iam_role.auth.arn : null
+    authenticated   = var.auth_role ? aws_iam_role.auth[0].arn : null
     unauthenticated = aws_iam_role.unauth.arn
   }
 }
@@ -113,6 +113,6 @@ resource "aws_iam_policy" "auth_iot" {
 
 resource "aws_iam_role_policy_attachment" "auth_iot_attach" {
   count      = var.auth_role ? 1 : 0
-  role       = aws_iam_role.auth.name
-  policy_arn = aws_iam_policy.auth_iot.arn
+  role       = aws_iam_role.auth[0].name
+  policy_arn = aws_iam_policy.auth_iot[0].arn
 }
