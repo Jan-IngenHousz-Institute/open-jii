@@ -23,9 +23,10 @@ variable "developer_provider_name" {
 variable "allow_unauthenticated_identities" {
   type        = bool
   description = "Whether to allow unauthenticated identities"
+  default     = true
 }
 
-variable "auth_role" {
+variable "create_auth_role" {
   type        = bool
-  description = "ARN of the IAM role for authenticated users"
+  description = "Whether to create an IAM role for authenticated users (developer-authenticated identities)"
 }

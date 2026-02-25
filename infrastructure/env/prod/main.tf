@@ -85,8 +85,8 @@ module "cognito" {
   region                           = var.aws_region
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
-  allow_unauthenticated_identities = false
-  auth_role                        = false
+  allow_unauthenticated_identities = true # change after mobile app is ready and we want to disable unauthenticated access
+  create_auth_role                  = false
 }
 
 module "vpc" {
