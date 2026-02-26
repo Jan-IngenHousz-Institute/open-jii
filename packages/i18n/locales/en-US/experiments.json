@@ -92,7 +92,9 @@
   "experimentData": {
     "title": "Experiment Data",
     "description": "View, download and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
-    "uploadData": "Upload Data"
+    "uploadData": "Upload Data",
+    "noData": "No measurements recorded yet. Use the openJII mobile app to add measurements.",
+    "readMore": "Read more"
   },
   "experiment": "Experiment",
   "detailsTitle": "Details",
