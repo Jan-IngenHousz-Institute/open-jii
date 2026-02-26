@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
@@ -58,7 +59,23 @@ export function ScatterChartRenderer({
       <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
         <div className="text-center">
           <div className="mb-2 font-medium">{t("errors.failedToLoadData")}</div>
-          <div className="text-sm">{t("errors.failedToLoadDataDescription")}</div>
+          <div className="text-sm">
+            {t("errors.failedToLoadDataDescription")
+              .split(/<link>|<\/link>/)
+              .map((part, i) =>
+                i === 1 ? (
+                  <Link
+                    key={i}
+                    href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}`}
+                    className="underline hover:opacity-80"
+                  >
+                    {part}
+                  </Link>
+                ) : (
+                  <React.Fragment key={i}>{part}</React.Fragment>
+                ),
+              )}
+          </div>
         </div>
       </div>
     );

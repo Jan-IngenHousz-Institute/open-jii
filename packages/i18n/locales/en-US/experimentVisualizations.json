@@ -197,7 +197,7 @@
     "yAxisNotConfigured": "Y-axis column not configured",
     "loadingData": "Loading chart data...",
     "failedToLoadData": "Failed to load data",
-    "failedToLoadDataDescription": "Unable to fetch experiment data for this visualization",
+    "failedToLoadDataDescription": "Unable to fetch experiment data for this visualization. Please check your chart <link>configuration</link> — the selected table or columns may no longer exist",
     "noDataFound": "No data found for this visualization",
     "unsupportedChartType": "Unsupported Chart Type",
     "chartTypeNotSupported": "is not supported"

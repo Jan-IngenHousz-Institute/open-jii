@@ -196,7 +196,7 @@
     "yAxisNotConfigured": "Y-Achsen-Spalte nicht konfiguriert",
     "loadingData": "Diagrammdaten werden geladen...",
     "failedToLoadData": "Daten konnten nicht geladen werden",
-    "failedToLoadDataDescription": "Experimentdaten für diese Visualisierung konnten nicht abgerufen werden",
+    "failedToLoadDataDescription": "Experimentdaten für diese Visualisierung konnten nicht abgerufen werden. Bitte überprüfen Sie Ihre Diagramm<link>konfiguration</link> — die ausgewählte Tabelle oder Spalten existieren möglicherweise nicht mehr",
     "noDataFound": "Keine Daten für diese Visualisierung gefunden",
     "unsupportedChartType": "Nicht unterstützter Diagrammtyp",
     "chartTypeNotSupported": "wird nicht unterstützt"

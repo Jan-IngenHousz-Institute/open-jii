@@ -128,6 +128,20 @@ describe("ScatterChartRenderer", () => {
 
       expect(screen.getByText("errors.noData")).toBeInTheDocument();
     });
+
+    it("should show error message when fetch fails", () => {
+      vi.mocked(useExperimentVisualizationData).mockReturnValue({
+        data: undefined,
+        tableInfo: undefined,
+        isLoading: false,
+        error: { status: 500, body: { message: "Internal error" }, headers: new Headers() },
+      });
+
+      render(<ScatterChartRenderer visualization={mockVisualization} experimentId="exp-1" />);
+
+      expect(screen.getByText("errors.failedToLoadData")).toBeInTheDocument();
+      expect(screen.getByText("errors.failedToLoadDataDescription")).toBeInTheDocument();
+    });
   });
 
   describe("Configuration validation", () => {
