@@ -2,6 +2,7 @@
 
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import type { ExperimentTableMetadata } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
+import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -69,6 +70,7 @@ function ChartTypeConfigurator({
 
 interface DataSourceStepProps extends WizardStepProps<ChartFormValues> {
   tables: ExperimentTableMetadata[];
+  tablesError?: unknown;
   experimentId: string;
   isPreviewOpen: boolean;
   onPreviewClose: () => void;
@@ -77,6 +79,7 @@ interface DataSourceStepProps extends WizardStepProps<ChartFormValues> {
 export function DataSourceStep({
   form,
   tables,
+  tablesError,
   experimentId,
   onNext,
   onPrevious,
@@ -95,7 +98,7 @@ export function DataSourceStep({
   const [selectedTableName, setSelectedTableName] = useState<string>(defaultTableName);
 
   // Fetch data for the selected table to get column information
-  const { tableMetadata, isLoading } = useExperimentData({
+  const { tableMetadata, isLoading, error: columnsError } = useExperimentData({
     experimentId,
     page: 1,
     pageSize: 1, // Just fetch 1 row to get column metadata
@@ -140,6 +143,14 @@ export function DataSourceStep({
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
+            {/* Tables error banner */}
+            {tablesError && (
+              <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {t("form.dataSource.failedToLoadTables")}
+              </div>
+            )}
+
             {/* Table Selection */}
             <div className="max-w-sm">
               <FormField
@@ -161,7 +172,11 @@ export function DataSourceStep({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {tables.length === 0 ? (
+                        {tablesError ? (
+                          <div className="text-destructive px-2 py-1.5 text-sm">
+                            {t("form.dataSource.failedToLoadTables")}
+                          </div>
+                        ) : tables.length === 0 ? (
                           <div className="text-muted-foreground px-2 py-1.5 text-sm">
                             {t("form.dataSource.noTablesAvailable")}
                           </div>
@@ -192,8 +207,24 @@ export function DataSourceStep({
               </div>
             )}
 
+            {/* Error loading columns */}
+            {selectedTableName && !isLoading && columnsError && (
+              <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {t("form.dataSource.failedToLoadColumns")}
+              </div>
+            )}
+
+            {/* No valid columns */}
+            {selectedTableName && !isLoading && !columnsError && columns.length === 0 && tableMetadata && (
+              <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {t("form.dataSource.noValidColumns")}
+              </div>
+            )}
+
             {/* Chart-specific configuration */}
-            {selectedTableName && !isLoading && columns.length > 0 && (
+            {selectedTableName && !isLoading && !columnsError && columns.length > 0 && (
               <ChartTypeConfigurator chartType={selectedChartType} form={form} columns={columns} />
             )}
           </div>
@@ -201,7 +232,7 @@ export function DataSourceStep({
       </Card>
 
       {/* Chart Preview */}
-      {selectedTableName && !isLoading && columns.length > 0 && (
+      {selectedTableName && !isLoading && !columnsError && columns.length > 0 && (
         <div className="flex justify-center">
           <ChartPreviewModal
             form={form}

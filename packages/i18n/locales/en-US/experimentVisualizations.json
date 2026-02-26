@@ -41,7 +41,10 @@
       "selectTable": "Select table",
       "tableInfo": "{{name}}",
       "noTablesAvailable": "No tables available",
-      "loadingColumns": "Loading columns..."
+      "failedToLoadTables": "Could not load tables for this experiment. Please try again later.",
+      "loadingColumns": "Loading columns...",
+      "failedToLoadColumns": "Could not load columns for this table. The table may no longer exist.",
+      "noValidColumns": "No valid columns found in this table for chart axes."
     }
   },
 
@@ -197,7 +200,7 @@
     "yAxisNotConfigured": "Y-axis column not configured",
     "loadingData": "Loading chart data...",
     "failedToLoadData": "Failed to load data",
-    "failedToLoadDataDescription": "Unable to fetch experiment data for this visualization. Please check your chart <link>configuration</link> — the selected table or columns may no longer exist",
+    "failedToLoadDataDescription": "Unable to fetch experiment data for this visualization. Please check your chart <configLink>configuration</configLink>.",
     "noDataFound": "No data found for this visualization",
     "unsupportedChartType": "Unsupported Chart Type",
     "chartTypeNotSupported": "is not supported"

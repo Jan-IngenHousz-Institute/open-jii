@@ -11,6 +11,11 @@ vi.mock("@repo/i18n", () => ({
   useTranslation: vi.fn(() => ({ t: (key: string) => key })),
 }));
 
+// Mock react-i18next (Trans component used for error messages with links)
+vi.mock("react-i18next", () => ({
+  Trans: ({ i18nKey }: { i18nKey: string }) => <span>{i18nKey}</span>,
+}));
+
 vi.mock("@repo/ui/components", () => ({
   ScatterChart: vi.fn(({ data }) => (
     <div data-testid="scatter-chart">
