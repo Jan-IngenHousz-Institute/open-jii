@@ -67,12 +67,15 @@ export function LineChartRenderer({
               i18nKey="errors.failedToLoadDataDescription"
               ns="experimentVisualizations"
               components={{
-                configLink: (
-                  <Link
-                    href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}/edit`}
-                    className="text-foreground underline hover:opacity-80"
-                  />
-                ),
+                configLink:
+                  visualization.id && visualization.id !== "preview" ? (
+                    <Link
+                      href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}/edit`}
+                      className="text-foreground underline hover:opacity-80"
+                    />
+                  ) : (
+                    <span className="text-foreground" />
+                  ),
               }}
             />
           </div>

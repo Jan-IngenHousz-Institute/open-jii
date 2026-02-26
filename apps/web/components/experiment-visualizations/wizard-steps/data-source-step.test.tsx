@@ -791,27 +791,19 @@ describe("DataSourceStep", () => {
 
   describe("Error States", () => {
     it("should show tables error banner when tablesError is set", () => {
-      render(
-        <TestWrapper
-          {...defaultProps}
-          tablesError={new Error("Failed to load tables")}
-        />,
-      );
+      render(<TestWrapper {...defaultProps} tablesError={new Error("Failed to load tables")} />);
 
       expect(screen.getAllByText("form.dataSource.failedToLoadTables").length).toBeGreaterThan(0);
     });
 
     it("should show fallback message in select dropdown when tablesError is set", () => {
-      render(
-        <TestWrapper
-          {...defaultProps}
-          tablesError={new Error("Failed to load tables")}
-        />,
-      );
+      render(<TestWrapper {...defaultProps} tablesError={new Error("Failed to load tables")} />);
 
       // The select content should show the error message
       const selectContent = screen.getByTestId("select-content");
-      expect(within(selectContent).getByText("form.dataSource.failedToLoadTables")).toBeInTheDocument();
+      expect(
+        within(selectContent).getByText("form.dataSource.failedToLoadTables"),
+      ).toBeInTheDocument();
     });
 
     it("should show columns error banner when columns fail to load", () => {
@@ -895,9 +887,7 @@ describe("DataSourceStep", () => {
           name: "measurements",
           displayName: "Measurements",
           totalRows: 100,
-          rawColumns: [
-            { name: "id", type_name: "STRUCT", type_text: "STRUCT<field:STRING>" },
-          ],
+          rawColumns: [{ name: "id", type_name: "STRUCT", type_text: "STRUCT<field:STRING>" }],
         },
         isLoading: false,
         error: null,

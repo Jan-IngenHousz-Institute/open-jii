@@ -9,14 +9,12 @@ import ExperimentVisualizationsDisplay from "./experiment-visualizations-display
 
 // Mock the visualization renderer component
 vi.mock("./experiment-visualization-renderer", () => ({
-  default: vi.fn(
-    ({ visualization }: { visualization?: ExperimentVisualization }) => (
-      <div data-testid="visualization-renderer">
-        <div data-testid="viz-id">{visualization?.id}</div>
-        <div data-testid="viz-name">{visualization?.name}</div>
-      </div>
-    ),
-  ),
+  default: vi.fn(({ visualization }: { visualization?: ExperimentVisualization }) => (
+    <div data-testid="visualization-renderer">
+      <div data-testid="viz-id">{visualization?.id}</div>
+      <div data-testid="viz-name">{visualization?.name}</div>
+    </div>
+  )),
 }));
 
 // Mock translation

@@ -98,7 +98,11 @@ export function DataSourceStep({
   const [selectedTableName, setSelectedTableName] = useState<string>(defaultTableName);
 
   // Fetch data for the selected table to get column information
-  const { tableMetadata, isLoading, error: columnsError } = useExperimentData({
+  const {
+    tableMetadata,
+    isLoading,
+    error: columnsError,
+  } = useExperimentData({
     experimentId,
     page: 1,
     pageSize: 1, // Just fetch 1 row to get column metadata
@@ -144,8 +148,8 @@ export function DataSourceStep({
         <CardContent>
           <div className="space-y-6">
             {/* Tables error banner */}
-            {tablesError && (
-              <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            {!!tablesError && (
+              <div className="bg-muted/30 text-muted-foreground flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-sm">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 {t("form.dataSource.failedToLoadTables")}
               </div>
@@ -172,7 +176,7 @@ export function DataSourceStep({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {tablesError ? (
+                        {!!tablesError ? (
                           <div className="text-destructive px-2 py-1.5 text-sm">
                             {t("form.dataSource.failedToLoadTables")}
                           </div>
@@ -209,19 +213,23 @@ export function DataSourceStep({
 
             {/* Error loading columns */}
             {selectedTableName && !isLoading && columnsError && (
-              <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <div className="bg-muted/30 text-muted-foreground flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-sm">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 {t("form.dataSource.failedToLoadColumns")}
               </div>
             )}
 
             {/* No valid columns */}
-            {selectedTableName && !isLoading && !columnsError && columns.length === 0 && tableMetadata && (
-              <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {t("form.dataSource.noValidColumns")}
-              </div>
-            )}
+            {selectedTableName &&
+              !isLoading &&
+              !columnsError &&
+              columns.length === 0 &&
+              tableMetadata && (
+                <div className="bg-muted/30 text-muted-foreground flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-sm">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {t("form.dataSource.noValidColumns")}
+                </div>
+              )}
 
             {/* Chart-specific configuration */}
             {selectedTableName && !isLoading && !columnsError && columns.length > 0 && (
