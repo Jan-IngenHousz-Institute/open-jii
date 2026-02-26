@@ -20,6 +20,7 @@ vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 
+// MemberList — sibling component (Rule 5)
 vi.mock("../current-members-list/current-members-list", () => ({
   MemberList: ({
     members,

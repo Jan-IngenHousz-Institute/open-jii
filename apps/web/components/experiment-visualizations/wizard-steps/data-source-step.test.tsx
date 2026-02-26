@@ -41,6 +41,7 @@ vi.mock("../chart-configurators/data/basic/scatter-chart/scatter-chart-data-conf
   ),
 }));
 
+// Sibling preview modal (Rule 5)
 vi.mock("../chart-preview/chart-preview-modal", () => ({
   ChartPreviewModal: ({
     experimentId,
