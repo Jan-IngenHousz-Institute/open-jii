@@ -85,7 +85,7 @@ QUESTIONS_SCHEMA = StructType([
 
 projects = spark.read.schema(PROJECTS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/projects.parquet")
 users = spark.read.schema(USERS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/users.parquet")
-measurements = spark.read.schema(MEASUREMENTS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/measurements.parquet")
+measurements = spark.read.schema(MEASUREMENTS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/measurements")
 questions = spark.read.schema(QUESTIONS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/questions.parquet")
 
 # COMMAND ----------
