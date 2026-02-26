@@ -8,15 +8,10 @@ import { ExperimentMeasurements } from "./experiment-measurements";
 globalThis.React = React;
 
 // ---------- Hoisted mocks ----------
-const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
+const { useExperimentDataSpy } = vi.hoisted(() => {
   return {
     useExperimentDataSpy: vi.fn(() => ({
       tableRows: null as unknown[] | null,
-      isLoading: false,
-      error: null as Error | null,
-    })),
-    useExperimentTablesSpy: vi.fn(() => ({
-      tables: [{ name: "device", displayName: "Device", rowCount: 10 }],
       isLoading: false,
       error: null as Error | null,
     })),
@@ -32,10 +27,6 @@ vi.mock("@repo/i18n", () => ({
 
 vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: () => useExperimentDataSpy(),
-}));
-
-vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
-  useExperimentTables: () => useExperimentTablesSpy(),
 }));
 
 vi.mock("~/hooks/useLocale", () => ({
@@ -187,41 +178,5 @@ describe("ExperimentMeasurements", () => {
     render(<ExperimentMeasurements experimentId="exp-test-123" />);
 
     expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
-  });
-
-  it("renders empty state when device table is not available", () => {
-    useExperimentTablesSpy.mockReturnValue({
-      tables: [{ name: "raw_data", displayName: "Raw Data", totalRows: 5 }],
-      isLoading: false,
-      error: null,
-    });
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: null,
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ExperimentMeasurements experimentId="exp-123" />);
-
-    expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
-  });
-
-  it("renders loading state when tables are loading", () => {
-    useExperimentTablesSpy.mockReturnValue({
-      tables: undefined,
-      isLoading: true,
-      error: null,
-    });
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: null,
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ExperimentMeasurements experimentId="exp-123" />);
-
-    expect(screen.getByText("measurements.latestMeasurements")).toBeInTheDocument();
-    const loadingElement = document.querySelector(".animate-pulse");
-    expect(loadingElement).toBeInTheDocument();
   });
 });

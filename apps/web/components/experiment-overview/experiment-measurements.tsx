@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
-import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useLocale } from "~/hooks/useLocale";
 
 import { ExperimentTableName } from "@repo/api";
@@ -31,22 +30,14 @@ export function ExperimentMeasurements({
   isArchived = false,
 }: ExperimentMeasurementsProps) {
   const locale = useLocale();
-  const { tables, isLoading: isLoadingTables } = useExperimentTables(experimentId);
-  const hasDeviceTable = tables?.some((table) => table.name === ExperimentTableName.DEVICE);
-  const {
-    tableRows,
-    isLoading: isLoadingData,
-    error,
-  } = useExperimentData({
+  const { tableRows, isLoading, error } = useExperimentData({
     experimentId,
     page: 1,
     pageSize: 4,
     tableName: ExperimentTableName.DEVICE,
     orderBy: "processed_timestamp",
     orderDirection: "DESC",
-    enabled: !!hasDeviceTable,
   });
-  const isLoading = isLoadingTables || (hasDeviceTable && isLoadingData);
   const { t } = useTranslation("experiments");
   if (isLoading) {
     return (
