@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "1.0.17",
+  "version": "1.0.20",
   "main": "index.tsx",
   "scripts": {
     "clean": "git clean -xdf .cache .expo .turbo android ios node_modules",
@@ -54,6 +54,7 @@
     "htmlparser2": "^10.0.0",
     "lodash": "^4.17.23",
     "lucide-react-native": "^0.513.0",
+    "luxon": "^3.5.0",
     "nativewind": "^4.1.23",
     "paho-mqtt": "^1.1.0",
     "react": "catalog:react19",

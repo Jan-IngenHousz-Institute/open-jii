@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
 import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
+import { PythonMacroProvider } from "~/components/python-macro-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useTheme } from "~/hooks/use-theme";
 
@@ -90,9 +91,11 @@ function RootLayoutContent() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ConfiguredQueryClientProvider>
         <SafeAreaProvider>
-          <StatusBar style={theme.isDark ? "light" : "dark"} />
-          <RootLayoutNav />
-          <Toaster />
+          <PythonMacroProvider>
+            <StatusBar style={theme.isDark ? "light" : "dark"} />
+            <RootLayoutNav />
+            <Toaster />
+          </PythonMacroProvider>
         </SafeAreaProvider>
       </ConfiguredQueryClientProvider>
     </GestureHandlerRootView>
