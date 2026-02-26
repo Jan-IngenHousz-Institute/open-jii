@@ -197,10 +197,116 @@ describe("DatabricksSqlService", () => {
       // Execute SQL query
       const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
 
-      // Assert result is failure
+      // Assert result is failure with 500 (unknown error code)
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toContain("SQL statement execution failed");
+      expect(result.error.statusCode).toBe(500);
+    });
+
+    it("should return 400 for UNRESOLVED_COLUMN error from Databricks", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution with UNRESOLVED_COLUMN error
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: {
+            state: "FAILED",
+            error: {
+              message:
+                "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column `nonexistent_col` cannot be resolved. Did you mean one of: `id`, `name`?",
+              error_code: "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+            },
+          },
+        });
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.code).toBe("INVALID_SQL_QUERY");
+      expect(result.error.message).toContain("SQL query references invalid columns or tables");
+      expect(result.error.message).toContain("UNRESOLVED_COLUMN");
+    });
+
+    it("should return 400 for TABLE_OR_VIEW_NOT_FOUND error from Databricks", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution with TABLE_OR_VIEW_NOT_FOUND error
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: {
+            state: "FAILED",
+            error: {
+              message:
+                "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nonexistent_table` cannot be found.",
+              error_code: "TABLE_OR_VIEW_NOT_FOUND",
+            },
+          },
+        });
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.code).toBe("INVALID_SQL_QUERY");
+      expect(result.error.message).toContain("SQL query references invalid columns or tables");
+    });
+
+    it("should return 400 for UNRESOLVED_COLUMN error during polling", async () => {
+      const statementId = "mock-statement-id";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock initial SQL statement submission with RUNNING status
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: statementId,
+          status: { state: "RUNNING" },
+        });
+
+      // Mock polling returning FAILED with UNRESOLVED_COLUMN error
+      nock(databricksHost)
+        .get(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`)
+        .reply(200, {
+          statement_id: statementId,
+          status: {
+            state: "FAILED",
+            error: {
+              message: "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column `bad_col` cannot be resolved.",
+              error_code: "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+            },
+          },
+        });
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.code).toBe("INVALID_SQL_QUERY");
     });
 
     it("should handle API errors during SQL execution", async () => {
@@ -382,7 +488,7 @@ describe("DatabricksSqlService", () => {
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain("Databricks SQL query execution");
+      expect(result.error.message).toContain("Invalid client credentials");
     });
 
     it("should successfully execute a SQL query with DDL statement and return results", async () => {

@@ -15,6 +15,42 @@ export class DatabricksSqlService {
 
   public static readonly SQL_STATEMENTS_ENDPOINT = "/api/2.0/sql/statements";
 
+  /**
+   * Databricks SQL error codes that indicate a client/query error rather than an infrastructure failure.
+   * These are caused by invalid user-provided input (e.g. referencing non-existent columns or tables)
+   * and should result in a 400 Bad Request rather than a 500 Internal Server Error.
+   */
+  private static readonly CLIENT_SQL_ERROR_PREFIXES = [
+    "UNRESOLVED_COLUMN",
+    "TABLE_OR_VIEW_NOT_FOUND",
+    "UNRESOLVED_ROUTINE",
+    "AMBIGUOUS_REFERENCE",
+    "MISSING_COLUMN",
+  ];
+
+  /**
+   * Determine the appropriate AppError for a Databricks SQL statement failure.
+   * Maps known client-error codes (e.g. UNRESOLVED_COLUMN.WITH_SUGGESTION) to 400 Bad Request,
+   * and everything else to 500 Internal Server Error.
+   */
+  private static mapSqlStatementError(error: { message?: string; error_code?: string }): AppError {
+    const errorCode = error.error_code ?? "";
+    const message = error.message ?? "Unknown error";
+
+    const isClientError = DatabricksSqlService.CLIENT_SQL_ERROR_PREFIXES.some(
+      (prefix) => errorCode === prefix || errorCode.startsWith(`${prefix}.`),
+    );
+
+    if (isClientError) {
+      return AppError.badRequest(
+        `SQL query references invalid columns or tables: ${message}`,
+        "INVALID_SQL_QUERY",
+      );
+    }
+
+    return AppError.internal(`SQL statement execution failed: ${message}`);
+  }
+
   constructor(
     private readonly httpService: HttpService,
     private readonly authService: DatabricksAuthService,
@@ -64,9 +100,7 @@ export class DatabricksSqlService {
             return this.formatExperimentDataResponse(statementResponse);
           } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
             if (statementResponse.status.error) {
-              throw AppError.internal(
-                `SQL statement execution failed: ${statementResponse.status.error.message ?? "Unknown error"}`,
-              );
+              throw DatabricksSqlService.mapSqlStatementError(statementResponse.status.error);
             }
             throw AppError.internal(
               `SQL statement execution ${statementResponse.status.state.toLowerCase()}`,
@@ -99,6 +133,10 @@ export class DatabricksSqlService {
           operation: "executeSqlQuery",
           error,
         });
+        // Preserve AppError instances (e.g. badRequest for invalid column references)
+        if (error instanceof AppError) {
+          return error;
+        }
         return apiErrorMapper(`Databricks SQL query execution: ${getAxiosErrorMessage(error)}`);
       },
     );
@@ -138,9 +176,7 @@ export class DatabricksSqlService {
         } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
           if (statementResponse.status.error) {
             return failure(
-              AppError.internal(
-                `SQL statement execution failed: ${statementResponse.status.error.message ?? "Unknown error"}`,
-              ),
+              DatabricksSqlService.mapSqlStatementError(statementResponse.status.error),
             );
           }
           return failure(
