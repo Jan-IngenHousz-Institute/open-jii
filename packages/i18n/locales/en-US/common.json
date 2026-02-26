@@ -413,6 +413,11 @@
   "registration": {
     "title": "Registration",
     "description": "Please fill out the form below to create your account.",
+    "email": "Email Address",
+    "emailPlaceholder": "Enter your email address",
+    "emailInvalid": "Please enter a valid email address",
+    "emailAlreadyTaken": "This email address is already associated with another account",
+    "emailDescription": "We could not retrieve your email from your sign-in provider. Please provide one so we can contact you.",
     "firstName": "First Name",
     "firstNamePlaceholder": "Enter your first name",
     "firstNameError": "Your first name must be at least 2 characters long",
@@ -427,6 +432,7 @@
     "registering": "Registering...",
     "register": "Register",
     "successMessage": "Registration successful",
+    "errorMessage": "Registration failed",
     "signOutTitle": "Sign Out",
     "signOutDescription": "To complete your registration, you now need to sign out and sign back in again.",
     "signOutConfirm": "Sign out"

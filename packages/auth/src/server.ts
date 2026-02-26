@@ -94,6 +94,10 @@ export const auth = betterAuth({
     },
   },
   user: {
+    changeEmail: {
+      enabled: true,
+      updateEmailWithoutVerification: true,
+    },
     additionalFields: {
       registered: {
         type: "boolean",
@@ -122,6 +126,7 @@ export const auth = betterAuth({
   plugins: [
     expo(), // Add Expo plugin for mobile app support
     emailOTP({
+      overrideDefaultEmailVerification: true, // Override the default email verification to use email otp instead
       async sendVerificationOTP({ email, otp }) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;
         const emailFrom = process.env.AUTH_EMAIL_FROM;
