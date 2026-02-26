@@ -1,10 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
-import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SuccessStep } from "./success-step";
-
-globalThis.React = React;
 
 describe("SuccessStep", () => {
   const mockOnClose = vi.fn();

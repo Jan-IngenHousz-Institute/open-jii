@@ -70,7 +70,6 @@ describe("NewExperimentLocationsCard", () => {
   const user = userEvent.setup();
 
   beforeEach(() => {
-    vi.clearAllMocks();
     lastMapProps = null;
     mockWatch.mockImplementation((f: string) => (f === "locations" ? [] : undefined));
   });

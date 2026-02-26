@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-import { renderHook } from "@testing-library/react";
+import { renderHook } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import type { ExperimentDataResponse, AnnotationType, AnnotationContent } from "@repo/api";

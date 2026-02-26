@@ -2,7 +2,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import type * as xyflowReact from "@xyflow/react";
 import React, { createRef } from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 // Spy on ensureOneStartNode from the real module (no full mock)
 import * as nodeUtils from "../../react-flow/node-utils";
@@ -10,22 +10,19 @@ import * as nodeUtils from "../../react-flow/node-utils";
 import { FlowEditor } from "../flow-editor";
 import type { FlowEditorHandle } from "../flow-editor";
 
-// Keep React on global for JSX in some deps
-globalThis.React = React;
-
 /* -------------------- Light mocks -------------------- */
 
-// debounce hook used by some panels/components
+// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
 
-// measurement panel (avoid pulling search hooks, etc.)
+// MeasurementPanel — sibling mock (Rule 5)
 vi.mock("../../side-panel-flow/measurement-panel", () => ({
   MeasurementPanel: () => null,
 }));
 
-// react-flow test double: expose count + buttons to simulate canvas events
+// @xyflow/react — pragmatic mock (canvas-based library, not renderable in jsdom)
 vi.mock("@xyflow/react", async () => {
   const actual = await vi.importActual("@xyflow/react");
   const ReactFlow = ({
@@ -75,7 +72,7 @@ vi.mock("@xyflow/react", async () => {
   return { ...(actual as xyflowReact.Node), ReactFlow };
 });
 
-// legend (keep tiny)
+// LegendFlow — sibling mock (Rule 5)
 vi.mock("../legend-flow", () => ({
   LegendFlow: ({ overlay }: { overlay?: boolean }) => (
     <div data-testid={overlay ? "legend-overlay" : "legend"} />
@@ -242,10 +239,6 @@ function renderEditor(
 
 /* -------------------- Tests -------------------- */
 describe("<FlowEditor /> (stable suite)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("renders and getFlowData() via ref returns ids", () => {
     const { ref } = renderEditor({}, true);
 

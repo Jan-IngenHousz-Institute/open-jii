@@ -1,9 +1,10 @@
+import { createExperimentDataTable, createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import type { ExperimentVisualization } from "@repo/api";
+import { contract } from "@repo/api";
 
-import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { LineChartRenderer } from "./line-chart-renderer";
 
 // Mock the LineChart component from UI package (Plotly-based, doesn't work in jsdom)
@@ -19,23 +20,14 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-// Mock the useExperimentVisualizationData hook
-vi.mock(
-  "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData",
-  () => ({
-    useExperimentVisualizationData: vi.fn(),
-  }),
-);
-
 describe("LineChartRenderer", () => {
-  const mockVisualization: ExperimentVisualization = {
+  const mockVisualization = createVisualization({
     id: "viz-1",
     name: "Test Line Chart",
     description: "Test Description",
     chartType: "line",
     chartFamily: "basic",
     experimentId: "exp-1",
-    createdBy: "user-1",
     config: {
       title: "Test Chart",
       xAxisTitle: "X Axis",
@@ -49,9 +41,7 @@ describe("LineChartRenderer", () => {
         { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
       ],
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  });
 
   const mockData = [
     { time: 0, value: 10 },
@@ -59,15 +49,6 @@ describe("LineChartRenderer", () => {
     { time: 2, value: 15 },
     { time: 3, value: 25 },
   ];
-
-  beforeEach(() => {
-    vi.mocked(useExperimentVisualizationData).mockReturnValue({
-      data: undefined,
-      tableInfo: undefined,
-      isLoading: false,
-      error: null,
-    });
-  });
 
   describe("Rendering with provided data", () => {
     it("should render chart when data is provided", () => {
@@ -99,11 +80,9 @@ describe("LineChartRenderer", () => {
 
   describe("Loading and error states", () => {
     it("should show loading message when data is loading", () => {
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: undefined,
-        tableInfo: undefined,
-        isLoading: true,
-        error: null,
+      server.mount(contract.experiments.getExperimentData, {
+        body: [createExperimentDataTable({ name: "test_table" })],
+        delay: 60_000,
       });
 
       render(<LineChartRenderer visualization={mockVisualization} experimentId="exp-1" />);
@@ -111,28 +90,16 @@ describe("LineChartRenderer", () => {
       expect(screen.getByText("errors.loadingData")).toBeInTheDocument();
     });
 
-    it("should show error message when fetch fails", () => {
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: undefined,
-        tableInfo: undefined,
-        isLoading: false,
-        error: new Error("Failed to fetch"),
-      });
+    it("should show error message when fetch fails", async () => {
+      server.mount(contract.experiments.getExperimentData, { status: 500 });
 
       render(<LineChartRenderer visualization={mockVisualization} experimentId="exp-1" />);
 
-      expect(screen.getByText("errors.failedToLoadData")).toBeInTheDocument();
+      expect(await screen.findByText("errors.failedToLoadData")).toBeInTheDocument();
       expect(screen.getByText("errors.failedToLoadDataDescription")).toBeInTheDocument();
     });
 
     it("should not show loading when data is provided", () => {
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: undefined,
-        tableInfo: undefined,
-        isLoading: true,
-        error: null,
-      });
-
       render(
         <LineChartRenderer
           visualization={mockVisualization}
@@ -146,13 +113,6 @@ describe("LineChartRenderer", () => {
     });
 
     it("should not show error when data is provided", () => {
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: undefined,
-        tableInfo: undefined,
-        isLoading: false,
-        error: new Error("Failed"),
-      });
-
       render(
         <LineChartRenderer
           visualization={mockVisualization}
@@ -176,22 +136,25 @@ describe("LineChartRenderer", () => {
       expect(screen.getByText("errors.noDataFound")).toBeInTheDocument();
     });
 
-    it("should use fetched data when available", () => {
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: { rows: mockData, columns: [], totalRows: mockData.length, truncated: false },
-        tableInfo: {
-          name: "test_table",
-          catalog_name: "catalog",
-          schema_name: "schema",
-          totalRows: mockData.length,
-        },
-        isLoading: false,
-        error: null,
+    it("should use fetched data when available", async () => {
+      server.mount(contract.experiments.getExperimentData, {
+        body: [
+          createExperimentDataTable({
+            name: "test_table",
+            data: {
+              columns: [],
+              rows: mockData,
+              totalRows: mockData.length,
+              truncated: false,
+            },
+            totalRows: mockData.length,
+          }),
+        ],
       });
 
       render(<LineChartRenderer visualization={mockVisualization} experimentId="exp-1" />);
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      expect(await screen.findByTestId("line-chart")).toBeInTheDocument();
     });
   });
 

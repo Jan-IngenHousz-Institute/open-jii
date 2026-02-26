@@ -1,4 +1,5 @@
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { createExperimentTable } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { use } from "react";
@@ -12,11 +13,6 @@ import ExperimentDataPage from "./page";
 // Mock useExperiment hook
 vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
   useExperiment: vi.fn(),
-}));
-
-// Mock translation hook
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
 }));
 
 // Mock useExperimentTables hook
@@ -93,13 +89,13 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
 }));
 
 const mockTablesData = [
-  {
+  createExperimentTable({
     name: "measurements",
     displayName: "Measurements",
     totalRows: 100,
     defaultSortColumn: "timestamp",
-  },
-  { name: ExperimentTableName.DEVICE, displayName: "Device", totalRows: 1 },
+  }),
+  createExperimentTable({ name: ExperimentTableName.DEVICE, displayName: "Device", totalRows: 1 }),
 ];
 
 beforeEach(() => {

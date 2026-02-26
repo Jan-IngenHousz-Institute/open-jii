@@ -14,6 +14,9 @@ import type {
   TransferRequest,
   ExperimentAccess,
   ExperimentDataResponse,
+  ExportRecord,
+  Flow,
+  FlowGraph,
   Location,
   Macro,
   Protocol,
@@ -288,6 +291,76 @@ export function createExperimentDataTable(
   };
 }
 
+// ── Flow ────────────────────────────────────────────────────────
+
+type FlowNode = FlowGraph["nodes"][number];
+
+let flowSeq = 0;
+
+export function createFlowNode(
+  overrides: Partial<FlowNode> & { type?: FlowNode["type"]; content?: FlowNode["content"] } = {},
+): FlowNode {
+  flowSeq++;
+  const type = overrides.type ?? "instruction";
+  const content =
+    overrides.content ??
+    (type === "measurement"
+      ? { protocolId: crypto.randomUUID() }
+      : type === "analysis"
+        ? { macroId: crypto.randomUUID() }
+        : { text: `Step ${flowSeq}` });
+
+  return {
+    id: `node-${flowSeq}`,
+    type,
+    name: `Node ${flowSeq}`,
+    content,
+    isStart: false,
+    ...overrides,
+  };
+}
+
+export function createFlow(
+  overrides: Partial<Omit<Flow, "graph">> & { graph?: Partial<FlowGraph> } = {},
+): Flow {
+  const { graph: graphOverrides, ...rest } = overrides;
+  const defaultNode = createFlowNode({ isStart: true });
+  return {
+    id: crypto.randomUUID(),
+    experimentId: "exp-1",
+    graph: {
+      nodes: [defaultNode],
+      edges: [],
+      ...graphOverrides,
+    },
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z",
+    ...rest,
+  };
+}
+
+// ── ExportRecord ────────────────────────────────────────────────
+
+let exportSeq = 0;
+
+export function createExportRecord(overrides: Partial<ExportRecord> = {}): ExportRecord {
+  exportSeq++;
+  return {
+    exportId: `export-${exportSeq}-${crypto.randomUUID().slice(0, 8)}`,
+    experimentId: "exp-1",
+    tableName: "raw_data",
+    format: "csv",
+    status: "completed",
+    filePath: `/exports/export-${exportSeq}.csv`,
+    rowCount: 100,
+    fileSize: 1024,
+    createdBy: "user-1",
+    createdAt: "2024-01-01T00:00:00Z",
+    completedAt: "2024-01-01T00:05:00Z",
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 /** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
@@ -301,4 +374,6 @@ export function resetFactories() {
   placeSeq = 0;
   locationSeq = 0;
   dataTableSeq = 0;
+  flowSeq = 0;
+  exportSeq = 0;
 }

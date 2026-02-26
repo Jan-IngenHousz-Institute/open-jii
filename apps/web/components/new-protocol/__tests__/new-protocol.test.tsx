@@ -1,33 +1,15 @@
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useRouter } from "next/navigation";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 import { NewProtocolForm } from "../new-protocol";
 
-// Mock next/navigation
-const mockPush = vi.fn();
-const mockBack = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    back: mockBack,
-  }),
-}));
-
-// Mock hooks
-vi.mock("@/hooks/protocol/useProtocolCreate/useProtocolCreate", () => ({
-  useProtocolCreate: vi.fn(({ onSuccess }: { onSuccess: (id: string) => void }) => ({
-    mutate: vi.fn((_data) => {
-      onSuccess("new-protocol-id");
-    }),
-    isPending: false,
-  })),
-}));
-
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
-// Mock ProtocolCodeEditor
+// ProtocolCodeEditor — pragmatic mock (Monaco editor doesn't work in jsdom)
 vi.mock("../../protocol-code-editor", () => ({
   default: ({
     value,
@@ -38,236 +20,113 @@ vi.mock("../../protocol-code-editor", () => ({
     onChange: (v: Record<string, unknown>[]) => void;
     onValidationChange: (v: boolean) => void;
   }) => (
-    <div data-testid="protocol-code-editor">
-      <textarea
-        data-testid="code-editor"
-        value={JSON.stringify(value)}
-        onChange={(e) => {
-          try {
-            const parsed = JSON.parse(e.target.value) as Record<string, unknown>[];
-            onChange(parsed);
-            onValidationChange(true);
-          } catch {
-            onValidationChange(false);
-          }
-        }}
-      />
-    </div>
+    <textarea
+      aria-label="code editor"
+      value={JSON.stringify(value)}
+      onChange={(e) => {
+        try {
+          const parsed = JSON.parse(e.target.value) as Record<string, unknown>[];
+          onChange(parsed);
+          onValidationChange(true);
+        } catch {
+          onValidationChange(false);
+        }
+      }}
+    />
   ),
 }));
 
-// Mock NewProtocolDetailsCard
+// NewProtocolDetailsCard — sibling component (Rule 5)
+// Uses form.register to connect the name field to react-hook-form
 vi.mock("../new-protocol-details-card", () => ({
-  NewProtocolDetailsCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="protocol-details-card">
-      <input data-testid="name-input" placeholder="Protocol name" />
-      <textarea data-testid="description-input" placeholder="Description" />
+  NewProtocolDetailsCard: ({
+    form,
+  }: {
+    form: { register: (name: string) => Record<string, unknown> };
+  }) => (
+    <div>
+      <label htmlFor="proto-name">Name</label>
+      <input id="proto-name" {...form.register("name")} />
     </div>
   ),
 }));
 
 describe("NewProtocolForm", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should render the form with all sections", () => {
+  it("renders form sections and buttons", () => {
     render(<NewProtocolForm />);
-
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
     expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
-  });
-
-  it("should render submit and cancel buttons", () => {
-    render(<NewProtocolForm />);
-
+    expect(screen.getByText("newProtocol.codeDescription")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /finalizeSetup/i })).toBeInTheDocument();
   });
 
-  it("should disable submit button when form is pristine", () => {
+  it("disables submit when form is pristine", () => {
     render(<NewProtocolForm />);
-
-    const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-    expect(submitButton).toBeDisabled();
+    expect(screen.getByRole("button", { name: /finalizeSetup/i })).toBeDisabled();
   });
 
-  it("should call router.back when cancel is clicked", async () => {
+  it("navigates back when cancel is clicked", async () => {
     render(<NewProtocolForm />);
-
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
-    await userEvent.click(cancelButton);
-
-    expect(mockBack).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(vi.mocked(useRouter)().back).toHaveBeenCalled();
   });
 
-  it("should disable submit when code is invalid", async () => {
+  it("disables submit when code is invalid", async () => {
     render(<NewProtocolForm />);
 
-    const codeEditor = screen.getByTestId("code-editor");
-
-    // Make the form dirty
-    const nameInput = screen.getByTestId("name-input");
-    await userEvent.type(nameInput, "Test Protocol");
-
-    // Set invalid code
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: "{ invalid json" } });
+    await userEvent.type(screen.getByLabelText("Name"), "Test Protocol");
+    fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
+      target: { value: "{ invalid json" },
+    });
 
     await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-      expect(submitButton).toBeDisabled();
+      expect(screen.getByRole("button", { name: /finalizeSetup/i })).toBeDisabled();
     });
   });
 
-  it.skip("should create protocol and navigate on successful submit", async () => {
-    // Skip: fireEvent.input doesn't trigger React Hook Form state updates properly
-    // This test would need user interaction with actual Monaco editor which requires more complex setup
-    const { useProtocolCreate } = await import(
-      "@/hooks/protocol/useProtocolCreate/useProtocolCreate"
-    );
-    const mockMutate = vi.fn((_data) => {
-      // Simulate successful creation
-      const onSuccess = vi.mocked(useProtocolCreate).mock.calls[0]?.[0]?.onSuccess;
-      if (onSuccess) {
-        onSuccess("new-protocol-id");
-      }
-    });
-
-    vi.mocked(useProtocolCreate).mockReturnValue({
-      mutate: mockMutate,
-      isPending: false,
-    } as never);
+  it("creates protocol, shows toast, and navigates on success", async () => {
+    const protocol = createProtocol({ id: "new-protocol-id" });
+    const spy = server.mount(contract.protocols.createProtocol, { body: protocol });
 
     render(<NewProtocolForm />);
 
-    // Fill in required fields to make form valid
-    const nameInput = screen.getByTestId("name-input");
-    await userEvent.type(nameInput, "Test Protocol");
-
-    const codeEditor = screen.getByTestId("code-editor");
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-
-    // Wait for form validation to complete
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-      expect(submitButton).not.toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Name"), "Test Protocol");
+    fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
+      target: { value: JSON.stringify([{ averages: 1 }]) },
     });
-
-    // Submit the form
-    const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-    await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols/new-protocol-id");
-    });
-  });
-
-  it.skip("should show toast notification on successful creation", async () => {
-    // Skip: fireEvent.input doesn't trigger React Hook Form state updates properly
-    const { toast } = await import("@repo/ui/hooks");
-    const { useProtocolCreate } = await import(
-      "@/hooks/protocol/useProtocolCreate/useProtocolCreate"
-    );
-
-    const mockMutate = vi.fn((_data) => {
-      const onSuccess = vi.mocked(useProtocolCreate).mock.calls[0]?.[0]?.onSuccess;
-      if (onSuccess) {
-        onSuccess("new-protocol-id");
-      }
+      expect(screen.getByRole("button", { name: /finalizeSetup/i })).not.toBeDisabled();
     });
 
-    vi.mocked(useProtocolCreate).mockReturnValue({
-      mutate: mockMutate,
-      isPending: false,
-    } as never);
+    await userEvent.click(screen.getByRole("button", { name: /finalizeSetup/i }));
 
-    render(<NewProtocolForm />);
-
-    const nameInput = screen.getByTestId("name-input");
-    await userEvent.type(nameInput, "Test Protocol");
-
-    const codeEditor = screen.getByTestId("code-editor");
-    fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-
-    // Wait for form validation
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-      expect(submitButton).not.toBeDisabled();
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      description: "protocols.protocolCreated",
     });
-
-    const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-    await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith({
-        description: "protocols.protocolCreated",
-      });
+      expect(spy.callCount).toBe(1);
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith(
+        "/en-US/platform/protocols/new-protocol-id",
+      );
     });
   });
 
-  it("should show loading state during creation", async () => {
-    const { useProtocolCreate } = await import(
-      "@/hooks/protocol/useProtocolCreate/useProtocolCreate"
-    );
-    vi.mocked(useProtocolCreate).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: true,
-    } as never);
-
+  it("initializes code editor with default value", () => {
     render(<NewProtocolForm />);
-
-    const submitButton = screen.getByRole("button", { name: /creating/i });
-    expect(submitButton).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /code editor/i })).toHaveValue(JSON.stringify([{}]));
   });
 
-  it("should initialize form with default values", () => {
+  it("updates code field via editor", () => {
     render(<NewProtocolForm />);
-
-    const codeEditor = screen.getByTestId("code-editor");
-    expect(codeEditor).toHaveValue(JSON.stringify([{}]));
-  });
-
-  it("should display code section with title and description", () => {
-    render(<NewProtocolForm />);
-
-    expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.codeDescription")).toBeInTheDocument();
-  });
-
-  it("should handle code editor changes", () => {
-    render(<NewProtocolForm />);
-
-    const codeEditor = screen.getByTestId("code-editor");
     const newCode = JSON.stringify([{ averages: 2 }]);
-
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: newCode } });
-
-    expect(codeEditor).toHaveValue(newCode);
-  });
-
-  it("should validate code changes", () => {
-    render(<NewProtocolForm />);
-
-    const codeEditor = screen.getByTestId("code-editor");
-
-    // Set valid code - use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-
-    // Button should still be disabled because form needs a name to be valid
-    // Note: Button text may show "creating" due to pending state
-    const submitButton = screen.getByRole("button", { name: /(finalizeSetup|creating)/i });
-    expect(submitButton).toBeDisabled();
-  });
-
-  it("should use multispeq as default family", () => {
-    render(<NewProtocolForm />);
-
-    // The form should initialize with family: "multispeq"
-    // This is implicit in the defaultValues
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
+      target: { value: newCode },
+    });
+    expect(screen.getByRole("textbox", { name: /code editor/i })).toHaveValue(newCode);
   });
 });

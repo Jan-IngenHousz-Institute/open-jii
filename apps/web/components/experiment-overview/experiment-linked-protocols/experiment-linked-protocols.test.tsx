@@ -1,19 +1,11 @@
-import { render, screen } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createFlow, createFlowNode, createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { ExperimentLinkedProtocols } from "./experiment-linked-protocols";
-
-// ---------- Mocks ----------
-const useExperimentFlowMock = vi.hoisted(() => vi.fn());
-const useProtocolMock = vi.hoisted(() => vi.fn());
-
-vi.mock("../../../hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
-  useExperimentFlow: useExperimentFlowMock,
-}));
-
-vi.mock("../../../hooks/protocol/useProtocol/useProtocol", () => ({
-  useProtocol: useProtocolMock,
-}));
 
 vi.mock("./protocol-card", () => ({
   ProtocolCard: ({ protocol, isLoading }: { protocol?: { name: string }; isLoading: boolean }) => (
@@ -34,237 +26,151 @@ vi.mock("./protocol-card", () => ({
   ),
 }));
 
-vi.mock("~/util/apiError", () => ({
-  parseApiError: (error: unknown) => error,
-}));
+/* --------------------------------- Helpers -------------------------------- */
+
+const PROTO_UUID_1 = "00000000-0000-4000-8000-000000000010";
+const PROTO_UUID_2 = "00000000-0000-4000-8000-000000000020";
+
+function mountFlow(protocolIds: string[]) {
+  const nodes = protocolIds.map((protocolId, i) =>
+    createFlowNode({ type: "measurement", content: { protocolId }, isStart: i === 0 }),
+  );
+  if (nodes.length === 0) {
+    nodes.push(createFlowNode({ type: "instruction", content: { text: "Begin" }, isStart: true }));
+  }
+  return server.mount(contract.experiments.getFlow, {
+    body: createFlow({ graph: { nodes, edges: [] } }),
+  });
+}
+
+function mountProtocol(name = "Test Protocol") {
+  return server.mount(contract.protocols.getProtocol, {
+    body: createProtocol({ name }),
+  });
+}
+
+/* ---------------------------------- Tests --------------------------------- */
 
 describe("ExperimentLinkedProtocols", () => {
-  beforeEach(() => {
-    useProtocolMock.mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: null,
-    });
-  });
-
   it("renders loading state", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: null,
-      isLoading: true,
-      error: null,
+    server.mount(contract.experiments.getFlow, {
+      body: createFlow({
+        graph: {
+          nodes: [
+            createFlowNode({
+              type: "measurement",
+              content: { protocolId: PROTO_UUID_1 },
+              isStart: true,
+            }),
+          ],
+          edges: [],
+        },
+      }),
+      delay: 5000,
     });
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
+
     expect(screen.getByText("protocols.linkedProtocols")).toBeInTheDocument();
-    // Loading state renders a skeleton, not the protocol cards
     expect(screen.queryByTestId("protocol-card")).not.toBeInTheDocument();
   });
 
-  it("renders no flow state", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: { code: "NOT_FOUND" },
+  it("renders no flow state when 404", async () => {
+    server.mount(contract.experiments.getFlow, {
+      status: 404,
+      body: { message: "Not found", code: "NOT_FOUND" },
     });
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByText("protocols.noFlowYet")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("protocols.noFlowYet")).toBeInTheDocument();
+    });
     expect(screen.getByText("protocols.createFlow")).toBeInTheDocument();
   });
 
-  it("renders error state", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: { message: "Error loading flow" },
-    });
+  it("renders error state for non-404 errors", async () => {
+    server.mount(contract.experiments.getFlow, { status: 500 });
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByText("protocols.unableToLoadExperimentFlow")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("protocols.unableToLoadExperimentFlow")).toBeInTheDocument();
+    });
   });
 
-  it("renders no protocols linked state", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: {
-        body: {
-          graph: {
-            nodes: [],
-            edges: [],
-          },
-        },
-      },
-      isLoading: false,
-      error: null,
-    });
+  it("renders no protocols linked when flow has no measurement nodes", async () => {
+    // Flow exists but has no measurement nodes → protocolIds is empty
+    mountFlow([]);
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByText("protocols.noProtocolsLinked")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("protocols.noProtocolsLinked")).toBeInTheDocument();
+    });
     expect(screen.getByText("protocols.goToFlow")).toBeInTheDocument();
   });
 
-  it("renders protocol selector when protocols exist", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: {
-        body: {
-          graph: {
-            nodes: [
-              {
-                id: "node-1",
-                type: "measurement",
-                content: { protocolId: "protocol-1" },
-              },
-              {
-                id: "node-2",
-                type: "measurement",
-                content: { protocolId: "protocol-2" },
-              },
-            ],
-            edges: [],
-          },
-        },
-      },
-      isLoading: false,
-      error: null,
-    });
-
-    useProtocolMock.mockReturnValue({
-      data: { body: { name: "Protocol 1" } },
-      isLoading: false,
-      error: null,
-    });
+  it("renders protocol selector when protocols exist", async () => {
+    mountFlow([PROTO_UUID_1, PROTO_UUID_2]);
+    mountProtocol("Protocol 1");
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByTestId("protocol-selector")).toHaveTextContent("protocol-1,protocol-2");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-selector")).toHaveTextContent(
+        `${PROTO_UUID_1},${PROTO_UUID_2}`,
+      );
+    });
     expect(screen.getByTestId("protocol-card")).toBeInTheDocument();
   });
 
-  it("renders protocol card with protocol data", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: {
-        body: {
-          graph: {
-            nodes: [
-              {
-                id: "node-1",
-                type: "measurement",
-                content: { protocolId: "protocol-1" },
-              },
-            ],
-            edges: [],
-          },
-        },
-      },
-      isLoading: false,
-      error: null,
-    });
-
-    useProtocolMock.mockReturnValue({
-      data: { body: { name: "Test Protocol" } },
-      isLoading: false,
-      error: null,
-    });
+  it("renders protocol card with protocol data", async () => {
+    mountFlow([PROTO_UUID_1]);
+    mountProtocol("Test Protocol");
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByTestId("protocol-card")).toHaveTextContent("Test Protocol");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-card")).toHaveTextContent("Test Protocol");
+    });
   });
 
-  it("shows protocol loading state", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: {
-        body: {
-          graph: {
-            nodes: [
-              {
-                id: "node-1",
-                type: "measurement",
-                content: { protocolId: "protocol-1" },
-              },
-            ],
-            edges: [],
-          },
-        },
-      },
-      isLoading: false,
-      error: null,
-    });
-
-    useProtocolMock.mockReturnValue({
-      data: null,
-      isLoading: true,
-      error: null,
+  it("shows protocol loading state", async () => {
+    mountFlow([PROTO_UUID_1]);
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ name: "Slow Protocol" }),
+      delay: 5000,
     });
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByTestId("protocol-card")).toHaveTextContent("loading");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-card")).toHaveTextContent("loading");
+    });
   });
 
-  it("renders go to protocol link when protocol is selected", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: {
-        body: {
-          graph: {
-            nodes: [
-              {
-                id: "node-1",
-                type: "measurement",
-                content: { protocolId: "protocol-1" },
-              },
-            ],
-            edges: [],
-          },
-        },
-      },
-      isLoading: false,
-      error: null,
-    });
-
-    useProtocolMock.mockReturnValue({
-      data: { body: { name: "Test Protocol" } },
-      isLoading: false,
-      error: null,
-    });
+  it("renders go to protocol link when protocol is selected", async () => {
+    mountFlow([PROTO_UUID_1]);
+    mountProtocol();
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByText("protocols.goToProtocol")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("protocols.goToProtocol")).toBeInTheDocument();
+    });
   });
 
-  it("filters duplicate protocol IDs", () => {
-    useExperimentFlowMock.mockReturnValue({
-      data: {
-        body: {
-          graph: {
-            nodes: [
-              {
-                id: "node-1",
-                type: "measurement",
-                content: { protocolId: "protocol-1" },
-              },
-              {
-                id: "node-2",
-                type: "measurement",
-                content: { protocolId: "protocol-1" },
-              },
-              {
-                id: "node-3",
-                type: "measurement",
-                content: { protocolId: "protocol-2" },
-              },
-            ],
-            edges: [],
-          },
-        },
-      },
-      isLoading: false,
-      error: null,
-    });
-
-    useProtocolMock.mockReturnValue({
-      data: { body: { name: "Protocol 1" } },
-      isLoading: false,
-      error: null,
-    });
+  it("filters duplicate protocol IDs", async () => {
+    mountFlow([PROTO_UUID_1, PROTO_UUID_1, PROTO_UUID_2]);
+    mountProtocol("Protocol 1");
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
-    expect(screen.getByTestId("protocol-selector")).toHaveTextContent("protocol-1,protocol-2");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-selector")).toHaveTextContent(
+        `${PROTO_UUID_1},${PROTO_UUID_2}`,
+      );
+    });
   });
 });

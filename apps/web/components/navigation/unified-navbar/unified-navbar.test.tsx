@@ -1,4 +1,4 @@
-import { createUserProfile } from "@/test/factories";
+import { createSession, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
@@ -7,7 +7,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 import { authClient } from "@repo/auth/client";
-import type { Session } from "@repo/auth/types";
 
 import { UnifiedNavbar } from "./unified-navbar";
 
@@ -94,21 +93,24 @@ vi.mock("@repo/ui/components", async () => {
   };
 });
 
-const makeSession = (over: Partial<Session> = {}): Session =>
-  ({
+const makeSession = (over: Record<string, unknown> = {}) =>
+  createSession({
     user: {
       id: "user-1",
       name: "Ada Lovelace",
       email: "ada@example.com",
-      image: "https://example.com/ada.png",
-      registered: true,
+      ...(over.user as Record<string, unknown>),
     },
-    expires: new Date(Date.now() + 3600_000).toISOString(),
     ...over,
-  }) as Session;
+  });
 
 function renderNavbar(
-  opts: { locale?: string; pathname?: string; session?: Session | null; isHomePage?: boolean } = {},
+  opts: {
+    locale?: string;
+    pathname?: string;
+    session?: ReturnType<typeof createSession> | null;
+    isHomePage?: boolean;
+  } = {},
 ) {
   vi.mocked(usePathname).mockReturnValue(opts.pathname ?? "/en-US");
   if (opts.session?.user) {

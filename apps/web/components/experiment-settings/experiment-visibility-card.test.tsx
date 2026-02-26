@@ -1,28 +1,13 @@
 // components/experiment-settings/experiment-visibility-card.test.tsx
 import { render, screen } from "@/test/test-utils";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ComponentProps } from "react";
+import { describe, it, expect } from "vitest";
 
 import { ExperimentVisibilityCard } from "./experiment-visibility-card";
 
-globalThis.React = React;
-
-// --- mock useExperimentUpdate to capture payload and resolve
-const mutateAsyncMock = vi.fn();
-vi.mock("../../hooks/experiment/useExperimentUpdate/useExperimentUpdate", () => ({
-  useExperimentUpdate: () => ({
-    mutateAsync: mutateAsyncMock,
-    isPending: false,
-  }),
-}));
-
 describe("<ExperimentVisibilityCard />", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  function renderCard(props?: Partial<React.ComponentProps<typeof ExperimentVisibilityCard>>) {
-    const defaultProps: React.ComponentProps<typeof ExperimentVisibilityCard> = {
+  function renderCard(props?: Partial<ComponentProps<typeof ExperimentVisibilityCard>>) {
+    const defaultProps: ComponentProps<typeof ExperimentVisibilityCard> = {
       experimentId: "exp-123",
       initialVisibility: "private",
       embargoUntil: "2025-12-31T23:59:59.999Z",

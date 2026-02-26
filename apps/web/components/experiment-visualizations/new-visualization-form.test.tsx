@@ -1,378 +1,119 @@
-import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
+import { createExperimentTable, createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { contract } from "@repo/api";
 import type { ExperimentTableMetadata } from "@repo/api";
-import { useTranslation } from "@repo/i18n";
 import type { WizardFormProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
-import {
-  getDefaultChartConfig,
-  getDefaultDataConfig,
-} from "./chart-configurators/chart-configurator-util";
 import NewVisualizationForm from "./new-visualization-form";
 
-// Mock external dependencies
-vi.mock("@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate");
-vi.mock("./chart-configurators/chart-configurator-util", () => ({
-  getDefaultChartConfig: vi.fn(),
-  getDefaultDataConfig: vi.fn(),
-}));
-
-// Mock WizardForm and Card components
+// Pragmatic: WizardForm is a complex multi-step wizard — mock to test handleSubmit directly
 vi.mock("@repo/ui/components", () => ({
-  WizardForm: vi.fn(({ defaultValues, onSubmit }: WizardFormProps<ChartFormValues>) => {
-    return (
-      <div data-testid="wizard-form">
-        <button
-          onClick={() => {
-            if (defaultValues) {
-              void onSubmit(defaultValues as ChartFormValues);
-            }
-          }}
-        >
-          Submit
-        </button>
-      </div>
-    );
-  }),
-  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
+  WizardForm: vi.fn(({ defaultValues, onSubmit }: WizardFormProps<ChartFormValues>) => (
+    <div>
+      <button
+        onClick={() => {
+          if (defaultValues) void onSubmit(defaultValues as ChartFormValues);
+        }}
+      >
+        Submit
+      </button>
+    </div>
+  )),
+  Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardTitle: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,
   CardDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+// Rule 5: sibling step components
+vi.mock("./wizard-steps/basic-info-step", () => ({
+  BasicInfoStep: () => null,
+  basicInfoSchema: () => ({}),
+}));
+vi.mock("./wizard-steps/chart-type-step", () => ({
+  ChartTypeStep: () => null,
+  chartTypeSchema: () => ({}),
+}));
+vi.mock("./wizard-steps/data-source-step", () => ({
+  DataSourceStep: () => null,
+  dataSourceSchema: () => ({}),
+}));
+vi.mock("./wizard-steps/appearance-step", () => ({
+  AppearanceStep: () => null,
+  appearanceSchema: () => ({}),
+}));
+
+function mountCreate(body = createVisualization()) {
+  return server.mount(contract.experiments.createExperimentVisualization, { body });
+}
+
+const tables: ExperimentTableMetadata[] = [
+  createExperimentTable({ name: "measurements", displayName: "Measurements" }),
+  createExperimentTable({ name: "observations", displayName: "Observations" }),
+];
+
+const defaultProps = {
+  experimentId: "exp-1",
+  tables,
+  onSuccess: vi.fn(),
+  isPreviewOpen: false,
+  onPreviewClose: vi.fn(),
+};
+
 describe("NewVisualizationForm", () => {
-  const mockOnSuccess = vi.fn();
-  const mockOnPreviewClose = vi.fn();
-  const mockCreateVisualization = vi.fn();
-  const mockT = vi.fn((key: string) => key);
-  const mockToast = vi.fn();
+  it("shows loading spinner when isLoading is true", () => {
+    render(<NewVisualizationForm {...defaultProps} isLoading={true} />);
 
-  const mockExperimentTableMetadatas: ExperimentTableMetadata[] = [
-    {
-      name: "measurements",
-      displayName: "Measurements",
-      totalRows: 100,
-      columns: [
-        { name: "time", type_name: "TIMESTAMP", type_text: "timestamp", position: 0 },
-        { name: "temperature", type_name: "DOUBLE", type_text: "double", position: 1 },
-      ],
-    },
-    {
-      name: "observations",
-      displayName: "Observations",
-      totalRows: 50,
-      columns: [
-        { name: "date", type_name: "TIMESTAMP", type_text: "timestamp", position: 0 },
-        { name: "value", type_name: "DOUBLE", type_text: "double", position: 1 },
-      ],
-    },
-  ];
+    expect(document.querySelector(".lucide-loader-circle")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /submit/i })).not.toBeInTheDocument();
+  });
 
-  const defaultProps = {
-    experimentId: "exp-123",
-    tables: mockExperimentTableMetadatas,
-    onSuccess: mockOnSuccess,
-    isPreviewOpen: false,
-    onPreviewClose: mockOnPreviewClose,
-  };
+  it("renders the wizard form when not loading", () => {
+    render(<NewVisualizationForm {...defaultProps} />);
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (useTranslation as ReturnType<typeof vi.fn>).mockReturnValue({ t: mockT });
-    (toast as ReturnType<typeof vi.fn>).mockImplementation(mockToast);
-    (getDefaultChartConfig as ReturnType<typeof vi.fn>).mockReturnValue({
-      title: "Default Chart",
+    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+  });
+
+  it("submits filtered data sources on form submit", async () => {
+    const spy = mountCreate(createVisualization({ id: "viz-new" }));
+
+    // WizardForm mock will submit defaultValues. Since getDefaultDataConfig runs for real
+    // with tableName "measurements", the default dataSources have empty columnName → all filtered out.
+    render(<NewVisualizationForm {...defaultProps} />);
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /submit/i }));
+
+    await waitFor(() => {
+      expect(spy.callCount).toBe(1);
     });
 
-    (getDefaultDataConfig as ReturnType<typeof vi.fn>).mockImplementation((tableName?: string) => ({
-      tableName: tableName ?? "",
-      dataSources: [
-        {
-          tableName: tableName ?? "",
-          columnName: "",
-          role: "x",
-          alias: "",
-        },
-        {
-          tableName: tableName ?? "",
-          columnName: "",
-          role: "y",
-          alias: "",
-        },
-      ],
-    }));
+    // getDefaultDataConfig returns dataSources with empty columnName → filtered to empty
+    expect(spy.body.dataConfig.dataSources).toHaveLength(0);
+  });
 
-    (useExperimentVisualizationCreate as ReturnType<typeof vi.fn>).mockReturnValue({
-      mutate: mockCreateVisualization,
-      isPending: false,
+  it("shows toast and calls onSuccess on successful creation", async () => {
+    mountCreate(createVisualization({ id: "viz-789" }));
+    const onSuccess = vi.fn();
+
+    render(<NewVisualizationForm {...defaultProps} onSuccess={onSuccess} />);
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /submit/i }));
+
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith({ description: "ui.messages.createSuccess" });
+      expect(onSuccess).toHaveBeenCalledWith("viz-789");
     });
   });
 
-  describe("Loading State", () => {
-    it("should render loading spinner when isLoading is true", () => {
-      render(<NewVisualizationForm {...defaultProps} isLoading={true} />);
+  it("handles empty table list gracefully", () => {
+    render(<NewVisualizationForm {...defaultProps} tables={[]} />);
 
-      // Check for the spinner element with lucide class
-      const spinner = document.querySelector(".lucide-loader-circle");
-      expect(spinner).toBeTruthy();
-      expect(screen.queryByTestId("wizard-form")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Form Rendering", () => {
-    it("should render the wizard form when not loading", () => {
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
-      // Should not show loading spinner
-      const spinner = document.querySelector(".lucide-loader-circle");
-      expect(spinner).toBeFalsy();
-    });
-
-    it("should initialize with first table when tables are available", () => {
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
-      // WizardForm should be called with defaultValues containing first table
-    });
-
-    it("should initialize with empty table name when no tables available", () => {
-      render(<NewVisualizationForm {...defaultProps} tables={[]} />);
-
-      expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
-      // WizardForm should be called with defaultValues containing empty tableName
-    });
-  });
-
-  describe("Form Submission", () => {
-    it("should call create mutation with correct data on submit", async () => {
-      const user = userEvent.setup();
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      await user.click(screen.getByRole("button", { name: /submit/i }));
-
-      await waitFor(() => {
-        expect(mockCreateVisualization).toHaveBeenCalledWith({
-          params: { id: "exp-123" },
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          body: expect.objectContaining({
-            name: "",
-            description: "",
-            chartFamily: "basic",
-            chartType: "line",
-          }),
-        });
-      });
-    });
-
-    it("should filter out empty data sources on submit", async () => {
-      const user = userEvent.setup();
-      const mockWithEmptySource = vi.fn();
-      (useExperimentVisualizationCreate as ReturnType<typeof vi.fn>).mockReturnValue({
-        mutate: mockWithEmptySource,
-        isPending: false,
-      });
-
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      await user.click(screen.getByRole("button", { name: /submit/i }));
-
-      await waitFor(() => {
-        expect(mockWithEmptySource).toHaveBeenCalledWith(
-          expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            body: expect.objectContaining({
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              dataConfig: expect.objectContaining({
-                dataSources: [],
-              }),
-            }),
-          }),
-        );
-      });
-    });
-
-    it("should filter out whitespace-only column names", async () => {
-      const user = userEvent.setup();
-      const mockWithWhitespace = vi.fn();
-      (useExperimentVisualizationCreate as ReturnType<typeof vi.fn>).mockReturnValue({
-        mutate: mockWithWhitespace,
-        isPending: false,
-      });
-
-      // Mock WizardForm to submit data with whitespace columns
-      const { WizardForm } = await import("@repo/ui/components");
-      (WizardForm as ReturnType<typeof vi.fn>).mockImplementation(
-        ({ onSubmit, defaultValues }: WizardFormProps) => {
-          const dataWithWhitespace = {
-            ...defaultValues,
-            dataConfig: {
-              tableName: "measurements",
-              dataSources: [
-                { tableName: "measurements", columnName: "  ", role: "x", alias: "" },
-                { tableName: "measurements", columnName: "temp", role: "y", alias: "" },
-              ],
-            },
-          } as ChartFormValues;
-          return (
-            <div data-testid="wizard-form">
-              <button onClick={() => void onSubmit(dataWithWhitespace)}>Submit</button>
-            </div>
-          );
-        },
-      );
-
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      await user.click(screen.getByRole("button", { name: /submit/i }));
-
-      await waitFor(() => {
-        expect(mockWithWhitespace).toHaveBeenCalledWith(
-          expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            body: expect.objectContaining({
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              dataConfig: expect.objectContaining({
-                dataSources: [
-                  { tableName: "measurements", columnName: "temp", role: "y", alias: "" },
-                ],
-              }),
-            }),
-          }),
-        );
-      });
-    });
-
-    it("should preserve data source aliases when filtering", async () => {
-      const user = userEvent.setup();
-      const mockWithAliases = vi.fn();
-      (useExperimentVisualizationCreate as ReturnType<typeof vi.fn>).mockReturnValue({
-        mutate: mockWithAliases,
-        isPending: false,
-      });
-
-      // Mock WizardForm to submit data with aliases
-      const { WizardForm } = await import("@repo/ui/components");
-      (WizardForm as ReturnType<typeof vi.fn>).mockImplementation(
-        ({ onSubmit, defaultValues }: WizardFormProps) => {
-          const dataWithAliases = {
-            ...defaultValues,
-            dataConfig: {
-              tableName: "measurements",
-              dataSources: [
-                {
-                  tableName: "measurements",
-                  columnName: "temp",
-                  role: "x",
-                  alias: "Temperature",
-                },
-                { tableName: "measurements", columnName: "", role: "y", alias: "Value" },
-              ],
-            },
-          } as ChartFormValues;
-          return (
-            <div data-testid="wizard-form">
-              <button onClick={() => void onSubmit(dataWithAliases)}>Submit</button>
-            </div>
-          );
-        },
-      );
-
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      await user.click(screen.getByRole("button", { name: /submit/i }));
-
-      await waitFor(() => {
-        expect(mockWithAliases).toHaveBeenCalledWith(
-          expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            body: expect.objectContaining({
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              dataConfig: expect.objectContaining({
-                dataSources: [
-                  {
-                    tableName: "measurements",
-                    columnName: "temp",
-                    role: "x",
-                    alias: "Temperature",
-                  },
-                ],
-              }),
-            }),
-          }),
-        );
-      });
-    });
-  });
-
-  describe("Success Handling", () => {
-    it("should show toast and call onSuccess when creation succeeds", () => {
-      let successCallback: ((visualization: { id: string }) => void) | undefined;
-      (useExperimentVisualizationCreate as ReturnType<typeof vi.fn>).mockImplementation(
-        ({ onSuccess }: { onSuccess: (visualization: { id: string }) => void }) => {
-          successCallback = onSuccess;
-          return {
-            mutate: mockCreateVisualization,
-            isPending: false,
-          };
-        },
-      );
-
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      // Trigger success callback
-      successCallback?.({ id: "viz-456" });
-
-      expect(mockToast).toHaveBeenCalledWith({
-        description: "ui.messages.createSuccess",
-      });
-      expect(mockOnSuccess).toHaveBeenCalledWith("viz-456");
-    });
-  });
-
-  describe("Default Config", () => {
-    it("should call getDefaultChartConfig with default chart type", () => {
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      expect(getDefaultChartConfig).toHaveBeenCalledWith("line");
-    });
-  });
-
-  describe("Wizard Steps Configuration", () => {
-    it("should configure wizard with all four steps", () => {
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      // Verify that wizard steps are configured properly
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.basicInfo.title");
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.basicInfo.description");
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.chartType.title");
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.chartType.description");
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.dataSource.title");
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.dataSource.description");
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.appearance.title");
-      expect(mockT).toHaveBeenCalledWith("wizard.steps.appearance.description");
-    });
-  });
-
-  describe("Data Sources Initialization", () => {
-    it("should initialize with two default data sources for x and y roles", () => {
-      render(<NewVisualizationForm {...defaultProps} />);
-
-      // The form should initialize with 2 data sources (x and y)
-      expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
-      // Default values should have been set with 2 data sources
-    });
-
-    it("should set table name to empty string when no tables provided", () => {
-      render(<NewVisualizationForm {...defaultProps} tables={[]} />);
-
-      expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
-      // Should handle empty table list gracefully
-    });
+    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
   });
 });

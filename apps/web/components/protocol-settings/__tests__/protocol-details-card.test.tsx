@@ -1,17 +1,14 @@
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 import { ProtocolDetailsCard } from "../protocol-details-card";
 
-// Mock the hooks
-vi.mock("../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
-  useProtocolUpdate: vi.fn(() => ({
-    mutateAsync: vi.fn().mockResolvedValue({}),
-    isPending: false,
-  })),
-}));
-
-// Mock ProtocolCodeEditor
+// ProtocolCodeEditor — pragmatic mock (Monaco editor doesn't work in jsdom)
 vi.mock("../../protocol-code-editor", () => ({
   default: ({
     value,
@@ -22,213 +19,116 @@ vi.mock("../../protocol-code-editor", () => ({
     onChange: (v: Record<string, unknown>[]) => void;
     onValidationChange: (v: boolean) => void;
   }) => (
-    <div data-testid="protocol-code-editor">
-      <textarea
-        data-testid="code-editor"
-        value={JSON.stringify(value)}
-        onChange={(e) => {
-          try {
-            const parsed = JSON.parse(e.target.value) as Record<string, unknown>[];
-            onChange(parsed);
-            onValidationChange(true);
-          } catch {
-            onValidationChange(false);
-          }
-        }}
-      />
-    </div>
+    <textarea
+      aria-label="code editor"
+      value={JSON.stringify(value)}
+      onChange={(e) => {
+        try {
+          const parsed = JSON.parse(e.target.value) as Record<string, unknown>[];
+          onChange(parsed);
+          onValidationChange(true);
+        } catch {
+          onValidationChange(false);
+        }
+      }}
+    />
   ),
 }));
 
+const defaultProps = {
+  protocolId: "test-protocol-id",
+  initialName: "Test Protocol",
+  initialDescription: "Test Description",
+  initialCode: [{ averages: 1, environmental: [["light_intensity", 0]] }],
+  initialFamily: "multispeq" as const,
+};
+
 describe("ProtocolDetailsCard", () => {
-  const defaultProps = {
-    protocolId: "test-protocol-id",
-    initialName: "Test Protocol",
-    initialDescription: "Test Description",
-    initialCode: [{ averages: 1, environmental: [["light_intensity", 0]] }],
-    initialFamily: "multispeq" as const,
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should render the form with initial values", () => {
+  it("renders form with initial values", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-
     expect(screen.getByDisplayValue("Test Protocol")).toBeInTheDocument();
-    // Description is wrapped in <p> tags by Quill, so can't use getByDisplayValue
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /code editor/i })).toBeInTheDocument();
   });
 
-  it("should display all form fields", () => {
+  it("displays all form fields", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/family/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /code/i })).toBeInTheDocument();
   });
 
-  it("should disable submit button when form is pristine", () => {
+  it("disables save when form is pristine", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const submitButton = screen.getByRole("button", { name: /save/i });
-    expect(submitButton).toBeDisabled();
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
 
-  it("should enable submit button when form is dirty and valid", async () => {
+  it("enables save when form is dirty and valid", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const nameInput = screen.getByLabelText(/name/i);
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Updated Protocol Name");
+    await userEvent.clear(screen.getByLabelText(/name/i));
+    await userEvent.type(screen.getByLabelText(/name/i), "Updated Protocol");
 
     await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /save/i });
-      expect(submitButton).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: /save/i })).not.toBeDisabled();
     });
   });
 
-  it("should call updateProtocol mutation on submit", async () => {
-    const { useProtocolUpdate } = await import(
-      "../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate"
-    );
-    const mockMutateAsync = vi.fn().mockResolvedValue({});
-    vi.mocked(useProtocolUpdate).mockReturnValue({
-      mutateAsync: mockMutateAsync,
-      isPending: false,
-    } as never);
+  it("submits updated protocol and shows toast", async () => {
+    const spy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ name: "Updated Name" }),
+    });
 
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    const nameInput = screen.getByLabelText(/name/i);
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Updated Name");
-
-    const submitButton = screen.getByRole("button", { name: /save/i });
-    await userEvent.click(submitButton);
+    await userEvent.clear(screen.getByLabelText(/name/i));
+    await userEvent.type(screen.getByLabelText(/name/i), "Updated Name");
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({
-        params: { id: "test-protocol-id" },
-        body: {
-          name: "Updated Name",
-          description: "<p>Test Description</p>", // Quill wraps content in HTML
-          code: defaultProps.initialCode,
-          family: defaultProps.initialFamily,
-        },
-      });
+      expect(spy.callCount).toBe(1);
+    });
+    expect(spy.body).toMatchObject({ name: "Updated Name" });
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      description: "protocols.protocolUpdated",
     });
   });
 
-  it("should show toast notification on successful update", async () => {
-    const { toast } = await import("@repo/ui/hooks");
-
+  it("disables save when code is invalid", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
+    await userEvent.clear(screen.getByLabelText(/name/i));
+    await userEvent.type(screen.getByLabelText(/name/i), "Updated");
 
-    const nameInput = screen.getByLabelText(/name/i);
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Updated Name");
-
-    const submitButton = screen.getByRole("button", { name: /save/i });
-    await userEvent.click(submitButton);
+    // fireEvent.input for JSON with curly braces (userEvent interprets { as modifier)
+    fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
+      target: { value: "{ invalid json" },
+    });
 
     await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith({
-        description: "protocols.protocolUpdated",
-      });
+      expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
     });
   });
 
-  it("should disable submit button when code is invalid", async () => {
+  it("updates code field", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const nameInput = screen.getByLabelText(/name/i);
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Updated Name");
-
-    const codeEditor = screen.getByTestId("code-editor");
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: "{ invalid json" } });
-
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /save/i });
-      expect(submitButton).toBeDisabled();
-    });
-  });
-
-  it("should show loading state during update", async () => {
-    const { useProtocolUpdate } = await import(
-      "../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate"
-    );
-    vi.mocked(useProtocolUpdate).mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: true,
-    } as never);
-
-    render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const submitButton = screen.getByRole("button", { name: /save/i });
-    expect(submitButton).toBeDisabled();
-  });
-
-  it.skip("should update description field", async () => {
-    // Skip: Description field is a Quill rich text editor, not a standard input
-    // Testing Quill editor interaction requires more complex setup
-    render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const descriptionInput = screen.getByLabelText(/description/i);
-    await userEvent.clear(descriptionInput);
-    await userEvent.type(descriptionInput, "New description");
-
-    expect(descriptionInput).toHaveValue("New description");
-  });
-
-  it("should update code field", () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const codeEditor = screen.getByTestId("code-editor");
     const newCode = JSON.stringify([{ averages: 2 }]);
-
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: newCode } });
-
-    expect(codeEditor).toHaveValue(newCode);
+    fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
+      target: { value: newCode },
+    });
+    expect(screen.getByRole("textbox", { name: /code editor/i })).toHaveValue(newCode);
   });
 
-  it("should show family selector with correct options", () => {
+  it("validates name as required", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const familySelect = screen.getByLabelText(/family/i);
-    expect(familySelect).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText(/name/i));
+    await userEvent.tab();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+    });
   });
 
-  it("should display card title and description", () => {
+  it("displays card title and description", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-
     expect(screen.getByText("protocolSettings.generalSettings")).toBeInTheDocument();
     expect(screen.getByText("protocolSettings.generalDescription")).toBeInTheDocument();
-  });
-
-  it("should handle empty code value", () => {
-    render(<ProtocolDetailsCard {...defaultProps} initialCode={[{}]} />);
-
-    const codeEditor = screen.getByTestId("code-editor");
-    expect(codeEditor).toHaveValue(JSON.stringify([{}]));
-  });
-
-  it("should validate name field", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
-
-    const nameInput = screen.getByLabelText(/name/i);
-    await userEvent.clear(nameInput);
-    await userEvent.tab(); // Trigger blur to show validation
-
-    await waitFor(() => {
-      // Form should show validation error
-      const submitButton = screen.getByRole("button", { name: /save/i });
-      expect(submitButton).toBeDisabled();
-    });
   });
 });

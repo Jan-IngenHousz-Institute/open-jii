@@ -8,7 +8,7 @@ import { AnalysisPanel } from "../analysis-panel";
 
 Element.prototype.scrollIntoView = vi.fn();
 
-// Mock useDebounce hook to make debouncing instant
+// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
 }));
@@ -37,7 +37,6 @@ const mockMacros = [
 
 describe("<AnalysisPanel />", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     // Dynamic MSW handler — filters macros based on "search" query param
     server.use(
       http.get("http://localhost:3020/api/v1/macros", ({ request }) => {

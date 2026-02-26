@@ -1,3 +1,4 @@
+import { createExperiment } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
@@ -18,7 +19,7 @@ vi.mock("./experiment-delete", () => ({
   ),
 }));
 
-const experiment = { id: "exp-1", name: "Test", status: "active" } as never;
+const experiment = createExperiment({ id: "exp-1", name: "Test", status: "active" });
 const members = [{ user: { id: "user-1" }, role: "admin" }] as never;
 
 describe("ExperimentInfoCard", () => {

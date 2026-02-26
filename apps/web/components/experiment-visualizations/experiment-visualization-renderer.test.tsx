@@ -1,8 +1,7 @@
+import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-
-import type { ExperimentVisualization } from "@repo/api";
 
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 
@@ -29,26 +28,14 @@ vi.mock("./chart-renderers/basic/scatter-chart/scatter-chart-renderer", () => ({
 describe("ExperimentVisualizationRenderer", () => {
   const mockExperimentId = "exp-123";
 
-  const baseVisualization: ExperimentVisualization = {
+  const baseVisualization = createVisualization({
     id: "viz-1",
     name: "Test Visualization",
     description: "A test visualization",
     experimentId: mockExperimentId,
     chartFamily: "basic",
     chartType: "line",
-    config: {},
-    dataConfig: {
-      tableName: "measurements",
-      dataSources: [
-        { tableName: "measurements", columnName: "x", role: "x" },
-        { tableName: "measurements", columnName: "y", role: "y" },
-      ],
-    },
-    createdBy: "user-1",
-    createdByName: "User One",
-    createdAt: "2023-01-01T00:00:00Z",
-    updatedAt: "2023-01-01T00:00:00Z",
-  };
+  });
 
   it("should render line chart renderer for line chart type", () => {
     const visualization = { ...baseVisualization, chartType: "line" as const };

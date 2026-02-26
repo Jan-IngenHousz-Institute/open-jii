@@ -1,38 +1,16 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import React from "react";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 
 import { ProtocolInfoCard } from "./protocol-info-card";
 
-// Set up mocks before tests
-const mockPush = vi.fn();
-
-// Mock useLocale
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
-// Mock next/navigation
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-}));
-
-// Mock formatDate
+// Mock formatDate (locale/timezone-dependent utility)
 vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
-}));
-
-// PostHog feature flags - hoisted mock
-const useFeatureFlagEnabledMock = vi.hoisted(() => vi.fn());
-
-vi.mock("posthog-js/react", () => ({
-  useFeatureFlagEnabled: useFeatureFlagEnabledMock,
 }));
 
 describe("ProtocolInfoCard", () => {
@@ -48,7 +26,6 @@ describe("ProtocolInfoCard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPush.mockClear();
 
     // Default: feature flag enabled
     useFeatureFlagEnabledMock.mockReturnValue(true);
@@ -131,7 +108,9 @@ describe("ProtocolInfoCard", () => {
   it("should handle delete when confirmed", async () => {
     const spy = server.mount(contract.protocols.deleteProtocol, { status: 204 });
 
-    render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
+    const { router } = render(
+      <ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />,
+    );
 
     // Open the dialog
     const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
@@ -144,7 +123,7 @@ describe("ProtocolInfoCard", () => {
     // Wait for the async operation to complete
     await waitFor(() => {
       expect(spy.params).toEqual({ id: "protocol-123" });
-      expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols");
+      expect(router.push).toHaveBeenCalledWith("/en-US/platform/protocols");
     });
   });
 });

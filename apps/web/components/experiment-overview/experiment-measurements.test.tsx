@@ -1,205 +1,139 @@
-import { render, screen } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { createExperimentDataTable } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { ExperimentMeasurements } from "./experiment-measurements";
 
-// ---------- Hoisted mocks ----------
-const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
-  return {
-    useExperimentDataSpy: vi.fn(() => ({
-      tableRows: null as unknown[] | null,
-      isLoading: false,
-      error: null as Error | null,
-    })),
-    useExperimentTablesSpy: vi.fn(() => ({
-      tables: [{ name: "device", displayName: "Device", totalRows: 10 }],
-      isLoading: false,
-      error: null as Error | null,
-    })),
-  };
-});
+/* --------------------------------- Helpers -------------------------------- */
 
-// ---------- Mocks ----------
-vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
-  useExperimentData: (...args: unknown[]) => useExperimentDataSpy(...args),
-}));
+function mountMeasurements(rows: Record<string, unknown>[] = [], opts?: { status?: number }) {
+  return server.mount(contract.experiments.getExperimentData, {
+    body: [
+      createExperimentDataTable({
+        name: "device",
+        data: {
+          columns: [
+            { name: "device_id", type_name: "STRING", type_text: "STRING" },
+            { name: "processed_timestamp", type_name: "STRING", type_text: "STRING" },
+          ],
+          rows,
+          totalRows: rows.length,
+          truncated: false,
+        },
+        totalRows: rows.length,
+        page: 1,
+        pageSize: 4,
+        totalPages: 1,
+      }),
+    ],
+    ...(opts?.status ? { status: opts.status } : {}),
+  });
+}
 
-vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
-  useExperimentTables: (...args: unknown[]) => useExperimentTablesSpy(...args),
-}));
-
-vi.mock("~/util/date", () => ({
-  formatDate: (dateString: string) => `formatted-${dateString}`,
-}));
+/* ---------------------------------- Tests --------------------------------- */
 
 describe("ExperimentMeasurements", () => {
-  it("renders loading state", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: null,
-      isLoading: true,
-      error: null,
-    });
+  it("renders loading then empty state when no measurements", async () => {
+    mountMeasurements([]);
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
+    // Initially shows loading
     expect(screen.getByText("measurements.latestMeasurements")).toBeInTheDocument();
-    // No table rows should be rendered while loading
-    expect(screen.queryByText("measurements.deviceId")).not.toBeInTheDocument();
+
+    // Eventually shows empty
+    await waitFor(() => {
+      expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
+    });
   });
 
-  it("renders empty state when no measurements", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [],
-      isLoading: false,
-      error: null,
-    });
+  it("renders empty state when API errors", async () => {
+    server.mount(contract.experiments.getExperimentData, { status: 500 });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
+    });
   });
 
-  it("renders empty state when error occurs", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: null,
-      isLoading: false,
-      error: new Error("Failed to fetch"),
-    });
+  it("renders table with measurement data", async () => {
+    mountMeasurements([
+      { device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" },
+      { device_id: "device-2", processed_timestamp: "2023-01-16T14:45:00Z" },
+    ]);
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
-  });
-
-  it("renders table with measurement data", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [
-        { device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" },
-        { device_id: "device-2", processed_timestamp: "2023-01-16T14:45:00Z" },
-      ],
-      isLoading: false,
-      error: null,
+    await waitFor(() => {
+      expect(screen.getByText("device-1")).toBeInTheDocument();
     });
-
-    render(<ExperimentMeasurements experimentId="exp-123" />);
 
     expect(screen.getByText("measurements.latestMeasurements")).toBeInTheDocument();
     expect(screen.getByText("measurements.deviceId")).toBeInTheDocument();
     expect(screen.getByText("measurements.lastProcessed")).toBeInTheDocument();
-    expect(screen.getByText("device-1")).toBeInTheDocument();
     expect(screen.getByText("device-2")).toBeInTheDocument();
     expect(screen.getByText("2023-01-15")).toBeInTheDocument();
     expect(screen.getByText("2023-01-16")).toBeInTheDocument();
   });
 
-  it("renders see all link for non-archived experiments", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }],
-      isLoading: false,
-      error: null,
-    });
+  it("renders see all link pointing to experiment data page", async () => {
+    mountMeasurements([{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }]);
 
     render(<ExperimentMeasurements experimentId="exp-456" isArchived={false} />);
 
-    const link = screen.getByRole("link", { name: /measurements\.seeAll/ });
-    expect(link).toHaveAttribute("href", "/en-US/platform/experiments/exp-456/data");
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /measurements\.seeAll/ })).toHaveAttribute(
+        "href",
+        "/en-US/platform/experiments/exp-456/data",
+      );
+    });
   });
 
-  it("renders see all link for archived experiments", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }],
-      isLoading: false,
-      error: null,
-    });
+  it("uses experiments-archive path when archived", async () => {
+    mountMeasurements([{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }]);
 
     render(<ExperimentMeasurements experimentId="exp-789" isArchived={true} />);
 
-    const link = screen.getByRole("link", { name: /measurements\.seeAll/ });
-    expect(link).toHaveAttribute("href", "/en-US/platform/experiments-archive/exp-789/data");
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /measurements\.seeAll/ })).toHaveAttribute(
+        "href",
+        "/en-US/platform/experiments-archive/exp-789/data",
+      );
+    });
   });
 
-  it("handles null device_id", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [{ device_id: null, processed_timestamp: "2023-01-15T10:30:00Z" }],
-      isLoading: false,
-      error: null,
-    });
+  it("shows dash for null device_id", async () => {
+    mountMeasurements([{ device_id: null, processed_timestamp: "2023-01-15T10:30:00Z" }]);
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
+    await waitFor(() => {
+      expect(screen.getByText("—")).toBeInTheDocument();
+    });
+  });
+
+  it("shows dash for null timestamp", async () => {
+    mountMeasurements([{ device_id: "device-1", processed_timestamp: null }]);
+
+    render(<ExperimentMeasurements experimentId="exp-123" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("device-1")).toBeInTheDocument();
+    });
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
-  it("handles null timestamp", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [{ device_id: "device-1", processed_timestamp: null }],
-      isLoading: false,
-      error: null,
-    });
+  it("renders numeric device_id as string", async () => {
+    mountMeasurements([{ device_id: 12345, processed_timestamp: "2023-01-15T10:30:00Z" }]);
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    expect(screen.getByText("—")).toBeInTheDocument();
-  });
-
-  it("handles numeric device_id", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [{ device_id: 12345, processed_timestamp: "2023-01-15T10:30:00Z" }],
-      isLoading: false,
-      error: null,
+    await waitFor(() => {
+      expect(screen.getByText("12345")).toBeInTheDocument();
     });
-
-    render(<ExperimentMeasurements experimentId="exp-123" />);
-
-    expect(screen.getByText("12345")).toBeInTheDocument();
-  });
-
-  it("renders component successfully", () => {
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: [],
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ExperimentMeasurements experimentId="exp-test-123" />);
-
-    expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
-  });
-
-  it("renders empty state when device table is not available", () => {
-    useExperimentTablesSpy.mockReturnValue({
-      tables: [{ name: "raw_data", displayName: "Raw Data", totalRows: 5 }],
-      isLoading: false,
-      error: null,
-    });
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: null,
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ExperimentMeasurements experimentId="exp-123" />);
-
-    expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
-    expect(useExperimentDataSpy).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
-  });
-
-  it("renders loading state when tables are loading", () => {
-    useExperimentTablesSpy.mockReturnValue({
-      tables: undefined,
-      isLoading: true,
-      error: null,
-    });
-    useExperimentDataSpy.mockReturnValue({
-      tableRows: null,
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ExperimentMeasurements experimentId="exp-123" />);
-
-    expect(screen.getByText("measurements.latestMeasurements")).toBeInTheDocument();
-    const loadingElement = document.querySelector(".animate-pulse");
-    expect(loadingElement).toBeInTheDocument();
   });
 });

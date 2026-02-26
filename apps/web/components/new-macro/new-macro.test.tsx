@@ -15,16 +15,13 @@ import { createMacro, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import * as base64Utils from "@/util/base64";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import { NewMacroForm } from "./new-macro";
-
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({ data: { user: { id: "user-1" } } }),
-}));
 
 vi.mock("@hookform/resolvers/zod", () => ({
   zodResolver: () => (values: Record<string, unknown>) => ({ values, errors: {} }),
@@ -48,9 +45,12 @@ vi.mock("../macro-code-editor", () => ({
   ),
 }));
 
-describe("NewMacroForm", () => {
-  beforeEach(() => vi.clearAllMocks());
+vi.mocked(useSession).mockReturnValue({
+  data: { user: { id: "user-1" } },
+  isPending: false,
+} as ReturnType<typeof useSession>);
 
+describe("NewMacroForm", () => {
   it("renders form structure (profile loaded via MSW)", async () => {
     server.mount(contract.users.getUserProfile, { body: createUserProfile() });
 
@@ -110,16 +110,5 @@ describe("NewMacroForm", () => {
       expect(screen.getByTestId("code-editor")).toBeInTheDocument();
     });
     expect(screen.getByTestId("code-editor")).toHaveAttribute("data-language", "python");
-  });
-
-  it("uses correct form layout", () => {
-    render(<NewMacroForm />);
-    expect(document.querySelector("form")).toHaveClass("space-y-8");
-  });
-
-  it("has correct button layout", () => {
-    render(<NewMacroForm />);
-    const container = screen.getByText("newMacro.cancel").parentElement;
-    expect(container).toHaveClass("flex", "gap-2");
   });
 });

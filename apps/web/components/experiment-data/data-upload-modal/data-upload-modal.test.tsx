@@ -1,10 +1,7 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataUploadModal } from "./data-upload-modal";
-
-globalThis.React = React;
 
 // Mock the step components
 vi.mock("./steps/sensor-selection-step", () => ({
