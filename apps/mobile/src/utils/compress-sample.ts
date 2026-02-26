@@ -9,8 +9,8 @@ export function compressSample(sample: unknown): string {
 
   // Convert Uint8Array → base64 via binary string (works in Hermes / JSC)
   let binary = "";
-  for (let i = 0; i < compressed.length; i++) {
-    binary += String.fromCharCode(compressed[i]);
+  for (const byte of compressed) {
+    binary += String.fromCharCode(byte);
   }
   return btoa(binary);
 }

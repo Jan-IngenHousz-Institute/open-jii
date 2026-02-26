@@ -12,12 +12,11 @@ from delta.tables import DeltaTable
 import requests
 import json
 import pandas as pd
-import gzip
-import base64
 from datetime import datetime
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
+from openjii import decompress_sample
 
 # COMMAND ----------
 
@@ -68,23 +67,6 @@ sensor_schema = StructType([
     StructField("macros", ArrayType(macro_schema), True),
     StructField("annotations", ArrayType(annotation_schema), True)
 ])
-
-# COMMAND ----------
-
-# DBTITLE 1,Sample Decompression UDF
-@F.udf(StringType())
-def decompress_sample(encoded_sample: str, encoding: str) -> str:
-    """Decompress a gzip+base64-encoded sample field back to its original JSON string.
-    
-    If encoding is None (legacy payloads), the sample is returned as-is.
-    """
-    if encoding is None or encoded_sample is None:
-        return encoded_sample
-    if encoding == "gzip+base64":
-        compressed = base64.b64decode(encoded_sample)
-        return gzip.decompress(compressed).decode("utf-8")
-    # Unknown encoding — pass through unchanged
-    return encoded_sample
 
 # COMMAND ----------
 
