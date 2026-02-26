@@ -1,4 +1,7 @@
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 import React from "react";
+import { Trans } from "react-i18next";
 
 import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -53,10 +56,29 @@ export function LineChartRenderer({
 
   if (error && !providedData) {
     return (
-      <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
+      <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed p-8">
         <div className="text-center">
+          <div className="bg-muted mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <AlertCircle className="h-6 w-6" />
+          </div>
           <div className="mb-2 font-medium">{t("errors.failedToLoadData")}</div>
-          <div className="text-sm">{t("errors.failedToLoadDataDescription")}</div>
+          <div className="text-sm">
+            <Trans
+              i18nKey="errors.failedToLoadDataDescription"
+              ns="experimentVisualizations"
+              components={{
+                configLink:
+                  visualization.id && visualization.id !== "preview" ? (
+                    <Link
+                      href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}/edit`}
+                      className="text-foreground underline hover:opacity-80"
+                    />
+                  ) : (
+                    <span className="text-foreground" />
+                  ),
+              }}
+            />
+          </div>
         </div>
       </div>
     );
@@ -132,7 +154,7 @@ export function LineChartRenderer({
     );
   } catch (error) {
     return (
-      <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
+      <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed">
         <div className="text-center">
           <div className="mb-2 font-medium">{t("errors.configurationError")}</div>
           <div className="text-sm">

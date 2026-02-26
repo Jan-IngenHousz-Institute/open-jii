@@ -8,7 +8,6 @@ import { toast } from "@repo/ui/hooks";
 
 import { useExperimentAccess } from "../../hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
-import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useExperimentVisualizationDelete } from "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import ExperimentVisualizationDetails from "./experiment-visualization-details";
 
@@ -39,13 +38,6 @@ vi.mock("../../hooks/experiment/useExperimentVisualization/useExperimentVisualiz
 vi.mock("../../hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
   useExperimentAccess: vi.fn(),
 }));
-
-vi.mock(
-  "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData",
-  () => ({
-    useExperimentVisualizationData: vi.fn(),
-  }),
-);
 
 vi.mock(
   "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete",
@@ -88,13 +80,6 @@ describe("ExperimentVisualizationDetails", () => {
     updatedAt: new Date("2024-01-15").toISOString(),
   };
 
-  const mockVisualizationData = {
-    rows: [
-      { time: 1, value: 10 },
-      { time: 2, value: 20 },
-    ],
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     (useRouter as ReturnType<typeof vi.fn>).mockReturnValue(mockRouter);
@@ -122,10 +107,6 @@ describe("ExperimentVisualizationDetails", () => {
       error: null,
     });
 
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: null,
-    });
-
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -146,10 +127,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: null,
       isLoading: false,
       error: new Error("Failed to load"),
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: null,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -173,10 +150,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: { body: mockVisualization },
       isLoading: false,
       error: null,
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -206,10 +179,6 @@ describe("ExperimentVisualizationDetails", () => {
       error: null,
     });
 
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
-    });
-
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -236,10 +205,6 @@ describe("ExperimentVisualizationDetails", () => {
       error: null,
     });
 
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
-    });
-
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -260,10 +225,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: { body: mockVisualization },
       isLoading: false,
       error: null,
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -288,10 +249,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: { body: mockVisualization },
       isLoading: false,
       error: null,
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -327,10 +284,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: { body: mockVisualization },
       isLoading: false,
       error: null,
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -370,10 +323,6 @@ describe("ExperimentVisualizationDetails", () => {
       error: null,
     });
 
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
-    });
-
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: vi.fn(),
       isPending: true,
@@ -402,10 +351,6 @@ describe("ExperimentVisualizationDetails", () => {
       error: new Error("Failed to load"),
     });
 
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: null,
-    });
-
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -431,10 +376,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: { body: mockVisualization },
       isLoading: false,
       error: null,
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockImplementation(
@@ -477,10 +418,6 @@ describe("ExperimentVisualizationDetails", () => {
       error: null,
     });
 
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
-    });
-
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -503,10 +440,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: { body: mockVisualization },
       isLoading: false,
       error: null,
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -544,10 +477,6 @@ describe("ExperimentVisualizationDetails", () => {
       data: { body: vizWithoutDescription },
       isLoading: false,
       error: null,
-    });
-
-    (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: mockVisualizationData,
     });
 
     (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -590,10 +519,6 @@ describe("ExperimentVisualizationDetails", () => {
         error: null,
       });
 
-      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: mockVisualizationData,
-      });
-
       (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
         mutate: vi.fn(),
         isPending: false,
@@ -615,10 +540,6 @@ describe("ExperimentVisualizationDetails", () => {
         data: { body: mockVisualization },
         isLoading: false,
         error: null,
-      });
-
-      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: mockVisualizationData,
       });
 
       (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -644,10 +565,6 @@ describe("ExperimentVisualizationDetails", () => {
         error: null,
       });
 
-      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: mockVisualizationData,
-      });
-
       (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
         mutate: vi.fn(),
         isPending: false,
@@ -670,10 +587,6 @@ describe("ExperimentVisualizationDetails", () => {
         data: { body: mockVisualization },
         isLoading: false,
         error: null,
-      });
-
-      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
-        data: mockVisualizationData,
       });
 
       (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
