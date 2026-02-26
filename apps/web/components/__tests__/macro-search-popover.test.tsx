@@ -1,4 +1,3 @@
-import { useLocale } from "@/hooks/useLocale";
 import { createMacro } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -44,7 +43,6 @@ function renderPopover(over: Partial<React.ComponentProps<typeof MacroSearchPopo
 describe("<MacroSearchPopover />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useLocale).mockReturnValue("en-US");
   });
 
   it("renders with correct structure", () => {

@@ -1,9 +1,10 @@
+import { createExperimentDataTable, createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { ExperimentVisualization } from "@repo/api";
+import { contract } from "@repo/api";
 
-import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { ScatterChartRenderer } from "./scatter-chart-renderer";
 
 // ScatterChart is Plotly-based, doesn't work in jsdom
@@ -19,23 +20,14 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-// Mock the useExperimentVisualizationData hook
-vi.mock(
-  "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData",
-  () => ({
-    useExperimentVisualizationData: vi.fn(),
-  }),
-);
-
 describe("ScatterChartRenderer", () => {
-  const mockVisualization: ExperimentVisualization = {
+  const mockVisualization = createVisualization({
     id: "viz-1",
     experimentId: "exp-1",
     name: "Test Scatter Chart",
     description: "Test Description",
     chartType: "scatter",
     chartFamily: "basic",
-    createdBy: "user-1",
     config: {
       mode: "markers",
       marker: {
@@ -50,18 +42,10 @@ describe("ScatterChartRenderer", () => {
         { tableName: "test_table", columnName: "y_value", role: "y", alias: "Y" },
       ],
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useExperimentVisualizationData).mockReturnValue({
-      data: undefined,
-      tableInfo: undefined,
-      isLoading: false,
-      error: null,
-    });
   });
 
   describe("Rendering with provided data", () => {
@@ -117,7 +101,16 @@ describe("ScatterChartRenderer", () => {
       expect(screen.getByText("errors.noDataFound")).toBeInTheDocument();
     });
 
-    it("should show no data message when data is undefined", () => {
+    it("should show no data message when data is undefined", async () => {
+      server.mount(contract.experiments.getExperimentData, {
+        body: [
+          createExperimentDataTable({
+            name: "test_table",
+            data: { columns: [], rows: [], totalRows: 0, truncated: false },
+          }),
+        ],
+      });
+
       render(
         <ScatterChartRenderer
           visualization={mockVisualization}
@@ -126,7 +119,7 @@ describe("ScatterChartRenderer", () => {
         />,
       );
 
-      expect(screen.getByText("errors.noData")).toBeInTheDocument();
+      expect(await screen.findByText("errors.noData")).toBeInTheDocument();
     });
   });
 

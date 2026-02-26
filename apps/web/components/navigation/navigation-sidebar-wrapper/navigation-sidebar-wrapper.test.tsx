@@ -6,8 +6,6 @@ import { SidebarProvider } from "@repo/ui/components";
 
 import { NavigationSidebarWrapper } from "./navigation-sidebar-wrapper";
 
-globalThis.React = React;
-
 // Mock navigation-config
 vi.mock("@/components/navigation/navigation-config", () => ({
   mainNavigation: {

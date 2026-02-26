@@ -1,10 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
-import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SensorSelectionStep, SENSOR_FAMILIES } from "./sensor-selection-step";
-
-globalThis.React = React;
 
 describe("SensorSelectionStep", () => {
   const mockOnSensorSelect = vi.fn();

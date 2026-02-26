@@ -1,42 +1,15 @@
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
-import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
-import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
-import { render, screen } from "@/test/test-utils";
+import { createExperiment, createExperimentAccess, createFlow } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { useEffect, useImperativeHandle, forwardRef, use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+
 import ExperimentFlowPage from "./page";
 
-// Mocks for hooks used by the page
-vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
-  useExperiment: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
-  useExperimentFlow: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate", () => ({
-  useExperimentFlowCreate: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate", () => ({
-  useExperimentFlowUpdate: vi.fn(),
-}));
-
-// Mock translation hook (client)
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
-
-// Mock FlowEditor
+// Mock FlowEditor (keep — complex forwardRef/useImperativeHandle component)
 const mockGetFlowData = vi.fn(() => ({ nodes: [{ id: "n1" }] }));
 
 vi.mock("@/components/flow-editor", () => ({
@@ -50,12 +23,10 @@ vi.mock("@/components/flow-editor", () => ({
   >((props, ref) => {
     const { onDirtyChange, initialFlow, isDisabled } = props;
 
-    // Expose the imperative handle
     useImperativeHandle(ref, () => ({
       getFlowData: mockGetFlowData,
     }));
 
-    // Call onDirtyChange to simulate user interaction
     useEffect(() => {
       if (onDirtyChange) {
         onDirtyChange();
@@ -71,121 +42,89 @@ vi.mock("@/components/flow-editor", () => ({
   }),
 }));
 
+/* --------------------------------- Helpers -------------------------------- */
+
+const EXP_ID = "test-experiment-id";
+const PARAMS = Promise.resolve({ id: EXP_ID, locale: "en-US" });
+
+const archivedExperiment = createExperiment({ id: EXP_ID, status: "archived" });
+const activeExperiment = createExperiment({ id: EXP_ID, status: "active" });
+
+const accessPayload = createExperimentAccess({
+  experiment: { id: EXP_ID, status: "archived" },
+  isAdmin: false,
+});
+
+/** Mount all three query endpoints with sensible archived defaults. */
+function mountDefaults() {
+  server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
+  server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+  server.mount(contract.experiments.getFlow, { status: 404 });
+}
+
+/* ---------------------------------- Tests --------------------------------- */
+
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(use).mockReturnValue({ id: "test-experiment-id" });
+  vi.mocked(use).mockReturnValue({ id: EXP_ID });
   mockGetFlowData.mockReturnValue({ nodes: [{ id: "n1" }] });
 
   vi.spyOn(console, "error").mockImplementation(() => {
     /* no-op */
   });
-
-  // Default safe returns for mutations
-  vi.mocked(useExperimentFlowCreate).mockReturnValue({
-    mutate: vi.fn(),
-    isPending: false,
-  } as unknown as ReturnType<typeof useExperimentFlowCreate>);
-  vi.mocked(useExperimentFlowUpdate).mockReturnValue({
-    mutate: vi.fn(),
-    isPending: false,
-  } as unknown as ReturnType<typeof useExperimentFlowUpdate>);
-  vi.mocked(useExperimentFlow).mockReturnValue({
-    data: undefined,
-    refetch: vi.fn(),
-  } as unknown as ReturnType<typeof useExperimentFlow>);
 });
 
 describe("<ExperimentFlowPage />", () => {
   it("shows loading when experiment or access is loading", () => {
-    vi.mocked(useExperiment).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    } as unknown as ReturnType<typeof useExperiment>);
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperimentAccess>);
+    server.mount(contract.experiments.getExperiment, { delay: "infinite" });
+    server.mount(contract.experiments.getExperimentAccess, { delay: "infinite" });
+    server.mount(contract.experiments.getFlow, { status: 404 });
 
-    render(
-      <ExperimentFlowPage
-        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
-      />,
-    );
+    render(<ExperimentFlowPage params={PARAMS} />);
 
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
-  it("renders ErrorDisplay when there is an error loading", () => {
-    vi.mocked(useExperiment).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("fail"),
-    } as unknown as ReturnType<typeof useExperiment>);
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperimentAccess>);
+  it("renders ErrorDisplay when there is an error loading", async () => {
+    server.mount(contract.experiments.getExperiment, { status: 500 });
+    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(contract.experiments.getFlow, { status: 404 });
 
-    render(
-      <ExperimentFlowPage
-        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
-      />,
-    );
+    render(<ExperimentFlowPage params={PARAMS} />);
 
-    // Real ErrorDisplay renders a heading and the error message
-    expect(screen.getByText("failedToLoad")).toBeInTheDocument();
-    expect(screen.getByText("fail")).toBeInTheDocument();
-  });
-
-  it("shows notFound text when experiment data or access experiment is missing", () => {
-    // No experiment body
-    vi.mocked(useExperiment).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperiment>);
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: { body: { experiment: true } },
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperimentAccess>);
-
-    render(
-      <ExperimentFlowPage
-        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
-      />,
-    );
-
-    expect(screen.getByText("notFound")).toBeInTheDocument();
-  });
-
-  it("calls notFound when experiment is not archived", () => {
-    // Provide experiment with non-archived status
-    vi.mocked(useExperiment).mockReturnValue({
-      data: { body: { status: "active" } },
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperiment>);
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: { body: { experiment: {} } },
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperimentAccess>);
-
-    // Make notFound throw so render will surface it
-    vi.mocked(notFound).mockImplementation(() => {
-      throw new Error("notFound");
+    await waitFor(() => {
+      expect(screen.getByText("failedToLoad")).toBeInTheDocument();
     });
+  });
 
-    expect(() =>
-      render(
-        <ExperimentFlowPage
-          params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
-        />,
-      ),
-    ).toThrow("notFound");
+  it("shows notFound text when experiment data or access experiment is missing", async () => {
+    // Experiment loads fine, but access returns with no experiment → triggers notFound text
+    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: { experiment: null, hasAccess: false, isAdmin: false },
+    });
+    server.mount(contract.experiments.getFlow, { status: 404 });
+
+    render(<ExperimentFlowPage params={PARAMS} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("notFound")).toBeInTheDocument();
+    });
+  });
+
+  it("calls notFound when experiment is not archived", async () => {
+    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { id: EXP_ID, status: "active" },
+      }),
+    });
+    server.mount(contract.experiments.getFlow, { status: 404 });
+
+    render(<ExperimentFlowPage params={PARAMS} />);
+
+    await waitFor(() => {
+      expect(vi.mocked(notFound)).toHaveBeenCalled();
+    });
   });
 });

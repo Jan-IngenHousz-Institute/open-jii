@@ -1,14 +1,15 @@
+import { createUserProfile } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { MemberItem } from "./member-item";
 
-const mockUser = {
+const mockUser = createUserProfile({
   userId: "user-123",
   firstName: "John",
   lastName: "Doe",
   email: "john@example.com",
-};
+});
 
 const mockMember = {
   role: "member",

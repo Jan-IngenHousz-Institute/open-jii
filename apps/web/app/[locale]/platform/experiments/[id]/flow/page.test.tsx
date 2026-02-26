@@ -1,41 +1,15 @@
+import { createExperiment, createExperimentAccess, createFlow } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+
 import ExperimentFlowPage from "./page";
 
-// --- Mocks ---
-
-const mockUseExperiment = vi.fn();
-vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
-  useExperiment: (): unknown => mockUseExperiment(),
-}));
-
-const mockUseExperimentAccess = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: (): unknown => mockUseExperimentAccess(),
-}));
-
-const mockUseExperimentFlow = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
-  useExperimentFlow: (): unknown => mockUseExperimentFlow(),
-}));
-
-const mockUseExperimentFlowCreate = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate", () => ({
-  useExperimentFlowCreate: (): unknown => mockUseExperimentFlowCreate(),
-}));
-
-const mockUseExperimentFlowUpdate = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate", () => ({
-  useExperimentFlowUpdate: (): unknown => mockUseExperimentFlowUpdate(),
-}));
-
-const mockUseTranslation = vi.fn();
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: (): unknown => mockUseTranslation(),
-}));
+// --- Mocks (component-level only, no hook mocks) ---
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
@@ -64,131 +38,100 @@ vi.mock("@/components/flow-editor", () => ({
   ),
 }));
 
+// --- Helpers ---
+
+const EXP_ID = "exp-123";
+const LOCALE = "en-US";
+const defaultProps = {
+  params: Promise.resolve({ locale: LOCALE, id: EXP_ID }),
+};
+
+const activeExperiment = createExperiment({
+  id: EXP_ID,
+  status: "active",
+  name: "Test Experiment",
+});
+
+const accessPayload = createExperimentAccess({
+  experiment: { id: EXP_ID, name: "Test Experiment", status: "active" },
+  isAdmin: true,
+});
+
+/** Mount all five endpoints with sensible active-experiment defaults. */
+function mountDefaults() {
+  server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+  server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+  server.mount(contract.experiments.getFlow, { status: 404 }); // no flow yet
+  server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
+  server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
+}
+
 // --- Tests ---
 describe("ExperimentFlowPage", () => {
-  const locale = "en-US";
-  const experimentId = "exp-123";
-  const defaultProps = {
-    params: Promise.resolve({ locale, id: experimentId }),
-  };
-
-  const mockExperimentData = {
-    data: {
-      body: {
-        id: "exp-123",
-        name: "Test Experiment",
-        status: "active",
-      },
-    },
-    isLoading: false,
-    error: null,
-  };
-
-  const mockAccessData = {
-    data: {
-      body: {
-        hasAccess: true,
-        isAdmin: true,
-        experiment: {
-          id: "exp-123",
-          name: "Test Experiment",
-        },
-      },
-    },
-    isLoading: false,
-    error: null,
-  };
-
-  const mockFlowData = {
-    data: null,
-    refetch: vi.fn(),
-  };
-
-  const mockCreateMutation = {
-    mutate: vi.fn(),
-  };
-
-  const mockUpdateMutation = {
-    mutate: vi.fn(),
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(use).mockReturnValue({ id: "exp-123", locale: "en-US" });
-    mockUseExperiment.mockReturnValue(mockExperimentData);
-    mockUseExperimentAccess.mockReturnValue(mockAccessData);
-    mockUseExperimentFlow.mockReturnValue(mockFlowData);
-    mockUseExperimentFlowCreate.mockReturnValue(mockCreateMutation);
-    mockUseExperimentFlowUpdate.mockReturnValue(mockUpdateMutation);
-    mockUseTranslation.mockReturnValue({
-      t: (key: string) => key,
-    });
+    vi.mocked(use).mockReturnValue({ id: EXP_ID, locale: LOCALE });
   });
 
   it("renders the experiment flow page with all components when loaded", async () => {
+    mountDefaults();
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText("flow.title")).toBeInTheDocument();
       expect(screen.getByTestId("flow-editor")).toBeInTheDocument();
-      expect(screen.getByTestId("button")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /flow.saveFlow/ })).toBeInTheDocument();
     });
   });
 
-  it("displays loading state when experiment is loading", async () => {
-    mockUseExperiment.mockReturnValue({
-      ...mockExperimentData,
-      isLoading: true,
-      data: null,
-    });
+  it("displays loading state when experiment is loading", () => {
+    server.mount(contract.experiments.getExperiment, { delay: "infinite" });
+    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
 
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
-    await waitFor(() => {
-      expect(screen.getByText("loading")).toBeInTheDocument();
-    });
+    expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
   it("displays error state when experiment fails to load", async () => {
-    const error = new Error("Test error");
-    mockUseExperiment.mockReturnValue({
-      ...mockExperimentData,
-      isLoading: false,
-      data: null,
-      error,
-    });
+    server.mount(contract.experiments.getExperiment, { status: 500 });
+    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
 
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(screen.getByTestId("error-display")).toHaveTextContent(
-        "failedToLoad: Error: Test error",
-      );
+      expect(screen.getByTestId("error-display")).toHaveTextContent("failedToLoad");
     });
   });
 
-  it("calls notFound when experiment is archived", () => {
-    mockUseExperiment.mockReturnValue({
-      ...mockExperimentData,
-      data: {
-        body: {
-          ...mockExperimentData.data.body,
-          status: "archived",
-        },
-      },
+  it("calls notFound when experiment is archived", async () => {
+    const archivedExperiment = createExperiment({ id: EXP_ID, status: "archived" });
+    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { id: EXP_ID, status: "archived" },
+      }),
     });
+    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
 
-    vi.mocked(notFound).mockImplementation(() => {
-      throw new Error("NEXT_NOT_FOUND");
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(vi.mocked(notFound)).toHaveBeenCalled();
     });
-
-    expect(() => render(<ExperimentFlowPage params={defaultProps.params} />)).toThrow(
-      "NEXT_NOT_FOUND",
-    );
   });
 
   it("renders FlowEditor with correct props", async () => {
+    mountDefaults();
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
@@ -198,28 +141,24 @@ describe("ExperimentFlowPage", () => {
     });
   });
 
-  it("displays access loading state", async () => {
-    mockUseExperimentAccess.mockReturnValue({
-      ...mockAccessData,
-      isLoading: true,
-      data: null,
-    });
+  it("displays access loading state", () => {
+    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+    server.mount(contract.experiments.getExperimentAccess, { delay: "infinite" });
+    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
 
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
-    await waitFor(() => {
-      expect(screen.getByText("loading")).toBeInTheDocument();
-    });
+    expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
   it("displays access error state", async () => {
-    const error = new Error("Access error");
-    mockUseExperimentAccess.mockReturnValue({
-      ...mockAccessData,
-      isLoading: false,
-      data: null,
-      error,
-    });
+    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
 
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
@@ -229,6 +168,7 @@ describe("ExperimentFlowPage", () => {
   });
 
   it("renders save button", async () => {
+    mountDefaults();
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
