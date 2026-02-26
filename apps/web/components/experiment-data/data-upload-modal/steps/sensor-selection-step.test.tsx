@@ -1,69 +1,10 @@
-import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SensorSelectionStep, SENSOR_FAMILIES } from "./sensor-selection-step";
 
 globalThis.React = React;
-
-// Mock translation
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock components from @repo/ui
-vi.mock("@repo/ui/components", () => ({
-  Label: ({ children, ...props }: { children: React.ReactNode; className?: string }) => (
-    <label {...props}>{children}</label>
-  ),
-  RadioGroup: ({
-    children,
-    onValueChange,
-    className,
-    value,
-  }: {
-    children: React.ReactNode;
-    onValueChange: (value: string) => void;
-    className?: string;
-    value?: string;
-  }) => (
-    <div
-      role="radiogroup"
-      className={className}
-      data-value={value}
-      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.type === "radio") {
-          onValueChange(e.target.value);
-        }
-      }}
-    >
-      {children}
-    </div>
-  ),
-  RadioGroupItem: ({
-    value,
-    disabled,
-    className,
-    "aria-label": ariaLabel,
-  }: {
-    value: string;
-    disabled?: boolean;
-    className?: string;
-    "aria-label"?: string;
-  }) => (
-    <input
-      type="radio"
-      name="sensor"
-      value={value}
-      disabled={disabled}
-      className={className}
-      aria-label={ariaLabel}
-    />
-  ),
-}));
 
 describe("SensorSelectionStep", () => {
   const mockOnSensorSelect = vi.fn();
@@ -113,24 +54,26 @@ describe("SensorSelectionStep", () => {
     });
   });
 
-  it("calls onSensorSelect when clicking on enabled sensor card", () => {
+  it("calls onSensorSelect when clicking on enabled sensor card", async () => {
+    const user = userEvent.setup();
     render(<SensorSelectionStep selectedSensor={null} onSensorSelect={mockOnSensorSelect} />);
 
     const enabledSensor = SENSOR_FAMILIES.find((sensor) => !sensor.disabled);
     if (enabledSensor) {
       const sensorCard = screen.getByTestId(`sensor-option-${enabledSensor.id}`);
-      fireEvent.click(sensorCard);
+      await user.click(sensorCard);
       expect(mockOnSensorSelect).toHaveBeenCalledWith(enabledSensor.id);
     }
   });
 
-  it("does not call onSensorSelect when clicking on disabled sensor card", () => {
+  it("does not call onSensorSelect when clicking on disabled sensor card", async () => {
+    const user = userEvent.setup();
     render(<SensorSelectionStep selectedSensor={null} onSensorSelect={mockOnSensorSelect} />);
 
     const disabledSensor = SENSOR_FAMILIES.find((sensor) => sensor.disabled);
     if (disabledSensor) {
       const sensorCard = screen.getByTestId(`sensor-option-${disabledSensor.id}`);
-      fireEvent.click(sensorCard);
+      await user.click(sensorCard);
       expect(mockOnSensorSelect).not.toHaveBeenCalled();
     }
   });
@@ -147,13 +90,14 @@ describe("SensorSelectionStep", () => {
     expect(radioGroup).toBeInTheDocument();
   });
 
-  it("handles radio button change events", () => {
+  it("handles radio button change events", async () => {
+    const user = userEvent.setup();
     render(<SensorSelectionStep selectedSensor={null} onSensorSelect={mockOnSensorSelect} />);
 
     const enabledSensor = SENSOR_FAMILIES.find((sensor) => !sensor.disabled);
     if (enabledSensor) {
       const radioButton = screen.getByLabelText(enabledSensor.label);
-      fireEvent.click(radioButton);
+      await user.click(radioButton);
       expect(mockOnSensorSelect).toHaveBeenCalledWith(enabledSensor.id);
     }
   });

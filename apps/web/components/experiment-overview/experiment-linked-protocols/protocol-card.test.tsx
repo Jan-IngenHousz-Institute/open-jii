@@ -1,14 +1,10 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { createProtocol } from "@/test/factories";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import type { Protocol } from "@repo/api";
 
 import { ProtocolCard, ProtocolSelector } from "./protocol-card";
-
-globalThis.React = React;
 
 // ---------- Hoisted mocks ----------
 const { useProtocolSpy } = vi.hoisted(() => {
@@ -21,12 +17,6 @@ const { useProtocolSpy } = vi.hoisted(() => {
 });
 
 // ---------- Mocks ----------
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
 vi.mock("../../../hooks/protocol/useProtocol/useProtocol", () => ({
   useProtocol: () => useProtocolSpy(),
 }));
@@ -41,33 +31,6 @@ vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<strin
     ...actual,
     RichTextRenderer: ({ content }: { content: string }) => (
       <div data-testid="rich-text-renderer">{content}</div>
-    ),
-    Select: ({
-      children,
-      value,
-      onValueChange,
-    }: {
-      children: React.ReactNode;
-      value: string;
-      onValueChange: (val: string) => void;
-    }) => (
-      <div data-testid="select" data-value={value}>
-        {children}
-        <button data-testid="select-button" onClick={() => onValueChange("new-protocol-id")}>
-          Change
-        </button>
-      </div>
-    ),
-    SelectTrigger: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="select-trigger">{children}</div>
-    ),
-    SelectContent: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="select-content">{children}</div>
-    ),
-    SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
-      <div data-testid="select-item" data-value={value}>
-        {children}
-      </div>
     ),
   };
 });
@@ -91,7 +54,7 @@ function mockOverflow({
 }
 
 describe("ProtocolCard", () => {
-  const mockProtocol: Protocol = {
+  const mockProtocol = createProtocol({
     id: "proto-1",
     name: "Test Protocol",
     description: "Test protocol description",
@@ -101,13 +64,14 @@ describe("ProtocolCard", () => {
     createdByName: "Test User",
     createdAt: "2023-01-01T00:00:00Z",
     updatedAt: "2023-01-15T00:00:00Z",
-  };
+  });
 
   it("renders loading state", () => {
     render(<ProtocolCard protocol={undefined} isLoading={true} error={null} />);
 
-    const loadingElement = document.querySelector(".animate-pulse");
-    expect(loadingElement).toBeInTheDocument();
+    // Loading renders skeleton, not the protocol content
+    expect(screen.queryByText("protocols.unableToLoadProtocol")).not.toBeInTheDocument();
+    expect(screen.queryByText("multispeq")).not.toBeInTheDocument();
   });
 
   it("renders error state", () => {
@@ -243,13 +207,17 @@ describe("ProtocolSelector", () => {
       />,
     );
 
-    const button = screen.getByTestId("select-button");
-    await user.click(button);
+    await user.click(screen.getByRole("combobox"));
 
-    expect(handleChange).toHaveBeenCalledWith("new-protocol-id");
+    const options = screen.getAllByRole("option");
+    await user.click(options[1]);
+
+    expect(handleChange).toHaveBeenCalledWith("proto-2");
   });
 
-  it("renders protocol items in dropdown", () => {
+  it("renders protocol items in dropdown", async () => {
+    const user = userEvent.setup();
+
     useProtocolSpy.mockReturnValue({
       data: {
         body: {
@@ -277,7 +245,9 @@ describe("ProtocolSelector", () => {
       />,
     );
 
-    const items = screen.getAllByTestId("select-item");
-    expect(items).toHaveLength(3);
+    await user.click(screen.getByRole("combobox"));
+
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(3);
   });
 });

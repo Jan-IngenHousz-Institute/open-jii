@@ -1,48 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { BulkActionsBar } from "./bulk-actions-bar";
-
-// Mock UI components to make dropdown content visible in tests
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    [key: string]: unknown;
-  }) => (
-    <button onClick={onClick} {...props}>
-      {children}
-    </button>
-  ),
-  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => <div onClick={onClick}>{children}</div>,
-  DropdownMenuSeparator: () => <div />,
-  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-// Mock i18n to return translation keys
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, params?: Record<string, unknown>) => {
-      if (params) {
-        return `${key}:${JSON.stringify(params)}`;
-      }
-      return key;
-    },
-  }),
-}));
 
 const mockProps = {
   rowIds: ["1", "2", "3"],
@@ -89,17 +48,25 @@ describe("BulkActionsBar", () => {
     ).toBeInTheDocument();
   });
 
-  it("should call downloadTable when download button clicked", () => {
+  it("should call downloadTable when download button clicked", async () => {
+    const user = userEvent.setup();
     render(<BulkActionsBar {...mockProps} />);
 
     const downloadButton = screen.getByText(/experimentDataTable.download/);
-    fireEvent.click(downloadButton);
+    await user.click(downloadButton);
 
     expect(mockProps.downloadTable).toHaveBeenCalled();
   });
 
-  it("should open actions dropdown and show options", () => {
+  it("should open actions dropdown and show options", async () => {
+    const user = userEvent.setup();
     render(<BulkActionsBar {...mockProps} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /experimentDataAnnotations.bulkActions.actions/,
+      }),
+    );
 
     expect(
       screen.getByText("experimentDataAnnotations.bulkActions.addComment"),
@@ -113,42 +80,58 @@ describe("BulkActionsBar", () => {
     ).toBeInTheDocument();
   });
 
-  it("should call onAddAnnotation when add comment clicked", () => {
+  it("should call onAddAnnotation when add comment clicked", async () => {
+    const user = userEvent.setup();
     render(<BulkActionsBar {...mockProps} />);
 
-    const addCommentButton = screen.getByText("experimentDataAnnotations.bulkActions.addComment");
-    fireEvent.click(addCommentButton);
+    await user.click(
+      screen.getByRole("button", {
+        name: /experimentDataAnnotations.bulkActions.actions/,
+      }),
+    );
+    await user.click(screen.getByText("experimentDataAnnotations.bulkActions.addComment"));
 
     expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["1", "2", "3"], "comment");
   });
 
-  it("should call onAddAnnotation when add flag clicked", () => {
+  it("should call onAddAnnotation when add flag clicked", async () => {
+    const user = userEvent.setup();
     render(<BulkActionsBar {...mockProps} />);
 
-    const addFlagButton = screen.getByText("experimentDataAnnotations.bulkActions.addFlag");
-    fireEvent.click(addFlagButton);
+    await user.click(
+      screen.getByRole("button", {
+        name: /experimentDataAnnotations.bulkActions.actions/,
+      }),
+    );
+    await user.click(screen.getByText("experimentDataAnnotations.bulkActions.addFlag"));
 
     expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["1", "2", "3"], "flag");
   });
 
-  it("should call onDeleteAnnotations when remove comments clicked", () => {
+  it("should call onDeleteAnnotations when remove comments clicked", async () => {
+    const user = userEvent.setup();
     render(<BulkActionsBar {...mockProps} />);
 
-    const removeCommentsButton = screen.getByText(
-      "experimentDataAnnotations.bulkActions.removeAllComments",
+    await user.click(
+      screen.getByRole("button", {
+        name: /experimentDataAnnotations.bulkActions.actions/,
+      }),
     );
-    fireEvent.click(removeCommentsButton);
+    await user.click(screen.getByText("experimentDataAnnotations.bulkActions.removeAllComments"));
 
     expect(mockProps.onDeleteAnnotations).toHaveBeenCalledWith(["1", "2", "3"], "comment");
   });
 
-  it("should call onDeleteAnnotations when remove flags clicked", () => {
+  it("should call onDeleteAnnotations when remove flags clicked", async () => {
+    const user = userEvent.setup();
     render(<BulkActionsBar {...mockProps} />);
 
-    const removeFlagsButton = screen.getByText(
-      "experimentDataAnnotations.bulkActions.removeAllFlags",
+    await user.click(
+      screen.getByRole("button", {
+        name: /experimentDataAnnotations.bulkActions.actions/,
+      }),
     );
-    fireEvent.click(removeFlagsButton);
+    await user.click(screen.getByText("experimentDataAnnotations.bulkActions.removeAllFlags"));
 
     expect(mockProps.onDeleteAnnotations).toHaveBeenCalledWith(["1", "2", "3"], "flag");
   });

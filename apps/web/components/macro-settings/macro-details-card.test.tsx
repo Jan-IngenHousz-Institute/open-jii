@@ -1,5 +1,4 @@
 import { render, screen } from "@/test/test-utils";
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { MacroDetailsCard } from "./macro-details-card";

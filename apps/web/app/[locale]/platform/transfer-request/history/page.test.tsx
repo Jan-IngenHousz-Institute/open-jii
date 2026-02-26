@@ -1,91 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { createTransferRequest } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { TransferRequestStatus } from "@repo/api";
+import { contract } from "@repo/api";
 
 import TransferRequestHistoryPage from "./page";
-
-globalThis.React = React;
-
-// -------------------
-// Mocks
-// -------------------
-
-const mockUseTransferRequests = vi.fn();
-vi.mock("~/hooks/useTransferRequests/useTransferRequests", () => ({
-  useTransferRequests: () => mockUseTransferRequests(),
-}));
-
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 vi.mock("~/util/date", () => ({
   formatDate: (date: string) => `formatted-${date}`,
 }));
 
-// -------------------
-// Test Data
-// -------------------
-
-const createMockRequest = (
-  requestId: string,
-  status: TransferRequestStatus,
-  projectIdOld: string,
-) => ({
-  requestId,
-  userId: "user-123",
-  userEmail: "test@example.com",
-  sourcePlatform: "photosynq",
-  projectIdOld,
-  projectUrlOld: `https://photosynq.com/projects/${projectIdOld}`,
-  status,
-  requestedAt: "2024-01-15T10:00:00Z",
-});
-
-// -------------------
-// Helpers
-// -------------------
-function renderHistoryPage({
-  isLoading = false,
-  error = null,
-  requests = [],
-}: {
-  isLoading?: boolean;
-  error?: { status?: number; message: string } | null;
-  requests?: ReturnType<typeof createMockRequest>[];
-} = {}) {
-  if (isLoading) {
-    mockUseTransferRequests.mockReturnValue({
-      data: null,
-      isLoading: true,
-      error: null,
-    });
-  } else if (error) {
-    mockUseTransferRequests.mockReturnValue({
-      data: null,
-      isLoading: false,
-      error,
-    });
-  } else {
-    mockUseTransferRequests.mockReturnValue({
-      data: { body: requests },
-      isLoading: false,
-      error: null,
-    });
-  }
-
-  return render(<TransferRequestHistoryPage />);
-}
-
-// -------------------
-// Tests
-// -------------------
+const createRequest = (requestId: string, status: TransferRequestStatus, projectIdOld: string) =>
+  createTransferRequest({
+    requestId,
+    status,
+    projectIdOld,
+    projectUrlOld: `https://photosynq.com/projects/${projectIdOld}`,
+    requestedAt: "2024-01-15T10:00:00Z",
+  });
 describe("<TransferRequestHistoryPage />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,173 +27,206 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Loading State", () => {
     it("renders loading skeletons when data is loading", () => {
-      renderHistoryPage({ isLoading: true });
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [],
+        delay: 999_999,
+      });
+
+      render(<TransferRequestHistoryPage />);
 
       expect(screen.getByText("transferRequest.yourRequests")).toBeInTheDocument();
-
-      // Check for skeleton elements
       const skeletons = document.querySelectorAll('[class*="animate-pulse"]');
       expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 
   describe("Error State", () => {
-    it("renders error alert when there is an error", () => {
-      const error = { message: "Failed to fetch", status: 500 };
-      renderHistoryPage({ error });
+    it("renders error alert when there is an error", async () => {
+      server.mount(contract.experiments.listTransferRequests, { status: 500 });
 
-      expect(screen.getByText("transferRequest.errorLoadingRequest")).toBeInTheDocument();
-      expect(screen.getByText("transferRequest.errorLoadingRequests")).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("transferRequest.errorLoadingRequest")).toBeInTheDocument();
+        expect(screen.getByText("transferRequest.errorLoadingRequests")).toBeInTheDocument();
+      });
     });
 
-    it("shows error for 404 status", () => {
-      const error = { message: "Not found", status: 404 };
-      renderHistoryPage({ error });
+    it("shows error for 404 status", async () => {
+      server.mount(contract.experiments.listTransferRequests, { status: 404 });
 
-      expect(screen.getByText("transferRequest.errorLoadingRequest")).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("transferRequest.errorLoadingRequest")).toBeInTheDocument();
+      });
     });
   });
 
   describe("Empty State", () => {
-    it("renders empty state when no requests exist", () => {
-      renderHistoryPage({ requests: [] });
+    it("renders empty state when no requests exist", async () => {
+      server.mount(contract.experiments.listTransferRequests, { body: [] });
 
-      expect(screen.getByText("transferRequest.noRequests")).toBeInTheDocument();
-      expect(screen.getByText("transferRequest.noRequestsDescription")).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("transferRequest.noRequests")).toBeInTheDocument();
+        expect(screen.getByText("transferRequest.noRequestsDescription")).toBeInTheDocument();
+      });
     });
 
-    it("does not render title in empty state", () => {
-      renderHistoryPage({ requests: [] });
+    it("does not render title in empty state", async () => {
+      server.mount(contract.experiments.listTransferRequests, { body: [] });
 
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("transferRequest.noRequests")).toBeInTheDocument();
+      });
       expect(screen.queryByText("transferRequest.yourRequests")).not.toBeInTheDocument();
     });
   });
 
   describe("Requests Rendering", () => {
-    it("renders list of transfer requests", () => {
-      const requests = [
-        createMockRequest("req-1", "pending", "project-123"),
-        createMockRequest("req-2", "completed", "project-456"),
-      ];
-      renderHistoryPage({ requests });
+    it("renders list of transfer requests", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [
+          createRequest("req-1", "pending", "project-123"),
+          createRequest("req-2", "completed", "project-456"),
+        ],
+      });
 
-      expect(screen.getByText("project-123")).toBeInTheDocument();
-      expect(screen.getByText("project-456")).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("project-123")).toBeInTheDocument();
+        expect(screen.getByText("project-456")).toBeInTheDocument();
+      });
     });
 
-    it("renders project URLs for each request", () => {
-      const requests = [createMockRequest("req-1", "pending", "project-789")];
-      renderHistoryPage({ requests });
+    it("renders project URLs for each request", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [createRequest("req-1", "pending", "project-789")],
+      });
 
-      expect(screen.getByText("https://photosynq.com/projects/project-789")).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("https://photosynq.com/projects/project-789")).toBeInTheDocument();
+      });
     });
 
-    it("renders requested date for each request", () => {
-      const requests = [createMockRequest("req-1", "pending", "project-123")];
-      renderHistoryPage({ requests });
+    it("renders requested date for each request", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [createRequest("req-1", "pending", "project-123")],
+      });
 
-      expect(screen.getByText(/transferRequest\.requestedAt/)).toBeInTheDocument();
-      expect(screen.getByText(/formatted-2024-01-15T10:00:00Z/)).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/transferRequest\.requestedAt/)).toBeInTheDocument();
+        expect(screen.getByText(/formatted-2024-01-15T10:00:00Z/)).toBeInTheDocument();
+      });
     });
   });
 
   describe("Status Display", () => {
-    it("renders pending status with correct styling", () => {
-      const requests = [createMockRequest("req-1", "pending", "project-123")];
-      renderHistoryPage({ requests });
+    it("renders pending status", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [createRequest("req-1", "pending", "project-123")],
+      });
 
-      const pendingLabel = screen.getByText("Pending");
-      expect(pendingLabel).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Pending")).toBeInTheDocument();
+      });
     });
 
-    it("renders completed status with correct styling", () => {
-      const requests = [createMockRequest("req-1", "completed", "project-123")];
-      renderHistoryPage({ requests });
+    it("renders completed status", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [createRequest("req-1", "completed", "project-123")],
+      });
 
-      const completedLabel = screen.getByText("Completed");
-      expect(completedLabel).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Completed")).toBeInTheDocument();
+      });
     });
 
-    it("renders rejected status with correct styling", () => {
-      const requests = [createMockRequest("req-1", "rejected", "project-123")];
-      renderHistoryPage({ requests });
+    it("renders rejected status", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [createRequest("req-1", "rejected", "project-123")],
+      });
 
-      const rejectedLabel = screen.getByText("Rejected");
-      expect(rejectedLabel).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Rejected")).toBeInTheDocument();
+      });
     });
   });
 
   describe("Layout Structure", () => {
-    it("renders title when requests exist", () => {
-      const requests = [createMockRequest("req-1", "pending", "project-123")];
-      renderHistoryPage({ requests });
-
-      expect(screen.getByText("transferRequest.yourRequests")).toBeInTheDocument();
-    });
-
-    it("renders scrollable container for multiple requests", () => {
-      const requests = Array.from({ length: 5 }, (_, i) =>
-        createMockRequest(`req-${i}`, "pending", `project-${i}`),
-      );
-      const { container } = renderHistoryPage({ requests });
-
-      // Check for overflow container
-      const scrollContainer = container.querySelector('[class*="overflow-y-auto"]');
-      expect(scrollContainer).toBeInTheDocument();
-    });
-  });
-
-  describe("Hook Integration", () => {
-    it("calls useTransferRequests hook", () => {
-      renderHistoryPage();
-
-      expect(mockUseTransferRequests).toHaveBeenCalled();
-    });
-
-    it("handles undefined data body gracefully", () => {
-      mockUseTransferRequests.mockReturnValue({
-        data: { body: undefined },
-        isLoading: false,
-        error: null,
+    it("renders title when requests exist", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [createRequest("req-1", "pending", "project-123")],
       });
 
       render(<TransferRequestHistoryPage />);
 
-      expect(screen.getByText("transferRequest.noRequests")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("transferRequest.yourRequests")).toBeInTheDocument();
+      });
     });
 
-    it("handles null data gracefully", () => {
-      mockUseTransferRequests.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: null,
+    it("renders scrollable container for multiple requests", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: Array.from({ length: 5 }, (_, i) =>
+          createRequest(`req-${i}`, "pending", `project-${i}`),
+        ),
       });
 
-      render(<TransferRequestHistoryPage />);
+      const { container } = render(<TransferRequestHistoryPage />);
 
-      expect(screen.getByText("transferRequest.noRequests")).toBeInTheDocument();
+      await waitFor(() => {
+        const scrollContainer = container.querySelector('[class*="overflow-y-auto"]');
+        expect(scrollContainer).toBeInTheDocument();
+      });
     });
   });
 
   describe("Different Request Scenarios", () => {
-    it("renders single request correctly", () => {
-      const requests = [createMockRequest("req-1", "completed", "single-project")];
-      renderHistoryPage({ requests });
+    it("renders single request correctly", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: [createRequest("req-1", "completed", "single-project")],
+      });
 
-      expect(screen.getByText("single-project")).toBeInTheDocument();
-      expect(screen.getByText("Completed")).toBeInTheDocument();
-      expect(screen.getByText("https://photosynq.com/projects/single-project")).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("single-project")).toBeInTheDocument();
+        expect(screen.getByText("Completed")).toBeInTheDocument();
+        expect(
+          screen.getByText("https://photosynq.com/projects/single-project"),
+        ).toBeInTheDocument();
+      });
     });
 
-    it("renders many requests", () => {
-      const requests = Array.from({ length: 10 }, (_, i) =>
-        createMockRequest(`req-${i}`, "pending", `project-${i}`),
-      );
-      renderHistoryPage({ requests });
+    it("renders many requests", async () => {
+      server.mount(contract.experiments.listTransferRequests, {
+        body: Array.from({ length: 10 }, (_, i) =>
+          createRequest(`req-${i}`, "pending", `project-${i}`),
+        ),
+      });
 
-      // Check first and last
-      expect(screen.getByText("project-0")).toBeInTheDocument();
-      expect(screen.getByText("project-9")).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("project-0")).toBeInTheDocument();
+        expect(screen.getByText("project-9")).toBeInTheDocument();
+      });
     });
   });
 });

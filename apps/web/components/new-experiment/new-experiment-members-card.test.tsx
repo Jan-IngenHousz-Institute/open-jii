@@ -1,6 +1,5 @@
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -12,12 +11,6 @@ import { NewExperimentMembersCard } from "./new-experiment-members-card";
 globalThis.React = React;
 
 /* ---------------------------------- Mocks ---------------------------------- */
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 vi.mock("@repo/auth/client", () => ({
   useSession: () => ({
@@ -141,14 +134,15 @@ describe("<NewExperimentMembersCard />", () => {
 
     // Type in search to trigger user search
     const searchInput = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
-    fireEvent.change(searchInput, { target: { value: "Alice" } });
+    await userEvent.clear(searchInput);
+    await userEvent.type(searchInput, "Alice");
 
     // Wait for and select user from results
     await waitFor(() => {
       expect(screen.getByText("Alice Tester")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("Alice Tester"));
+    await userEvent.click(screen.getByText("Alice Tester"));
 
     // Click Add button
     await waitFor(() => {
@@ -156,7 +150,7 @@ describe("<NewExperimentMembersCard />", () => {
       expect(addBtn).not.toBeDisabled();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "common.add" }));
+    await userEvent.click(screen.getByRole("button", { name: "common.add" }));
 
     // Verify member was added to the list
     await waitFor(() => {
@@ -172,7 +166,7 @@ describe("<NewExperimentMembersCard />", () => {
 
     // Click remove button
     const removeButton = screen.getByLabelText(/remove.*alice/i);
-    fireEvent.click(removeButton);
+    await userEvent.click(removeButton);
 
     // Member should be removed
     await waitFor(() => {

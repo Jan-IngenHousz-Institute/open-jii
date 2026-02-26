@@ -1,6 +1,5 @@
 // apps/web/components/__tests__/flow-editor.test.tsx
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import type * as xyflowReact from "@xyflow/react";
 import React, { createRef } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -15,11 +14,6 @@ import type { FlowEditorHandle } from "../flow-editor";
 globalThis.React = React;
 
 /* -------------------- Light mocks -------------------- */
-
-// i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
 
 // debounce hook used by some panels/components
 vi.mock("@/hooks/useDebounce", () => ({

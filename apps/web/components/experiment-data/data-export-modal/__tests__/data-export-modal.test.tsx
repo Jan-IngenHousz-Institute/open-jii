@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -56,48 +55,6 @@ vi.mock("../steps/export-list-step", () => ({
   ),
 }));
 
-// Mock translation
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }) =>
-    open ? (
-      <div data-testid="dialog" data-onchange={String(!!onOpenChange)}>
-        {children}
-      </div>
-    ) : null,
-  DialogContent: ({ children }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-content">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-title">{children}</div>
-  ),
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-description">{children}</div>
-  ),
-}));
-
-// Mock lucide-react
-vi.mock("lucide-react", () => ({
-  Download: () => <span data-testid="download-icon" />,
-}));
-
 describe("DataExportModal", () => {
   const mockOnOpenChange = vi.fn();
   const defaultProps = {
@@ -122,13 +79,13 @@ describe("DataExportModal", () => {
 
   it("renders modal when open", () => {
     renderModal();
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("experimentData.exportModal.title")).toBeInTheDocument();
   });
 
   it("does not render modal when closed", () => {
     renderModal({ open: false });
-    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("always shows export list step", () => {
@@ -141,18 +98,18 @@ describe("DataExportModal", () => {
     expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
   });
 
-  it("sets creationStatus to creating when export is initiated", () => {
+  it("sets creationStatus to creating when export is initiated", async () => {
     renderModal();
 
-    fireEvent.click(screen.getByTestId("create-csv-button"));
+    await userEvent.click(screen.getByTestId("create-csv-button"));
 
     expect(screen.getByTestId("creation-status")).toHaveTextContent("creating");
   });
 
-  it("calls initiateExport with correct params when format is selected", () => {
+  it("calls initiateExport with correct params when format is selected", async () => {
     renderModal();
 
-    fireEvent.click(screen.getByTestId("create-csv-button"));
+    await userEvent.click(screen.getByTestId("create-csv-button"));
 
     expect(mockInitiateExport).toHaveBeenCalledWith(
       {
@@ -171,7 +128,7 @@ describe("DataExportModal", () => {
   it("sets creationStatus to success and shows toast after successful export", async () => {
     renderModal();
 
-    fireEvent.click(screen.getByTestId("create-csv-button"));
+    await userEvent.click(screen.getByTestId("create-csv-button"));
 
     capturedOnSuccess?.();
 
@@ -183,13 +140,13 @@ describe("DataExportModal", () => {
     });
   });
 
-  it("resets creationStatus to idle after success delay", () => {
+  it("resets creationStatus to idle after success delay", async () => {
     vi.useFakeTimers();
 
     renderModal();
 
-    act(() => {
-      fireEvent.click(screen.getByTestId("create-csv-button"));
+    await act(async () => {
+      await userEvent.click(screen.getByTestId("create-csv-button"));
     });
 
     act(() => {
@@ -205,7 +162,7 @@ describe("DataExportModal", () => {
     expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
   });
 
-  it("resets creationStatus to idle and shows error toast on failure", () => {
+  it("resets creationStatus to idle and shows error toast on failure", async () => {
     mockInitiateExport.mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (_params: unknown, options?: { onError?: (err: any) => void }) => {
@@ -215,7 +172,7 @@ describe("DataExportModal", () => {
 
     renderModal();
 
-    fireEvent.click(screen.getByTestId("create-csv-button"));
+    await userEvent.click(screen.getByTestId("create-csv-button"));
 
     // Error callback fires synchronously in the mock, resetting status to idle
     expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
@@ -225,21 +182,21 @@ describe("DataExportModal", () => {
     });
   });
 
-  it("closes modal when close button is clicked", () => {
+  it("closes modal when close button is clicked", async () => {
     renderModal();
 
-    fireEvent.click(screen.getByTestId("close-button"));
+    await userEvent.click(screen.getByTestId("close-button"));
 
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("resets creationStatus when modal closes and reopens", () => {
+  it("resets creationStatus when modal closes and reopens", async () => {
     vi.useFakeTimers();
 
     const { rerender } = render(<DataExportModal {...defaultProps} open={true} />);
 
-    act(() => {
-      fireEvent.click(screen.getByTestId("create-csv-button"));
+    await act(async () => {
+      await userEvent.click(screen.getByTestId("create-csv-button"));
     });
     expect(screen.getByTestId("creation-status")).toHaveTextContent("creating");
 
@@ -254,6 +211,7 @@ describe("DataExportModal", () => {
 
   it("renders dialog header correctly", () => {
     renderModal();
-    expect(screen.getByTestId("dialog-header")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.exportModal.title")).toBeInTheDocument();
   });
 });

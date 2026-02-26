@@ -5,8 +5,9 @@ Test behaviour, not implementation. Query by role/text, render real components, 
 ## File structure
 
 ```
+.env.test            # Test env vars (auto-loaded by Vitest)
 test/
-├── setup.ts        # Global mocks + MSW lifecycle (loaded via vitest setupFiles)
+├── setup.ts         # Global mocks + MSW lifecycle (loaded via vitest setupFiles)
 ├── test-utils.tsx   # render() / renderHook() wrapped in QueryClientProvider
 ├── factories.ts     # createExperiment(), createSession(), etc.
 └── msw/
@@ -19,19 +20,23 @@ test/
 
 These are already mocked globally. **Do not re-declare them in test files.**
 
-| Module                            | Default                                                                                                                            |
+| Module / Global                   | Default                                                                                                                            |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `global.ResizeObserver`           | Noop stub (not implemented in jsdom, required by Radix UI / shadcn)                                                                |
+| `window.matchMedia`               | Noop stub (not implemented in jsdom, required by Radix UI / shadcn)                                                                |
 | `@repo/i18n`, `@repo/i18n/server` | `t(key)` returns the key                                                                                                           |
 | `next/navigation`                 | `useRouter()` returns spied router, `usePathname()` returns `"/platform/experiments"`, `useParams()` returns `{ locale: "en-US" }` |
 | `next/headers`                    | `headers()`, `cookies()`, `draftMode()` stubs                                                                                      |
 | `~/app/actions/auth`              | `auth()` resolves to `null` (unauthenticated)                                                                                      |
 | `~/app/actions/revalidate`        | `revalidateAuth()` noop                                                                                                            |
 | `@repo/auth/client`               | `authClient` methods resolve `{ data: null, error: null }`, `useSession()` returns `{ data: null, isPending: false }`              |
-| `~/env`                           | Deterministic test values                                                                                                          |
 | `@repo/ui/hooks`                  | `toast()` noop spy                                                                                                                 |
 | `@/hooks/useLocale`               | Returns `"en-US"`                                                                                                                  |
-| `posthog-js`, `posthog-js/react`  | Noop stubs                                                                                                                         |
+| `posthog-js`                      | Noop stubs (`init`, `capture`, `identify`, `reset`, `opt_in_capturing`, `opt_out_capturing`)                                       |
+| `posthog-js/react`                | `usePostHog()` returns a **stable singleton** with spied methods — safe to assert on directly                                      |
 | `React.use`                       | Spy wrapping real implementation                                                                                                   |
+
+Environment variables come from `.env.test` (Vitest auto-loads it). The zod schema in `env.ts` provides defaults for most values; `.env.test` only sets non-default ones like PostHog keys. To override env in a single test file, use `vi.mock("~/env")` — per-file mocks take precedence.
 
 **Do not mock** `@repo/ui/components`, `next/link`, `next/image`, `lucide-react` — they work fine in jsdom.
 
@@ -60,9 +65,23 @@ vi.mocked(authClient.signIn.emailOtp).mockResolvedValue({
 vi.unmock("~/app/actions/auth");
 ```
 
-## MSW + `server.mount()`
+## MSW + `server.mount()` — preferred for API mocking
 
-Every test mounts exactly the endpoints it needs using `server.mount()` with the ts-rest contract:
+**Prefer `server.mount()` over `vi.mock()` on hooks that call the API.** This lets hooks, query state, and data flow run for real — the test only controls the network boundary.
+
+```diff
+# ❌ Avoid: mocking the hook
+- vi.mock("@/hooks/experiment/useExperimentUpdate/useExperimentUpdate", () => ({
+-   useExperimentUpdate: () => ({ mutateAsync: vi.fn(), isPending: false }),
+- }));
+
+# ✅ Prefer: mock the network via MSW
++ const spy = server.mount(contract.experiments.updateExperiment, {
++   body: createExperiment({ id: "exp-1" }),
++ });
+```
+
+Every test mounts exactly the endpoints it needs:
 
 ```tsx
 import { server } from "@/test/msw/server";

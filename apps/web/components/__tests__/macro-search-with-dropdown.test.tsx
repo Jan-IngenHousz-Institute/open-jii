@@ -1,27 +1,14 @@
-import "@testing-library/jest-dom";
-import { render, screen, act } from "@testing-library/react";
-import Image from "next/image";
-import React from "react";
+import { createMacro } from "@/test/factories";
+import { act, render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Macro } from "@repo/api";
 
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
-globalThis.React = React;
-
 // --------------------
 // Mocks
 // --------------------
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
 
 interface PopoverPropsCaptured {
   availableMacros: Macro[];
@@ -46,105 +33,13 @@ vi.mock("../macro-search-popover", () => ({
   },
 }));
 
-vi.mock("@repo/ui/components", () => {
-  const Button = ({
-    children,
-    className,
-    variant: _variant,
-    role,
-    disabled,
-    ...rest
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    role?: string;
-    variant?: string;
-    className?: string;
-  }) => (
-    <button {...rest} className={className} role={role} disabled={disabled}>
-      {children}
-    </button>
-  );
-
-  const Avatar = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="avatar" className={className}>
-      {children}
-    </div>
-  );
-
-  const AvatarImage = (
-    props: React.ImgHTMLAttributes<HTMLImageElement> & { src: string; alt: string },
-  ) => {
-    const { width, height, ...rest } = props;
-    return (
-      <Image
-        data-testid="avatar-image"
-        width={typeof width === "string" ? parseInt(width, 10) : width}
-        height={typeof height === "string" ? parseInt(height, 10) : height}
-        {...rest}
-      />
-    );
-  };
-
-  const AvatarFallback = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="avatar-fallback" className={className}>
-      {children}
-    </div>
-  );
-
-  const Popover = ({ children }: React.PropsWithChildren) => <div>{children}</div>;
-  const PopoverTrigger = ({ children }: React.PropsWithChildren) => <div>{children}</div>;
-
-  return {
-    Button,
-    Avatar,
-    AvatarImage,
-    AvatarFallback,
-    Popover,
-    PopoverTrigger,
-  };
-});
-
-vi.mock("lucide-react", () => ({
-  ChevronsUpDown: ({ className }: { className?: string }) => (
-    <span data-testid="icon" className={className} />
-  ),
-  ExternalLink: ({ className }: { className?: string }) => (
-    <span data-testid="external-link-icon" className={className} />
-  ),
-}));
-
 // --------------------
 // Test data & helpers
 // --------------------
 const macros: Macro[] = [
-  {
-    id: "m1",
-    name: "Plot Temperature",
-    description: "Visualize temperature data",
-    language: "python",
-    createdBy: "user1",
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-    createdByName: "Ada Lovelace",
-  } as Macro,
-  {
-    id: "m2",
-    name: "Plot Humidity",
-    description: "Visualize humidity data",
-    language: "r",
-    createdBy: "user2",
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-    createdByName: "Al Turing",
-  } as Macro,
-  {
-    id: "m3",
-    name: "Statistical Analysis",
-    description: "Perform statistical analysis",
-    language: "javascript",
-    createdBy: "user3",
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-  } as Macro,
+  createMacro({ id: "m1" }),
+  createMacro({ id: "m2" }),
+  createMacro({ id: "m3" }),
 ];
 
 function renderWidget(over: Partial<React.ComponentProps<typeof MacroSearchWithDropdown>> = {}) {

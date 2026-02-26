@@ -1,5 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, userEvent } from "@/test/test-utils";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
@@ -126,14 +125,6 @@ vi.mock("~/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
     data: mockState.isLoading ? undefined : { body: mockState.userProfileData.body },
     isLoading: mockState.isLoading,
   }),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: "en" },
-  }),
-  useLocale: () => "en",
 }));
 
 vi.mock("@repo/ui/hooks");

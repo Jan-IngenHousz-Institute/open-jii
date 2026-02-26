@@ -1,15 +1,8 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import VisualizationDetailPage from "./page";
-
-// Mock next/navigation
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
-}));
 
 // Mock the ExperimentVisualizationDetails component
 vi.mock(

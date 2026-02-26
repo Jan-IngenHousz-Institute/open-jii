@@ -1,18 +1,10 @@
-import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FormatSelectionStep } from "../steps/format-selection-step";
 
 globalThis.React = React;
-
-// Mock translation
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
@@ -149,11 +141,11 @@ describe("FormatSelectionStep", () => {
     expect(submitButton).toHaveTextContent("experimentData.exportModal.createExport");
   });
 
-  it("calls onBack when back button is clicked", () => {
+  it("calls onBack when back button is clicked", async () => {
     renderStep();
 
     const backButton = screen.getByTestId("back-button");
-    fireEvent.click(backButton);
+    await userEvent.click(backButton);
 
     expect(mockOnBack).toHaveBeenCalledTimes(1);
   });
@@ -163,11 +155,11 @@ describe("FormatSelectionStep", () => {
 
     // Select CSV format
     const selectCsvButton = screen.getByTestId("select-csv");
-    fireEvent.click(selectCsvButton);
+    await userEvent.click(selectCsvButton);
 
     // Submit form
     const submitButton = screen.getByTestId("submit-button");
-    fireEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockOnFormatSubmit).toHaveBeenCalledWith("csv");

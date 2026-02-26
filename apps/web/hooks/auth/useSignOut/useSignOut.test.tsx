@@ -5,14 +5,6 @@ import { authClient } from "@repo/auth/client";
 
 import { useSignOut } from "./useSignOut";
 
-vi.mock("@repo/auth/client", () => ({
-  authClient: { signOut: vi.fn() },
-}));
-
-vi.mock("~/app/actions/revalidate", () => ({
-  revalidateAuth: vi.fn(),
-}));
-
 describe("useSignOut", () => {
   it("signs out and clears session cache", async () => {
     vi.mocked(authClient.signOut).mockResolvedValue({ data: { success: true }, error: null });

@@ -3,15 +3,12 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
 import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import React, { useEffect, useImperativeHandle, forwardRef, use } from "react";
+import { useEffect, useImperativeHandle, forwardRef, use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import ExperimentFlowPage from "./page";
-
-globalThis.React = React;
 
 // Mocks for hooks used by the page
 vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
@@ -72,11 +69,6 @@ vi.mock("@/components/flow-editor", () => ({
       </div>
     );
   }),
-}));
-
-// Mock next/navigation notFound
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
 }));
 
 beforeEach(() => {

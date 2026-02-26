@@ -1,34 +1,15 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+
 import { ProtocolInfoCard } from "./protocol-info-card";
-
-// Mock the delete mutation function
-const mockDeleteMutate = vi.fn().mockImplementation(() => Promise.resolve());
-
-// Mock useProtocolDelete
-vi.mock("@/hooks/protocol/useProtocolDelete/useProtocolDelete", () => ({
-  useProtocolDelete: () => ({
-    mutateAsync: mockDeleteMutate,
-    isPending: false,
-  }),
-}));
 
 // Set up mocks before tests
 const mockPush = vi.fn();
-
-// Mock useTranslation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string, options?: Record<string, unknown>) => {
-      if (options) {
-        return `${k} ${JSON.stringify(options)}`;
-      }
-      return k;
-    },
-  }),
-}));
 
 // Mock useLocale
 vi.mock("@/hooks/useLocale", () => ({
@@ -55,27 +36,25 @@ vi.mock("posthog-js/react", () => ({
 }));
 
 describe("ProtocolInfoCard", () => {
-  const mockProtocol = {
+  const mockProtocol = createProtocol({
     id: "protocol-123",
     name: "Test Protocol",
     description: "Test description",
-    type: "protocol" as const,
-    language: "python" as const,
-    code: btoa("print('Hello, World!')"), // base64 encoded code
-    filename: "test_protocol.py",
     createdBy: "user-123",
     createdByName: "Test User",
     createdAt: "2023-01-01T00:00:00Z",
     updatedAt: "2023-01-02T00:00:00Z",
-  };
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockPush.mockClear();
-    mockDeleteMutate.mockClear();
 
     // Default: feature flag enabled
     useFeatureFlagEnabledMock.mockReturnValue(true);
+
+    // Default: mount the delete endpoint so the real hook works
+    server.mount(contract.protocols.deleteProtocol, { status: 204 });
   });
 
   it("should render the protocol info card with correct data", () => {
@@ -115,58 +94,56 @@ describe("ProtocolInfoCard", () => {
     expect(screen.queryByText("protocolSettings.deleteProtocol")).not.toBeInTheDocument();
   });
 
-  it("should open the delete confirmation dialog when delete button is clicked", () => {
+  it("should open the delete confirmation dialog when delete button is clicked", async () => {
     render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
     const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
-    fireEvent.click(deleteButton);
+    await userEvent.click(deleteButton);
 
     // The dialog text is broken up into multiple elements, so we use a more flexible approach
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveTextContent(
-      `common.confirmDelete ${JSON.stringify({ name: "Test Protocol" })}`,
-    );
+    expect(dialog).toHaveTextContent("common.confirmDelete");
     expect(screen.getByText("protocolSettings.cancel")).toBeInTheDocument();
     expect(screen.getByText("protocolSettings.delete")).toBeInTheDocument();
   });
 
-  it("should close the dialog when cancel is clicked", () => {
+  it("should close the dialog when cancel is clicked", async () => {
     render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
     // Open the dialog
     const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
-    fireEvent.click(deleteButton);
+    await userEvent.click(deleteButton);
 
     // Check that the dialog is open
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveTextContent(
-      `common.confirmDelete ${JSON.stringify({ name: "Test Protocol" })}`,
-    );
+    expect(dialog).toHaveTextContent("common.confirmDelete");
 
     // Click cancel
     const cancelButton = screen.getByText("protocolSettings.cancel");
-    fireEvent.click(cancelButton);
+    await userEvent.click(cancelButton);
 
     // Dialog should be closed
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("should handle delete when confirmed", async () => {
+    const spy = server.mount(contract.protocols.deleteProtocol, { status: 204 });
+
     render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
     // Open the dialog
     const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
-    fireEvent.click(deleteButton);
+    await userEvent.click(deleteButton);
 
     // Click delete
     const confirmDeleteButton = screen.getByText("protocolSettings.delete");
-    fireEvent.click(confirmDeleteButton);
+    await userEvent.click(confirmDeleteButton);
 
     // Wait for the async operation to complete
     await waitFor(() => {
-      expect(mockDeleteMutate).toHaveBeenCalledWith({ params: { id: "protocol-123" } });
+      expect(spy.params).toEqual({ id: "protocol-123" });
       expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols");
     });
   });

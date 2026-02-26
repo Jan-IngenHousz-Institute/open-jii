@@ -5,10 +5,6 @@ import { authClient } from "@repo/auth/client";
 
 import { useSignInEmail } from "./useSignInEmail";
 
-vi.mock("@repo/auth/client", () => ({
-  authClient: { emailOtp: { sendVerificationOtp: vi.fn() } },
-}));
-
 describe("useSignInEmail", () => {
   it("calls sendVerificationOtp with email", async () => {
     vi.mocked(authClient.emailOtp.sendVerificationOtp).mockResolvedValue({

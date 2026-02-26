@@ -1,26 +1,13 @@
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { useParams } from "next/navigation";
-import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import ExperimentVisualizationsPage from "./page";
 
-globalThis.React = React;
-
 // Mock hooks
 vi.mock("@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations", () => ({
   useExperimentVisualizations: vi.fn(),
-}));
-
-vi.mock("next/navigation", () => ({
-  useParams: vi.fn(),
-}));
-
-// Mock translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
 }));
 
 // Mock ExperimentVisualizationsList component

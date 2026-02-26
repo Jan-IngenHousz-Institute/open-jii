@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -8,28 +7,6 @@ import { SidebarProvider } from "@repo/ui/components";
 import { NavigationSidebarWrapper } from "./navigation-sidebar-wrapper";
 
 globalThis.React = React;
-
-// Mock window.matchMedia
-window.matchMedia = () =>
-  ({
-    matches: false,
-    media: "",
-    onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }) as unknown as MediaQueryList;
-
-// Mock @repo/i18n/server
-vi.mock("@repo/i18n/server", () => ({
-  __esModule: true,
-  default: vi.fn(() => {
-    const t = (key: string) => key;
-    return Promise.resolve({ t });
-  }),
-}));
 
 // Mock navigation-config
 vi.mock("@/components/navigation/navigation-config", () => ({

@@ -1,6 +1,5 @@
 // apps/web/components/__tests__/experiment-side-panel.test.tsx
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import type { Edge, Node } from "@xyflow/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -14,23 +13,6 @@ interface QuestionSpec {
 }
 
 // ---------- Mocks ----------
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) =>
-      ({
-        "sidePanelFlow.nodePanel": "Panel",
-        "sidePanelFlow.label": "Label",
-        "sidePanelFlow.labelPlaceholder": "Enter node label...",
-        "sidePanelFlow.nodeProperties": "Node properties",
-        "sidePanelFlow.startNode": "Start node",
-        "sidePanelFlow.startNodeLimit": "Only one start node allowed",
-        "flow.questionTooltip.title": "Data Column Name",
-        "flow.questionTooltip.description":
-          "This label will become a column in your data analysis:",
-        "flow.questionTooltip.defaultColumnName": "question_name",
-      })[k] ?? k,
-  }),
-}));
 
 // Stub child panels so we can trigger onChange easily
 vi.mock("../instruction-panel", () => ({
@@ -224,7 +206,7 @@ describe("<ExperimentSidePanel />", () => {
     renderPanel({ nodeType: "INSTRUCTION", nodeTitle: "Hello" });
     expect(screen.queryByText(/Instruction Panel$/)).toBeTruthy();
 
-    const input = screen.getByPlaceholderText<HTMLInputElement>("Enter node label...");
+    const input = screen.getByPlaceholderText<HTMLInputElement>("sidePanelFlow.labelPlaceholder");
     expect(input.value).toBe("Hello");
   });
 
@@ -241,7 +223,7 @@ describe("<ExperimentSidePanel />", () => {
   it("updates title via input and calls onTitleChange", async () => {
     const { props } = renderPanel({ nodeTitle: "" });
 
-    const input = screen.getByPlaceholderText("Enter node label...");
+    const input = screen.getByPlaceholderText("sidePanelFlow.labelPlaceholder");
     await userEvent.type(input, "A");
 
     expect(props.onTitleChange).toHaveBeenCalled();
@@ -251,7 +233,7 @@ describe("<ExperimentSidePanel />", () => {
   it("disables title input and prevents callback when isDisabled", async () => {
     const { props } = renderPanel({ isDisabled: true });
 
-    const input = screen.getByPlaceholderText("Enter node label...");
+    const input = screen.getByPlaceholderText("sidePanelFlow.labelPlaceholder");
     expect((input as HTMLInputElement).disabled).toBe(true);
 
     await userEvent.type(input, "X");
@@ -459,7 +441,7 @@ describe("<ExperimentSidePanel />", () => {
       selectedEdge: { id: "e2", source: "nA", target: "nB", data: {} as Edge } as Edge,
     });
 
-    const input = screen.getByPlaceholderText("Enter node label...");
+    const input = screen.getByPlaceholderText("sidePanelFlow.labelPlaceholder");
     expect((input as HTMLInputElement).disabled).toBe(true);
     await userEvent.type(input, "X");
 

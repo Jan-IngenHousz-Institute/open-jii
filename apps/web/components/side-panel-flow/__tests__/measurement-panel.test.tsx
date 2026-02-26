@@ -1,6 +1,4 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -8,11 +6,6 @@ import { MeasurementPanel } from "../measurement-panel";
 
 // Ensure React available globally for any dependencies expecting it
 (globalThis as unknown as { React?: typeof React }).React = React;
-
-// ---- Mocks ----
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
 
 // Debounce: allow toggling debounced state within tests
 let debouncedFlag = false;

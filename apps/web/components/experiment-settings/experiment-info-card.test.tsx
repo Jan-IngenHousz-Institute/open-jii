@@ -2,11 +2,9 @@ import { render, screen } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ExperimentInfoCard } from "./experiment-info-card";
+import { useSession } from "@repo/auth/client";
 
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({ data: { user: { id: "user-1" } } }),
-}));
+import { ExperimentInfoCard } from "./experiment-info-card";
 
 vi.mock("./experiment-archive", () => ({
   ExperimentArchive: (props: { experimentId: string }) => (
@@ -25,6 +23,7 @@ const members = [{ user: { id: "user-1" }, role: "admin" }] as never;
 
 describe("ExperimentInfoCard", () => {
   it("renders archive and delete for admin", () => {
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
     render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={members} />);
 
@@ -33,6 +32,7 @@ describe("ExperimentInfoCard", () => {
   });
 
   it("shows danger zone note", () => {
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
     render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={members} />);
 
@@ -40,6 +40,7 @@ describe("ExperimentInfoCard", () => {
   });
 
   it("hides archive for non-admin", () => {
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
     const nonAdminMembers = [{ user: { id: "user-1" }, role: "member" }] as never;
     render(
       <ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={nonAdminMembers} />,

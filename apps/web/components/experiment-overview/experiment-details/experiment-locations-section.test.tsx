@@ -1,6 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { userEvent } from "@testing-library/user-event";
-import React from "react";
+import { createLocation } from "@/test/factories";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Location } from "@repo/api";
@@ -8,47 +7,6 @@ import type { Location } from "@repo/api";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
 /* --------------------------------- Mocks -------------------------------- */
-
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Button: ({ children, onClick, ...props }: React.ComponentProps<"button">) => (
-    <button onClick={onClick} {...props}>
-      {children}
-    </button>
-  ),
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-content">{children}</div>
-  ),
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-description">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-title">{children}</div>
-  ),
-}));
 
 vi.mock("../../experiment-settings/experiment-location-management-card", () => ({
   ExperimentLocationManagement: (props: Record<string, unknown>) => (
@@ -62,30 +20,16 @@ vi.mock("../../map", () => ({
 
 /* ------------------------------- Test Data ------------------------------- */
 
-const createLocation = (id: string, name: string, lat: number, lng: number): Location => ({
-  id,
-  name,
-  latitude: lat,
-  longitude: lng,
-  country: "USA",
-  region: "NY",
-  municipality: "NYC",
-  postalCode: "10001",
-  addressLabel: "123 Main St",
-  createdAt: "2024-01-01",
-  updatedAt: "2024-01-01",
-});
-
 const mockLocations = {
-  one: [createLocation("loc-1", "Location 1", 40.7128, -74.006)],
+  one: [createLocation({ id: "loc-1", name: "Location 1", latitude: 40.7128, longitude: -74.006 })],
   two: [
-    createLocation("loc-1", "Location 1", 40.7128, -74.006),
-    createLocation("loc-2", "Location 2", 34.0522, -118.2437),
+    createLocation({ id: "loc-1", name: "Location 1", latitude: 40.7128, longitude: -74.006 }),
+    createLocation({ id: "loc-2", name: "Location 2", latitude: 34.0522, longitude: -118.2437 }),
   ],
   three: [
-    createLocation("loc-1", "Location 1", 40.7128, -74.006),
-    createLocation("loc-2", "Location 2", 34.0522, -118.2437),
-    createLocation("loc-3", "Location 3", 41.8781, -87.6298),
+    createLocation({ id: "loc-1", name: "Location 1", latitude: 40.7128, longitude: -74.006 }),
+    createLocation({ id: "loc-2", name: "Location 2", latitude: 34.0522, longitude: -118.2437 }),
+    createLocation({ id: "loc-3", name: "Location 3", latitude: 41.8781, longitude: -87.6298 }),
   ],
 };
 
@@ -178,8 +122,7 @@ describe("ExperimentLocationsSection", () => {
     const button = screen.getByText("View");
     await user.click(button);
 
-    const dialog = screen.getByTestId("dialog");
-    expect(dialog).toHaveAttribute("data-open", "true");
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 
   it("opens dialog when map is clicked", async () => {
@@ -191,7 +134,6 @@ describe("ExperimentLocationsSection", () => {
       await user.click(mapOverlay);
     }
 
-    const dialog = screen.getByTestId("dialog");
-    expect(dialog).toHaveAttribute("data-open", "true");
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 });

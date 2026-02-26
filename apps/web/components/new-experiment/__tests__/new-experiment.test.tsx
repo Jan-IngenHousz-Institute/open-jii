@@ -1,6 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -71,13 +69,6 @@ vi.mock("next/navigation", () => ({
     back: mockRouterBack,
   }),
   usePathname: () => "/mock-path",
-}));
-
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
 }));
 
 // Mock toast
@@ -193,14 +184,14 @@ describe("NewExperimentForm", () => {
   });
 
   describe("Form Submission", () => {
-    it("calls createExperiment with correct data", () => {
+    it("calls createExperiment with correct data", async () => {
       render(<NewExperimentForm />);
       const submitButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.textContent === "newExperiment.finalizeSetup");
 
       if (submitButton) {
-        fireEvent.click(submitButton);
+        await userEvent.click(submitButton);
       }
 
       expect(mockCreateExperiment).toHaveBeenCalledWith({

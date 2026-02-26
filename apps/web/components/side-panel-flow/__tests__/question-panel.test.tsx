@@ -1,16 +1,9 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import type { QuestionUI } from "../../question-card/question-card";
 import { QuestionPanel } from "../question-panel";
-
-// i18n mock
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
 
 // Helper to build specs
 const makeSpec = (overrides: Partial<QuestionUI> = {}): QuestionUI => ({

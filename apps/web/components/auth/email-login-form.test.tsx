@@ -1,5 +1,4 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { authClient } from "@repo/auth/client";
@@ -66,8 +65,11 @@ async function submitEmail(email = "test@example.com") {
   return user;
 }
 
-function submitOTP(value = "123456") {
-  fireEvent.change(screen.getByTestId("otp-input"), { target: { value } });
+async function submitOTP(value = "123456") {
+  const user = userEvent.setup();
+  const input = screen.getByTestId("otp-input");
+  await user.clear(input);
+  await user.type(input, value);
 }
 
 describe("EmailLoginForm", () => {
@@ -117,7 +119,7 @@ describe("EmailLoginForm", () => {
   it("redirects to callback URL when user is registered", async () => {
     const { router } = render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
-    submitOTP();
+    await submitOTP();
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/platform"));
   });
 
@@ -125,7 +127,7 @@ describe("EmailLoginForm", () => {
     vi.mocked(authClient.signIn.emailOtp).mockRejectedValue(new Error("Invalid code"));
     render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
-    submitOTP();
+    await submitOTP();
     await waitFor(() => expect(authClient.signIn.emailOtp).toHaveBeenCalled());
   });
 
@@ -136,7 +138,7 @@ describe("EmailLoginForm", () => {
     });
     const { router } = render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
-    submitOTP();
+    await submitOTP();
     await waitFor(() => expect(authClient.signIn.emailOtp).toHaveBeenCalled());
     expect(router.push).not.toHaveBeenCalled();
   });

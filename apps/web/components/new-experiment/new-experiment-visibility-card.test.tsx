@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@/test/test-utils";
 import React from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -9,13 +8,6 @@ import type { CreateExperimentBody } from "@repo/api";
 import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
 
 globalThis.React = React;
-
-// --- mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
 
 function renderWithForm(defaultValues: Partial<CreateExperimentBody>) {
   function Host() {

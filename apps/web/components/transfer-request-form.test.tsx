@@ -1,7 +1,5 @@
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import { fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -27,7 +25,7 @@ describe("TransferRequestForm", () => {
   it("validates empty submission", async () => {
     render(<TransferRequestForm />);
 
-    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+    await userEvent.click(screen.getByText("transferRequest.submitButton"));
 
     await waitFor(() => {
       expect(screen.getAllByText(/required/i).length).toBeGreaterThan(0);
@@ -43,7 +41,7 @@ describe("TransferRequestForm", () => {
       screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
       "https://example.com",
     );
-    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+    await user.click(screen.getByText("transferRequest.submitButton"));
 
     await waitFor(() => {
       expect(screen.getByText(/ownership or permission/i)).toBeInTheDocument();
@@ -66,7 +64,7 @@ describe("TransferRequestForm", () => {
       "https://photosynq.com/projects/123",
     );
     await user.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+    await user.click(screen.getByText("transferRequest.submitButton"));
 
     await waitFor(() => {
       expect(spy.called).toBe(true);
@@ -91,7 +89,7 @@ describe("TransferRequestForm", () => {
       "https://test.com",
     );
     await user.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByText("transferRequest.submitButton"));
+    await user.click(screen.getByText("transferRequest.submitButton"));
 
     await waitFor(() => {
       expect(screen.getByText("transferRequest.successTitle")).toBeInTheDocument();

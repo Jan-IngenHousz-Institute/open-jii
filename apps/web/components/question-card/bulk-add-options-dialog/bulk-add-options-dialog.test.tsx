@@ -1,5 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BulkAddOptionsDialog } from "./bulk-add-options-dialog";
@@ -37,7 +36,7 @@ describe("BulkAddOptionsDialog", () => {
     expect(screen.queryByText("questionCard.bulkAdd.title")).not.toBeInTheDocument();
   });
 
-  it("handles text input", () => {
+  it("handles text input", async () => {
     render(
       <BulkAddOptionsDialog
         open={true}
@@ -46,13 +45,14 @@ describe("BulkAddOptionsDialog", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const textarea = screen.getByPlaceholderText("questionCard.bulkAdd.placeholder");
-    fireEvent.change(textarea, { target: { value: "Option 1\nOption 2\nOption 3" } });
+    await user.type(textarea, "Option 1{Enter}Option 2{Enter}Option 3");
 
     expect(textarea).toHaveValue("Option 1\nOption 2\nOption 3");
   });
 
-  it("calls onAddOptions with parsed options when Add is clicked", () => {
+  it("calls onAddOptions with parsed options when Add is clicked", async () => {
     render(
       <BulkAddOptionsDialog
         open={true}
@@ -61,17 +61,18 @@ describe("BulkAddOptionsDialog", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const textarea = screen.getByPlaceholderText("questionCard.bulkAdd.placeholder");
-    fireEvent.change(textarea, { target: { value: "Plot A\nPlot B\n\nPlot C\n  " } });
+    await user.type(textarea, "Plot A{Enter}Plot B{Enter}{Enter}Plot C{Enter}  ");
 
     const addButton = screen.getByText("questionCard.bulkAdd.add");
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     expect(mockOnAddOptions).toHaveBeenCalledWith(["Plot A", "Plot B", "Plot C"]);
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("filters out empty lines", () => {
+  it("filters out empty lines", async () => {
     render(
       <BulkAddOptionsDialog
         open={true}
@@ -80,16 +81,17 @@ describe("BulkAddOptionsDialog", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const textarea = screen.getByPlaceholderText("questionCard.bulkAdd.placeholder");
-    fireEvent.change(textarea, { target: { value: "\n\nOption 1\n\n\nOption 2\n\n" } });
+    await user.type(textarea, "{Enter}{Enter}Option 1{Enter}{Enter}{Enter}Option 2{Enter}{Enter}");
 
     const addButton = screen.getByText("questionCard.bulkAdd.add");
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     expect(mockOnAddOptions).toHaveBeenCalledWith(["Option 1", "Option 2"]);
   });
 
-  it("trims whitespace from options", () => {
+  it("trims whitespace from options", async () => {
     render(
       <BulkAddOptionsDialog
         open={true}
@@ -98,11 +100,12 @@ describe("BulkAddOptionsDialog", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const textarea = screen.getByPlaceholderText("questionCard.bulkAdd.placeholder");
-    fireEvent.change(textarea, { target: { value: "  Option 1  \n  Option 2  " } });
+    await user.type(textarea, "  Option 1  {Enter}  Option 2  ");
 
     const addButton = screen.getByText("questionCard.bulkAdd.add");
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     expect(mockOnAddOptions).toHaveBeenCalledWith(["Option 1", "Option 2"]);
   });
@@ -120,7 +123,7 @@ describe("BulkAddOptionsDialog", () => {
     expect(addButton).toBeDisabled();
   });
 
-  it("clears textarea when cancelled", () => {
+  it("clears textarea when cancelled", async () => {
     render(
       <BulkAddOptionsDialog
         open={true}
@@ -129,11 +132,12 @@ describe("BulkAddOptionsDialog", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const textarea = screen.getByPlaceholderText("questionCard.bulkAdd.placeholder");
-    fireEvent.change(textarea, { target: { value: "Option 1\nOption 2" } });
+    await user.type(textarea, "Option 1{Enter}Option 2");
 
     const cancelButton = screen.getByText("questionCard.bulkAdd.cancel");
-    fireEvent.click(cancelButton);
+    await user.click(cancelButton);
 
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });

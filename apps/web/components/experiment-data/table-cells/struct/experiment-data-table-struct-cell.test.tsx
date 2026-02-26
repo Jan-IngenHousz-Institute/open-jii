@@ -1,57 +1,10 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   ExperimentDataTableStructCell,
   StructExpandedContent,
 } from "./experiment-data-table-struct-cell";
-
-// Mock lucide-react icons
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => <div data-testid="chevron-down">▼</div>,
-  ChevronRight: () => <div data-testid="chevron-right">▶</div>,
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Collapsible: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="collapsible" data-open={String(open)} onClick={() => onOpenChange?.(!open)}>
-      {children}
-    </div>
-  ),
-  CollapsibleTrigger: ({
-    children,
-    asChild: _asChild,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-  }) => <div data-testid="collapsible-trigger">{children}</div>,
-  Button: ({
-    children,
-    variant: _variant,
-    size: _size,
-    className: _className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <button onClick={onClick} data-testid="button">
-      {children}
-    </button>
-  ),
-}));
 
 describe("ExperimentDataTableStructCell", () => {
   it("should render simple text for non-struct data", () => {
@@ -114,7 +67,7 @@ describe("ExperimentDataTableStructCell", () => {
     expect(screen.getByText('[{"name": "John"}]')).toBeInTheDocument();
   });
 
-  it("should show chevron-right when collapsed", () => {
+  it("should render collapsed state with button", () => {
     render(
       <ExperimentDataTableStructCell
         data='{"name": "John"}'
@@ -123,10 +76,11 @@ describe("ExperimentDataTableStructCell", () => {
         isExpanded={false}
       />,
     );
-    expect(screen.getByTestId("chevron-right")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByText("1 field")).toBeInTheDocument();
   });
 
-  it("should show chevron-down when expanded", () => {
+  it("should render expanded state with button", () => {
     render(
       <ExperimentDataTableStructCell
         data='{"name": "John"}'
@@ -135,10 +89,12 @@ describe("ExperimentDataTableStructCell", () => {
         isExpanded={true}
       />,
     );
-    expect(screen.getByTestId("chevron-down")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByText("1 field")).toBeInTheDocument();
   });
 
-  it("should call onToggleExpansion when clicked", () => {
+  it("should call onToggleExpansion when clicked", async () => {
+    const user = userEvent.setup();
     const onToggleExpansion = vi.fn();
     render(
       <ExperimentDataTableStructCell
@@ -150,8 +106,7 @@ describe("ExperimentDataTableStructCell", () => {
       />,
     );
 
-    const collapsible = screen.getByTestId("collapsible");
-    fireEvent.click(collapsible);
+    await user.click(screen.getByRole("button"));
 
     expect(onToggleExpansion).toHaveBeenCalledWith("test-row", "test-col");
   });

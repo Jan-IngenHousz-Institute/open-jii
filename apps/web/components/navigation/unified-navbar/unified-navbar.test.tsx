@@ -1,7 +1,6 @@
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { within } from "@testing-library/react";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";

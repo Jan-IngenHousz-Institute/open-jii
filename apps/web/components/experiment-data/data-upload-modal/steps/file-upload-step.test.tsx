@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -141,7 +140,7 @@ describe("FileUploadStep", () => {
     expect(screen.getByText("uploadModal.fileUpload.uploadFiles")).toBeInTheDocument();
   });
 
-  it("calls onBack when back button is clicked", () => {
+  it("calls onBack when back button is clicked", async () => {
     render(
       <FileUploadStep
         experimentId="test-experiment"
@@ -151,7 +150,7 @@ describe("FileUploadStep", () => {
     );
 
     const backButton = screen.getByText("uploadModal.fileUpload.back");
-    fireEvent.click(backButton);
+    await userEvent.click(backButton);
     expect(mockOnBack).toHaveBeenCalled();
   });
 
@@ -165,7 +164,7 @@ describe("FileUploadStep", () => {
     );
 
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     await waitFor(() => {
       expect(validateAmbyteStructure).toHaveBeenCalled();
@@ -187,7 +186,7 @@ describe("FileUploadStep", () => {
     );
 
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     await waitFor(() => {
       expect(screen.getByTestId("validation-errors")).toBeInTheDocument();
@@ -205,11 +204,11 @@ describe("FileUploadStep", () => {
 
     // First select files
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
-    await waitFor(() => {
+    await waitFor(async () => {
       const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-      fireEvent.click(uploadButton);
+      await userEvent.click(uploadButton);
     });
 
     expect(mockUploadData).toHaveBeenCalled();
@@ -297,7 +296,7 @@ describe("FileUploadStep", () => {
     expect(mockOnUploadSuccess).not.toHaveBeenCalled();
   });
 
-  it("shows excluded files warning when excluded files are present", () => {
+  it("shows excluded files warning when excluded files are present", async () => {
     // Mock isExcludedFile to return true for specific files
     (isExcludedFile as ReturnType<typeof vi.fn>).mockImplementation(
       (file: File) => file.name === ".DS_Store",
@@ -320,7 +319,7 @@ describe("FileUploadStep", () => {
 
     // Mock the FileUpload component to simulate file selection
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     // The component should show excluded files warning when excluded files are detected
     // This tests the excludedFiles.length > 0 condition
@@ -340,7 +339,7 @@ describe("FileUploadStep", () => {
     expect(fileUploadComponent).toBeInTheDocument();
   });
 
-  it("sets validation error when all files are excluded", () => {
+  it("sets validation error when all files are excluded", async () => {
     // Mock all files as excluded
     (isExcludedFile as ReturnType<typeof vi.fn>).mockReturnValue(true);
 
@@ -354,10 +353,10 @@ describe("FileUploadStep", () => {
 
     // This should trigger the noValidFiles error case
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
   });
 
-  it("handles upload when validation errors exist", () => {
+  it("handles upload when validation errors exist", async () => {
     render(
       <FileUploadStep
         experimentId="test-experiment"
@@ -373,16 +372,16 @@ describe("FileUploadStep", () => {
     });
 
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     // Try to upload with validation errors - should not call upload
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-    fireEvent.click(uploadButton);
+    await userEvent.click(uploadButton);
 
     expect(mockUploadData).not.toHaveBeenCalled();
   });
 
-  it("handles upload with no selected files", () => {
+  it("handles upload with no selected files", async () => {
     render(
       <FileUploadStep
         experimentId="test-experiment"
@@ -393,12 +392,12 @@ describe("FileUploadStep", () => {
 
     // Try to upload without selecting files
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-    fireEvent.click(uploadButton);
+    await userEvent.click(uploadButton);
 
     expect(mockUploadData).not.toHaveBeenCalled();
   });
 
-  it("displays upload error from parseApiError", () => {
+  it("displays upload error from parseApiError", async () => {
     const errorMessage = "Custom upload error";
 
     render(
@@ -419,16 +418,16 @@ describe("FileUploadStep", () => {
 
     // Select files and upload
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-    fireEvent.click(uploadButton);
+    await userEvent.click(uploadButton);
 
     // The error should be displayed
     // This tests the parseApiError and upload error handling
   });
 
-  it("handles parseApiError returning null", () => {
+  it("handles parseApiError returning null", async () => {
     // Mock parseApiError to return null
     vi.doMock("~/util/apiError", () => ({
       parseApiError: () => null,
@@ -451,10 +450,10 @@ describe("FileUploadStep", () => {
     });
 
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-    fireEvent.click(uploadButton);
+    await userEvent.click(uploadButton);
   });
 
   it("handles the else branch when files is null", () => {
@@ -472,7 +471,7 @@ describe("FileUploadStep", () => {
     expect(screen.getByTestId("file-upload-button")).toBeInTheDocument();
   });
 
-  it("ensures validation and upload errors are reset when files change", () => {
+  it("ensures validation and upload errors are reset when files change", async () => {
     render(
       <FileUploadStep
         experimentId="test-experiment"
@@ -483,12 +482,12 @@ describe("FileUploadStep", () => {
 
     // This test ensures the state reset calls are covered
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     expect(screen.getByTestId("file-upload-button")).toBeInTheDocument();
   });
 
-  it("triggers upload error callback with network error", () => {
+  it("triggers upload error callback with network error", async () => {
     let storedErrorCallback: ((error: { message: string }) => void) | undefined;
 
     (useExperimentDataUpload as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -515,10 +514,10 @@ describe("FileUploadStep", () => {
 
     // Select files and upload to capture the error callback
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-    fireEvent.click(uploadButton);
+    await userEvent.click(uploadButton);
 
     // Now trigger the error callback to test line 86
     if (storedErrorCallback) {
@@ -528,7 +527,7 @@ describe("FileUploadStep", () => {
     expect(mockOnUploadSuccess).not.toHaveBeenCalled();
   });
 
-  it("returns early when no files selected", () => {
+  it("returns early when no files selected", async () => {
     render(
       <FileUploadStep
         experimentId="test-experiment"
@@ -538,12 +537,12 @@ describe("FileUploadStep", () => {
     );
 
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-    fireEvent.click(uploadButton);
+    await userEvent.click(uploadButton);
 
     expect(mockUploadData).not.toHaveBeenCalled();
   });
 
-  it("returns early when validation errors exist", () => {
+  it("returns early when validation errors exist", async () => {
     (validateAmbyteStructure as ReturnType<typeof vi.fn>).mockReturnValue({
       isValid: false,
       errors: [{ key: "uploadModal.validation.invalidStructure" }],
@@ -559,10 +558,10 @@ describe("FileUploadStep", () => {
 
     // Select files with validation errors
     const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
+    await userEvent.click(fileUploadButton);
 
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-    fireEvent.click(uploadButton);
+    await userEvent.click(uploadButton);
 
     expect(mockUploadData).not.toHaveBeenCalled();
   });

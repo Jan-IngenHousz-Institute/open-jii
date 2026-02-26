@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,13 +41,6 @@ vi.mock("~/util/format-file-size", () => ({
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (error: { body?: { message?: string } }) => error.body,
-}));
-
-// Mock translation
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
 }));
 
 // Mock UI components
@@ -261,7 +253,7 @@ describe("ExportListStep", () => {
     expect(screen.queryByTestId("download-button")).not.toBeInTheDocument();
   });
 
-  it("calls onCreateExport with format when dropdown item is clicked", () => {
+  it("calls onCreateExport with format when dropdown item is clicked", async () => {
     mockUseListExports.mockReturnValue({
       data: { body: { exports: [] } },
       isLoading: false,
@@ -272,12 +264,12 @@ describe("ExportListStep", () => {
 
     const dropdownItems = screen.getAllByTestId("dropdown-item");
     // Click "CSV" item (first)
-    fireEvent.click(dropdownItems[0]);
+    await userEvent.click(dropdownItems[0]);
 
     expect(mockOnCreateExport).toHaveBeenCalledWith("csv");
   });
 
-  it("calls onCreateExport with ndjson when NDJSON dropdown item is clicked", () => {
+  it("calls onCreateExport with ndjson when NDJSON dropdown item is clicked", async () => {
     mockUseListExports.mockReturnValue({
       data: { body: { exports: [] } },
       isLoading: false,
@@ -288,12 +280,12 @@ describe("ExportListStep", () => {
 
     const dropdownItems = screen.getAllByTestId("dropdown-item");
     // Click "NDJSON" item (second)
-    fireEvent.click(dropdownItems[1]);
+    await userEvent.click(dropdownItems[1]);
 
     expect(mockOnCreateExport).toHaveBeenCalledWith("ndjson");
   });
 
-  it("calls onCreateExport with json-array when JSON Array dropdown item is clicked", () => {
+  it("calls onCreateExport with json-array when JSON Array dropdown item is clicked", async () => {
     mockUseListExports.mockReturnValue({
       data: { body: { exports: [] } },
       isLoading: false,
@@ -304,12 +296,12 @@ describe("ExportListStep", () => {
 
     const dropdownItems = screen.getAllByTestId("dropdown-item");
     // Click "JSON Array" item (third)
-    fireEvent.click(dropdownItems[2]);
+    await userEvent.click(dropdownItems[2]);
 
     expect(mockOnCreateExport).toHaveBeenCalledWith("json-array");
   });
 
-  it("calls onClose when close button is clicked", () => {
+  it("calls onClose when close button is clicked", async () => {
     mockUseListExports.mockReturnValue({
       data: { body: { exports: [] } },
       isLoading: false,
@@ -319,7 +311,7 @@ describe("ExportListStep", () => {
     renderStep();
 
     const closeButton = screen.getByTestId("close-button");
-    fireEvent.click(closeButton);
+    await userEvent.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
@@ -456,7 +448,7 @@ describe("ExportListStep", () => {
     expect(screen.getAllByText("Parquet").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("calls downloadExport when download button is clicked", () => {
+  it("calls downloadExport when download button is clicked", async () => {
     const mockExports: ExportRecord[] = [
       {
         exportId: "export-1",
@@ -482,7 +474,7 @@ describe("ExportListStep", () => {
     renderStep();
 
     const downloadButton = screen.getByTestId("download-button");
-    fireEvent.click(downloadButton);
+    await userEvent.click(downloadButton);
 
     expect(mockDownloadExport).toHaveBeenCalledWith("export-1");
   });

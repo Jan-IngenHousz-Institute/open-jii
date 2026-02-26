@@ -1,5 +1,4 @@
-import { render, screen } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { FormProvider, useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
@@ -9,7 +8,9 @@ import type { ChartFormValues } from "../../chart-configurator-util";
 import XAxisConfiguration from "./x-axis-configuration";
 
 HTMLElement.prototype.hasPointerCapture = () => false;
-HTMLElement.prototype.scrollIntoView = () => {};
+HTMLElement.prototype.scrollIntoView = () => {
+  // noop
+};
 
 // Mock table data
 const mockColumns: DataColumn[] = [

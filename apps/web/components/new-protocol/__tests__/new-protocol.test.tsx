@@ -1,5 +1,4 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { NewProtocolForm } from "../new-protocol";
@@ -26,18 +25,6 @@ vi.mock("@/hooks/protocol/useProtocolCreate/useProtocolCreate", () => ({
 
 vi.mock("@/hooks/useLocale", () => ({
   useLocale: () => "en",
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock toast
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
 }));
 
 // Mock ProtocolCodeEditor

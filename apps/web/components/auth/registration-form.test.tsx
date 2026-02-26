@@ -1,23 +1,11 @@
+import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
 import { authClient } from "@repo/auth/client";
 
 import { RegistrationForm } from "../auth/registration-form";
-
-const createUserProfileMock = vi.fn();
-vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
-  useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
-    mutateAsync: async (args: unknown) => {
-      const result = createUserProfileMock(args) as unknown;
-      if (result instanceof Promise) {
-        await result;
-      }
-      await Promise.resolve(opts.onSuccess());
-      return Promise.resolve();
-    },
-  }),
-}));
 
 const termsData = {
   title: "Terms and Conditions",
@@ -30,8 +18,11 @@ describe("RegistrationForm", () => {
     termsData,
   };
 
+  let spy: ReturnType<typeof server.mount>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    spy = server.mount(contract.users.createUserProfile, { body: {}, status: 201 });
     vi.mocked(authClient.updateUser).mockResolvedValue({ data: {}, error: null });
   });
 
@@ -87,7 +78,7 @@ describe("RegistrationForm", () => {
     await waitFor(() => {
       expect(screen.getByText("registration.acceptTermsError")).toBeInTheDocument();
     });
-    expect(createUserProfileMock).not.toHaveBeenCalled();
+    expect(spy.called).toBe(false);
   });
 
   it("submits form successfully when terms are accepted", async () => {
@@ -102,8 +93,11 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalledWith({
-        body: { firstName: "Jane", lastName: "Doe", organization: "Acme" },
+      expect(spy.called).toBe(true);
+      expect(spy.body).toMatchObject({
+        firstName: "Jane",
+        lastName: "Doe",
+        organization: "Acme",
       });
     });
   });
@@ -119,9 +113,8 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(spy.called).toBe(true);
       expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(router.push).toHaveBeenCalledWith("/dashboard");
     });
   });
@@ -137,8 +130,7 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(spy.called).toBe(true);
       expect(router.push).toHaveBeenCalledWith("/platform");
     });
   });
@@ -202,16 +194,18 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(spy.called).toBe(true);
       expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
     });
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).not.toHaveBeenCalled();
   });
 
   it("handles form submission error and resets pending state", async () => {
-    createUserProfileMock.mockRejectedValue(new Error("Network error"));
+    spy = server.mount(contract.users.createUserProfile, {
+      body: { message: "Network error" },
+      status: 500,
+    });
 
     const user = userEvent.setup();
     render(<RegistrationForm {...defaultProps} />);
@@ -227,7 +221,7 @@ describe("RegistrationForm", () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(spy.called).toBe(true);
     });
 
     await waitFor(() => {
@@ -236,8 +230,10 @@ describe("RegistrationForm", () => {
   });
 
   it("prevents multiple submissions when already pending", async () => {
-    createUserProfileMock.mockImplementation(() => {
-      return new Promise((resolve) => setTimeout(resolve, 100));
+    spy = server.mount(contract.users.createUserProfile, {
+      body: {},
+      status: 201,
+      delay: 999_999,
     });
 
     const user = userEvent.setup();
@@ -257,6 +253,6 @@ describe("RegistrationForm", () => {
 
     await user.click(submitButton);
 
-    expect(createUserProfileMock).toHaveBeenCalledTimes(1);
+    expect(spy.callCount).toBe(1);
   });
 });

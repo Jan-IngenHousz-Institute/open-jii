@@ -1,19 +1,10 @@
-import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import type { UserProfile } from "@repo/api";
 import type { User } from "@repo/auth/types";
 
 import { NavigationTopbar } from "./navigation-topbar";
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 // Mock useGetUserProfile hook
 let mockUserProfile: { body: UserProfile } | null = null;
@@ -51,21 +42,6 @@ vi.mock("posthog-js/react", () => ({
 
 // Mock sidebar state
 let mockSidebarState: "expanded" | "collapsed" = "expanded";
-
-// Mock Next.js Image
-vi.mock("next/image", () => ({
-  default: ({ src, alt }: { src: string; alt: string }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} />
-  ),
-}));
-
-// Mock Next.js Link
-vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
 
 vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
   const actual = await importOriginal();
