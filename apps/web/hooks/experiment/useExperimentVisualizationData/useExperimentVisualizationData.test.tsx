@@ -17,6 +17,10 @@ vi.mock("~/lib/tsr", () => ({
   },
 }));
 
+vi.mock("@/util/query-retry", () => ({
+  shouldRetryQuery: vi.fn(),
+}));
+
 const mockTsr = tsr as any;
 
 describe("useExperimentVisualizationData", () => {
@@ -73,7 +77,7 @@ describe("useExperimentVisualizationData", () => {
         "experiment-visualization-data",
         "exp-123",
         "measurements",
-        ["timestamp", "value"],
+        "timestamp,value",
         undefined,
         undefined,
       ],
@@ -81,6 +85,7 @@ describe("useExperimentVisualizationData", () => {
       enabled: true,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      retry: expect.any(Function),
     });
   });
 
@@ -119,7 +124,7 @@ describe("useExperimentVisualizationData", () => {
         "experiment-visualization-data",
         "exp-123",
         "measurements",
-        ["timestamp", "value"],
+        "timestamp,value",
         "timestamp",
         "DESC",
       ],
@@ -127,6 +132,7 @@ describe("useExperimentVisualizationData", () => {
       enabled: true,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      retry: expect.any(Function),
     });
   });
 
@@ -170,6 +176,7 @@ describe("useExperimentVisualizationData", () => {
       enabled: true,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      retry: expect.any(Function),
     });
   });
 

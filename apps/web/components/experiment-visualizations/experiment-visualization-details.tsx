@@ -21,7 +21,6 @@ import { toast } from "@repo/ui/hooks";
 
 import { useExperimentAccess } from "../../hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
-import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useExperimentVisualizationDelete } from "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 
@@ -58,23 +57,6 @@ export default function ExperimentVisualizationDetails({
   } = useExperimentVisualization(visualizationId, experimentId);
 
   const visualization = visualizationResponse?.body;
-
-  // Get X-axis column for ordering
-  const xDataSources = visualization?.dataConfig.dataSources.filter((ds) => ds.role === "x");
-  const xColumn = xDataSources?.[0]?.columnName;
-
-  // Fetch the actual data for this visualization (only if visualization is loaded)
-  const { data: visualizationData } = useExperimentVisualizationData(
-    experimentId,
-    visualization
-      ? {
-          tableName: visualization.dataConfig.tableName,
-          columns: visualization.dataConfig.dataSources.map((ds) => ds.columnName),
-          orderBy: xColumn,
-          orderDirection: "ASC",
-        }
-      : { tableName: "", columns: [] }, // Fallback when visualization not loaded
-  );
 
   const { mutate: deleteVisualization, isPending: isDeleting } = useExperimentVisualizationDelete({
     experimentId,
@@ -233,7 +215,6 @@ export default function ExperimentVisualizationDetails({
             <ExperimentVisualizationRenderer
               experimentId={experimentId}
               visualization={visualization}
-              data={visualizationData?.rows}
               showDescription={false}
               showTitle={false}
             />
