@@ -19,10 +19,12 @@ exports.handler = async (event) => {
   const { request } = event.Records[0].cf;
 
   try {
-    if (["POST","PUT","PATCH"].includes(request.method)) {
+    if (["POST","PUT","PATCH"].includes(request.method) && request.body) {
       const body = Buffer.from(request.body.data, request.body.encoding);
+      
       const hash = createHash("sha256").update(body).digest("hex");
       request.headers["x-amz-content-sha256"] = [{ key:"x-amz-content-sha256", value:hash }];
+      
       console.log('  computed hash:', hash);
     }
     return request;
@@ -131,8 +133,19 @@ function handler(event) {
 EOT
 }
 
-
-# CloudFront distribution
+resource "aws_cloudfront_function" "posthog_rewrite" {
+  name    = "${var.project_name}-posthog-rewrite"
+  runtime = "cloudfront-js-1.0"
+  comment = "Strip /ingest prefix for PostHog origin"
+  publish = true
+  code    = <<-EOT
+function handler(event) {
+  var request = event.request;
+  request.uri = request.uri.replace(/^\/ingest/, '');
+  return request;
+}
+EOT
+}
 resource "aws_cloudfront_distribution" "distribution" {
   enabled         = true
   is_ipv6_enabled = true
@@ -180,6 +193,32 @@ resource "aws_cloudfront_distribution" "distribution" {
 
     custom_origin_config {
       http_port              = 443
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # PostHog ingest origin - direct passthrough to avoid body corruption
+  origin {
+    origin_id   = "PostHogIngest"
+    domain_name = "eu.i.posthog.com"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # PostHog static assets origin
+  origin {
+    origin_id   = "PostHogAssets"
+    domain_name = "eu-assets.i.posthog.com"
+
+    custom_origin_config {
+      http_port              = 80
       https_port             = 443
       origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
@@ -234,27 +273,37 @@ resource "aws_cloudfront_distribution" "distribution" {
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
   }
 
-  # Cache behavior for PostHog ingest routes (with edge body handling)
+  # Cache behavior for PostHog ingest routes - direct passthrough to PostHog
   ordered_cache_behavior {
-    path_pattern           = "/*/ingest/*"
-    target_origin_id       = "ServerLambda"
+    path_pattern           = "/ingest/static/*"
+    target_origin_id       = "PostHogAssets"
     viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
-
-    lambda_function_association {
-      event_type   = "origin-request"
-      lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
-      include_body = true
-    }
+    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimizedForUncompressedObjects
 
     function_association {
       event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.forward_host_header.arn
+      function_arn = aws_cloudfront_function.posthog_rewrite.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/ingest/*"
+    target_origin_id       = "PostHogIngest"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = false # Don't compress - PostHog sends pre-compressed gzip data
+
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.posthog_passthrough.id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.posthog_rewrite.arn
     }
   }
 
@@ -373,6 +422,26 @@ resource "aws_cloudfront_cache_policy" "cache_policy" {
     query_strings_config {
       query_string_behavior = "all"
     }
+  }
+}
+
+# Origin Request Policy for PostHog passthrough
+# Forwards query strings, content-type, and cookies but NOT the Host header
+# so CloudFront uses the origin domain (eu.i.posthog.com) as Host
+resource "aws_cloudfront_origin_request_policy" "posthog_passthrough" {
+  name    = "${var.project_name}-posthog-passthrough"
+  comment = "Forward query strings and content-type to PostHog without Host header"
+  headers_config {
+    header_behavior = "whitelist"
+    headers {
+      items = ["content-type", "origin"]
+    }
+  }
+  cookies_config {
+    cookie_behavior = "none"
+  }
+  query_strings_config {
+    query_string_behavior = "all"
   }
 }
 

@@ -11,7 +11,12 @@ import { EndFlowButton } from "./components/end-flow-button";
 import { ExperimentSelectionStep } from "./components/experiment-selection-step";
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
 
-export function MeasurementFlowScreen() {
+interface MeasurementFlowScreenProps {
+  /** Called after flow is ended (e.g. to navigate back to landing) */
+  onEndFlowComplete?: () => void;
+}
+
+export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
   const { classes } = useTheme();
   const { currentStep, previousStep, resetFlow, flowNodes, currentFlowStep, isFlowFinished } =
@@ -25,9 +30,10 @@ export function MeasurementFlowScreen() {
   const handleEndFlow = () => {
     resetFlow();
     clearHistory();
+    onEndFlowComplete?.();
   };
 
-  const shouldShowNavigationButtons = currentStep > 0;
+  const shouldShowNavigationButtons = currentStep > 0 || (currentStep === 0 && !!onEndFlowComplete);
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
   const isInCompletedState = isFlowCompleted && isFlowFinished;
   // Hide back button on first flow step (currentFlowStep === 0) and in completed state

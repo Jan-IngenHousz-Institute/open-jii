@@ -80,7 +80,7 @@ export function DeviceConnectionWidget() {
   };
 
   return (
-    <View className="flex-row items-center gap-2" style={{ marginRight: 16 }}>
+    <View className="flex-row items-center gap-2">
       <View
         className="flex-row items-center gap-0.5 rounded-lg border px-1.5 py-0.5"
         style={{

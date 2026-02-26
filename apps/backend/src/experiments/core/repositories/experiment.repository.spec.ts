@@ -414,11 +414,11 @@ describe("ExperimentRepository", () => {
         status: "active",
       });
 
-      // Create draft experiment
+      // Create stale experiment
       await testApp.createExperiment({
         name: "Draft Experiment",
         userId: mainUserId,
-        status: "provisioning",
+        status: "stale",
       });
 
       // Create archived experiment
