@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
-CATALOG_NAME = spark.conf.get("catalog_name", "open_jii_data_hackathon")
+CATALOG_NAME = spark.conf.get("catalog_name")
 CENTRUM_SCHEMA = "centrum"
 PHOTOSYNQ_DATA_PATH = spark.conf.get("PHOTOSYNQ_DATA_PATH")
 ENVIRONMENT = spark.conf.get("ENVIRONMENT").lower()
