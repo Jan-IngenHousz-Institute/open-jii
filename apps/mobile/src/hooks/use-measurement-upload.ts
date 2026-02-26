@@ -4,6 +4,7 @@ import { toast } from "sonner-native";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
+import { compressSample } from "~/utils/compress-sample";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
@@ -44,7 +45,7 @@ function prepareMeasurementForUpload({
   const macros: MacroInfo[] = macro ? [macro] : [];
   const annotations = commentText ? buildAnnotationsWithComment(commentText) : [];
 
-  return {
+  const payload = {
     questions,
     macros,
     timestamp,
@@ -52,6 +53,15 @@ function prepareMeasurementForUpload({
     ...rawMeasurement,
     annotations,
   };
+
+  // Compress the (large) sample field to reduce MQTT payload size.
+  // The outer JSON envelope stays valid for AWS IoT Core SQL parsing.
+  if (payload.sample != null) {
+    payload.sample = compressSample(payload.sample);
+    payload._sample_encoding = "gzip+base64";
+  }
+
+  return payload;
 }
 
 export function useMeasurementUpload() {

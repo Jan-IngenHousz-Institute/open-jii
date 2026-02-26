@@ -12,6 +12,8 @@ from delta.tables import DeltaTable
 import requests
 import json
 import pandas as pd
+import gzip
+import base64
 from datetime import datetime
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
@@ -58,6 +60,7 @@ sensor_schema = StructType([
     StructField("device_battery", DoubleType(), True),
     StructField("device_firmware", StringType(), True),
     StructField("sample", StringType(), True),
+    StructField("_sample_encoding", StringType(), True),
     StructField("timestamp", TimestampType(), False),
     StructField("output", StringType(), True),
     StructField("questions", ArrayType(question_schema), True),
@@ -65,6 +68,23 @@ sensor_schema = StructType([
     StructField("macros", ArrayType(macro_schema), True),
     StructField("annotations", ArrayType(annotation_schema), True)
 ])
+
+# COMMAND ----------
+
+# DBTITLE 1,Sample Decompression UDF
+@F.udf(StringType())
+def decompress_sample(encoded_sample: str, encoding: str) -> str:
+    """Decompress a gzip+base64-encoded sample field back to its original JSON string.
+    
+    If encoding is None (legacy payloads), the sample is returned as-is.
+    """
+    if encoding is None or encoded_sample is None:
+        return encoded_sample
+    if encoding == "gzip+base64":
+        compressed = base64.b64decode(encoded_sample)
+        return gzip.decompress(compressed).decode("utf-8")
+    # Unknown encoding — pass through unchanged
+    return encoded_sample
 
 # COMMAND ----------
 
@@ -174,7 +194,13 @@ def clean_data():
         .withColumn("device_version", F.col("parsed_data.device_version"))
         .withColumn("device_battery", F.col("parsed_data.device_battery"))
         .withColumn("device_firmware", F.col("parsed_data.device_firmware"))
-        .withColumn("sample", F.col("parsed_data.sample"))
+        .withColumn(
+            "sample",
+            decompress_sample(
+                F.col("parsed_data.sample"),
+                F.col("parsed_data._sample_encoding")
+            )
+        )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
