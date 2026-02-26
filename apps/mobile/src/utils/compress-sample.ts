@@ -8,9 +8,6 @@ export function compressSample(sample: unknown): string {
   const compressed = pako.gzip(json);
 
   // Convert Uint8Array → base64 via binary string (works in Hermes / JSC)
-  let binary = "";
-  for (const byte of compressed) {
-    binary += String.fromCharCode(byte);
-  }
+  const binary = Array.from(compressed, (b) => String.fromCharCode(b)).join("");
   return btoa(binary);
 }
