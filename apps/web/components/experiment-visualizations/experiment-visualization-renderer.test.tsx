@@ -111,9 +111,9 @@ describe("ExperimentVisualizationRenderer", () => {
     // Verify the error styling is applied - check the outer error container
     const errorContainer = screen
       .getByText("errors.unsupportedChartType")
-      .closest(".bg-destructive\\/10");
-    expect(errorContainer).toHaveClass("bg-destructive/10");
-    expect(errorContainer).toHaveClass("text-destructive");
+      .closest(".bg-muted\\/30");
+    expect(errorContainer).toHaveClass("bg-muted/30");
+    expect(errorContainer).toHaveClass("text-muted-foreground");
   });
 
   it("should render title when showTitle is true", () => {

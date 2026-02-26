@@ -1,3 +1,4 @@
+import { shouldRetryQuery } from "@/util/query-retry";
 import { tsr } from "~/lib/tsr";
 
 // Time in ms before data is removed from the cache
@@ -25,12 +26,15 @@ export const useExperimentVisualizationData = (
   dataConfig: VisualizationDataConfig,
   enabled = true,
 ) => {
+  // Serialize columns for stable queryKey (avoid new array reference each render)
+  const columnsKey = dataConfig.columns?.join(",");
+
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
       params: { id: experimentId },
       query: {
         tableName: dataConfig.tableName,
-        columns: dataConfig.columns?.join(","),
+        columns: columnsKey,
         orderBy: dataConfig.orderBy,
         orderDirection: dataConfig.orderDirection,
       },
@@ -39,7 +43,7 @@ export const useExperimentVisualizationData = (
       "experiment-visualization-data",
       experimentId,
       dataConfig.tableName,
-      dataConfig.columns,
+      columnsKey,
       dataConfig.orderBy,
       dataConfig.orderDirection,
     ],
@@ -47,6 +51,7 @@ export const useExperimentVisualizationData = (
     enabled: enabled && !!dataConfig.tableName,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    retry: shouldRetryQuery,
   });
 
   // Extract the table data from the response

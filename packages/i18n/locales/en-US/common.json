@@ -170,9 +170,7 @@
     "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
     "noMacrosAvailable": "No macros available",
     "createFirstMacro": "Create your first macro to get started",
-    "requestTransfer": "Request Project Transfer",
-    "infrastructureSetupTitle": "Infrastructure Setup",
-    "infrastructureSetupDescription": "After finishing this process the experiment infrastructure will be set up which can take 10 to 40 minutes. Viewing data will be possible once the experiment is active. In the meantime, data can already be added through the openJII mobile app."
+    "requestTransfer": "Request Project Transfer"
   },
   "transferRequest": {
     "title": "Request Project Transfer",

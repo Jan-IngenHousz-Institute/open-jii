@@ -1,12 +1,14 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { Upload } from "lucide-react";
+import { BarChart3, Upload } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
 import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
+import { env } from "~/env";
 import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
@@ -93,7 +95,21 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </Button>
         </div>
 
-        <div className="text-muted-foreground py-12 text-center">{t("experimentData.noData")}</div>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
+            <BarChart3 className="text-muted-foreground h-12 w-12" />
+          </div>
+          <p className="text-muted-foreground mb-4 text-center text-sm">
+            {t("experimentData.noData")}
+          </p>
+          <Link
+            href={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/mobile-app`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="muted">{t("experimentData.readMore")}</Button>
+          </Link>
+        </div>
 
         <DataUploadModal
           experimentId={id}
