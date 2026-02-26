@@ -15,6 +15,7 @@ import {
   experimentMembers,
   experimentLocations,
   experiments,
+  invitations,
   users,
   sessions,
   auditLogs,
@@ -181,6 +182,7 @@ export class TestHarness {
 
     // Clean up test data in correct order (respecting foreign key constraints)
     await this.database.delete(auditLogs).execute();
+    await this.database.delete(invitations).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentProtocols).execute();
     await this.database.delete(experimentLocations).execute();

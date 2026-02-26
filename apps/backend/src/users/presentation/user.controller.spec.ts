@@ -4,12 +4,17 @@ import { StatusCodes } from "http-status-codes";
 import type { ErrorResponse, UserList, UserProfileList, User } from "@repo/api";
 import { contract } from "@repo/api";
 
+import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
+import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
 
 describe("UserController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let searchUsersUseCase: SearchUsersUseCase;
+  let createUserProfileUseCase: CreateUserProfileUseCase;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -18,6 +23,8 @@ describe("UserController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+    searchUsersUseCase = testApp.module.get(SearchUsersUseCase);
+    createUserProfileUseCase = testApp.module.get(CreateUserProfileUseCase);
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
@@ -172,6 +179,17 @@ describe("UserController", () => {
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
+
+    it("should return 500 when use case returns failure", async () => {
+      vi.spyOn(searchUsersUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      await testApp
+        .get(contract.users.searchUsers.path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
   });
 
   describe("getUser", () => {
@@ -309,6 +327,18 @@ describe("UserController", () => {
         .withoutAuth()
         .send({ firstName: "Test", lastName: "User" })
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should return 500 when use case returns failure", async () => {
+      vi.spyOn(createUserProfileUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      await testApp
+        .post(contract.users.createUserProfile.path)
+        .withAuth(testUserId)
+        .send({ firstName: "Test", lastName: "User", organization: "Test Org" })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
   describe("getUserProfile", () => {

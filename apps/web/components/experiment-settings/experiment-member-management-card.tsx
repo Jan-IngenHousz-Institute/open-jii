@@ -1,8 +1,9 @@
 "use client";
 
+import { Mail } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { UserProfile, ExperimentMemberRole, ExperimentMember } from "@repo/api";
+import type { UserProfile, ExperimentMemberRole, ExperimentMember, Invitation } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -12,6 +13,12 @@ import {
   CardDescription,
   CardContent,
   Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -19,8 +26,17 @@ import { useExperimentMemberAdd } from "../../hooks/experiment/useExperimentMemb
 import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useUserSearch } from "../../hooks/useUserSearch";
+import { useUserInvitationCreate } from "../../hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate";
+import { useUserInvitationRevoke } from "../../hooks/user-invitation/useUserInvitationRevoke/useUserInvitationRevoke";
+import { useUserInvitationRoleUpdate } from "../../hooks/user-invitation/useUserInvitationRoleUpdate/useUserInvitationRoleUpdate";
+import { useUserInvitations } from "../../hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { MemberList } from "../current-members-list/current-members-list";
 import { UserSearchPopover } from "../user-search-popover";
+
+type MemberSelection =
+  | { type: "user"; user: UserProfile }
+  | { type: "email"; email: string }
+  | null;
 
 interface ExperimentMemberManagementProps {
   experimentId: string;
@@ -46,16 +62,31 @@ export function ExperimentMemberManagement({
 
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selection, setSelection] = useState<MemberSelection>(null);
   const [selectedRole, setSelectedRole] = useState<ExperimentMemberRole>("member");
   const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
   const { data: userSearchData, isLoading: isFetchingUsers } = useUserSearch(debouncedSearch);
 
-  // Add/remove member mutations
   const { mutateAsync: addMember, isPending: isAddingMember } = useExperimentMemberAdd();
   const { mutateAsync: removeMember, isPending: isRemovingMember } = useExperimentMemberRemove();
+  const { mutateAsync: createInvitation, isPending: isCreatingInvitation } =
+    useUserInvitationCreate();
+  const { mutate: revokeInvitation } = useUserInvitationRevoke();
+  const { mutate: updateInvitationRole } = useUserInvitationRoleUpdate();
+  const { data: invitationsData } = useUserInvitations("experiment", experimentId);
+  const invitations: Invitation[] = invitationsData?.body ?? [];
 
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+
+  const selectedUser = selection?.type === "user" ? selection.user : null;
+  const selectedEmail = selection?.type === "email" ? selection.email : null;
+
+  const isAddingMembersDisabled =
+    !selection ||
+    isAddingMember ||
+    isCreatingInvitation ||
+    currentUserRole !== "admin" ||
+    isArchived;
 
   // Safely extract available users and filter out existing members
   const availableUsers = useMemo(() => {
@@ -65,28 +96,47 @@ export function ExperimentMemberManagement({
     return [];
   }, [userSearchData, members]);
 
-  // Handle adding a member
-  const handleAddMember = async () => {
-    if (!selectedUser) return;
+  const resetSelection = () => {
+    setUserSearch("");
+    setSelection(null);
+    setSelectedRole("member");
+  };
 
-    await addMember({
-      params: { id: experimentId },
-      body: {
-        members: [
-          {
-            userId: selectedUser.userId,
+  // Handle adding a member by userId or inviting by email
+  const handleAddMember = async () => {
+    if (!selection) return;
+
+    if (selection.type === "user") {
+      await addMember(
+        {
+          params: { id: experimentId },
+          body: { members: [{ userId: selection.user.userId, role: selectedRole }] },
+        },
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.memberAdded") });
+          },
+        },
+      );
+    } else {
+      await createInvitation(
+        {
+          body: {
+            resourceType: "experiment",
+            resourceId: experimentId,
+            email: selection.email,
             role: selectedRole,
           },
-        ],
-      },
-    });
+        },
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.invitationSent") });
+          },
+        },
+      );
+    }
 
-    toast({ description: t("experimentSettings.memberAdded") });
-
-    // Reset search and selection
-    setUserSearch("");
-    setSelectedUser(null);
-    setSelectedRole("member");
+    resetSelection();
   };
 
   // Handle removing a member
@@ -94,16 +144,46 @@ export function ExperimentMemberManagement({
     setRemovingMemberId(memberId);
 
     try {
-      await removeMember({
-        params: {
-          id: experimentId,
-          memberId,
+      await removeMember(
+        {
+          params: {
+            id: experimentId,
+            memberId,
+          },
         },
-      });
-
-      toast({ description: t("experimentSettings.memberRemoved") });
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.memberRemoved") });
+          },
+        },
+      );
     } finally {
       setRemovingMemberId(null);
+    }
+  };
+
+  const handleInvitationValueChange = (value: string, invitation: Invitation) => {
+    if (value === "revoke") {
+      revokeInvitation(
+        { params: { invitationId: invitation.id } },
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.invitationRevoked") });
+          },
+        },
+      );
+    } else {
+      updateInvitationRole(
+        {
+          params: { invitationId: invitation.id },
+          body: { role: value as ExperimentMemberRole },
+        },
+        {
+          onSuccess: () => {
+            toast({ description: t("experimentSettings.roleUpdated") });
+          },
+        },
+      );
     }
   };
 
@@ -150,10 +230,12 @@ export function ExperimentMemberManagement({
             onSearchChange={setUserSearch}
             isAddingUser={isAddingMember}
             loading={!isDebounced || isFetchingUsers}
-            onSelectUser={setSelectedUser}
+            onSelectUser={(user) => setSelection({ type: "user", user })}
+            onSelectEmail={(email) => setSelection({ type: "email", email })}
             placeholder={t("experiments.searchUsersPlaceholder")}
             selectedUser={selectedUser}
-            onClearSelection={() => setSelectedUser(null)}
+            selectedEmail={selectedEmail}
+            onClearSelection={() => setSelection(null)}
             disabled={isArchived || currentUserRole !== "admin"}
             selectedRole={selectedRole}
             onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
@@ -161,7 +243,7 @@ export function ExperimentMemberManagement({
           <Button
             onClick={handleAddMember}
             variant="muted"
-            disabled={!selectedUser || isAddingMember || currentUserRole !== "admin" || isArchived}
+            disabled={isAddingMembersDisabled}
             size="default"
           >
             {t("common.add")}
@@ -193,6 +275,52 @@ export function ExperimentMemberManagement({
             isArchived={isArchived}
           />
         </div>
+
+        {/* Pending invitations section */}
+        {invitations.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-foreground font-semibold">
+              {t("experimentSettings.pendingInvitations")}
+            </h4>
+            <div className="max-h-[120px] space-y-3 overflow-y-auto pr-2">
+              {invitations.map((invitation) => (
+                <div key={invitation.id} className="flex items-center justify-between rounded">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-foreground text-sm font-medium">{invitation.email}</span>
+                    <span className="flex items-center gap-x-1">
+                      <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+                      <span className="text-muted-foreground text-sm">
+                        {t("experimentSettings.pendingInvite")}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex flex-shrink-0 pl-4">
+                    <Select
+                      value={invitation.role}
+                      disabled={isArchived || currentUserRole !== "admin"}
+                      onValueChange={(value) => handleInvitationValueChange(value, invitation)}
+                    >
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
+                        <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
+                        <SelectSeparator />
+                        <SelectItem
+                          value="revoke"
+                          className="text-destructive focus:text-destructive"
+                        >
+                          {t("experimentSettings.revoke")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </>
   );

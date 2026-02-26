@@ -261,4 +261,34 @@ describe("EmailAdapter", () => {
       );
     });
   });
+
+  describe("sendInvitationEmail", () => {
+    const MOCK_RESOURCE_ID = "res-123";
+    const MOCK_RESOURCE_NAME = "Test Experiment";
+    const MOCK_ACTOR = "John Doe";
+
+    it("should send an email and return success", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendAddedUserNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await adapter.sendInvitationEmail(
+        MOCK_RESOURCE_ID,
+        MOCK_RESOURCE_NAME,
+        MOCK_ACTOR,
+        "member",
+        "invite@example.com",
+      );
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledOnce();
+      expect(notificationSpy).toHaveBeenCalledWith(
+        MOCK_RESOURCE_ID,
+        MOCK_RESOURCE_NAME,
+        MOCK_ACTOR,
+        "member",
+        "invite@example.com",
+      );
+    });
+  });
 });
