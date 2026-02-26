@@ -32,6 +32,7 @@ vi.mock("@/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
     mockUseExperimentTables(experimentId) as {
       tables: unknown[];
       isLoading: boolean;
+      error: unknown;
     },
 }));
 
@@ -44,6 +45,7 @@ vi.mock("@/components/experiment-visualizations/new-visualization-form", () => (
   default: ({
     experimentId,
     tables,
+    tablesError,
     onSuccess,
     isLoading,
     isPreviewOpen,
@@ -51,6 +53,7 @@ vi.mock("@/components/experiment-visualizations/new-visualization-form", () => (
   }: {
     experimentId: string;
     tables: unknown[];
+    tablesError?: unknown;
     onSuccess: (id: string) => void;
     isLoading: boolean;
     isPreviewOpen: boolean;
@@ -59,6 +62,7 @@ vi.mock("@/components/experiment-visualizations/new-visualization-form", () => (
     <div data-testid="new-visualization-form" data-loading={isLoading}>
       <div>Experiment: {experimentId}</div>
       <div>Tables: {tables.length}</div>
+      <div>Tables Error: {tablesError ? "Yes" : "No"}</div>
       <div>Preview Open: {isPreviewOpen ? "Yes" : "No"}</div>
       <button onClick={() => onSuccess("new-viz-123")}>Create Visualization</button>
       <button onClick={onPreviewClose}>Close Preview</button>
@@ -138,6 +142,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -149,6 +154,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -161,6 +167,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -174,6 +181,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: mockTables,
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -185,6 +193,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: true,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -199,6 +208,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -212,6 +222,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -233,6 +244,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -264,6 +276,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -284,6 +297,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -306,6 +320,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -317,6 +332,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: true,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -329,6 +345,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -342,6 +359,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: mockTables,
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -355,6 +373,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       renderWithQueryClient(<NewVisualizationPage />);
@@ -381,6 +400,7 @@ describe("NewVisualizationPage", () => {
       mockUseExperimentTables.mockReturnValue({
         tables: [],
         isLoading: false,
+        error: null,
       });
 
       expect(() => renderWithQueryClient(<NewVisualizationPage />)).toThrow("Not Found");

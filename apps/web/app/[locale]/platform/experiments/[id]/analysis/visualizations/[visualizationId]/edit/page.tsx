@@ -40,7 +40,11 @@ export default function EditVisualizationPage() {
   const visualization = visualizationResponse?.body;
 
   // Fetch tables metadata
-  const { tables, isLoading: isLoadingTables } = useExperimentTables(experimentId);
+  const {
+    tables,
+    isLoading: isLoadingTables,
+    error: tablesError,
+  } = useExperimentTables(experimentId);
 
   const handleSuccess = (_visualizationId: string) => {
     router.push(
@@ -91,6 +95,7 @@ export default function EditVisualizationPage() {
         experimentId={experimentId}
         visualization={visualization}
         tables={tables ?? []}
+        tablesError={tablesError}
         onSuccess={handleSuccess}
         isLoading={isLoadingTables}
         isPreviewOpen={isPreviewOpen}

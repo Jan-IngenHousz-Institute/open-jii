@@ -109,6 +109,8 @@
     "searchUsers": "Search users",
     "searchUsersPlaceholder": "Enter name or email...",
     "noUsersFound": "No users found for \"{{search}}\"",
+    "inviteByEmail": "Invite {{email}} by email",
+    "sendInviteByEmail": "Send invite by email",
     "searchExperiments": "Search experiments...",
     "startTypingToSearch": "Start typing to search",
     "searchProtocols": "Search protocols...",
@@ -168,9 +170,7 @@
     "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
     "noMacrosAvailable": "No macros available",
     "createFirstMacro": "Create your first macro to get started",
-    "requestTransfer": "Request Project Transfer",
-    "infrastructureSetupTitle": "Infrastructure Setup",
-    "infrastructureSetupDescription": "After finishing this process the experiment infrastructure will be set up which can take 10 to 40 minutes. Viewing data will be possible once the experiment is active. In the meantime, data can already be added through the openJII mobile app."
+    "requestTransfer": "Request Project Transfer"
   },
   "transferRequest": {
     "title": "Request Project Transfer",
@@ -259,6 +259,7 @@
     "memberDescription": "Manage experiment members and permissions",
     "currentMembers": "Current Members",
     "memberAdded": "Member added successfully",
+    "invitationSent": "Invitation sent successfully",
     "memberRemoved": "Member removed successfully",
     "memberManagementError": "Error loading members. Please try again.",
     "noMembersYet": "No members yet",
@@ -312,6 +313,10 @@
     "confirmDemote": "Change to Member",
     "leave": "Leave",
     "remove": "Remove",
+    "pendingInvitations": "Invited",
+    "pendingInvite": "Invite pending",
+    "invitationRevoked": "Invitation revoked successfully",
+    "revoke": "Revoke",
     "collaborators": "Collaborators",
     "collaboratorsDescription": "Manage who has access to this experiment",
     "dangerZoneNote": "Once you archive an experiment, it will be read-only and no longer editable.",

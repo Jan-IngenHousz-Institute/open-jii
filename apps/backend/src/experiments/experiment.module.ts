@@ -80,7 +80,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule, EmailModule, UserModule, AnalyticsModule],
+  imports: [DatabricksModule, AwsModule, EmailModule, AnalyticsModule, UserModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,

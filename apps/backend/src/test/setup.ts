@@ -17,6 +17,7 @@ vi.mock("@repo/auth/server", () => ({
       trustedOrigins: ["http://localhost:3000"],
       baseURL: "http://localhost:3020",
       secret: "test-secret",
+      hooks: {},
     },
     trustedOrigins: ["http://localhost:3000"],
     baseURL: "http://localhost:3020",
