@@ -1,7 +1,6 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api";

@@ -1,5 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { SelectOptionsEditor } from "./select-options-editor";
@@ -37,17 +36,19 @@ describe("SelectOptionsEditor", () => {
     expect(inputs[1]).toHaveValue("Option B");
   });
 
-  it("calls onUpdateOption when option text changes", () => {
+  it("calls onUpdateOption when option text changes", async () => {
     const mockOnUpdateOption = vi.fn();
     render(<SelectOptionsEditor options={["Option 1"]} onUpdateOption={mockOnUpdateOption} />);
 
+    const user = userEvent.setup();
     const input = screen.getByPlaceholderText("questionCard.answerOptionPlaceholder");
-    fireEvent.change(input, { target: { value: "Updated Option" } });
+    await user.clear(input);
+    await user.type(input, "Updated Option");
 
     expect(mockOnUpdateOption).toHaveBeenCalledWith(0, "Updated Option");
   });
 
-  it("calls onDeleteOption when delete button is clicked", () => {
+  it("calls onDeleteOption when delete button is clicked", async () => {
     const mockOnDeleteOption = vi.fn();
     render(
       <SelectOptionsEditor
@@ -56,37 +57,41 @@ describe("SelectOptionsEditor", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const deleteButtons = screen.getAllByTitle("questionCard.removeOption");
-    fireEvent.click(deleteButtons[0]);
+    await user.click(deleteButtons[0]);
 
     expect(mockOnDeleteOption).toHaveBeenCalledWith(0);
   });
 
-  it("calls onAddOption when Add Option button is clicked", () => {
+  it("calls onAddOption when Add Option button is clicked", async () => {
     const mockOnAddOption = vi.fn();
     render(<SelectOptionsEditor options={[]} onAddOption={mockOnAddOption} />);
 
+    const user = userEvent.setup();
     const addButton = screen.getByText("questionCard.addOption");
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     expect(mockOnAddOption).toHaveBeenCalledTimes(1);
   });
 
-  it("opens bulk add dialog when Bulk Add is clicked", () => {
+  it("opens bulk add dialog when Bulk Add is clicked", async () => {
     render(<SelectOptionsEditor options={[]} />);
 
+    const user = userEvent.setup();
     const bulkAddButton = screen.getByText("questionCard.bulkAddOptions");
-    fireEvent.click(bulkAddButton);
+    await user.click(bulkAddButton);
 
     // Dialog should open (assuming mocked dialog component)
     expect(bulkAddButton).toBeInTheDocument();
   });
 
-  it("opens delete all dialog when Delete All is clicked", () => {
+  it("opens delete all dialog when Delete All is clicked", async () => {
     render(<SelectOptionsEditor options={["Option 1"]} />);
 
+    const user = userEvent.setup();
     const deleteAllButton = screen.getByText("questionCard.deleteAllOptions");
-    fireEvent.click(deleteAllButton);
+    await user.click(deleteAllButton);
 
     // Dialog should open (assuming mocked dialog component)
     expect(deleteAllButton).toBeInTheDocument();
@@ -111,26 +116,28 @@ describe("SelectOptionsEditor", () => {
     expect(deleteAllButton).toBeDisabled();
   });
 
-  it("calls onBulkAddOptions with new options", () => {
+  it("calls onBulkAddOptions with new options", async () => {
     const mockOnBulkAddOptions = vi.fn();
     render(<SelectOptionsEditor options={[]} onBulkAddOptions={mockOnBulkAddOptions} />);
 
+    const user = userEvent.setup();
     const bulkAddButton = screen.getByText("questionCard.bulkAddOptions");
-    fireEvent.click(bulkAddButton);
+    await user.click(bulkAddButton);
 
     // In real usage, the dialog would call onBulkAddOptions
     // This tests the prop is passed correctly
     expect(mockOnBulkAddOptions).not.toHaveBeenCalled(); // Until dialog confirms
   });
 
-  it("calls onDeleteAllOptions when confirmed", () => {
+  it("calls onDeleteAllOptions when confirmed", async () => {
     const mockOnDeleteAllOptions = vi.fn();
     render(
       <SelectOptionsEditor options={["Option 1"]} onDeleteAllOptions={mockOnDeleteAllOptions} />,
     );
 
+    const user = userEvent.setup();
     const deleteAllButton = screen.getByText("questionCard.deleteAllOptions");
-    fireEvent.click(deleteAllButton);
+    await user.click(deleteAllButton);
 
     // In real usage, the dialog would call onDeleteAllOptions
     expect(mockOnDeleteAllOptions).not.toHaveBeenCalled(); // Until dialog confirms

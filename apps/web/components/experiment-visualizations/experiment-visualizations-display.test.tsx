@@ -1,31 +1,36 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
 
+import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import ExperimentVisualizationsDisplay from "./experiment-visualizations-display";
 
 // Mock the visualization renderer component
 vi.mock("./experiment-visualization-renderer", () => ({
-  default: vi.fn(({ visualization }: { visualization?: ExperimentVisualization }) => (
-    <div data-testid="visualization-renderer">
-      <div data-testid="viz-id">{visualization?.id}</div>
-      <div data-testid="viz-name">{visualization?.name}</div>
-    </div>
-  )),
+  default: vi.fn(
+    ({ visualization, data }: { visualization?: ExperimentVisualization; data?: unknown }) => (
+      <div data-testid="visualization-renderer">
+        <div data-testid="viz-id">{visualization?.id}</div>
+        <div data-testid="viz-name">{visualization?.name}</div>
+        <div data-testid="viz-data">{data ? "has-data" : "no-data"}</div>
+      </div>
+    ),
+  ),
 }));
 
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
+// Mock the visualization data hook
+vi.mock(
+  "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData",
+  () => ({
+    useExperimentVisualizationData: vi.fn(),
   }),
-}));
+);
 
 describe("ExperimentVisualizationsDisplay", () => {
   const mockExperimentId = "exp-123";
+  const mockUseExperimentVisualizationData = vi.mocked(useExperimentVisualizationData);
   const mockVisualizations: ExperimentVisualization[] = [
     {
       id: "viz-1",
@@ -72,6 +77,27 @@ describe("ExperimentVisualizationsDisplay", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Default mock implementation
+    mockUseExperimentVisualizationData.mockReturnValue({
+      data: {
+        columns: [
+          { name: "timestamp", type_name: "string", type_text: "string" },
+          { name: "value", type_name: "number", type_text: "number" },
+        ],
+        rows: [{ timestamp: "2023-01-01", value: 10 }],
+        totalRows: 1,
+        truncated: false,
+      },
+      tableInfo: {
+        name: "measurements",
+        catalog_name: "default",
+        schema_name: "default",
+        totalRows: 1,
+      },
+      isLoading: false,
+      error: null,
+    });
   });
 
   it("should render loading state", () => {
@@ -153,7 +179,7 @@ describe("ExperimentVisualizationsDisplay", () => {
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  it("should render visualization renderer when visualization is selected", () => {
+  it("should render visualization renderer when data is loaded", () => {
     render(
       <ExperimentVisualizationsDisplay
         experimentId={mockExperimentId}
@@ -165,9 +191,17 @@ describe("ExperimentVisualizationsDisplay", () => {
     // Should show the visualization in the renderer
     expect(screen.getByTestId("visualization-renderer")).toBeInTheDocument();
     expect(screen.getByTestId("viz-name")).toHaveTextContent("Line Chart Visualization");
+    expect(screen.getByTestId("viz-data")).toHaveTextContent("has-data");
   });
 
-  it("should render the visualization renderer for selected visualization", () => {
+  it("should show loading state for visualization data", () => {
+    mockUseExperimentVisualizationData.mockReturnValue({
+      data: undefined,
+      tableInfo: undefined,
+      isLoading: true,
+      error: null,
+    });
+
     render(
       <ExperimentVisualizationsDisplay
         experimentId={mockExperimentId}
@@ -176,12 +210,96 @@ describe("ExperimentVisualizationsDisplay", () => {
       />,
     );
 
-    // Should render the visualization renderer
+    expect(screen.getByText("ui.messages.loadingData")).toBeInTheDocument();
+  });
+
+  it("should call hook with correct parameters for selected visualization", () => {
+    render(
+      <ExperimentVisualizationsDisplay
+        experimentId={mockExperimentId}
+        visualizations={mockVisualizations}
+        isLoading={false}
+      />,
+    );
+
+    expect(mockUseExperimentVisualizationData).toHaveBeenCalledWith(
+      mockExperimentId,
+      {
+        tableName: "measurements",
+        columns: ["timestamp", "value"],
+        orderBy: "timestamp",
+        orderDirection: "ASC",
+      },
+      true,
+    );
+  });
+
+  it("should call hook with fallback parameters when no visualization selected", () => {
+    render(
+      <ExperimentVisualizationsDisplay
+        experimentId={mockExperimentId}
+        visualizations={[]}
+        isLoading={false}
+      />,
+    );
+
+    expect(mockUseExperimentVisualizationData).toHaveBeenCalledWith(
+      mockExperimentId,
+      {
+        tableName: "",
+        columns: [],
+      },
+      false,
+    );
+  });
+
+  it("should pass visualization data to renderer", () => {
+    const mockData = {
+      columns: [
+        { name: "x", type_name: "number", type_text: "number" },
+        { name: "y", type_name: "number", type_text: "number" },
+      ],
+      rows: [
+        { x: 1, y: 2 },
+        { x: 3, y: 4 },
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    mockUseExperimentVisualizationData.mockReturnValue({
+      data: mockData,
+      tableInfo: {
+        name: "measurements",
+        catalog_name: "default",
+        schema_name: "default",
+        totalRows: 2,
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <ExperimentVisualizationsDisplay
+        experimentId={mockExperimentId}
+        visualizations={mockVisualizations}
+        isLoading={false}
+      />,
+    );
+
+    // Should render the visualization with data
     expect(screen.getByTestId("visualization-renderer")).toBeInTheDocument();
+    expect(screen.getByTestId("viz-data")).toHaveTextContent("has-data");
     expect(screen.getByTestId("viz-name")).toHaveTextContent("Line Chart Visualization");
   });
 
-  it("should still render renderer when no data is available yet", () => {
+  it("should pass null data when no data available", () => {
+    mockUseExperimentVisualizationData.mockReturnValue({
+      data: undefined,
+      tableInfo: undefined,
+      isLoading: false,
+      error: null,
+    });
+
     render(
       <ExperimentVisualizationsDisplay
         experimentId={mockExperimentId}
@@ -190,8 +308,9 @@ describe("ExperimentVisualizationsDisplay", () => {
       />,
     );
 
-    // Should still render the visualization renderer (data fetching is now handled by chart renderers)
+    // Should still render the visualization but with no data
     expect(screen.getByTestId("visualization-renderer")).toBeInTheDocument();
+    expect(screen.getByTestId("viz-data")).toHaveTextContent("no-data");
     expect(screen.getByTestId("viz-name")).toHaveTextContent("Line Chart Visualization");
   });
 });

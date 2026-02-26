@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React, { use } from "react";
+import { render, screen } from "@/test/test-utils";
+import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import DataLayout from "../layout";
-
-// Global React for JSX in mocks
-globalThis.React = React;
 
 // -------------------
 // Mocks

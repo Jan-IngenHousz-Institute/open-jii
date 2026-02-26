@@ -145,14 +145,6 @@ vi.mock("~/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
   }),
 }));
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: "en" },
-  }),
-  useLocale: () => "en",
-}));
-
 vi.mock("@repo/ui/hooks");
 
 vi.mock("@repo/ui/components", () => ({

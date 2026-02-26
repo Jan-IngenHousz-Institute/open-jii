@@ -1,16 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreview } from "./chart-preview";
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({
-    t: (key: string) => key,
-  })),
-}));
 
 // Mock the visualization data hook
 vi.mock(

@@ -1,7 +1,5 @@
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -118,13 +116,6 @@ vi.mock("../../hooks/experiment/useExperimentLocations/useExperimentLocations", 
 
 vi.mock("../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate", () => ({
   useExperimentLocationsUpdate: useExperimentLocationsUpdateMock,
-}));
-
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
 }));
 
 // Mock UI components

@@ -1,6 +1,4 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -11,12 +9,6 @@ import { getDefaultChartConfig } from "../chart-configurators/chart-configurator
 import { ChartTypeStep } from "./chart-type-step";
 
 // Mock dependencies
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({
-    t: (key: string) => key,
-  })),
-}));
-
 vi.mock("../chart-preview/chart-preview-modal", () => ({
   ChartPreviewModal: ({ isOpen }: { isOpen: boolean }) => (
     <div data-testid="chart-preview-modal">{isOpen ? "Open" : "Closed"}</div>

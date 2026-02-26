@@ -1,5 +1,5 @@
 import { render, screen } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { SidebarProvider } from "@repo/ui/components";
 
@@ -15,22 +15,6 @@ vi.mock("./nav-items", () => ({
     </div>
   ),
 }));
-
-// useSidebar needs partial mock
-const mockUseSidebar = vi.fn(() => ({
-  state: "expanded" as const,
-  toggleSidebar: vi.fn(),
-  open: true,
-  setOpen: vi.fn(),
-  openMobile: false,
-  setOpenMobile: vi.fn(),
-  isMobile: false,
-}));
-
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
-  return { ...actual, useSidebar: () => mockUseSidebar() };
-});
 
 const navigationData = {
   navDashboard: [{ title: "Dashboard", url: "/en/platform", icon: "Home", items: [] }],
@@ -61,18 +45,6 @@ function renderSidebar() {
 }
 
 describe("AppSidebar", () => {
-  beforeEach(() => {
-    mockUseSidebar.mockReturnValue({
-      state: "expanded",
-      toggleSidebar: vi.fn(),
-      open: true,
-      setOpen: vi.fn(),
-      openMobile: false,
-      setOpenMobile: vi.fn(),
-      isMobile: false,
-    });
-  });
-
   it("renders navigation items", () => {
     renderSidebar();
     for (const text of ["Dashboard", "Experiments", "Protocols", "Macros"]) {

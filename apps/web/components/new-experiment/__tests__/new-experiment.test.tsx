@@ -73,13 +73,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/mock-path",
 }));
 
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
 // Mock toast
 vi.mock("@repo/ui/hooks", () => ({
   toast: mockToast,
@@ -193,14 +186,14 @@ describe("NewExperimentForm", () => {
   });
 
   describe("Form Submission", () => {
-    it("calls createExperiment with correct data", () => {
+    it("calls createExperiment with correct data", async () => {
       render(<NewExperimentForm />);
       const submitButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.textContent === "newExperiment.finalizeSetup");
 
       if (submitButton) {
-        fireEvent.click(submitButton);
+        await userEvent.click(submitButton);
       }
 
       expect(mockCreateExperiment).toHaveBeenCalledWith({

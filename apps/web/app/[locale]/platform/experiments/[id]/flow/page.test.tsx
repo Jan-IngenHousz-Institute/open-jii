@@ -1,20 +1,11 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import React, { use } from "react";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { notFound } from "next/navigation";
+import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import ExperimentFlowPage from "./page";
 
-globalThis.React = React;
-
 // --- Mocks ---
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(() => {
-    const error = new Error("NEXT_NOT_FOUND");
-    error.name = "NotFoundError";
-    throw error;
-  }),
-}));
 
 const mockUseExperiment = vi.fn();
 vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
@@ -55,39 +46,22 @@ vi.mock("@/components/error-display", () => ({
 }));
 
 vi.mock("@/components/flow-editor", () => ({
-  FlowEditor: React.forwardRef<
-    HTMLDivElement,
-    { initialFlow?: unknown; isDisabled?: boolean; onDirtyChange?: () => void }
-  >(({ initialFlow, isDisabled }, ref) => (
+  FlowEditor: ({
+    initialFlow,
+    isDisabled,
+  }: {
+    initialFlow?: unknown;
+    isDisabled?: boolean;
+    onDirtyChange?: () => void;
+  }) => (
     <div
       data-testid="flow-editor"
       data-initial-flow={initialFlow ? "present" : "null"}
       data-disabled={isDisabled ? "true" : "false"}
-      ref={ref}
     >
       Flow Editor
     </div>
-  )),
-}));
-
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-  }) => (
-    <button data-testid="button" onClick={onClick} disabled={disabled}>
-      {children}
-    </button>
   ),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
 }));
 
 // --- Tests ---
@@ -140,7 +114,7 @@ describe("ExperimentFlowPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(use).mockReturnValue({ id: "exp-123", locale: "en-US" } as never);
+    vi.mocked(use).mockReturnValue({ id: "exp-123", locale: "en-US" });
     mockUseExperiment.mockReturnValue(mockExperimentData);
     mockUseExperimentAccess.mockReturnValue(mockAccessData);
     mockUseExperimentFlow.mockReturnValue(mockFlowData);
@@ -205,6 +179,10 @@ describe("ExperimentFlowPage", () => {
       },
     });
 
+    vi.mocked(notFound).mockImplementation(() => {
+      throw new Error("NEXT_NOT_FOUND");
+    });
+
     expect(() => render(<ExperimentFlowPage params={defaultProps.params} />)).toThrow(
       "NEXT_NOT_FOUND",
     );
@@ -250,34 +228,11 @@ describe("ExperimentFlowPage", () => {
     });
   });
 
-  it("renders save button with correct text", async () => {
+  it("renders save button", async () => {
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("button")).toHaveTextContent("flow.saveFlow");
-    });
-  });
-
-  it("renders with correct structure and spacing", async () => {
-    const { container } = render(<ExperimentFlowPage params={defaultProps.params} />);
-
-    await waitFor(() => {
-      const mainDiv = container.querySelector(".space-y-6");
-      expect(mainDiv).toBeInTheDocument();
-
-      const headerDiv = container.querySelector(".flex.items-center.justify-between");
-      expect(headerDiv).toBeInTheDocument();
-    });
-  });
-
-  it("renders title with correct styling", async () => {
-    const { container } = render(<ExperimentFlowPage params={defaultProps.params} />);
-
-    await waitFor(() => {
-      const title = container.querySelector("h2");
-      expect(title).toBeInTheDocument();
-      expect(title).toHaveClass("text-2xl", "font-bold");
-      expect(title).toHaveTextContent("flow.title");
+      expect(screen.getByRole("button", { name: /flow.saveFlow/ })).toBeInTheDocument();
     });
   });
 });

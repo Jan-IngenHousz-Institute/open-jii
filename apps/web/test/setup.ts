@@ -59,6 +59,13 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+vi.mock("@repo/i18n/client", () => ({
+  useTranslation: (_ns?: string) => ({
+    t: (key: string) => key,
+    i18n: { language: "en-US", changeLanguage: vi.fn() },
+  }),
+}));
+
 const initTranslationsMock = vi.fn().mockResolvedValue({
   t: (key: string) => key,
   i18n: { t: (key: string) => key },
@@ -124,6 +131,8 @@ vi.mock("@repo/auth/client", () => ({
     },
     signIn: {
       emailOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
+      social: vi.fn().mockResolvedValue({ data: null, error: null }),
+      oauth2: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
     updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
     getSession: vi.fn().mockResolvedValue({ data: null, error: null }),

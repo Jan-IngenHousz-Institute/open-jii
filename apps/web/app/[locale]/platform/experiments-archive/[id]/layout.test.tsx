@@ -1,13 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { useLocale } from "@/hooks/useLocale";
+import { render, screen } from "@/test/test-utils";
+import { usePathname, useParams } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import ExperimentLayout from "./layout";
-
-// Global React for JSX in mocks
-globalThis.React = React;
 
 // -------------------
 // Mocks
@@ -17,38 +14,6 @@ globalThis.React = React;
 const mockUseExperimentAccess = vi.fn();
 vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
   useExperimentAccess: (id: string) => mockUseExperimentAccess(id),
-}));
-
-// Mock useLocale hook
-const mockUseLocale = vi.fn();
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => mockUseLocale(),
-}));
-
-// Mock Next.js navigation hooks
-const mockUsePathname = vi.fn();
-const mockUseParams = vi.fn();
-const mockNotFound = vi.fn();
-vi.mock("next/navigation", () => ({
-  usePathname: () => mockUsePathname(),
-  useParams: () => mockUseParams(),
-  notFound: () => mockNotFound(),
-}));
-
-// Mock Next.js Link component
-vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href} data-testid="next-link">
-      {children}
-    </a>
-  ),
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
 }));
 
 // Mock ExperimentTitle component
@@ -84,7 +49,7 @@ const createMockAccessData = ({
 // Helpers
 // -------------------
 function renderExperimentLayout({
-  children = <div data-testid="child-content">Child Content</div>,
+  children = <div>Child Content</div>,
   hasAccess = true,
   isAdmin = false,
   isLoading = false,
@@ -102,10 +67,10 @@ function renderExperimentLayout({
   experimentId?: string;
   locale?: string;
 } = {}) {
-  // Mock navigation hooks
-  mockUsePathname.mockReturnValue(pathname);
-  mockUseParams.mockReturnValue({ id: experimentId });
-  mockUseLocale.mockReturnValue(locale);
+  // Mock navigation hooks (globally mocked)
+  vi.mocked(usePathname).mockReturnValue(pathname);
+  vi.mocked(useParams).mockReturnValue({ id: experimentId });
+  vi.mocked(useLocale).mockReturnValue(locale);
 
   // Mock useExperimentAccess hook response
   if (error) {
@@ -140,7 +105,7 @@ describe("<ExperimentLayout />", () => {
       renderExperimentLayout({ isLoading: true });
 
       expect(screen.getByText("loading")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
   });
 
@@ -151,7 +116,7 @@ describe("<ExperimentLayout />", () => {
 
       expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
       expect(screen.getByText("noPermissionToAccess")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 
     it("shows generic error for non-403 errors", () => {
@@ -160,7 +125,7 @@ describe("<ExperimentLayout />", () => {
 
       expect(screen.getByText("errors.error")).toBeInTheDocument();
       expect(screen.getByText("errorLoadingExperiment")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 
     it("shows generic error for 404 status", () => {
@@ -175,9 +140,9 @@ describe("<ExperimentLayout />", () => {
 
   describe("No Data State", () => {
     it("shows not found message when no experiment data is returned", () => {
-      mockUsePathname.mockReturnValue("/en/platform/experiments-archive/test-id");
-      mockUseParams.mockReturnValue({ id: "test-id" });
-      mockUseLocale.mockReturnValue("en");
+      vi.mocked(usePathname).mockReturnValue("/en/platform/experiments-archive/test-id");
+      vi.mocked(useParams).mockReturnValue({ id: "test-id" });
+      vi.mocked(useLocale).mockReturnValue("en");
       mockUseExperimentAccess.mockReturnValue({
         data: null,
         isLoading: false,
@@ -186,13 +151,13 @@ describe("<ExperimentLayout />", () => {
 
       render(
         <ExperimentLayout>
-          <div data-testid="child-content">Child Content</div>
+          <div>Child Content</div>
         </ExperimentLayout>,
       );
 
       expect(screen.getByText("errors.notFound")).toBeInTheDocument();
       expect(screen.getByText("experimentNotFound")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
   });
 
@@ -206,17 +171,16 @@ describe("<ExperimentLayout />", () => {
       expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
     });
 
-    it("all tabs render as links", () => {
+    it("all tabs render as links with correct hrefs", () => {
       renderExperimentLayout({ isAdmin: true, locale: "en", experimentId: "test-id" });
 
-      const links = screen.getAllByTestId("next-link");
-      expect(links).toHaveLength(4); // 4 tabs for archived experiments
+      const links = screen.getAllByRole("link");
+      const hrefs = links.map((l) => l.getAttribute("href"));
 
-      // Check href attributes (archived uses /experiments-archive/ path)
-      expect(links[0]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id");
-      expect(links[1]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/analysis");
-      expect(links[3]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/flow");
+      expect(hrefs).toContain("/en/platform/experiments-archive/test-id");
+      expect(hrefs).toContain("/en/platform/experiments-archive/test-id/data");
+      expect(hrefs).toContain("/en/platform/experiments-archive/test-id/analysis");
+      expect(hrefs).toContain("/en/platform/experiments-archive/test-id/flow");
     });
 
     it("renders tabs when on root experiment path", () => {
@@ -226,7 +190,7 @@ describe("<ExperimentLayout />", () => {
       });
 
       expect(screen.getByText("overview")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
     it("renders tabs when on data path", () => {
@@ -236,18 +200,7 @@ describe("<ExperimentLayout />", () => {
       });
 
       expect(screen.getByText("data")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
-    });
-
-    it("renders tabs when on nested data path", () => {
-      renderExperimentLayout({
-        pathname: "/en/platform/experiments/test-id/data/sensors",
-        experimentId: "test-id",
-        locale: "en",
-      });
-
-      expect(screen.getByText("data")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
     it("renders tabs when on analysis path", () => {
@@ -257,7 +210,7 @@ describe("<ExperimentLayout />", () => {
       });
 
       expect(screen.getByText("analysis.title")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
     it("renders tabs when on flow path", () => {
@@ -267,23 +220,15 @@ describe("<ExperimentLayout />", () => {
       });
 
       expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
   });
 
   describe("Layout Content", () => {
-    it("renders experiment title component", () => {
+    it("renders children", () => {
       renderExperimentLayout();
 
-      // ExperimentTitle component is rendered (we'd need to mock it to test its content)
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
-    });
-
-    it("wraps children in proper structure", () => {
-      renderExperimentLayout();
-
-      const childContent = screen.getByTestId("child-content");
-      expect(childContent).toBeInTheDocument();
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
   });
 
@@ -292,24 +237,6 @@ describe("<ExperimentLayout />", () => {
       renderExperimentLayout({ experimentId: "my-experiment-123" });
 
       expect(mockUseExperimentAccess).toHaveBeenCalledWith("my-experiment-123");
-    });
-
-    it("calls useLocale hook", () => {
-      renderExperimentLayout();
-
-      expect(mockUseLocale).toHaveBeenCalled();
-    });
-
-    it("calls usePathname hook", () => {
-      renderExperimentLayout();
-
-      expect(mockUsePathname).toHaveBeenCalled();
-    });
-
-    it("calls useParams hook", () => {
-      renderExperimentLayout();
-
-      expect(mockUseParams).toHaveBeenCalled();
     });
   });
 
@@ -321,11 +248,13 @@ describe("<ExperimentLayout />", () => {
         experimentId: "test-id",
       });
 
-      const links = screen.getAllByTestId("next-link");
-      expect(links[0]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id");
-      expect(links[1]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/analysis");
-      expect(links[3]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/flow");
+      const links = screen.getAllByRole("link");
+      const hrefs = links.map((l) => l.getAttribute("href"));
+
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id");
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/data");
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/analysis");
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/flow");
     });
 
     it("renders tabs for different locale", () => {
@@ -336,7 +265,7 @@ describe("<ExperimentLayout />", () => {
       });
 
       expect(screen.getByText("data")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
   });
 });

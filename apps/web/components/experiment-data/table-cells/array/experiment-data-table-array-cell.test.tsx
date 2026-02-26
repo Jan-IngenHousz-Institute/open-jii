@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, expect, it } from "vitest";
 
@@ -133,7 +132,8 @@ describe("ExperimentDataTableArrayCell", () => {
     expect(screen.getByText("2 items")).toBeInTheDocument();
   });
 
-  it("should expand and show items when triggered", () => {
+  it("should expand and show items when triggered", async () => {
+    const user = userEvent.setup();
     const testData = JSON.stringify([
       { question_label: "question1", question_text: "What is your name?", question_answer: "John" },
       { question_label: "question2", question_text: "What is your age?", question_answer: "25" },
@@ -153,7 +153,7 @@ describe("ExperimentDataTableArrayCell", () => {
     expect(screen.queryByText("question_label:")).not.toBeInTheDocument();
 
     // Click to expand
-    fireEvent.click(screen.getByRole("button"));
+    await user.click(screen.getByRole("button"));
 
     // Note: The DOM manipulation content won't be visible in React testing environment
     // but we can verify the trigger was clicked and collapsible state changed

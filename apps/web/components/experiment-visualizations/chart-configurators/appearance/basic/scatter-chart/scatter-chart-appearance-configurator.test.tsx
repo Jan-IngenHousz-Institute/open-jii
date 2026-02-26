@@ -1,5 +1,4 @@
-import { render, screen } from "@/test/test-utils";
-import { userEvent } from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { FormProvider, useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,7 +10,9 @@ vi.mock("../../shared/display-options-section", () => ({
 }));
 
 HTMLElement.prototype.hasPointerCapture = () => false;
-HTMLElement.prototype.scrollIntoView = () => {};
+HTMLElement.prototype.scrollIntoView = () => {
+  // noop
+};
 
 describe("ScatterChartAppearanceConfigurator", () => {
   it("should render display options section", () => {

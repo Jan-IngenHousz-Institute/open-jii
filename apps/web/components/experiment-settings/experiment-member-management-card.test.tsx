@@ -1,6 +1,5 @@
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -24,12 +23,6 @@ const useUserInvitationRoleUpdateMock = vi.hoisted(() => vi.fn());
 const useUserInvitationsMock = vi.hoisted(() => vi.fn());
 
 // --- Regular mocks ---
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
 vi.mock("@repo/auth/client", () => ({
   useSession: () => ({
     data: { user: { id: "u-admin" } },
@@ -244,16 +237,17 @@ describe("<ExperimentMemberManagement />", () => {
     renderWithClient();
 
     const input = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
-    fireEvent.change(input, { target: { value: "Kat" } });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Kat");
 
     // Wait for the search results to appear
     const katherineButton = await screen.findByRole("button", { name: /Katherine Johnson/i });
-    fireEvent.click(katherineButton);
+    await userEvent.click(katherineButton);
 
     const addBtn = screen.getByRole("button", { name: "common.add" });
     expect(addBtn).not.toBeDisabled();
 
-    fireEvent.click(addBtn);
+    await userEvent.click(addBtn);
 
     await waitFor(() => {
       expect(addSpy).toHaveBeenCalledWith(
@@ -279,7 +273,7 @@ describe("<ExperimentMemberManagement />", () => {
     const removeButtons = screen.getAllByRole("button", { name: /remove/i });
     expect(removeButtons.length).toBeGreaterThan(0);
 
-    fireEvent.click(removeButtons[0]);
+    await userEvent.click(removeButtons[0]);
 
     await waitFor(() => {
       expect(removeSpy).toHaveBeenCalledWith(

@@ -1,17 +1,10 @@
 // apps/web/components/side-panel-flow/__tests__/edge-side-panel.test.tsx
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import type { Edge } from "@xyflow/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { EdgeSidePanel } from "../edge-panel";
-
-// Minimal i18n mock (labels are predictable)
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
 
 const makeEdge = (overrides?: Partial<Edge>): Edge =>
   ({

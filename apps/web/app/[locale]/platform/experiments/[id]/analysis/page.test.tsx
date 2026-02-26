@@ -1,13 +1,7 @@
-import "@testing-library/jest-dom";
 import { redirect } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
 import AnalysisPage from "./page";
-
-// Mock next/navigation
-vi.mock("next/navigation", () => ({
-  redirect: vi.fn(),
-}));
 
 describe("AnalysisPage", () => {
   it("should redirect to visualizations page", async () => {

@@ -10,13 +10,6 @@ import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
 
 globalThis.React = React;
 
-// --- mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
 function renderWithForm(defaultValues: Partial<CreateExperimentBody>) {
   function Host() {
     const methods = useForm<CreateExperimentBody>({

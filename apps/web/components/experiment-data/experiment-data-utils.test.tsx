@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -11,19 +11,6 @@ import {
   ExperimentTableHeader,
   ExperimentDataRows,
 } from "./experiment-data-utils";
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "experimentDataTable.noResults": "No results found",
-        "experimentDataTable.loading": "Loading...",
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
 
 // Mock @tanstack/react-table
 vi.mock("@tanstack/react-table", () => ({
@@ -633,7 +620,7 @@ describe("experiment-data-utils", () => {
       );
 
       // Should not display loading text anymore
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+      expect(screen.queryByText("experimentDataTable.loading")).not.toBeInTheDocument();
 
       // Should render 3 skeleton rows with 2 columns each
       const skeletons = screen.getAllByTestId("skeleton");
@@ -1382,7 +1369,7 @@ describe("experiment-data-utils", () => {
       expect(screen.getByTestId("arrow-up")).toBeInTheDocument();
     });
 
-    it("should call onSort with column name and type when header is clicked", () => {
+    it("should call onSort with column name and type when header is clicked", async () => {
       const mockOnSort = vi.fn();
       const mockHeaderGroups = [
         {
@@ -1421,7 +1408,7 @@ describe("experiment-data-utils", () => {
       expect(regularHeader).toHaveClass("cursor-pointer");
 
       // Click to trigger sort
-      fireEvent.click(regularHeader as HTMLElement);
+      await userEvent.click(regularHeader as HTMLElement);
 
       // Should be called with the actual column name and type
       expect(mockOnSort).toHaveBeenCalledWith("regularColumn", "STRING");

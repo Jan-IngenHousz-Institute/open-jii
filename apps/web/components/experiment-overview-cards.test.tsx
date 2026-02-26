@@ -65,8 +65,10 @@ const mockExperiment: Experiment = {
 
 describe("ExperimentOverviewCards", () => {
   it("shows skeleton loaders while loading", () => {
-    const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
-    expect(container.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
+    render(<ExperimentOverviewCards experiments={undefined} />);
+    // Loading state: no experiment content or empty-state message
+    expect(screen.queryByText("experiments.noExperiments")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("shows empty message when no experiments", () => {

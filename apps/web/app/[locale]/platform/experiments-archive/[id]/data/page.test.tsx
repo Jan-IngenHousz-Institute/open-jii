@@ -1,16 +1,13 @@
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import React, { use } from "react";
+import { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import { ExperimentTableName } from "@repo/api";
 
 import ExperimentDataPage from "./page";
-
-globalThis.React = React;
 
 // Mock useExperiment hook
 vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
@@ -20,11 +17,6 @@ vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
 // Mock translation hook
 vi.mock("@repo/i18n/client", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
-}));
-
-// Mock useLocale hook
-vi.mock("~/hooks/useLocale", () => ({
-  useLocale: () => "en-US",
 }));
 
 // Mock useExperimentTables hook
@@ -98,11 +90,6 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
       onClick={() => onOpenChange(!open)}
     />
   ),
-}));
-
-// Mock next/navigation notFound
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
 }));
 
 const mockTablesData = [
