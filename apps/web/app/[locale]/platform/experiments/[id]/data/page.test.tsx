@@ -10,6 +10,22 @@ import ExperimentDataPage from "./page";
 
 globalThis.React = React;
 
+// Mock env
+vi.mock("~/env", () => ({
+  env: {
+    NEXT_PUBLIC_DOCS_URL: "https://docs.openjii.org",
+  },
+}));
+
+// Mock next/link
+vi.mock("next/link", () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 // Mock React.use
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
@@ -280,6 +296,7 @@ describe("ExperimentDataPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
+      expect(screen.getByText("experimentData.readMore")).toBeInTheDocument();
     });
   });
 
