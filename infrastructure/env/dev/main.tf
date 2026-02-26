@@ -745,7 +745,7 @@ module "project_transfer_job" {
       parameters = {
         catalog_name        = module.databricks_catalog.catalog_name
         ENVIRONMENT         = upper(var.environment)
-        PHOTOSYNQ_DATA_PATH = "/Volumes/${module.databricks_catalog.catalog_name}/default/hackathon_data_volume/photosynq_data"
+        PHOTOSYNQ_DATA_PATH = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/data-legacy/photosynq_data"
       }
     }
   ]

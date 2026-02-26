@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 # DBTITLE 1,Configuration
 CATALOG_NAME = spark.conf.get("catalog_name", "open_jii_data_hackathon")
 CENTRUM_SCHEMA = "centrum"
-PHOTOSYNQ_DATA_PATH = spark.conf.get("PHOTOSYNQ_DATA_PATH", f"/Volumes/{CATALOG_NAME}/default/hackathon_data_volume/photosynq_data")
-ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+PHOTOSYNQ_DATA_PATH = spark.conf.get("PHOTOSYNQ_DATA_PATH")
+ENVIRONMENT = spark.conf.get("ENVIRONMENT").lower()
 VOLUME_BASE = f"/Volumes/{CATALOG_NAME}/centrum/data-imports"
 TRANSFER_TABLE = f"{CATALOG_NAME}.{CENTRUM_SCHEMA}.openjii_project_transfer_requests"
 
