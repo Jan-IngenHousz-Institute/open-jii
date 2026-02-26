@@ -176,7 +176,7 @@ export function DataSourceStep({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {!!tablesError ? (
+                        {tablesError ? (
                           <div className="text-destructive px-2 py-1.5 text-sm">
                             {t("form.dataSource.failedToLoadTables")}
                           </div>
