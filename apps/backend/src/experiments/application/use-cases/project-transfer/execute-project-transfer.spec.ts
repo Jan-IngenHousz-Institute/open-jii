@@ -1,7 +1,6 @@
 import type { ProjectTransferWebhookPayload } from "@repo/api";
 
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import {
   AppError,
   assertFailure,
@@ -12,6 +11,7 @@ import {
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
@@ -36,7 +36,7 @@ describe("ExecuteProjectTransferUseCase", () => {
     vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
 
     // Default: Email sending succeeds
-    const emailAdapter = testApp.module.get(EMAIL_PORT);
+    const emailAdapter = testApp.module.get<EmailPort>(EMAIL_PORT);
     vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(success(undefined));
   });
 
@@ -287,7 +287,7 @@ describe("ExecuteProjectTransferUseCase", () => {
     });
 
     it("should send project transfer complete email after successful transfer", async () => {
-      const emailAdapter = testApp.module.get(EMAIL_PORT);
+      const emailAdapter = testApp.module.get<EmailPort>(EMAIL_PORT);
       const emailSpy = vi
         .spyOn(emailAdapter, "sendProjectTransferComplete")
         .mockResolvedValue(success(undefined));
@@ -305,7 +305,7 @@ describe("ExecuteProjectTransferUseCase", () => {
     });
 
     it("should succeed even when email sending fails (non-fatal)", async () => {
-      const emailAdapter = testApp.module.get(EMAIL_PORT);
+      const emailAdapter = testApp.module.get<EmailPort>(EMAIL_PORT);
       vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(
         failure({
           message: "Email service unavailable",
