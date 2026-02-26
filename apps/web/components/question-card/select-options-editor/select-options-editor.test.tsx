@@ -36,10 +36,11 @@ describe("SelectOptionsEditor", () => {
     expect(inputs[1]).toHaveValue("Option B");
   });
 
-  it("calls onUpdateOption when option text changes", () => {
+  it("calls onUpdateOption when option text changes", async () => {
     const mockOnUpdateOption = vi.fn();
     render(<SelectOptionsEditor options={["Option 1"]} onUpdateOption={mockOnUpdateOption} />);
 
+    const user = userEvent.setup();
     const input = screen.getByPlaceholderText("questionCard.answerOptionPlaceholder");
     // fireEvent: controlled component without state wrapper - userEvent.type fires per-character
     fireEvent.change(input, { target: { value: "Updated Option" } });

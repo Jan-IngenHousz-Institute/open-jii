@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api";
 
+import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import ExperimentVisualizationsDisplay from "./experiment-visualizations-display";
 
 vi.mock("./experiment-visualization-renderer", () => ({

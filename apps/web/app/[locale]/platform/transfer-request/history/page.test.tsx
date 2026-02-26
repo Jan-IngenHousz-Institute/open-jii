@@ -188,7 +188,7 @@ describe("<TransferRequestHistoryPage />", () => {
         ),
       });
 
-      render(<TransferRequestHistoryPage />);
+      const { container } = render(<TransferRequestHistoryPage />);
 
       await waitFor(() => {
         const scrollContainer = document.querySelector('[class*="overflow-y-auto"]');

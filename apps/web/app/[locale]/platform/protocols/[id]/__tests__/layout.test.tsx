@@ -9,6 +9,9 @@ import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
+import { contract } from "@repo/api";
+import { useSession } from "@repo/auth/client";
+
 import ProtocolLayout from "../layout";
 
 vi.mock("@/components/error-display", () => ({

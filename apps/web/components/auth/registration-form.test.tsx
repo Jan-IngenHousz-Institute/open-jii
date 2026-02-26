@@ -2,6 +2,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
 import { authClient } from "@repo/auth/client";
 
 import { RegistrationForm } from "../auth/registration-form";
@@ -52,6 +53,8 @@ describe("RegistrationForm", () => {
     termsData,
     userEmail: "test@example.com",
   };
+
+  let spy: ReturnType<typeof server.mount>;
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<
@@ -115,7 +118,7 @@ describe("RegistrationForm", () => {
     await waitFor(() => {
       expect(screen.getByText("registration.acceptTermsError")).toBeInTheDocument();
     });
-    expect(createUserProfileMock).not.toHaveBeenCalled();
+    expect(spy.called).toBe(false);
   });
 
   it("submits form successfully when terms are accepted", async () => {
@@ -130,8 +133,11 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalledWith({
-        body: { firstName: "Jane", lastName: "Doe", organization: "Acme" },
+      expect(spy.called).toBe(true);
+      expect(spy.body).toMatchObject({
+        firstName: "Jane",
+        lastName: "Doe",
+        organization: "Acme",
       });
     });
   });
@@ -172,8 +178,7 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(spy.called).toBe(true);
       expect(router.push).toHaveBeenCalledWith("/platform");
     });
   });
@@ -237,16 +242,18 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(spy.called).toBe(true);
       expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
     });
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(router.push).not.toHaveBeenCalled();
   });
 
   it("handles form submission error and resets pending state", async () => {
-    createUserProfileMock.mockRejectedValue(new Error("Network error"));
+    spy = server.mount(contract.users.createUserProfile, {
+      body: { message: "Network error" },
+      status: 500,
+    });
 
     render(<RegistrationForm {...defaultProps} />);
 
@@ -262,7 +269,7 @@ describe("RegistrationForm", () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(spy.called).toBe(true);
     });
 
     await waitFor(() => {
@@ -271,8 +278,10 @@ describe("RegistrationForm", () => {
   });
 
   it("prevents multiple submissions when already pending", async () => {
-    createUserProfileMock.mockImplementation(() => {
-      return new Promise((resolve) => setTimeout(resolve, 100));
+    spy = server.mount(contract.users.createUserProfile, {
+      body: {},
+      status: 201,
+      delay: 999_999,
     });
 
     render(<RegistrationForm {...defaultProps} />);
@@ -294,7 +303,7 @@ describe("RegistrationForm", () => {
     // Second click while pending
     await user.click(submitButton);
 
-    expect(createUserProfileMock).toHaveBeenCalledTimes(1);
+    expect(spy.callCount).toBe(1);
   });
 
   it("shows validation error if firstName is too short", async () => {

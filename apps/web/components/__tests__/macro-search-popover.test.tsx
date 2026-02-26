@@ -39,6 +39,7 @@ function renderPopover(over: Partial<React.ComponentProps<typeof MacroSearchPopo
 describe("<MacroSearchPopover />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useLocale).mockReturnValue("en-US");
   });
 
   it("renders with correct structure", () => {

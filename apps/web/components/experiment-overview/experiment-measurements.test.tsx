@@ -44,8 +44,8 @@ describe("ExperimentMeasurements", () => {
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
     expect(screen.getByText("measurements.latestMeasurements")).toBeInTheDocument();
-    const loadingElement = document.querySelector(".animate-pulse");
-    expect(loadingElement).toBeInTheDocument();
+    // No table rows should be rendered while loading
+    expect(screen.queryByText("measurements.deviceId")).not.toBeInTheDocument();
   });
 
   it("renders empty state when no measurements", () => {

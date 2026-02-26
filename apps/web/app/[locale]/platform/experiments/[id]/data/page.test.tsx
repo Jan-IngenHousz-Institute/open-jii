@@ -182,6 +182,7 @@ describe("ExperimentDataPage", () => {
     mountDefaults();
     render(<ExperimentDataPage params={defaultProps.params} />);
 
+    // Measurements is active by default
     await waitFor(() => {
       expect(screen.getByRole("tabpanel")).toBeInTheDocument();
     });

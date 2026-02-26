@@ -10,7 +10,9 @@ vi.mock("../../shared/display-options-section", () => ({
 }));
 
 HTMLElement.prototype.hasPointerCapture = () => false;
-HTMLElement.prototype.scrollIntoView = () => {};
+HTMLElement.prototype.scrollIntoView = () => {
+  // noop
+};
 
 describe("LineChartAppearanceConfigurator", () => {
   it("should render display options section", () => {
