@@ -15,7 +15,7 @@ globalThis.React = React;
 // Mock env
 vi.mock("~/env", () => ({
   env: {
-    NEXT_PUBLIC_DOCS_URL: "https://docs.openjii.org",
+    NEXT_PUBLIC_DOCS_URL: "http://localhost:3010",
   },
 }));
 
