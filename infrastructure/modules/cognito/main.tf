@@ -6,9 +6,9 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_cognito_identity_pool" "this" {
   identity_pool_name               = var.identity_pool_name
-  allow_unauthenticated_identities = true
+  allow_unauthenticated_identities = var.allow_unauthenticated_identities
 
-  developer_provider_name = local.developer_provider_name_full
+  developer_provider_name = var.create_auth_role ? local.developer_provider_name_full : null
 }
 
 resource "aws_iam_role" "unauth" {
@@ -59,6 +59,7 @@ resource "aws_iam_role_policy_attachment" "unauth_iot_attach" {
 }
 
 resource "aws_iam_role" "auth" {
+  count = var.create_auth_role ? 1 : 0
   name = "${var.identity_pool_name}-auth-role"
 
   assume_role_policy = jsonencode({
@@ -81,14 +82,15 @@ resource "aws_iam_role" "auth" {
 
 resource "aws_cognito_identity_pool_roles_attachment" "this" {
   identity_pool_id = aws_cognito_identity_pool.this.id
-
+  
   roles = {
-    authenticated   = aws_iam_role.auth.arn
+    authenticated   = var.create_auth_role ? aws_iam_role.auth[0].arn : null
     unauthenticated = aws_iam_role.unauth.arn
   }
 }
 
 resource "aws_iam_policy" "auth_iot" {
+  count       = var.create_auth_role ? 1 : 0
   name        = "${var.identity_pool_name}-auth-iot"
   description = "Allow authenticated identities to connect and publish to experiment/data_ingest/v1"
 
@@ -110,6 +112,7 @@ resource "aws_iam_policy" "auth_iot" {
 }
 
 resource "aws_iam_role_policy_attachment" "auth_iot_attach" {
-  role       = aws_iam_role.auth.name
-  policy_arn = aws_iam_policy.auth_iot.arn
+  count      = var.create_auth_role ? 1 : 0
+  role       = aws_iam_role.auth[0].name
+  policy_arn = aws_iam_policy.auth_iot[0].arn
 }

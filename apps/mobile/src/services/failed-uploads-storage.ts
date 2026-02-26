@@ -43,6 +43,16 @@ export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload]
   }
 }
 
+// Update a single failed upload by key (e.g. to add/update annotations)
+export async function updateFailedUpload(key: string, data: FailedUpload): Promise<void> {
+  try {
+    if (!key.startsWith(UPLOAD_KEY_PREFIX)) return;
+    await AsyncStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error("Failed to update upload:", error);
+  }
+}
+
 // Delete a single upload by key
 export async function removeFailedUpload(key: string): Promise<void> {
   try {

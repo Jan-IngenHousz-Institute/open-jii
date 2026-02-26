@@ -6,6 +6,7 @@ import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
+import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
 
 interface MacroInfo {
   id: string;
@@ -19,6 +20,7 @@ interface PrepareMeasurementArgs {
   macro: MacroInfo | null;
   timestamp: string;
   questions: AnswerData[];
+  commentText?: string;
 }
 
 function prepareMeasurementForUpload({
@@ -27,6 +29,7 @@ function prepareMeasurementForUpload({
   macro,
   timestamp,
   questions,
+  commentText,
 }: PrepareMeasurementArgs) {
   if ("sample" in rawMeasurement && rawMeasurement.sample) {
     const samples = Array.isArray(rawMeasurement.sample)
@@ -39,6 +42,7 @@ function prepareMeasurementForUpload({
   }
 
   const macros: MacroInfo[] = macro ? [macro] : [];
+  const annotations = commentText ? buildAnnotationsWithComment(commentText) : [];
 
   return {
     questions,
@@ -46,6 +50,7 @@ function prepareMeasurementForUpload({
     timestamp,
     user_id: userId,
     ...rawMeasurement,
+    annotations,
   };
 }
 
@@ -63,6 +68,7 @@ export function useMeasurementUpload() {
       userId,
       macro,
       questions,
+      commentText,
     }: {
       rawMeasurement: any;
       timestamp: string;
@@ -72,6 +78,7 @@ export function useMeasurementUpload() {
       userId: string;
       macro: { id: string; name: string; filename: string } | null;
       questions: AnswerData[];
+      commentText?: string;
     }) => {
       if (typeof rawMeasurement !== "object") {
         return;
@@ -83,6 +90,7 @@ export function useMeasurementUpload() {
         macro,
         timestamp,
         questions,
+        commentText,
       });
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });

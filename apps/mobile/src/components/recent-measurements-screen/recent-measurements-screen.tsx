@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
-import { MeasurementItem } from "~/components/measurement-item";
+import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
+import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
 import { useAllMeasurements } from "~/hooks/use-all-measurements";
 import type {
   MeasurementFilter,
@@ -13,15 +14,17 @@ import type {
 } from "~/hooks/use-all-measurements";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
-import { removeFailedUpload as removeFailedUploadFromStorage } from "~/services/failed-uploads-storage";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
+import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
+  const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const { measurements, invalidate } = useAllMeasurements(filter);
-  const { uploadAll, isUploading, uploadOne } = useFailedUploads();
+  const { uploadAll, isUploading, uploadOne, removeFailedUpload, updateMeasurementComment } =
+    useFailedUploads();
 
   const handleSyncAll = () => {
     Alert.alert(
@@ -82,7 +85,7 @@ export function RecentMeasurementsScreen() {
           if (status === "synced") {
             await removeSuccessfulUpload(id);
           } else {
-            await removeFailedUploadFromStorage(id);
+            await removeFailedUpload(id);
           }
           invalidate();
         }) as any,
@@ -190,13 +193,19 @@ export function RecentMeasurementsScreen() {
           data={measurements}
           keyExtractor={(item) => item.key}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 0, paddingBottom: 16 }}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           renderItem={({ item: measurement }) => (
-            <MeasurementItem
+            <SwipeableMeasurementRow
               id={measurement.key}
               timestamp={measurement.timestamp}
               experimentName={measurement.experimentName}
               status={measurement.status}
               onPress={() => handleItemPress(measurement)}
+              onComment={
+                measurement.status === "unsynced"
+                  ? () => setSelectedForComment(measurement)
+                  : undefined
+              }
               onDelete={() =>
                 handleDelete(measurement.key, measurement.status, measurement.experimentName)
               }
@@ -215,6 +224,21 @@ export function RecentMeasurementsScreen() {
           visible={!!selectedMeasurement}
           measurement={selectedMeasurement}
           onClose={() => setSelectedMeasurement(null)}
+        />
+      )}
+
+      {selectedForComment && (
+        <CommentModal
+          visible={!!selectedForComment}
+          initialText={getCommentFromMeasurementResult(
+            selectedForComment.data.measurementResult as Record<string, unknown>,
+          )}
+          onSave={async (text) => {
+            await updateMeasurementComment(selectedForComment.key, selectedForComment.data, text);
+            invalidate();
+            setSelectedForComment(null);
+          }}
+          onCancel={() => setSelectedForComment(null)}
         />
       )}
     </View>

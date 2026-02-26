@@ -82,7 +82,8 @@ module "cognito" {
   region                           = var.aws_region
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
-  allow_unauthenticated_identities = false
+  allow_unauthenticated_identities = true # change after mobile app is ready and we want to disable unauthenticated access
+  create_auth_role                 = true
 }
 
 module "vpc" {
@@ -836,6 +837,14 @@ module "opennext_waf" {
   environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
+
+  large_body_bypass_routes = [
+    {
+      search_string         = "/ingest"
+      positional_constraint = "STARTS_WITH"
+      method                = "POST"
+    }
+  ]
 
   tags = {
     Environment = var.environment
