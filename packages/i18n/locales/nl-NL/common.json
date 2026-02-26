@@ -153,7 +153,8 @@
     "invitationSent": "Uitnodiging succesvol verzonden",
     "memberRemoved": "Lid succesvol verwijderd",
     "memberManagementError": "Fout bij het laden van leden. Probeer het opnieuw.",
-    "currentMembers": "Huidige leden"
+    "currentMembers": "Huidige leden",
+    "pendingInvite": "Uitnodiging in afwachting"
   },
   "jii": {
     "institute": "Jan IngenHousz Instituut",

@@ -16,6 +16,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components";
@@ -305,7 +306,7 @@ export function ExperimentMemberManagement({
                       <SelectContent>
                         <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
                         <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
-                        <div className="my-1 border-t" />
+                        <SelectSeparator />
                         <SelectItem
                           value="revoke"
                           className="text-destructive focus:text-destructive"

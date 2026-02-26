@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { EmailPort as ExperimentsEmailPort } from "../../../../experiments/core/ports/email.port";
 import { EmailPort as UsersEmailPort } from "../../../../users/core/ports/email.port";
-import { Result, success } from "../../../utils/fp-utils";
+import { Result } from "../../../utils/fp-utils";
 import { NotificationsService } from "./notifications/notifications.service";
 
 @Injectable()
@@ -60,14 +60,12 @@ export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort {
     role: string,
     email: string,
   ): Promise<Result<void>> {
-    await this.notificationService.sendAddedUserNotification(
+    return this.notificationService.sendAddedUserNotification(
       resourceId,
       resourceName,
       actor,
       role,
       email,
     );
-
-    return success(undefined);
   }
 }

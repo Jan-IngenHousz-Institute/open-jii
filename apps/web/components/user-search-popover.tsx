@@ -130,33 +130,37 @@ export function UserSearchPopover({
   );
 }
 
-function SearchInput({
-  displayValue,
-  handleSearchChange,
-  placeholder,
-  isAddingUser,
-  disabled,
-  hasSelection,
-  searchValue,
-  handleClear,
-  selectedRole,
-  onRoleChange,
-  t,
+const SearchInput = React.forwardRef<
+  HTMLDivElement,
+  {
+    displayValue: string | null;
+    handleSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder: string;
+    isAddingUser: boolean;
+    disabled: boolean;
+    hasSelection: boolean;
+    searchValue: string;
+    handleClear: () => void;
+    selectedRole: string;
+    onRoleChange?: (role: string) => void;
+    t: (key: string) => string;
+  }
+>(function SearchInput(
+  {
+    displayValue,
+    handleSearchChange,
+    placeholder,
+    isAddingUser,
+    disabled,
+    hasSelection,
+    searchValue,
+    handleClear,
+    selectedRole,
+    onRoleChange,
+    t,
+  },
   ref,
-}: {
-  displayValue: string | null;
-  handleSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string;
-  isAddingUser: boolean;
-  disabled: boolean;
-  hasSelection: boolean;
-  searchValue: string;
-  handleClear: () => void;
-  selectedRole: string;
-  onRoleChange?: (role: string) => void;
-  t: (key: string) => string;
-  ref?: React.Ref<HTMLDivElement>;
-}) {
+) {
   return (
     <div
       ref={ref}
@@ -206,7 +210,7 @@ function SearchInput({
       )}
     </div>
   );
-}
+});
 
 function InviteByEmailButton({
   onClick,

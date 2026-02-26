@@ -103,13 +103,23 @@ export class CreateInvitationUseCase {
       return failure(AppError.internal("Failed to resolve resource name"));
     }
 
-    await this.emailPort.sendInvitationEmail(
+    const emailResult = await this.emailPort.sendInvitationEmail(
       resourceId,
       resourceNameResult.value,
       actor,
       invitation.role,
       invitation.email,
     );
+
+    if (emailResult.isFailure()) {
+      this.logger.error({
+        msg: "Failed to send invitation email, invitation was still created",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "create-invitation",
+        resourceId,
+        email: invitation.email,
+      });
+    }
 
     return success(invitation);
   }
