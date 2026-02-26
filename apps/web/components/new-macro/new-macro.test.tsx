@@ -22,6 +22,7 @@ import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import { NewMacroForm } from "./new-macro";

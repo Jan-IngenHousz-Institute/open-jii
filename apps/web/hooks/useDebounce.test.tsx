@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { useDebounce } from "./useDebounce";

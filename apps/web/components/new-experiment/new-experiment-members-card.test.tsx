@@ -1,41 +1,29 @@
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
-import { useForm } from "react-hook-form";
+import { createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderWithForm, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { CreateExperimentBody, UserProfile } from "@repo/api";
+import { contract } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
 
-globalThis.React = React;
-
 /* ---------------------------------- Mocks ---------------------------------- */
 
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({
+// Override global session mock with a logged-in user
+beforeEach(() => {
+  vi.mocked(useSession).mockReturnValue({
     data: { user: { id: "current-user-id" } },
-  }),
-}));
+  } as ReturnType<typeof useSession>);
+});
 
-const useDebounceMock = vi.fn();
+// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
-  useDebounce: (val: string) => useDebounceMock(val) as [string, boolean],
+  useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 
-const useUserSearchMock = vi.fn();
-vi.mock("@/hooks/useUserSearch", () => ({
-  useUserSearch: () => useUserSearchMock() as { data: { body: UserProfile[] }; isLoading: boolean },
-}));
-
-vi.mock("@/hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate", () => ({
-  useExperimentMemberRoleUpdate: () => ({
-    mutateAsync: vi.fn(),
-    mutate: vi.fn(),
-    isPending: false,
-  }),
-}));
-
+// MemberList — sibling component (Rule 5)
 vi.mock("../current-members-list/current-members-list", () => ({
   MemberList: ({
     members,
@@ -46,9 +34,9 @@ vi.mock("../current-members-list/current-members-list", () => ({
     onRemoveMember: (userId: string) => void;
     adminCount?: number;
   }) => (
-    <div data-testid="member-list">
+    <div>
       {members?.map((m) => (
-        <div key={m.userId} data-testid={`member-${m.userId}`}>
+        <div key={m.userId}>
           <span>{m.firstName ?? m.user?.firstName}</span>
           <button
             aria-label={`remove member ${m.firstName ?? m.user?.firstName}`}
@@ -58,29 +46,18 @@ vi.mock("../current-members-list/current-members-list", () => ({
           </button>
         </div>
       ))}
-      {adminCount !== undefined && <span data-testid="admin-count">{adminCount} admin(s)</span>}
+      {adminCount !== undefined && <p>{adminCount} admin(s)</p>}
     </div>
   ),
 }));
 
 /* ---------------------------------- Helpers ---------------------------------- */
 
-const mkProfile = (id: string, name: string): UserProfile => ({
-  userId: id,
-  firstName: name,
-  lastName: "Tester",
-  email: `${name.toLowerCase()}@mail.com`,
-  bio: null,
-  activated: null,
-  organization: undefined,
-});
-
-// Use the actual schema type instead of custom interface
 type FormMember = NonNullable<CreateExperimentBody["members"]>[number];
 
-function renderWithForm(initialMembers: FormMember[] = []) {
-  function Host() {
-    const methods = useForm<CreateExperimentBody>({
+function renderMembersCard(initialMembers: FormMember[] = []) {
+  return renderWithForm<CreateExperimentBody>((form) => <NewExperimentMembersCard form={form} />, {
+    useFormProps: {
       defaultValues: {
         name: "Test Experiment",
         visibility: "private",
@@ -89,100 +66,72 @@ function renderWithForm(initialMembers: FormMember[] = []) {
         description: "",
         members: initialMembers,
       },
-    });
-    return <NewExperimentMembersCard form={methods} />;
-  }
-
-  const queryClient = new QueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <Host />
-    </QueryClientProvider>,
-  );
+    },
+  });
 }
 
 const users = [
-  mkProfile("current-user-id", "Me"), // should be filtered out
-  mkProfile("user-1", "Alice"),
-  mkProfile("user-2", "Bob"),
+  createUserProfile({ userId: "current-user-id", firstName: "Me" }),
+  createUserProfile({ userId: "user-1", firstName: "Alice", lastName: "Tester" }),
+  createUserProfile({ userId: "user-2", firstName: "Bob", lastName: "Tester" }),
 ];
-
-/* ---------------------------------- Setup ---------------------------------- */
-
-beforeEach(() => {
-  vi.clearAllMocks();
-
-  useDebounceMock.mockImplementation((v: string) => [v, true]);
-  useUserSearchMock.mockImplementation(() => ({
-    data: { body: users },
-    isLoading: false,
-  }));
-});
 
 /* ---------------------------------- Tests ---------------------------------- */
 
 describe("<NewExperimentMembersCard />", () => {
   it("renders title and description", () => {
-    renderWithForm([]);
-
+    server.mount(contract.users.searchUsers, { body: [] });
+    renderMembersCard([]);
     expect(screen.getByText("newExperiment.addMembersTitle")).toBeInTheDocument();
     expect(screen.getByText("newExperiment.addMembersDescription")).toBeInTheDocument();
   });
 
   it("adds a member after selecting from popover and clicking Add", async () => {
-    renderWithForm([]);
+    server.mount(contract.users.searchUsers, { body: users });
+    renderMembersCard([]);
 
-    // Type in search to trigger user search
     const searchInput = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
     await userEvent.clear(searchInput);
     await userEvent.type(searchInput, "Alice");
 
-    // Wait for and select user from results
     await waitFor(() => {
       expect(screen.getByText("Alice Tester")).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getByText("Alice Tester"));
 
-    // Click Add button
     await waitFor(() => {
-      const addBtn = screen.getByRole("button", { name: "common.add" });
-      expect(addBtn).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: "common.add" })).not.toBeDisabled();
     });
 
     await userEvent.click(screen.getByRole("button", { name: "common.add" }));
 
-    // Verify member was added to the list
     await waitFor(() => {
       expect(screen.getByText(/Alice/)).toBeInTheDocument();
     });
   });
 
   it("removes a member when remove button is clicked", async () => {
-    renderWithForm([{ userId: "user-1", role: "member", firstName: "Alice" }]);
+    server.mount(contract.users.searchUsers, { body: users });
+    renderMembersCard([{ userId: "user-1", role: "member", firstName: "Alice" }]);
 
-    // Member should be visible initially
     expect(screen.getByText(/Alice/)).toBeInTheDocument();
 
-    // Click remove button
-    const removeButton = screen.getByLabelText(/remove.*alice/i);
-    await userEvent.click(removeButton);
+    await userEvent.click(screen.getByLabelText(/remove.*alice/i));
 
-    // Member should be removed
     await waitFor(() => {
       expect(screen.queryByText(/Alice/)).not.toBeInTheDocument();
     });
   });
 
   it("computes adminCount correctly", () => {
-    renderWithForm([
+    server.mount(contract.users.searchUsers, { body: [] });
+    renderMembersCard([
       { userId: "u1", role: "admin", firstName: "Admin1" },
       { userId: "u2", role: "admin", firstName: "Admin2" },
       { userId: "u3", role: "member", firstName: "Member1" },
     ]);
 
-    // Verify the admin count is displayed correctly
-    const adminCount = screen.getByTestId("admin-count");
-    expect(adminCount).toHaveTextContent("2");
+    expect(screen.getByText("2 admin(s)")).toBeInTheDocument();
   });
 });

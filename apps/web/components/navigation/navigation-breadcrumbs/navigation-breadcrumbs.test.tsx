@@ -1,61 +1,62 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { Breadcrumbs } from "./navigation-breadcrumbs";
 
-const { mockUseBreadcrumbs } = vi.hoisted(() => ({ mockUseBreadcrumbs: vi.fn() }));
-vi.mock("@/hooks/breadcrumbs/useBreadcrumbs", () => ({
-  useBreadcrumbs: mockUseBreadcrumbs,
+const { enrichPathSegmentsMock } = vi.hoisted(() => ({
+  enrichPathSegmentsMock: vi.fn(),
+}));
+
+vi.mock("~/app/actions/breadcrumbs", () => ({
+  enrichPathSegments: enrichPathSegmentsMock,
 }));
 
 describe("Breadcrumbs", () => {
-  it("returns null when no segments", () => {
-    mockUseBreadcrumbs.mockReturnValue({ data: [] });
-    const { container } = render(<Breadcrumbs locale="en-US" />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("returns null when data is undefined", () => {
-    mockUseBreadcrumbs.mockReturnValue({ data: undefined });
-    const { container } = render(<Breadcrumbs locale="en-US" />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("renders breadcrumb segments", () => {
-    mockUseBreadcrumbs.mockReturnValue({
-      data: [
-        { segment: "platform", href: "/en-US/platform", title: "platform" },
-        { segment: "experiments", href: "/en-US/platform/experiments", title: "experiments" },
-      ],
-    });
+  it("renders nothing when no segments", async () => {
+    enrichPathSegmentsMock.mockResolvedValue([]);
 
     render(<Breadcrumbs locale="en-US" />);
 
-    expect(screen.getByText("breadcrumbs.platform")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("renders breadcrumb segments", async () => {
+    enrichPathSegmentsMock.mockResolvedValue([
+      { segment: "platform", href: "/en-US/platform", title: "platform" },
+      { segment: "experiments", href: "/en-US/platform/experiments", title: "experiments" },
+    ]);
+
+    render(<Breadcrumbs locale="en-US" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("breadcrumbs.platform")).toBeInTheDocument();
+    });
     expect(screen.getByText("breadcrumbs.experiments")).toBeInTheDocument();
   });
 
-  it("uses enriched title when different from segment", () => {
-    mockUseBreadcrumbs.mockReturnValue({
-      data: [
-        { segment: "experiments", href: "/en-US/platform/experiments", title: "My Experiment" },
-      ],
-    });
+  it("uses enriched title when different from segment", async () => {
+    enrichPathSegmentsMock.mockResolvedValue([
+      { segment: "experiments", href: "/en-US/platform/experiments", title: "My Experiment" },
+    ]);
 
     render(<Breadcrumbs locale="en-US" />);
 
-    expect(screen.getByText("My Experiment")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("My Experiment")).toBeInTheDocument();
+    });
   });
 
-  it("handles dashed segments as title case", () => {
-    mockUseBreadcrumbs.mockReturnValue({
-      data: [{ segment: "my-project", href: "/en-US/platform/my-project", title: "my-project" }],
-    });
+  it("handles dashed segments as title case", async () => {
+    enrichPathSegmentsMock.mockResolvedValue([
+      { segment: "my-project", href: "/en-US/platform/my-project", title: "my-project" },
+    ]);
 
     render(<Breadcrumbs locale="en-US" />);
 
-    expect(screen.getByText("My Project")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("My Project")).toBeInTheDocument();
+    });
   });
 });

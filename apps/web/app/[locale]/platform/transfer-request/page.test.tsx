@@ -74,12 +74,10 @@ describe("<TransferRequestPage />", () => {
     });
 
     it("renders notes as an unordered list", async () => {
-      const { container } = await renderTransferRequestPage();
+      await renderTransferRequestPage();
 
-      const list = container.querySelector("ul");
-      expect(list).toBeInTheDocument();
-      expect(list).toHaveClass("list-outside");
-      expect(list).toHaveClass("list-disc");
+      const list = screen.getByRole("list");
+      expect(list).toHaveClass("list-outside", "list-disc");
     });
   });
 

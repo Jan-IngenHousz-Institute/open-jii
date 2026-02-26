@@ -5,7 +5,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataUploadModal } from "./data-upload-modal";
 
-globalThis.React = React;
+// Mock the step components
+vi.mock("./steps/sensor-selection-step", () => ({
+  SensorSelectionStep: ({ onSensorSelect }: { onSensorSelect: (id: string) => void }) => (
+    <div data-testid="sensor-selection-step">
+      <button onClick={() => onSensorSelect("ambyte")} data-testid="select-ambyte">
+        Select Ambyte
+      </button>
+    </div>
+  ),
+  SENSOR_FAMILIES: [
+    {
+      id: "ambyte",
+      label: "Ambyte",
+      disabled: false,
+      description: "uploadModal.sensorTypes.ambyte.description",
+    },
+  ],
+}));
 
 vi.mock("./steps/file-upload-step", () => ({
   FileUploadStep: ({

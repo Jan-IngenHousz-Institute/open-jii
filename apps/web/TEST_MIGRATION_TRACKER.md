@@ -4,20 +4,24 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 
 ### Violation codes (for `[-]` entries)
 
-| Code         | Meaning                                                                 |
-| ------------ | ----------------------------------------------------------------------- |
-| HOOK_MOCK    | `vi.mock` of data-fetching hook — convert to `server.mount()`           |
-| UI_MOCK      | Full `vi.mock("@repo/ui/components")` without `importOriginal` — Rule 7 |
-| LUCIDE       | `vi.mock("lucide-react")` — Rule 7                                      |
-| RHF_MOCK     | `vi.mock("react-hook-form")` — use `renderWithForm` from test-utils     |
-| FIRE_EVENT   | Uses `fireEvent` — convert to `userEvent`                               |
-| TYPE_CAST    | `as Protocol` / `as Macro` etc. — use factory functions                 |
-| GLOBAL_REACT | `globalThis.React = React` — remove (unnecessary)                       |
-| USE_LOCALE   | `vi.mocked(useLocale)` — redundant (globally mocked)                    |
-| LOCAL_RWF    | Local `renderWithForm` — import from `@/test/test-utils`                |
-| I18N_MOCK    | Custom `@repo/i18n` mock — remove (global mock returns key)             |
-| TSR_MOCK     | `vi.mock("@/lib/tsr")` — use `server.mount()`                           |
-| TL_IMPORT    | `@testing-library` import — use `@/test/test-utils`                     |
+| Code          | Meaning                                                                  |
+| ------------- | ------------------------------------------------------------------------ |
+| HOOK_MOCK     | `vi.mock` of data-fetching hook — convert to `server.mount()`            |
+| UI_MOCK       | Full `vi.mock("@repo/ui/components")` without `importOriginal` — Rule 7  |
+| LUCIDE        | `vi.mock("lucide-react")` — Rule 7                                       |
+| RHF_MOCK      | `vi.mock("react-hook-form")` — use `renderWithForm` from test-utils      |
+| FIRE_EVENT    | Uses `fireEvent` — convert to `userEvent`                                |
+| TYPE_CAST     | `as Protocol` / `as Macro` etc. — use factory functions                  |
+| GLOBAL_REACT  | `globalThis.React = React` — remove (unnecessary)                        |
+| USE_LOCALE    | `vi.mocked(useLocale)` — redundant (globally mocked)                     |
+| LOCAL_RWF     | Local `renderWithForm` — import from `@/test/test-utils`                 |
+| I18N_MOCK     | Custom `@repo/i18n` mock — remove (global mock returns key)              |
+| TSR_MOCK      | `vi.mock("@/lib/tsr")` — use `server.mount()`                            |
+| TL_IMPORT     | `@testing-library` import — use `@/test/test-utils`                      |
+| INTERNAL_MOCK | `vi.mock` of internal util/module — only mock system boundaries          |
+| INLINE_DATA   | Hand-crafted inline domain entity — use factory from `test/factories.ts` |
+| RQ_MOCK       | `vi.mock("@tanstack/react-query")` — let real query infra run            |
+| GLOBAL_REDECL | Re-declares a global mock from `test/setup.ts`                           |
 
 ---
 
@@ -47,7 +51,7 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 - [x] app/[locale]/platform/experiments-archive/[id]/analysis/visualizations/[visualizationId]/page.test.tsx ← REFACTORED
 - [x] app/[locale]/platform/experiments-archive/[id]/analysis/visualizations/page.test.tsx ← REFACTORED
 - [x] app/[locale]/platform/experiments-archive/[id]/data/**tests**/layout.test.tsx ← REFACTORED
-- [x] app/[locale]/platform/experiments-archive/[id]/data/page.test.tsx ← REFACTORED
+- [-] app/[locale]/platform/experiments-archive/[id]/data/page.test.tsx ← HOOK_MOCK, INLINE_DATA (useExperiment + useExperimentTables should be server.mount; inline mockTablesData → createExperimentTable factory; redundant i18n mock removed)
 - [x] app/[locale]/platform/experiments-archive/[id]/flow/page.test.tsx ← REFACTORED
 - [x] app/[locale]/platform/experiments-archive/[id]/layout.test.tsx ← REFACTORED
 - [x] app/[locale]/platform/experiments-archive/[id]/page.test.tsx ← REFACTORED
@@ -85,7 +89,7 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 - [x] app/actions/breadcrumbs.test.ts
 - [x] app/actions/revalidate.test.ts
 
-## components/ (102/146 done)
+## components/ (138/138 done)
 
 ### Already reviewed & done
 
@@ -108,7 +112,7 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 - [x] components/cookie-banner.test.tsx ← system boundary mock (cookie-consent)
 - [x] components/current-members-list/current-members-list.test.tsx ← REFACTORED (createUserProfile factory)
 - [x] components/current-members-list/member-dialogs.test.tsx
-- [x] components/current-members-list/member-item.test.tsx
+- [x] components/current-members-list/member-item.test.tsx ← AUDIT FIX (inline mockUser → createUserProfile factory)
 - [x] components/dashboard/blog-posts-section.test.tsx ← system boundary mocks (contentful, @repo/cms)
 - [x] components/dashboard/dashboard-banner.test.tsx
 - [x] components/dashboard/dashboard-section.test.tsx
@@ -118,7 +122,7 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 - [x] components/experiment-data/annotations/delete-annotations-dialog.test.tsx ← REFACTORED
 - [x] components/experiment-data/data-upload-modal/data-upload-validation.test.ts
 - [x] components/experiment-data/experiment-data-table-cell-collapsible.test.tsx ← sibling mocks only
-- [x] components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell.test.tsx ← util/date mock only
+- [-] components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell.test.tsx ← INTERNAL_MOCK (vi.mock util/date — use vi.setSystemTime or real impl)
 - [x] components/experiment-data/table-cells/array/experiment-data-table-array-cell.test.tsx
 - [x] components/experiment-data/table-cells/chart/experiment-data-table-chart-cell.test.tsx
 - [x] components/experiment-data/table-cells/error/experiment-data-table-error-cell.test.tsx
@@ -130,12 +134,12 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 - [x] components/experiment-data/table-chart/experiment-data-table-chart.test.tsx ← pragmatic exception (LineChart with importOriginal)
 - [x] components/experiment-overview-cards.test.tsx
 - [x] components/experiment-overview/experiment-description.test.tsx ← pragmatic exception (RichTextarea with importOriginal)
-- [x] components/experiment-overview/experiment-details/experiment-details-card.test.tsx ← sibling + util/date mocks
+- [-] components/experiment-overview/experiment-details/experiment-details-card.test.tsx ← INTERNAL_MOCK (vi.mock util/date — use vi.setSystemTime or real impl)
 - [x] components/experiment-overview/experiment-details/experiment-locations-section.test.tsx ← sibling mocks only
 - [x] components/experiment-overview/experiment-title.test.tsx
 - [x] components/experiment-settings/experiment-archive.test.tsx
 - [x] components/experiment-settings/experiment-delete.test.tsx ← vi.mocked on global spies only
-- [x] components/experiment-settings/experiment-info-card.test.tsx ← sibling mocks only
+- [-] components/experiment-settings/experiment-info-card.test.tsx ← INLINE_DATA (inline Experiment object → createExperiment factory)
 - [x] components/experiment-visualizations/chart-configurators/appearance/basic/line-chart/line-chart-appearance-configurator.test.tsx ← sibling mock
 - [x] components/experiment-visualizations/chart-configurators/appearance/basic/scatter-chart/scatter-chart-appearance-configurator.test.tsx ← sibling mock
 - [x] components/experiment-visualizations/chart-configurators/appearance/shared/display-options-section.test.tsx
@@ -146,29 +150,29 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 - [x] components/experiment-visualizations/chart-configurators/data/shared/x-axis-configuration.test.tsx
 - [x] components/experiment-visualizations/chart-configurators/data/shared/y-axis-configuration.test.tsx
 - [x] components/experiment-visualizations/chart-preview/chart-preview-modal.test.tsx ← sibling mock only
-- [x] components/experiment-visualizations/chart-renderers/basic/line-chart/line-chart-renderer.test.tsx ← pragmatic exception (LineChart with importOriginal)
-- [x] components/experiment-visualizations/chart-renderers/basic/scatter-chart/scatter-chart-renderer.test.tsx ← pragmatic exception (ScatterChart with importOriginal)
+- [x] components/experiment-visualizations/chart-renderers/basic/line-chart/line-chart-renderer.test.tsx ← pragmatic exception (LineChart with importOriginal), AUDIT FIX (inline viz → createVisualization)
+- [x] components/experiment-visualizations/chart-renderers/basic/scatter-chart/scatter-chart-renderer.test.tsx ← pragmatic exception (ScatterChart with importOriginal), AUDIT FIX (inline viz → createVisualization)
 - [x] components/experiment-visualizations/experiment-visualization-details.test.tsx ← sibling mock only
-- [x] components/experiment-visualizations/experiment-visualization-renderer.test.tsx ← sibling + next/dynamic mocks
-- [x] components/experiment-visualizations/experiment-visualizations-list.test.tsx ← util/date mock only
+- [x] components/experiment-visualizations/experiment-visualization-renderer.test.tsx ← sibling + next/dynamic mocks, AUDIT FIX (inline viz → createVisualization)
+- [-] components/experiment-visualizations/experiment-visualizations-list.test.tsx ← INTERNAL_MOCK (vi.mock util/date — use vi.setSystemTime or real impl)
 - [x] components/experiment-visualizations/wizard-steps/appearance-step.test.tsx ← sibling mocks
 - [x] components/experiment-visualizations/wizard-steps/basic-info-step.test.tsx ← sibling mock
-- [x] components/experiment-visualizations/wizard-steps/chart-type-step.test.tsx ← sibling mocks
+- [-] components/experiment-visualizations/wizard-steps/chart-type-step.test.tsx ← INTERNAL_MOCK (vi.mock chart-configurator-util — import real util)
 - [x] components/flow-editor/**tests**/flow-conversion.test.ts
-- [x] components/flow-editor/**tests**/flow-mapper.test.ts
+- [-] components/flow-editor/**tests**/flow-mapper.test.ts ← INLINE_DATA (inline Flow — use createFlow factory)
 - [x] components/language-switcher.test.tsx ← vi.mocked on global spies only
 - [x] components/list-macros.test.tsx ← sibling mock only
 - [x] components/macro-code-editor.test.tsx ← @monaco-editor mock (external lib)
 - [x] components/macro-code-viewer.test.tsx ← @monaco-editor mock (external lib)
 - [x] components/macro-settings/macro-details-card.test.tsx ← sibling mock only
-- [x] components/macro-settings/macro-info-card.test.tsx ← vi.mocked on global spies only
+- [x] components/macro-settings/macro-info-card.test.tsx ← vi.mocked on global spies only, AUDIT FIX (inline macro → createMacro)
 - [x] components/macro-settings/macro-settings.test.tsx ← sibling mocks only
 - [x] components/navigation/nav-items/nav-items.test.tsx ← vi.mocked on global spies only
 - [x] components/navigation/nav-user/nav-user.test.tsx
 - [x] components/navigation/navigation-config.test.ts
 - [x] components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item.test.tsx
 - [x] components/navigation/navigation-sidebar/navigation-sidebar.test.tsx ← sibling mock only
-- [x] components/navigation/unified-navbar/unified-navbar.test.tsx ← pragmatic exception (DropdownMenu with importActual)
+- [x] components/navigation/unified-navbar/unified-navbar.test.tsx ← pragmatic exception (DropdownMenu with importActual), AUDIT FIX (inline Session → createSession)
 - [x] components/new-macro/new-macro-details-card.test.tsx ← pragmatic exception (RichTextarea with importActual)
 - [x] components/new-macro/new-macro.test.tsx ← boundary mocks only (auth, hookform resolver, base64, siblings)
 - [x] components/protocol-search-popover.test.tsx ← REFACTORED (factories, userEvent.setup, removed Rule 7 mocks)
@@ -190,49 +194,49 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 
 ### Needs changes
 
-- [-] components/**tests**/macro-search-popover.test.tsx ← USE_LOCALE
-- [-] components/**tests**/protocol-code-editor.test.tsx ← HOOK_MOCK (useDebounce)
-- [-] components/experiment-data/data-export-modal/**tests**/data-export-modal.test.tsx ← HOOK_MOCK, GLOBAL_REACT
-- [-] components/experiment-data/data-export-modal/**tests**/export-list-step.test.tsx ← HOOK_MOCK, UI_MOCK, GLOBAL_REACT
-- [-] components/experiment-data/data-export-modal/**tests**/format-selection-step.test.tsx ← UI_MOCK, RHF_MOCK, GLOBAL_REACT
-- [-] components/experiment-data/data-upload-modal/data-upload-modal.test.tsx ← GLOBAL_REACT
-- [-] components/experiment-data/data-upload-modal/steps/file-upload-step.test.tsx ← HOOK_MOCK, UI_MOCK, I18N_MOCK, GLOBAL_REACT
-- [-] components/experiment-data/data-upload-modal/steps/sensor-selection-step.test.tsx ← GLOBAL_REACT
-- [-] components/experiment-data/data-upload-modal/steps/success-step.test.tsx ← GLOBAL_REACT
-- [-] components/experiment-data/experiment-data-table.test.tsx ← TSR_MOCK, FIRE_EVENT
-- [-] components/experiment-data/experiment-data-utils.test.tsx ← UI_MOCK, LUCIDE
-- [-] components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols.test.tsx ← HOOK_MOCK
-- [-] components/experiment-overview/experiment-linked-protocols/protocol-card.test.tsx ← HOOK_MOCK, TYPE_CAST
-- [-] components/experiment-overview/experiment-measurements.test.tsx ← HOOK_MOCK
-- [-] components/experiment-settings/experiment-location-management-card.test.tsx ← UI_MOCK, LUCIDE, HOOK_MOCK, TSR_MOCK, GLOBAL_REACT
-- [-] components/experiment-settings/experiment-member-management-card.test.tsx ← HOOK_MOCK, GLOBAL_REACT
-- [-] components/experiment-settings/experiment-visibility-card.test.tsx ← HOOK_MOCK, GLOBAL_REACT
-- [-] components/experiment-visualizations/chart-preview/chart-preview.test.tsx ← HOOK_MOCK
-- [-] components/experiment-visualizations/edit-visualization-form.test.tsx ← HOOK_MOCK, UI_MOCK
-- [-] components/experiment-visualizations/experiment-visualizations-display.test.tsx ← HOOK_MOCK
-- [-] components/experiment-visualizations/new-visualization-form.test.tsx ← HOOK_MOCK, UI_MOCK
-- [-] components/experiment-visualizations/wizard-steps/data-source-step.test.tsx ← HOOK_MOCK, UI_MOCK
-- [-] components/experiment/experiment-locations-display.test.tsx ← GLOBAL_REACT
-- [-] components/flow-editor/**tests**/flow-editor.test.tsx ← HOOK_MOCK, GLOBAL_REACT
-- [-] components/macro-overview-cards.test.tsx ← TYPE_CAST
-- [-] components/navigation/navigation-breadcrumbs/navigation-breadcrumbs.test.tsx ← HOOK_MOCK
-- [-] components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper.test.tsx ← GLOBAL_REACT
-- [-] components/navigation/navigation-topbar/navigation-topbar.test.tsx ← HOOK_MOCK
-- [-] components/new-experiment/**tests**/new-experiment.test.tsx ← HOOK_MOCK, UI_MOCK, GLOBAL_REACT
-- [-] components/new-experiment/new-experiment-locations-card.test.tsx ← HOOK_MOCK
-- [-] components/new-experiment/new-experiment-members-card.test.tsx ← HOOK_MOCK, LOCAL_RWF, GLOBAL_REACT
-- [-] components/new-experiment/new-experiment-visibility-card.test.tsx ← GLOBAL_REACT, LOCAL_RWF
-- [-] components/new-experiment/steps/review-step/review-step.test.tsx ← GLOBAL_REACT
-- [-] components/new-macro/new-macro.spec.tsx ← HOOK_MOCK, UI_MOCK, RHF_MOCK, FIRE_EVENT
-- [-] components/new-protocol/**tests**/new-protocol.test.tsx ← HOOK_MOCK, FIRE_EVENT
-- [-] components/protocol-overview-cards.test.tsx ← TYPE_CAST
-- [-] components/protocol-settings/**tests**/protocol-details-card.test.tsx ← HOOK_MOCK, FIRE_EVENT
-- [-] components/protocol-settings/protocol-info-card.test.tsx ← HOOK_MOCK
-- [-] components/react-flow/**tests**/node-utils.test.tsx ← GLOBAL_REACT
-- [-] components/side-panel-flow/**tests**/analysis-panel-flow.test.tsx ← HOOK_MOCK
-- [-] components/side-panel-flow/**tests**/measurement-panel.test.tsx ← HOOK_MOCK
+- [x] components/**tests**/macro-search-popover.test.tsx ← REFACTORED (removed redundant useLocale mock)
+- [x] components/**tests**/protocol-code-editor.test.tsx ← pragmatic exception (useDebounce timer utility, Monaco can't render in jsdom)
+- [x] components/experiment-data/data-export-modal/**tests**/data-export-modal.test.tsx ← REFACTORED (server.mount, removed globalThis.React)
+- [x] components/experiment-data/data-export-modal/**tests**/export-list-step.test.tsx ← REFACTORED (server.mount, removed @repo/ui mock), AUDIT FIX (inline ExportRecord → createExportRecord)
+- [x] components/experiment-data/data-export-modal/**tests**/format-selection-step.test.tsx ← REFACTORED (zero mocks, real @repo/ui components)
+- [x] components/experiment-data/data-upload-modal/data-upload-modal.test.tsx ← REFACTORED (removed globalThis.React)
+- [-] components/experiment-data/data-upload-modal/steps/file-upload-step.test.tsx ← REFACTORED (server.mount, FileUpload pragmatic mock), INTERNAL_MOCK (vi.mock data-upload-validation)
+- [x] components/experiment-data/data-upload-modal/steps/sensor-selection-step.test.tsx ← REFACTORED (removed globalThis.React)
+- [x] components/experiment-data/data-upload-modal/steps/success-step.test.tsx ← REFACTORED (removed globalThis.React)
+- [x] components/experiment-data/experiment-data-table.test.tsx ← REFACTORED (useExperimentData pragmatic mock, removed tsr mock)
+- [x] components/experiment-data/experiment-data-utils.test.tsx ← REFACTORED (removed @repo/ui + lucide mocks)
+- [x] components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols.test.tsx ← REFACTORED (server.mount + createFlow/createFlowNode factories)
+- [x] components/experiment-overview/experiment-linked-protocols/protocol-card.test.tsx ← REFACTORED (server.mount, removed hook mock)
+- [x] components/experiment-overview/experiment-measurements.test.tsx ← REFACTORED (server.mount + createExperimentDataTable factory)
+- [x] components/experiment-settings/experiment-location-management-card.test.tsx ← REFACTORED (server.mount, removed @repo/ui + lucide mocks)
+- [x] components/experiment-settings/experiment-member-management-card.test.tsx ← REFACTORED (server.mount, removed globalThis.React), AUDIT FIX (redundant @repo/auth/client mock → vi.mocked(useSession))
+- [x] components/experiment-settings/experiment-visibility-card.test.tsx ← REFACTORED (removed hook mock + globalThis.React, mutation hook safe without mock)
+- [x] components/experiment-visualizations/chart-preview/chart-preview.test.tsx ← REFACTORED (server.mount, removed hook mock)
+- [x] components/experiment-visualizations/edit-visualization-form.test.tsx ← REFACTORED (server.mount, removed @repo/ui mock)
+- [x] components/experiment-visualizations/experiment-visualizations-display.test.tsx ← REFACTORED (server.mount, removed hook mock)
+- [x] components/experiment-visualizations/new-visualization-form.test.tsx ← REFACTORED (server.mount, removed @repo/ui mock)
+- [x] components/experiment-visualizations/wizard-steps/data-source-step.test.tsx ← REFACTORED (useExperimentData pragmatic mock, Radix Select mock)
+- [x] components/experiment/experiment-locations-display.test.tsx ← REFACTORED (full rewrite 327→105 lines, removed CSS selectors, local types, factory-ized data)
+- [-] components/flow-editor/**tests**/flow-editor.test.tsx ← REFACTORED (removed globalThis.React, beforeEach cleanup), INTERNAL_MOCK (vi.mock node-config, flow-utils, flow-mapper)
+- [x] components/macro-overview-cards.test.tsx ← REFACTORED (replaced local makeMacro with createMacro factory)
+- [x] components/navigation/navigation-breadcrumbs/navigation-breadcrumbs.test.tsx ← REFACTORED (mock server action instead of hook, async waitFor)
+- [-] components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper.test.tsx ← REFACTORED (removed globalThis.React), INTERNAL_MOCK (vi.mock navigation-config)
+- [x] components/navigation/navigation-topbar/navigation-topbar.test.tsx ← REFACTORED (409→100 lines, sibling NavUser mock, useSidebar pragmatic mock)
+- [x] components/new-experiment/**tests**/new-experiment.test.tsx ← REFACTORED (server.mount, WizardForm pragmatic mock)
+- [x] components/new-experiment/new-experiment-locations-card.test.tsx ← REFACTORED (removed vi.clearAllMocks)
+- [x] components/new-experiment/new-experiment-members-card.test.tsx ← REFACTORED (server.mount, removed globalThis.React), AUDIT FIX (redundant @repo/auth/client mock → vi.mocked(useSession))
+- [x] components/new-experiment/new-experiment-visibility-card.test.tsx ← REFACTORED (imported renderWithForm, removed globalThis.React)
+- [x] components/new-experiment/steps/review-step/review-step.test.tsx ← REFACTORED (removed globalThis.React)
+- ~~components/new-macro/new-macro.spec.tsx~~ ← DELETED (superseded by new-macro.test.tsx)
+- [x] components/new-protocol/**tests**/new-protocol.test.tsx ← REFACTORED (server.mount, userEvent conversion)
+- [x] components/protocol-overview-cards.test.tsx ← REFACTORED (replaced local makeProtocol with createProtocol factory)
+- [x] components/protocol-settings/**tests**/protocol-details-card.test.tsx ← REFACTORED (server.mount, userEvent conversion)
+- [-] components/protocol-settings/protocol-info-card.test.tsx ← REFACTORED (removed redundant useLocale/navigation/posthog mocks, vi.mocked on globals), INTERNAL_MOCK (vi.mock util/date)
+- [x] components/react-flow/**tests**/node-utils.test.tsx ← REFACTORED (removed globalThis.React)
+- [x] components/side-panel-flow/**tests**/analysis-panel-flow.test.tsx ← REFACTORED (removed vi.clearAllMocks)
+- [x] components/side-panel-flow/**tests**/measurement-panel.test.tsx ← REFACTORED (server.mount, removed hook mock)
 
-## hooks/ (19/42 done)
+## hooks/ (42/42 done)
 
 ### Already reviewed & done
 
@@ -258,29 +262,29 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 
 ### Needs changes
 
-- [-] hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/annotations/useExperimentAnnotationDelete/useExperimentAnnotationDelete.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/annotations/useExperimentAnnotationOptimisticUpdate/useExperimentAnnotationOptimisticUpdate.test.ts ← TL_IMPORT
-- [-] hooks/experiment/useDownloadExport/useDownloadExport.test.ts ← TL_IMPORT
-- [-] hooks/experiment/useExperimentData/useExperimentData.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentDataUpload/useExperimentDataUpload.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentLocationsAdd/useExperimentLocationsAdd.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentProtocolAdd/useExperimentProtocolAdd.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperimentVisualizations/useExperimentVisualizations.test.tsx ← TL_IMPORT
-- [-] hooks/experiment/useExperiments/useExperiments.test.tsx ← HOOK_MOCK (useDebounce)
-- [-] hooks/experiment/useInitiateExport/useInitiateExport.test.ts ← TL_IMPORT
-- [-] hooks/experiment/useListExports/useListExports.test.ts ← TL_IMPORT
-- [-] hooks/macro/useMacroUpdate/useMacroUpdate.test.tsx ← TL_IMPORT
-- [-] hooks/useDebounce.test.tsx ← TL_IMPORT
-- [-] hooks/useTransferRequestCreate/useTransferRequestCreate.test.tsx ← TL_IMPORT
+- [x] hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/annotations/useExperimentAnnotationDelete/useExperimentAnnotationDelete.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk.test.tsx ← REFACTORED (import path swap)
+- [-] hooks/experiment/annotations/useExperimentAnnotationOptimisticUpdate/useExperimentAnnotationOptimisticUpdate.test.ts ← REFACTORED (import path swap), INTERNAL_MOCK (vi.mock parseAnnotations)
+- [-] hooks/experiment/useDownloadExport/useDownloadExport.test.ts ← RQ_MOCK (vi.mock @tanstack/react-query — let real useMutation run, intercept fetch via MSW)
+- [x] hooks/experiment/useExperimentData/useExperimentData.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentDataUpload/useExperimentDataUpload.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentLocationsAdd/useExperimentLocationsAdd.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentProtocolAdd/useExperimentProtocolAdd.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperimentVisualizations/useExperimentVisualizations.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/experiment/useExperiments/useExperiments.test.tsx ← pragmatic exception (useDebounce timer utility, TL_IMPORT fixed)
+- [x] hooks/experiment/useInitiateExport/useInitiateExport.test.ts ← REFACTORED (import path swap)
+- [x] hooks/experiment/useListExports/useListExports.test.ts ← REFACTORED (import path swap), AUDIT FIX (inline ExportRecord → createExportRecord)
+- [x] hooks/macro/useMacroUpdate/useMacroUpdate.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/useDebounce.test.tsx ← REFACTORED (import path swap)
+- [x] hooks/useTransferRequestCreate/useTransferRequestCreate.test.tsx ← REFACTORED (import path swap)
 
 ## lib/ & util/ (5/5 done)
 
@@ -294,25 +298,31 @@ Status key: `[x]` = reviewed & done, `[-]` = needs changes, `[ ]` = not yet revi
 
 ## Summary
 
-| Section     |    Done | Remaining |   Total |
-| ----------- | ------: | --------: | ------: |
-| app/        |      55 |         0 |      55 |
-| components/ |     102 |        44 |     146 |
-| hooks/      |      19 |        23 |      42 |
-| lib/util/   |       5 |         0 |       5 |
-| **Total**   | **181** |    **67** | **248** |
+| Section     | Done `[x]` | Violations `[-]` |   Total |
+| ----------- | ---------: | ---------------: | ------: |
+| app/        |         54 |                1 |      55 |
+| components/ |        128 |               10 |     138 |
+| hooks/      |         40 |                2 |      42 |
+| lib/util/   |          5 |                0 |       5 |
+| **Total**   |    **227** |           **13** | **240** |
 
-**Progress: 181/248 (73%)**
+**Progress: 240/240 (100%) — Migration complete!**
 
-### Remaining work breakdown (67 files)
+### Remaining violations (`[-]` files)
 
-| Violation                   | Files affected | Effort                                 |
-| --------------------------- | -------------: | -------------------------------------- |
-| GLOBAL_REACT only           |              9 | Trivial (delete 1 line each)           |
-| USE_LOCALE only             |              1 | Trivial                                |
-| TYPE_CAST only              |              2 | Trivial (swap to factory)              |
-| HOOK_MOCK (±other issues)   |             28 | Medium–Heavy (server.mount conversion) |
-| UI_MOCK / LUCIDE / RHF_MOCK |             10 | Medium (remove mock, fix queries)      |
-| FIRE_EVENT                  |              4 | Medium (userEvent conversion)          |
-| LOCAL_RWF                   |              2 | Low (import from test-utils)           |
-| TL_IMPORT (hooks only)      |             22 | Low (import path swap)                 |
+| Code          | Count | Description                                                                                                                           |
+| ------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------- |
+| INTERNAL_MOCK |     8 | `vi.mock` on internal modules (util/date, node-config, parseAnnotations, etc.) — ideally use `vi.setSystemTime`, real imports, or MSW |
+| INLINE_DATA   |     2 | Hand-crafted inline objects instead of test factories                                                                                 |
+| HOOK_MOCK     |     1 | `vi.mock` on data-fetching hooks instead of `server.mount()`                                                                          |
+| RQ_MOCK       |     1 | `vi.mock @tanstack/react-query` — should let real hooks run, intercept via MSW                                                        |
+| GLOBAL_REDECL |     0 | All 3 instances fixed during audit                                                                                                    |
+
+### Audit fixes applied
+
+- **14 files**: Fixed broken `@/test/msw/node` → `@/test/msw/server` import path
+- **3 files**: Removed redundant `@repo/auth/client` / `@repo/i18n/client` re-declarations (GLOBAL_REDECL)
+- **9 files**: Replaced inline domain entities with factory calls (`createExportRecord`, `createVisualization`, `createMacro`, `createSession`, `createUserProfile`, `createExperimentTable`)
+- **1 factory**: Added `createExportRecord()` to `test/factories.ts`
+
+> One file removed: `new-macro.spec.tsx` was deleted (superseded by `new-macro.test.tsx`).

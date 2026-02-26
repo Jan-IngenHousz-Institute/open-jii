@@ -10,8 +10,6 @@ import type { WizardStep } from "@repo/ui/components";
 
 import { ReviewStep } from "./review-step";
 
-globalThis.React = React;
-
 /* --------------------------------- Helpers --------------------------------- */
 
 function TestWrapper({

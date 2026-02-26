@@ -1,4 +1,5 @@
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { createExperimentTable } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { use } from "react";
@@ -12,11 +13,6 @@ import ExperimentDataPage from "./page";
 // Mock useExperiment hook
 vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
   useExperiment: vi.fn(),
-}));
-
-// Mock translation hook
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
 }));
 
 // Mock useExperimentTables hook

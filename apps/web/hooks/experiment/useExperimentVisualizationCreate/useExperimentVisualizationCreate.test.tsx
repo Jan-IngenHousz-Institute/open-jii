@@ -1,240 +1,121 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
-import { tsr } from "@/lib/tsr";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+/**
+ * useExperimentVisualizationCreate hook test — MSW-based.
+ *
+ * The real hook calls `tsr.experiments.createExperimentVisualization.useMutation` →
+ * `POST /api/v1/experiments/:id/visualizations`. MSW intercepts that request.
+ */
+import { createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentVisualizationCreate } from "./useExperimentVisualizationCreate";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    experiments: {
-      createExperimentVisualization: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as any;
-
 describe("useExperimentVisualizationCreate", () => {
-  let queryClient: QueryClient;
-  const mockCancelQueries = vi.fn().mockResolvedValue(undefined);
-  const mockGetQueryData = vi.fn();
-  const mockSetQueryData = vi.fn();
-  const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
+  it("sends POST request via MSW", async () => {
+    const viz = createVisualization({ experimentId: "exp-1" });
+    const spy = server.mount(contract.experiments.createExperimentVisualization, { body: viz });
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    const { result } = renderHook(() =>
+      useExperimentVisualizationCreate({ experimentId: "exp-1" }),
     );
-  };
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    const mockQueryClient = {
-      cancelQueries: mockCancelQueries,
-      getQueryData: mockGetQueryData,
-      setQueryData: mockSetQueryData,
-      invalidateQueries: mockInvalidateQueries,
-    };
-
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient);
-  });
-
-  it("should call useMutation with correct configuration", () => {
-    const mockUseMutation = vi.fn();
-    mockTsr.experiments.createExperimentVisualization.useMutation = mockUseMutation;
-
-    renderHook(() => useExperimentVisualizationCreate({ experimentId: "exp-123" }), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onMutate: expect.any(Function),
-      onError: expect.any(Function),
-      onSettled: expect.any(Function),
-      onSuccess: expect.any(Function),
-    });
-  });
-
-  describe("onMutate callback", () => {
-    it("should cancel queries and return previous data", async () => {
-      const mockPreviousData = {
-        body: [{ id: "viz-1", name: "Existing Visualization" }],
-      };
-      mockGetQueryData.mockReturnValue(mockPreviousData);
-
-      let onMutate: any;
-
-      mockTsr.experiments.createExperimentVisualization.useMutation = vi.fn((opts: any) => {
-        onMutate = opts.onMutate;
-        return {};
-      });
-
-      renderHook(() => useExperimentVisualizationCreate({ experimentId: "exp-123" }), {
-        wrapper: createWrapper(),
-      });
-
-      const result = await onMutate();
-
-      expect(mockCancelQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment-visualizations", "exp-123"],
-      });
-      expect(mockGetQueryData).toHaveBeenCalledWith(["experiment-visualizations", "exp-123"]);
-      expect(result).toEqual({ previousVisualizations: mockPreviousData });
-    });
-  });
-
-  describe("onError callback", () => {
-    it("should revert to previous data when context has previousVisualizations", () => {
-      let onError: any;
-
-      mockTsr.experiments.createExperimentVisualization.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
-
-      renderHook(() => useExperimentVisualizationCreate({ experimentId: "exp-123" }), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Creation failed");
-      const variables = {};
-      const context = {
-        previousVisualizations: { body: [{ id: "viz-1" }] },
-      };
-
-      onError(error, variables, context);
-
-      expect(mockSetQueryData).toHaveBeenCalledWith(
-        ["experiment-visualizations", "exp-123"],
-        context.previousVisualizations,
-      );
-    });
-
-    it("should not revert data when context has no previousVisualizations", () => {
-      let onError: any;
-
-      mockTsr.experiments.createExperimentVisualization.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
-
-      renderHook(() => useExperimentVisualizationCreate({ experimentId: "exp-123" }), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Creation failed");
-      const variables = {};
-      const context = {};
-
-      onError(error, variables, context);
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
-    });
-
-    it("should not revert data when context is undefined", () => {
-      let onError: any;
-
-      mockTsr.experiments.createExperimentVisualization.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
-
-      renderHook(() => useExperimentVisualizationCreate({ experimentId: "exp-123" }), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Creation failed");
-      const variables = {};
-
-      onError(error, variables, undefined);
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("onSettled callback", () => {
-    it("should invalidate queries after mutation", async () => {
-      let onSettled: any;
-
-      mockTsr.experiments.createExperimentVisualization.useMutation = vi.fn((opts: any) => {
-        onSettled = opts.onSettled;
-        return {};
-      });
-
-      renderHook(() => useExperimentVisualizationCreate({ experimentId: "exp-123" }), {
-        wrapper: createWrapper(),
-      });
-
-      await onSettled();
-
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment-visualizations", "exp-123"],
-      });
-    });
-  });
-
-  describe("onSuccess callback", () => {
-    it("should call onSuccess callback when provided", () => {
-      const mockOnSuccess = vi.fn();
-      let onSuccess: any;
-
-      mockTsr.experiments.createExperimentVisualization.useMutation = vi.fn((opts: any) => {
-        onSuccess = opts.onSuccess;
-        return {};
-      });
-
-      renderHook(
-        () =>
-          useExperimentVisualizationCreate({
-            experimentId: "exp-123",
-            onSuccess: mockOnSuccess,
-          }),
-        {
-          wrapper: createWrapper(),
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: {
+          name: "New Viz",
+          chartFamily: "basic",
+          chartType: "line",
+          config: {},
+          dataConfig: viz.dataConfig,
         },
-      );
-
-      const mockVisualization = {
-        id: "viz-123",
-        name: "New Visualization",
-        chartType: "line",
-      };
-      const data = { body: mockVisualization };
-
-      onSuccess(data);
-
-      expect(mockOnSuccess).toHaveBeenCalledWith(mockVisualization);
+      });
     });
 
-    it("should not throw when onSuccess callback not provided", () => {
-      let onSuccess: any;
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
+      expect(spy.params.id).toBe("exp-1");
+    });
+  });
 
-      mockTsr.experiments.createExperimentVisualization.useMutation = vi.fn((opts: any) => {
-        onSuccess = opts.onSuccess;
-        return {};
+  it("sends correct body", async () => {
+    const viz = createVisualization({ experimentId: "exp-1" });
+    const spy = server.mount(contract.experiments.createExperimentVisualization, { body: viz });
+
+    const { result } = renderHook(() =>
+      useExperimentVisualizationCreate({ experimentId: "exp-1" }),
+    );
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: {
+          name: "Test Viz",
+          chartFamily: "basic",
+          chartType: "bar",
+          config: {},
+          dataConfig: viz.dataConfig,
+        },
       });
+    });
 
-      renderHook(() => useExperimentVisualizationCreate({ experimentId: "exp-123" }), {
-        wrapper: createWrapper(),
+    await waitFor(() => {
+      expect(spy.body).toMatchObject({ name: "Test Viz", chartType: "bar" });
+    });
+  });
+
+  it("calls onSuccess callback with visualization data", async () => {
+    const viz = createVisualization({ id: "viz-1", experimentId: "exp-1" });
+    server.mount(contract.experiments.createExperimentVisualization, { body: viz });
+
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() =>
+      useExperimentVisualizationCreate({ experimentId: "exp-1", onSuccess }),
+    );
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: {
+          name: viz.name,
+          chartFamily: "basic",
+          chartType: "line",
+          config: {},
+          dataConfig: viz.dataConfig,
+        },
       });
+    });
 
-      const data = { body: { id: "viz-123" } };
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: "viz-1" }));
+    });
+  });
 
-      expect(() => onSuccess(data)).not.toThrow();
+  it("handles error response", async () => {
+    server.mount(contract.experiments.createExperimentVisualization, { status: 500 });
+
+    const { result } = renderHook(() =>
+      useExperimentVisualizationCreate({ experimentId: "exp-1" }),
+    );
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: {
+          name: "Fail",
+          chartFamily: "basic",
+          chartType: "line",
+          config: {},
+          dataConfig: { tableName: "t", dataSources: [] },
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
     });
   });
 });
