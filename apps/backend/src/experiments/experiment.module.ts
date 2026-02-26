@@ -9,9 +9,11 @@ import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapt
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
+import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
 import { DATABRICKS_PORT as MACRO_DATABRICKS_PORT } from "../macros/core/ports/databricks.port";
 import { MacroRepository } from "../macros/core/repositories/macro.repository";
 import { MacroModule } from "../macros/macro.module";
+import { CreateProtocolUseCase } from "../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
 import { UserModule } from "../users/user.module";
 // Services
@@ -138,6 +140,10 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // External domain repositories (for project transfer)
     MacroRepository,
     ProtocolRepository,
+
+    // External domain use cases (for project transfer)
+    CreateProtocolUseCase,
+    CreateMacroUseCase,
 
     // Services
     EmbargoProcessorService,

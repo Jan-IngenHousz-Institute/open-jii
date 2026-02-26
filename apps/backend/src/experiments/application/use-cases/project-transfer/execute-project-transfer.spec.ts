@@ -83,6 +83,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.experimentId).toBeDefined();
       expect(result.value.protocolId).toBeDefined();
       expect(result.value.macroId).toBeDefined();
+      expect(result.value.macroFilename).toBeDefined();
     });
 
     it("should upload macro code to Databricks", async () => {
@@ -97,7 +98,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(uploadSpy).toHaveBeenCalledOnce();
     });
 
-    it("should succeed even when Databricks upload fails (non-fatal)", async () => {
+    it("should fail when Databricks upload fails (CreateMacroUseCase is fatal)", async () => {
       const databricksAdapter = testApp.module.get(DatabricksAdapter);
       vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(
         failure({
@@ -111,8 +112,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       const payload = buildPayload();
       const result = await useCase.execute(payload);
 
-      assertSuccess(result);
-      expect(result.value.success).toBe(true);
+      assertFailure(result);
     });
 
     it("should create a flow with questions when provided", async () => {
@@ -142,6 +142,7 @@ describe("ExecuteProjectTransferUseCase", () => {
     });
 
     it("should handle flow creation failure gracefully (non-fatal)", async () => {
+      // CreateFlowUseCase delegates to FlowRepository internally
       vi.spyOn(FlowRepository.prototype, "create").mockResolvedValue(
         failure(AppError.internal("Flow creation failed")),
       );
@@ -262,6 +263,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.experimentId).toBeDefined();
       expect(result.value.protocolId).toBeNull();
       expect(result.value.macroId).toBeNull();
+      expect(result.value.macroFilename).toBeNull();
       expect(result.value.flowId).toBeNull();
     });
 
@@ -283,7 +285,41 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.protocolId).toBeDefined();
       expect(result.value.protocolId).not.toBeNull();
       expect(result.value.macroId).toBeNull();
+      expect(result.value.macroFilename).toBeNull();
       expect(result.value.flowId).toBeNull();
+    });
+
+    it("should return macroFilename when macro is created", async () => {
+      const payload = buildPayload();
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.macroFilename).toMatch(/^macro_[a-f0-9]+$/);
+    });
+
+    it("should return macroFilename when macro is reused", async () => {
+      const macroRepo = testApp.module.get(MacroRepository);
+      const macroName = "Filename Reuse Macro";
+
+      const preCreated = await macroRepo.create(
+        { name: macroName, description: null, language: "javascript", code: "Y29uc29sZQ==" },
+        testUserId,
+      );
+      assertSuccess(preCreated);
+      const expectedFilename = preCreated.value[0].filename;
+
+      const payload = buildPayload({
+        macro: {
+          name: macroName,
+          language: "javascript",
+          code: "Y29uc29sZS5sb2coJ2hlbGxvJyk=",
+          createdBy: testUserId,
+        },
+      });
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.macroFilename).toBe(expectedFilename);
     });
 
     it("should send project transfer complete email after successful transfer", async () => {
@@ -336,6 +372,137 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       assertSuccess(result);
       expect(result.value.success).toBe(true);
+    });
+
+    it("should reuse existing protocol when one with the same name exists", async () => {
+      const protocolRepo = testApp.module.get(ProtocolRepository);
+      const protocolName = "Shared Protocol";
+
+      // Pre-create the protocol
+      const preCreated = await protocolRepo.create(
+        { name: protocolName, description: null, code: "[]", family: "multispeq" },
+        testUserId,
+      );
+      assertSuccess(preCreated);
+      const existingProtocolId = preCreated.value[0].id;
+
+      const createSpy = vi.spyOn(protocolRepo, "create");
+
+      const payload = buildPayload({
+        protocol: {
+          name: protocolName,
+          code: [{ step: "measure" }],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+      });
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.protocolId).toBe(existingProtocolId);
+      // create should NOT be called because we reuse the existing one
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reuse existing macro when one with the same name exists", async () => {
+      const macroRepo = testApp.module.get(MacroRepository);
+      const macroName = "Shared Macro";
+
+      // Pre-create the macro
+      const preCreated = await macroRepo.create(
+        { name: macroName, description: null, language: "javascript", code: "Y29uc29sZQ==" },
+        testUserId,
+      );
+      assertSuccess(preCreated);
+      const existingMacroId = preCreated.value[0].id;
+
+      const createSpy = vi.spyOn(macroRepo, "create");
+
+      const payload = buildPayload({
+        macro: {
+          name: macroName,
+          language: "javascript",
+          code: "Y29uc29sZS5sb2coJ2hlbGxvJyk=",
+          createdBy: testUserId,
+        },
+      });
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.macroId).toBe(existingMacroId);
+      // create should NOT be called because we reuse the existing one
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should skip Databricks upload when reusing existing macro", async () => {
+      const macroRepo = testApp.module.get(MacroRepository);
+      const databricksAdapter = testApp.module.get(DatabricksAdapter);
+      const uploadSpy = vi
+        .spyOn(databricksAdapter, "uploadMacroCode")
+        .mockResolvedValue(success({}));
+      const macroName = "Reuse No Upload Macro";
+
+      // Pre-create the macro
+      const preCreated = await macroRepo.create(
+        { name: macroName, description: null, language: "javascript", code: "Y29uc29sZQ==" },
+        testUserId,
+      );
+      assertSuccess(preCreated);
+
+      const payload = buildPayload({
+        macro: {
+          name: macroName,
+          language: "javascript",
+          code: "Y29uc29sZS5sb2coJ2hlbGxvJyk=",
+          createdBy: testUserId,
+        },
+      });
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(uploadSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reuse both protocol and macro when both names already exist", async () => {
+      const protocolRepo = testApp.module.get(ProtocolRepository);
+      const macroRepo = testApp.module.get(MacroRepository);
+      const protocolName = "Both Shared Protocol";
+      const macroName = "Both Shared Macro";
+
+      // Pre-create protocol and macro
+      const preProtocol = await protocolRepo.create(
+        { name: protocolName, description: null, code: "[]", family: "multispeq" },
+        testUserId,
+      );
+      assertSuccess(preProtocol);
+      const existingProtocolId = preProtocol.value[0].id;
+
+      const preMacro = await macroRepo.create(
+        { name: macroName, description: null, language: "javascript", code: "Y29uc29sZQ==" },
+        testUserId,
+      );
+      assertSuccess(preMacro);
+      const existingMacroId = preMacro.value[0].id;
+
+      const payload = buildPayload({
+        protocol: {
+          name: protocolName,
+          code: [{ step: "measure" }],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+        macro: {
+          name: macroName,
+          language: "javascript",
+          code: "Y29uc29sZS5sb2coJ2hlbGxvJyk=",
+          createdBy: testUserId,
+        },
+      });
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.protocolId).toBe(existingProtocolId);
+      expect(result.value.macroId).toBe(existingMacroId);
     });
   });
 });

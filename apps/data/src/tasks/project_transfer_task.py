@@ -328,7 +328,7 @@ enriched = (
         F.col("r.experiment_id"),
         F.col("r.protocol_id"),
         F.col("r.macro_id"),
-        F.col("r.flow_id").alias("macro_filename"),
+        F.col("r.macro_filename"),
         F.col("d.timestamp"),
         F.col("d.date"),
         F.col("d.questions"),

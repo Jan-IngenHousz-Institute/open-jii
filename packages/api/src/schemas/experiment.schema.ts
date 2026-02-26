@@ -1065,6 +1065,7 @@ export const zProjectTransferWebhookResponse = z.object({
   experimentId: z.string().uuid(),
   protocolId: z.string().uuid().nullable(),
   macroId: z.string().uuid().nullable(),
+  macroFilename: z.string().nullable(),
   flowId: z.string().uuid().nullable(),
   message: z.string().optional(),
 });

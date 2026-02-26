@@ -1085,6 +1085,7 @@ describe("Experiment Schema", () => {
       experimentId: "123e4567-e89b-12d3-a456-426614174000",
       protocolId: "223e4567-e89b-12d3-a456-426614174000",
       macroId: "323e4567-e89b-12d3-a456-426614174000",
+      macroFilename: "macro_abc123def456",
       flowId: "423e4567-e89b-12d3-a456-426614174000",
     };
 
@@ -1103,10 +1104,12 @@ describe("Experiment Schema", () => {
         ...validResponse,
         protocolId: null,
         macroId: null,
+        macroFilename: null,
         flowId: null,
       });
       expect(result.protocolId).toBeNull();
       expect(result.macroId).toBeNull();
+      expect(result.macroFilename).toBeNull();
     });
 
     it("should allow optional message", () => {

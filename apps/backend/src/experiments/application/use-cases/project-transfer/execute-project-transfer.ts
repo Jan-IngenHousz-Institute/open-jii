@@ -8,11 +8,9 @@ import type {
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import {
-  DATABRICKS_PORT as MACRO_DATABRICKS_PORT,
-  DatabricksPort as MacroDatabricksPort,
-} from "../../../../macros/core/ports/databricks.port";
+import { CreateMacroUseCase } from "../../../../macros/application/use-cases/create-macro/create-macro";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { CreateProtocolUseCase } from "../../../../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
@@ -22,7 +20,7 @@ import { LocationRepository } from "../../../core/repositories/experiment-locati
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
+import { CreateFlowUseCase } from "../flows/create-flow";
 
 @Injectable()
 export class ExecuteProjectTransferUseCase {
@@ -33,11 +31,12 @@ export class ExecuteProjectTransferUseCase {
     private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly experimentProtocolRepository: ExperimentProtocolRepository,
     private readonly locationRepository: LocationRepository,
-    private readonly flowRepository: FlowRepository,
+    private readonly createFlowUseCase: CreateFlowUseCase,
+    private readonly createProtocolUseCase: CreateProtocolUseCase,
+    private readonly createMacroUseCase: CreateMacroUseCase,
     private readonly macroRepository: MacroRepository,
     private readonly protocolRepository: ProtocolRepository,
     private readonly userRepository: UserRepository,
-    @Inject(MACRO_DATABRICKS_PORT) private readonly macroDatabricksPort: MacroDatabricksPort,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
@@ -52,78 +51,73 @@ export class ExecuteProjectTransferUseCase {
       macroName: data.macro?.name,
     });
 
-    // 1. Create Protocol (if provided)
+    // 1. Create or reuse Protocol (if provided)
     let protocolId: string | null = null;
     if (data.protocol) {
-      const protocolResult = await this.protocolRepository.create(
-        {
-          name: data.protocol.name,
-          description: data.protocol.description ?? null,
-          code: JSON.stringify(data.protocol.code),
-          family: data.protocol.family,
-        },
-        data.protocol.createdBy,
-      );
+      // Check if a protocol with the same name already exists
+      const existingProtocol = await this.protocolRepository.findByName(data.protocol.name);
 
-      if (protocolResult.isFailure()) {
-        return protocolResult;
-      }
-
-      if (protocolResult.value.length === 0) {
-        this.logger.error({
-          msg: "Failed to create protocol during project transfer",
-          errorCode: ErrorCodes.PROTOCOL_CREATE_FAILED,
+      if (existingProtocol.isSuccess() && existingProtocol.value) {
+        protocolId = existingProtocol.value.id;
+        this.logger.log({
+          msg: "Reusing existing protocol with same name",
           operation: "executeProjectTransfer",
+          protocolId,
+          protocolName: data.protocol.name,
         });
-        return failure(AppError.internal("Failed to create protocol"));
-      }
+      } else {
+        const protocolResult = await this.createProtocolUseCase.execute(
+          {
+            name: data.protocol.name,
+            description: data.protocol.description ?? null,
+            code: JSON.stringify(data.protocol.code),
+            family: data.protocol.family,
+          },
+          data.protocol.createdBy,
+        );
 
-      protocolId = protocolResult.value[0].id;
+        if (protocolResult.isFailure()) {
+          return protocolResult;
+        }
+
+        protocolId = protocolResult.value.id;
+      }
     }
 
-    // 2. Create Macro (if provided)
+    // 2. Create or reuse Macro (if provided)
     let macroId: string | null = null;
+    let macroFilename: string | null = null;
     if (data.macro) {
-      const macroResult = await this.macroRepository.create(
-        {
-          name: data.macro.name,
-          description: data.macro.description ?? null,
-          language: data.macro.language,
-          code: data.macro.code,
-        },
-        data.macro.createdBy,
-      );
+      // Check if a macro with the same name already exists
+      const existingMacro = await this.macroRepository.findByName(data.macro.name);
 
-      if (macroResult.isFailure()) {
-        return macroResult;
-      }
-
-      if (macroResult.value.length === 0) {
-        this.logger.error({
-          msg: "Failed to create macro during project transfer",
-          errorCode: ErrorCodes.MACRO_CREATE_FAILED,
+      if (existingMacro.isSuccess() && existingMacro.value) {
+        macroId = existingMacro.value.id;
+        macroFilename = existingMacro.value.filename;
+        this.logger.log({
+          msg: "Reusing existing macro with same name",
           operation: "executeProjectTransfer",
+          macroId,
+          macroFilename,
+          macroName: data.macro.name,
         });
-        return failure(AppError.internal("Failed to create macro"));
-      }
+      } else {
+        const macroResult = await this.createMacroUseCase.execute(
+          {
+            name: data.macro.name,
+            description: data.macro.description ?? null,
+            language: data.macro.language,
+            code: data.macro.code,
+          },
+          data.macro.createdBy,
+        );
 
-      const macro = macroResult.value[0];
-      macroId = macro.id;
+        if (macroResult.isFailure()) {
+          return macroResult;
+        }
 
-      // Upload macro code to Databricks (non-fatal)
-      const databricksResult = await this.macroDatabricksPort.uploadMacroCode({
-        filename: macro.filename,
-        code: macro.code,
-        language: macro.language,
-      });
-
-      if (databricksResult.isFailure()) {
-        this.logger.warn({
-          msg: "Failed to upload macro to Databricks (non-fatal, can be retried)",
-          operation: "executeProjectTransfer",
-          macroId: macro.id,
-          error: databricksResult.error.message,
-        });
+        macroId = macroResult.value.id;
+        macroFilename = macroResult.value.filename;
       }
     }
 
@@ -243,10 +237,11 @@ export class ExecuteProjectTransferUseCase {
         target: nodeIds[i + 1],
       }));
 
-      const flowResult = await this.flowRepository.create(experiment.id, {
-        nodes: allNodes,
-        edges,
-      } as FlowGraph);
+      const flowResult = await this.createFlowUseCase.execute(
+        experiment.id,
+        data.experiment.createdBy,
+        { nodes: allNodes, edges } as FlowGraph,
+      );
 
       if (flowResult.isSuccess()) {
         flowId = flowResult.value.id;
@@ -300,6 +295,7 @@ export class ExecuteProjectTransferUseCase {
       experimentId: experiment.id,
       protocolId,
       macroId,
+      macroFilename,
       flowId,
     });
   }

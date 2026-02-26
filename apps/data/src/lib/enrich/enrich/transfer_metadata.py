@@ -31,10 +31,22 @@ TRANSFER_RESULT_SCHEMA = StructType([
     StructField("experiment_id", StringType(), True),
     StructField("protocol_id", StringType(), True),
     StructField("macro_id", StringType(), True),
+    StructField("macro_filename", StringType(), True),
     StructField("flow_id", StringType(), True),
     StructField("success", BooleanType(), False),
     StructField("error", StringType(), True),
 ])
+
+_NAME_MAX_LENGTH = 255
+_TRANSFER_SUFFIX = " (PhotosynQ)"
+
+
+def _transfer_name(name: str) -> str:
+    """Append a provenance suffix to the original name, truncating the base
+    to stay within the 255-character database limit."""
+    max_base = _NAME_MAX_LENGTH - len(_TRANSFER_SUFFIX)
+    return name[:max_base] + _TRANSFER_SUFFIX
+
 
 # PhotosynQ value_type → webhook question kind mapping
 _VALUE_TYPE_TO_KIND = {
@@ -63,7 +75,7 @@ def _build_protocol_payload(
     if isinstance(code_val, dict):
         code_val = [code_val]
     return {
-        "name": proto["name"],
+        "name": _transfer_name(proto["name"]),
         "description": proto.get("description"),
         "code": code_val,
         "family": proto.get("family"),
@@ -86,7 +98,7 @@ def _build_macro_payload(
         else None
     )
     return {
-        "name": macro["name"],
+        "name": _transfer_name(macro["name"]),
         "description": macro.get("description"),
         "language": macro.get("language"),
         "code": b64_code,
@@ -117,6 +129,35 @@ def _build_questions_payload(
     return questions_payload
 
 
+def _build_transfer_description(
+    original_description: Optional[str],
+    protocol_name: Optional[str],
+    macro_name: Optional[str],
+) -> str:
+    """Build an enriched experiment description for transferred projects."""
+    lines = [
+        "This experiment has been automatically created and set up as part of a project transfer.",
+        "",
+    ]
+    if protocol_name:
+        lines.append(f'The protocol used in this experiment is "{protocol_name}".')
+    if macro_name:
+        lines.append(f'The macro used in this experiment is "{macro_name}".')
+    if protocol_name or macro_name:
+        lines.append("")
+
+    lines.append(
+        "The data is migrated from the original project without any re-processing. "
+        "There may be discrepancies in how the data is presented."
+    )
+
+    if original_description:
+        lines.append("")
+        lines.append(original_description)
+
+    return "\n".join(lines)
+
+
 def _call_transfer_webhook(
     row: Dict[str, Any], client: BackendClient
 ) -> Dict[str, Any]:
@@ -138,10 +179,19 @@ def _call_transfer_webhook(
         )
         questions_payload = _build_questions_payload(row.get("questions"))
 
+        protocol_name = protocol_payload["name"] if protocol_payload else None
+        macro_name = macro_payload["name"] if macro_payload else None
+
+        description = _build_transfer_description(
+            row.get("project_description"),
+            protocol_name,
+            macro_name,
+        )
+
         payload: Dict[str, Any] = {
             "experiment": {
                 "name": row.get("project_name"),
-                "description": row.get("project_description"),
+                "description": description,
                 "createdBy": creator_user_id,
             },
         }
@@ -163,6 +213,7 @@ def _call_transfer_webhook(
             "experiment_id": result.get("experimentId"),
             "protocol_id": result.get("protocolId"),
             "macro_id": result.get("macroId"),
+            "macro_filename": result.get("macroFilename"),
             "flow_id": result.get("flowId"),
             "success": True,
             "error": None,
@@ -177,6 +228,7 @@ def _call_transfer_webhook(
             "experiment_id": None,
             "protocol_id": None,
             "macro_id": None,
+            "macro_filename": None,
             "flow_id": None,
             "success": False,
             "error": str(e),

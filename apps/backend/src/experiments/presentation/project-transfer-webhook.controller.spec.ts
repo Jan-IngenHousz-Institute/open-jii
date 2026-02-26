@@ -86,6 +86,7 @@ describe("ProjectTransferWebhookController", () => {
       expect(body.experimentId).toBeDefined();
       expect(body.protocolId).toBeDefined();
       expect(body.macroId).toBeDefined();
+      expect(body.macroFilename).toBeDefined();
     });
 
     it("should reject requests without valid API key ID", async () => {

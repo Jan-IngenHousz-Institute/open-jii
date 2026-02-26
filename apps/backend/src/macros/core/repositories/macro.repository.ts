@@ -113,6 +113,32 @@ export class MacroRepository {
     });
   }
 
+  async findByName(name: string): Promise<Result<MacroDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({
+          macros,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
+        .from(macros)
+        .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
+        .where(eq(macros.name, name))
+        .limit(1);
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      const augmentedResult = result[0].macros as MacroDto;
+      const firstName = result[0].firstName;
+      const lastName = result[0].lastName;
+      augmentedResult.createdByName =
+        firstName && lastName ? `${firstName} ${lastName}` : undefined;
+      return augmentedResult;
+    });
+  }
+
   async update(id: string, data: UpdateMacroDto): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       // The filename is based on the macro ID hash and should not change during updates
