@@ -1,17 +1,9 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreviewModal } from "./chart-preview-modal";
-
-// Mock the translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 // Mock the ChartPreview component
 vi.mock("./chart-preview", () => ({

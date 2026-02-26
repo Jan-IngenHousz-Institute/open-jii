@@ -1,5 +1,4 @@
-import { render, screen, within } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, within } from "@/test/test-utils";
 import { FormProvider, useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 

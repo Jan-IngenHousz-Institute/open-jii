@@ -1,6 +1,4 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -8,13 +6,6 @@ import { Form } from "@repo/ui/components";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { BasicInfoStep } from "./basic-info-step";
-
-// Mock dependencies
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({
-    t: (key: string) => key,
-  })),
-}));
 
 vi.mock("../chart-preview/chart-preview-modal", () => ({
   ChartPreviewModal: ({ isOpen }: { isOpen: boolean }) => (

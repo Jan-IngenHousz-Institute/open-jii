@@ -1,27 +1,7 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, expect, it } from "vitest";
 
 import { ExperimentDataTableTextCell } from "./experiment-data-table-text-cell";
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Tooltip: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TooltipTrigger: ({
-    children,
-    asChild: _asChild,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-  }) => <div data-testid="tooltip-trigger">{children}</div>,
-  TooltipContent: ({
-    children,
-    className: _className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <div data-testid="tooltip-content">{children}</div>,
-}));
 
 describe("ExperimentDataTableTextCell", () => {
   it("should render short text without tooltip", () => {

@@ -1,7 +1,6 @@
 import { tsr } from "@/lib/tsr";
+import { render, screen, userEvent, fireEvent } from "@/test/test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
@@ -46,13 +45,6 @@ vi.mock("@/lib/tsr", () => ({
   },
 }));
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
 // Mock BulkActionsBar
 vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
   BulkActionsBar: () => <div data-testid="bulk-actions-bar">BulkActionsBar</div>,
@@ -68,174 +60,6 @@ vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", ()
   DeleteAnnotationsDialog: () => (
     <div data-testid="delete-annotations-dialog">DeleteAnnotationsDialog</div>
   ),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <button onClick={onClick} className={className} {...props}>
-      {children}
-    </button>
-  ),
-  Checkbox: ({
-    checked,
-    onCheckedChange,
-    "aria-label": ariaLabel,
-  }: {
-    checked?: boolean | "indeterminate";
-    onCheckedChange?: (checked: boolean) => void;
-    "aria-label"?: string;
-  }) => (
-    <input
-      type="checkbox"
-      checked={checked === true}
-      onChange={(e) => onCheckedChange?.(e.target.checked)}
-      aria-label={ariaLabel}
-      data-indeterminate={checked === "indeterminate"}
-    />
-  ),
-  Dialog: ({
-    children,
-    open,
-    onOpenChange: _onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (open ? <div data-testid="dialog">{children}</div> : null),
-  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className} data-testid="dialog-content">
-      {children}
-    </div>
-  ),
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-description">{children}</div>
-  ),
-  DialogFooter: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-footer">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-title">{children}</div>
-  ),
-  Label: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
-  Pagination: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  PaginationContent: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <div className={className}>{children}</div>,
-  PaginationItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PaginationNext: ({
-    children,
-    onClick,
-    className,
-    title,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    title?: string;
-  }) => (
-    <button onClick={onClick} className={className} title={title} {...props}>
-      {children ?? "Next"}
-    </button>
-  ),
-  PaginationPrevious: ({
-    children,
-    onClick,
-    className,
-    title,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    title?: string;
-  }) => (
-    <button onClick={onClick} className={className} title={title} {...props}>
-      {children ?? "Previous"}
-    </button>
-  ),
-  Select: ({
-    children,
-    onValueChange,
-    value,
-  }: {
-    children: React.ReactNode;
-    onValueChange?: (value: string) => void;
-    value?: string;
-  }) => (
-    <select
-      data-testid="page-size-select"
-      onChange={(e) => onValueChange?.(e.target.value)}
-      value={value}
-    >
-      {children}
-    </select>
-  ),
-  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
-    <option value={value}>{children}</option>
-  ),
-  SelectTrigger: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  SelectValue: () => <span>Select value</span>,
-  Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
-  TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  TableCell: ({ children, ...props }: { children: React.ReactNode; colSpan?: number }) => (
-    <td {...props}>{children}</td>
-  ),
-  TableHead: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <th className={className}>{children}</th>
-  ),
-  TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
-  TableRow: ({ children, ...props }: { children: React.ReactNode }) => (
-    <tr {...props}>{children}</tr>
-  ),
-  Skeleton: ({ className }: { className?: string }) => (
-    <div data-testid="skeleton" className={className} />
-  ),
-  Form: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
-    <div {...props}>{children}</div>
-  ),
-  FormField: ({
-    render,
-  }: {
-    render: (field: {
-      field: { value: string; onChange: (value: string) => void };
-    }) => React.ReactNode;
-  }) => {
-    const field = { value: "csv", onChange: vi.fn() };
-    return <>{render({ field })}</>;
-  },
-  FormItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  FormLabel: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <label className={className}>{children}</label>
-  ),
-  FormControl: ({ children }: { children: React.ReactNode }) => {
-    return <>{children}</>;
-  },
-  FormMessage: () => <div />,
 }));
 
 // Mock DataExportModal
@@ -430,7 +254,7 @@ describe("ExperimentDataTable", () => {
     });
     mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-    render(
+    const { container } = render(
       <ExperimentDataTable
         defaultSortColumn="timestamp"
         experimentId="experiment-123"
@@ -442,7 +266,7 @@ describe("ExperimentDataTable", () => {
     );
 
     // Should render multiple skeleton components
-    const skeletons = screen.getAllByTestId("skeleton");
+    const skeletons = container.querySelectorAll(".animate-pulse");
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
@@ -535,8 +359,9 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    const pageSizeSelect = screen.getByTestId("page-size-select");
-    await user.selectOptions(pageSizeSelect, "20");
+    const trigger = screen.getByRole("combobox");
+    await user.click(trigger);
+    await user.click(screen.getByRole("option", { name: "20" }));
 
     // Should call useQuery with new page size
     expect(mockUseQuery).toHaveBeenCalledWith(
@@ -553,7 +378,7 @@ describe("ExperimentDataTable", () => {
     );
   });
 
-  it("should handle pagination navigation", () => {
+  it("should handle pagination navigation", async () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: mockResponse,
       isLoading: false,
@@ -574,7 +399,7 @@ describe("ExperimentDataTable", () => {
 
     // Test next page button
     const nextButton = screen.getByText("Next");
-    fireEvent.click(nextButton);
+    await userEvent.click(nextButton);
 
     expect(mockUseQuery).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -969,7 +794,7 @@ describe("ExperimentDataTable", () => {
       expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
     });
 
-    it("should handle ArrowLeft key press when previous page is available", () => {
+    it("should handle ArrowLeft key press when previous page is available", async () => {
       const mockUseQuery = vi.fn().mockReturnValue({
         data: mockResponse,
         isLoading: false,
@@ -990,7 +815,7 @@ describe("ExperimentDataTable", () => {
 
       // First navigate to page 2
       const nextButton = screen.getByText("Next");
-      fireEvent.click(nextButton);
+      await userEvent.click(nextButton);
 
       // Now Previous button should be enabled
       const previousButton = screen.getByText("Previous");
@@ -1170,8 +995,9 @@ describe("ExperimentDataTable", () => {
       );
 
       // Change page size, which should clear selection
-      const pageSizeSelect = screen.getByTestId("page-size-select");
-      await user.selectOptions(pageSizeSelect, "20");
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+      await user.click(screen.getByRole("option", { name: "20" }));
 
       // Selection should be cleared (verified through component behavior)
       expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();

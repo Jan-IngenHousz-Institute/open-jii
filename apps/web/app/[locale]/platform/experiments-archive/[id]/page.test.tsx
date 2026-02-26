@@ -2,16 +2,12 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import React, { use } from "react";
+import { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import ExperimentOverviewPage from "./page";
-
-globalThis.React = React;
 
 // Mock hooks used by the page
 vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
@@ -30,11 +26,6 @@ vi.mock("@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizati
   useExperimentVisualizations: vi.fn(),
 }));
 
-// Mock translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
-
 // Mock ErrorDisplay
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
@@ -44,21 +35,6 @@ vi.mock("@/components/error-display", () => ({
     </div>
   ),
 }));
-
-// Mock next/navigation notFound
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
-}));
-
-// Helper to render with QueryClient
-const renderWithQueryClient = (ui: React.ReactElement) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -88,9 +64,7 @@ describe("<ExperimentOverviewPage />", () => {
       error: null,
     } as ReturnType<typeof useExperimentAccess>);
 
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
+    render(<ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />);
 
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
@@ -102,9 +76,7 @@ describe("<ExperimentOverviewPage />", () => {
       error: new Error("fail"),
     } as ReturnType<typeof useExperimentAccess>);
 
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
+    render(<ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />);
 
     expect(screen.getByTestId("error-title")).toHaveTextContent("failedToLoad");
     expect(screen.getByTestId("error-message")).toHaveTextContent("fail");
@@ -117,9 +89,7 @@ describe("<ExperimentOverviewPage />", () => {
       error: null,
     } as ReturnType<typeof useExperimentAccess>);
 
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
+    render(<ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />);
 
     expect(screen.getByText("notFound")).toBeInTheDocument();
   });
@@ -131,9 +101,7 @@ describe("<ExperimentOverviewPage />", () => {
       error: null,
     } as unknown as ReturnType<typeof useExperimentAccess>);
 
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
+    render(<ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />);
 
     expect(screen.getByText("notFound")).toBeInTheDocument();
   });
@@ -155,9 +123,7 @@ describe("<ExperimentOverviewPage />", () => {
     });
 
     expect(() =>
-      renderWithQueryClient(
-        <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-      ),
+      render(<ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />),
     ).toThrow("notFound");
   });
 });

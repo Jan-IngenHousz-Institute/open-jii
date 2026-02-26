@@ -1,14 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { NavigationMobileNavItem } from "./navigation-mobile-nav-item";
-
-// Mock the i18n hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 describe("NavigationMobileNavItem", () => {
   const mockOnItemClick = vi.fn();

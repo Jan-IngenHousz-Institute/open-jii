@@ -1,24 +1,11 @@
 // components/experiment-settings/experiment-visibility-card.test.tsx
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ExperimentVisibilityCard } from "./experiment-visibility-card";
 
 globalThis.React = React;
-
-// --- mock i18n to return keys
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
-// --- mock toast (no-op)
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
 
 // --- mock useExperimentUpdate to capture payload and resolve
 const mutateAsyncMock = vi.fn();

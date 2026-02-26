@@ -1,6 +1,5 @@
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 

@@ -1,8 +1,6 @@
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { render, screen, userEvent, within } from "@/test/test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom/vitest";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,12 +13,6 @@ import type { ChartFormValues } from "../chart-configurators/chart-configurator-
 import { DataSourceStep } from "./data-source-step";
 
 // Mock dependencies
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({
-    t: (key: string) => key,
-  })),
-}));
-
 vi.mock("@repo/ui/components", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {

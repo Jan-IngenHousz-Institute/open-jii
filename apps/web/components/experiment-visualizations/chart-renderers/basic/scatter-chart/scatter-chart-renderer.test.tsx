@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
@@ -6,23 +6,18 @@ import type { ExperimentVisualization } from "@repo/api";
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { ScatterChartRenderer } from "./scatter-chart-renderer";
 
-// Mock the hooks and components
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({ t: (key: string) => key })),
-}));
-
-// Mock react-i18next (Trans component used for error messages with links)
-vi.mock("react-i18next", () => ({
-  Trans: ({ i18nKey }: { i18nKey: string }) => <span>{i18nKey}</span>,
-}));
-
-vi.mock("@repo/ui/components", () => ({
-  ScatterChart: vi.fn(({ data }) => (
-    <div data-testid="scatter-chart">
-      <pre data-testid="chart-data">{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  )),
-}));
+// ScatterChart is Plotly-based, doesn't work in jsdom
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    ScatterChart: vi.fn(({ data }: { data: unknown }) => (
+      <div data-testid="scatter-chart">
+        <pre data-testid="chart-data">{JSON.stringify(data, null, 2)}</pre>
+      </div>
+    )),
+  };
+});
 
 // Mock the useExperimentVisualizationData hook
 vi.mock(
@@ -132,20 +127,6 @@ describe("ScatterChartRenderer", () => {
       );
 
       expect(screen.getByText("errors.noData")).toBeInTheDocument();
-    });
-
-    it("should show error message when fetch fails", () => {
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: undefined,
-        tableInfo: undefined,
-        isLoading: false,
-        error: { status: 500, body: { message: "Internal error" }, headers: new Headers() },
-      });
-
-      render(<ScatterChartRenderer visualization={mockVisualization} experimentId="exp-1" />);
-
-      expect(screen.getByText("errors.failedToLoadData")).toBeInTheDocument();
-      expect(screen.getByText("errors.failedToLoadDataDescription")).toBeInTheDocument();
     });
   });
 

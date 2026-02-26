@@ -1,7 +1,5 @@
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
-import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExperimentTableMetadata } from "@repo/api";
@@ -18,8 +16,6 @@ import NewVisualizationForm from "./new-visualization-form";
 
 // Mock external dependencies
 vi.mock("@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate");
-vi.mock("@repo/i18n");
-vi.mock("@repo/ui/hooks");
 vi.mock("./chart-configurators/chart-configurator-util", () => ({
   getDefaultChartConfig: vi.fn(),
   getDefaultDataConfig: vi.fn(),

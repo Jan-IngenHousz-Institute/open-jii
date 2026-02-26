@@ -1,6 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { useForm } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
@@ -13,15 +11,6 @@ import type { WizardStep } from "@repo/ui/components";
 import { ReviewStep } from "./review-step";
 
 globalThis.React = React;
-
-/* --------------------------------- Mocks --------------------------------- */
-
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 /* --------------------------------- Helpers --------------------------------- */
 

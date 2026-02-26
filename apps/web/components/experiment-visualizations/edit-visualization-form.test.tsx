@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
-import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExperimentTableMetadata } from "@repo/api";
@@ -11,16 +9,6 @@ import type { WizardFormProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import EditVisualizationForm from "./edit-visualization-form";
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({
-    t: (key: string) => key,
-  })),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
 
 vi.mock(
   "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate",

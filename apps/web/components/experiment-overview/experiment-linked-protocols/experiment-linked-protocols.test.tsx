@@ -1,26 +1,11 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ExperimentLinkedProtocols } from "./experiment-linked-protocols";
 
-globalThis.React = React;
-
 // ---------- Mocks ----------
 const useExperimentFlowMock = vi.hoisted(() => vi.fn());
 const useProtocolMock = vi.hoisted(() => vi.fn());
-const useLocaleMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-vi.mock("~/hooks/useLocale", () => ({
-  useLocale: useLocaleMock,
-}));
 
 vi.mock("../../../hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
   useExperimentFlow: useExperimentFlowMock,
@@ -55,8 +40,6 @@ vi.mock("~/util/apiError", () => ({
 
 describe("ExperimentLinkedProtocols", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    useLocaleMock.mockReturnValue("en");
     useProtocolMock.mockReturnValue({
       data: null,
       isLoading: false,
@@ -73,7 +56,8 @@ describe("ExperimentLinkedProtocols", () => {
 
     render(<ExperimentLinkedProtocols experimentId="exp-123" />);
     expect(screen.getByText("protocols.linkedProtocols")).toBeInTheDocument();
-    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+    // Loading state renders a skeleton, not the protocol cards
+    expect(screen.queryByTestId("protocol-card")).not.toBeInTheDocument();
   });
 
   it("renders no flow state", () => {

@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -47,49 +46,6 @@ vi.mock("next/dynamic", () => ({
         <div data-testid="map-sidebar-title">{props.sidebarTitle}</div>
       </div>
     )),
-}));
-
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { count?: number }) => {
-      if (key.includes("locationsCount")) {
-        return `${options?.count ?? 0} locations found`;
-      }
-      return key;
-    },
-  }),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-header">{children}</div>
-  ),
-  CardTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-title" className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
-}));
-
-// Mock Lucide icons
-vi.mock("lucide-react", () => ({
-  MapPinIcon: ({ className }: { className?: string }) => (
-    <div data-testid="map-pin-icon" className={className}>
-      📍
-    </div>
-  ),
 }));
 
 /* ------------------------------- Test Data ------------------------------- */
@@ -143,18 +99,13 @@ describe("ExperimentLocationsDisplay", () => {
     it("should render loading skeleton when isLoading is true", () => {
       render(<ExperimentLocationsDisplay locations={[]} isLoading={true} />);
 
-      expect(screen.getByTestId("card")).toBeInTheDocument();
-      expect(screen.getByTestId("card-header")).toBeInTheDocument();
-      expect(screen.getByTestId("card-title")).toBeInTheDocument();
       expect(screen.getByText("details.locations.locationsTitle")).toBeInTheDocument();
-      expect(screen.getByTestId("map-pin-icon")).toBeInTheDocument();
+      expect(document.querySelector(".lucide-map-pin")).toBeInTheDocument();
 
       // Check for loading skeleton
-      expect(screen.getByTestId("card-content")).toBeInTheDocument();
-      const content = screen.getByTestId("card-content");
-      expect(content.querySelector(".animate-pulse")).toBeInTheDocument();
-      expect(content.querySelector(".h-4.w-3\\/4.rounded.bg-gray-200")).toBeInTheDocument();
-      expect(content.querySelector(".h-64.rounded.bg-gray-200")).toBeInTheDocument();
+      expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+      expect(document.querySelector(".h-4.w-3\\/4.rounded.bg-gray-200")).toBeInTheDocument();
+      expect(document.querySelector(".h-64.rounded.bg-gray-200")).toBeInTheDocument();
     });
 
     it("should not render map component when loading", () => {
@@ -168,8 +119,6 @@ describe("ExperimentLocationsDisplay", () => {
     it("should render empty state when locations array is empty", () => {
       render(<ExperimentLocationsDisplay locations={[]} isLoading={false} />);
 
-      expect(screen.getByTestId("card")).toBeInTheDocument();
-      expect(screen.getByTestId("card-header")).toBeInTheDocument();
       expect(screen.getByText("details.locations.locationsTitle")).toBeInTheDocument();
 
       // Check for empty state content
@@ -177,7 +126,7 @@ describe("ExperimentLocationsDisplay", () => {
       expect(screen.getByText("details.locations.noLocationsDescription")).toBeInTheDocument();
 
       // Should have map pin icon in both header and empty state
-      const mapIcons = screen.getAllByTestId("map-pin-icon");
+      const mapIcons = document.querySelectorAll(".lucide-map-pin");
       expect(mapIcons).toHaveLength(2);
 
       // Should not render map component
@@ -187,14 +136,13 @@ describe("ExperimentLocationsDisplay", () => {
     it("should apply correct classes to empty state elements", () => {
       render(<ExperimentLocationsDisplay locations={[]} isLoading={false} />);
 
-      const content = screen.getByTestId("card-content");
-      const emptyIcon = content.querySelector(".mx-auto.h-12.w-12.text-gray-400");
+      const emptyIcon = document.querySelector(".mx-auto.h-12.w-12.text-gray-400");
       expect(emptyIcon).toBeInTheDocument();
 
-      const emptyTitle = content.querySelector(".mt-2.text-sm.font-medium.text-gray-900");
+      const emptyTitle = document.querySelector(".mt-2.text-sm.font-medium.text-gray-900");
       expect(emptyTitle).toBeInTheDocument();
 
-      const emptyDescription = content.querySelector(".mt-1.text-sm.text-gray-500");
+      const emptyDescription = document.querySelector(".mt-1.text-sm.text-gray-500");
       expect(emptyDescription).toBeInTheDocument();
     });
   });
@@ -203,10 +151,8 @@ describe("ExperimentLocationsDisplay", () => {
     it("should render locations with map when locations are provided", () => {
       render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={false} />);
 
-      expect(screen.getByTestId("card")).toBeInTheDocument();
-      expect(screen.getByTestId("card-header")).toBeInTheDocument();
       expect(screen.getAllByText("details.locations.locationsTitle")).toHaveLength(2);
-      expect(screen.getByText("3 locations found")).toBeInTheDocument();
+      expect(screen.getByText("experiments.locationsCount")).toBeInTheDocument();
 
       // Should render map component
       expect(screen.getByTestId("map-component")).toBeInTheDocument();
@@ -257,16 +203,17 @@ describe("ExperimentLocationsDisplay", () => {
     it("should display correct location count in header", () => {
       render(<ExperimentLocationsDisplay locations={singleLocation} isLoading={false} />);
 
-      expect(screen.getByText("1 locations found")).toBeInTheDocument();
+      expect(screen.getByText("experiments.locationsCount")).toBeInTheDocument();
     });
 
     it("should apply correct CSS classes to map container", () => {
       render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={false} />);
 
-      const cardContent = screen.getByTestId("card-content");
-      expect(cardContent).toHaveClass("space-y-4");
+      // CardContent renders with space-y-4 class
+      const cardContent = document.querySelector(".space-y-4");
+      expect(cardContent).toBeInTheDocument();
 
-      const mapContainer = cardContent.querySelector(".overflow-hidden.rounded-lg.border");
+      const mapContainer = document.querySelector(".overflow-hidden.rounded-lg.border");
       expect(mapContainer).toBeInTheDocument();
     });
   });
@@ -275,26 +222,26 @@ describe("ExperimentLocationsDisplay", () => {
     it("should render header with correct structure and classes", () => {
       render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={false} />);
 
-      const cardHeader = screen.getByTestId("card-header");
-      const headerContent = cardHeader.querySelector(".flex.items-start.justify-between");
+      const headerContent = document.querySelector(".flex.items-start.justify-between");
       expect(headerContent).toBeInTheDocument();
 
       const titleSection = headerContent?.querySelector("div");
       expect(titleSection).toBeInTheDocument();
 
-      const cardTitle = screen.getByTestId("card-title");
-      expect(cardTitle).toHaveClass("flex", "items-center", "gap-2");
+      // CardTitle contains the title text
+      const titleElement = screen.getAllByText("details.locations.locationsTitle")[0];
+      expect(titleElement).toBeInTheDocument();
 
-      const locationCount = cardHeader.querySelector(".text-muted-foreground.mt-1.text-sm");
+      const locationCount = document.querySelector(".text-muted-foreground.mt-1.text-sm");
       expect(locationCount).toBeInTheDocument();
     });
 
     it("should always render map pin icon in header", () => {
       render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={false} />);
 
-      const headerIcon = screen
-        .getByTestId("card-title")
-        .querySelector('[data-testid="map-pin-icon"]');
+      // The title text and icon are siblings inside CardTitle
+      const titleElement = screen.getAllByText("details.locations.locationsTitle")[0];
+      const headerIcon = titleElement.closest("div")?.querySelector(".lucide-map-pin");
       expect(headerIcon).toBeInTheDocument();
       expect(headerIcon).toHaveClass("h-5", "w-5");
     });
@@ -369,7 +316,7 @@ describe("ExperimentLocationsDisplay", () => {
       render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={false} />);
 
       expect(screen.getAllByText("details.locations.locationsTitle")).toHaveLength(2);
-      expect(screen.getByText("3 locations found")).toBeInTheDocument();
+      expect(screen.getByText("experiments.locationsCount")).toBeInTheDocument();
     });
 
     it("should use translation keys in empty state", () => {

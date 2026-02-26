@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
@@ -6,26 +6,18 @@ import type { ExperimentVisualization } from "@repo/api";
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { LineChartRenderer } from "./line-chart-renderer";
 
-// Mock the translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock react-i18next (Trans component used for error messages with links)
-vi.mock("react-i18next", () => ({
-  Trans: ({ i18nKey }: { i18nKey: string }) => <span>{i18nKey}</span>,
-}));
-
-// Mock the LineChart component from UI package
-vi.mock("@repo/ui/components", () => ({
-  LineChart: ({ data }: { data: unknown }) => (
-    <div data-testid="line-chart">
-      <pre data-testid="chart-data">{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  ),
-}));
+// Mock the LineChart component from UI package (Plotly-based, doesn't work in jsdom)
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    LineChart: ({ data }: { data: unknown }) => (
+      <div data-testid="line-chart">
+        <pre data-testid="chart-data">{JSON.stringify(data, null, 2)}</pre>
+      </div>
+    ),
+  };
+});
 
 // Mock the useExperimentVisualizationData hook
 vi.mock(

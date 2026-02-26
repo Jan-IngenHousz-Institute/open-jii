@@ -1,5 +1,4 @@
-import { render, screen } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 

@@ -1,12 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import ProtocolCodeEditor from "../protocol-code-editor";
-
-// Mock posthog feature flag hook
-vi.mock("posthog-js/react", () => ({
-  useFeatureFlagEnabled: vi.fn(),
-}));
 
 // Mock useDebounce to return value immediately for testing
 vi.mock("~/hooks/useDebounce", () => ({

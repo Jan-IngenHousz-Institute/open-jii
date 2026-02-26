@@ -5,14 +5,6 @@ import { authClient } from "@repo/auth/client";
 
 import { useVerifyEmail } from "./useVerifyEmail";
 
-vi.mock("@repo/auth/client", () => ({
-  authClient: { signIn: { emailOtp: vi.fn() } },
-}));
-
-vi.mock("~/app/actions/revalidate", () => ({
-  revalidateAuth: vi.fn(),
-}));
-
 describe("useVerifyEmail", () => {
   it("verifies email OTP and caches session", async () => {
     const mockSession = { user: { id: "1", email: "test@example.com" } };

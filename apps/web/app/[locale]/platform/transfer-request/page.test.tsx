@@ -1,11 +1,7 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
 
 import TransferRequestPage from "./page";
-
-globalThis.React = React;
 
 // -------------------
 // Mocks
@@ -13,10 +9,6 @@ globalThis.React = React;
 
 vi.mock("~/components/transfer-request-form", () => ({
   TransferRequestForm: () => <div data-testid="transfer-request-form">Form Component</div>,
-}));
-
-vi.mock("@repo/i18n/server", () => ({
-  default: () => Promise.resolve({ t: (key: string) => key }),
 }));
 
 // -------------------

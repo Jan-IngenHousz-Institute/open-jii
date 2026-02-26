@@ -1,18 +1,10 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
 
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
-
-// Mock translation
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
-  }),
-}));
 
 // Mock Next.js dynamic import
 vi.mock("next/dynamic", () => ({

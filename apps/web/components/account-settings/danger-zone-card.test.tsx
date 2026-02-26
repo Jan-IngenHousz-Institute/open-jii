@@ -1,7 +1,5 @@
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent } from "@/test/test-utils";
-import { waitFor } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { CreateUserProfileBody } from "@repo/api";
@@ -10,41 +8,6 @@ import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import { DangerZoneCard } from "./danger-zone-card";
-
-// We need mock Dialog because real radix Dialog relies on portal/overlay
-// which doesn't render content visibly in jsdom without pointer events
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
-  return {
-    ...actual,
-    Dialog: ({
-      children,
-      open,
-      onOpenChange,
-    }: {
-      children: React.ReactNode;
-      open?: boolean;
-      onOpenChange?: (open: boolean) => void;
-    }) => (
-      <div data-testid="dialog" data-open={open}>
-        {children}
-        <button data-testid="dialog-close" onClick={() => onOpenChange?.(false)}>
-          Close
-        </button>
-      </div>
-    ),
-    DialogTrigger: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="dialog-trigger">{children}</div>
-    ),
-    DialogContent: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="dialog-content">{children}</div>
-    ),
-    DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-    DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-    DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  };
-});
 
 const defaultProfile = { firstName: "Ada", lastName: "Lovelace", activated: true };
 
@@ -55,27 +18,6 @@ function renderCard(props: { profile?: CreateUserProfileBody | null; userId?: st
       userId={props.userId ?? "user-123"}
     />,
   );
-}
-
-/** Open dialog, type confirmation, return the confirm button */
-async function _confirmAction(
-  buttonName: string,
-  placeholder: string,
-  confirmWord: string,
-  dialogIndex: number,
-) {
-  const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: buttonName }));
-  const input = screen.getByPlaceholderText(placeholder);
-  await user.type(input, confirmWord);
-  const contents = screen.getAllByTestId("dialog-content");
-  // Find the actual confirm button by name within dialog content
-  const allBtns = Array.from(contents[dialogIndex].querySelectorAll("button"));
-  const btn =
-    allBtns.find((b) => !b.disabled && b.textContent.includes("Confirm")) ??
-    allBtns.find((b) => !b.disabled && b.textContent !== "dangerZone.cancel");
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  return { user, btn: btn!, input };
 }
 
 describe("DangerZoneCard", () => {
@@ -316,7 +258,7 @@ describe("DangerZoneCard", () => {
         screen.getByPlaceholderText("dangerZone.deactivate.confirmPlaceholder"),
         "test",
       );
-      await user.click(screen.getAllByTestId("dialog-close")[0]);
+      await user.click(screen.getByRole("button", { name: "dangerZone.cancel" }));
       await user.click(screen.getByRole("button", { name: "dangerZone.deactivate.button" }));
 
       expect(screen.getByPlaceholderText("dangerZone.deactivate.confirmPlaceholder")).toHaveValue(
@@ -330,7 +272,7 @@ describe("DangerZoneCard", () => {
 
       await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
       await user.type(screen.getByPlaceholderText("dangerZone.delete.confirmPlaceholder"), "test");
-      await user.click(screen.getAllByTestId("dialog-close")[1]);
+      await user.click(screen.getByRole("button", { name: "dangerZone.cancel" }));
       await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
 
       expect(screen.getByPlaceholderText("dangerZone.delete.confirmPlaceholder")).toHaveValue("");

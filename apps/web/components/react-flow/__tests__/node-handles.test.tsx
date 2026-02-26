@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { Position } from "@xyflow/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";

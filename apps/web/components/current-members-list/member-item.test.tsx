@@ -1,15 +1,7 @@
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { MemberItem } from "./member-item";
-
-// Minimal mocks
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 const mockUser = {
   userId: "user-123",
@@ -96,7 +88,7 @@ describe("<MemberItem />", () => {
     expect(screen.getByText("experimentSettings.roleAdmin")).toBeInTheDocument();
   });
 
-  it("calls onValueChange when role is changed", () => {
+  it("calls onValueChange when role is changed", async () => {
     const onValueChange = vi.fn();
 
     render(
@@ -114,16 +106,17 @@ describe("<MemberItem />", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const selectTrigger = screen.getByRole("combobox");
-    fireEvent.click(selectTrigger);
+    await user.click(selectTrigger);
 
     const adminOption = screen.getByText("experimentSettings.roleAdmin");
-    fireEvent.click(adminOption);
+    await user.click(adminOption);
 
     expect(onValueChange).toHaveBeenCalledWith("admin");
   });
 
-  it("shows leave option for current user", () => {
+  it("shows leave option for current user", async () => {
     const onValueChange = vi.fn();
 
     render(
@@ -141,13 +134,14 @@ describe("<MemberItem />", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const selectTrigger = screen.getByRole("combobox");
-    fireEvent.click(selectTrigger);
+    await user.click(selectTrigger);
 
     expect(screen.getByText("experimentSettings.leave")).toBeInTheDocument();
   });
 
-  it("shows remove option for other users", () => {
+  it("shows remove option for other users", async () => {
     const onValueChange = vi.fn();
 
     render(
@@ -165,8 +159,9 @@ describe("<MemberItem />", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const selectTrigger = screen.getByRole("combobox");
-    fireEvent.click(selectTrigger);
+    await user.click(selectTrigger);
 
     expect(screen.getByText("experimentSettings.remove")).toBeInTheDocument();
   });
@@ -211,7 +206,7 @@ describe("<MemberItem />", () => {
     expect(selectTrigger).not.toBeDisabled();
   });
 
-  it("disables remove option when member is being removed", () => {
+  it("disables remove option when member is being removed", async () => {
     render(
       <MemberItem
         member={mockMember}
@@ -227,14 +222,15 @@ describe("<MemberItem />", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const selectTrigger = screen.getByRole("combobox");
-    fireEvent.click(selectTrigger);
+    await user.click(selectTrigger);
 
     const removeOption = screen.getByText("experimentSettings.remove");
     expect(removeOption.closest('[role="option"]')).toHaveAttribute("data-disabled");
   });
 
-  it("disables role options when last admin", () => {
+  it("disables role options when last admin", async () => {
     const adminMember = {
       ...mockMember,
       role: "admin",
@@ -255,8 +251,9 @@ describe("<MemberItem />", () => {
       />,
     );
 
+    const user = userEvent.setup();
     const selectTrigger = screen.getByRole("combobox");
-    fireEvent.click(selectTrigger);
+    await user.click(selectTrigger);
 
     // Find the member option in the dropdown
     const memberOptions = screen.getAllByText("experimentSettings.roleMember");

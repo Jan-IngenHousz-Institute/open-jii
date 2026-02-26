@@ -5,10 +5,6 @@ import { authClient } from "@repo/auth/client";
 
 import { useUpdateUser } from "./useUpdateUser";
 
-vi.mock("@repo/auth/client", () => ({
-  authClient: { updateUser: vi.fn() },
-}));
-
 describe("useUpdateUser", () => {
   it("calls updateUser and invalidates auth queries", async () => {
     vi.mocked(authClient.updateUser).mockResolvedValue({ data: { success: true }, error: null });

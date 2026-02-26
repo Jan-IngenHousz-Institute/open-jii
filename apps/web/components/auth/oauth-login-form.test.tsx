@@ -5,14 +5,8 @@ import { authClient } from "@repo/auth/client";
 
 import { OAuthLoginForm } from "./oauth-login-form";
 
-vi.mock("@repo/auth/client", () => ({
-  authClient: {
-    signIn: { oauth2: vi.fn(), social: vi.fn() },
-  },
-}));
-
-const mockSignInSocial = authClient.signIn.social as ReturnType<typeof vi.fn>;
-const mockSignInOAuth2 = authClient.signIn.oauth2 as ReturnType<typeof vi.fn>;
+const mockSignInSocial = vi.mocked(authClient.signIn.social);
+const mockSignInOAuth2 = vi.mocked(authClient.signIn.oauth2);
 
 describe("OAuthLoginForm", () => {
   beforeEach(() => vi.clearAllMocks());

@@ -1,14 +1,16 @@
-import { render, screen } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
 
 Element.prototype.scrollIntoView = vi.fn();
 
-// Mock useDebounce hook
+// Mock useDebounce hook to make debouncing instant
 vi.mock("@/hooks/useDebounce", () => ({
-  useDebounce: (value: string, _delay: number) => [value, true], // Return [debouncedValue, isDebounced]
+  useDebounce: (value: string, _delay: number) => [value, true],
 }));
 
 // Mock useProtocol (used by AnalysisPanel to fetch upstream protocol name)
@@ -23,22 +25,19 @@ vi.mock("@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacro
 
 // Mock data
 const mockMacros = [
-  {
-    id: "macro-1",
+  createMacro({
     name: "Plot Temperature",
     description: "Visualize temperature data",
     language: "python",
     createdByName: "John Doe",
-  },
-  {
-    id: "macro-2",
+  }),
+  createMacro({
     name: "Plot Humidity",
     description: "Visualize humidity data",
     language: "r",
     createdByName: "Jane Smith",
-  },
-  {
-    id: "macro-3",
+  }),
+  createMacro({
     name: "Statistical Analysis",
     description: "Perform statistical analysis on data",
     language: "javascript",
@@ -66,6 +65,17 @@ vi.mock("../../../lib/tsr", () => ({
 describe("<AnalysisPanel />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Dynamic MSW handler — filters macros based on "search" query param
+    server.use(
+      http.get("http://localhost:3020/api/v1/macros", ({ request }) => {
+        const url = new URL(request.url);
+        const search = url.searchParams.get("search");
+        const filtered = search
+          ? mockMacros.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()))
+          : mockMacros;
+        return HttpResponse.json(filtered);
+      }),
+    );
   });
 
   const openDropdown = async (): Promise<HTMLButtonElement> => {
@@ -98,17 +108,16 @@ describe("<AnalysisPanel />", () => {
     const search = screen.getByPlaceholderText("experiments.searchMacros");
     await userEvent.type(search, "humidity");
 
-    // Wait for debounce delay
-    await new Promise((resolve) => setTimeout(resolve, 350));
-
-    // Expect the filtered option to be present and others (like temperature) to be absent
-    expect(screen.getByRole("heading", { name: /Plot Humidity/i })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /Plot Temperature/i })).not.toBeInTheDocument();
+    // Wait for React Query to return filtered results
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /Plot Humidity/i })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /Plot Temperature/i })).not.toBeInTheDocument();
+    });
 
     // Select it - click the macro item itself
     const macroItem = screen.getByRole("option", { name: /Plot Humidity/i });
     await userEvent.click(macroItem);
-    expect(onChange).toHaveBeenCalledWith("macro-2");
+    expect(onChange).toHaveBeenCalledWith(mockMacros[1].id);
 
     // Popover should be closed (search input disappears)
     expect(screen.queryByPlaceholderText("experiments.searchMacros")).not.toBeInTheDocument();
