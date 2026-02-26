@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslation } from "react-i18next";
 import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useLocale } from "~/hooks/useLocale";
 
 import { ExperimentTableName } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
 import {
   Button,
   Card,
@@ -46,7 +46,7 @@ export function ExperimentMeasurements({
     orderDirection: "DESC",
     enabled: !!hasDeviceTable,
   });
-  const isLoading = isLoadingTables || (hasDeviceTable && isLoadingData);
+  const isLoading = isLoadingTables || (!!hasDeviceTable && isLoadingData);
   const { t } = useTranslation("experiments");
   if (isLoading) {
     return (

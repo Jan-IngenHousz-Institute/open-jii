@@ -16,7 +16,7 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
       error: null as Error | null,
     })),
     useExperimentTablesSpy: vi.fn(() => ({
-      tables: [{ name: "device", displayName: "Device", rowCount: 10 }],
+      tables: [{ name: "device", displayName: "Device", totalRows: 10 }],
       isLoading: false,
       error: null as Error | null,
     })),
@@ -31,11 +31,11 @@ vi.mock("@repo/i18n", () => ({
 }));
 
 vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
-  useExperimentData: () => useExperimentDataSpy(),
+  useExperimentData: (...args: unknown[]) => useExperimentDataSpy(...args),
 }));
 
 vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
-  useExperimentTables: () => useExperimentTablesSpy(),
+  useExperimentTables: (...args: unknown[]) => useExperimentTablesSpy(...args),
 }));
 
 vi.mock("~/hooks/useLocale", () => ({
@@ -204,6 +204,7 @@ describe("ExperimentMeasurements", () => {
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
     expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
+    expect(useExperimentDataSpy).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 
   it("renders loading state when tables are loading", () => {
