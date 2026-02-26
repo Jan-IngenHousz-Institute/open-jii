@@ -39,23 +39,19 @@ export function MemberItem({
 
   return (
     <div className="flex items-center justify-between rounded">
-      <div className="flex min-w-0 flex-1 flex-col space-y-1">
-        <div className="flex min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-            <h4 className="text-foreground truncate text-sm font-medium">
-              {`${member.user.firstName} ${member.user.lastName}`}
-            </h4>
-            <span
-              className="flex min-w-0 items-center gap-x-1"
-              title={member.user.email ?? t("experimentSettings.noEmail")}
-            >
-              <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-              <span className="text-muted-foreground truncate text-sm md:max-w-[200px]">
-                {member.user.email ?? t("experimentSettings.noEmail")}
-              </span>
-            </span>
-          </div>
-        </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <h4 className="text-foreground truncate text-sm font-medium">
+          {`${member.user.firstName} ${member.user.lastName}`}
+        </h4>
+        <span
+          className="flex min-w-0 items-center gap-x-1"
+          title={member.user.email ?? t("experimentSettings.noEmail")}
+        >
+          <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+          <span className="text-muted-foreground truncate text-sm">
+            {member.user.email ?? t("experimentSettings.noEmail")}
+          </span>
+        </span>
       </div>
 
       <div className="flex flex-shrink-0 flex-col-reverse items-end space-x-3 pl-4 md:flex-row md:items-center">

@@ -113,7 +113,10 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       const isRegistered = user?.registered;
 
       if (!isRegistered) {
-        router.push(`/${locale}/register`);
+        const registerUrl = callbackUrl
+          ? `/${locale}/register?callbackUrl=${encodeURIComponent(callbackUrl)}`
+          : `/${locale}/register`;
+        router.push(registerUrl);
       } else {
         router.push(callbackUrl ?? "/platform");
       }

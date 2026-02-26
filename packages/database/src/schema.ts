@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { primaryKey } from "drizzle-orm/pg-core";
+import { primaryKey, check } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -179,6 +179,38 @@ export const experimentMembers = pgTable(
       .notNull(),
   },
   (table) => [primaryKey({ columns: [table.experimentId, table.userId] })],
+);
+
+// Invitation Status Enum
+export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "accepted", "revoked"]);
+
+// Invitation Resource Type Enum
+export const invitationResourceTypeEnum = pgEnum("invitation_resource_type", [
+  "platform",
+  "experiment",
+]);
+
+// Invitations Table
+export const invitations = pgTable(
+  "invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    resourceType: invitationResourceTypeEnum("resource_type").notNull(),
+    resourceId: uuid("resource_id"),
+    email: text("email").notNull(),
+    role: text("role").default("member").notNull(),
+    status: invitationStatusEnum("status").default("pending").notNull(),
+    invitedBy: uuid("invited_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "resource_id_check",
+      sql`(${table.resourceType} = 'platform' AND ${table.resourceId} IS NULL) OR (${table.resourceType} != 'platform' AND ${table.resourceId} IS NOT NULL)`,
+    ),
+  ],
 );
 
 // Associative table: Experiment Protocols

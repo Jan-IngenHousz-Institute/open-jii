@@ -13,6 +13,12 @@ import {
   zUserMetadataWebhookPayload,
   zUserMetadataWebhookResponse,
   zWebhookErrorResponse,
+  zInvitation,
+  zInvitationList,
+  zCreateInvitationBody,
+  zUpdateInvitationRoleBody,
+  zInvitationIdPathParam,
+  zListInvitationsQuery,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -93,5 +99,60 @@ export const userContract = c.router({
     summary: "Get user metadata for Databricks pipelines",
     description:
       "Fetches user profile metadata (firstName, lastName, avatarUrl) for multiple user IDs to populate Databricks pipeline tables",
+  },
+
+  createInvitation: {
+    method: "POST",
+    path: "/api/v1/invitations",
+    body: zCreateInvitationBody,
+    responses: {
+      201: zInvitation,
+      400: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Create invitation",
+    description: "Creates an invitation for a user to join a resource.",
+  },
+
+  listInvitations: {
+    method: "GET",
+    path: "/api/v1/invitations",
+    query: zListInvitationsQuery,
+    responses: {
+      200: zInvitationList,
+      400: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "List invitations",
+    description: "Returns all pending invitations for a given resource.",
+  },
+
+  updateInvitationRole: {
+    method: "PATCH",
+    path: "/api/v1/invitations/:invitationId",
+    pathParams: zInvitationIdPathParam,
+    body: zUpdateInvitationRoleBody,
+    responses: {
+      200: zInvitation,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update invitation role",
+    description: "Updates the role on a pending invitation.",
+  },
+
+  revokeInvitation: {
+    method: "DELETE",
+    path: "/api/v1/invitations/:invitationId",
+    pathParams: zInvitationIdPathParam,
+    responses: {
+      204: null,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Revoke invitation",
+    description: "Revokes a pending invitation so it can no longer be accepted.",
   },
 });

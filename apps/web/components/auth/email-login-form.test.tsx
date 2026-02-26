@@ -231,7 +231,7 @@ describe("EmailLoginForm", () => {
     fireEvent.change(otpInput, { target: { value: "123456" } });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/en-US/register");
+      expect(mockPush).toHaveBeenCalledWith("/en-US/register?callbackUrl=%2Fplatform");
     });
   });
 

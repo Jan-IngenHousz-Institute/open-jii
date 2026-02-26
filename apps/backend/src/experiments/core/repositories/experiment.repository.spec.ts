@@ -416,7 +416,7 @@ describe("ExperimentRepository", () => {
 
       // Create stale experiment
       await testApp.createExperiment({
-        name: "Draft Experiment",
+        name: "Stale Experiment",
         userId: mainUserId,
         status: "stale",
       });
