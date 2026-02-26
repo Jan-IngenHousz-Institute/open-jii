@@ -13,10 +13,4 @@ CREATE TABLE "invitations" (
 	CONSTRAINT "resource_id_check" CHECK (("invitations"."resource_type" = 'platform' AND "invitations"."resource_id" IS NULL) OR ("invitations"."resource_type" != 'platform' AND "invitations"."resource_id" IS NOT NULL))
 );
 --> statement-breakpoint
-ALTER TABLE "experiments" ALTER COLUMN "status" SET DATA TYPE text;--> statement-breakpoint
-ALTER TABLE "experiments" ALTER COLUMN "status" SET DEFAULT 'active'::text;--> statement-breakpoint
-DROP TYPE "public"."experiment_status";--> statement-breakpoint
-CREATE TYPE "public"."experiment_status" AS ENUM('active', 'stale', 'archived', 'published');--> statement-breakpoint
-ALTER TABLE "experiments" ALTER COLUMN "status" SET DEFAULT 'active'::"public"."experiment_status";--> statement-breakpoint
-ALTER TABLE "experiments" ALTER COLUMN "status" SET DATA TYPE "public"."experiment_status" USING "status"::"public"."experiment_status";--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_invited_by_users_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
