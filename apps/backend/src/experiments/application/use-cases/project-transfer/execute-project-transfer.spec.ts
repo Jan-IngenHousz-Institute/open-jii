@@ -1,6 +1,7 @@
 import type { ProjectTransferWebhookPayload } from "@repo/api";
 
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import {
   AppError,
   assertFailure,
@@ -11,6 +12,7 @@ import {
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { ExecuteProjectTransferUseCase } from "./execute-project-transfer";
@@ -32,6 +34,10 @@ describe("ExecuteProjectTransferUseCase", () => {
     // Default: Databricks upload succeeds (DatabricksAdapter is a singleton from DatabricksModule)
     const databricksAdapter = testApp.module.get(DatabricksAdapter);
     vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
+
+    // Default: Email sending succeeds
+    const emailAdapter = testApp.module.get(EMAIL_PORT);
+    vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -278,6 +284,58 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.protocolId).not.toBeNull();
       expect(result.value.macroId).toBeNull();
       expect(result.value.flowId).toBeNull();
+    });
+
+    it("should send project transfer complete email after successful transfer", async () => {
+      const emailAdapter = testApp.module.get(EMAIL_PORT);
+      const emailSpy = vi
+        .spyOn(emailAdapter, "sendProjectTransferComplete")
+        .mockResolvedValue(success(undefined));
+
+      const payload = buildPayload();
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(emailSpy).toHaveBeenCalledOnce();
+      expect(emailSpy).toHaveBeenCalledWith(
+        expect.any(String), // user email
+        result.value.experimentId,
+        payload.experiment.name,
+      );
+    });
+
+    it("should succeed even when email sending fails (non-fatal)", async () => {
+      const emailAdapter = testApp.module.get(EMAIL_PORT);
+      vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(
+        failure({
+          message: "Email service unavailable",
+          code: "INTERNAL_ERROR",
+          statusCode: 500,
+          name: "InternalError",
+        }),
+      );
+
+      const payload = buildPayload();
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.success).toBe(true);
+    });
+
+    it("should succeed when user has no email address", async () => {
+      // Create a user without an email
+      const noEmailUserId = await testApp.createTestUser({ email: "" });
+
+      const payload = buildPayload({
+        experiment: {
+          name: "No Email Transfer",
+          createdBy: noEmailUserId,
+        },
+      });
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.success).toBe(true);
     });
   });
 });

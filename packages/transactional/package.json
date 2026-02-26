@@ -34,6 +34,14 @@
     "./render/transfer-request-confirmation": {
       "types": "./dist/render/transfer-request-confirmation.d.ts",
       "default": "./dist/render/transfer-request-confirmation.js"
+    },
+    "./emails/project-transfer-complete": {
+      "types": "./dist/emails/project-transfer-complete.d.ts",
+      "default": "./dist/emails/project-transfer-complete.js"
+    },
+    "./render/project-transfer-complete": {
+      "types": "./dist/render/project-transfer-complete.d.ts",
+      "default": "./dist/render/project-transfer-complete.js"
     }
   },
   "scripts": {

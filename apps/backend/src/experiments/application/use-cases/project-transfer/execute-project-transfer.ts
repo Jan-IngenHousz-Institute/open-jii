@@ -14,7 +14,10 @@ import {
 } from "../../../../macros/core/ports/databricks.port";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
+import { EMAIL_PORT } from "../../../core/ports/email.port";
+import type { EmailPort } from "../../../core/ports/email.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
@@ -33,7 +36,9 @@ export class ExecuteProjectTransferUseCase {
     private readonly flowRepository: FlowRepository,
     private readonly macroRepository: MacroRepository,
     private readonly protocolRepository: ProtocolRepository,
+    private readonly userRepository: UserRepository,
     @Inject(MACRO_DATABRICKS_PORT) private readonly macroDatabricksPort: MacroDatabricksPort,
+    @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
   async execute(
@@ -263,6 +268,32 @@ export class ExecuteProjectTransferUseCase {
       macroId,
       flowId,
     });
+
+    // 8. Send project transfer complete email (non-fatal)
+    const userResult = await this.userRepository.findOne(data.experiment.createdBy);
+
+    if (userResult.isSuccess() && userResult.value?.email) {
+      const emailResult = await this.emailPort.sendProjectTransferComplete(
+        userResult.value.email,
+        experiment.id,
+        experiment.name,
+      );
+
+      if (emailResult.isFailure()) {
+        this.logger.warn({
+          msg: "Failed to send project transfer complete email (non-fatal)",
+          operation: "executeProjectTransfer",
+          experimentId: experiment.id,
+          error: emailResult.error.message,
+        });
+      }
+    } else {
+      this.logger.warn({
+        msg: "Could not retrieve user email for project transfer notification",
+        operation: "executeProjectTransfer",
+        userId: data.experiment.createdBy,
+      });
+    }
 
     return success({
       success: true,
