@@ -455,7 +455,7 @@ def experiment_raw_data():
             sanitized = label.lower()
             
             # Replace invalid characters with underscores
-            invalid_chars = ' ,;{}()\n\t='
+            invalid_chars = ' ,;{}()\n\t=.'
             for char in invalid_chars:
                 sanitized = sanitized.replace(char, '_')
             
