@@ -237,6 +237,23 @@ macros = (
 # COMMAND ----------
 
 # DBTITLE 1,Project Data
+@F.udf(StringType())
+def to_json_string(value: str) -> str:
+    """Convert a Python repr string (single quotes) to valid JSON (double quotes)."""
+    if value is None:
+        return None
+    try:
+        json.loads(value)
+        return value
+    except (json.JSONDecodeError, ValueError):
+        pass
+    try:
+        import ast
+        parsed = ast.literal_eval(value)
+        return json.dumps(parsed)
+    except Exception:
+        return None
+
 questions_map = questions.groupBy("project_id").agg(
     F.map_from_arrays(
         F.collect_list("question_id"),
@@ -256,7 +273,7 @@ project_data = (
         F.lit(None).cast("double").alias("device_battery"),
         F.lit(None).cast("string").alias("device_firmware"),
         F.col("m.sample_raw").alias("sample"),
-        F.col("m.sample_processed").alias("output"),
+        to_json_string(F.col("m.sample_processed")).alias("output"),
         F.lit(None).cast("string").alias("user_id"),
         F.lit(None).cast("string").alias("experiment_id"),
         F.lit(None).cast("string").alias("protocol_id"),

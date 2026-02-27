@@ -491,7 +491,7 @@ def experiment_raw_data():
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
         .withColumn("data", F.expr("parse_json(sample)"))
-        .withColumn("output_data", F.expr("parse_json(output)"))
+        .withColumn("output_data", F.expr("try_parse_json(output)"))
         .withColumn(
             "questions_sanitized",
             F.when(
