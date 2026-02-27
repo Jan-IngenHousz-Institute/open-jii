@@ -16,6 +16,7 @@ from datetime import datetime
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
+from openjii import decompress_sample
 
 # COMMAND ----------
 
@@ -58,6 +59,7 @@ sensor_schema = StructType([
     StructField("device_battery", DoubleType(), True),
     StructField("device_firmware", StringType(), True),
     StructField("sample", StringType(), True),
+    StructField("_sample_encoding", StringType(), True),
     StructField("timestamp", TimestampType(), False),
     StructField("output", StringType(), True),
     StructField("questions", ArrayType(question_schema), True),
@@ -174,7 +176,13 @@ def clean_data():
         .withColumn("device_version", F.col("parsed_data.device_version"))
         .withColumn("device_battery", F.col("parsed_data.device_battery"))
         .withColumn("device_firmware", F.col("parsed_data.device_firmware"))
-        .withColumn("sample", F.col("parsed_data.sample"))
+        .withColumn(
+            "sample",
+            decompress_sample(
+                F.col("parsed_data.sample"),
+                F.col("parsed_data._sample_encoding")
+            )
+        )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
