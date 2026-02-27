@@ -1033,8 +1033,8 @@ def raw_imported_data():
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+        .option("cloudFiles.schemaHints", IMPORTED_DATA_SCHEMA_HINTS)
         .option("recursiveFileLookup", "true")
-        .schema(imported_data_schema)
         .load(imported_path)
     )
     
@@ -1106,8 +1106,8 @@ def raw_ambyte_data():
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+        .option("cloudFiles.schemaHints", AMBYTE_DATA_SCHEMA_HINTS)
         .option("recursiveFileLookup", "true")
-        .schema(ambyte_data_schema)
         .load(processed_path)
     )
     

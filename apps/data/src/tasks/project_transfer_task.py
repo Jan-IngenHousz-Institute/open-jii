@@ -256,8 +256,9 @@ project_data = (
         F.lit(None).cast("string").alias("protocol_id"),
         F.lit(None).cast("string").alias("macro_id"),
         F.lit(None).cast("string").alias("macro_filename"),
-        F.col("m.time").cast("timestamp").alias("timestamp"),
-        F.to_date(F.col("m.time").cast("timestamp")).cast("string").alias("date"),
+        # PhotosynQ `time` is Unix epoch in milliseconds; divide by 1000 to get seconds
+        (F.col("m.time").cast("double") / 1000).cast("timestamp").alias("timestamp"),
+        F.to_date((F.col("m.time").cast("double") / 1000).cast("timestamp")).cast("string").alias("date"),
         F.when(
             F.col("m.user_answers").isNotNull() & (F.size("m.user_answers") > 0),
             F.expr("""
