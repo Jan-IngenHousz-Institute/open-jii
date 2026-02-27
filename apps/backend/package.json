@@ -23,8 +23,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
+    "@aws-sdk/client-lambda": "catalog:aws-sdk",
     "@aws-sdk/client-location": "catalog:aws-sdk",
     "@nestjs/axios": "^4.0.1",
+    "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.1.8",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.8",
@@ -42,6 +44,7 @@
     "axios": "catalog:",
     "better-auth": "^1.4.12",
     "busboy": "^1.6.0",
+    "cache-manager": "^7.2.8",
     "drizzle-zod": "^0.5.1",
     "expo-secure-store": "~15.0.8",
     "expo-web-browser": "~15.0.9",

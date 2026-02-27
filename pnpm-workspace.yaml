@@ -44,3 +44,4 @@ catalogs:
   aws-sdk:
     "@aws-sdk/client-cognito-identity": ^3.995.0
     "@aws-sdk/client-location": ^3.995.0
+    "@aws-sdk/client-lambda": ^3.995.0
