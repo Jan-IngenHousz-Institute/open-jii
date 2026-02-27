@@ -29,8 +29,9 @@ describe("<QuestionPanel />", () => {
     // Find the validation message input and update it
     const input = screen.getByPlaceholderText("questionCard.placeholder");
 
+    const user = userEvent.setup();
     // Type some text - this will append to "Init"
-    await userEvent.type(input, "X");
+    await user.type(input, "X");
 
     // Should have been called with updated text
     expect(onChange).toHaveBeenCalled();
@@ -44,8 +45,9 @@ describe("<QuestionPanel />", () => {
       <QuestionPanel stepSpecification={makeSpec()} onChange={onChange} disabled={false} />,
     );
 
+    const user = userEvent.setup();
     // Click on the SELECT radio button - find by its label
-    await userEvent.click(screen.getByText("questionCard.answerTypes.SELECT"));
+    await user.click(screen.getByText("questionCard.answerTypes.SELECT"));
     const firstCallArr = onChange.mock.calls.at(-1);
     expect(firstCallArr).toBeDefined();
     const firstCall = firstCallArr?.[0];
@@ -62,7 +64,7 @@ describe("<QuestionPanel />", () => {
     );
 
     // Click on the TEXT radio button
-    await userEvent.click(screen.getByText("questionCard.answerTypes.TEXT"));
+    await user.click(screen.getByText("questionCard.answerTypes.TEXT"));
     const secondCall = onChange.mock.calls.at(-1)?.[0];
     expect(secondCall).toBeDefined();
     expect(secondCall?.answerType).toBe("TEXT");
@@ -92,8 +94,9 @@ describe("<QuestionPanel />", () => {
       <QuestionPanel stepSpecification={baseSelect} onChange={onChange} disabled={false} />,
     );
 
+    const user = userEvent.setup();
     // Add option - use translation key
-    await userEvent.click(screen.getByRole("button", { name: "questionCard.addOption" }));
+    await user.click(screen.getByRole("button", { name: "questionCard.addOption" }));
     const afterAddCall = onChange.mock.calls.at(-1);
     expect(afterAddCall).toBeDefined();
     const afterAdd = afterAddCall?.[0];
@@ -109,8 +112,8 @@ describe("<QuestionPanel />", () => {
     );
     const inputs = screen.getAllByRole("textbox");
     const optionInput = inputs[inputs.length - 1]; // Last textbox is the option input
-    await userEvent.clear(optionInput);
-    await userEvent.type(optionInput, "UPDATED_OPT");
+    await user.clear(optionInput);
+    await user.type(optionInput, "UPDATED_OPT");
     // Check that onChange was called with updated option
     expect(onChange).toHaveBeenCalled();
 
@@ -123,7 +126,7 @@ describe("<QuestionPanel />", () => {
       />,
     );
     const deleteButtons = screen.getAllByRole("button", { name: "questionCard.removeOption" });
-    await userEvent.click(deleteButtons[0]);
+    await user.click(deleteButtons[0]);
     const afterDeleteCall = onChange.mock.calls.at(-1);
     expect(afterDeleteCall).toBeDefined();
     const afterDelete = afterDeleteCall?.[0];
@@ -140,15 +143,16 @@ describe("<QuestionPanel />", () => {
       />,
     );
 
+    const user = userEvent.setup();
     // Try various operations - these should all be disabled and not call onChange
     const radios = screen.getAllByRole("radio");
-    await userEvent.click(radios[0]); // Try to switch answer type
+    await user.click(radios[0]); // Try to switch answer type
 
     const checkbox = screen.getByRole("checkbox");
-    await userEvent.click(checkbox); // Try to toggle required
+    await user.click(checkbox); // Try to toggle required
 
     const addButton = screen.getByRole("button", { name: "questionCard.addOption" });
-    await userEvent.click(addButton); // Try to add option
+    await user.click(addButton); // Try to add option
 
     expect(onChange).not.toHaveBeenCalled();
   });

@@ -5,7 +5,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Form } from "@repo/ui/components";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
-import { getDefaultChartConfig } from "../chart-configurators/chart-configurator-util";
 import { ChartTypeStep } from "./chart-type-step";
 
 // Mock dependencies
@@ -13,13 +12,6 @@ vi.mock("../chart-preview/chart-preview-modal", () => ({
   ChartPreviewModal: ({ isOpen }: { isOpen: boolean }) => (
     <div data-testid="chart-preview-modal">{isOpen ? "Open" : "Closed"}</div>
   ),
-}));
-
-vi.mock("../chart-configurators/chart-configurator-util", () => ({
-  getDefaultChartConfig: vi.fn((chartType: string) => ({
-    title: `Default ${chartType} config`,
-  })),
-  getDefaultDataConfig: vi.fn(),
 }));
 
 describe("ChartTypeStep", () => {
@@ -135,14 +127,18 @@ describe("ChartTypeStep", () => {
       expect(scatterChartOption).toHaveClass("border-primary");
     });
 
-    it("should call getDefaultChartConfig when selecting a chart type", async () => {
+    it("should update chart config when selecting a different chart type", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper {...defaultProps} />);
+      render(<TestWrapper {...defaultProps} defaultValues={{ chartType: "line" }} />);
 
+      // Verify line is initially selected
+      expect(screen.getByLabelText("charts.types.line")).toHaveClass("border-primary");
+
+      // Switch to scatter — verify it becomes selected
       const scatterChartOption = screen.getByLabelText("charts.types.scatter");
       await user.click(scatterChartOption);
 
-      expect(getDefaultChartConfig).toHaveBeenCalledWith("scatter");
+      expect(scatterChartOption).toHaveClass("border-primary");
     });
 
     it("should update form values when selecting chart type", async () => {

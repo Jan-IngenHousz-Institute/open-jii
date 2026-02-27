@@ -6,20 +6,6 @@ import type { ExperimentDataResponse, AnnotationType, AnnotationContent } from "
 
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
 
-// Mock the parseAnnotations function
-vi.mock(
-  "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell",
-  () => ({
-    parseAnnotations: vi.fn((str: string): unknown[] => {
-      try {
-        return JSON.parse(str) as unknown[];
-      } catch {
-        return [];
-      }
-    }),
-  }),
-);
-
 // Mock structuredClone for older test environments
 Object.assign(global, {
   structuredClone: vi.fn((obj: unknown) => JSON.parse(JSON.stringify(obj)) as unknown),

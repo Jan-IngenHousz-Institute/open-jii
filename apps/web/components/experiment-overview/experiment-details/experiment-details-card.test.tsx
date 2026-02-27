@@ -1,5 +1,6 @@
 import { createExperiment, createLocation } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
+import { formatDate } from "@/util/date";
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -9,9 +10,6 @@ import { useSession } from "@repo/auth/client";
 import { ExperimentDetailsCard } from "./experiment-details-card";
 
 // ---------- Mocks ----------
-vi.mock("@/util/date", () => ({
-  formatDate: (date: string) => date,
-}));
 
 vi.mock("../../experiment-settings/experiment-info-card", () => ({
   ExperimentInfoCard: ({ experimentId }: { experimentId: string }) => (
@@ -131,8 +129,8 @@ describe("ExperimentDetailsCard", () => {
     renderComponent();
     expect(screen.getByText("created")).toBeInTheDocument();
     expect(screen.getByText("updated")).toBeInTheDocument();
-    expect(screen.getByText("2024-01-01T00:00:00.000Z")).toBeInTheDocument();
-    expect(screen.getByText("2024-01-15T00:00:00.000Z")).toBeInTheDocument();
+    expect(screen.getByText(formatDate("2024-01-01T00:00:00.000Z"))).toBeInTheDocument();
+    expect(screen.getByText(formatDate("2024-01-15T00:00:00.000Z"))).toBeInTheDocument();
   });
 
   it("renders creator name", () => {

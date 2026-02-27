@@ -36,20 +36,23 @@ describe("QuestionCard", () => {
   });
 
   it("fires onUpdateText when typing", async () => {
+    const user = userEvent.setup();
     const { props } = renderCard();
-    await userEvent.setup().type(screen.getByPlaceholderText("questionCard.placeholder"), "a");
+    await user.type(screen.getByPlaceholderText("questionCard.placeholder"), "a");
     expect(props.onUpdateText).toHaveBeenLastCalledWith("a");
   });
 
   it("toggles required via the checkbox", async () => {
+    const user = userEvent.setup();
     const { props } = renderCard();
-    await userEvent.setup().click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox"));
     expect(props.onToggleRequired).toHaveBeenCalledTimes(1);
   });
 
   it("switches answer type and shows relevant section", async () => {
+    const user = userEvent.setup();
     const { props } = renderCard();
-    await userEvent.setup().click(screen.getByText("questionCard.answerTypes.SELECT"));
+    await user.click(screen.getByText("questionCard.answerTypes.SELECT"));
     expect(props.onUpdateAnswerType).toHaveBeenCalledWith("SELECT");
 
     // Re-render in SELECT mode

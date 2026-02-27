@@ -21,19 +21,21 @@ describe("FormatSelectionStep", () => {
 
   it("calls onBack when back button is clicked", async () => {
     renderStep();
-    await userEvent.click(screen.getByRole("button", { name: /common\.back/i }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /common\.back/i }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it("submits selected format", async () => {
     renderStep();
 
+    const user = userEvent.setup();
     // Open the select and choose CSV
-    await userEvent.click(screen.getByRole("combobox"));
-    await userEvent.click(screen.getByRole("option", { name: "CSV" }));
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "CSV" }));
 
     // Submit
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: /experimentData\.exportModal\.createExport/i }),
     );
 

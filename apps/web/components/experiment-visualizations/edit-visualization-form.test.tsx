@@ -99,6 +99,7 @@ describe("EditVisualizationForm", () => {
   });
 
   it("submits update mutation with filtered data sources", async () => {
+    const user = userEvent.setup();
     const spy = mountUpdate(createVisualization({ id: "viz-1" }));
     const vizWithEmpty = createVisualization({
       ...viz,
@@ -114,7 +115,7 @@ describe("EditVisualizationForm", () => {
 
     render(<EditVisualizationForm {...defaultProps} visualization={vizWithEmpty} />);
 
-    await userEvent.setup().click(screen.getByRole("button", { name: /submit/i }));
+    await user.click(screen.getByRole("button", { name: /submit/i }));
 
     await waitFor(() => {
       expect(spy.callCount).toBe(1);
@@ -127,12 +128,13 @@ describe("EditVisualizationForm", () => {
   });
 
   it("shows toast and calls onSuccess on successful update", async () => {
+    const user = userEvent.setup();
     mountUpdate(createVisualization({ id: "viz-1" }));
     const onSuccess = vi.fn();
 
     render(<EditVisualizationForm {...defaultProps} onSuccess={onSuccess} />);
 
-    await userEvent.setup().click(screen.getByRole("button", { name: /submit/i }));
+    await user.click(screen.getByRole("button", { name: /submit/i }));
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "ui.messages.updateSuccess" });

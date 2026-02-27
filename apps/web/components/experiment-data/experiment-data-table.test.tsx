@@ -1,4 +1,4 @@
-import { render, screen, userEvent, fireEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { describe, it, expect, vi } from "vitest";
 
@@ -124,8 +124,9 @@ describe("ExperimentDataTable", () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
 
-    await userEvent.click(screen.getByRole("combobox"));
-    await userEvent.click(screen.getByRole("option", { name: "20" }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "20" }));
 
     expect(mockUseExperimentData).toHaveBeenLastCalledWith(
       expect.objectContaining({ pageSize: 20, page: 1 }),
@@ -136,10 +137,11 @@ describe("ExperimentDataTable", () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
 
-    await userEvent.click(screen.getByTitle("experimentDataTable.next"));
+    const user = userEvent.setup();
+    await user.click(screen.getByTitle("experimentDataTable.next"));
     expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
 
-    await userEvent.click(screen.getByTitle("experimentDataTable.previous"));
+    await user.click(screen.getByTitle("experimentDataTable.previous"));
     expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
   });
 
@@ -156,12 +158,13 @@ describe("ExperimentDataTable", () => {
 
   it("navigates pages via Arrow keys", async () => {
     setupHook();
+    const user = userEvent.setup();
     render(<ExperimentDataTable {...defaultProps} />);
 
-    fireEvent.keyDown(window, { key: "ArrowRight" });
+    await user.keyboard("{ArrowRight}");
     expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
 
-    fireEvent.keyDown(window, { key: "ArrowLeft" });
+    await user.keyboard("{ArrowLeft}");
     expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
   });
 

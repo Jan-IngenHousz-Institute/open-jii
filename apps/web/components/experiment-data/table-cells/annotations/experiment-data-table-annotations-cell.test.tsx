@@ -1,15 +1,11 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { formatDate } from "~/util/date";
 
 import type { Annotation } from "@repo/api";
 
 import { ExperimentDataTableAnnotationsCell } from "./experiment-data-table-annotations-cell";
-
-// Mock date utility
-vi.mock("~/util/date", () => ({
-  formatDate: (date: string) => `formatted-${date}`,
-}));
 
 const sampleAnnotations: Annotation[] = [
   {
@@ -82,7 +78,7 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     expect(screen.getByText(/experimentDataAnnotations.comments/)).toBeInTheDocument();
     expect(screen.getByText("This is a comment")).toBeInTheDocument();
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.getByText("formatted-2023-01-01T00:00:00Z")).toBeInTheDocument();
+    expect(screen.getByText(formatDate("2023-01-01T00:00:00Z"))).toBeInTheDocument();
   });
 
   it("should open flags popover and show details", async () => {

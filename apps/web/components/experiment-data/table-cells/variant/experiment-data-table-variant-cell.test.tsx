@@ -7,13 +7,6 @@ import {
   VariantExpandedContent,
 } from "./experiment-data-table-variant-cell";
 
-// Mock clipboard API
-Object.assign(navigator, {
-  clipboard: {
-    writeText: vi.fn(() => Promise.resolve()),
-  },
-});
-
 describe("ExperimentDataTableVariantCell", () => {
   it("should render simple text for non-JSON data", () => {
     render(
@@ -224,6 +217,10 @@ describe("ExperimentDataTableVariantCell", () => {
 });
 
 describe("VariantExpandedContent", () => {
+  beforeEach(() => {
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+  });
+
   it("should render formatted JSON content", () => {
     const { container } = render(<VariantExpandedContent data='{\n  "key": "value"\n}' />);
 
@@ -256,7 +253,7 @@ describe("VariantExpandedContent", () => {
 
     // Check that clipboard.writeText was called
     await waitFor(() => {
-      expect(vi.mocked(navigator.clipboard.writeText)).toHaveBeenCalledWith(jsonData);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(jsonData);
     });
   });
 
