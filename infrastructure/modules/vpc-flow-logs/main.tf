@@ -36,10 +36,8 @@ resource "aws_iam_role_policy" "this" {
     Statement = [{
       Effect = "Allow"
       Action = [
-        "logs:CreateLogGroup",
         "logs:CreateLogStream",
         "logs:PutLogEvents",
-        "logs:DescribeLogGroups",
         "logs:DescribeLogStreams"
       ]
       Resource = "${aws_cloudwatch_log_group.this.arn}:*"
