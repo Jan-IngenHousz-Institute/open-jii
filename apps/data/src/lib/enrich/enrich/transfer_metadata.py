@@ -81,9 +81,11 @@ def _build_protocol_payload(
         code_val = json.loads(code_val)
     if isinstance(code_val, dict):
         code_val = [code_val]
+    raw_desc = proto.get("description")
+    description = f"<p>{raw_desc}</p>" if raw_desc else raw_desc
     return {
         "name": _transfer_name(proto["name"]),
-        "description": proto.get("description"),
+        "description": description,
         "code": code_val,
         "family": proto.get("family"),
         "createdBy": creator_user_id,
@@ -104,9 +106,11 @@ def _build_macro_payload(
         if raw_code
         else None
     )
+    raw_desc = macro.get("description")
+    description = f"<p>{raw_desc}</p>" if raw_desc else raw_desc
     return {
         "name": _transfer_name(macro["name"]),
-        "description": macro.get("description"),
+        "description": description,
         "language": macro.get("language"),
         "code": b64_code,
         "createdBy": creator_user_id,
@@ -147,28 +151,29 @@ def _build_transfer_description(
     protocol_name: Optional[str],
     macro_name: Optional[str],
 ) -> str:
-    """Build an enriched experiment description for transferred projects."""
-    lines = [
-        "This experiment has been automatically created and set up as part of a project transfer.",
-        "",
-    ]
-    if protocol_name:
-        lines.append(f'The protocol used in this experiment is "{protocol_name}".')
-    if macro_name:
-        lines.append(f'The macro used in this experiment is "{macro_name}".')
-    if protocol_name or macro_name:
-        lines.append("")
+    """Build an enriched experiment description for transferred projects.
 
-    lines.append(
+    Returns HTML with each logical paragraph wrapped in <p> tags.
+    """
+    paragraphs = [
+        "<p>This experiment has been automatically created and set up as part of a project transfer.</p>",
+    ]
+
+    details_parts: list[str] = []
+    if protocol_name:
+        details_parts.append(f'The protocol used in this experiment is "{protocol_name}".')
+    if macro_name:
+        details_parts.append(f'The macro used in this experiment is "{macro_name}".')
+    details_parts.append(
         "The data is migrated from the original project without any re-processing. "
         "There may be discrepancies in how the data is presented."
     )
+    paragraphs.append("<p>" + " ".join(details_parts) + "</p>")
 
     if original_description:
-        lines.append("")
-        lines.append(original_description)
+        paragraphs.append(f"<p>{original_description}</p>")
 
-    return "\n".join(lines)
+    return "".join(paragraphs)
 
 
 def _call_transfer_webhook(

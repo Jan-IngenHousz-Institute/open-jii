@@ -230,6 +230,17 @@ export class ExecuteProjectTransferUseCase {
         },
       ];
 
+      // Assign horizontal positions so the flow renders as a left-to-right chain.
+      // Nodes auto-size in the UI (min-w 120px, label max-w 250px) so we use a
+      // comfortable center-to-center spacing that avoids overlap for typical titles.
+      const NODE_SPACING = 250;
+      const Y_CENTER = 240;
+      const totalWidth = (allNodes.length - 1) * NODE_SPACING;
+      const startX = -totalWidth / 2;
+      for (let i = 0; i < allNodes.length; i++) {
+        allNodes[i].position = { x: startX + i * NODE_SPACING, y: Y_CENTER };
+      }
+
       const nodeIds = allNodes.map((n) => n.id);
       const edges: FlowGraph["edges"] = nodeIds.slice(0, -1).map((source, i) => ({
         id: `e_${i}`,

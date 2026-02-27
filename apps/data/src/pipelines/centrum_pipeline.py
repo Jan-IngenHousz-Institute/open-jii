@@ -68,27 +68,6 @@ sensor_schema = StructType([
     StructField("annotations", ArrayType(annotation_schema), True)
 ])
 
-# Schema hints for volume-sourced Auto Loader tables.
-# Using cloudFiles.schemaHints (instead of .schema()) lets Auto Loader
-# start with a known set of columns when the volumes are empty, while
-# still supporting cloudFiles.schemaEvolutionMode = addNewColumns to
-# pick up additional columns once real files land.
-IMPORTED_DATA_SCHEMA_HINTS = (
-    "id STRING, device_id STRING, device_name STRING, device_version STRING, "
-    "device_battery DOUBLE, device_firmware STRING, sample STRING, output STRING, "
-    "user_id STRING, experiment_id STRING, timestamp TIMESTAMP, "
-    "macro_id STRING, macro_filename STRING, questions STRING"
-)
-
-AMBYTE_DATA_SCHEMA_HINTS = (
-    "Time TIMESTAMP, Actinic INT, BoardT FLOAT, Count INT, Full BOOLEAN, "
-    "Leaf INT, PAR FLOAT, PTS INT, Ref7 DOUBLE, RefF LONG, Res INT, "
-    "Sig7 DOUBLE, SigF LONG, Sun INT, Temp FLOAT, Type STRING, "
-    "raw FLOAT, spec ARRAY<LONG>, meta_Actinic FLOAT, meta_Dark INT, "
-    "ambyte_folder STRING, ambit_index INT, processed_at TIMESTAMP, "
-    "experiment_id STRING, id INT"
-)
-
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
@@ -1008,8 +987,6 @@ def raw_imported_data():
     """Streaming ingestion of imported measurement data from parquet files in data-imports volume."""
     imported_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/photosynq_transfer"
     
-    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/imported_data_schema"
-
     imported_data_schema = StructType([
         StructField("id", StringType(), True),
         StructField("device_id", StringType(), True),
@@ -1031,10 +1008,8 @@ def raw_imported_data():
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
-        .option("cloudFiles.schemaLocation", schema_location)
-        .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
-        .option("cloudFiles.schemaHints", IMPORTED_DATA_SCHEMA_HINTS)
         .option("recursiveFileLookup", "true")
+        .schema(imported_data_schema)
         .load(imported_path)
     )
     
@@ -1068,8 +1043,6 @@ def raw_ambyte_data():
     """Streaming ingestion of pre-processed Ambyte trace data."""
     processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/processed-ambyte"
     
-    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/ambyte_schema"
-
     from pyspark.sql.types import FloatType, BooleanType, LongType
 
     ambyte_data_schema = StructType([
@@ -1104,10 +1077,8 @@ def raw_ambyte_data():
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
-        .option("cloudFiles.schemaLocation", schema_location)
-        .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
-        .option("cloudFiles.schemaHints", AMBYTE_DATA_SCHEMA_HINTS)
         .option("recursiveFileLookup", "true")
+        .schema(ambyte_data_schema)
         .load(processed_path)
     )
     
