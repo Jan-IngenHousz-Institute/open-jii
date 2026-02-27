@@ -25,7 +25,7 @@ except ImportError as e:
     print(json.dumps({"status": "error", "results": [], "errors": [f"Helper import failed: {e}"]}))
     sys.exit(0)
 
-# Paths from Go Service
+# Paths passed as command-line arguments from Lambda handler
 if len(sys.argv) < 3:
     print("Usage: python_wrapper.py <script_path> <input_json_path>")
     sys.exit(1)

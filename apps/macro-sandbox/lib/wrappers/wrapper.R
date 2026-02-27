@@ -156,6 +156,12 @@ for (item in batch_items) {
   lockBinding("getExportedValue", run_env)
   assign("getFromNamespace", function(...) stop("Security: getFromNamespace() is disabled"), envir = run_env)
   lockBinding("getFromNamespace", run_env)
+  assign("getNamespace", function(...) stop("Security: getNamespace() is disabled"), envir = run_env)
+  lockBinding("getNamespace", run_env)
+  assign("asNamespace", function(...) stop("Security: asNamespace() is disabled"), envir = run_env)
+  lockBinding("asNamespace", run_env)
+  assign("loadNamespace", function(...) stop("Security: loadNamespace() is disabled"), envir = run_env)
+  lockBinding("loadNamespace", run_env)
 
   assign(".GlobalEnv", NULL, envir = run_env)
   lockBinding(".GlobalEnv", run_env)

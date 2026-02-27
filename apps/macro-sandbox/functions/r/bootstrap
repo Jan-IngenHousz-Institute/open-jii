@@ -58,12 +58,13 @@ while true; do
       -H "Content-Type: application/json" \
       -d "$RESPONSE"
   else
-    # Read stderr for error details
-    ERROR_MSG=$(tail -1 /tmp/handler_stderr.log 2>/dev/null || echo "Unknown error")
+    # Read stderr for error details (capture last few lines for better context)
+    ERROR_MSG=$(tail -5 /tmp/handler_stderr.log 2>/dev/null || echo "Unknown error")
+    ERROR_JSON=$(jq -n --arg msg "$ERROR_MSG" '{errorMessage: $msg, errorType: "RuntimeError"}')
     curl -sS -X POST \
       "${RUNTIME_API}/invocation/${REQUEST_ID}/error" \
       -H "Content-Type: application/json" \
-      -d "{\"errorMessage\": \"$(echo "$ERROR_MSG" | sed 's/"/\\"/g')\", \"errorType\": \"RuntimeError\"}"
+      -d "$ERROR_JSON"
   fi
 
   # 6. Clean up /tmp from this invocation (rm -rf for directories)

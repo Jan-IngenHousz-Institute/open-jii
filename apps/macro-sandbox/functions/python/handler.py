@@ -100,9 +100,17 @@ def _execute(event):
         script_path = os.path.join(tmpdir, "script")
         input_path = os.path.join(tmpdir, "input.json")
 
-        with open(script_path, "w") as f:
+        with open(
+            script_path,
+            "w",
+            opener=lambda path, flags: os.open(path, flags, 0o600),
+        ) as f:
             f.write(script_content)
-        with open(input_path, "w") as f:
+        with open(
+            input_path,
+            "w",
+            opener=lambda path, flags: os.open(path, flags, 0o600),
+        ) as f:
             json.dump(items, f)
 
         # Execute wrapper as subprocess
