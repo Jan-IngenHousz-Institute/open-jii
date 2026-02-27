@@ -206,11 +206,25 @@ def _call_transfer_webhook(
             macro_name,
         )
 
+        locations_raw = row.get("locations")
+        locations = None
+        if locations_raw:
+            # Remap parquet "address" key to the API-expected "name" key
+            locations = [
+                {
+                    "name": loc.get("address", loc.get("name", "")),
+                    "latitude": loc["latitude"],
+                    "longitude": loc["longitude"],
+                }
+                for loc in locations_raw
+            ]
+
         payload: Dict[str, Any] = {
             "experiment": {
                 "name": row.get("project_name"),
                 "description": description,
                 "createdBy": creator_user_id,
+                **({"locations": locations} if locations else {}),
             },
         }
         if protocol_payload:

@@ -54,6 +54,11 @@ PROJECTS_SCHEMA = StructType([
     StructField("protocols", StringType(), True),
     StructField("tags", ArrayType(StringType()), True),
     StructField("directions", StringType(), True),
+    StructField("locations", ArrayType(StructType([
+        StructField("address", StringType(), True),
+        StructField("latitude", DoubleType(), True),
+        StructField("longitude", DoubleType(), True),
+    ])), True),
 ])
 
 MEASUREMENTS_SCHEMA = StructType([
@@ -157,6 +162,7 @@ metadata = (
         F.col("p.creator_id"),
         F.col("tr.user_id").alias("creator_user_id"),
         F.coalesce(F.col("q.questions"), F.array()).alias("questions"),
+        F.col("p.locations"),
     )
 )
 
@@ -305,6 +311,7 @@ transfers = (
         F.col("m.description").alias("project_description"),
         F.col("m.creator_user_id"),
         F.col("m.questions"),
+        F.col("m.locations"),
         F.col("p.protocols_list"),
         F.col("mc.macros_list"),
     )
