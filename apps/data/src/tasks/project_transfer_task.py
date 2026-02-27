@@ -168,7 +168,11 @@ protocols_parsed = (
     .filter(F.col("protocols").isNotNull())
     .select(
         F.col("project_id"),
-        F.explode(F.expr("parse_json(protocols)")).alias("proto"),
+        F.explode(F.expr("from_json(protocols, 'ARRAY<STRING>')")).alias("proto_raw"),
+    )
+    .select(
+        F.col("project_id"),
+        F.expr("parse_json(proto_raw)").alias("proto"),
     )
 )
 

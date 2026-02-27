@@ -68,6 +68,33 @@ sensor_schema = StructType([
     StructField("annotations", ArrayType(annotation_schema), True)
 ])
 
+# Base schemas for volume-sourced Auto Loader tables.
+# Providing an explicit schema prevents CF_EMPTY_DIR_FOR_SCHEMA_INFERENCE
+# errors when the volumes have no data yet.  Schema evolution via
+# cloudFiles.schemaEvolutionMode = addNewColumns will pick up any
+# additional columns once real files land.
+imported_data_schema = StructType([
+    StructField("id", StringType(), True),
+    StructField("device_id", StringType(), True),
+    StructField("device_name", StringType(), True),
+    StructField("device_version", StringType(), True),
+    StructField("device_battery", DoubleType(), True),
+    StructField("device_firmware", StringType(), True),
+    StructField("sample", StringType(), True),
+    StructField("output", StringType(), True),
+    StructField("user_id", StringType(), True),
+    StructField("experiment_id", StringType(), True),
+    StructField("timestamp", TimestampType(), True),
+    StructField("macro_id", StringType(), True),
+    StructField("macro_filename", StringType(), True),
+    StructField("questions", StringType(), True),
+])
+
+ambyte_data_schema = StructType([
+    StructField("experiment_id", StringType(), True),
+    StructField("processed_at", TimestampType(), True),
+])
+
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
@@ -994,7 +1021,9 @@ def raw_imported_data():
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
+        .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .option("recursiveFileLookup", "true")
+        .schema(imported_data_schema)
         .load(imported_path)
     )
     
@@ -1035,7 +1064,9 @@ def raw_ambyte_data():
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
+        .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .option("recursiveFileLookup", "true")
+        .schema(ambyte_data_schema)
         .load(processed_path)
     )
     
