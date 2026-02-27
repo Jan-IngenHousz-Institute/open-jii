@@ -54,21 +54,7 @@ jobs:
           echo "Checked out SHA: $ACTUAL_SHA"
 
       - name: Capture Deployment Start Time
-        id: deployment-start
-        run: |
-          DEPLOY_START=$(date +%s)
-          echo "DEPLOY_START_TIME=$DEPLOY_START" >> $GITHUB_ENV
-          echo "deploy_start_time=$DEPLOY_START" >> $GITHUB_OUTPUT
-          
-          # Get commit timestamp for lead time calculation
-          COMMIT_TIME=$(git show -s --format=%ct)
-          echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
-          echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
-          
-          echo "📊 DORA Metrics Collection Started"
-          echo "  Commit SHA: ${{ steps.get-sha.outputs.sha }}"
-          echo "  Commit Time: $(date -d @$COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "  Deploy Start: $(date -d @$DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC')"
+        uses: ./.github/actions/capture-dora-start
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
@@ -622,64 +608,11 @@ jobs:
             echo "::warning::Skipping CloudFront invalidation (no distribution ID provided)"
           fi
 
-      - name: Calculate DORA Metrics
-        id: dora-metrics
-        if: success()
-        run: |
-          DEPLOY_END=$(date +%s)
-          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START_TIME))
-          LEAD_TIME=$((DEPLOY_END - COMMIT_TIME))
-          
-          # Convert to milliseconds for CloudWatch
-          LEAD_TIME_MS=$((LEAD_TIME * 1000))
-          
-          echo "lead_time_ms=$LEAD_TIME_MS" >> $GITHUB_OUTPUT
-          echo "deployment_duration=$DEPLOY_DURATION" >> $GITHUB_OUTPUT
-          
-          echo "📊 DORA Metrics Calculated:"
-          echo "  Lead Time: ${LEAD_TIME}s (${LEAD_TIME_MS}ms)"
-          echo "  Deployment Duration: ${DEPLOY_DURATION}s"
-
-      - name: Publish DORA - Deployment Frequency
+      - name: Publish DORA Metrics
         if: always()
-        uses: ./.github/actions/publish-dora-metric
+        uses: ./.github/actions/publish-dora-metrics
         with:
-          metric-name: 'DeploymentFrequency'
-          value: '1'
-          unit: 'Count'
-          service: 'web'
-          environment: ${{ inputs.environment }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Publish DORA - Lead Time
-        if: success()
-        uses: ./.github/actions/publish-dora-metric
-        with:
-          metric-name: 'LeadTime'
-          value: ${{ steps.dora-metrics.outputs.lead_time_ms }}
-          unit: 'Milliseconds'
-          service: 'web'
-          environment: ${{ inputs.environment }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Publish DORA - Deployment Success
-        if: success()
-        uses: ./.github/actions/publish-dora-metric
-        with:
-          metric-name: 'DeploymentSuccess'
-          value: '1'
-          unit: 'Count'
-          service: 'web'
-          environment: ${{ inputs.environment }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Publish DORA - Deployment Failed
-        if: failure()
-        uses: ./.github/actions/publish-dora-metric
-        with:
-          metric-name: 'DeploymentFailed'
-          value: '1'
-          unit: 'Count'
+          deployment-outcome: ${{ steps.update-lambdas.outcome || 'failure' }}
           service: 'web'
           environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
@@ -706,14 +639,6 @@ jobs:
             if [[ -n "${DOMAIN_NAME}" ]]; then
               echo "Application URL: https://${DOMAIN_NAME}"
             fi
-          fi
-
-          # Display DORA metrics if available
-          if [[ -n "${{ steps.dora-metrics.outputs.lead_time_ms }}" ]]; then
-            echo ""
-            echo "📊 DORA Metrics Published:"
-            echo "  Lead Time: ${{ steps.dora-metrics.outputs.lead_time_ms }}ms"
-            echo "  Deployment Duration: ${{ steps.dora-metrics.outputs.deployment_duration }}s"
           fi
 
           # Check overall deployment success

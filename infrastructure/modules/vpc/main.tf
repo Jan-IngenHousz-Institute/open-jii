@@ -171,31 +171,6 @@ resource "aws_security_group_rule" "aurora_migration_ingress" {
   security_group_id        = aws_security_group.aurora_sg[0].id
   description              = "Allow access from migration ECS tasks"
 }
-
-# -------------------------
-# Server Lambda Aurora Access Security Group
-# -------------------------
-resource "aws_security_group" "server_lambda_aurora" {
-  count = var.create_lambda_resources ? 1 : 0
-
-  name        = "${var.environment}-opennext-server-sg"
-  description = "Security group allowing OpenNext server Lambda to access Aurora database"
-  vpc_id      = aws_vpc.this.id
-
-  # Allow all outbound traffic (required for Lambda to access AWS services and database)
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    "Name"        = "${var.environment}-opennext-server-sg"
-    "Environment" = var.environment
-  }
-}
-
 # ----------------------
 # Security group rule to allow ECS tasks to access Aurora database
 # ----------------------
@@ -209,19 +184,6 @@ resource "aws_security_group_rule" "ecs_to_aurora" {
   source_security_group_id = aws_security_group.ecs_sg[0].id
   security_group_id        = aws_security_group.aurora_sg[0].id
   description              = "Allow access from backend ECS tasks to Aurora database"
-}
-
-# Security group rule to allow server Lambda to access Aurora database
-resource "aws_security_group_rule" "server_lambda_to_aurora" {
-  count = var.create_aurora_resources && var.create_lambda_resources ? 1 : 0
-
-  type                     = "ingress"
-  from_port                = 5432
-  to_port                  = 5432
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.server_lambda_aurora[0].id
-  security_group_id        = aws_security_group.aurora_sg[0].id
-  description              = "Allow access from OpenNext server Lambda to Aurora database"
 }
 
 # ---------------

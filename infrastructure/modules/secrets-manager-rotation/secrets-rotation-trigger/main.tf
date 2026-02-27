@@ -28,8 +28,8 @@ resource "aws_cloudwatch_event_rule" "secrets_rotation" {
 # Create Lambda function code
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "${path.module}/force_deploy.py"
-  output_path = "${path.module}/force_deploy.zip"
+  source_file = "${path.module}/lambda/force_deploy.py"
+  output_path = "${path.module}/lambda/force_deploy.zip"
 }
 
 # Lambda Function

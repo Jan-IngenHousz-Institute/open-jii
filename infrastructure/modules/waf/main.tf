@@ -112,12 +112,47 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  # AWS Managed Bot Control Rule Set - detects and manages bot traffic
+  # Provides protection against scrapers, crawlers, and automated tools
+  # Note: This adds cost (~$10/month + $1/million requests for common level)
+  # Only created when enable_bot_control is true
+  dynamic "rule" {
+    for_each = var.enable_bot_control ? [1] : []
+    content {
+      name     = "AWSManagedRulesBotControlRuleSet"
+      priority = 3 # After known bad inputs, before geo-blocking
+
+      override_action {
+        none {}
+      }
+
+      statement {
+        managed_rule_group_statement {
+          name        = "AWSManagedRulesBotControlRuleSet"
+          vendor_name = "AWS"
+
+          managed_rule_group_configs {
+            aws_managed_rules_bot_control_rule_set {
+              inspection_level = var.bot_control_inspection_level
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "BotControlRuleSetMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
   # Rate limiting protection against DDoS and brute force attacks
   # Blocks IP addresses that exceed the specified request rate within 5-minute windows
   # aggregate_key_type = "IP" means rate limit is per source IP address
   rule {
     name     = "RateLimitRule"
-    priority = 3
+    priority = 4
 
     action {
       block {} # Block requests that exceed the rate limit
@@ -149,7 +184,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.blocked_countries) > 0 ? [1] : []
     content {
       name     = "GeoBlockRule"
-      priority = 6
+      priority = 5
 
       action {
         block {}
@@ -175,7 +210,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
     content {
       name     = "AllowLargeBodyRule"
-      priority = 5 # Run after security checks but before geographic blocking
+      priority = 6 # Run after all security checks including geographic blocking
 
       action {
         allow {}

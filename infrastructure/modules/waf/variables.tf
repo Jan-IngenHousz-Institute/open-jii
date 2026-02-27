@@ -11,7 +11,7 @@ variable "environment" {
 variable "rate_limit" {
   description = "Rate limit for requests per 5-minute period from a single IP"
   type        = number
-  default     = 2000
+  default     = 500
 }
 
 variable "blocked_countries" {
@@ -57,6 +57,23 @@ variable "large_body_bypass_routes" {
       ], route.method)
     ])
     error_message = "method must be one of: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS"
+  }
+}
+
+variable "enable_bot_control" {
+  description = "Enable AWS Managed Bot Control rule set. Adds ~$10/month + $1/million requests."
+  type        = bool
+  default     = false
+}
+
+variable "bot_control_inspection_level" {
+  description = "Inspection level for Bot Control rule set. COMMON detects common bots, TARGETED adds advanced detection for targeted bots."
+  type        = string
+  default     = "COMMON"
+
+  validation {
+    condition     = contains(["COMMON", "TARGETED"], var.bot_control_inspection_level)
+    error_message = "bot_control_inspection_level must be either COMMON or TARGETED."
   }
 }
 
