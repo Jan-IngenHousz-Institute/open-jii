@@ -70,7 +70,7 @@ variable "iot_log_group_name" {
 }
 
 variable "macro_sandbox_function_names" {
-  description = "Lambda function names for macro-sandbox, keyed by language (python, javascript, r)"
+  description = "Lambda function names for macro-sandbox, keyed by language (python, js, r)"
   type        = map(string)
   default     = {}
 }

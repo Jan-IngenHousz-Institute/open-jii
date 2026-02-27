@@ -53,5 +53,5 @@ module "lambda" {
   flow_log_group_name = module.flow_logs.log_group_name
   log_retention_days  = var.log_retention_days
 
-  tags = var.tags
+  tags = local.common_tags
 }
