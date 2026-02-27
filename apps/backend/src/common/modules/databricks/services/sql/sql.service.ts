@@ -17,14 +17,15 @@ export class DatabricksSqlService {
 
   /**
    * Determine the appropriate AppError for a Databricks SQL statement failure.
-   * Databricks returns error_code "BAD_REQUEST" for all SQL-related client errors
-   * (invalid columns, missing tables, syntax errors, etc.) so we map that directly
-   * to a 400 Bad Request. Everything else becomes a 500 Internal Server Error.
+   * Databricks returns error_code "BAD_REQUEST" or "INVALID_PARAMETER_VALUE" for
+   * client errors (invalid columns, missing tables, syntax errors, bad parameters)
+   * so we map those to a 400 Bad Request. Everything else becomes a 500.
    */
   private static mapSqlStatementError(error: { message?: string; error_code?: string }): AppError {
     const message = error.message ?? "Unknown error";
+    const clientErrorCodes = ["BAD_REQUEST", "INVALID_PARAMETER_VALUE"];
 
-    if (error.error_code === "BAD_REQUEST") {
+    if (error.error_code && clientErrorCodes.includes(error.error_code)) {
       return AppError.badRequest(message, "INVALID_SQL_QUERY");
     }
 

@@ -308,7 +308,7 @@ describe("DatabricksSqlService", () => {
       expect(result.error.code).toBe("INVALID_SQL_QUERY");
     });
 
-    it("should return 500 for non-BAD_REQUEST error codes from Databricks", async () => {
+    it("should return 400 for INVALID_PARAMETER_VALUE error from Databricks", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -316,7 +316,37 @@ describe("DatabricksSqlService", () => {
         token_type: "Bearer",
       });
 
-      // Non-BAD_REQUEST error codes are treated as internal errors
+      // Mock SQL statement execution with INVALID_PARAMETER_VALUE error
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: {
+            state: "FAILED",
+            error: {
+              message: "Supplied value for a parameter was invalid",
+              error_code: "INVALID_PARAMETER_VALUE",
+            },
+          },
+        });
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.code).toBe("INVALID_SQL_QUERY");
+    });
+
+    it("should return 500 for non-client error codes from Databricks", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Non-client error codes are treated as internal errors
       nock(databricksHost)
         .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
         .reply(200, {
@@ -325,7 +355,7 @@ describe("DatabricksSqlService", () => {
             state: "FAILED",
             error: {
               message: "Something went wrong internally",
-              error_code: "INVALID_STATE",
+              error_code: "INTERNAL_ERROR",
             },
           },
         });
