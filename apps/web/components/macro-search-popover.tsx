@@ -41,9 +41,19 @@ interface MacroListProps {
   isAddingMacro: boolean;
   setOpen: (open: boolean) => void;
   onSearchChange: (value: string) => void;
+  recommendedMacroIds?: Set<string>;
+  recommendedReason?: string;
 }
 
-function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange }: MacroListProps) {
+function MacroList({
+  macros,
+  onAddMacro,
+  isAddingMacro,
+  setOpen,
+  onSearchChange,
+  recommendedMacroIds,
+  recommendedReason,
+}: MacroListProps) {
   const locale = useLocale();
   const { t } = useTranslation("common");
 
@@ -60,11 +70,13 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
     <>
       {macros.map((macro) => {
         const isPreferred = macro.sortOrder !== null;
+        const isRecommended = recommendedMacroIds?.has(macro.id) ?? false;
+        const isFeatured = isPreferred || isRecommended;
         return (
           <CommandItem
             key={macro.id}
             value={macro.id}
-            className={macroItemVariants({ featured: isPreferred })}
+            className={macroItemVariants({ featured: isFeatured })}
             onSelect={() => handleAddMacro(macro.id)}
             disabled={isAddingMacro}
           >
@@ -85,10 +97,12 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
                   <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
                 </Link>
 
-                {isPreferred && (
+                {(isPreferred || isRecommended) && (
                   <div className="ml-auto">
                     <Badge className={"bg-secondary/30 text-primary"}>
-                      {t("common.preferred")}
+                      {isRecommended
+                        ? (recommendedReason ?? t("common.recommended"))
+                        : t("common.preferred")}
                     </Badge>
                   </div>
                 )}
@@ -169,6 +183,8 @@ export interface MacroSearchPopoverProps {
   loading: boolean;
   setOpen: (open: boolean) => void;
   popoverClassName?: string;
+  recommendedMacroIds?: Set<string>;
+  recommendedReason?: string;
 }
 
 export function MacroSearchPopover({
@@ -180,6 +196,8 @@ export function MacroSearchPopover({
   loading,
   setOpen,
   popoverClassName = "w-80",
+  recommendedMacroIds,
+  recommendedReason,
 }: MacroSearchPopoverProps) {
   const { t } = useTranslation("common");
 
@@ -210,6 +228,8 @@ export function MacroSearchPopover({
               isAddingMacro={isAddingMacro}
               setOpen={setOpen}
               onSearchChange={onSearchChange}
+              recommendedMacroIds={recommendedMacroIds}
+              recommendedReason={recommendedReason}
             />
           </CommandGroup>
         </CommandList>

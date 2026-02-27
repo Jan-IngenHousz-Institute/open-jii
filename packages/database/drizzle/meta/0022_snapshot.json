@@ -1,6 +1,6 @@
 {
-  "id": "2322eb27-ff90-4ee6-99e0-6b8a246fc5a0",
-  "prevId": "53d9ac3f-d653-46d2-942b-7224cbdb4a26",
+  "id": "a0c8f8c8-1869-465c-85fd-0500acb5b91d",
+  "prevId": "2322eb27-ff90-4ee6-99e0-6b8a246fc5a0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -584,18 +584,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
-        },
-        "pipeline_id": {
-          "name": "pipeline_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "schema_name": {
-          "name": "schema_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
