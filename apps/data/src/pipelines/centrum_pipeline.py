@@ -68,32 +68,26 @@ sensor_schema = StructType([
     StructField("annotations", ArrayType(annotation_schema), True)
 ])
 
-# Base schemas for volume-sourced Auto Loader tables.
-# Providing an explicit schema prevents CF_EMPTY_DIR_FOR_SCHEMA_INFERENCE
-# errors when the volumes have no data yet.  Schema evolution via
-# cloudFiles.schemaEvolutionMode = addNewColumns will pick up any
-# additional columns once real files land.
-imported_data_schema = StructType([
-    StructField("id", StringType(), True),
-    StructField("device_id", StringType(), True),
-    StructField("device_name", StringType(), True),
-    StructField("device_version", StringType(), True),
-    StructField("device_battery", DoubleType(), True),
-    StructField("device_firmware", StringType(), True),
-    StructField("sample", StringType(), True),
-    StructField("output", StringType(), True),
-    StructField("user_id", StringType(), True),
-    StructField("experiment_id", StringType(), True),
-    StructField("timestamp", TimestampType(), True),
-    StructField("macro_id", StringType(), True),
-    StructField("macro_filename", StringType(), True),
-    StructField("questions", StringType(), True),
-])
+# Schema hints for volume-sourced Auto Loader tables.
+# Using cloudFiles.schemaHints (instead of .schema()) lets Auto Loader
+# start with a known set of columns when the volumes are empty, while
+# still supporting cloudFiles.schemaEvolutionMode = addNewColumns to
+# pick up additional columns once real files land.
+IMPORTED_DATA_SCHEMA_HINTS = (
+    "id STRING, device_id STRING, device_name STRING, device_version STRING, "
+    "device_battery DOUBLE, device_firmware STRING, sample STRING, output STRING, "
+    "user_id STRING, experiment_id STRING, timestamp TIMESTAMP, "
+    "macro_id STRING, macro_filename STRING, questions STRING"
+)
 
-ambyte_data_schema = StructType([
-    StructField("experiment_id", StringType(), True),
-    StructField("processed_at", TimestampType(), True),
-])
+AMBYTE_DATA_SCHEMA_HINTS = (
+    "Time TIMESTAMP, Actinic INT, BoardT FLOAT, Count INT, Full BOOLEAN, "
+    "Leaf INT, PAR FLOAT, PTS INT, Ref7 DOUBLE, RefF LONG, Res INT, "
+    "Sig7 DOUBLE, SigF LONG, Sun INT, Temp FLOAT, Type STRING, "
+    "raw FLOAT, spec ARRAY<LONG>, meta_Actinic FLOAT, meta_Dark INT, "
+    "ambyte_folder STRING, ambit_index INT, processed_at TIMESTAMP, "
+    "experiment_id STRING, id INT"
+)
 
 # COMMAND ----------
 
@@ -1021,9 +1015,9 @@ def raw_imported_data():
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
+        .option("cloudFiles.schemaHints", IMPORTED_DATA_SCHEMA_HINTS)
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .option("recursiveFileLookup", "true")
-        .schema(imported_data_schema)
         .load(imported_path)
     )
     
@@ -1064,9 +1058,9 @@ def raw_ambyte_data():
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
+        .option("cloudFiles.schemaHints", AMBYTE_DATA_SCHEMA_HINTS)
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .option("recursiveFileLookup", "true")
-        .schema(ambyte_data_schema)
         .load(processed_path)
     )
     
