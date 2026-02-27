@@ -70,3 +70,8 @@ output "macro_sandbox_lambda_security_group_id" {
   description = "ID of the macro-sandbox Lambda security group (isolated, no inbound, HTTPS to VPC endpoints only)"
   value       = var.create_macro_sandbox_resources ? aws_security_group.macro_sandbox_lambda[0].id : null
 }
+
+output "macro_sandbox_vpc_endpoints_security_group_id" {
+  description = "ID of the dedicated security group for VPC endpoints in isolated subnets (macro-sandbox)"
+  value       = var.create_macro_sandbox_resources ? aws_security_group.macro_sandbox_vpc_endpoints[0].id : null
+}

@@ -103,11 +103,12 @@ module "vpc_endpoints" {
   private_subnet_ids      = module.vpc.private_subnets
   security_group_ids      = [module.vpc.default_sg_id]
 
-  isolated_route_table_ids = module.vpc.isolated_rt_ids
-  isolated_subnet_ids      = module.vpc.isolated_subnets
-  create_ecr_api_endpoint  = true
-  create_ecr_dkr_endpoint  = true
-  create_logs_endpoint     = true
+  isolated_route_table_ids    = module.vpc.isolated_rt_ids
+  isolated_subnet_ids         = module.vpc.isolated_subnets
+  isolated_security_group_ids = [module.vpc.macro_sandbox_vpc_endpoints_security_group_id]
+  create_ecr_api_endpoint     = true
+  create_ecr_dkr_endpoint     = true
+  create_logs_endpoint        = true
 }
 
 module "macro_sandbox" {

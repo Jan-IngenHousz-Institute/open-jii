@@ -4,6 +4,7 @@ locals {
     var.public_route_table_ids,
     var.isolated_route_table_ids,
   )
+  isolated_sg_ids = coalesce(var.isolated_security_group_ids, var.security_group_ids)
 }
 
 resource "aws_vpc_endpoint" "s3" {
@@ -48,7 +49,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   vpc_endpoint_type   = "Interface"
   subnet_ids          = var.isolated_subnet_ids
   private_dns_enabled = true
-  security_group_ids  = var.security_group_ids
+  security_group_ids  = local.isolated_sg_ids
   tags                = { Name = "open-jii-ecr-api-vpc-endpoint-${var.environment}" }
 }
 
@@ -60,7 +61,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   vpc_endpoint_type   = "Interface"
   subnet_ids          = var.isolated_subnet_ids
   private_dns_enabled = true
-  security_group_ids  = var.security_group_ids
+  security_group_ids  = local.isolated_sg_ids
   tags                = { Name = "open-jii-ecr-dkr-vpc-endpoint-${var.environment}" }
 }
 
@@ -72,6 +73,6 @@ resource "aws_vpc_endpoint" "logs" {
   vpc_endpoint_type   = "Interface"
   subnet_ids          = var.isolated_subnet_ids
   private_dns_enabled = true
-  security_group_ids  = var.security_group_ids
+  security_group_ids  = local.isolated_sg_ids
   tags                = { Name = "open-jii-logs-vpc-endpoint-${var.environment}" }
 }
