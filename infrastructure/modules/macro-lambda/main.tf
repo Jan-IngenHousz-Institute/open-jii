@@ -167,6 +167,10 @@ resource "aws_lambda_function" "this" {
     Security = "isolated"
   })
 
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
+
   depends_on = [
     aws_iam_role_policy.lambda_logs,
     aws_iam_role_policy.lambda_vpc,
