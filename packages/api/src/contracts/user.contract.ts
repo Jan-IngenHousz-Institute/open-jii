@@ -19,8 +19,6 @@ import {
   zUpdateInvitationRoleBody,
   zInvitationIdPathParam,
   zListInvitationsQuery,
-  zProjectTransferWebhookPayload,
-  zProjectTransferWebhookResponse,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -156,20 +154,5 @@ export const userContract = c.router({
     },
     summary: "Revoke invitation",
     description: "Revokes a pending invitation so it can no longer be accepted.",
-  },
-  projectTransfer: {
-    method: "POST",
-    path: "/api/v1/webhooks/project-transfer",
-    body: zProjectTransferWebhookPayload,
-    headers: zWebhookAuthHeader,
-    responses: {
-      201: zProjectTransferWebhookResponse,
-      400: zWebhookErrorResponse,
-      401: zWebhookErrorResponse,
-      500: zWebhookErrorResponse,
-    },
-    summary: "Execute project transfer from Databricks",
-    description:
-      "Creates experiment, protocol, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
   },
 });
