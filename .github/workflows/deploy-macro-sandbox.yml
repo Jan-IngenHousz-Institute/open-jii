@@ -41,7 +41,7 @@ jobs:
     environment: ${{ inputs.environment }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - language: python
@@ -156,7 +156,7 @@ jobs:
 
       - name: Calculate DORA Metrics
         id: dora-metrics
-        if: success()
+        if: always()
         run: |
           DEPLOY_END=$(date +%s)
           DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START_TIME))
@@ -171,7 +171,7 @@ jobs:
           echo "  Deployment Duration: ${DEPLOY_DURATION}s"
 
       - name: Publish DORA - Deployment Frequency
-        if: success()
+        if: always()
         uses: ./.github/actions/publish-dora-metric
         with:
           metric-name: "DeploymentFrequency"
@@ -182,7 +182,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Publish DORA - Lead Time
-        if: success()
+        if: always()
         uses: ./.github/actions/publish-dora-metric
         with:
           metric-name: "LeadTime"
@@ -193,7 +193,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Publish DORA - Deployment Success
-        if: success()
+        if: always()
         uses: ./.github/actions/publish-dora-metric
         with:
           metric-name: "DeploymentSuccess"
@@ -204,7 +204,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Publish DORA - Deployment Failed
-        if: failure()
+        if: always()
         uses: ./.github/actions/publish-dora-metric
         with:
           metric-name: "DeploymentFailed"

@@ -33,6 +33,12 @@ variable "security_group_ids" {
   type        = list(string)
 }
 
+variable "isolated_security_group_ids" {
+  description = "Security group IDs for interface endpoints in isolated subnets (ECR API, ECR DKR, Logs). Defaults to security_group_ids if not set."
+  type        = list(string)
+  default     = null
+}
+
 # Feature toggles for VPC endpoints
 variable "create_s3_endpoint" {
   description = "Whether to create S3 VPC endpoint (Gateway type)"
