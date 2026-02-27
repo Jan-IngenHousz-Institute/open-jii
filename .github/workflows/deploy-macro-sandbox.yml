@@ -121,10 +121,6 @@ jobs:
           echo "📦 Pushing ${FULL_IMAGE}..."
           docker push "${FULL_IMAGE}"
 
-          # Also tag as latest for Lambda's default image URI
-          docker tag "${FULL_IMAGE}" "${ECR_REGISTRY}/${ECR_REPO}:latest"
-          docker push "${ECR_REGISTRY}/${ECR_REPO}:latest"
-
           echo "image=${FULL_IMAGE}" >> $GITHUB_OUTPUT
           echo "✅ Image pushed: ${FULL_IMAGE}"
 
