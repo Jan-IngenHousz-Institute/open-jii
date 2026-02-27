@@ -63,7 +63,8 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "expo-asset"
+      "expo-asset",
+      "expo-localization"
     ],
     "extra": {
       "expo-router": {
