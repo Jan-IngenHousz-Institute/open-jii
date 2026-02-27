@@ -1009,15 +1009,32 @@ def raw_imported_data():
     imported_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/photosynq_transfer"
     
     schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/imported_data_schema"
+
+    imported_data_schema = StructType([
+        StructField("id", StringType(), True),
+        StructField("device_id", StringType(), True),
+        StructField("device_name", StringType(), True),
+        StructField("device_version", StringType(), True),
+        StructField("device_battery", DoubleType(), True),
+        StructField("device_firmware", StringType(), True),
+        StructField("sample", StringType(), True),
+        StructField("output", StringType(), True),
+        StructField("user_id", StringType(), True),
+        StructField("experiment_id", StringType(), True),
+        StructField("timestamp", TimestampType(), True),
+        StructField("macro_id", StringType(), True),
+        StructField("macro_filename", StringType(), True),
+        StructField("questions", StringType(), True),
+    ])
     
     df = (
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
-        .option("cloudFiles.schemaHints", IMPORTED_DATA_SCHEMA_HINTS)
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .option("recursiveFileLookup", "true")
+        .schema(imported_data_schema)
         .load(imported_path)
     )
     
@@ -1052,15 +1069,45 @@ def raw_ambyte_data():
     processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/processed-ambyte"
     
     schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/ambyte_schema"
+
+    from pyspark.sql.types import FloatType, BooleanType, LongType
+
+    ambyte_data_schema = StructType([
+        StructField("Time", TimestampType(), True),
+        StructField("Actinic", IntegerType(), True),
+        StructField("BoardT", FloatType(), True),
+        StructField("Count", IntegerType(), True),
+        StructField("Full", BooleanType(), True),
+        StructField("Leaf", IntegerType(), True),
+        StructField("PAR", FloatType(), True),
+        StructField("PTS", IntegerType(), True),
+        StructField("Ref7", DoubleType(), True),
+        StructField("RefF", LongType(), True),
+        StructField("Res", IntegerType(), True),
+        StructField("Sig7", DoubleType(), True),
+        StructField("SigF", LongType(), True),
+        StructField("Sun", IntegerType(), True),
+        StructField("Temp", FloatType(), True),
+        StructField("Type", StringType(), True),
+        StructField("raw", FloatType(), True),
+        StructField("spec", ArrayType(LongType()), True),
+        StructField("meta_Actinic", FloatType(), True),
+        StructField("meta_Dark", IntegerType(), True),
+        StructField("ambyte_folder", StringType(), True),
+        StructField("ambit_index", IntegerType(), True),
+        StructField("processed_at", TimestampType(), True),
+        StructField("experiment_id", StringType(), True),
+        StructField("id", IntegerType(), True),
+    ])
     
     df = (
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("cloudFiles.schemaLocation", schema_location)
-        .option("cloudFiles.schemaHints", AMBYTE_DATA_SCHEMA_HINTS)
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .option("recursiveFileLookup", "true")
+        .schema(ambyte_data_schema)
         .load(processed_path)
     )
     

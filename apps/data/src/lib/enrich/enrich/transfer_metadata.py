@@ -269,11 +269,11 @@ def execute_transfers(df: DataFrame, environment: str, dbutils, spark) -> DataFr
     Returns:
         DataFrame with transfer results matching TRANSFER_RESULT_SCHEMA
     """
-    scope = f"project-transfer-{environment}"
+    scope = f"node-webhook-secret-scope-{environment}"
     client = BackendClient(
-        base_url=dbutils.secrets.get(scope=scope, key="backend-url"),
-        api_key_id=dbutils.secrets.get(scope=scope, key="webhook-api-key-id"),
-        webhook_secret=dbutils.secrets.get(scope=scope, key="webhook-secret"),
+        base_url=dbutils.secrets.get(scope=scope, key="webhook_base_url"),
+        api_key_id=dbutils.secrets.get(scope=scope, key="webhook_api_key_id"),
+        webhook_secret=dbutils.secrets.get(scope=scope, key="webhook_secret"),
         timeout=60,
     )
 
