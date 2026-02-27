@@ -197,6 +197,9 @@ module "node_cluster_policy" {
       whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
     },
     {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+    },
+    {
       pypi = {
         package = "mini-racer==0.12.4"
       }
