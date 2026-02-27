@@ -2,21 +2,50 @@ name: Submit to Google Play
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/mobile/**'
+    inputs:
+      version:
+        description: "Version to submit (e.g., 1.2.0). If empty, uses latest mobile release tag."
+        required: false
+        type: string
+  release:
+    types: [published]
 
 permissions:
   contents: read
 
 jobs:
   build-aab:
+    # Only run for mobile releases (tag starts with mobile-v) or manual dispatch
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.release.tag_name, 'mobile-v')
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            VERSION="${TAG#mobile-v}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(git tag -l 'mobile-v*' --sort=-version:refname | head -1 | sed 's/mobile-v//')
+          fi
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not determine version"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Submitting version: $VERSION"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,6 +64,17 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Set app version from release
+        working-directory: apps/mobile
+        run: |
+          node -e "
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.expo.version = '${{ steps.version.outputs.version }}';
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+          "
+          echo "Set app version to ${{ steps.version.outputs.version }}"
 
       - name: Submit to Google Play
         working-directory: apps/mobile
