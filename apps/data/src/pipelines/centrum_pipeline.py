@@ -491,6 +491,7 @@ def experiment_raw_data():
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
         .withColumn("data", F.expr("parse_json(sample)"))
+        .withColumn("output_data", F.expr("parse_json(output)"))
         .withColumn(
             "questions_sanitized",
             F.when(
@@ -528,6 +529,7 @@ def experiment_raw_data():
             "annotations",
             "user_id",
             "data",
+            "output_data",
             "date",
             "processed_timestamp",
             "skip_macro_processing"
@@ -605,14 +607,11 @@ def experiment_device_data():
 def experiment_macro_data():
     """Process macros with VARIANT output column."""
     
-    # Read from experiment_raw_data and explode macros
-    # Skip rows marked as imported (skip_macro_processing = true) since their
-    # macro output is already included in the imported data
+    # Read all rows with macros from experiment_raw_data
     base_df = (
         dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
-        .filter("skip_macro_processing IS NOT TRUE")
         .select(
             "id",
             "experiment_id",
@@ -621,10 +620,12 @@ def experiment_macro_data():
             "timestamp",
             "user_id",
             "data",
+            "output_data",
             "date",
             "processed_timestamp",
             "questions_data",
             "annotations",
+            "skip_macro_processing",
             F.explode("macros").alias("macro")
         )
         .select(
@@ -635,10 +636,12 @@ def experiment_macro_data():
             "timestamp",
             "user_id",
             "data",
+            "output_data",
             "date",
             "processed_timestamp",
             "questions_data",
             "annotations",
+            "skip_macro_processing",
             F.col("macro.id").alias("macro_id"),
             F.col("macro.name").alias("macro_name"),
             F.col("macro.filename").alias("macro_filename")
@@ -683,12 +686,31 @@ def experiment_macro_data():
     
     return (
         base_df
-        .withColumn("macro_result", execute_macro_udf(F.struct("data", "macro_filename", "macro_name")))
+        # Run macro UDF only for non-imported rows (skip_macro_processing != true)
+        .withColumn(
+            "macro_result",
+            F.when(
+                F.col("skip_macro_processing") != True,
+                execute_macro_udf(F.struct("data", "macro_filename", "macro_name"))
+            )
+        )
+        # For imported rows, use pre-computed output_data; otherwise use UDF result
         .withColumn(
             "macro_output",
-            F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.col("output_data")
+            ).otherwise(
+                F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
+            )
         )
-        .withColumn("macro_error", F.col("macro_result.error"))
+        .withColumn(
+            "macro_error",
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.lit(None).cast("string")
+            ).otherwise(F.col("macro_result.error"))
+        )
         .withColumn(
             "macro_row_id",
             F.abs(
