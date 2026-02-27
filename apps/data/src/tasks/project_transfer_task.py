@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
-CATALOG_NAME = spark.conf.get("catalog_name")
+CATALOG_NAME = dbutils.widgets.get("catalog_name")
 CENTRUM_SCHEMA = "centrum"
-PHOTOSYNQ_DATA_PATH = spark.conf.get("PHOTOSYNQ_DATA_PATH")
-ENVIRONMENT = spark.conf.get("ENVIRONMENT").lower()
+PHOTOSYNQ_DATA_PATH = dbutils.widgets.get("PHOTOSYNQ_DATA_PATH")
+ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT").lower()
 VOLUME_BASE = f"/Volumes/{CATALOG_NAME}/centrum/data-imports"
 TRANSFER_TABLE = f"{CATALOG_NAME}.{CENTRUM_SCHEMA}.openjii_project_transfer_requests"
 
