@@ -50,17 +50,19 @@ describe("NewExperimentForm", () => {
   it("renders the wizard form and unsaved changes dialog", () => {
     render(<NewExperimentForm />);
     expect(screen.getByRole("form", { name: "wizard form" })).toBeInTheDocument();
-    expect(screen.getByText("experiments.unsavedChangesTitle")).toBeInTheDocument();
+    // Dialog starts closed (open={false}), so Radix Dialog content is not in the DOM
+    expect(screen.queryByText("experiments.unsavedChangesTitle")).not.toBeInTheDocument();
   });
 
   it("submits experiment and navigates on success", async () => {
+    const user = userEvent.setup();
     const spy = server.mount(contract.experiments.createExperiment, {
       body: { id: "exp-123" },
     });
 
     render(<NewExperimentForm />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
 
     await waitFor(() => {
       expect(spy.callCount).toBe(1);

@@ -139,12 +139,13 @@ describe("ExperimentMemberManagement", () => {
     );
 
     const input = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
-    await userEvent.type(input, "Kat");
+    const user = userEvent.setup();
+    await user.type(input, "Kat");
 
     const katherineButton = await screen.findByRole("button", { name: /Katherine Johnson/i });
-    await userEvent.click(katherineButton);
+    await user.click(katherineButton);
 
-    await userEvent.click(screen.getByRole("button", { name: "common.add" }));
+    await user.click(screen.getByRole("button", { name: "common.add" }));
 
     await waitFor(() => {
       expect(addSpy.callCount).toBe(1);
@@ -165,7 +166,8 @@ describe("ExperimentMemberManagement", () => {
     );
 
     const removeButtons = screen.getAllByRole("button", { name: /remove/i });
-    await userEvent.click(removeButtons[0]);
+    const user = userEvent.setup();
+    await user.click(removeButtons[0]);
 
     await waitFor(() => {
       expect(removeSpy.callCount).toBe(1);

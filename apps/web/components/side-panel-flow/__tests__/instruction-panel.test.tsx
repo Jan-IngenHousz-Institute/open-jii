@@ -42,7 +42,8 @@ describe("<InstructionPanel />", () => {
     render(<InstructionPanel value="" onChange={onChange} disabled={false} />);
 
     const textarea = screen.getByLabelText<HTMLTextAreaElement>("rich-textarea");
-    await userEvent.type(textarea, "ABC");
+    const user = userEvent.setup();
+    await user.type(textarea, "ABC");
 
     // Should be called once per character with that character (since parent isn't updating value)
     const calls = onChange.mock.calls.map((c) => c[0]);
@@ -55,7 +56,8 @@ describe("<InstructionPanel />", () => {
 
     const textarea = screen.getByLabelText<HTMLTextAreaElement>("rich-textarea");
     expect(textarea).toBeDisabled();
-    await userEvent.type(textarea, "X");
+    const user = userEvent.setup();
+    await user.type(textarea, "X");
     expect(onChange).not.toHaveBeenCalled();
   });
 });

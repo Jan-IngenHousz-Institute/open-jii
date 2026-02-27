@@ -60,8 +60,8 @@ describe("VisualizationsPage", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Experiment: exp-123")).toBeInTheDocument();
+        expect(screen.getByTestId("viz-viz-1")).toBeInTheDocument();
       });
-      expect(screen.getByTestId("viz-viz-1")).toBeInTheDocument();
       expect(screen.getByText("Temperature Over Time")).toBeInTheDocument();
       expect(screen.getByTestId("viz-viz-2")).toBeInTheDocument();
       expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
@@ -200,12 +200,11 @@ describe("VisualizationsPage", () => {
       });
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      vi.mocked(notFound).mockImplementation(() => {
-        throw new Error("Not Found");
-      });
+      render(<VisualizationsPage />);
 
-      expect(() => render(<VisualizationsPage />)).toThrow("Not Found");
-      expect(notFound).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(notFound).toHaveBeenCalled();
+      });
     });
   });
 });

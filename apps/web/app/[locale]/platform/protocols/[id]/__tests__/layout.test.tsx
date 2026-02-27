@@ -1,7 +1,7 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
@@ -39,6 +39,7 @@ function mockSessionUser(userId: string) {
 describe("ProtocolLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useParams).mockReturnValue({ id: "test-id", locale: "en-US" });
   });
 
   describe("Loading State", () => {

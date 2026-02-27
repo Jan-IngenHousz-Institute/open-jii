@@ -1,4 +1,4 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { render, screen, userEvent, fireEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { SelectOptionsEditor } from "./select-options-editor";
@@ -40,10 +40,8 @@ describe("SelectOptionsEditor", () => {
     const mockOnUpdateOption = vi.fn();
     render(<SelectOptionsEditor options={["Option 1"]} onUpdateOption={mockOnUpdateOption} />);
 
-    const user = userEvent.setup();
     const input = screen.getByPlaceholderText("questionCard.answerOptionPlaceholder");
-    await user.clear(input);
-    await user.type(input, "Updated Option");
+    fireEvent.change(input, { target: { value: "Updated Option" } });
 
     expect(mockOnUpdateOption).toHaveBeenCalledWith(0, "Updated Option");
   });

@@ -25,7 +25,8 @@ describe("TransferRequestForm", () => {
   it("validates empty submission", async () => {
     render(<TransferRequestForm />);
 
-    await userEvent.click(screen.getByText("transferRequest.submitButton"));
+    const user = userEvent.setup();
+    await user.click(screen.getByText("transferRequest.submitButton"));
 
     await waitFor(() => {
       expect(screen.getAllByText(/required/i).length).toBeGreaterThan(0);

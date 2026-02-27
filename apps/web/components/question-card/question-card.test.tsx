@@ -1,4 +1,4 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { render, screen, userEvent, fireEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { QuestionUI } from "./question-card";
@@ -28,9 +28,8 @@ describe("QuestionCard", () => {
     const mockOnUpdateText = vi.fn();
     render(<QuestionCard stepSpecification={defaultSpec} onUpdateText={mockOnUpdateText} />);
 
-    const user = userEvent.setup();
     const input = screen.getByPlaceholderText("questionCard.placeholder");
-    await user.type(input, "New question");
+    fireEvent.change(input, { target: { value: "New question" } });
 
     expect(mockOnUpdateText).toHaveBeenCalledWith("New question");
   });

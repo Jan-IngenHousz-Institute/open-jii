@@ -100,6 +100,7 @@ describe("ExperimentDataTableChart", () => {
   });
 
   it("calls onClose when close button is clicked", async () => {
+    const user = userEvent.setup();
     const mockOnClose = vi.fn();
 
     render(
@@ -113,7 +114,7 @@ describe("ExperimentDataTableChart", () => {
     );
 
     const closeButton = screen.getByRole("button", { name: /close/i });
-    await userEvent.click(closeButton);
+    await user.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalled();
   });

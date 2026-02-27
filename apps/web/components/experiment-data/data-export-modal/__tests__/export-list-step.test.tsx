@@ -75,7 +75,7 @@ describe("ExportListStep", () => {
 
   it("renders error state", async () => {
     server.mount(contract.experiments.listExports, {
-      body: { exports: [] },
+      body: { message: "Server error" } as never,
       status: 500,
     });
 
@@ -129,7 +129,8 @@ describe("ExportListStep", () => {
       expect(screen.getByText("experimentData.exportModal.noExports")).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByRole("button", { name: /common\.close/i }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /common\.close/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -144,12 +145,13 @@ describe("ExportListStep", () => {
     });
 
     // Open the dropdown
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       screen.getByRole("button", { name: /experimentData\.exportModal\.createExport/i }),
     );
 
     // Click CSV option
-    await userEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    await user.click(await screen.findByRole("menuitem", { name: "CSV" }));
 
     expect(onCreateExport).toHaveBeenCalledWith("csv");
   });
@@ -164,8 +166,9 @@ describe("ExportListStep", () => {
     });
 
     // The download button is an icon button
+    const user = userEvent.setup();
     const downloadButton = screen.getByRole("button", { name: "" });
-    await userEvent.click(downloadButton);
+    await user.click(downloadButton);
 
     expect(mockDownloadExport).toHaveBeenCalledWith("export-1");
   });

@@ -113,8 +113,9 @@ describe("<MacroSearchPopover />", () => {
     const onSearchChange = vi.fn();
     renderPopover({ onAddMacro, setOpen, onSearchChange });
 
+    const user = userEvent.setup();
     const items = screen.getAllByRole("option");
-    await userEvent.click(items[0]);
+    await user.click(items[0]);
 
     expect(onAddMacro).toHaveBeenCalledWith("m1");
     expect(setOpen).toHaveBeenCalledWith(false);
@@ -127,8 +128,9 @@ describe("<MacroSearchPopover />", () => {
     const onSearchChange = vi.fn();
     renderPopover({ onAddMacro, setOpen, onSearchChange });
 
+    const user = userEvent.setup();
     const items = screen.getAllByRole("option");
-    await userEvent.click(items[1]);
+    await user.click(items[1]);
 
     await waitFor(() => {
       expect(onAddMacro).toHaveBeenCalledWith("m2");
@@ -145,7 +147,8 @@ describe("<MacroSearchPopover />", () => {
     expect(items).toHaveLength(3);
 
     // Clicking a disabled cmdk item does not trigger onSelect
-    await userEvent.click(items[0]);
+    const user = userEvent.setup();
+    await user.click(items[0]);
     expect(onAddMacro).not.toHaveBeenCalled();
   });
 
@@ -184,7 +187,8 @@ describe("<MacroSearchPopover />", () => {
     const input = screen.getByRole("combobox");
     expect(input).toHaveValue("test");
 
-    await userEvent.type(input, "x");
+    const user = userEvent.setup();
+    await user.type(input, "x");
     expect(onSearchChange).toHaveBeenCalled();
   });
 
@@ -217,8 +221,9 @@ describe("<MacroSearchPopover />", () => {
     const onAddMacro = vi.fn();
     renderPopover({ onAddMacro });
 
+    const user = userEvent.setup();
     const items = screen.getAllByRole("option");
-    await userEvent.click(items[0]);
+    await user.click(items[0]);
 
     expect(onAddMacro).toHaveBeenCalledWith("m1");
   });

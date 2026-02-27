@@ -261,7 +261,8 @@ describe("ExperimentTableHeader", () => {
 
     const th = screen.getByText("name").closest("th")!;
     expect(th).toHaveClass("cursor-pointer");
-    await userEvent.click(th);
+    const user = userEvent.setup();
+    await user.click(th);
     expect(onSort).toHaveBeenCalledWith("name", "STRING");
   });
 
@@ -327,7 +328,7 @@ describe("ExperimentDataRows", () => {
         </tbody>
       </table>,
     );
-    expect(screen.getByText("No results found")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.noResults")).toBeInTheDocument();
   });
 
   it("renders one row per data entry with correct selection state", () => {

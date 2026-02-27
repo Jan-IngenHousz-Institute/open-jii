@@ -27,18 +27,7 @@ describe("RegisterPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue(
-      createSession({
-        user: {
-          id: "1",
-          name: "Test",
-          email: "t@t.com",
-          registered: false,
-          firstName: "Test",
-          lastName: "User",
-        },
-      }),
-    );
+    vi.mocked(auth).mockResolvedValue(createSession({ user: { registered: false } }));
   });
 
   it("redirects to login when unauthenticated", async () => {

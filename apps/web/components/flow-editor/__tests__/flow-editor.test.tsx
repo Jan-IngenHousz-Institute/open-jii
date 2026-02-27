@@ -271,38 +271,43 @@ describe("<FlowEditor /> (stable suite)", () => {
 
   it("fullscreen toggle changes aria-label", async () => {
     renderEditor();
+    const user = userEvent.setup();
 
     const btn = screen.getByRole("button", { name: /Enter fullscreen/i });
-    await userEvent.click(btn);
+    await user.click(btn);
     expect(screen.getByRole("button", { name: /Exit fullscreen/i })).toBeTruthy();
   });
 
   it("connect adds an edge when enabled", async () => {
     renderEditor();
+    const user = userEvent.setup();
     const before = getCounts();
     expect(before.e).toBe(1);
 
-    await userEvent.click(screen.getByRole("button", { name: "Sim Connect" }));
+    await user.click(screen.getByRole("button", { name: "Sim Connect" }));
     const after = getCounts();
     expect(after.e).toBe(2);
   });
 
   it("pane click is wired (no throw)", async () => {
     renderEditor();
-    await userEvent.click(screen.getByRole("button", { name: "Sim Pane Click" }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Sim Pane Click" }));
   });
 
   it("calls onDirtyChange(true) after first change", async () => {
     const { props } = renderEditor();
-    await userEvent.click(screen.getByRole("button", { name: "Sim Connect" }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Sim Connect" }));
     expect(props.onDirtyChange).toHaveBeenCalledWith(true);
   });
 
   it("disabled mode prevents connect and disables interactivity flags", async () => {
     renderEditor({ isDisabled: true });
+    const user = userEvent.setup();
 
     const before = getCounts();
-    await userEvent.click(screen.getByRole("button", { name: "Sim Connect" }));
+    await user.click(screen.getByRole("button", { name: "Sim Connect" }));
     const after = getCounts();
     expect(after.e).toBe(before.e);
 

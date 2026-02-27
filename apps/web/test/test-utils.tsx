@@ -102,9 +102,16 @@ function render(ui: ReactElement, options?: CustomRenderOptions): CustomRenderRe
 
 /**
  * Custom renderHook that wraps hooks in all required providers.
+ *
+ * Supports the same `initialProps` option as RTL's `renderHook` so hooks
+ * that accept arguments (e.g. useDebounce(value, delay)) can be tested
+ * with rerender(newProps).
  */
-function renderHook<TResult>(hook: () => TResult, options?: { queryClient?: QueryClient }) {
-  const { queryClient } = options ?? {};
+function renderHook<TResult, TProps = undefined>(
+  hook: TProps extends undefined ? () => TResult : (props: TProps) => TResult,
+  options?: { queryClient?: QueryClient; initialProps?: TProps },
+) {
+  const { queryClient, initialProps } = options ?? {};
 
   function Wrapper({ children }: WrapperProps) {
     const client = queryClient ?? createTestQueryClient();
@@ -115,12 +122,15 @@ function renderHook<TResult>(hook: () => TResult, options?: { queryClient?: Quer
     );
   }
 
-  const hookResult = rtlRenderHook(hook, { wrapper: Wrapper });
+  const hookResult = rtlRenderHook(hook, {
+    wrapper: Wrapper,
+    ...(initialProps !== undefined && { initialProps }),
+  } as Parameters<typeof rtlRenderHook>[1]);
   // eslint-disable-next-line react-hooks/rules-of-hooks -- useRouter is globally mocked in setup.ts
   const router = useRouter();
   return { ...hookResult, router } as {
     result: { current: TResult };
-    rerender: () => void;
+    rerender: (props?: TProps) => void;
     unmount: () => void;
     router: AppRouterInstance;
   };

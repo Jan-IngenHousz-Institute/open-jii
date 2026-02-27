@@ -170,9 +170,9 @@ describe("MacroOverviewPage", () => {
         render(<MacroOverviewPage params={mockParams} />);
 
         await waitFor(() => {
-          const badge = screen.getByText(displayName);
-          expect(badge).toBeInTheDocument();
-          expect(badge).toHaveClass(colorClass);
+          const badges = screen.getAllByText(displayName);
+          const badge = badges.find((el) => el.classList.contains(colorClass));
+          expect(badge).toBeTruthy();
         });
       },
     );

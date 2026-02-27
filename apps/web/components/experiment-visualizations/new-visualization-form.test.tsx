@@ -81,13 +81,14 @@ describe("NewVisualizationForm", () => {
   });
 
   it("submits filtered data sources on form submit", async () => {
+    const user = userEvent.setup();
     const spy = mountCreate(createVisualization({ id: "viz-new" }));
 
     // WizardForm mock will submit defaultValues. Since getDefaultDataConfig runs for real
     // with tableName "measurements", the default dataSources have empty columnName → all filtered out.
     render(<NewVisualizationForm {...defaultProps} />);
 
-    await userEvent.setup().click(screen.getByRole("button", { name: /submit/i }));
+    await user.click(screen.getByRole("button", { name: /submit/i }));
 
     await waitFor(() => {
       expect(spy.callCount).toBe(1);
@@ -98,12 +99,13 @@ describe("NewVisualizationForm", () => {
   });
 
   it("shows toast and calls onSuccess on successful creation", async () => {
+    const user = userEvent.setup();
     mountCreate(createVisualization({ id: "viz-789" }));
     const onSuccess = vi.fn();
 
     render(<NewVisualizationForm {...defaultProps} onSuccess={onSuccess} />);
 
-    await userEvent.setup().click(screen.getByRole("button", { name: /submit/i }));
+    await user.click(screen.getByRole("button", { name: /submit/i }));
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "ui.messages.createSuccess" });

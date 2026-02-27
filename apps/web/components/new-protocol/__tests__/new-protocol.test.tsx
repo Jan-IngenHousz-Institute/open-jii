@@ -66,15 +66,17 @@ describe("NewProtocolForm", () => {
   });
 
   it("navigates back when cancel is clicked", async () => {
+    const user = userEvent.setup();
     render(<NewProtocolForm />);
-    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
     expect(vi.mocked(useRouter)().back).toHaveBeenCalled();
   });
 
   it("disables submit when code is invalid", async () => {
+    const user = userEvent.setup();
     render(<NewProtocolForm />);
 
-    await userEvent.type(screen.getByLabelText("Name"), "Test Protocol");
+    await user.type(screen.getByLabelText("Name"), "Test Protocol");
     fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
       target: { value: "{ invalid json" },
     });
@@ -85,12 +87,13 @@ describe("NewProtocolForm", () => {
   });
 
   it("creates protocol, shows toast, and navigates on success", async () => {
+    const user = userEvent.setup();
     const protocol = createProtocol({ id: "new-protocol-id" });
     const spy = server.mount(contract.protocols.createProtocol, { body: protocol });
 
     render(<NewProtocolForm />);
 
-    await userEvent.type(screen.getByLabelText("Name"), "Test Protocol");
+    await user.type(screen.getByLabelText("Name"), "Test Protocol");
     fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
       target: { value: JSON.stringify([{ averages: 1 }]) },
     });
@@ -99,7 +102,7 @@ describe("NewProtocolForm", () => {
       expect(screen.getByRole("button", { name: /finalizeSetup/i })).not.toBeDisabled();
     });
 
-    await userEvent.click(screen.getByRole("button", { name: /finalizeSetup/i }));
+    await user.click(screen.getByRole("button", { name: /finalizeSetup/i }));
 
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       description: "protocols.protocolCreated",

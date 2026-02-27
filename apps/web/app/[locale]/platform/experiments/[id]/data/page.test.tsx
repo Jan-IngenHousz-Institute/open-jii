@@ -224,10 +224,6 @@ describe("ExperimentDataPage", () => {
     });
     server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
 
-    vi.mocked(notFound).mockImplementation(() => {
-      throw new Error("notFound");
-    });
-
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {

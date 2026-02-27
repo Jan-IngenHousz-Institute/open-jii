@@ -1,4 +1,5 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { MacroCodeViewer } from "./macro-code-viewer";
@@ -11,9 +12,10 @@ vi.mock("@monaco-editor/react", () => ({
   ),
 }));
 
-const mockWriteText = vi.fn().mockResolvedValue(undefined);
+// jsdom does not implement navigator.clipboard — provide a minimal stub so
+// handleCopy() resolves instead of throwing.
 Object.defineProperty(navigator, "clipboard", {
-  value: { writeText: mockWriteText },
+  value: { writeText: vi.fn().mockResolvedValue(undefined) },
   writable: true,
   configurable: true,
 });
@@ -23,7 +25,7 @@ const defaults = { value: "# Sample\nprint('Hello')", language: "python" as cons
 describe("MacroCodeViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
   afterEach(() => vi.useRealTimers());
 
@@ -66,10 +68,17 @@ describe("MacroCodeViewer", () => {
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("copies code to clipboard", () => {
+  it("copies code to clipboard", async () => {
     render(<MacroCodeViewer value="# Test" language="python" />);
-    screen.getAllByRole("button")[0].click();
-    expect(mockWriteText).toHaveBeenCalledWith("# Test");
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    // Before click: copy icon is shown
+    const button = screen.getAllByRole("button")[0];
+    expect(button.querySelector(".lucide-copy")).toBeInTheDocument();
+    await user.click(button);
+    // After click: check icon appears confirming the copy
+    await waitFor(() => {
+      expect(button.querySelector(".lucide-check")).toBeInTheDocument();
+    });
   });
 
   it("applies custom height", () => {

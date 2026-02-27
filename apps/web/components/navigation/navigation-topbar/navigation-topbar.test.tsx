@@ -1,5 +1,6 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import type { User } from "@repo/auth/types";
@@ -27,6 +28,11 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
       isMobile: false,
       toggleSidebar: vi.fn(),
     })),
+    // SidebarTrigger calls useSidebar internally via closured reference,
+    // so the mock above doesn't intercept it. Mock the component directly.
+    SidebarTrigger: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+      <button aria-label="Toggle Sidebar" {...props} />
+    ),
   };
 });
 
@@ -54,10 +60,11 @@ describe("NavigationTopbar", () => {
   });
 
   it("opens mobile menu and shows navigation items", async () => {
+    const user = userEvent.setup();
     render(<NavigationTopbar locale="en" user={testUser} />);
     expect(screen.queryByText("navigation.logout")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByLabelText("Open menu"));
+    await user.click(screen.getByLabelText("Open menu"));
 
     await waitFor(() => {
       expect(screen.getByText("navigation.logout")).toBeInTheDocument();
@@ -65,14 +72,15 @@ describe("NavigationTopbar", () => {
   });
 
   it("signs out and navigates home via mobile menu", async () => {
+    const user = userEvent.setup();
     const { router } = render(<NavigationTopbar locale="en" user={testUser} />);
-    await userEvent.click(screen.getByLabelText("Open menu"));
+    await user.click(screen.getByLabelText("Open menu"));
 
     await waitFor(() => {
       expect(screen.getByText("navigation.logout")).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText("navigation.logout"));
+    await user.click(screen.getByText("navigation.logout"));
 
     await waitFor(() => {
       expect(router.push).toHaveBeenCalledWith("/");
@@ -95,10 +103,11 @@ describe("NavigationTopbar", () => {
   });
 
   it("shows language options when multi-language flag is enabled", async () => {
-    vi.mocked(useFeatureFlagEnabled).mockReturnValueOnce(true);
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
 
+    const user = userEvent.setup();
     render(<NavigationTopbar locale="en" user={testUser} />);
-    await userEvent.click(screen.getByLabelText("Open menu"));
+    await user.click(screen.getByLabelText("Open menu"));
 
     await waitFor(() => {
       expect(screen.getByText("common.language")).toBeInTheDocument();

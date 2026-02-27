@@ -36,7 +36,7 @@ describe("ExperimentDataTableChartCell", () => {
   });
 
   it("scrolls to experiment-data-chart when clicked", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     // Mock scrollIntoView
     const mockScrollIntoView = vi.fn();
@@ -50,7 +50,7 @@ describe("ExperimentDataTableChartCell", () => {
 
     const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
       await user.click(chartContainer);
     }
 
@@ -71,7 +71,7 @@ describe("ExperimentDataTableChartCell", () => {
   });
 
   it("handles missing chart container gracefully on click", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     const mockGetElementById = vi.spyOn(document, "getElementById");
     mockGetElementById.mockReturnValue(null);
@@ -81,7 +81,7 @@ describe("ExperimentDataTableChartCell", () => {
 
     const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
       await user.click(chartContainer);
     }
 
@@ -96,18 +96,20 @@ describe("ExperimentDataTableChartCell", () => {
   });
 
   it("does not scroll when clicking on empty data", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const mockGetElementById = vi.spyOn(document, "getElementById");
 
     render(<ExperimentDataTableChartCell data={[]} columnName={mockColumnName} />);
 
     const noDataElement = screen.getByText("No data");
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
     await user.click(noDataElement);
 
     // Should not attempt to scroll
     expect(mockGetElementById).not.toHaveBeenCalled();
 
     mockGetElementById.mockRestore();
+    vi.useRealTimers();
   });
 
   it("parses JSON string data correctly", () => {

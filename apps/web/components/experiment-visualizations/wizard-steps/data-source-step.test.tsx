@@ -269,6 +269,7 @@ describe("DataSourceStep", () => {
   });
 
   it("calls onPreviewClose when preview modal is closed", async () => {
+    const user = userEvent.setup();
     setupExperimentData();
     const onPreviewClose = vi.fn();
     render(
@@ -280,7 +281,7 @@ describe("DataSourceStep", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Close Preview" }));
+    await user.click(screen.getByRole("button", { name: "Close Preview" }));
     expect(onPreviewClose).toHaveBeenCalledOnce();
   });
 

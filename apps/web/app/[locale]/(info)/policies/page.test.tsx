@@ -85,6 +85,7 @@ describe("PoliciesPage", () => {
   });
 
   it("passes correct locale to Contentful query", async () => {
+    vi.mocked(draftMode).mockResolvedValue({ isEnabled: false } as never);
     await PoliciesPage({ params: Promise.resolve({ locale: "de" as const }) });
     expect(mockPagePolicies).toHaveBeenCalledWith({ locale: "de", preview: false });
   });

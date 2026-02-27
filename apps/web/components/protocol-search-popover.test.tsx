@@ -13,7 +13,12 @@ import { ProtocolSearchPopover } from "./protocol-search-popover";
 const protocols = [
   createProtocol({ name: "Fv/FM Baseline", family: "multispeq", createdByName: "Ada Lovelace" }),
   createProtocol({ name: "Ambient Light", family: "ambit", createdByName: "Al Turing" }),
-  createProtocol({ name: "PAM Fluorometry", family: "multispeq", sortOrder: 1 }),
+  createProtocol({
+    name: "PAM Fluorometry",
+    family: "multispeq",
+    sortOrder: 1,
+    createdByName: undefined,
+  }),
 ];
 
 function renderPopover(over: Partial<React.ComponentProps<typeof ProtocolSearchPopover>> = {}) {
