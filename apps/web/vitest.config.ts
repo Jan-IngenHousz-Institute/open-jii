@@ -23,6 +23,7 @@ const webConfig = defineConfig({
       exclude: [
         // Web-specific exclusions (extends base config)
         ".next/**", // Next.js build artifacts
+        ".open-next/**", // OpenNext build artifacts
         ".releaserc.js", // Semantic release configuration
       ],
     },
