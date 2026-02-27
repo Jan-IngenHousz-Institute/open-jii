@@ -25,6 +25,15 @@ global.ResizeObserver = class ResizeObserver {
   }
 };
 
+// scrollIntoView is not implemented in jsdom but used by cmdk, charts, etc.
+Element.prototype.scrollIntoView = vi.fn();
+
+// Pointer-capture methods are not implemented in jsdom but used by Radix UI
+// Select / Popover / DropdownMenu pointer-event handling.
+Element.prototype.hasPointerCapture = vi.fn(() => false);
+Element.prototype.setPointerCapture = vi.fn();
+Element.prototype.releasePointerCapture = vi.fn();
+
 // window.matchMedia is not implemented in jsdom but used by Radix UI / shadcn
 Object.defineProperty(window, "matchMedia", {
   writable: true,

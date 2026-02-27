@@ -32,15 +32,17 @@ describe("CookieBanner", () => {
   });
 
   it("persists consent on accept", async () => {
+    const user = userEvent.setup();
     render(<CookieBanner />);
-    await userEvent.setup().click(screen.getByRole("button", { name: /cookieBanner.acceptAll/i }));
+    await user.click(screen.getByRole("button", { name: /cookieBanner.acceptAll/i }));
     expect(setConsentStatus).toHaveBeenCalledWith("accepted");
     expect(screen.queryByText("cookieBanner.intro", { exact: false })).not.toBeInTheDocument();
   });
 
   it("persists rejection on reject", async () => {
+    const user = userEvent.setup();
     render(<CookieBanner />);
-    await userEvent.setup().click(screen.getByRole("button", { name: /cookieBanner.rejectAll/i }));
+    await user.click(screen.getByRole("button", { name: /cookieBanner.rejectAll/i }));
     expect(setConsentStatus).toHaveBeenCalledWith("rejected");
   });
 

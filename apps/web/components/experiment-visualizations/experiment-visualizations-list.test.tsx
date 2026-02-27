@@ -1,14 +1,11 @@
 import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { formatDate } from "@/util/date";
+import { describe, it, expect } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
 
 import ExperimentVisualizationsList from "./experiment-visualizations-list";
-
-vi.mock("@/util/date", () => ({
-  formatDate: vi.fn((d: string) => new Date(d).toLocaleDateString()),
-}));
 
 const expId = "exp-123";
 
@@ -109,7 +106,7 @@ describe("ExperimentVisualizationsList", () => {
   });
 
   it("displays formatted update date", () => {
-    const date = new Date("2024-03-15").toLocaleDateString();
+    const date = formatDate(new Date("2024-03-15").toISOString());
     render(
       <ExperimentVisualizationsList
         visualizations={[viz({ updatedAt: new Date("2024-03-15").toISOString() })]}

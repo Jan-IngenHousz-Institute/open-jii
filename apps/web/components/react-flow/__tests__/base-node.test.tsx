@@ -98,7 +98,8 @@ describe("BaseNode", () => {
     const onDelete = vi.fn();
     render(<BaseNode nodes={[node]} onNodeDelete={onDelete} {...node} {...baseNodeDefaults} />);
     const btn = screen.getByRole("button", { name: /delete node/i });
-    await userEvent.click(btn);
+    const user = userEvent.setup();
+    await user.click(btn);
     expect(onDelete).toHaveBeenCalledWith("n1");
   });
 
@@ -126,7 +127,8 @@ describe("BaseNode", () => {
         {...baseNodeDefaults}
       />,
     );
-    await userEvent.click(screen.getByText("My Node"));
+    const user = userEvent.setup();
+    await user.click(screen.getByText("My Node"));
     expect(onSelect).toHaveBeenCalledWith(node);
   });
 
@@ -141,7 +143,8 @@ describe("BaseNode", () => {
         {...baseNodeDefaults}
       />,
     );
-    await userEvent.click(screen.getByText("My Node"));
+    const user = userEvent.setup();
+    await user.click(screen.getByText("My Node"));
     expect(onSelect).toHaveBeenCalledWith(null);
   });
 
