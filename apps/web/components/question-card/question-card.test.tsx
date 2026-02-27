@@ -28,7 +28,6 @@ describe("QuestionCard", () => {
     const mockOnUpdateText = vi.fn();
     render(<QuestionCard stepSpecification={defaultSpec} onUpdateText={mockOnUpdateText} />);
 
-    const user = userEvent.setup();
     const input = screen.getByPlaceholderText("questionCard.placeholder");
     // fireEvent: controlled component without state wrapper - userEvent.type fires per-character
     fireEvent.change(input, { target: { value: "New question" } });
