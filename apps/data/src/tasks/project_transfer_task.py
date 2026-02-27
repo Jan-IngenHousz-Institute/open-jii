@@ -181,7 +181,7 @@ protocols_exploded = protocols_parsed.selectExpr(
     "proto:id::BIGINT as protocol_id_old",
     "proto:name::STRING as name",
     "proto:description::STRING as description",
-    "proto:protocol_json as code",
+    "proto:protocol_json::STRING as code",
 )
 
 protocols = (
