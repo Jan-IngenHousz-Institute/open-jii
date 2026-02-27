@@ -91,34 +91,34 @@ questions = spark.read.schema(QUESTIONS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/
 # COMMAND ----------
 
 # DBTITLE 1,Validate Pending Requests
-projects_local = {row.project_id: row.creator_id for row in projects.collect()}
-users_local = {row.user_id: row.email for row in users.collect()}
+pending = spark.table(TRANSFER_TABLE).filter("status = 'pending'")
+pending_count = pending.count()
+logger.info(f"Pending requests: {pending_count}")
 
-pending = spark.table(TRANSFER_TABLE).filter("status = 'pending'").collect()
-logger.info(f"Pending requests: {len(pending)}")
-
-for req in pending:
-    request_id = req.request_id
-    project_id_old = req.project_id_old
-    user_email = req.user_email
-
-    creator_id = projects_local.get(str(project_id_old))
-
-    if creator_id is None:
-        status = "failed"
-    else:
-        creator_email = users_local.get(str(creator_id))
-        if creator_email and creator_email.lower() == user_email.lower():
-            status = "approved"
-        else:
-            status = "rejected"
-
+if pending_count > 0:
+    validation = (
+        pending.alias("t")
+        .join(projects.alias("p"), F.col("t.project_id_old") == F.col("p.project_id"), "left")
+        .join(users.alias("u"), F.col("p.creator_id") == F.col("u.user_id"), "left")
+        .select(
+            F.col("t.request_id"),
+            F.when(F.col("p.project_id").isNull(), F.lit("failed"))
+            .when(
+                F.lower(F.col("u.email")) == F.lower(F.col("t.user_email")),
+                F.lit("approved"),
+            )
+            .otherwise(F.lit("rejected"))
+            .alias("new_status"),
+        )
+    )
+    validation.createOrReplaceTempView("_validation_results")
     spark.sql(f"""
-        UPDATE {TRANSFER_TABLE}
-        SET status = '{status}'
-        WHERE request_id = '{request_id}'
+        MERGE INTO {TRANSFER_TABLE} t
+        USING _validation_results v ON t.request_id = v.request_id
+        WHEN MATCHED THEN UPDATE SET t.status = v.new_status
     """)
-    logger.info(f"  {request_id}: {status}")
+    for row in validation.collect():
+        logger.info(f"  {row.request_id}: {row.new_status}")
 
 # COMMAND ----------
 
@@ -344,24 +344,25 @@ for row in successful.select("experiment_id", "transfer_id").collect():
     enriched.filter(F.col("experiment_id") == experiment_id).write.mode("overwrite").parquet(output_path)
     logger.info(f"Wrote import data to {output_path}")
 
-    spark.sql(f"""
-        UPDATE {TRANSFER_TABLE}
-        SET status = 'completed'
-        WHERE request_id = '{transfer_id}'
-    """)
-    logger.info(f"  {transfer_id}: completed")
+# Bulk-update transfer statuses (completed + failed) via MERGE
+status_updates = transfer_results.select(
+    F.col("transfer_id").alias("request_id"),
+    F.when(F.col("success") == True, F.lit("completed"))
+    .otherwise(F.lit("failed"))
+    .alias("new_status"),
+)
+status_updates.createOrReplaceTempView("_status_updates")
+spark.sql(f"""
+    MERGE INTO {TRANSFER_TABLE} t
+    USING _status_updates u ON t.request_id = u.request_id
+    WHEN MATCHED THEN UPDATE SET t.status = u.new_status
+""")
 
-# Update failed transfers
-failed = transfer_results.filter(F.col("success") == False)
-for row in failed.select("transfer_id", "error").collect():
-    transfer_id = row["transfer_id"]
-    error_msg = (row["error"] or "Unknown error").replace("'", "''")
-    spark.sql(f"""
-        UPDATE {TRANSFER_TABLE}
-        SET status = 'failed'
-        WHERE request_id = '{transfer_id}'
-    """)
-    logger.info(f"  {transfer_id}: failed - {error_msg}")
+for row in successful.select("transfer_id").collect():
+    logger.info(f"  {row['transfer_id']}: completed")
+for row in transfer_results.filter(F.col("success") == False).select("transfer_id", "error").collect():
+    error_msg = row["error"] or "Unknown error"
+    logger.info(f"  {row['transfer_id']}: failed - {error_msg}")
 
 # COMMAND ----------
 

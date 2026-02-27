@@ -315,16 +315,19 @@ def clean_data():
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
         .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
-        # Build macros array from macro columns
+        # Build macros array from macro columns (empty when no macro)
         .withColumn(
             "macros",
-            F.array(
-                F.struct(
-                    F.col("macro_id").alias("id"),
-                    F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("name"),
-                    F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("filename")
+            F.when(
+                F.col("macro_id").isNotNull(),
+                F.array(
+                    F.struct(
+                        F.col("macro_id").alias("id"),
+                        F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("name"),
+                        F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("filename")
+                    )
                 )
-            )
+            ).otherwise(F.array())
         )
         # Parse questions from JSON string if present, otherwise empty array
         .withColumn(

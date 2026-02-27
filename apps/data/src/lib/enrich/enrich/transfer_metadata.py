@@ -45,6 +45,13 @@ def _transfer_name(name: str) -> str:
     """Append a provenance suffix to the original name, truncating the base
     to stay within the 255-character database limit."""
     max_base = _NAME_MAX_LENGTH - len(_TRANSFER_SUFFIX)
+    if len(name) > max_base:
+        logger.warning(
+            "Name truncated from %d to %d chars: '%s…'",
+            len(name),
+            max_base,
+            name[:40],
+        )
     return name[:max_base] + _TRANSFER_SUFFIX
 
 
@@ -118,6 +125,12 @@ def _build_questions_payload(
         vt = (q.get("value_type") or "").lower()
         kind = _VALUE_TYPE_TO_KIND.get(vt, "open_ended")
         text = q.get("question_text") or q.get("label")
+        if text and len(text) > 64:
+            logger.warning(
+                "Question text truncated from %d to 64 chars: '%s…'",
+                len(text),
+                text[:40],
+            )
         text = text[:64] if text else text  # webhook max length
 
         entry: Dict[str, Any] = {"kind": kind, "text": text}
