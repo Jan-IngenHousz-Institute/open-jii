@@ -98,6 +98,22 @@ export const zWebhookErrorResponse = z.object({
   statusCode: z.number(),
 });
 
+// Infer types from Zod schemas
+export type User = z.infer<typeof zUser>;
+export type UserList = z.infer<typeof zUserList>;
+export type UserProfileList = z.infer<typeof zUserProfileList>;
+export type SearchUsersQuery = z.infer<typeof zSearchUsersQuery>;
+export type UserIdPathParam = z.infer<typeof zUserIdPathParam>;
+export type UserProfile = z.infer<typeof zUserProfile>;
+export type CreateUserProfileBody = z.infer<typeof zCreateUserProfileBody>;
+export type CreateUserProfileResponse = z.infer<typeof zCreateUserProfileResponse>;
+export type WebhookAuthHeader = z.infer<typeof zWebhookAuthHeader>;
+export type UserMetadataWebhookPayload = z.infer<typeof zUserMetadataWebhookPayload>;
+export type UserMetadata = z.infer<typeof zUserMetadata>;
+export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookResponse>;
+export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
+export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
+
 // --- Invitation Schemas ---
 export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);
 export const zInvitationResourceType = z.enum(["platform", "experiment"]);
@@ -138,18 +154,11 @@ export const zListInvitationsQuery = z.object({
   resourceId: z.string().uuid(),
 });
 
-// Infer types from Zod schemas
-export type User = z.infer<typeof zUser>;
-export type UserList = z.infer<typeof zUserList>;
-export type UserProfileList = z.infer<typeof zUserProfileList>;
-export type SearchUsersQuery = z.infer<typeof zSearchUsersQuery>;
-export type UserIdPathParam = z.infer<typeof zUserIdPathParam>;
-export type UserProfile = z.infer<typeof zUserProfile>;
-export type CreateUserProfileBody = z.infer<typeof zCreateUserProfileBody>;
-export type CreateUserProfileResponse = z.infer<typeof zCreateUserProfileResponse>;
-export type WebhookAuthHeader = z.infer<typeof zWebhookAuthHeader>;
-export type UserMetadataWebhookPayload = z.infer<typeof zUserMetadataWebhookPayload>;
-export type UserMetadata = z.infer<typeof zUserMetadata>;
-export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookResponse>;
-export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
-export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
+// Invitation types
+export type InvitationStatus = z.infer<typeof zInvitationStatus>;
+export type InvitationResourceType = z.infer<typeof zInvitationResourceType>;
+export type Invitation = z.infer<typeof zInvitation>;
+export type CreateInvitationBody = z.infer<typeof zCreateInvitationBody>;
+export type UpdateInvitationRoleBody = z.infer<typeof zUpdateInvitationRoleBody>;
+export type InvitationIdPathParam = z.infer<typeof zInvitationIdPathParam>;
+export type ListInvitationsQuery = z.infer<typeof zListInvitationsQuery>;
