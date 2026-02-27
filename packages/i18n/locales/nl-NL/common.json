@@ -362,7 +362,11 @@
     "code": "Protocol code",
     "codePlaceholder": "Voer protocol code in als JSON",
     "codeDescription": "Definieer de JSON-structuur en logica voor je protocol",
-    "family": "Sensor familie"
+    "family": "Sensor familie",
+    "compatibleMacros": "Compatibele macro's",
+    "compatibleMacrosDescription": "Macro's waarvan bekend is dat ze werken met dit protocol. Deze worden aanbevolen in de flow builder.",
+    "noCompatibleMacros": "Nog geen compatibele macro's gekoppeld.",
+    "addCompatibleMacro": "Zoek en voeg een compatibele macro toe..."
   },
   "experimentDataTable": {
     "noData": "Geen gegevens ontvangen",

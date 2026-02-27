@@ -68,6 +68,9 @@ export enum ErrorCodes {
   PROTOCOL_DELETE_FAILED = "PROTOCOL_DELETE_FAILED", // Failed to delete protocol
   PROTOCOL_NOT_FOUND = "PROTOCOL_NOT_FOUND", // Protocol not found
   PROTOCOL_ASSIGNED = "PROTOCOL_ASSIGNED", // Cannot modify assigned protocol
+  PROTOCOL_MACROS_ADD_FAILED = "PROTOCOL_MACROS_ADD_FAILED", // Failed to add compatible macros
+  PROTOCOL_MACROS_REMOVE_FAILED = "PROTOCOL_MACROS_REMOVE_FAILED", // Failed to remove compatible macro
+  PROTOCOL_MACROS_LIST_FAILED = "PROTOCOL_MACROS_LIST_FAILED", // Failed to list compatible macros
 
   // ==================== Domain Operations - Users ====================
   // Location: src/users/application/use-cases/

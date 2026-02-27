@@ -56,7 +56,9 @@
     "comingSoon": "Coming Soon",
     "ok": "OK",
     "greeting": "Hi, {{name}}",
-    "preferred": "Preferred"
+    "preferred": "Preferred",
+    "recommended": "Recommended",
+    "compatibleWithProtocol": "Compatible with {{protocolName}} protocol"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -165,6 +167,7 @@
     "searchMacros": "Search analysis options...",
     "addMacro": "Add macro",
     "seeMacroDetails": "See macro details",
+    "macroIncompatibilityWarning": "This macro has not been marked as compatible with the selected protocol.",
     "searchingMacros": "Searching macros...",
     "noMacrosFound": "No macros found",
     "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
@@ -710,7 +713,11 @@
     "code": "Protocol Code",
     "codePlaceholder": "Enter protocol code as JSON",
     "codeDescription": "Define the JSON structure and logic for your protocol",
-    "family": "Sensor Family"
+    "family": "Sensor Family",
+    "compatibleMacros": "Compatible Macros",
+    "compatibleMacrosDescription": "Macros that are known to work with this protocol. These will be recommended in the flow builder.",
+    "noCompatibleMacros": "No compatible macros linked yet.",
+    "addCompatibleMacro": "Search and add a compatible macro..."
   },
   "macroSettings": {
     "macroInfo": "Macro Information",

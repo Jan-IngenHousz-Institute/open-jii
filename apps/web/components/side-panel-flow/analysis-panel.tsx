@@ -1,7 +1,10 @@
 "use client";
 
+import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 
 import type { Macro } from "@repo/api";
@@ -14,12 +17,14 @@ interface AnalysisPanelProps {
   selectedMacroId?: string;
   onChange: (macroId: string) => void;
   disabled?: boolean;
+  upstreamProtocolId?: string;
 }
 
 export function AnalysisPanel({
   selectedMacroId = "",
   onChange,
   disabled = false,
+  upstreamProtocolId,
 }: AnalysisPanelProps) {
   const { t } = useTranslation("common");
 
@@ -30,7 +35,43 @@ export function AnalysisPanel({
     search: debouncedMacroSearch || undefined,
   });
 
-  const availableMacros: Macro[] = macroList ?? [];
+  // Fetch the upstream protocol name for recommendation context
+  const { data: upstreamProtocol } = useProtocol(upstreamProtocolId ?? "", !!upstreamProtocolId);
+
+  // Fetch compatible macros for the upstream protocol
+  const { data: compatibleData } = useProtocolCompatibleMacros(
+    upstreamProtocolId ?? "",
+    !!upstreamProtocolId,
+  );
+
+  const compatibleMacroIds = useMemo(
+    () => new Set((compatibleData?.body ?? []).map((entry) => entry.macro.id)),
+    [compatibleData],
+  );
+  const hasCompatibilityData = !!upstreamProtocolId && !!compatibleData;
+
+  // Sort compatible macros first when we have compatibility data
+  const availableMacros: Macro[] = useMemo(() => {
+    const all = macroList ?? [];
+    if (!hasCompatibilityData || compatibleMacroIds.size === 0) return all;
+    return [...all].sort((a, b) => {
+      const aCompat = compatibleMacroIds.has(a.id) ? 0 : 1;
+      const bCompat = compatibleMacroIds.has(b.id) ? 0 : 1;
+      return aCompat - bCompat;
+    });
+  }, [macroList, hasCompatibilityData, compatibleMacroIds]);
+
+  const upstreamProtocolName = upstreamProtocol?.body.name;
+  const recommendedReason =
+    hasCompatibilityData && compatibleMacroIds.size > 0 && upstreamProtocolName
+      ? t("common.compatibleWithProtocol", { protocolName: upstreamProtocolName })
+      : undefined;
+
+  const showIncompatibilityWarning =
+    selectedMacroId &&
+    hasCompatibilityData &&
+    compatibleMacroIds.size > 0 &&
+    !compatibleMacroIds.has(selectedMacroId);
 
   const handleAddMacro = (macroId: string) => {
     if (disabled) return;
@@ -43,7 +84,7 @@ export function AnalysisPanel({
       <CardHeader>
         <CardTitle className="text-jii-dark-green">{t("experiments.analysisPanelTitle")}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <MacroSearchWithDropdown
           availableMacros={availableMacros}
           value={selectedMacroId}
@@ -54,7 +95,18 @@ export function AnalysisPanel({
           onAddMacro={handleAddMacro}
           isAddingMacro={false}
           disabled={disabled}
+          recommendedMacroIds={
+            hasCompatibilityData && compatibleMacroIds.size > 0 ? compatibleMacroIds : undefined
+          }
+          recommendedReason={recommendedReason}
         />
+
+        {showIncompatibilityWarning && (
+          <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{t("experiments.macroIncompatibilityWarning")}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

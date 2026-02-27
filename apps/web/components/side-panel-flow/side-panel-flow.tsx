@@ -49,6 +49,41 @@ function formatNodeLabelAsColumnName(title: string): string {
   return sanitized;
 }
 
+/**
+ * Walk edges backward from a node to find the nearest upstream MEASUREMENT node's protocolId.
+ */
+function findUpstreamProtocolId(nodeId: string, nodes: Node[], edges: Edge[]): string | undefined {
+  const visited = new Set<string>();
+  const queue = [nodeId];
+
+  while (queue.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    // Find all edges pointing TO this node (current is the target)
+    for (const edge of edges) {
+      if (edge.target === current) {
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        if (!sourceNode) continue;
+
+        if (
+          sourceNode.type === "MEASUREMENT" &&
+          typeof sourceNode.data.protocolId === "string" &&
+          sourceNode.data.protocolId
+        ) {
+          return sourceNode.data.protocolId;
+        }
+
+        queue.push(edge.source);
+      }
+    }
+  }
+
+  return undefined;
+}
+
 export interface ExperimentSidePanelProps {
   open: boolean;
   selectedNode?: Node | null;
@@ -61,6 +96,7 @@ export interface ExperimentSidePanelProps {
   onEdgeUpdate?: (edgeId: string, updates: Partial<Edge>) => void;
   onEdgeDelete?: (edgeId: string) => void;
   nodes?: Node[]; // Add nodes to check for existing start/end nodes
+  edges?: Edge[]; // Edges for upstream protocol lookup
   isDisabled?: boolean; // Whether the panel is read-only
 }
 
@@ -76,6 +112,7 @@ export function ExperimentSidePanel({
   onEdgeUpdate,
   onEdgeDelete,
   nodes = [],
+  edges = [],
   isDisabled = false,
 }: ExperimentSidePanelProps) {
   // Keep previous content during transition
@@ -310,6 +347,7 @@ export function ExperimentSidePanel({
                 }
               }}
               disabled={isDisabled}
+              upstreamProtocolId={findUpstreamProtocolId(selectedNode.id, nodes, edges)}
             />
           )}
         </div>

@@ -273,6 +273,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           onEdgeUpdate={isDisabled ? undefined : handleEdgeUpdate}
           onEdgeDelete={isDisabled ? undefined : handleEdgeDelete}
           nodes={nodes}
+          edges={edges}
           isDisabled={isDisabled}
         />
 

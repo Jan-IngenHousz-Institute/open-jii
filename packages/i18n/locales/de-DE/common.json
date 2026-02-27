@@ -54,7 +54,9 @@
     "megabytes": "MB",
     "comingSoon": "Demnächst",
     "greeting": "Hallo, {{name}}",
-    "preferred": "Bevorzugt"
+    "preferred": "Bevorzugt",
+    "recommended": "Empfohlen",
+    "compatibleWithProtocol": "Kompatibel mit {{protocolName}} Protokoll"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -609,6 +611,10 @@
     "code": "Protokollcode",
     "codePlaceholder": "Protokollcode als JSON eingeben",
     "codeDescription": "Definieren Sie die JSON-Struktur und Logik für Ihr Protokoll",
-    "family": "Sensor-Familie"
+    "family": "Sensor-Familie",
+    "compatibleMacros": "Kompatible Makros",
+    "compatibleMacrosDescription": "Makros, die bekanntermaßen mit diesem Protokoll funktionieren. Diese werden im Flow-Builder empfohlen.",
+    "noCompatibleMacros": "Noch keine kompatiblen Makros verknüpft.",
+    "addCompatibleMacro": "Kompatibles Makro suchen und hinzufügen..."
   }
 }
