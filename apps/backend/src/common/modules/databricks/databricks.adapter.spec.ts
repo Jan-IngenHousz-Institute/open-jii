@@ -414,26 +414,30 @@ describe("DatabricksAdapter", () => {
 
   describe("buildExperimentQuery", () => {
     it("should build query for standard tables (raw_data, device, raw_ambyte_data)", () => {
-      const query = databricksAdapter.buildExperimentQuery({
+      const result = databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",
         tableType: "static",
         experimentId: "exp-123",
         columns: ["id", "timestamp"],
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("SELECT `id`, `timestamp`");
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
       expect(query).toContain(databricksAdapter.RAW_DATA_TABLE_NAME);
     });
 
     it("should build query for macro tables with macro_id filter", () => {
-      const query = databricksAdapter.buildExperimentQuery({
+      const result = databricksAdapter.buildExperimentQuery({
         tableName: "some_macro_id",
         tableType: "macro",
         experimentId: "exp-123",
         columns: ["id", "data"],
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("SELECT `id`, `data`");
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
       expect(query).toContain("`macro_id` = 'some_macro_id'");
@@ -441,13 +445,15 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should handle VARIANT columns parsing", () => {
-      const query = databricksAdapter.buildExperimentQuery({
+      const result = databricksAdapter.buildExperimentQuery({
         tableName: "device",
         tableType: "static",
         experimentId: "exp-123",
         variants: [{ columnName: "data", schema: '{"field1":"int"}' }],
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("SELECT");
       expect(query).toContain("* EXCEPT (data, parsed_data)");
       expect(query).toContain("parsed_data.*");
@@ -455,7 +461,7 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should handle all query options (limit, offset, orderBy)", () => {
-      const query = databricksAdapter.buildExperimentQuery({
+      const result = databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",
         tableType: "static",
         experimentId: "exp-123",
@@ -466,6 +472,8 @@ describe("DatabricksAdapter", () => {
         offset: 50,
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("ORDER BY `timestamp` DESC");
       expect(query).toContain("LIMIT 100");
       expect(query).toContain("OFFSET 50");
