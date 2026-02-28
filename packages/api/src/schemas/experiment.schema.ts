@@ -894,7 +894,10 @@ export const zColumnInfo = z.object({
 });
 
 export const zExperimentTableMetadata = z.object({
-  name: z.string().describe("Technical name of the table used for queries and operations"),
+  identifier: z.string().describe("Stable identifier: static table name or macro UUID"),
+  tableType: z
+    .enum(["static", "macro"])
+    .describe("Whether this is a static table or a macro table"),
   displayName: z.string().describe("Human-readable display name of the table for UI"),
   totalRows: z.number().int().describe("Total number of rows in the table"),
   defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),

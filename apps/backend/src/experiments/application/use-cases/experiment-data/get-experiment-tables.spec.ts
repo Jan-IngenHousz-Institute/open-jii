@@ -9,6 +9,7 @@ import {
   assertSuccess,
   assertFailure,
 } from "../../../../common/utils/fp-utils";
+import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -19,6 +20,7 @@ describe("GetExperimentTablesUseCase", () => {
   let testUserId: string;
   let useCase: GetExperimentTablesUseCase;
   let databricksPort: DatabricksPort;
+  let macroRepository: MacroRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -29,6 +31,7 @@ describe("GetExperimentTablesUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(GetExperimentTablesUseCase);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
+    macroRepository = testApp.module.get(MacroRepository);
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
@@ -51,14 +54,20 @@ describe("GetExperimentTablesUseCase", () => {
       });
 
       // Mock getExperimentTableMetadata response
+      const macroId = faker.string.uuid();
       const mockMetadata = [
-        { tableName: ExperimentTableName.RAW_DATA, rowCount: 100 },
-        { tableName: ExperimentTableName.DEVICE, rowCount: 50 },
-        { tableName: "some_macro", rowCount: 25 },
+        { identifier: ExperimentTableName.RAW_DATA, tableType: "static" as const, rowCount: 100 },
+        { identifier: ExperimentTableName.DEVICE, tableType: "static" as const, rowCount: 50 },
+        { identifier: macroId, tableType: "macro" as const, rowCount: 25 },
       ];
 
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
+      );
+
+      // Mock macro name resolution from PG
+      vi.spyOn(macroRepository, "findNamesByIds").mockResolvedValue(
+        success(new Map([[macroId, { name: "some_macro", filename: "some_macro_file" }]])),
       );
 
       // Execute the use case
@@ -71,21 +80,24 @@ describe("GetExperimentTablesUseCase", () => {
 
       expect(result.value).toEqual([
         {
-          name: ExperimentTableName.RAW_DATA,
+          identifier: ExperimentTableName.RAW_DATA,
+          tableType: "static",
           displayName: "Raw Data",
           totalRows: 100,
           defaultSortColumn: "timestamp",
           errorColumn: undefined,
         },
         {
-          name: ExperimentTableName.DEVICE,
+          identifier: ExperimentTableName.DEVICE,
+          tableType: "static",
           displayName: "Device Metadata",
           totalRows: 50,
           defaultSortColumn: "processed_timestamp",
           errorColumn: undefined,
         },
         {
-          name: "some_macro",
+          identifier: macroId,
+          tableType: "macro",
           displayName: "Processed Data (some_macro)",
           totalRows: 25,
           defaultSortColumn: "timestamp",
@@ -135,7 +147,9 @@ describe("GetExperimentTablesUseCase", () => {
         visibility: "public",
       });
 
-      const mockMetadata = [{ tableName: ExperimentTableName.RAW_DATA, rowCount: 100 }];
+      const mockMetadata = [
+        { identifier: ExperimentTableName.RAW_DATA, tableType: "static" as const, rowCount: 100 },
+      ];
 
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),

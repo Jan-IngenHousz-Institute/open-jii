@@ -8,6 +8,7 @@ import type {
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportMetadata } from "../models/experiment-data-exports.model";
+import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 
 /**
  * Injection token for the Databricks port
@@ -40,33 +41,24 @@ export interface DatabricksPort {
    * that replaces multiple separate queries.
    *
    * Returns metadata for all tables in an experiment:
-   * - Raw data table
-   * - Device data table
-   * - Ambyte data table
-   * - All macro tables
+   * - Raw data table (identifier: 'raw_data', tableType: 'static')
+   * - Device data table (identifier: 'device', tableType: 'static')
+   * - Ambyte data table (identifier: 'raw_ambyte_data', tableType: 'static')
+   * - All macro tables (identifier: macro_id UUID, tableType: 'macro')
    *
    * @param experimentId - The experiment identifier
    * @param options - Optional configuration
-   * @param options.tableName - If provided, only return metadata for this specific table
+   * @param options.identifier - If provided, only return metadata for this specific table (static name or macro_id)
    * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
-   * @returns Result containing array of table metadata with schemas and row counts
+   * @returns Result containing array of table metadata with identifiers, types, and row counts
    */
   getExperimentTableMetadata(
     experimentId: string,
     options?: {
-      tableName?: string;
+      identifier?: string;
       includeSchemas?: boolean;
     },
-  ): Promise<
-    Result<
-      {
-        tableName: string;
-        rowCount: number;
-        macroSchema?: string | null;
-        questionsSchema?: string | null;
-      }[]
-    >
-  >;
+  ): Promise<Result<ExperimentTableMetadata[]>>;
 
   /**
    * Build a SQL query for experiment data with optional VARIANT parsing
@@ -77,6 +69,7 @@ export interface DatabricksPort {
    */
   buildExperimentQuery(params: {
     tableName: string;
+    tableType: "static" | "macro";
     experimentId: string;
     columns?: string[];
     variants?: { columnName: string; schema: string }[];

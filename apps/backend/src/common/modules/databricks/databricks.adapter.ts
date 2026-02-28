@@ -4,6 +4,7 @@ import { Readable } from "stream";
 import { ExperimentTableName } from "@repo/api";
 
 import type { ExportMetadata } from "../../../experiments/core/models/experiment-data-exports.model";
+import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
@@ -26,12 +27,6 @@ import type {
 } from "./services/workspace/workspace.types";
 import { WorkspaceObjectFormat } from "./services/workspace/workspace.types";
 
-export interface ExperimentTableMetadata {
-  tableName: string;
-  rowCount: number;
-  macroSchema?: string | null;
-  questionsSchema?: string | null;
-}
 @Injectable()
 export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
@@ -518,21 +513,21 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * that replaces multiple separate queries.
    *
    * Returns metadata for all tables in an experiment:
-   * - Raw data table (logical name: 'raw_data')
-   * - Device data table (logical name: 'device')
-   * - Ambyte data table (logical name: 'raw_ambyte_data')
-   * - All macro tables (one per macro_filename, uses macro_name as display name)
+   * - Raw data table (identifier: 'raw_data', tableType: 'static')
+   * - Device data table (identifier: 'device', tableType: 'static')
+   * - Ambyte data table (identifier: 'raw_ambyte_data', tableType: 'static')
+   * - All macro tables (identifier: macro_id UUID, tableType: 'macro')
    *
    * @param experimentId - The experiment identifier
    * @param options - Optional configuration
-   * @param options.tableName - If provided, only return metadata for this specific table (logical name or macro name)
+   * @param options.identifier - If provided, only return metadata for this specific table (static name or macro_id)
    * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
-   * @returns Result containing array of table metadata with schemas and row counts
+   * @returns Result containing array of table metadata with identifiers, types, and row counts
    */
   async getExperimentTableMetadata(
     experimentId: string,
     options?: {
-      tableName?: string;
+      identifier?: string;
       includeSchemas?: boolean;
     },
   ): Promise<Result<ExperimentTableMetadata[]>> {
@@ -541,12 +536,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     const includeSchemas = options?.includeSchemas !== false; // Default to true
     const columns = includeSchemas
-      ? ["table_name", "row_count", "macro_schema", "questions_schema"]
-      : ["table_name", "row_count"];
+      ? ["identifier", "table_type", "row_count", "macro_schema", "questions_schema"]
+      : ["identifier", "table_type", "row_count"];
 
     const whereConditions: [string, string][] = [["experiment_id", experimentId]];
-    if (options?.tableName) {
-      whereConditions.push(["table_name", options.tableName]);
+    if (options?.identifier) {
+      whereConditions.push(["identifier", options.identifier]);
     }
 
     const query = this.queryBuilder.buildQuery({
@@ -559,7 +554,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       msg: "Querying experiment table metadata",
       operation: "getExperimentTableMetadata",
       experimentId,
-      tableName: options?.tableName,
+      identifier: options?.identifier,
       includeSchemas,
     });
 
@@ -577,15 +572,16 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     const metadata = result.value.rows.map((row) => {
       const base = {
         // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
-        tableName: row[0] as string,
-        rowCount: row[1] ? parseInt(row[1], 10) : 0,
+        identifier: row[0] as string,
+        tableType: (row[1] ?? "static") as "static" | "macro",
+        rowCount: row[2] ? parseInt(row[2], 10) : 0,
       };
 
       if (includeSchemas) {
         return {
           ...base,
-          macroSchema: row[2],
-          questionsSchema: row[3],
+          macroSchema: row[3],
+          questionsSchema: row[4],
         };
       }
 
@@ -601,6 +597,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    */
   buildExperimentQuery(params: {
     tableName: string;
+    tableType: "static" | "macro";
     experimentId: string;
     columns?: string[];
     variants?: { columnName: string; schema: string }[];
@@ -612,6 +609,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }): string {
     const {
       tableName,
+      tableType,
       experimentId,
       columns,
       variants,
@@ -625,26 +623,40 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     const catalog = this.configService.getCatalogName();
     const schema = this.configService.getCentrumSchemaName();
 
-    // Map table names to their corresponding physical tables
-    const tableMapping: Record<string, string> = {
+    if (tableType === "macro") {
+      // Macro tables: query the shared macro data table, filter by experiment_id AND macro_id
+      const table = `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
+      const whereConditions: [string, string][] = [
+        ["experiment_id", experimentId],
+        ["macro_id", tableName],
+      ];
+
+      return this.queryBuilder.buildQuery({
+        table,
+        columns,
+        variants,
+        exceptColumns,
+        whereConditions,
+        orderBy,
+        orderDirection,
+        limit,
+        offset,
+      });
+    }
+
+    // Static tables: map identifier to physical table name
+    const staticTableMapping: Record<string, string> = {
       [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
       [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
       [ExperimentTableName.RAW_AMBYTE_DATA]: this.RAW_AMBYTE_DATA_TABLE_NAME,
     };
 
-    const targetTable = tableMapping[tableName];
-    const table = targetTable
-      ? `${catalog}.${schema}.${targetTable}`
-      : `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
-
-    // For known physical tables, filter by experiment_id only
-    // For macros, filter by experiment_id AND macro_filename
-    const whereConditions: [string, string][] = targetTable
-      ? [["experiment_id", experimentId]]
-      : [
-          ["experiment_id", experimentId],
-          ["macro_filename", tableName],
-        ];
+    const physicalTable = staticTableMapping[tableName];
+    if (!physicalTable) {
+      throw new Error(`No physical table mapping found for static table '${tableName}'`);
+    }
+    const table = `${catalog}.${schema}.${physicalTable}`;
+    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
 
     return this.queryBuilder.buildQuery({
       table,

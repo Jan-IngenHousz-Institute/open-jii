@@ -56,7 +56,7 @@ export default function NewVisualizationForm({
     chartFamily: "basic",
     chartType: "line",
     config: getDefaultChartConfig("line"),
-    dataConfig: getDefaultDataConfig(tables.length > 0 ? tables[0].name : undefined),
+    dataConfig: getDefaultDataConfig(tables.length > 0 ? tables[0].identifier : undefined),
   };
 
   // Wizard steps configuration
