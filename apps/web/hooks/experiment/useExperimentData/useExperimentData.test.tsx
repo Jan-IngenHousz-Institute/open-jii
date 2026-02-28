@@ -69,10 +69,6 @@ describe("getColumnWidth", () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  useExperimentData (MSW-backed integration tests)                   */
-/* ------------------------------------------------------------------ */
-
 describe("useExperimentData", () => {
   const mockExperimentData: ExperimentData = {
     columns: [

@@ -31,7 +31,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-// Sibling chart configurators (Rule 5)
 vi.mock("../chart-configurators/data", () => ({
   LineChartDataConfigurator: ({ columns }: { columns: DataColumn[] }) => (
     <div data-testid="line-chart-configurator">Columns: {columns.length}</div>
@@ -41,7 +40,6 @@ vi.mock("../chart-configurators/data", () => ({
   ),
 }));
 
-// Sibling preview modal (Rule 5)
 vi.mock("../chart-preview/chart-preview-modal", () => ({
   ChartPreviewModal: ({
     experimentId,

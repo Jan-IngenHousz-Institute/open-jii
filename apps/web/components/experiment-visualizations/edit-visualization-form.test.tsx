@@ -30,7 +30,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-// Rule 5: sibling step components
 vi.mock("./wizard-steps/basic-info-step", () => ({
   BasicInfoStep: () => null,
   basicInfoSchema: () => ({}),
