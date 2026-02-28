@@ -606,7 +606,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     orderDirection?: "ASC" | "DESC";
     limit?: number;
     offset?: number;
-  }): string {
+  }): Result<string> {
     const {
       tableName,
       tableType,
@@ -631,17 +631,19 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         ["macro_id", tableName],
       ];
 
-      return this.queryBuilder.buildQuery({
-        table,
-        columns,
-        variants,
-        exceptColumns,
-        whereConditions,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      });
+      return success(
+        this.queryBuilder.buildQuery({
+          table,
+          columns,
+          variants,
+          exceptColumns,
+          whereConditions,
+          orderBy,
+          orderDirection,
+          limit,
+          offset,
+        }),
+      );
     }
 
     // Static tables: map identifier to physical table name
@@ -653,22 +655,29 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     const physicalTable = staticTableMapping[tableName];
     if (!physicalTable) {
-      throw new Error(`No physical table mapping found for static table '${tableName}'`);
+      return failure(
+        AppError.internal(
+          `No physical table mapping found for static table '${tableName}'`,
+          "UNKNOWN_TABLE_MAPPING",
+        ),
+      );
     }
     const table = `${catalog}.${schema}.${physicalTable}`;
     const whereConditions: [string, string][] = [["experiment_id", experimentId]];
 
-    return this.queryBuilder.buildQuery({
-      table,
-      columns,
-      variants,
-      exceptColumns,
-      whereConditions,
-      orderBy,
-      orderDirection,
-      limit,
-      offset,
-    });
+    return success(
+      this.queryBuilder.buildQuery({
+        table,
+        columns,
+        variants,
+        exceptColumns,
+        whereConditions,
+        orderBy,
+        orderDirection,
+        limit,
+        offset,
+      }),
+    );
   }
 
   /**

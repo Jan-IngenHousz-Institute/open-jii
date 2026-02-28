@@ -65,7 +65,7 @@ export interface DatabricksPort {
    * Consolidates simple queries and VARIANT parsing into one method
    *
    * @param params - Query parameters including table name, experiment ID, columns, variants, ordering, pagination
-   * @returns SQL query string
+   * @returns Result containing the SQL query string or an error
    */
   buildExperimentQuery(params: {
     tableName: string;
@@ -78,7 +78,7 @@ export interface DatabricksPort {
     orderDirection?: "ASC" | "DESC";
     limit?: number;
     offset?: number;
-  }): string;
+  }): Result<string>;
 
   /**
    * Execute a SQL query in a specific schema.

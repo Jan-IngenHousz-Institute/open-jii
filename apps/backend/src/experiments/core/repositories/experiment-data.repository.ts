@@ -137,7 +137,7 @@ export class ExperimentDataRepository {
       }
     }
 
-    const query = this.databricksPort.buildExperimentQuery({
+    return this.databricksPort.buildExperimentQuery({
       tableName,
       tableType,
       experimentId,
@@ -149,8 +149,6 @@ export class ExperimentDataRepository {
       limit,
       offset,
     });
-
-    return success(query);
   }
 
   /**

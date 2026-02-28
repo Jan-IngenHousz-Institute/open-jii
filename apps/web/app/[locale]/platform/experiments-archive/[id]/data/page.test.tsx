@@ -335,6 +335,7 @@ describe("<ExperimentDataPage />", () => {
     expect(tabContent1).toBeInTheDocument();
     const dataTable1 = tabContent1.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable1).toHaveAttribute("data-experiment-id", "test-experiment-id");
+    expect(dataTable1).toHaveAttribute("data-table-name", "measurements");
     expect(dataTable1).toHaveAttribute("data-display-name", "Measurements");
     expect(dataTable1).toHaveAttribute("data-default-sort-column", "timestamp");
 
@@ -342,6 +343,7 @@ describe("<ExperimentDataPage />", () => {
     expect(tabContent2).toBeInTheDocument();
     const dataTable2 = tabContent2.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable2).toHaveAttribute("data-experiment-id", "test-experiment-id");
+    expect(dataTable2).toHaveAttribute("data-table-name", ExperimentTableName.DEVICE);
     expect(dataTable2).toHaveAttribute("data-display-name", "Device");
   });
 
