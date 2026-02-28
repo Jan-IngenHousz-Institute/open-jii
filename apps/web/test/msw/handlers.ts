@@ -1,7 +1,6 @@
 /**
- * MSW handlers — intentionally empty.
+ * MSW default global handlers.
  *
- * Every test mounts exactly the endpoints it needs via `server.mount()`.
- * No global defaults — tests are explicit about their API dependencies.
+ * Set up handlers here for any endpoints that should have a default response across all tests.
  */
 export const handlers = [] as const;

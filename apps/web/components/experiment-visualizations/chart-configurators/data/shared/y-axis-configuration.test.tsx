@@ -1,16 +1,10 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { FormProvider, useForm } from "react-hook-form";
+import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import YAxisConfiguration from "./y-axis-configuration";
-
-HTMLElement.prototype.hasPointerCapture = () => false;
-HTMLElement.prototype.scrollIntoView = () => {
-  // noop
-};
 
 // Mock table data
 const mockColumns: DataColumn[] = [
@@ -20,70 +14,65 @@ const mockColumns: DataColumn[] = [
   { name: "pressure", type_name: "INT", type_text: "INT" },
 ];
 
-// Test wrapper component with form context
-function TestWrapper({
-  defaultValues,
-  columns = mockColumns,
-  yAxisDataSources = [],
-  onAddSeries = vi.fn(),
-  onRemoveSeries = vi.fn(),
-  isColorColumnSelected = false,
-}: {
-  defaultValues?: Partial<ChartFormValues>;
-  columns?: DataColumn[];
-  yAxisDataSources?: { field: { id: string; columnName: string; role: string }; index: number }[];
-  onAddSeries?: () => void;
-  onRemoveSeries?: (index: number) => void;
-  isColorColumnSelected?: boolean;
-}) {
-  const methods = useForm<ChartFormValues>({
-    defaultValues: {
-      name: "",
-      chartFamily: "basic",
-      chartType: "line",
-      config: {
-        yAxisTitle: defaultValues?.config?.yAxisTitle ?? "",
-        yAxisType: defaultValues?.config?.yAxisType ?? "linear",
-        color: defaultValues?.config?.color ?? [],
-      },
-      dataConfig: {
-        tableName: defaultValues?.dataConfig?.tableName ?? "test-table",
-        dataSources: defaultValues?.dataConfig?.dataSources ?? [],
-      },
-    } as ChartFormValues,
-  });
-
-  return (
-    <FormProvider {...methods}>
+function renderYAxisConfig(
+  opts: {
+    defaultValues?: Partial<ChartFormValues>;
+    columns?: DataColumn[];
+    yAxisDataSources?: { field: { id: string; columnName: string; role: string }; index: number }[];
+    onAddSeries?: () => void;
+    onRemoveSeries?: (index: number) => void;
+    isColorColumnSelected?: boolean;
+  } = {},
+) {
+  return renderWithForm<ChartFormValues>(
+    (form) => (
       <YAxisConfiguration
-        form={methods}
-        columns={columns}
-        yAxisDataSources={yAxisDataSources}
-        addYAxisSeries={onAddSeries}
-        removeDataSource={onRemoveSeries}
-        isColorColumnSelected={isColorColumnSelected}
+        form={form}
+        columns={opts.columns ?? mockColumns}
+        yAxisDataSources={opts.yAxisDataSources ?? []}
+        addYAxisSeries={opts.onAddSeries ?? vi.fn()}
+        removeDataSource={opts.onRemoveSeries ?? vi.fn()}
+        isColorColumnSelected={opts.isColorColumnSelected ?? false}
       />
-    </FormProvider>
+    ),
+    {
+      useFormProps: {
+        defaultValues: {
+          name: "",
+          chartFamily: "basic",
+          chartType: "line",
+          config: {
+            yAxisTitle: opts.defaultValues?.config?.yAxisTitle ?? "",
+            yAxisType: opts.defaultValues?.config?.yAxisType ?? "linear",
+            color: opts.defaultValues?.config?.color ?? [],
+          },
+          dataConfig: {
+            tableName: opts.defaultValues?.dataConfig?.tableName ?? "test-table",
+            dataSources: opts.defaultValues?.dataConfig?.dataSources ?? [],
+          },
+        } as ChartFormValues,
+      },
+    },
   );
 }
 
 describe("YAxisConfiguration", () => {
   describe("Rendering", () => {
     it("should render Y-axis section header", () => {
-      render(<TestWrapper />);
+      renderYAxisConfig();
 
       expect(screen.getByText(/configuration\.columns\.yAxis/i)).toBeInTheDocument();
     });
 
     it("should render add series button", () => {
-      render(<TestWrapper />);
+      renderYAxisConfig();
 
       expect(screen.getByRole("button", { name: /add/i })).toBeInTheDocument();
       expect(screen.getByText(/configuration\.series\.add/i)).toBeInTheDocument();
     });
 
     it("should not render any series cards when yAxisDataSources is empty", () => {
-      render(<TestWrapper yAxisDataSources={[]} />);
+      renderYAxisConfig({ yAxisDataSources: [] });
 
       expect(screen.queryByText(/configuration\.series\.title/i)).not.toBeInTheDocument();
     });
@@ -100,21 +89,19 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const temperatureElements = screen.getAllByText("temperature");
       expect(temperatureElements.length).toBeGreaterThanOrEqual(1);
@@ -127,7 +114,7 @@ describe("YAxisConfiguration", () => {
       const user = userEvent.setup();
       const onAddSeries = vi.fn();
 
-      render(<TestWrapper onAddSeries={onAddSeries} />);
+      renderYAxisConfig({ onAddSeries });
 
       await user.click(screen.getByRole("button", { name: /add/i }));
 
@@ -144,20 +131,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const temperatureElements = screen.getAllByText("temperature");
       expect(temperatureElements.length).toBeGreaterThanOrEqual(1);
@@ -171,20 +156,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       expect(screen.getByText(/configuration\.series\.title 1/i)).toBeInTheDocument();
     });
@@ -201,21 +184,19 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const removeButtons = screen.getAllByRole("button", { name: "" });
       // Filter for buttons that have the Trash2 icon (remove buttons)
@@ -231,20 +212,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const removeButtons = screen.getAllByRole("button", { name: "" });
       const trashButton = removeButtons.find((btn) => btn.querySelector("svg"));
@@ -266,22 +245,20 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          onRemoveSeries={onRemoveSeries}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        onRemoveSeries,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const removeButtons = screen.getAllByRole("button", { name: "" });
       const trashButtons = removeButtons.filter(
@@ -304,20 +281,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       expect(screen.getByText(/configuration\.columns\.dataColumn/i)).toBeInTheDocument();
     });
@@ -332,20 +307,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const selects = screen.getAllByRole("combobox");
       const columnSelect = selects[0];
@@ -368,20 +341,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const selects = screen.getAllByRole("combobox");
       const columnSelect = selects[0];
@@ -403,20 +374,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const selects = screen.getAllByRole("combobox");
       const columnSelect = selects[0];
@@ -441,23 +410,21 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            config: {
-              yAxisTitle: "Existing Title",
-            },
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          config: {
+            yAxisTitle: "Existing Title",
+          },
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const selects = screen.getAllByRole("combobox");
       const columnSelect = selects[0];
@@ -486,24 +453,22 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            config: {
-              yAxisTitle: "Initial Title",
-            },
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          config: {
+            yAxisTitle: "Initial Title",
+          },
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       // Find the second series column select (should be index 2 in comboboxes)
       const selects = screen.getAllByRole("combobox");
@@ -529,20 +494,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       expect(screen.getByText(/configuration\.series\.name/i)).toBeInTheDocument();
       expect(
@@ -560,20 +523,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const input = screen.getByPlaceholderText(/enterSeriesName/i);
       await user.type(input, "Temperature Data");
@@ -589,25 +550,23 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                {
-                  tableName: "test-table",
-                  columnName: "temperature",
-                  role: "y",
-                  alias: "Temp (°C)",
-                },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              {
+                tableName: "test-table",
+                columnName: "temperature",
+                role: "y",
+                alias: "Temp (°C)",
+              },
+            ],
+          },
+        },
+      });
 
       const input = screen.getByPlaceholderText(/enterSeriesName/i);
       expect(input).toHaveValue("Temp (°C)");
@@ -623,23 +582,21 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-            config: {
-              color: ["#ff0000"],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+          config: {
+            color: ["#ff0000"],
+          },
+        },
+      });
 
       expect(screen.getByText(/configuration\.series\.color/i)).toBeInTheDocument();
       const colorInputs = screen.getAllByDisplayValue("#ff0000");
@@ -654,24 +611,22 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          isColorColumnSelected={true}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-            config: {
-              color: ["#ff0000"],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        isColorColumnSelected: true,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+          config: {
+            color: ["#ff0000"],
+          },
+        },
+      });
 
       const colorInputs = screen.getAllByDisplayValue("#ff0000");
       colorInputs.forEach((input) => {
@@ -687,24 +642,22 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          isColorColumnSelected={false}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-            config: {
-              color: ["#ff0000"],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        isColorColumnSelected: false,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+          config: {
+            color: ["#ff0000"],
+          },
+        },
+      });
 
       const colorInputs = screen.getAllByDisplayValue("#ff0000");
       colorInputs.forEach((input) => {
@@ -722,20 +675,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const typeLabels = screen.getAllByText(/configuration\.axes\.type/i);
       expect(typeLabels.length).toBeGreaterThanOrEqual(1);
@@ -749,20 +700,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       expect(screen.getByText(/configuration\.axisTypes\.linear/i)).toBeInTheDocument();
     });
@@ -777,20 +726,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const selects = screen.getAllByRole("combobox");
       const typeSelect = selects.find((select) => select.textContent.includes("linear"));
@@ -819,21 +766,19 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const axisTitleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
       // Should only have one axis title input (for first series)
@@ -850,20 +795,18 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const input = screen.getByPlaceholderText(/enterAxisTitle/i);
       await user.type(input, "Y-Axis Label");
@@ -879,23 +822,21 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            config: {
-              yAxisTitle: "Temperature (°C)",
-            },
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          config: {
+            yAxisTitle: "Temperature (°C)",
+          },
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const input = screen.getByPlaceholderText(/enterAxisTitle/i);
       expect(input).toHaveValue("Temperature (°C)");
@@ -919,22 +860,20 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "pressure", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "pressure", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       const temperatureElements = screen.getAllByText("temperature");
       expect(temperatureElements.length).toBeGreaterThanOrEqual(1);
@@ -958,22 +897,20 @@ describe("YAxisConfiguration", () => {
         },
       ];
 
-      render(
-        <TestWrapper
-          yAxisDataSources={yAxisDataSources}
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
-                { tableName: "test-table", columnName: "", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "", role: "y", alias: "" },
-                { tableName: "test-table", columnName: "", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderYAxisConfig({
+        yAxisDataSources,
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+              { tableName: "test-table", columnName: "", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "", role: "y", alias: "" },
+              { tableName: "test-table", columnName: "", role: "y", alias: "" },
+            ],
+          },
+        },
+      });
 
       expect(screen.getByText(/configuration\.series\.title 1/i)).toBeInTheDocument();
       expect(screen.getByText(/configuration\.series\.title 2/i)).toBeInTheDocument();

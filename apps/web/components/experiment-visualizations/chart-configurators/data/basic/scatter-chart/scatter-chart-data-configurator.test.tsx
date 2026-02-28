@@ -1,5 +1,4 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { useForm } from "react-hook-form";
+import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DataColumn } from "@repo/api";
@@ -67,37 +66,33 @@ vi.mock("../../shared/color-dimension-configuration", () => ({
   ),
 }));
 
-// Test wrapper component
-function TestWrapper({ initialValues }: { initialValues: Partial<ChartFormValues> }) {
-  const form = useForm<ChartFormValues>({
-    defaultValues: {
-      ...initialValues,
-    } as ChartFormValues,
-  });
+const mockColumns: DataColumn[] = [
+  { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
+  { name: "temperature", type_name: "float", type_text: "float" },
+  { name: "humidity", type_name: "float", type_text: "float" },
+  { name: "sensor_id", type_name: "string", type_text: "string" },
+];
 
-  const mockColumns: DataColumn[] = [
-    { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
-    { name: "temperature", type_name: "float", type_text: "float" },
-    { name: "humidity", type_name: "float", type_text: "float" },
-    { name: "sensor_id", type_name: "string", type_text: "string" },
-  ];
-
-  return <ScatterChartDataConfigurator form={form} columns={mockColumns} />;
+function renderScatterDataConfigurator(initialValues: Partial<ChartFormValues>) {
+  return renderWithForm<ChartFormValues>(
+    (form) => <ScatterChartDataConfigurator form={form} columns={mockColumns} />,
+    {
+      useFormProps: {
+        defaultValues: { ...initialValues } as ChartFormValues,
+      },
+    },
+  );
 }
 
 describe("ScatterChartDataConfigurator", () => {
   describe("Component Rendering", () => {
     it("should render all three configuration sections", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [],
+        },
+      });
 
       expect(screen.getByTestId("x-axis-config")).toBeInTheDocument();
       expect(screen.getByTestId("y-axis-config")).toBeInTheDocument();
@@ -105,16 +100,12 @@ describe("ScatterChartDataConfigurator", () => {
     });
 
     it("should render with proper spacing between sections", () => {
-      const { container } = render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [],
-            },
-          }}
-        />,
-      );
+      const { container } = renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [],
+        },
+      });
 
       const mainDiv = container.firstChild as HTMLElement;
       expect(mainDiv).toHaveClass("space-y-6");
@@ -123,79 +114,63 @@ describe("ScatterChartDataConfigurator", () => {
 
   describe("Data Source Filtering by Role", () => {
     it("should correctly filter x-axis data sources", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
+          ],
+        },
+      });
 
       expect(screen.getByTestId("x-axis-source-0")).toHaveTextContent("timestamp");
       expect(screen.queryByTestId("x-axis-source-1")).not.toBeInTheDocument();
     });
 
     it("should correctly filter y-axis data sources", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "Temp" },
-                { tableName: "test_table", columnName: "humidity", role: "y", alias: "Humidity" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "temperature", role: "y", alias: "Temp" },
+            { tableName: "test_table", columnName: "humidity", role: "y", alias: "Humidity" },
+          ],
+        },
+      });
 
       expect(screen.getByTestId("y-axis-source-0")).toHaveTextContent("temperature");
       expect(screen.getByTestId("y-axis-source-1")).toHaveTextContent("humidity");
     });
 
     it("should correctly filter color-axis data sources", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test_table", columnName: "sensor_id", role: "color", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
+            { tableName: "test_table", columnName: "sensor_id", role: "color", alias: "" },
+          ],
+        },
+      });
 
       expect(screen.getByTestId("color-axis-source-0")).toHaveTextContent("sensor_id");
     });
 
     it("should handle multiple data sources of same role", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test_table", columnName: "humidity", role: "y", alias: "" },
-                { tableName: "test_table", columnName: "pressure", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
+            { tableName: "test_table", columnName: "humidity", role: "y", alias: "" },
+            { tableName: "test_table", columnName: "pressure", role: "y", alias: "" },
+          ],
+        },
+      });
 
       // Should have 3 y-axis sources
       expect(screen.getByTestId("y-axis-source-0")).toBeInTheDocument();
@@ -206,57 +181,45 @@ describe("ScatterChartDataConfigurator", () => {
 
   describe("Color Column Selection Detection", () => {
     it("should detect when color column is selected", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test_table", columnName: "sensor_id", role: "color", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
+            { tableName: "test_table", columnName: "sensor_id", role: "color", alias: "" },
+          ],
+        },
+      });
 
       expect(screen.getByTestId("color-selected")).toHaveTextContent("yes");
     });
 
     it("should detect when color column is not selected (no color data source)", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
+          ],
+        },
+      });
 
       expect(screen.getByTestId("color-selected")).toHaveTextContent("no");
     });
 
     it("should detect when color data source exists but columnName is empty", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
-                { tableName: "test_table", columnName: "", role: "color", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
+            { tableName: "test_table", columnName: "", role: "color", alias: "" },
+          ],
+        },
+      });
 
       expect(screen.getByTestId("color-selected")).toHaveTextContent("no");
     });
@@ -266,28 +229,16 @@ describe("ScatterChartDataConfigurator", () => {
     it("should add new y-axis series with correct default values", async () => {
       const user = userEvent.setup();
 
-      function TestWrapperWithState() {
-        const form = useForm<ChartFormValues>({
-          defaultValues: {
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
-              ],
-            },
-          } as ChartFormValues,
-        });
+      const stateTestColumns: DataColumn[] = [
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+        { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ];
 
-        const mockColumns: DataColumn[] = [
-          { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
-          { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
-          { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },
-        ];
-
-        return (
+      renderWithForm<ChartFormValues>(
+        (form) => (
           <>
-            <ScatterChartDataConfigurator form={form} columns={mockColumns} />
+            <ScatterChartDataConfigurator form={form} columns={stateTestColumns} />
             <div data-testid="data-sources-count">
               {form.watch("dataConfig.dataSources").length}
             </div>
@@ -300,10 +251,21 @@ describe("ScatterChartDataConfigurator", () => {
                 : "empty"}
             </div>
           </>
-        );
-      }
-
-      render(<TestWrapperWithState />);
+        ),
+        {
+          useFormProps: {
+            defaultValues: {
+              dataConfig: {
+                tableName: "test_table",
+                dataSources: [
+                  { tableName: "test_table", columnName: "timestamp", role: "x", alias: "" },
+                  { tableName: "test_table", columnName: "temperature", role: "y", alias: "" },
+                ],
+              },
+            } as ChartFormValues,
+          },
+        },
+      );
 
       expect(screen.getByTestId("data-sources-count")).toHaveTextContent("2");
 
@@ -317,33 +279,32 @@ describe("ScatterChartDataConfigurator", () => {
     it("should use current tableName when adding new series", async () => {
       const user = userEvent.setup();
 
-      function TestWrapperWithState() {
-        const form = useForm<ChartFormValues>({
-          defaultValues: {
-            dataConfig: {
-              tableName: "experiment_data",
-              dataSources: [
-                { tableName: "experiment_data", columnName: "timestamp", role: "x", alias: "" },
-              ],
-            },
-          } as ChartFormValues,
-        });
+      const tableNameTestColumns: DataColumn[] = [
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+      ];
 
-        const mockColumns: DataColumn[] = [
-          { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
-        ];
-
-        return (
+      renderWithForm<ChartFormValues>(
+        (form) => (
           <>
-            <ScatterChartDataConfigurator form={form} columns={mockColumns} />
+            <ScatterChartDataConfigurator form={form} columns={tableNameTestColumns} />
             <div data-testid="last-data-source-table">
               {form.watch("dataConfig.dataSources").at(-1)?.tableName ?? "none"}
             </div>
           </>
-        );
-      }
-
-      render(<TestWrapperWithState />);
+        ),
+        {
+          useFormProps: {
+            defaultValues: {
+              dataConfig: {
+                tableName: "experiment_data",
+                dataSources: [
+                  { tableName: "experiment_data", columnName: "timestamp", role: "x", alias: "" },
+                ],
+              },
+            } as ChartFormValues,
+          },
+        },
+      );
 
       await user.click(screen.getByTestId("add-y-axis"));
 
@@ -353,16 +314,12 @@ describe("ScatterChartDataConfigurator", () => {
 
   describe("Empty State Handling", () => {
     it("should handle empty data sources array", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [],
+        },
+      });
 
       // All sections should still render
       expect(screen.getByTestId("x-axis-config")).toBeInTheDocument();
@@ -374,19 +331,15 @@ describe("ScatterChartDataConfigurator", () => {
     });
 
     it("should display empty state text in child components", () => {
-      render(
-        <TestWrapper
-          initialValues={{
-            dataConfig: {
-              tableName: "test_table",
-              dataSources: [
-                { tableName: "test_table", columnName: "", role: "x", alias: "" },
-                { tableName: "test_table", columnName: "", role: "y", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderScatterDataConfigurator({
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [
+            { tableName: "test_table", columnName: "", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "", role: "y", alias: "" },
+          ],
+        },
+      });
 
       expect(screen.getByTestId("x-axis-source-0")).toHaveTextContent("empty");
       expect(screen.getByTestId("y-axis-source-0")).toHaveTextContent("empty");

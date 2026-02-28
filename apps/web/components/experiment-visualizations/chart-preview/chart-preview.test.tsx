@@ -1,7 +1,6 @@
 import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen } from "@/test/test-utils";
-import { useForm } from "react-hook-form";
+import { renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api";
@@ -42,16 +41,16 @@ const defaultFormValues: ChartFormValues = {
   },
 };
 
-function TestWrapper({ formValues }: { formValues: Partial<ChartFormValues> }) {
-  const form = useForm<ChartFormValues>({
-    defaultValues: { ...defaultFormValues, ...formValues },
-  });
-  return <ChartPreview form={form} experimentId="test-experiment-id" />;
+function renderChartPreview(formValues: Partial<ChartFormValues> = {}) {
+  return renderWithForm<ChartFormValues>(
+    (form) => <ChartPreview form={form} experimentId="test-experiment-id" />,
+    { useFormProps: { defaultValues: { ...defaultFormValues, ...formValues } } },
+  );
 }
 
 describe("ChartPreview", () => {
   it("shows no-data-source message when table name is empty", () => {
-    render(<TestWrapper formValues={{ dataConfig: { tableName: "", dataSources: [] } }} />);
+    renderChartPreview({ dataConfig: { tableName: "", dataSources: [] } });
 
     expect(screen.getByText("preview.noDataSource")).toBeInTheDocument();
     expect(screen.getByText("preview.selectTable")).toBeInTheDocument();
@@ -59,16 +58,12 @@ describe("ChartPreview", () => {
   });
 
   it("shows no-columns message when data sources have no column names", () => {
-    render(
-      <TestWrapper
-        formValues={{
-          dataConfig: {
-            tableName: "measurements",
-            dataSources: [{ tableName: "measurements", columnName: "", role: "y", alias: "" }],
-          },
-        }}
-      />,
-    );
+    renderChartPreview({
+      dataConfig: {
+        tableName: "measurements",
+        dataSources: [{ tableName: "measurements", columnName: "", role: "y", alias: "" }],
+      },
+    });
 
     expect(screen.getByText("preview.noColumns")).toBeInTheDocument();
     expect(screen.getByText("preview.configureColumns")).toBeInTheDocument();
@@ -76,7 +71,7 @@ describe("ChartPreview", () => {
 
   it("shows loading message while data is loading", () => {
     mountExperimentData({ delay: 999_999 });
-    render(<TestWrapper formValues={{}} />);
+    renderChartPreview();
 
     expect(screen.getByText("ui.messages.loadingData")).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
@@ -84,23 +79,21 @@ describe("ChartPreview", () => {
 
   it("renders the visualization with chart name", async () => {
     mountExperimentData();
-    render(<TestWrapper formValues={{}} />);
+    renderChartPreview();
 
     expect(await screen.findByRole("img", { name: "Test Chart" })).toBeInTheDocument();
   });
 
   it("uses default preview name when chart name is empty", async () => {
     mountExperimentData();
-    render(<TestWrapper formValues={{ name: "" }} />);
+    renderChartPreview({ name: "" });
 
     expect(await screen.findByRole("img", { name: "charts.preview" })).toBeInTheDocument();
   });
 
   it("handles null description gracefully", async () => {
     mountExperimentData();
-    render(
-      <TestWrapper formValues={{ name: "Test Chart", description: null as unknown as string }} />,
-    );
+    renderChartPreview({ name: "Test Chart", description: null as unknown as string });
 
     expect(await screen.findByRole("img", { name: "Test Chart" })).toBeInTheDocument();
   });

@@ -78,7 +78,6 @@ export function AddAnnotationDialog({
     mode: "onChange",
   });
 
-  // Reset form when type changes
   useEffect(() => {
     form.reset(defaultValues[type]);
   }, [defaultValues, type, form]);

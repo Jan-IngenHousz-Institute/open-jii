@@ -7,9 +7,12 @@ import type { Location } from "@repo/api";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
 vi.mock("../../experiment-settings/experiment-location-management-card", () => ({
-  ExperimentLocationManagement: (props: Record<string, unknown>) => (
-    <div data-testid="experiment-location-management" {...props} />
-  ),
+  ExperimentLocationManagement: ({
+    experimentId: _experimentId,
+    hasAccess: _hasAccess,
+    isArchived: _isArchived,
+    ...rest
+  }: Record<string, unknown>) => <div data-testid="experiment-location-management" {...rest} />,
 }));
 
 vi.mock("../../map", () => ({
