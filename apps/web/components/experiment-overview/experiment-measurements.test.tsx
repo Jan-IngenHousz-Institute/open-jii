@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract, ExperimentTableName } from "@repo/api";
 
 import { ExperimentMeasurements } from "./experiment-measurements";
 
@@ -51,6 +51,7 @@ describe("ExperimentMeasurements", () => {
   });
 
   it("renders empty state when API errors", async () => {
+    mountTables();
     server.mount(contract.experiments.getExperimentData, { status: 500 });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
