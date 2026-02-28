@@ -693,6 +693,9 @@ importers:
       '@types/paho-mqtt':
         specifier: ^1.0.10
         version: 1.0.10
+      '@types/pako':
+        specifier: ^2.0.4
+        version: 2.0.4
       '@types/react':
         specifier: catalog:react19
         version: 19.2.14
