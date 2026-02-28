@@ -59,7 +59,7 @@ describe("useExperimentVisualizations", () => {
   });
 
   describe("chartFamily filter", () => {
-    it("should allow setting chart family filter", async () => {
+    it("should allow setting chart family filter", () => {
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
@@ -91,7 +91,7 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should detect next page when results equal limit", async () => {
-      const visualizations = Array.from({ length: 50 }, (_, i) =>
+      const visualizations = Array.from({ length: 50 }, () =>
         createVisualization({ experimentId: "exp-123" }),
       );
 
@@ -165,7 +165,7 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.offset).toBe(0);
     });
 
-    it("should go to previous page", async () => {
+    it("should go to previous page", () => {
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() =>
@@ -184,7 +184,7 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.offset).toBe(0);
     });
 
-    it("should not go to previous page when offset is 0", async () => {
+    it("should not go to previous page when offset is 0", () => {
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
@@ -196,7 +196,7 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.offset).toBe(0);
     });
 
-    it("should reset pagination", async () => {
+    it("should reset pagination", () => {
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() =>
@@ -215,7 +215,7 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.offset).toBe(0);
     });
 
-    it("should allow setting custom limit", async () => {
+    it("should allow setting custom limit", () => {
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
@@ -227,7 +227,7 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.limit).toBe(25);
     });
 
-    it("should allow setting custom offset", async () => {
+    it("should allow setting custom offset", () => {
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));

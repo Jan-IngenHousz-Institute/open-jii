@@ -112,8 +112,10 @@ describe("EmailLoginForm", () => {
     });
     const { router } = render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
-    submitOTP();
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/en-US/register?callbackUrl=%2Fplatform"));
+    await submitOTP();
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith("/en-US/register?callbackUrl=%2Fplatform"),
+    );
   });
 
   it("redirects to callback URL when user is registered", async () => {

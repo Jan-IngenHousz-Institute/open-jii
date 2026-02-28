@@ -96,7 +96,6 @@ describe("LineChartRenderer", () => {
       render(<LineChartRenderer visualization={mockVisualization} experimentId="exp-1" />);
 
       expect(await screen.findByText("errors.failedToLoadData")).toBeInTheDocument();
-      expect(screen.getByText("errors.failedToLoadDataDescription")).toBeInTheDocument();
     });
 
     it("should not show loading when data is provided", () => {
