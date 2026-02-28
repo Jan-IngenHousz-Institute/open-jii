@@ -17,6 +17,7 @@ import type {
   ExportRecord,
   Flow,
   FlowGraph,
+  Invitation,
   Location,
   Macro,
   Protocol,
@@ -361,6 +362,28 @@ export function createExportRecord(overrides: Partial<ExportRecord> = {}): Expor
   };
 }
 
+// ── Invitation ──────────────────────────────────────────────────
+
+let invitationSeq = 0;
+
+export function createInvitation(overrides: Partial<Invitation> = {}): Invitation {
+  invitationSeq++;
+  return {
+    id: `inv-${invitationSeq}-${crypto.randomUUID().slice(0, 8)}`,
+    resourceType: "experiment",
+    resourceId: crypto.randomUUID(),
+    email: `user${invitationSeq}@example.com`,
+    role: "member",
+    status: "pending",
+    invitedBy: "user-1",
+    invitedByName: "Test User",
+    resourceName: `Experiment ${invitationSeq}`,
+    createdAt: "2025-01-01T00:00:00.000Z",
+    updatedAt: "2025-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 /** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
@@ -376,4 +399,5 @@ export function resetFactories() {
   dataTableSeq = 0;
   flowSeq = 0;
   exportSeq = 0;
+  invitationSeq = 0;
 }
