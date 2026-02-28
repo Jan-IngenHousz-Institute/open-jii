@@ -198,6 +198,72 @@ describe("ExperimentDataTableVariantCell", () => {
     expect(screen.getByText("JSON")).toBeInTheDocument();
   });
 
+  it("should render numeric scalar as plain text instead of collapsible JSON", () => {
+    render(
+      <ExperimentDataTableVariantCell
+        data="0.34"
+        columnName="Thickness"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
+    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
+    expect(screen.getByText("0.34")).toBeInTheDocument();
+  });
+
+  it("should render integer scalar as plain text instead of collapsible JSON", () => {
+    render(
+      <ExperimentDataTableVariantCell
+        data="1"
+        columnName="Thickness"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
+    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("should render string scalar as plain text instead of collapsible JSON", () => {
+    render(
+      <ExperimentDataTableVariantCell
+        data='"hello world"'
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
+    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
+    // The raw data string (including JSON quotes) is displayed as-is
+    expect(screen.getByText('"hello world"')).toBeInTheDocument();
+  });
+
+  it("should render boolean scalar as plain text instead of collapsible JSON", () => {
+    render(
+      <ExperimentDataTableVariantCell
+        data="true"
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
+    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
+    expect(screen.getByText("true")).toBeInTheDocument();
+  });
+
+  it("should render null JSON value as plain text", () => {
+    render(
+      <ExperimentDataTableVariantCell
+        data="null"
+        columnName="test"
+        rowId="test-row"
+        isExpanded={false}
+      />,
+    );
+    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
+    expect(screen.getByText("null")).toBeInTheDocument();
+  });
+
   it("should show correct button states", () => {
     render(
       <ExperimentDataTableVariantCell

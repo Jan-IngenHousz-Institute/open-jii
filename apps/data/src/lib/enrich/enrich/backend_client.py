@@ -65,9 +65,9 @@ class BackendClient:
         Returns:
             HMAC SHA256 signature as hex string
         """
-        # Create canonical JSON string (sorted keys, compact representation)
-        canonical_payload = json.dumps(payload, sort_keys=True, separators=(',', ':'))
-        
+        # ensure_ascii=False so non-ASCII chars (e.g. U+FEFF BOM) are output as
+        # raw UTF-8, matching JavaScript JSON.stringify which does not escape them.
+        canonical_payload = json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
         # Create payload string with timestamp prefix as required by the backend
         message = f"{timestamp}:{canonical_payload}"
         

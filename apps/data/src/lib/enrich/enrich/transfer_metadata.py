@@ -225,8 +225,7 @@ def _call_transfer_webhook(
                 "name": row.get("project_name"),
                 "description": description,
                 "createdBy": creator_user_id,
-                # TODO: re-enable once HMAC mismatch is resolved
-                # **({"locations": locations} if locations else {}),
+                **({"locations": locations} if locations else {}),
             },
         }
         if protocol_payload:
