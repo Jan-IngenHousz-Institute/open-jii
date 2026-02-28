@@ -7,8 +7,6 @@ import { contract, ExperimentTableName } from "@repo/api";
 
 import { ExperimentMeasurements } from "./experiment-measurements";
 
-/* --------------------------------- Helpers -------------------------------- */
-
 function mountTables() {
   server.mount(contract.experiments.getExperimentTables, {
     body: [
@@ -45,8 +43,6 @@ function mountMeasurements(rows: Record<string, unknown>[] = [], opts?: { status
     ...(opts?.status ? { status: opts.status } : {}),
   });
 }
-
-/* ---------------------------------- Tests --------------------------------- */
 
 describe("ExperimentMeasurements", () => {
   it("renders loading then empty state when no measurements", async () => {

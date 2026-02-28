@@ -11,7 +11,6 @@ import { toast } from "@repo/ui/hooks";
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 import NewVisualizationForm from "./new-visualization-form";
 
-// Pragmatic: WizardForm is a complex multi-step wizard — mock to test handleSubmit directly
 vi.mock("@repo/ui/components", () => ({
   WizardForm: vi.fn(({ defaultValues, onSubmit }: WizardFormProps<ChartFormValues>) => (
     <div>
@@ -31,7 +30,6 @@ vi.mock("@repo/ui/components", () => ({
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-// Rule 5: sibling step components
 vi.mock("./wizard-steps/basic-info-step", () => ({
   BasicInfoStep: () => null,
   basicInfoSchema: () => ({}),

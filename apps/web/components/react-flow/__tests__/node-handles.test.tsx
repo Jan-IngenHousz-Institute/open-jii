@@ -6,7 +6,6 @@ import { describe, it, expect, vi } from "vitest";
 import type { NodeType } from "../node-config";
 import { NodeHandles, getHandlePositionClasses } from "../node-handles";
 
-// --- mock nodeTypeColorMap ---
 vi.mock("../node-config", () => ({
   nodeTypeColorMap: {
     QUESTION: { border: "border-red-500", bg: "bg-red-50" },
@@ -17,7 +16,6 @@ vi.mock("../node-config", () => ({
   },
 }));
 
-// --- mock Handle from @xyflow/react ---
 vi.mock("@xyflow/react", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@xyflow/react");
   return {

@@ -10,9 +10,6 @@ import { contract } from "@repo/api";
 import { validateAmbyteStructure, isExcludedFile } from "../data-upload-validation";
 import { FileUploadStep } from "./file-upload-step";
 
-/* --------------------------------- Mocks --------------------------------- */
-
-// Sibling validation utilities (Rule 5 — tested in their own file)
 vi.mock("../data-upload-validation", () => ({
   validateAmbyteStructure: vi.fn().mockReturnValue({ isValid: true, errors: [] }),
   isExcludedFile: vi.fn().mockReturnValue(false),
@@ -62,8 +59,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-/* -------------------------------- Helpers -------------------------------- */
-
 const defaultProps = {
   experimentId: "exp-123",
   onBack: vi.fn(),
@@ -92,8 +87,6 @@ function mountUploadHandler(overrides?: { status?: number; body?: unknown }) {
   );
   return spy;
 }
-
-/* --------------------------------- Tests --------------------------------- */
 
 describe("FileUploadStep", () => {
   beforeEach(() => {

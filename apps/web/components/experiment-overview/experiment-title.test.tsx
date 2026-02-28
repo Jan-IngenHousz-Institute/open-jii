@@ -7,7 +7,6 @@ import { contract } from "@repo/api";
 
 import { ExperimentTitle } from "./experiment-title";
 
-// ---------- Helpers ----------
 function renderComponent(
   props: {
     experimentId?: string;

@@ -8,10 +8,6 @@ import { WellKnownColumnTypes, contract } from "@repo/api";
 
 import { getColumnWidth, useExperimentData } from "./useExperimentData";
 
-/* ------------------------------------------------------------------ */
-/*  getColumnWidth (pure function – no MSW needed)                     */
-/* ------------------------------------------------------------------ */
-
 describe("getColumnWidth", () => {
   it("should return 120 for ARRAY column type", () => {
     expect(getColumnWidth("ARRAY")).toBe(120);
@@ -72,10 +68,6 @@ describe("getColumnWidth", () => {
     expect(getColumnWidth(WellKnownColumnTypes.CONTRIBUTOR)).toBe(180);
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  useExperimentData (MSW-backed integration tests)                   */
-/* ------------------------------------------------------------------ */
 
 describe("useExperimentData", () => {
   const mockExperimentData: ExperimentData = {

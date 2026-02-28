@@ -7,7 +7,6 @@ import { contract } from "@repo/api";
 
 import { ProtocolCard, ProtocolSelector } from "./protocol-card";
 
-// Pragmatic mock – Quill-backed RichTextRenderer has no jsdom support
 vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
   const actual = await importOriginal();
   return {

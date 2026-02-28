@@ -9,8 +9,6 @@ import { toast } from "@repo/ui/hooks";
 
 import { NewExperimentForm } from "../new-experiment";
 
-/* --------------------------------- Mocks --------------------------------- */
-
 // WizardForm — pragmatic mock (complex multi-step wizard orchestration)
 vi.mock("@repo/ui/components", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
@@ -43,8 +41,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
     ),
   };
 });
-
-/* --------------------------------- Tests --------------------------------- */
 
 describe("NewExperimentForm", () => {
   it("renders the wizard form and unsaved changes dialog", () => {

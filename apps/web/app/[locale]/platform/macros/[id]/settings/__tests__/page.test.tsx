@@ -9,7 +9,6 @@ import { useSession } from "@repo/auth/client";
 
 import MacroSettingsPage from "../page";
 
-// Mock the MacroSettings component
 vi.mock("@/components/macro-settings", () => ({
   MacroSettings: ({ macroId }: { macroId: string }) => (
     <div data-testid="macro-settings">
@@ -48,9 +47,6 @@ function mockUnauthenticated() {
   } as never);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<MacroSettingsPage />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -1,4 +1,3 @@
-// components/experiment-settings/experiment-visibility-card.test.tsx
 import { render, screen } from "@/test/test-utils";
 import type { ComponentProps } from "react";
 import { describe, it, expect } from "vitest";

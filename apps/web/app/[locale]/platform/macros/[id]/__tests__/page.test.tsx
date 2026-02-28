@@ -8,12 +8,10 @@ import { contract } from "@repo/api";
 
 import MacroOverviewPage from "../page";
 
-// Mock the date utility
 vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
 }));
 
-// Mock the ErrorDisplay component
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">
@@ -23,7 +21,6 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-// Mock the MacroCodeViewer component
 vi.mock("@/components/macro-code-viewer", () => ({
   default: ({ value, language, height }: { value: string; language: string; height: string }) => (
     <div data-testid="macro-code-viewer">
@@ -185,14 +182,11 @@ describe("MacroOverviewPage", () => {
       render(<MacroOverviewPage params={mockParams} />);
 
       await waitFor(() => {
-        // Info section
         expect(screen.getByText(macro.name)).toBeInTheDocument();
         expect(screen.getByText("common.created")).toBeInTheDocument();
         expect(screen.getByText("common.updated")).toBeInTheDocument();
         expect(screen.getByText("common.createdBy")).toBeInTheDocument();
-        // Description section
         expect(screen.getByText("common.description")).toBeInTheDocument();
-        // Code section
         expect(screen.getByText("macros.code")).toBeInTheDocument();
       });
     });

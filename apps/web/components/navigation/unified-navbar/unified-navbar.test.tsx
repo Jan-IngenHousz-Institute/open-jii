@@ -163,7 +163,6 @@ describe("UnifiedNavbar", () => {
     renderNavbar({ session: makeSession() });
     // The trigger button should exist with aria-label
     expect(screen.getByRole("button", { name: "User menu" })).toBeInTheDocument();
-    // Display name shown in dropdown content (async — MSW resolves profile)
     const content = screen.getAllByTestId("dropdown-content")[0];
     await waitFor(() => {
       expect(within(content).getByText("Ada Lovelace")).toBeInTheDocument();

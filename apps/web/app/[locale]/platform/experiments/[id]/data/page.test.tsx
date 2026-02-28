@@ -58,7 +58,6 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ),
 }));
 
-// --- Tests ---
 describe("ExperimentDataPage", () => {
   const experimentId = "exp-123";
   const defaultProps = {
@@ -169,7 +168,6 @@ describe("ExperimentDataPage", () => {
     mountDefaults();
     render(<ExperimentDataPage params={defaultProps.params} />);
 
-    // Measurements is active by default
     await waitFor(() => {
       expect(screen.getByRole("tabpanel")).toBeInTheDocument();
     });
@@ -177,7 +175,6 @@ describe("ExperimentDataPage", () => {
       within(screen.getByRole("tabpanel")).getByTestId("experiment-data-table"),
     ).toBeInTheDocument();
 
-    // Switch to device tab
     await user.click(screen.getByRole("tab", { name: /Device Metadata/ }));
     await waitFor(() => {
       expect(

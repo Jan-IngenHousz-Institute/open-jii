@@ -10,7 +10,6 @@ import { toast } from "@repo/ui/hooks";
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 import EditVisualizationForm from "./edit-visualization-form";
 
-// Pragmatic: WizardForm is a complex multi-step wizard — mock to test handleSubmit directly
 vi.mock("@repo/ui/components", () => ({
   WizardForm: vi.fn(
     ({ onSubmit, defaultValues, isSubmitting }: WizardFormProps<ChartFormValues>) => (
@@ -27,7 +26,6 @@ vi.mock("@repo/ui/components", () => ({
   ),
 }));
 
-// Rule 5: sibling step components
 vi.mock("./wizard-steps/basic-info-step", () => ({
   BasicInfoStep: () => null,
   basicInfoSchema: () => ({}),

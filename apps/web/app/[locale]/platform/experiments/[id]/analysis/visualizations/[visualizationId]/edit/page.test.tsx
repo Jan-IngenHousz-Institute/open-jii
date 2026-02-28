@@ -12,8 +12,6 @@ import { contract } from "@repo/api";
 
 import EditVisualizationPage from "./page";
 
-// --- Component mocks ---
-
 vi.mock("@/components/experiment-visualizations/edit-visualization-form", () => ({
   default: ({
     experimentId,
@@ -43,8 +41,6 @@ vi.mock("@/components/experiment-visualizations/edit-visualization-form", () => 
   ),
 }));
 
-// --- Helpers ---
-
 const experimentId = "exp-123";
 const visualizationId = "viz-456";
 
@@ -67,8 +63,6 @@ function mountDefaults(overrides?: {
     body: overrides?.tables ?? [],
   });
 }
-
-// --- Tests ---
 
 describe("EditVisualizationPage", () => {
   beforeEach(() => {
@@ -251,7 +245,6 @@ describe("EditVisualizationPage", () => {
         expect(screen.getByRole("button", { name: /preview.title/ })).toBeInTheDocument();
       });
 
-      // Open preview
       const previewButton = screen.getByRole("button", { name: /preview.title/ });
 
       await user.click(previewButton);
@@ -260,7 +253,6 @@ describe("EditVisualizationPage", () => {
         expect(screen.getByText("Preview Open: Yes")).toBeInTheDocument();
       });
 
-      // Close preview
       const closeButton = screen.getByText("Close Preview");
       await user.click(closeButton);
 

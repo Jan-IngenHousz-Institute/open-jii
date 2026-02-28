@@ -6,8 +6,6 @@ import type { Location } from "@repo/api";
 
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
-/* --------------------------------- Mocks -------------------------------- */
-
 vi.mock("../../experiment-settings/experiment-location-management-card", () => ({
   ExperimentLocationManagement: (props: Record<string, unknown>) => (
     <div data-testid="experiment-location-management" {...props} />
@@ -17,8 +15,6 @@ vi.mock("../../experiment-settings/experiment-location-management-card", () => (
 vi.mock("../../map", () => ({
   Map: () => <div data-testid="map" />,
 }));
-
-/* ------------------------------- Test Data ------------------------------- */
 
 const mockLocations = {
   one: [createLocation({ id: "loc-1", name: "Location 1", latitude: 40.7128, longitude: -74.006 })],
@@ -32,8 +28,6 @@ const mockLocations = {
     createLocation({ id: "loc-3", name: "Location 3", latitude: 41.8781, longitude: -87.6298 }),
   ],
 };
-
-/* --------------------------------- Tests -------------------------------- */
 
 describe("ExperimentLocationsSection", () => {
   it("renders title", () => {

@@ -6,18 +6,14 @@ import { describe, it, expect, vi } from "vitest";
 
 // Spy on ensureOneStartNode from the real module (no full mock)
 import * as nodeUtils from "../../react-flow/node-utils";
-/* -------------------- Import the component AFTER mocks -------------------- */
 import { FlowEditor } from "../flow-editor";
 import type { FlowEditorHandle } from "../flow-editor";
-
-/* -------------------- Light mocks -------------------- */
 
 // useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
 
-// MeasurementPanel — sibling mock (Rule 5)
 vi.mock("../../side-panel-flow/measurement-panel", () => ({
   MeasurementPanel: () => null,
 }));
@@ -72,7 +68,6 @@ vi.mock("@xyflow/react", async () => {
   return { ...(actual as xyflowReact.Node), ReactFlow };
 });
 
-// LegendFlow — sibling mock (Rule 5)
 vi.mock("../legend-flow", () => ({
   LegendFlow: ({ overlay }: { overlay?: boolean }) => (
     <div data-testid={overlay ? "legend-overlay" : "legend"} />
@@ -176,8 +171,6 @@ vi.mock("../flow-mapper", () => {
   };
 });
 
-/* -------------------- Helpers -------------------- */
-/** Robustly read an integer from a test id */
 const readCount = (testId: string): number => {
   const el = screen.getByTestId(testId);
   const n = Number.parseInt(el.textContent, 10);
@@ -237,7 +230,6 @@ function renderEditor(
   return { ...utils, props, ref };
 }
 
-/* -------------------- Tests -------------------- */
 describe("<FlowEditor /> (stable suite)", () => {
   it("renders and getFlowData() via ref returns ids", () => {
     const { ref } = renderEditor({}, true);

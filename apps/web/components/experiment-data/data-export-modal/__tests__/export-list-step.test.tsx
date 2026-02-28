@@ -8,8 +8,6 @@ import type { ExportRecord } from "@repo/api";
 
 import { ExportListStep } from "../steps/export-list-step";
 
-/* --------------------------------- Mocks --------------------------------- */
-
 // useDownloadExport — pragmatic mock (browser download API: blob + anchor + click)
 const mockDownloadExport = vi.fn();
 vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
@@ -19,8 +17,6 @@ vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
     downloadingExportId: null,
   }),
 }));
-
-/* -------------------------------- Helpers -------------------------------- */
 
 const completedExport = createExportRecord({
   exportId: "export-1",
@@ -59,8 +55,6 @@ const defaultProps = {
   onCreateExport: vi.fn(),
   onClose: vi.fn(),
 };
-
-/* --------------------------------- Tests --------------------------------- */
 
 describe("ExportListStep", () => {
   it("renders loading state", () => {

@@ -8,7 +8,6 @@ import { toast } from "@repo/ui/hooks";
 
 import { ProtocolDetailsCard } from "../protocol-details-card";
 
-// ProtocolCodeEditor — pragmatic mock (Monaco editor doesn't work in jsdom)
 vi.mock("../../protocol-code-editor", () => ({
   default: ({
     value,

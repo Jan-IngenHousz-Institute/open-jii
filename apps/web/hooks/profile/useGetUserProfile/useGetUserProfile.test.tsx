@@ -1,11 +1,3 @@
-/**
- * useGetUserProfile hook test — MSW-based.
- *
- * The real hook calls `tsr.users.getUserProfile.useQuery` →
- * `GET /api/v1/users/:id/profile`. MSW intercepts that request.
- *
- * Tests cover: data fetching, enabled logic, 404 handling, and retry logic.
- */
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
@@ -16,7 +8,7 @@ import { contract } from "@repo/api";
 import { useGetUserProfile } from "./useGetUserProfile";
 
 describe("useGetUserProfile", () => {
-  it("returns user profile data from MSW", async () => {
+  it("returns user profile data", async () => {
     const profile = createUserProfile({ userId: "user-123" });
     server.mount(contract.users.getUserProfile, { body: profile });
 

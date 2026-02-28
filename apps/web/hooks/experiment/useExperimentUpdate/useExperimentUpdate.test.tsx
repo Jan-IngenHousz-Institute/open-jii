@@ -1,12 +1,3 @@
-/**
- * useExperimentUpdate hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.updateExperiment.useMutation` →
- * `PATCH /api/v1/experiments/:id`. MSW intercepts that request.
- *
- * Tests verify: PATCH request sent, optimistic cache update,
- * rollback on error, cache invalidation on settle.
- */
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -18,7 +9,7 @@ import { contract } from "@repo/api";
 import { useExperimentUpdate } from "./useExperimentUpdate";
 
 describe("useExperimentUpdate", () => {
-  it("sends PATCH request via MSW", async () => {
+  it("sends PATCH request", async () => {
     const spy = server.mount(contract.experiments.updateExperiment, {
       body: createExperiment({ id: "exp-1", name: "Updated" }),
     });
@@ -79,7 +70,6 @@ describe("useExperimentUpdate", () => {
 
     server.mount(contract.experiments.updateExperiment, { status: 403 });
 
-    // The onSettled handler will re-fetch the single experiment, serve it from MSW
     server.mount(contract.experiments.getExperiment, {
       body: createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
     });

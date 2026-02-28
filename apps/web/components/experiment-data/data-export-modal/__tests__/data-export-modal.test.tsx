@@ -7,7 +7,6 @@ import { toast } from "@repo/ui/hooks";
 
 import { DataExportModal } from "../data-export-modal";
 
-// ExportListStep — sibling component (Rule 5: mock siblings in a parent-level test)
 vi.mock("../steps/export-list-step", () => ({
   ExportListStep: ({
     onCreateExport,
@@ -30,11 +29,6 @@ vi.mock("../steps/export-list-step", () => ({
   ),
 }));
 
-/**
- * Mounts both the initiateExport and listExports handlers.
- * listExports is needed because useInitiateExport's onSuccess calls
- * `queryClient.invalidateQueries` which triggers a refetch of the exports list.
- */
 function mountExportHandlers(initiateOverrides?: {
   status?: number;
   body?: unknown;
@@ -89,7 +83,6 @@ describe("DataExportModal", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Create CSV Export" }));
 
-    // After the click the full mutation lifecycle has settled (MSW responds
     // synchronously), so the status has already transitioned through
     // "creating" → "success".
     await waitFor(() => {

@@ -16,12 +16,10 @@ beforeEach(() => {
   } as ReturnType<typeof useSession>);
 });
 
-// Pragmatic exception – timer utility (useDebounce needs fake timers otherwise)
 vi.mock("../../hooks/useDebounce", () => ({
   useDebounce: (v: string) => [v, true],
 }));
 
-// Rule 5 – sibling component mock (MemberList has its own tests)
 vi.mock("../current-members-list/current-members-list", () => ({
   MemberList: ({
     membersWithUserInfo,

@@ -9,16 +9,12 @@ import { useSession } from "@repo/auth/client";
 
 import ProtocolLayout from "../layout";
 
-// Mock ErrorDisplay component
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
     <div data-testid="error-display">{String(error)}</div>
   ),
 }));
 
-// -------------------
-// Helpers
-// -------------------
 function mountProtocol(overrides: Parameters<typeof createProtocol>[0] = {}) {
   const protocol = createProtocol({ id: "test-id", ...overrides });
   server.mount(contract.protocols.getProtocol, { body: protocol });

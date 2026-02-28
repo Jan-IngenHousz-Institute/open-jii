@@ -24,7 +24,6 @@ const baseNodeDefaults = {
   measured: { width: 100, height: 60 },
 };
 
-// --- mock node-content ---
 vi.mock("../node-content", () => ({
   NodeContent: (props: {
     title: string;

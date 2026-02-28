@@ -36,7 +36,6 @@ vi.mock("../../protocol-code-editor", () => ({
   ),
 }));
 
-// NewProtocolDetailsCard — sibling component (Rule 5)
 // Uses form.register to connect the name field to react-hook-form
 vi.mock("../new-protocol-details-card", () => ({
   NewProtocolDetailsCard: ({

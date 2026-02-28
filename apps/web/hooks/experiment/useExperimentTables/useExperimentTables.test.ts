@@ -1,9 +1,3 @@
-/**
- * useExperimentTables hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.getExperimentTables.useQuery` →
- * `GET /api/v1/experiments/:id/tables`. MSW intercepts that request.
- */
 import { createExperimentTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
@@ -28,7 +22,7 @@ describe("useExperimentTables", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("returns tables metadata from MSW", async () => {
+  it("returns tables metadata", async () => {
     const mockTables = [
       createExperimentTable({
         name: "measurements",

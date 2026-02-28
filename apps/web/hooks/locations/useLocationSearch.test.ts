@@ -1,12 +1,3 @@
-/**
- * useLocationSearch hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.searchPlaces.useQuery` →
- * `GET /api/v1/locations/search?query=...&maxResults=...`.
- * MSW intercepts that request.
- *
- * The hook disables the query when query.length ≤ 2 or enabled=false.
- */
 import { createPlace } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";

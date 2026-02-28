@@ -8,7 +8,7 @@ import { contract } from "@repo/api";
 import { useMacroUpdate } from "./useMacroUpdate";
 
 describe("useMacroUpdate", () => {
-  it("should send an update request via MSW", async () => {
+  it("should send an update request", async () => {
     const updatedMacro = createMacro({
       id: "test-macro-id",
       name: "Updated Name",

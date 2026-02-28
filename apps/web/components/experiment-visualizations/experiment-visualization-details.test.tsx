@@ -1,11 +1,3 @@
-/**
- * ExperimentVisualizationDetails — tests with MSW.
- *
- * All four hooks (useExperimentAccess, useExperimentVisualization,
- * useExperimentVisualizationData, useExperimentVisualizationDelete)
- * run for real; MSW intercepts the HTTP requests made by the `tsr`
- * client and returns controlled responses.
- */
 import {
   createExperimentAccess,
   createExperimentDataTable,
@@ -84,7 +76,6 @@ describe("ExperimentVisualizationDetails", () => {
     // Initially loading while waiting for data
     expect(screen.getByText("ui.messages.loading")).toBeInTheDocument();
 
-    // Data arrives via MSW
     await waitFor(() => {
       expect(screen.getAllByText(defaultViz.name).length).toBeGreaterThan(0);
     });
@@ -156,7 +147,7 @@ describe("ExperimentVisualizationDetails", () => {
     );
   });
 
-  it("calls delete via real mutation (MSW intercepts DELETE)", async () => {
+  it("calls delete via real mutation", async () => {
     const deleteSpy = server.mount(contract.experiments.deleteExperimentVisualization);
 
     const { user, router } = setup();

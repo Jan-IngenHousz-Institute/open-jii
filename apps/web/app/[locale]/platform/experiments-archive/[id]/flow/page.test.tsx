@@ -9,7 +9,6 @@ import { contract } from "@repo/api";
 
 import ExperimentFlowPage from "./page";
 
-// Mock FlowEditor (keep — complex forwardRef/useImperativeHandle component)
 const mockGetFlowData = vi.fn(() => ({ nodes: [{ id: "n1" }] }));
 
 vi.mock("@/components/flow-editor", () => ({
@@ -42,8 +41,6 @@ vi.mock("@/components/flow-editor", () => ({
   }),
 }));
 
-/* --------------------------------- Helpers -------------------------------- */
-
 const EXP_ID = "test-experiment-id";
 const PARAMS = Promise.resolve({ id: EXP_ID, locale: "en-US" });
 
@@ -54,8 +51,6 @@ const accessPayload = createExperimentAccess({
   experiment: { id: EXP_ID, status: "archived" },
   isAdmin: false,
 });
-
-/* ---------------------------------- Tests --------------------------------- */
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -91,7 +86,6 @@ describe("<ExperimentFlowPage />", () => {
   });
 
   it("shows notFound text when experiment data or access experiment is missing", async () => {
-    // Experiment loads fine, but access returns with no experiment → triggers notFound text
     server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
     server.mount(contract.experiments.getExperimentAccess, {
       body: { experiment: null, hasAccess: false, isAdmin: false },

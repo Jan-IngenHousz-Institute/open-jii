@@ -7,9 +7,7 @@ import { Popover } from "@repo/ui/components";
 
 import { MacroSearchPopover } from "../macro-search-popover";
 
-// --------------------
 // Test data & helpers
-// --------------------
 const macros: Macro[] = [
   createMacro({ id: "m1" }),
   createMacro({ id: "m2", language: "r" }),
@@ -37,9 +35,7 @@ function renderPopover(over: Partial<React.ComponentProps<typeof MacroSearchPopo
   };
 }
 
-// --------------------
 // Tests
-// --------------------
 describe("<MacroSearchPopover />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

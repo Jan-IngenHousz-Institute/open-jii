@@ -28,7 +28,6 @@ describe("MacroSettings", () => {
     // Initially shows loading
     expect(screen.getByText("macroSettings.loading")).toBeInTheDocument();
 
-    // After MSW responds, shows the detail cards
     await waitFor(() => {
       expect(screen.getByTestId("macro-details-card")).toBeInTheDocument();
     });

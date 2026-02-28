@@ -1,11 +1,3 @@
-/**
- * useTransferRequests hook test — uses MSW to intercept the real HTTP
- * request instead of mocking the `tsr` module. This tests the hook's
- * *observable behaviour* (returned data, loading, error states) rather
- * than its internal wiring to react-query.
- *
- * @see https://testing-library.com/docs/react-testing-library/api#renderhook
- */
 import { createTransferRequest, resetFactories } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
