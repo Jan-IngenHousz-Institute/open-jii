@@ -1,14 +1,11 @@
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getContentfulClients } from "~/lib/contentful";
+
+import Page, { generateMetadata } from "./page";
 
 const mockPageBlog = vi.fn();
-vi.mock("~/lib/contentful", () => ({
-  getContentfulClients: vi.fn().mockResolvedValue({
-    client: { pageBlog: mockPageBlog },
-    previewClient: { pageBlog: mockPageBlog },
-  }),
-}));
 
 vi.mock("@repo/cms/article", () => ({
   ArticleHero: ({ article }: { article?: { title?: string } }) => (
@@ -48,13 +45,16 @@ const defaultResult = {
 describe("BlogLandingPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getContentfulClients).mockResolvedValue({
+      client: { pageBlog: mockPageBlog },
+      previewClient: { pageBlog: mockPageBlog },
+    } as never);
     mockPageBlog.mockResolvedValue(defaultResult);
   });
 
   const params = { params: Promise.resolve({ locale: "en-US" }) };
 
   it("generates metadata with SEO fields", async () => {
-    const { generateMetadata } = await import("./page");
     const metadata = await generateMetadata(params);
     expect(metadata.title).toBe("Blog");
     expect(metadata.description).toBe("Our blog");
@@ -65,13 +65,11 @@ describe("BlogLandingPage", () => {
       pageLandingCollection: { items: [] },
       pageBlogPostCollection: { items: [] },
     });
-    const { default: Page } = await import("./page");
     await Page(params).catch(() => undefined);
     expect(notFound).toHaveBeenCalled();
   });
 
   it("renders featured hero and post grid", async () => {
-    const { default: Page } = await import("./page");
     const ui = await Page(params);
     render(ui);
     expect(screen.getByRole("region", { name: /featured hero/i })).toHaveTextContent(
@@ -85,7 +83,6 @@ describe("BlogLandingPage", () => {
       pageLandingCollection: { items: [{ featuredBlogPost: null, seoFields: null }] },
       pageBlogPostCollection: { items: [] },
     });
-    const { default: Page } = await import("./page");
     const ui = await Page(params);
     expect(ui).toBeUndefined();
   });

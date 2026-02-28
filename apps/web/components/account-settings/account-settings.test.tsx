@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 import type { Session } from "@repo/auth/types";
+import { toast } from "@repo/ui/hooks";
 
 import { AccountSettings } from "./account-settings";
 
@@ -152,7 +153,6 @@ describe("<AccountSettings />", () => {
       organization: "Analytical Engines Inc.",
     });
 
-    const { toast } = await import("@repo/ui/hooks");
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "settings.saved" });
     });

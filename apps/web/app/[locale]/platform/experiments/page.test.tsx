@@ -1,13 +1,14 @@
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
+import Page from "./page";
+
 vi.mock("@/components/list-experiments", () => ({
   ListExperiments: () => <div data-testid="list-experiments">Experiments list</div>,
 }));
 
 describe("ExperimentPage", () => {
   const renderPage = async () => {
-    const { default: Page } = await import("./page");
     const ui = await Page({ params: Promise.resolve({ locale: "en-US" }) });
     return render(ui);
   };

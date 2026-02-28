@@ -1,4 +1,5 @@
 import { render, screen } from "@/test/test-utils";
+import { draftMode } from "next/headers";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { TermsAndConditionsDialog } from "./terms-and-conditions-dialog";
@@ -44,7 +45,6 @@ describe("TermsAndConditionsDialog", () => {
   });
 
   it("uses previewClient in draft mode", async () => {
-    const { draftMode } = await import("next/headers");
     vi.mocked(draftMode).mockResolvedValueOnce({ isEnabled: true } as never);
 
     mockPreviewClient.pageTermsAndConditions.mockResolvedValue({

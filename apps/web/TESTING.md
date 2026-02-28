@@ -136,8 +136,9 @@ await user.click(screen.getByRole("button", { name: /save/i }));
 **Server component (page/layout):**
 
 ```tsx
+import Page from "./page";
+
 it("renders the page", async () => {
-  const Page = (await import("./page")).default;
   render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
   expect(screen.getByRole("heading")).toBeInTheDocument();
 });
@@ -146,16 +147,16 @@ it("renders the page", async () => {
 **Authenticated page:**
 
 ```tsx
+import Page from "./page";
+
 it("redirects when unauthenticated", async () => {
   // auth returns null by default
-  const Page = (await import("./page")).default;
   render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
   expect(redirect).toHaveBeenCalledWith("/en-US/login");
 });
 
 it("shows content when authenticated", async () => {
   vi.mocked(auth).mockResolvedValue(createSession());
-  const Page = (await import("./page")).default;
   render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
   expect(screen.getByText("settings.title")).toBeInTheDocument();
 });

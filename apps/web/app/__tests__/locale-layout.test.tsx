@@ -1,6 +1,9 @@
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
+import * as posthogServer from "~/lib/posthog-server";
+
+import Layout from "../[locale]/layout";
 
 vi.mock("next/font/google", () => ({
   Poppins: () => ({ variable: "--font-poppins" }),
@@ -31,7 +34,6 @@ vi.mock("../../providers/QueryProvider", () => ({
 
 describe("LocaleLayout", () => {
   it("renders children within providers", async () => {
-    const { default: Layout } = await import("../[locale]/layout");
     const ui = await Layout({
       children: <div>Content</div>,
       params: Promise.resolve({ locale: "en-US" }),
@@ -41,9 +43,7 @@ describe("LocaleLayout", () => {
   });
 
   it("calls notFound for non-default locale when multi-language is disabled", async () => {
-    const mod = await import("~/lib/posthog-server");
-    vi.mocked(mod.isFeatureFlagEnabled).mockResolvedValue(false);
-    const { default: Layout } = await import("../[locale]/layout");
+    vi.mocked(posthogServer.isFeatureFlagEnabled).mockResolvedValue(false);
     await Layout({
       children: <div />,
       params: Promise.resolve({ locale: "de-DE" }),
