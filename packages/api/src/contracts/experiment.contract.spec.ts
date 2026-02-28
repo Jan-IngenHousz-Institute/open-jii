@@ -103,6 +103,7 @@ describe("Experiment Contract Schemas", () => {
         protocolId: "223e4567-e89b-12d3-a456-426614174000",
         macroId: "323e4567-e89b-12d3-a456-426614174000",
         macroFilename: "macro_abc123def456",
+        macroName: "My Macro",
         flowId: null,
       };
 
@@ -117,6 +118,7 @@ describe("Experiment Contract Schemas", () => {
         protocolId: null,
         macroId: null,
         macroFilename: null,
+        macroName: null,
         flowId: null,
       };
 
