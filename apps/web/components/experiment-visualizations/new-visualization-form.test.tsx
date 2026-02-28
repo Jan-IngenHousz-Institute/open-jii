@@ -11,24 +11,23 @@ import { toast } from "@repo/ui/hooks";
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 import NewVisualizationForm from "./new-visualization-form";
 
-vi.mock("@repo/ui/components", () => ({
-  WizardForm: vi.fn(({ defaultValues, onSubmit }: WizardFormProps<ChartFormValues>) => (
-    <div>
-      <button
-        onClick={() => {
-          if (defaultValues) void onSubmit(defaultValues as ChartFormValues);
-        }}
-      >
-        Submit
-      </button>
-    </div>
-  )),
-  Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardTitle: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,
-  CardDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    WizardForm: vi.fn(({ defaultValues, onSubmit }: WizardFormProps<ChartFormValues>) => (
+      <div>
+        <button
+          onClick={() => {
+            if (defaultValues) void onSubmit(defaultValues as ChartFormValues);
+          }}
+        >
+          Submit
+        </button>
+      </div>
+    )),
+  };
+});
 
 vi.mock("./wizard-steps/basic-info-step", () => ({
   BasicInfoStep: () => null,
