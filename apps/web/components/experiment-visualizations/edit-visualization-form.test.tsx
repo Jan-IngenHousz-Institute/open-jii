@@ -10,21 +10,25 @@ import { toast } from "@repo/ui/hooks";
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 import EditVisualizationForm from "./edit-visualization-form";
 
-vi.mock("@repo/ui/components", () => ({
-  WizardForm: vi.fn(
-    ({ onSubmit, defaultValues, isSubmitting }: WizardFormProps<ChartFormValues>) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void onSubmit(defaultValues as ChartFormValues);
-        }}
-      >
-        <div data-testid="is-submitting">{isSubmitting ? "true" : "false"}</div>
-        <button type="submit">Submit</button>
-      </form>
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    WizardForm: vi.fn(
+      ({ onSubmit, defaultValues, isSubmitting }: WizardFormProps<ChartFormValues>) => (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void onSubmit(defaultValues as ChartFormValues);
+          }}
+        >
+          <div data-testid="is-submitting">{isSubmitting ? "true" : "false"}</div>
+          <button type="submit">Submit</button>
+        </form>
+      ),
     ),
-  ),
-}));
+  };
+});
 
 vi.mock("./wizard-steps/basic-info-step", () => ({
   BasicInfoStep: () => null,
