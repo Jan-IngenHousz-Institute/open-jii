@@ -10,8 +10,6 @@ import type { WizardStep } from "@repo/ui/components";
 
 import { ReviewStep } from "./review-step";
 
-/* --------------------------------- Helpers --------------------------------- */
-
 function TestWrapper({
   children,
   defaultValues,
@@ -41,8 +39,6 @@ const mockStep: WizardStep<CreateExperimentBody> = {
   component: ReviewStep,
   validationSchema: z.object({}),
 };
-
-/* --------------------------------- Tests --------------------------------- */
 
 describe("ReviewStep", () => {
   const defaultProps = {

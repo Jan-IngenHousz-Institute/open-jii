@@ -7,7 +7,7 @@ import { contract } from "@repo/api";
 import { useExperimentDataUpload } from "./useExperimentDataUpload";
 
 describe("useExperimentDataUpload", () => {
-  it("should send an upload request via MSW", async () => {
+  it("should send an upload request", async () => {
     const spy = server.mount(contract.experiments.uploadExperimentData, {
       body: { success: true, message: "Upload complete" },
       status: 201,

@@ -1,9 +1,3 @@
-/**
- * useExperimentVisualizationCreate hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.createExperimentVisualization.useMutation` →
- * `POST /api/v1/experiments/:id/visualizations`. MSW intercepts that request.
- */
 import { createVisualization } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
@@ -14,7 +8,7 @@ import { contract } from "@repo/api";
 import { useExperimentVisualizationCreate } from "./useExperimentVisualizationCreate";
 
 describe("useExperimentVisualizationCreate", () => {
-  it("sends POST request via MSW", async () => {
+  it("sends POST request", async () => {
     const viz = createVisualization({ experimentId: "exp-1" });
     const spy = server.mount(contract.experiments.createExperimentVisualization, { body: viz });
 

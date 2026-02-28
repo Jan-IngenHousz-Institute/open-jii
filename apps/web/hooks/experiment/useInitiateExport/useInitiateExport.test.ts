@@ -1,12 +1,3 @@
-/**
- * useInitiateExport hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.initiateExport.useMutation` →
- * `POST /api/v1/experiments/:id/data/exports`. MSW intercepts that request.
- *
- * Tests verify: POST request sent, correct body forwarded,
- * custom onSuccess callback, error handling.
- */
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -16,7 +7,7 @@ import { contract } from "@repo/api";
 import { useInitiateExport } from "./useInitiateExport";
 
 describe("useInitiateExport", () => {
-  it("sends POST request via MSW", async () => {
+  it("sends POST request", async () => {
     const spy = server.mount(contract.experiments.initiateExport, {
       body: { status: "initiated" },
     });

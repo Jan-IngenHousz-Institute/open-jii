@@ -1,9 +1,3 @@
-/**
- * useExperimentAccess hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.getExperimentAccess.useQuery` which
- * issues `GET /api/v1/experiments/:id/access`. MSW intercepts that request.
- */
 import { createExperimentAccess } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
@@ -14,7 +8,7 @@ import { contract } from "@repo/api";
 import { useExperimentAccess } from "./useExperimentAccess";
 
 describe("useExperimentAccess", () => {
-  it("returns experiment access data from MSW", async () => {
+  it("returns experiment access data", async () => {
     server.mount(contract.experiments.getExperimentAccess, {
       body: createExperimentAccess({ isAdmin: true }),
     });
@@ -25,7 +19,6 @@ describe("useExperimentAccess", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    // Default MSW handler returns hasAccess: true, isAdmin: true
     expect(result.current.data?.body).toMatchObject({
       hasAccess: true,
       isAdmin: true,

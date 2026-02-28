@@ -1,16 +1,3 @@
-/**
- * NewMacroForm — MSW-based test.
- *
- * `useMacroCreate` (POST /api/v1/macros) and `useGetUserProfile`
- * (GET /api/v1/users/:id/profile) run for real with MSW intercepting
- * the HTTP requests.
- *
- * Legitimately mocked:
- *  - Children (NewMacroDetailsCard, MacroCodeEditor) — tested separately
- *  - zodResolver — children are mocked so form fields aren't interactive
- *  - next/navigation, @repo/auth/client — framework / auth, not HTTP via tsr
- *  - @repo/ui/hooks (toast), @/util/base64 — side-effects / utilities
- */
 import { createMacro, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
@@ -239,11 +226,9 @@ describe("NewMacroForm", () => {
 
     render(<NewMacroForm />);
 
-    // Children render immediately (mocked)
     expect(screen.getByTestId("details-card")).toBeInTheDocument();
     expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
 
-    // Code editor shows once user profile resolves from MSW
     await waitFor(() => {
       expect(screen.getByTestId("code-editor")).toBeInTheDocument();
     });
@@ -262,7 +247,7 @@ describe("NewMacroForm", () => {
     expect(router.back).toHaveBeenCalled();
   });
 
-  it("submits form — POST /api/v1/macros via MSW", async () => {
+  it("submits form — POST /api/v1/macros", async () => {
     server.mount(contract.users.getUserProfile, { body: createUserProfile() });
 
     const spy = server.mount(contract.macros.createMacro, {

@@ -7,7 +7,6 @@ import { contract } from "@repo/api";
 
 import { ExperimentLocationManagement } from "./experiment-location-management-card";
 
-// Pragmatic mock – Leaflet Map has no jsdom support (canvas / WebGL)
 vi.mock("../map", () => ({
   Map: ({
     locations,

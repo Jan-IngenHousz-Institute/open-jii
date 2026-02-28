@@ -1,12 +1,3 @@
-/**
- * useLocationGeocode hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.geocodeLocation.useQuery` →
- * `GET /api/v1/locations/geocode?latitude=...&longitude=...`.
- * MSW intercepts that request.
- *
- * The hook disables the query when coordinates are NaN or enabled=false.
- */
 import { createPlace } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";

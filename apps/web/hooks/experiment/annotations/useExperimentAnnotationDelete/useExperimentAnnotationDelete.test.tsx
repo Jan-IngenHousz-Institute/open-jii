@@ -7,7 +7,7 @@ import { contract } from "@repo/api";
 import { useExperimentAnnotationDelete } from "./useExperimentAnnotationDelete";
 
 describe("useExperimentAnnotationDelete", () => {
-  it("sends DELETE request via MSW", async () => {
+  it("sends DELETE request", async () => {
     const spy = server.mount(contract.experiments.deleteAnnotation, {
       body: { rowsAffected: 1 },
     });

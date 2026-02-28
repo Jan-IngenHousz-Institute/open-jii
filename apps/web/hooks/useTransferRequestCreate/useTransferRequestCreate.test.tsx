@@ -1,9 +1,3 @@
-/**
- * useTransferRequestCreate hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.createTransferRequest.useMutation` →
- * `POST /api/v1/experiments/transfer-requests`. MSW intercepts that request.
- */
 import { createTransferRequest } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
@@ -14,7 +8,7 @@ import { contract } from "@repo/api";
 import { useTransferRequestCreate } from "./useTransferRequestCreate";
 
 describe("useTransferRequestCreate", () => {
-  it("sends POST request via MSW", async () => {
+  it("sends POST request", async () => {
     const spy = server.mount(contract.experiments.createTransferRequest, {
       body: createTransferRequest({ requestId: "req-1" }),
     });

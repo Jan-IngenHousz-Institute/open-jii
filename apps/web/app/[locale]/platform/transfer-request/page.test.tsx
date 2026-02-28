@@ -3,26 +3,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import TransferRequestPage from "./page";
 
-// -------------------
-// Mocks
-// -------------------
-
 vi.mock("~/components/transfer-request-form", () => ({
   TransferRequestForm: () => <div data-testid="transfer-request-form">Form Component</div>,
 }));
 
-// -------------------
-// Helpers
-// -------------------
 async function renderTransferRequestPage({ locale = "en" }: { locale?: string } = {}) {
   const params = Promise.resolve({ locale });
   const component = await TransferRequestPage({ params });
   return render(component);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<TransferRequestPage />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

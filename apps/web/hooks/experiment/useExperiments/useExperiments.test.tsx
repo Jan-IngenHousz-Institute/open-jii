@@ -1,16 +1,3 @@
-/**
- * useExperiments hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.listExperiments.useQuery`, which
- * issues a `GET /api/v1/experiments`.  MSW intercepts that request and
- * returns controlled data, so we test the hook's *observable behaviour*
- * (filter / search / status / URL sync) without touching internal wiring.
- *
- * `useDebounce` is still mocked — it's a timing utility with no HTTP,
- * and letting it tick naturally would make every test wait 300ms.
- *
- * `next/navigation` is still mocked — it's framework-level, not HTTP.
- */
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
@@ -47,7 +34,6 @@ describe("useExperiments", () => {
     expect(result.current.status).toBeUndefined();
     expect(result.current.search).toBe("");
 
-    // Default MSW handler returns []
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });

@@ -9,8 +9,6 @@ import { contract } from "@repo/api";
 
 import ExperimentFlowPage from "./page";
 
-// --- Mocks (component-level only, no hook mocks) ---
-
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">
@@ -38,8 +36,6 @@ vi.mock("@/components/flow-editor", () => ({
   ),
 }));
 
-// --- Helpers ---
-
 const EXP_ID = "exp-123";
 const LOCALE = "en-US";
 const defaultProps = {
@@ -57,16 +53,14 @@ const accessPayload = createExperimentAccess({
   isAdmin: true,
 });
 
-/** Mount all five endpoints with sensible active-experiment defaults. */
 function mountDefaults() {
   server.mount(contract.experiments.getExperiment, { body: activeExperiment });
   server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-  server.mount(contract.experiments.getFlow, { status: 404 }); // no flow yet
+  server.mount(contract.experiments.getFlow, { status: 404 });
   server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
   server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
 }
 
-// --- Tests ---
 describe("ExperimentFlowPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();

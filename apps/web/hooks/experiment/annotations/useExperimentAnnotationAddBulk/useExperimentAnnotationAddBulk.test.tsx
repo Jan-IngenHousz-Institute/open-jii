@@ -7,7 +7,7 @@ import { contract } from "@repo/api";
 import { useExperimentAnnotationAddBulk } from "./useExperimentAnnotationAddBulk";
 
 describe("useExperimentAnnotationAddBulk", () => {
-  it("sends POST request via MSW", async () => {
+  it("sends POST request", async () => {
     const spy = server.mount(contract.experiments.addAnnotationsBulk, {
       body: { rowsAffected: 3 },
     });

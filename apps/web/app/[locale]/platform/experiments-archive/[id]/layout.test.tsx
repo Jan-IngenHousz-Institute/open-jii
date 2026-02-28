@@ -9,7 +9,6 @@ import { contract } from "@repo/api";
 
 import ExperimentLayout from "./layout";
 
-// Mock ExperimentTitle component (keep — presentational stub)
 vi.mock("~/components/experiment-overview/experiment-title", () => ({
   ExperimentTitle: ({ name }: { name: string }) => <div data-testid="experiment-title">{name}</div>,
 }));
@@ -17,10 +16,6 @@ vi.mock("~/components/experiment-overview/experiment-title", () => ({
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
 }));
-
-// -------------------
-// Helpers
-// -------------------
 
 const defaultAccess = createExperimentAccess({
   experiment: {
@@ -34,9 +29,6 @@ const defaultAccess = createExperimentAccess({
 const renderLayout = (children: React.ReactNode = <div>Child Content</div>) =>
   render(<ExperimentLayout>{children}</ExperimentLayout>);
 
-// -------------------
-// Tests
-// -------------------
 describe("<ExperimentLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

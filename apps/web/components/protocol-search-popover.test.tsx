@@ -7,9 +7,7 @@ import { Popover } from "@repo/ui/components";
 
 import { ProtocolSearchPopover } from "./protocol-search-popover";
 
-// --------------------
 // Test data & helpers
-// --------------------
 const protocols = [
   createProtocol({ name: "Fv/FM Baseline", family: "multispeq", createdByName: "Ada Lovelace" }),
   createProtocol({ name: "Ambient Light", family: "ambit", createdByName: "Al Turing" }),
@@ -44,9 +42,7 @@ function renderPopover(over: Partial<React.ComponentProps<typeof ProtocolSearchP
   };
 }
 
-// --------------------
 // Tests
-// --------------------
 describe("<ProtocolSearchPopover />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

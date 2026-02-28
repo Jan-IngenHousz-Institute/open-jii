@@ -8,7 +8,6 @@ import { contract } from "@repo/api";
 
 import ExperimentVisualizationsPage from "./page";
 
-// Mock ExperimentVisualizationsList component
 vi.mock("~/components/experiment-visualizations/experiment-visualizations-list", () => ({
   default: ({
     visualizations,

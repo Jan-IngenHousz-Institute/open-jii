@@ -6,9 +6,7 @@ import type { Protocol } from "@repo/api";
 
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
-// --------------------
 // Mocks
-// --------------------
 
 interface PopoverPropsCaptured {
   availableProtocols: Protocol[];
@@ -32,9 +30,7 @@ vi.mock("../protocol-search-popover", () => ({
   },
 }));
 
-// --------------------
 // Test data & helpers
-// --------------------
 const protocols: Protocol[] = [
   createProtocol({ id: "p1" }),
   createProtocol({ id: "p2" }),
@@ -60,9 +56,7 @@ function renderWidget(over: Partial<React.ComponentProps<typeof ProtocolSearchWi
   };
 }
 
-// --------------------
 // Tests
-// --------------------
 describe("<ProtocolSearchWithDropdown />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

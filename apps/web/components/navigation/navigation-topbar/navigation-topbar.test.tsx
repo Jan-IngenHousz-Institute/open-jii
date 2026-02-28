@@ -8,7 +8,6 @@ import { useSidebar } from "@repo/ui/components";
 
 import { NavigationTopbar } from "./navigation-topbar";
 
-// NavUser — sibling mock (Rule 5, tested in nav-user.test.tsx)
 // Requires SidebarProvider context for SidebarMenu* components
 vi.mock("../nav-user/nav-user", () => ({
   NavUser: () => <span>nav-user</span>,

@@ -13,7 +13,6 @@ vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 
-// ProtocolSearchWithDropdown — sibling component (Rule 5)
 vi.mock("../../protocol-search-with-dropdown", () => ({
   ProtocolSearchWithDropdown: ({
     availableProtocols,

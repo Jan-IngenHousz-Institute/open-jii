@@ -9,8 +9,6 @@ import { contract } from "@repo/api";
 
 import NewVisualizationPage from "./page";
 
-// --- Component mocks ---
-
 vi.mock("@/components/experiment-visualizations/new-visualization-form", () => ({
   default: ({
     experimentId,
@@ -37,8 +35,6 @@ vi.mock("@/components/experiment-visualizations/new-visualization-form", () => (
   ),
 }));
 
-// --- Helpers ---
-
 const experimentId = "exp-123";
 
 function mountDefaults(overrides?: { tables?: unknown[] }) {
@@ -52,8 +48,6 @@ function mountDefaults(overrides?: { tables?: unknown[] }) {
     body: (overrides?.tables ?? []) as ReturnType<typeof createExperimentTable>[],
   });
 }
-
-// --- Tests ---
 
 describe("NewVisualizationPage", () => {
   beforeEach(() => {
@@ -159,7 +153,6 @@ describe("NewVisualizationPage", () => {
         expect(screen.getByRole("button", { name: /preview.title/ })).toBeInTheDocument();
       });
 
-      // Open preview
       const previewButton = screen.getByRole("button", { name: /preview.title/ });
 
       await user.click(previewButton);
@@ -168,7 +161,6 @@ describe("NewVisualizationPage", () => {
         expect(screen.getByText("Preview Open: Yes")).toBeInTheDocument();
       });
 
-      // Close preview
       const closeButton = screen.getByText("Close Preview");
       await user.click(closeButton);
 

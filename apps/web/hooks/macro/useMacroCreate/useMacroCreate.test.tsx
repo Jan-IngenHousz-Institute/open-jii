@@ -1,12 +1,3 @@
-/**
- * useMacroCreate hook test — MSW-based.
- *
- * The real hook calls `tsr.macros.createMacro.useMutation` →
- * `POST /api/v1/macros`. MSW intercepts that request.
- *
- * Tests verify: mutation fires POST, onSuccess invalidates cache and
- * calls user callback, onError calls user callback.
- */
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -19,7 +10,7 @@ import { toast } from "@repo/ui/hooks";
 import { useMacroCreate } from "./useMacroCreate";
 
 describe("useMacroCreate", () => {
-  it("calls POST /macros via MSW and invokes onSuccess with id", async () => {
+  it("calls POST /macros and invokes onSuccess with id", async () => {
     server.mount(contract.macros.createMacro, {
       body: createMacro({ id: "macro-1" }),
     });
@@ -32,7 +23,6 @@ describe("useMacroCreate", () => {
 
     const { result } = renderHook(() => useMacroCreate({ onSuccess }), { queryClient });
 
-    // Default MSW handler returns { id: "macro-1", ... } with 201
     act(() => {
       result.current.mutate({ body: { name: "New Macro", language: "python", code: "" } });
     });

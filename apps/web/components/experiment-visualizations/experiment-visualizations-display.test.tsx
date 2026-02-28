@@ -7,7 +7,6 @@ import { contract } from "@repo/api";
 
 import ExperimentVisualizationsDisplay from "./experiment-visualizations-display";
 
-// Pragmatic: ExperimentVisualizationRenderer uses Plotly via dynamic import — no jsdom support
 vi.mock("./experiment-visualization-renderer", () => ({
   default: ({ visualization }: { visualization: { name: string } }) => (
     <div role="img" aria-label={visualization.name} />
