@@ -51,9 +51,7 @@ describe("<MemberList />", () => {
     expect(onRemove).toHaveBeenCalledWith("user-2");
   });
 
-  it("shows fallback text when member has no email", async () => {
-    const user = userEvent.setup();
-
+  it("shows fallback text when member has no email", () => {
     render(
       <MemberList
         membersWithUserInfo={[

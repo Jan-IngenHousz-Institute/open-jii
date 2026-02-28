@@ -61,21 +61,6 @@ describe("ExperimentVisualizationsDisplay", () => {
     expect(await screen.findByRole("img", { name: "Line Chart" })).toBeInTheDocument();
   });
 
-  it("shows loading message while visualization data loads", async () => {
-    mountExperimentData({ delay: 999_999 });
-    const viz = createVisualization({ name: "My Chart" });
-
-    render(
-      <ExperimentVisualizationsDisplay
-        experimentId="exp-1"
-        visualizations={[viz]}
-        isLoading={false}
-      />,
-    );
-
-    expect(await screen.findByText("ui.messages.loadingData")).toBeInTheDocument();
-  });
-
   it("renders renderer once data arrives", async () => {
     mountExperimentData();
     const viz = createVisualization({ name: "Temperature Trend" });

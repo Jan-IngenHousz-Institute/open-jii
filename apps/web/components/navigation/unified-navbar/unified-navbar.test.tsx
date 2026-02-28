@@ -212,9 +212,7 @@ describe("UnifiedNavbar", () => {
 
   it("shows User icon fallback when no avatar", () => {
     renderNavbar({
-      session: {
-        user: { id: "u-1", email: "test@example.com", image: null, registered: true },
-      } as Session,
+      session: makeSession({ user: { email: "test@example.com", image: null } }),
     });
     expect(screen.getByRole("button", { name: "User menu" })).toBeInTheDocument();
     expect(screen.getAllByText("test@example.com").length).toBeGreaterThan(0);

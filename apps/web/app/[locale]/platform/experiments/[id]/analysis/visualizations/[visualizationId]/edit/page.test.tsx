@@ -304,7 +304,7 @@ describe("EditVisualizationPage", () => {
       const router = vi.mocked(useRouter)();
       await waitFor(() => {
         expect(router.push).toHaveBeenCalled();
-        const calledPath = vi.mocked(router.push).mock.calls[0]?.[0] as string;
+        const calledPath = vi.mocked(router.push).mock.calls[0]?.[0];
         expect(calledPath).toContain(experimentId);
         expect(calledPath).toContain("analysis/visualizations");
         expect(calledPath).toContain(visualizationId);

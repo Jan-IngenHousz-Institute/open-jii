@@ -123,8 +123,13 @@ describe("useExperimentData", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.tableMetadata).toEqual({
-      columns: expect.arrayContaining([
+    const metadata = result.current.tableMetadata;
+    expect(metadata).toBeDefined();
+    expect(metadata?.totalPages).toBe(5);
+    expect(metadata?.totalRows).toBe(100);
+    expect(metadata?.errorColumn).toBeUndefined();
+    expect(metadata?.columns).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           accessorKey: "id",
           header: "id",
@@ -146,16 +151,15 @@ describe("useExperimentData", () => {
           meta: { type: "TIMESTAMP" },
         }),
       ]),
-      totalPages: 5,
-      totalRows: 100,
-      errorColumn: undefined,
-      rawColumns: expect.arrayContaining([
+    );
+    expect(metadata?.rawColumns).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({ name: "id", type_name: "INT" }),
         expect.objectContaining({ name: "name", type_name: "STRING" }),
         expect.objectContaining({ name: "value", type_name: "DOUBLE" }),
         expect.objectContaining({ name: "timestamp", type_name: "TIMESTAMP" }),
       ]),
-    });
+    );
     expect(result.current.tableRows).toEqual(mockExperimentData.rows);
     expect(result.current.error).toBeNull();
   });

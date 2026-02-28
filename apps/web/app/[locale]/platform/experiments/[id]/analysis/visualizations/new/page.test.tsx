@@ -49,7 +49,7 @@ function mountDefaults(overrides?: { tables?: unknown[] }) {
     }),
   });
   server.mount(contract.experiments.getExperimentTables, {
-    body: (overrides?.tables as ReturnType<typeof createExperimentTable>[]) ?? [],
+    body: (overrides?.tables ?? []) as ReturnType<typeof createExperimentTable>[],
   });
 }
 
@@ -212,7 +212,7 @@ describe("NewVisualizationPage", () => {
       const router = vi.mocked(useRouter)();
       await waitFor(() => {
         expect(router.push).toHaveBeenCalled();
-        const calledPath = vi.mocked(router.push).mock.calls[0]?.[0] as string;
+        const calledPath = vi.mocked(router.push).mock.calls[0]?.[0];
         expect(calledPath).toContain("exp-123");
         expect(calledPath).toContain("analysis/visualizations");
         expect(calledPath).toContain("new-viz-123");

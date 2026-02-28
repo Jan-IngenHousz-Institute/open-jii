@@ -95,7 +95,8 @@ describe("NewVisualizationForm", () => {
     });
 
     // getDefaultDataConfig returns dataSources with empty columnName → filtered to empty
-    expect(spy.body.dataConfig.dataSources).toHaveLength(0);
+    const submitted = spy.body as { dataConfig: { dataSources: unknown[] } };
+    expect(submitted.dataConfig.dataSources).toHaveLength(0);
   });
 
   it("shows toast and calls onSuccess on successful creation", async () => {

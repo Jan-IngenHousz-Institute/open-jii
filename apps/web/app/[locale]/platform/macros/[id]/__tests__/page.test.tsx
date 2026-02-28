@@ -80,11 +80,11 @@ describe("MacroOverviewPage", () => {
       await waitFor(() => {
         expect(screen.getByText(macro.name)).toBeInTheDocument();
       });
-      expect(screen.getByText(macro.description!)).toBeInTheDocument();
+      expect(screen.getByText(macro.description ?? "")).toBeInTheDocument();
       expect(screen.getByText("Python")).toBeInTheDocument();
       expect(screen.getByText(`formatted-${macro.createdAt}`)).toBeInTheDocument();
       expect(screen.getByText(`formatted-${macro.updatedAt}`)).toBeInTheDocument();
-      expect(screen.getByText(macro.createdByName!)).toBeInTheDocument();
+      expect(screen.getByText(macro.createdByName ?? "")).toBeInTheDocument();
     });
 
     it("should display macro code viewer when code is available", async () => {
@@ -119,7 +119,7 @@ describe("MacroOverviewPage", () => {
       await waitFor(() => {
         expect(screen.getByText("common.description")).toBeInTheDocument();
       });
-      expect(screen.getByText(macro.description!)).toBeInTheDocument();
+      expect(screen.getByText(macro.description ?? "")).toBeInTheDocument();
     });
 
     it("should handle macro without createdByName", async () => {

@@ -111,7 +111,7 @@ describe("EditVisualizationForm", () => {
       expect(spy.callCount).toBe(1);
     });
 
-    const submitted = spy.body;
+    const submitted = spy.body as { dataConfig: { dataSources: { columnName: string }[] } };
     expect(submitted.dataConfig.dataSources).toHaveLength(2);
     expect(submitted.dataConfig.dataSources[0].columnName).toBe("x");
     expect(submitted.dataConfig.dataSources[1].columnName).toBe("z");

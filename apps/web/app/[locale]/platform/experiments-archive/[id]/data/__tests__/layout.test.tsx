@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";

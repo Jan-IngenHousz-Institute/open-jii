@@ -36,7 +36,7 @@ describe("SelectOptionsEditor", () => {
     expect(inputs[1]).toHaveValue("Option B");
   });
 
-  it("calls onUpdateOption when option text changes", async () => {
+  it("calls onUpdateOption when option text changes", () => {
     const mockOnUpdateOption = vi.fn();
     render(<SelectOptionsEditor options={["Option 1"]} onUpdateOption={mockOnUpdateOption} />);
 

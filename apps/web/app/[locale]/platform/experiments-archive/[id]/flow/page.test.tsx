@@ -1,4 +1,4 @@
-import { createExperiment, createExperimentAccess, createFlow } from "@/test/factories";
+import { createExperiment, createExperimentAccess } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
@@ -54,13 +54,6 @@ const accessPayload = createExperimentAccess({
   experiment: { id: EXP_ID, status: "archived" },
   isAdmin: false,
 });
-
-/** Mount all three query endpoints with sensible archived defaults. */
-function mountDefaults() {
-  server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
-  server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-  server.mount(contract.experiments.getFlow, { status: 404 });
-}
 
 /* ---------------------------------- Tests --------------------------------- */
 

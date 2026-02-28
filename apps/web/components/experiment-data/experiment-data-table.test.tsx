@@ -7,7 +7,7 @@ import { ExperimentDataTable } from "./experiment-data-table";
 // useExperimentData — pragmatic mock (heavy: tsr query + tanstack-table column creation + cell formatting)
 const mockUseExperimentData = vi.fn();
 vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
-  useExperimentData: (...args: unknown[]) => mockUseExperimentData(...args),
+  useExperimentData: (...args: unknown[]): unknown => mockUseExperimentData(...args),
 }));
 
 // Sibling mocks (Rule 5) — annotation components, export modal, chart

@@ -36,7 +36,6 @@ vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<strin
   };
 });
 
-
 // ---------- Helpers ----------
 function renderComponent(
   props: {
