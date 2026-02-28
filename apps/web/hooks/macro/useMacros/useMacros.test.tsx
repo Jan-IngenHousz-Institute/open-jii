@@ -57,7 +57,7 @@ describe("useMacros", () => {
     expect(spy.calls[spy.calls.length - 1]?.query?.language).toBe("python");
   });
 
-  it("returns macros list from MSW", async () => {
+  it("returns macros list", async () => {
     server.mount(contract.macros.listMacros, {
       body: [
         createMacro({ id: "1", name: "M1" }),

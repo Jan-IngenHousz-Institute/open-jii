@@ -52,7 +52,6 @@ describe("NewMacroForm", () => {
     });
     expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
 
-    // Code editor shows once user profile resolves from MSW
     await waitFor(() => {
       expect(screen.getByTestId("code-editor")).toBeInTheDocument();
     });
