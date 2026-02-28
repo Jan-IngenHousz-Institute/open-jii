@@ -150,7 +150,10 @@ describe("ExperimentVisualizationsList", () => {
 
   it("uses responsive grid layout", () => {
     const { container } = render(
-      <ExperimentVisualizationsList visualizations={[viz(), viz(), viz()]} experimentId={expId} />,
+      <ExperimentVisualizationsList
+        visualizations={[viz({ id: "v-1" }), viz({ id: "v-2" }), viz({ id: "v-3" })]}
+        experimentId={expId}
+      />,
     );
     const grid = container.querySelector(".grid");
     expect(grid).toHaveClass("grid-cols-1", "md:grid-cols-2", "lg:grid-cols-3");

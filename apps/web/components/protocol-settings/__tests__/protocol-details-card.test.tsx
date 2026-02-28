@@ -43,23 +43,29 @@ const defaultProps = {
 };
 
 describe("ProtocolDetailsCard", () => {
-  it("renders form with initial values", () => {
+  it("renders form with initial values", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-    expect(screen.getByDisplayValue("Test Protocol")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Test Protocol")).toBeInTheDocument();
+    });
     expect(screen.getByRole("textbox", { name: /code editor/i })).toBeInTheDocument();
   });
 
-  it("displays all form fields", () => {
+  it("displays all form fields", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+    });
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/family/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /code/i })).toBeInTheDocument();
   });
 
-  it("disables save when form is pristine", () => {
+  it("disables save when form is pristine", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+    });
   });
 
   it("enables save when form is dirty and valid", async () => {
@@ -107,8 +113,11 @@ describe("ProtocolDetailsCard", () => {
     });
   });
 
-  it("updates code field", () => {
+  it("updates code field", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /code editor/i })).toBeInTheDocument();
+    });
     const newCode = JSON.stringify([{ averages: 2 }]);
     fireEvent.input(screen.getByRole("textbox", { name: /code editor/i }), {
       target: { value: newCode },
@@ -125,9 +134,11 @@ describe("ProtocolDetailsCard", () => {
     });
   });
 
-  it("displays card title and description", () => {
+  it("displays card title and description", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
-    expect(screen.getByText("protocolSettings.generalSettings")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("protocolSettings.generalSettings")).toBeInTheDocument();
+    });
     expect(screen.getByText("protocolSettings.generalDescription")).toBeInTheDocument();
   });
 });

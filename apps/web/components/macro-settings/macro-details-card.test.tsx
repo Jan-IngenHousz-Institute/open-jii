@@ -1,4 +1,4 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { MacroDetailsCard } from "./macro-details-card";
@@ -33,37 +33,45 @@ const defaultProps = {
 describe("MacroDetailsCard", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders card with title and description", () => {
+  it("renders card with title and description", async () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    expect(screen.getByText("macroSettings.generalSettings")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("macroSettings.generalSettings")).toBeInTheDocument();
+    });
     expect(screen.getByText("macroSettings.generalDescription")).toBeInTheDocument();
   });
 
-  it("renders form labels for name, description, and language", () => {
+  it("renders form labels for name, description, and language", async () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    expect(screen.getByText("macroSettings.name")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("macroSettings.name")).toBeInTheDocument();
+    });
     expect(screen.getByText("macroSettings.description")).toBeInTheDocument();
     expect(screen.getByText("macroSettings.language")).toBeInTheDocument();
   });
 
-  it("renders language options", () => {
+  it("renders language options", async () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    // Python appears in both the trigger (selected value) and dropdown
-    expect(screen.getAllByText("Python").length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => {
+      expect(screen.getAllByText("Python").length).toBeGreaterThanOrEqual(1);
+    });
     expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
-  it("renders the MacroCodeEditor with decoded initial code", () => {
+  it("renders the MacroCodeEditor with decoded initial code", async () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
+    });
     expect(screen.getByTestId("editor-value")).toHaveTextContent("print('Hello')");
     expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
   });
 
-  it("renders a save button", () => {
+  it("renders a save button", async () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    const button = screen.getByRole("button", { name: /macroSettings.save/i });
-    expect(button).toBeInTheDocument();
-    expect(button).not.toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /macroSettings.save/i })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /macroSettings.save/i })).not.toBeDisabled();
   });
 });

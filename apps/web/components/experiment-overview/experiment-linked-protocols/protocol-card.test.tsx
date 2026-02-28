@@ -107,6 +107,7 @@ describe("ProtocolCard", () => {
 
 describe("ProtocolSelector", () => {
   it("renders selected protocol name from prop", () => {
+    mountProtocol();
     render(
       <ProtocolSelector
         protocolIds={["proto-1", "proto-2"]}
@@ -120,6 +121,7 @@ describe("ProtocolSelector", () => {
   });
 
   it("shows loading text when no protocol name provided", () => {
+    mountProtocol();
     render(
       <ProtocolSelector
         protocolIds={["proto-1"]}

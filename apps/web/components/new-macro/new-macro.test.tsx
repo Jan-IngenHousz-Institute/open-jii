@@ -52,12 +52,14 @@ describe("NewMacroForm", () => {
   });
 
   it("renders cancel and submit buttons", () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
     render(<NewMacroForm />);
     expect(screen.getByText("newMacro.cancel")).toBeInTheDocument();
     expect(screen.getByText("newMacro.finalizeSetup")).toBeInTheDocument();
   });
 
   it("navigates back on cancel", async () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
     const user = userEvent.setup();
     const { router } = render(<NewMacroForm />);
     await user.click(screen.getByText("newMacro.cancel"));

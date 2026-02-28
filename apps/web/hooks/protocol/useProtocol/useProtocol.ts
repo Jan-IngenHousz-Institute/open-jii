@@ -12,5 +12,6 @@ export const useProtocol = (protocolId: string) => {
     queryData: { params: { id: protocolId } },
     queryKey: ["protocol", protocolId],
     retry: shouldRetryQuery,
+    enabled: !!protocolId,
   });
 };

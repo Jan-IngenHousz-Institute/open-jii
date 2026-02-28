@@ -1,5 +1,4 @@
-import { render, screen } from "@/test/test-utils";
-import { useForm } from "react-hook-form";
+import { act, renderWithForm, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
@@ -21,143 +20,84 @@ vi.mock("../../shared/y-axis-configuration", () => ({
   }),
 }));
 
-describe("LineChartDataConfigurator", () => {
-  const mockColumns = [
-    { name: "time", type_name: "number", type_text: "number" },
-    { name: "value", type_name: "number", type_text: "number" },
-    { name: "category", type_name: "string", type_text: "string" },
-  ];
+const mockColumns = [
+  { name: "time", type_name: "number", type_text: "number" },
+  { name: "value", type_name: "number", type_text: "number" },
+  { name: "category", type_name: "string", type_text: "string" },
+];
 
-  it("should render X-axis configuration component", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
+function renderLineDataConfigurator(
+  dataSources: { tableName: string; columnName: string; role: string; alias: string }[],
+) {
+  return renderWithForm<ChartFormValues>(
+    (form) => <LineChartDataConfigurator form={form} columns={mockColumns} />,
+    {
+      useFormProps: {
         defaultValues: {
-          dataConfig: {
-            tableName: "test_table",
-            dataSources: [{ tableName: "test_table", columnName: "time", role: "x", alias: "" }],
-          },
-        },
-      });
+          dataConfig: { tableName: "test_table", dataSources },
+        } as ChartFormValues,
+      },
+    },
+  );
+}
 
-      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
-    }
-
-    render(<TestComponent />);
+describe("LineChartDataConfigurator", () => {
+  it("should render X-axis configuration component", () => {
+    renderLineDataConfigurator([
+      { tableName: "test_table", columnName: "time", role: "x", alias: "" },
+    ]);
 
     expect(screen.getByTestId("x-axis-configuration")).toBeInTheDocument();
   });
 
   it("should render Y-axis configuration component", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          dataConfig: {
-            tableName: "test_table",
-            dataSources: [
-              { tableName: "test_table", columnName: "time", role: "x", alias: "" },
-              { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
-            ],
-          },
-        },
-      });
-
-      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
-    }
-
-    render(<TestComponent />);
+    renderLineDataConfigurator([
+      { tableName: "test_table", columnName: "time", role: "x", alias: "" },
+      { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
+    ]);
 
     expect(screen.getByTestId("y-axis-configuration")).toBeInTheDocument();
   });
 
   it("should render both configuration components", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          dataConfig: {
-            tableName: "test_table",
-            dataSources: [
-              { tableName: "test_table", columnName: "time", role: "x", alias: "" },
-              { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
-            ],
-          },
-        },
-      });
-
-      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
-    }
-
-    render(<TestComponent />);
+    renderLineDataConfigurator([
+      { tableName: "test_table", columnName: "time", role: "x", alias: "" },
+      { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
+    ]);
 
     expect(screen.getByTestId("x-axis-configuration")).toBeInTheDocument();
     expect(screen.getByTestId("y-axis-configuration")).toBeInTheDocument();
   });
 
   it("should provide addYAxisSeries function to Y-axis configuration", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          dataConfig: {
-            tableName: "test_table",
-            dataSources: [
-              { tableName: "test_table", columnName: "time", role: "x", alias: "" },
-              { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
-            ],
-          },
-        },
-      });
-
-      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
-    }
-
-    render(<TestComponent />);
+    renderLineDataConfigurator([
+      { tableName: "test_table", columnName: "time", role: "x", alias: "" },
+      { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
+    ]);
 
     // Verify the addYAxisSeries function was captured and can be called
     expect(capturedAddYAxisSeries).toBeTruthy();
-    expect(() => capturedAddYAxisSeries?.()).not.toThrow();
+    act(() => {
+      capturedAddYAxisSeries?.();
+    });
   });
 
   it("should pass isColorColumnSelected as true when color column is configured", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          dataConfig: {
-            tableName: "test_table",
-            dataSources: [
-              { tableName: "test_table", columnName: "time", role: "x", alias: "" },
-              { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
-              { tableName: "test_table", columnName: "category", role: "color", alias: "" },
-            ],
-          },
-        },
-      });
-
-      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
-    }
-
-    render(<TestComponent />);
+    renderLineDataConfigurator([
+      { tableName: "test_table", columnName: "time", role: "x", alias: "" },
+      { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
+      { tableName: "test_table", columnName: "category", role: "color", alias: "" },
+    ]);
 
     expect(capturedIsColorColumnSelected).toBe(true);
   });
 
   it("should pass isColorColumnSelected as false when color column has no columnName", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          dataConfig: {
-            tableName: "test_table",
-            dataSources: [
-              { tableName: "test_table", columnName: "time", role: "x", alias: "" },
-              { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
-              { tableName: "test_table", columnName: "", role: "color", alias: "" },
-            ],
-          },
-        },
-      });
-
-      return <LineChartDataConfigurator form={form} columns={mockColumns} />;
-    }
-
-    render(<TestComponent />);
+    renderLineDataConfigurator([
+      { tableName: "test_table", columnName: "time", role: "x", alias: "" },
+      { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
+      { tableName: "test_table", columnName: "", role: "color", alias: "" },
+    ]);
 
     expect(capturedIsColorColumnSelected).toBe(false);
   });

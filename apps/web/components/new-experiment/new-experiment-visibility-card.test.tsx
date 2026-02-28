@@ -32,24 +32,30 @@ function renderVisibilityCard(defaultValues: Partial<CreateExperimentBody> = {})
 describe("<NewExperimentVisibilityCard />", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders title & description", () => {
+  it("renders title & description", async () => {
     renderVisibilityCard({});
-    expect(screen.getByText("newExperiment.visibilityTitle")).toBeInTheDocument();
-    expect(screen.getByText("newExperiment.visibilityDescription")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("newExperiment.visibilityTitle")).toBeInTheDocument();
+      expect(screen.getByText("newExperiment.visibilityDescription")).toBeInTheDocument();
+    });
   });
 
-  it("shows embargo section when visibility is not public", () => {
+  it("shows embargo section when visibility is not public", async () => {
     renderVisibilityCard({ visibility: "private" });
-    expect(
-      screen.getByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
+      ).toBeInTheDocument();
+    });
   });
 
-  it("hides embargo section when visibility is public", () => {
+  it("hides embargo section when visibility is public", async () => {
     renderVisibilityCard({ visibility: "public" });
-    expect(
-      screen.queryByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("sets a default embargo when none is set", async () => {

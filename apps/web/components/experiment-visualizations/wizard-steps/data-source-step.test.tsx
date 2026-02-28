@@ -1,11 +1,9 @@
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
-import { render, screen, userEvent, within } from "@/test/test-utils";
+import { renderWithForm, screen, userEvent, within } from "@/test/test-utils";
 import React from "react";
-import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ExperimentTableMetadata, DataColumn } from "@repo/api";
-import { Form } from "@repo/ui/components";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { DataSourceStep } from "./data-source-step";
@@ -101,24 +99,13 @@ const defaultProps = {
   onPreviewClose: vi.fn(),
 };
 
-function TestWrapper({
-  defaultValues,
-  ...stepProps
-}: { defaultValues?: Partial<ChartFormValues> } & typeof defaultProps) {
-  const form = useForm<ChartFormValues>({
-    defaultValues: {
-      name: "",
-      description: "",
-      chartType: "line",
-      chartFamily: "basic",
-      dataConfig: { tableName: "", dataSources: [] },
-      config: { xAxisTitle: "", yAxisTitle: "" },
-      ...defaultValues,
-    },
-  });
-
-  return (
-    <Form {...form}>
+function renderDataSourceStep(
+  opts: { defaultValues?: Partial<ChartFormValues> } & Partial<typeof defaultProps> = {},
+) {
+  const { defaultValues, ...stepPropOverrides } = opts;
+  const stepProps = { ...defaultProps, ...stepPropOverrides };
+  return renderWithForm<ChartFormValues>(
+    (form) => (
       <DataSourceStep
         {...stepProps}
         form={form}
@@ -129,7 +116,20 @@ function TestWrapper({
           component: () => null,
         }}
       />
-    </Form>
+    ),
+    {
+      useFormProps: {
+        defaultValues: {
+          name: "",
+          description: "",
+          chartType: "line",
+          chartFamily: "basic",
+          dataConfig: { tableName: "", dataSources: [] },
+          config: { xAxisTitle: "", yAxisTitle: "" },
+          ...defaultValues,
+        },
+      },
+    },
   );
 }
 
@@ -152,7 +152,7 @@ function setupExperimentData() {
 describe("DataSourceStep", () => {
   it("renders the data source form with table dropdown", () => {
     setupExperimentData();
-    render(<TestWrapper {...defaultProps} />);
+    renderDataSourceStep();
 
     expect(screen.getByText("wizard.steps.dataSource.title")).toBeInTheDocument();
     expect(screen.getByText("wizard.steps.dataSource.description")).toBeInTheDocument();
@@ -161,7 +161,7 @@ describe("DataSourceStep", () => {
 
   it("renders available tables as select options", () => {
     setupExperimentData();
-    render(<TestWrapper {...defaultProps} />);
+    renderDataSourceStep();
 
     const options = screen.getAllByRole("option");
     expect(options).toHaveLength(2);
@@ -171,7 +171,7 @@ describe("DataSourceStep", () => {
 
   it("renders wizard step navigation buttons", () => {
     setupExperimentData();
-    render(<TestWrapper {...defaultProps} />);
+    renderDataSourceStep();
 
     expect(screen.getByRole("button", { name: "experiments.back" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "experiments.next" })).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe("DataSourceStep", () => {
 
   it("disables navigation buttons when submitting", () => {
     setupExperimentData();
-    render(<TestWrapper {...defaultProps} isSubmitting={true} />);
+    renderDataSourceStep({ isSubmitting: true });
 
     expect(screen.getByRole("button", { name: "experiments.back" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "experiments.next" })).toBeDisabled();
@@ -187,30 +187,24 @@ describe("DataSourceStep", () => {
 
   it("renders line chart configurator when table is selected", () => {
     setupExperimentData();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        defaultValues={{
-          chartType: "line",
-          dataConfig: { tableName: "measurements", dataSources: [] },
-        }}
-      />,
-    );
+    renderDataSourceStep({
+      defaultValues: {
+        chartType: "line",
+        dataConfig: { tableName: "measurements", dataSources: [] },
+      },
+    });
 
     expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
   });
 
   it("renders scatter chart configurator for scatter chart type", () => {
     setupExperimentData();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        defaultValues={{
-          chartType: "scatter",
-          dataConfig: { tableName: "measurements", dataSources: [] },
-        }}
-      />,
-    );
+    renderDataSourceStep({
+      defaultValues: {
+        chartType: "scatter",
+        dataConfig: { tableName: "measurements", dataSources: [] },
+      },
+    });
 
     expect(screen.getByTestId("scatter-chart-configurator")).toBeInTheDocument();
     expect(screen.queryByTestId("line-chart-configurator")).not.toBeInTheDocument();
@@ -218,13 +212,10 @@ describe("DataSourceStep", () => {
 
   it("does not render configurator when no table is selected", () => {
     setupExperimentData();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        tables={[]}
-        defaultValues={{ dataConfig: { tableName: "", dataSources: [] } }}
-      />,
-    );
+    renderDataSourceStep({
+      tables: [],
+      defaultValues: { dataConfig: { tableName: "", dataSources: [] } },
+    });
 
     expect(screen.queryByTestId("line-chart-configurator")).not.toBeInTheDocument();
     expect(screen.queryByTestId("scatter-chart-configurator")).not.toBeInTheDocument();
@@ -232,12 +223,9 @@ describe("DataSourceStep", () => {
 
   it("renders chart preview modal when table is selected", () => {
     setupExperimentData();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        defaultValues={{ dataConfig: { tableName: "measurements", dataSources: [] } }}
-      />,
-    );
+    renderDataSourceStep({
+      defaultValues: { dataConfig: { tableName: "measurements", dataSources: [] } },
+    });
 
     const modal = screen.getByTestId("chart-preview-modal");
     expect(within(modal).getByText("Experiment ID: test-experiment-id")).toBeInTheDocument();
@@ -246,13 +234,10 @@ describe("DataSourceStep", () => {
 
   it("passes isPreviewOpen to preview modal", () => {
     setupExperimentData();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        isPreviewOpen={true}
-        defaultValues={{ dataConfig: { tableName: "measurements", dataSources: [] } }}
-      />,
-    );
+    renderDataSourceStep({
+      isPreviewOpen: true,
+      defaultValues: { dataConfig: { tableName: "measurements", dataSources: [] } },
+    });
 
     const modal = screen.getByTestId("chart-preview-modal");
     expect(within(modal).getByText("Open: true")).toBeInTheDocument();
@@ -262,14 +247,11 @@ describe("DataSourceStep", () => {
     const user = userEvent.setup();
     setupExperimentData();
     const onPreviewClose = vi.fn();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        isPreviewOpen={true}
-        onPreviewClose={onPreviewClose}
-        defaultValues={{ dataConfig: { tableName: "measurements", dataSources: [] } }}
-      />,
-    );
+    renderDataSourceStep({
+      isPreviewOpen: true,
+      onPreviewClose,
+      defaultValues: { dataConfig: { tableName: "measurements", dataSources: [] } },
+    });
 
     await user.click(screen.getByRole("button", { name: "Close Preview" }));
     expect(onPreviewClose).toHaveBeenCalledOnce();
@@ -277,15 +259,12 @@ describe("DataSourceStep", () => {
 
   it("handles unknown chart type gracefully", () => {
     setupExperimentData();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        defaultValues={{
-          chartType: "unknown" as "line" | "scatter",
-          dataConfig: { tableName: "measurements", dataSources: [] },
-        }}
-      />,
-    );
+    renderDataSourceStep({
+      defaultValues: {
+        chartType: "unknown" as "line" | "scatter",
+        dataConfig: { tableName: "measurements", dataSources: [] },
+      },
+    });
 
     expect(screen.queryByTestId("line-chart-configurator")).not.toBeInTheDocument();
     expect(screen.queryByTestId("scatter-chart-configurator")).not.toBeInTheDocument();
@@ -293,7 +272,7 @@ describe("DataSourceStep", () => {
 
   it("handles empty tables array gracefully", () => {
     setupExperimentData();
-    render(<TestWrapper {...defaultProps} tables={[]} />);
+    renderDataSourceStep({ tables: [] });
 
     expect(screen.getByText("wizard.steps.dataSource.title")).toBeInTheDocument();
     expect(screen.getByRole("combobox")).toBeInTheDocument();
@@ -301,13 +280,10 @@ describe("DataSourceStep", () => {
 
   it("does not show preview modal when no table is selected", () => {
     setupExperimentData();
-    render(
-      <TestWrapper
-        {...defaultProps}
-        tables={[]}
-        defaultValues={{ dataConfig: { tableName: "", dataSources: [] } }}
-      />,
-    );
+    renderDataSourceStep({
+      tables: [],
+      defaultValues: { dataConfig: { tableName: "", dataSources: [] } },
+    });
 
     expect(screen.queryByTestId("chart-preview-modal")).not.toBeInTheDocument();
   });

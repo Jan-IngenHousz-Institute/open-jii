@@ -10,26 +10,6 @@ import { authClient } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";
 
-// unified-navbar uses react-i18next directly (not @repo/i18n)
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (k: string, fallback?: string) =>
-      ({
-        "navigation.home": "Home",
-        "navigation.about": "About",
-        "navigation.blog": "Blog",
-        "navigation.platform": "Platform",
-        "navigation.menu": "Navigation menu",
-        "navigation.faq": "FAQ",
-        "auth.userMenu": "User menu",
-        "auth.account": "Account",
-        "auth.signOut": "Sign Out",
-      })[k] ??
-      fallback ??
-      k,
-  }),
-}));
-
 vi.mock("@/components/language-switcher", () => ({
   LanguageSwitcher: ({ locale }: { locale: string }) => (
     <div data-testid="language-switcher">{locale}</div>
@@ -137,8 +117,13 @@ describe("UnifiedNavbar", () => {
     const desktop = nav.querySelector(".md\\:flex")!;
     const utils = within(desktop as HTMLElement);
 
-    expect(utils.getByRole("link", { name: /Home/i })).not.toHaveAttribute("aria-current");
-    expect(utils.getByRole("link", { name: /Blog/i })).toHaveAttribute("aria-current", "page");
+    expect(utils.getByRole("link", { name: /navigation\.home/i })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(utils.getByRole("link", { name: /navigation\.blog/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("shows Platform link for guests", () => {
@@ -146,7 +131,7 @@ describe("UnifiedNavbar", () => {
     const nav = screen.getByRole("navigation");
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const desktop = within(nav.querySelector(".md\\:flex")!);
-    expect(desktop.getByRole("link", { name: /Platform/i })).toHaveAttribute(
+    expect(desktop.getByRole("link", { name: /navigation\.platform/i })).toHaveAttribute(
       "href",
       "/en-US/platform",
     );
@@ -155,14 +140,14 @@ describe("UnifiedNavbar", () => {
   it("shows Platform link as active for authenticated users on platform", () => {
     renderNavbar({ pathname: "/en-US/platform", session: makeSession() });
     const nav = screen.getByRole("navigation");
-    const link = within(nav).getAllByRole("link", { name: /Platform/i })[0];
+    const link = within(nav).getAllByRole("link", { name: /navigation\.platform/i })[0];
     expect(link).toHaveAttribute("aria-current", "page");
   });
 
   it("renders user trigger and display name when authenticated", async () => {
     renderNavbar({ session: makeSession() });
     // The trigger button should exist with aria-label
-    expect(screen.getByRole("button", { name: "User menu" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "auth.userMenu" })).toBeInTheDocument();
     const content = screen.getAllByTestId("dropdown-content")[0];
     await waitFor(() => {
       expect(within(content).getByText("Ada Lovelace")).toBeInTheDocument();
@@ -172,25 +157,25 @@ describe("UnifiedNavbar", () => {
   it("renders account and sign out in desktop dropdown", () => {
     renderNavbar({ session: makeSession() });
     const dropdown = screen.getAllByTestId("dropdown-content")[0];
-    expect(within(dropdown).getByRole("link", { name: /Account/i })).toHaveAttribute(
+    expect(within(dropdown).getByRole("link", { name: /auth\.account/i })).toHaveAttribute(
       "href",
       "/en-US/platform/account/settings",
     );
-    expect(within(dropdown).getByRole("menuitem", { name: /Sign Out/i })).toBeInTheDocument();
+    expect(within(dropdown).getByRole("menuitem", { name: /auth\.signOut/i })).toBeInTheDocument();
   });
 
   it("calls signOut on Sign Out click", async () => {
     const user = userEvent.setup();
     const { router } = renderNavbar({ pathname: "/en-US/blog", session: makeSession() });
     const dropdown = screen.getAllByTestId("dropdown-content")[0];
-    await user.click(within(dropdown).getByRole("menuitem", { name: /Sign Out/i }));
+    await user.click(within(dropdown).getByRole("menuitem", { name: /auth\.signOut/i }));
     await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
     expect(router.push).toHaveBeenCalledWith("/");
   });
 
   it("has mobile menu trigger button", () => {
     renderNavbar();
-    expect(screen.getByRole("button", { name: /Navigation menu/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /navigation\.menu/i })).toBeInTheDocument();
   });
 
   it("renders header banner", () => {
@@ -204,7 +189,7 @@ describe("UnifiedNavbar", () => {
     const mobile = dropdowns[dropdowns.length - 1];
     const aboutLink = within(mobile)
       .getAllByRole("link")
-      .find((l) => l.textContent.includes("About") === true);
+      .find((l) => l.textContent?.includes("navigation.about") === true);
     expect(aboutLink).toBeDefined();
     expect(aboutLink).toHaveAttribute("aria-current", "page");
   });
@@ -213,7 +198,7 @@ describe("UnifiedNavbar", () => {
     renderNavbar({
       session: makeSession({ user: { email: "test@example.com", image: null } }),
     });
-    expect(screen.getByRole("button", { name: "User menu" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "auth.userMenu" })).toBeInTheDocument();
     expect(screen.getAllByText("test@example.com").length).toBeGreaterThan(0);
   });
 

@@ -1,4 +1,4 @@
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataUploadModal } from "./data-upload-modal";
@@ -190,7 +190,9 @@ describe("DataUploadModal", () => {
     );
 
     // Wait for reset timeout
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
 
     // Reopen modal
     rerender(

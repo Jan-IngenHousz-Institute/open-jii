@@ -7,8 +7,7 @@ export const decodeBase64 = (content: string | null): string => {
   if (!content) return "";
   try {
     return atob(content);
-  } catch (e) {
-    console.error("Failed to decode base64 content:", e);
+  } catch {
     return "Error decoding content";
   }
 };
