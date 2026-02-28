@@ -1,0 +1,39 @@
+{
+  "name": "macro-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:python && npm run build:js && npm run build:r",
+    "build:python": "docker build -f functions/python/Dockerfile -t macro-sandbox-python .",
+    "build:js": "docker build -f functions/javascript/Dockerfile -t macro-sandbox-js .",
+    "build:r": "docker build -f functions/r/Dockerfile -t macro-sandbox-r .",
+    "dev": "docker compose up --build",
+    "dev:python": "docker run --rm -p 9001:8080 macro-sandbox-python",
+    "dev:js": "docker run --rm -p 9002:8080 macro-sandbox-js",
+    "dev:r": "docker run --rm -p 9003:8080 macro-sandbox-r",
+    "invoke:python": "curl -sS -XPOST http://localhost:9001/2015-03-31/functions/function/invocations -d @test/event.json | jq .",
+    "invoke:js": "curl -sS -XPOST http://localhost:9002/2015-03-31/functions/function/invocations -d @test/event.json | jq .",
+    "invoke:r": "curl -sS -XPOST http://localhost:9003/2015-03-31/functions/function/invocations -d @test/event.json | jq .",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "env:test": "dotenv -e .env.test --",
+    "test:up": "pnpm env:test docker compose up --build -d --wait",
+    "test:down": "pnpm env:test docker compose down",
+    "test": "pnpm test:up && pnpm test:run && pnpm test:down",
+    "test:run": "pnpm env:test vitest run",
+    "test:generate": "tsx test/scripts/generate.ts",
+    "test:init": "tsx test/scripts/init.ts",
+    "test:view": "tsx test/scripts/view.ts",
+    "test:edit": "tsx test/scripts/edit.ts",
+    "clean": "git clean -xdf .cache .turbo dist node_modules"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "dotenv-cli": "^8.0.0",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:testing"
+  }
+}
