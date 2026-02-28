@@ -84,6 +84,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.protocolId).toBeDefined();
       expect(result.value.macroId).toBeDefined();
       expect(result.value.macroFilename).toBeDefined();
+      expect(result.value.macroName).toBeDefined();
     });
 
     it("should upload macro code to Databricks", async () => {
@@ -264,6 +265,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.protocolId).toBeNull();
       expect(result.value.macroId).toBeNull();
       expect(result.value.macroFilename).toBeNull();
+      expect(result.value.macroName).toBeNull();
       expect(result.value.flowId).toBeNull();
     });
 
@@ -286,6 +288,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.protocolId).not.toBeNull();
       expect(result.value.macroId).toBeNull();
       expect(result.value.macroFilename).toBeNull();
+      expect(result.value.macroName).toBeNull();
       expect(result.value.flowId).toBeNull();
     });
 
@@ -295,6 +298,7 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       assertSuccess(result);
       expect(result.value.macroFilename).toMatch(/^macro_[a-f0-9]+$/);
+      expect(result.value.macroName).toBeDefined();
     });
 
     it("should return macroFilename when macro is reused", async () => {
@@ -320,6 +324,7 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       assertSuccess(result);
       expect(result.value.macroFilename).toBe(expectedFilename);
+      expect(result.value.macroName).toBe(macroName);
     });
 
     it("should send project transfer complete email after successful transfer", async () => {

@@ -1086,6 +1086,7 @@ describe("Experiment Schema", () => {
       protocolId: "223e4567-e89b-12d3-a456-426614174000",
       macroId: "323e4567-e89b-12d3-a456-426614174000",
       macroFilename: "macro_abc123def456",
+      macroName: "Test Macro (PhotosynQ)",
       flowId: "423e4567-e89b-12d3-a456-426614174000",
     };
 
@@ -1105,11 +1106,13 @@ describe("Experiment Schema", () => {
         protocolId: null,
         macroId: null,
         macroFilename: null,
+        macroName: null,
         flowId: null,
       });
       expect(result.protocolId).toBeNull();
       expect(result.macroId).toBeNull();
       expect(result.macroFilename).toBeNull();
+      expect(result.macroName).toBeNull();
     });
 
     it("should allow optional message", () => {

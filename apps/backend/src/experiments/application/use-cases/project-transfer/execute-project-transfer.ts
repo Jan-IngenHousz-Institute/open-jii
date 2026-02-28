@@ -87,6 +87,7 @@ export class ExecuteProjectTransferUseCase {
     // 2. Create or reuse Macro (if provided)
     let macroId: string | null = null;
     let macroFilename: string | null = null;
+    let macroName: string | null = null;
     if (data.macro) {
       // Check if a macro with the same name already exists
       const existingMacro = await this.macroRepository.findByName(data.macro.name);
@@ -94,6 +95,7 @@ export class ExecuteProjectTransferUseCase {
       if (existingMacro.isSuccess() && existingMacro.value) {
         macroId = existingMacro.value.id;
         macroFilename = existingMacro.value.filename;
+        macroName = existingMacro.value.name;
         this.logger.log({
           msg: "Reusing existing macro with same name",
           operation: "executeProjectTransfer",
@@ -118,6 +120,7 @@ export class ExecuteProjectTransferUseCase {
 
         macroId = macroResult.value.id;
         macroFilename = macroResult.value.filename;
+        macroName = macroResult.value.name;
       }
     }
 
@@ -307,6 +310,7 @@ export class ExecuteProjectTransferUseCase {
       protocolId,
       macroId,
       macroFilename,
+      macroName,
       flowId,
     });
   }

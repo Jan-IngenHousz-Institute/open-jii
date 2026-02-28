@@ -239,20 +239,25 @@ macros = (
 # DBTITLE 1,Project Data
 @F.udf(StringType())
 def to_json_string(value: str) -> str:
-    """Convert a Python repr string (single quotes) to valid JSON (double quotes)."""
+    """Convert a Python repr string (single quotes) to valid JSON (double quotes).
+    
+    If the parsed result is a single-element list, unwrap it to return just the
+    object — macro output should always be a single JSON object, not an array.
+    """
     if value is None:
         return None
     try:
-        json.loads(value)
-        return value
+        obj = json.loads(value)
     except (json.JSONDecodeError, ValueError):
-        pass
-    try:
-        import ast
-        parsed = ast.literal_eval(value)
-        return json.dumps(parsed)
-    except Exception:
-        return None
+        try:
+            import ast
+            obj = ast.literal_eval(value)
+        except Exception:
+            return None
+    # Unwrap single-element arrays — macro output is always one object
+    if isinstance(obj, list) and len(obj) == 1:
+        obj = obj[0]
+    return json.dumps(obj)
 
 questions_map = questions.groupBy("project_id").agg(
     F.map_from_arrays(
@@ -358,6 +363,7 @@ enriched = (
         F.col("r.protocol_id"),
         F.col("r.macro_id"),
         F.col("r.macro_filename"),
+        F.col("r.macro_name"),
         F.col("d.timestamp"),
         F.col("d.date"),
         F.col("d.questions"),

@@ -323,7 +323,7 @@ def clean_data():
                 F.array(
                     F.struct(
                         F.col("macro_id").alias("id"),
-                        F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("name"),
+                        F.coalesce(F.col("macro_name"), F.col("macro_filename"), F.col("macro_id")).alias("name"),
                         F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("filename")
                     )
                 )
@@ -690,7 +690,7 @@ def experiment_macro_data():
         .withColumn(
             "macro_result",
             F.when(
-                F.col("skip_macro_processing") != True,
+                ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
                 execute_macro_udf(F.struct("data", "macro_filename", "macro_name"))
             )
         )
@@ -1023,6 +1023,7 @@ def raw_imported_data():
         StructField("timestamp", TimestampType(), True),
         StructField("macro_id", StringType(), True),
         StructField("macro_filename", StringType(), True),
+        StructField("macro_name", StringType(), True),
         StructField("questions", StringType(), True),
     ])
     
