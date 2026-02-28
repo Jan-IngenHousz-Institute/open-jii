@@ -81,7 +81,9 @@ describe("useUserInvitationRoleUpdate", () => {
 
   it("invalidates experiment-invitations queries on success", async () => {
     server.mount(contract.users.listInvitations, { body: [createInvitation()] });
-    server.mount(contract.users.updateInvitationRole, { body: createInvitation({ role: "admin" }) });
+    server.mount(contract.users.updateInvitationRole, {
+      body: createInvitation({ role: "admin" }),
+    });
 
     const { result } = renderHook(() => useUserInvitationRoleUpdate());
 
