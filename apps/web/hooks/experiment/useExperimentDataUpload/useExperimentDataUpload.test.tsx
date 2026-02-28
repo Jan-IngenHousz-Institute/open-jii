@@ -15,7 +15,7 @@ describe("useExperimentDataUpload", () => {
 
     const { result } = renderHook(() => useExperimentDataUpload());
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({
         params: { id: "experiment-123" },
         body: { fileName: "data.csv", content: "csv-content" },
@@ -44,7 +44,7 @@ describe("useExperimentDataUpload", () => {
 
     const { result } = renderHook(() => useExperimentDataUpload());
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({
         params: { id: "experiment-123" },
         body: { fileName: "data.csv", content: "csv-content" },

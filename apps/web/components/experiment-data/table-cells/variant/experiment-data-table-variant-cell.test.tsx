@@ -1,6 +1,6 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ExperimentDataTableVariantCell,

@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, userEvent } from "@/test/test-utils";
+import type { HeaderGroup, Row } from "@tanstack/react-table";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -180,13 +180,13 @@ describe("LoadingRows", () => {
 
 describe("ExperimentTableHeader", () => {
   function makeHeaderGroup(
-    headers: Array<{
+    headers: {
       id: string;
       type?: string;
       header?: string | (() => React.ReactNode);
       size?: number;
       isPlaceholder?: boolean;
-    }>,
+    }[],
   ) {
     return [
       {
@@ -206,7 +206,7 @@ describe("ExperimentTableHeader", () => {
           getContext: () => ({}),
         })),
       },
-    ] as any;
+    ] as unknown as HeaderGroup<Record<string, unknown>>[];
   }
 
   it("renders header text and aligns numeric types right", () => {
@@ -259,10 +259,10 @@ describe("ExperimentTableHeader", () => {
       </table>,
     );
 
-    const th = screen.getByText("name").closest("th")!;
-    expect(th).toHaveClass("cursor-pointer");
+    const nameEl = screen.getByText("name");
+    expect(nameEl.closest("th")).toHaveClass("cursor-pointer");
     const user = userEvent.setup();
-    await user.click(th);
+    await user.click(nameEl);
     expect(onSort).toHaveBeenCalledWith("name", "STRING");
   });
 
@@ -357,7 +357,7 @@ describe("ExperimentDataRows", () => {
           },
         ],
       },
-    ] as any;
+    ] as unknown as Row<Record<string, unknown>>[];
 
     render(
       <table>

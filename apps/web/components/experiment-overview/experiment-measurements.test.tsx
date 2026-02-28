@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract, ExperimentTableName } from "@repo/api";
 
 import { ExperimentMeasurements } from "./experiment-measurements";
 
@@ -23,7 +23,20 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   };
 });
 
+function mountTables() {
+  server.mount(contract.experiments.getExperimentTables, {
+    body: [
+      {
+        name: ExperimentTableName.DEVICE,
+        displayName: "Device",
+        totalRows: 10,
+      },
+    ],
+  });
+}
+
 function mountMeasurements(rows: Record<string, unknown>[] = [], opts?: { status?: number }) {
+  mountTables();
   return server.mount(contract.experiments.getExperimentData, {
     body: [
       createExperimentDataTable({
@@ -65,6 +78,7 @@ describe("ExperimentMeasurements", () => {
   });
 
   it("renders empty state when API errors", async () => {
+    mountTables();
     server.mount(contract.experiments.getExperimentData, { status: 500 });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
