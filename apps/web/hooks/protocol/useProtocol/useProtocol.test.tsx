@@ -59,6 +59,7 @@ describe("useProtocol", () => {
       queryData: { params: { id: "protocol-123" } },
       queryKey: ["protocol", "protocol-123"],
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
+      enabled: true,
     });
   });
 
@@ -131,6 +132,28 @@ describe("useProtocol", () => {
     expect(result.current.isLoading).toBe(true);
     expect(result.current.data).toBeUndefined();
     expect(result.current.error).toBeNull();
+  });
+
+  it("should pass enabled=false when explicitly disabled", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: false,
+    });
+    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
+      typeof mockTsr.protocols.getProtocol.useQuery
+    >;
+
+    renderHook(() => useProtocol("protocol-123", false), {
+      wrapper: createWrapper(),
+    });
+
+    expect(mockUseQuery).toHaveBeenCalledWith({
+      queryData: { params: { id: "protocol-123" } },
+      queryKey: ["protocol", "protocol-123"],
+      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
+      enabled: false,
+    });
   });
 
   it("should use different query keys for different protocol IDs", () => {

@@ -23,13 +23,15 @@ const macroItemVariants = cva(
   "mb-1 flex items-center justify-between gap-2 rounded border p-2.5 relative",
   {
     variants: {
-      featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
-        false: "border-gray-200 bg-white",
+      variant: {
+        default: "border-gray-200 bg-white",
+        preferred:
+          "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
+        recommended: "border-l-4 border-l-emerald-400 border-gray-200 bg-emerald-50/40",
       },
     },
     defaultVariants: {
-      featured: false,
+      variant: "default",
     },
   },
 );
@@ -41,9 +43,19 @@ interface MacroListProps {
   isAddingMacro: boolean;
   setOpen: (open: boolean) => void;
   onSearchChange: (value: string) => void;
+  recommendedMacroIds?: Set<string>;
+  recommendedReason?: string;
 }
 
-function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange }: MacroListProps) {
+function MacroList({
+  macros,
+  onAddMacro,
+  isAddingMacro,
+  setOpen,
+  onSearchChange,
+  recommendedMacroIds,
+  recommendedReason,
+}: MacroListProps) {
   const locale = useLocale();
   const { t } = useTranslation("common");
 
@@ -60,11 +72,13 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
     <>
       {macros.map((macro) => {
         const isPreferred = macro.sortOrder !== null;
+        const isRecommended = recommendedMacroIds?.has(macro.id) ?? false;
+        const variant = isRecommended ? "recommended" : isPreferred ? "preferred" : "default";
         return (
           <CommandItem
             key={macro.id}
             value={macro.id}
-            className={macroItemVariants({ featured: isPreferred })}
+            className={macroItemVariants({ variant })}
             onSelect={() => handleAddMacro(macro.id)}
             disabled={isAddingMacro}
           >
@@ -85,11 +99,9 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
                   <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
                 </Link>
 
-                {isPreferred && (
+                {isPreferred && !isRecommended && (
                   <div className="ml-auto">
-                    <Badge className={"bg-secondary/30 text-primary"}>
-                      {t("common.preferred")}
-                    </Badge>
+                    <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
                   </div>
                 )}
               </div>
@@ -104,6 +116,13 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
                 <div className="text-muted-foreground truncate text-xs">
                   <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
                   <span className="font-medium">{macro.createdByName}</span>
+                </div>
+              )}
+
+              {/* Compatibility reason */}
+              {isRecommended && (
+                <div className="truncate text-xs italic text-emerald-600">
+                  {recommendedReason ?? t("common.recommended")}
                 </div>
               )}
             </div>
@@ -169,6 +188,8 @@ export interface MacroSearchPopoverProps {
   loading: boolean;
   setOpen: (open: boolean) => void;
   popoverClassName?: string;
+  recommendedMacroIds?: Set<string>;
+  recommendedReason?: string;
 }
 
 export function MacroSearchPopover({
@@ -180,6 +201,8 @@ export function MacroSearchPopover({
   loading,
   setOpen,
   popoverClassName = "w-80",
+  recommendedMacroIds,
+  recommendedReason,
 }: MacroSearchPopoverProps) {
   const { t } = useTranslation("common");
 
@@ -210,6 +233,8 @@ export function MacroSearchPopover({
               isAddingMacro={isAddingMacro}
               setOpen={setOpen}
               onSearchChange={onSearchChange}
+              recommendedMacroIds={recommendedMacroIds}
+              recommendedReason={recommendedReason}
             />
           </CommandGroup>
         </CommandList>
