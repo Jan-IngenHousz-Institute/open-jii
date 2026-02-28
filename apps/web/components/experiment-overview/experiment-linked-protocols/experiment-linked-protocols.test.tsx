@@ -118,7 +118,9 @@ describe("ExperimentLinkedProtocols", () => {
         `${PROTO_UUID_1},${PROTO_UUID_2}`,
       );
     });
-    expect(screen.getByTestId("protocol-card")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-card")).toHaveTextContent("Protocol 1");
+    });
   });
 
   it("renders protocol card with protocol data", async () => {
@@ -167,6 +169,9 @@ describe("ExperimentLinkedProtocols", () => {
       expect(screen.getByTestId("protocol-selector")).toHaveTextContent(
         `${PROTO_UUID_1},${PROTO_UUID_2}`,
       );
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-card")).toHaveTextContent("Protocol 1");
     });
   });
 });

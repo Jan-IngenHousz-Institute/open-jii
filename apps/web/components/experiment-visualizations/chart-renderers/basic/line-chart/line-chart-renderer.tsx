@@ -3,8 +3,8 @@ import Link from "next/link";
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
-import { Trans } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
+import { Trans } from "@repo/i18n/client";
 import type { LineSeriesData, PlotlyChartConfig } from "@repo/ui/components";
 import { LineChart } from "@repo/ui/components";
 
