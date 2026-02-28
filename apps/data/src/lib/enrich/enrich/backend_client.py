@@ -114,7 +114,7 @@ class BackendClient:
         try:
             # Use canonical JSON in the actual request to ensure signature matches
             canonical_payload = json.dumps(payload, sort_keys=True, separators=(',', ':'))
-            
+
             # Use data with explicit content-type to ensure the exact canonical format is preserved
             response = self.session.post(
                 url,
