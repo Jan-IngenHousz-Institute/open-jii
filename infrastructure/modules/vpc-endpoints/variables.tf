@@ -33,6 +33,12 @@ variable "security_group_ids" {
   type        = list(string)
 }
 
+variable "isolated_security_group_ids" {
+  description = "Security group IDs for interface endpoints in isolated subnets (ECR API, ECR DKR, Logs). Defaults to security_group_ids if not set."
+  type        = list(string)
+  default     = null
+}
+
 # Feature toggles for VPC endpoints
 variable "create_s3_endpoint" {
   description = "Whether to create S3 VPC endpoint (Gateway type)"
@@ -50,4 +56,36 @@ variable "create_kinesis_endpoint" {
   description = "Whether to create Kinesis Streams VPC endpoint (Interface type)"
   type        = bool
   default     = true
+}
+
+# ---- Macro-sandbox Lambda endpoints ----
+
+variable "isolated_route_table_ids" {
+  description = "List of isolated route table IDs (for S3 gateway — needed by Lambda image pulls)"
+  type        = list(string)
+  default     = []
+}
+
+variable "isolated_subnet_ids" {
+  description = "List of isolated subnet IDs (for interface endpoints used by Lambda)"
+  type        = list(string)
+  default     = []
+}
+
+variable "create_ecr_api_endpoint" {
+  description = "Whether to create ECR API VPC endpoint (Interface type — required for Lambda in isolated subnets)"
+  type        = bool
+  default     = false
+}
+
+variable "create_ecr_dkr_endpoint" {
+  description = "Whether to create ECR Docker VPC endpoint (Interface type — required for Lambda image pulls)"
+  type        = bool
+  default     = false
+}
+
+variable "create_logs_endpoint" {
+  description = "Whether to create CloudWatch Logs VPC endpoint (Interface type — required for Lambda logging)"
+  type        = bool
+  default     = false
 }

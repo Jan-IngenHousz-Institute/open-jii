@@ -102,6 +102,39 @@ module "vpc_endpoints" {
   public_route_table_ids  = module.vpc.public_rt_ids
   private_subnet_ids      = module.vpc.private_subnets
   security_group_ids      = [module.vpc.default_sg_id]
+
+  isolated_route_table_ids    = module.vpc.isolated_rt_ids
+  isolated_subnet_ids         = module.vpc.isolated_subnets
+  isolated_security_group_ids = [module.vpc.macro_sandbox_vpc_endpoints_security_group_id]
+  create_ecr_api_endpoint     = true
+  create_ecr_dkr_endpoint     = true
+  create_logs_endpoint        = true
+}
+
+module "macro_sandbox" {
+  source = "../../modules/macro-sandbox"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  ci_cd_role_arn      = module.iam_oidc.role_arn
+  isolated_subnet_ids = module.vpc.isolated_subnets
+  lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
+
+  languages = {
+    python = { memory = 1024, timeout = 65 }
+    js     = { memory = 512, timeout = 65 }
+    r      = { memory = 1024, timeout = 65 }
+  }
+
+  # Dev overrides
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+  log_retention_days   = 7
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+  }
 }
 
 module "databricks_workspace_s3_policy" {
@@ -1315,7 +1348,8 @@ module "backend_ecs" {
 
   # Additional IAM policies for the task role
   additional_task_role_policy_arns = [
-    module.location_service.iam_policy_arn
+    module.location_service.iam_policy_arn,
+    module.macro_sandbox.invoke_policy_arn,
   ]
 
   tags = {
@@ -1634,6 +1668,8 @@ module "grafana_dashboard" {
   kinesis_stream_name = module.kinesis.kinesis_stream_name
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
+
+  macro_sandbox_function_names = module.macro_sandbox.function_names
 
   providers = {
     grafana.amg = grafana.amg

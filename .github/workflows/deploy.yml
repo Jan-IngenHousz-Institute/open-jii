@@ -155,3 +155,20 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
     secrets: inherit
+
+  deploy-macro-sandbox:
+    name: Deploy Macro Sandbox
+    needs: [deploy-infrastructure, detect-changes]
+    if: >-
+      always() &&
+      needs.detect-changes.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'macro-sandbox'))
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-macro-sandbox.yml
+    with:
+      environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref || github.sha }}
+    secrets: inherit
