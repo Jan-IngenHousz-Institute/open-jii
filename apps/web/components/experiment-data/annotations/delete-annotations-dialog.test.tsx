@@ -4,6 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api";
 import type { AnnotationType } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 import { DeleteAnnotationsDialog } from "./delete-annotations-dialog";
 
@@ -124,7 +125,6 @@ describe("DeleteAnnotationsDialog", () => {
   });
 
   it("should show toast on successful delete", async () => {
-    const { toast } = await import("@repo/ui/hooks");
     mountDeleteEndpoint();
 
     render(<DeleteAnnotationsDialog {...mockProps} />);

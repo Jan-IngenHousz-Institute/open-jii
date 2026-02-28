@@ -1,14 +1,11 @@
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getContentfulClients } from "~/lib/contentful";
+
+import Page, { generateMetadata } from "./page";
 
 const mockBlogDetail = vi.fn();
-vi.mock("~/lib/contentful", () => ({
-  getContentfulClients: vi.fn().mockResolvedValue({
-    client: { pageBlogDetail: mockBlogDetail },
-    previewClient: { pageBlogDetail: mockBlogDetail },
-  }),
-}));
 
 vi.mock("@repo/cms/article", () => ({
   ArticleHero: ({ article }: { article?: { title?: string } }) => (
@@ -46,13 +43,16 @@ const defaultResult = {
 describe("BlogDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getContentfulClients).mockResolvedValue({
+      client: { pageBlogDetail: mockBlogDetail },
+      previewClient: { pageBlogDetail: mockBlogDetail },
+    } as never);
     mockBlogDetail.mockResolvedValue(defaultResult);
   });
 
   const params = { params: Promise.resolve({ locale: "en-US", slug: "test-post" }) };
 
   it("generates metadata with SEO fields and alternates", async () => {
-    const { generateMetadata } = await import("./page");
     const metadata = await generateMetadata(params);
     expect(metadata.title).toBe("SEO Title");
     expect(metadata.description).toBe("SEO Desc");
@@ -64,13 +64,11 @@ describe("BlogDetailPage", () => {
       pageBlogPostCollection: { items: [] },
       pageLandingCollection: { items: [{}] },
     });
-    const { default: Page } = await import("./page");
     await Page(params).catch(() => undefined);
     expect(notFound).toHaveBeenCalled();
   });
 
   it("renders article hero and content", async () => {
-    const { default: Page } = await import("./page");
     const ui = await Page(params);
     render(ui);
     expect(screen.getByRole("region", { name: /article hero/i })).toHaveTextContent("Test Post");
@@ -78,7 +76,6 @@ describe("BlogDetailPage", () => {
   });
 
   it("shows related posts when available", async () => {
-    const { default: Page } = await import("./page");
     const ui = await Page(params);
     render(ui);
     expect(screen.getByRole("region", { name: /related posts/i })).toHaveTextContent("1 posts");
@@ -91,7 +88,6 @@ describe("BlogDetailPage", () => {
       },
       pageLandingCollection: { items: [{}] },
     });
-    const { default: Page } = await import("./page");
     const ui = await Page(params);
     render(ui);
     expect(screen.queryByRole("region", { name: /related posts/i })).not.toBeInTheDocument();

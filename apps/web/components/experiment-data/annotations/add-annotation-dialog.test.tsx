@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 import type { AnnotationType } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 import { AddAnnotationDialog } from "./add-annotation-dialog";
 
@@ -125,7 +126,6 @@ describe("AddAnnotationDialog", () => {
       screen.getByRole("button", { name: "experimentDataAnnotations.commentDialogBulk.add" }),
     );
 
-    const { toast } = await import("@repo/ui/hooks");
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({ description: "experimentDataAnnotations.updated" });
       expect(defaultProps.setOpen).toHaveBeenCalledWith(false);
