@@ -8,6 +8,14 @@ import { contract } from "@repo/api";
 import { useProtocol } from "./useProtocol";
 
 describe("useProtocol", () => {
+  it("does not fetch when protocolId is empty", () => {
+    const { result } = renderHook(() => useProtocol(""));
+
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
   it("returns protocol data", async () => {
     const protocol = createProtocol({ id: "protocol-123" });
     server.mount(contract.protocols.getProtocol, { body: protocol });

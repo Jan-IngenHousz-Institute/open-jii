@@ -24,8 +24,7 @@ export const useExperimentDataUpload = () => {
         );
       }
     },
-    onSuccess: async (data) => {
-      console.log("Upload success response:", data);
+    onSuccess: async () => {
       // Invalidate experiment data queries to refresh data after upload
       await queryClient.invalidateQueries({
         queryKey: ["experiment"],

@@ -1,8 +1,5 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { useForm } from "react-hook-form";
+import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import { Form } from "@repo/ui/components";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartTypeStep } from "./chart-type-step";
@@ -31,29 +28,13 @@ describe("ChartTypeStep", () => {
     onPreviewClose: mockOnPreviewClose,
   };
 
-  const TestWrapper = ({
-    defaultValues,
-    ...stepProps
-  }: {
-    defaultValues?: Partial<ChartFormValues>;
-  } & typeof defaultProps) => {
-    const form = useForm<ChartFormValues>({
-      defaultValues: {
-        name: "",
-        description: "",
-        chartFamily: "basic",
-        chartType: "line",
-        dataConfig: {
-          tableName: "",
-          dataSources: [],
-        },
-        config: {},
-        ...defaultValues,
-      } as ChartFormValues,
-    });
-
-    return (
-      <Form {...form}>
+  function renderChartTypeStep(
+    opts: { defaultValues?: Partial<ChartFormValues> } & Partial<typeof defaultProps> = {},
+  ) {
+    const { defaultValues, ...stepPropOverrides } = opts;
+    const stepProps = { ...defaultProps, ...stepPropOverrides };
+    return renderWithForm<ChartFormValues>(
+      (form) => (
         <ChartTypeStep
           form={form}
           step={{
@@ -64,9 +45,25 @@ describe("ChartTypeStep", () => {
           }}
           {...stepProps}
         />
-      </Form>
+      ),
+      {
+        useFormProps: {
+          defaultValues: {
+            name: "",
+            description: "",
+            chartFamily: "basic",
+            chartType: "line",
+            dataConfig: {
+              tableName: "",
+              dataSources: [],
+            },
+            config: {},
+            ...defaultValues,
+          } as ChartFormValues,
+        },
+      },
     );
-  };
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -74,7 +71,7 @@ describe("ChartTypeStep", () => {
 
   describe("Rendering", () => {
     it("should render the chart type selection form", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       expect(screen.getByText("wizard.steps.chartType.title")).toBeInTheDocument();
       expect(screen.getByText("wizard.steps.chartType.description")).toBeInTheDocument();
@@ -82,28 +79,28 @@ describe("ChartTypeStep", () => {
     });
 
     it("should render line chart option", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       expect(screen.getByText("charts.types.line")).toBeInTheDocument();
       expect(screen.getByLabelText("charts.types.line")).toBeInTheDocument();
     });
 
     it("should render scatter chart option", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       expect(screen.getByText("charts.types.scatter")).toBeInTheDocument();
       expect(screen.getByLabelText("charts.types.scatter")).toBeInTheDocument();
     });
 
     it("should render wizard step buttons", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       expect(screen.getByRole("button", { name: "experiments.back" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "experiments.next" })).toBeInTheDocument();
     });
 
     it("should render chart preview modal", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       expect(screen.getByTestId("chart-preview-modal")).toBeInTheDocument();
     });
@@ -111,7 +108,7 @@ describe("ChartTypeStep", () => {
 
   describe("Chart Type Selection", () => {
     it("should show line chart as selected by default", () => {
-      render(<TestWrapper {...defaultProps} defaultValues={{ chartType: "line" }} />);
+      renderChartTypeStep({ defaultValues: { chartType: "line" } });
 
       const lineChartOption = screen.getByLabelText("charts.types.line");
       expect(lineChartOption).toHaveClass("border-primary");
@@ -119,7 +116,7 @@ describe("ChartTypeStep", () => {
 
     it("should allow selecting scatter chart", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       const scatterChartOption = screen.getByLabelText("charts.types.scatter");
       await user.click(scatterChartOption);
@@ -129,7 +126,7 @@ describe("ChartTypeStep", () => {
 
     it("should update chart config when selecting a different chart type", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper {...defaultProps} defaultValues={{ chartType: "line" }} />);
+      renderChartTypeStep({ defaultValues: { chartType: "line" } });
 
       // Verify line is initially selected
       expect(screen.getByLabelText("charts.types.line")).toHaveClass("border-primary");
@@ -143,38 +140,7 @@ describe("ChartTypeStep", () => {
 
     it("should update form values when selecting chart type", async () => {
       const user = userEvent.setup();
-      const TestWrapperWithSpy = () => {
-        const form = useForm<ChartFormValues>({
-          defaultValues: {
-            name: "",
-            description: "",
-            chartFamily: "basic",
-            chartType: "line",
-            dataConfig: {
-              tableName: "",
-              dataSources: [],
-            },
-            config: {},
-          } as ChartFormValues,
-        });
-
-        return (
-          <Form {...form}>
-            <ChartTypeStep
-              form={form}
-              step={{
-                title: "Chart Type",
-                description: "Select chart type",
-                validationSchema: {} as never,
-                component: () => null,
-              }}
-              {...defaultProps}
-            />
-          </Form>
-        );
-      };
-
-      render(<TestWrapperWithSpy />);
+      renderChartTypeStep();
 
       const scatterChartOption = screen.getByLabelText("charts.types.scatter");
       await user.click(scatterChartOption);
@@ -185,7 +151,7 @@ describe("ChartTypeStep", () => {
 
     it("should highlight selected chart type", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper {...defaultProps} defaultValues={{ chartType: "line" }} />);
+      renderChartTypeStep({ defaultValues: { chartType: "line" } });
 
       const lineLabel = screen.getByLabelText("charts.types.line");
       const scatterLabel = screen.getByLabelText("charts.types.scatter");
@@ -203,14 +169,14 @@ describe("ChartTypeStep", () => {
 
   describe("Wizard Navigation", () => {
     it("should enable previous button on second step", () => {
-      render(<TestWrapper {...defaultProps} stepIndex={1} />);
+      renderChartTypeStep({ stepIndex: 1 });
 
       const previousButton = screen.getByRole("button", { name: "experiments.back" });
       expect(previousButton).not.toBeDisabled();
     });
 
     it("should show next button when not on last step", () => {
-      render(<TestWrapper {...defaultProps} stepIndex={1} totalSteps={4} />);
+      renderChartTypeStep({ stepIndex: 1, totalSteps: 4 });
 
       const nextButton = screen.getByRole("button", { name: "experiments.next" });
       expect(nextButton).toBeInTheDocument();
@@ -218,7 +184,7 @@ describe("ChartTypeStep", () => {
     });
 
     it("should disable buttons when submitting", () => {
-      render(<TestWrapper {...defaultProps} isSubmitting={true} />);
+      renderChartTypeStep({ isSubmitting: true });
 
       const previousButton = screen.getByRole("button", { name: "experiments.back" });
       const nextButton = screen.getByRole("button", { name: "experiments.next" });
@@ -230,14 +196,14 @@ describe("ChartTypeStep", () => {
 
   describe("Chart Preview Modal", () => {
     it("should show preview modal as closed by default", () => {
-      render(<TestWrapper {...defaultProps} isPreviewOpen={false} />);
+      renderChartTypeStep({ isPreviewOpen: false });
 
       const modal = screen.getByTestId("chart-preview-modal");
       expect(modal).toHaveTextContent("Closed");
     });
 
     it("should show preview modal as open when isPreviewOpen is true", () => {
-      render(<TestWrapper {...defaultProps} isPreviewOpen={true} />);
+      renderChartTypeStep({ isPreviewOpen: true });
 
       const modal = screen.getByTestId("chart-preview-modal");
       expect(modal).toHaveTextContent("Open");
@@ -246,14 +212,14 @@ describe("ChartTypeStep", () => {
 
   describe("Initial State", () => {
     it("should preserve chartType from form values", () => {
-      render(<TestWrapper {...defaultProps} defaultValues={{ chartType: "scatter" }} />);
+      renderChartTypeStep({ defaultValues: { chartType: "scatter" } });
 
       const scatterLabel = screen.getByLabelText("charts.types.scatter");
       expect(scatterLabel).toHaveClass("border-primary");
     });
 
     it("should default to line chart when not specified", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       const lineLabel = screen.getByLabelText("charts.types.line");
       expect(lineLabel).toHaveClass("border-primary");
@@ -262,14 +228,14 @@ describe("ChartTypeStep", () => {
 
   describe("Chart Family", () => {
     it("should display basic chart family label", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       expect(screen.getByText("charts.families.basic")).toBeInTheDocument();
     });
 
     it("should set chartFamily to basic when selecting any chart type", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       const scatterOption = screen.getByLabelText("charts.types.scatter");
       await user.click(scatterOption);
@@ -281,7 +247,7 @@ describe("ChartTypeStep", () => {
 
   describe("Icons", () => {
     it("should render chart type icons", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderChartTypeStep();
 
       // Check that both chart type options are rendered with their labels
       expect(screen.getByText("charts.types.line")).toBeInTheDocument();

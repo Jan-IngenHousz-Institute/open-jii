@@ -1,14 +1,10 @@
-import { render, screen, userEvent, within } from "@/test/test-utils";
-import { FormProvider, useForm } from "react-hook-form";
+import { renderWithForm, screen, userEvent, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import ColorDimensionConfiguration from "./color-dimension-configuration";
-
-HTMLElement.prototype.hasPointerCapture = vi.fn();
-HTMLElement.prototype.scrollIntoView = vi.fn();
 
 // Sample table data
 const mockColumns = [
@@ -18,108 +14,100 @@ const mockColumns = [
   { name: "location", type_name: "VARCHAR", type_text: "VARCHAR" },
 ];
 
-// Test wrapper component
-function TestWrapper({
-  defaultValues,
-  columns = mockColumns,
-  colorAxisDataSources = [],
-  onAppendDataSource = vi.fn(),
-  onRemoveDataSource = vi.fn(),
-}: {
-  defaultValues?: Partial<ChartFormValues>;
-  columns?: DataColumn[];
-  colorAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
-  onAppendDataSource?: (dataSource: {
-    tableName: string;
-    columnName: string;
-    role: string;
-    alias: string;
-  }) => void;
-  onRemoveDataSource?: (index: number) => void;
-}) {
-  const methods = useForm<ChartFormValues>({
-    defaultValues: {
-      name: "",
-      chartFamily: "basic",
-      chartType: "scatter",
-      dataConfig: { tableName: "test-table" },
-      config: {
-        title: "",
-        showlegend: true,
-        gridlines: { x: true, y: true },
-        xaxis: { title: { text: "" }, type: "linear" },
-        yaxis: { title: { text: "" }, type: "linear" },
-        marker: {
-          colorscale: (defaultValues?.config?.marker?.colorscale as string) || "Viridis",
-          showscale: defaultValues?.config?.marker?.showscale ?? true,
-          colorbar: {
-            title: {
-              side: defaultValues?.config?.marker?.colorbar?.title?.side ?? "right",
-              text: defaultValues?.config?.marker?.colorbar?.title?.text ?? "",
+function renderColorDimension(
+  opts: {
+    defaultValues?: Partial<ChartFormValues>;
+    columns?: DataColumn[];
+    colorAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
+    onAppendDataSource?: (dataSource: {
+      tableName: string;
+      columnName: string;
+      role: string;
+      alias: string;
+    }) => void;
+    onRemoveDataSource?: (index: number) => void;
+  } = {},
+) {
+  return renderWithForm<ChartFormValues>(
+    (form) => (
+      <ColorDimensionConfiguration
+        form={form}
+        columns={opts.columns ?? mockColumns}
+        colorAxisDataSources={opts.colorAxisDataSources ?? []}
+        appendDataSource={opts.onAppendDataSource ?? vi.fn()}
+        removeDataSource={opts.onRemoveDataSource ?? vi.fn()}
+      />
+    ),
+    {
+      useFormProps: {
+        defaultValues: {
+          name: "",
+          chartFamily: "basic",
+          chartType: "scatter",
+          dataConfig: { tableName: "test-table" },
+          config: {
+            title: "",
+            showlegend: true,
+            gridlines: { x: true, y: true },
+            xaxis: { title: { text: "" }, type: "linear" },
+            yaxis: { title: { text: "" }, type: "linear" },
+            marker: {
+              colorscale: (opts.defaultValues?.config?.marker?.colorscale as string) || "Viridis",
+              showscale: opts.defaultValues?.config?.marker?.showscale ?? true,
+              colorbar: {
+                title: {
+                  side: opts.defaultValues?.config?.marker?.colorbar?.title?.side ?? "right",
+                  text: opts.defaultValues?.config?.marker?.colorbar?.title?.text ?? "",
+                },
+              },
             },
           },
-        },
+          ...opts.defaultValues,
+        } as ChartFormValues,
       },
-      ...defaultValues,
-    } as ChartFormValues,
-  });
-
-  return (
-    <FormProvider {...methods}>
-      <ColorDimensionConfiguration
-        form={methods}
-        columns={columns}
-        colorAxisDataSources={colorAxisDataSources}
-        appendDataSource={onAppendDataSource}
-        removeDataSource={onRemoveDataSource}
-      />
-    </FormProvider>
+    },
   );
 }
 
 describe("ColorDimensionConfiguration", () => {
   describe("Rendering", () => {
     it("should render section header", () => {
-      render(<TestWrapper />);
+      renderColorDimension();
 
       expect(screen.getByText("configuration.color.dimensionConfig")).toBeInTheDocument();
     });
 
     it("should render color column select", () => {
-      render(<TestWrapper />);
+      renderColorDimension();
 
       expect(screen.getByText("configuration.columns.color")).toBeInTheDocument();
     });
 
     it("should not show colorbar checkbox when no color column selected", () => {
-      render(<TestWrapper />);
+      renderColorDimension();
 
       expect(screen.queryByText("configuration.chart.showColorbar")).not.toBeInTheDocument();
     });
 
     it("should not show color configuration when no color column selected", () => {
-      render(<TestWrapper />);
+      renderColorDimension();
 
       expect(screen.queryByText("configuration.color.scale")).not.toBeInTheDocument();
       expect(screen.queryByText("configuration.axes.titlePosition")).not.toBeInTheDocument();
     });
 
     it("should show colorbar checkbox when color column is selected", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       expect(screen.getByText("configuration.chart.showColorbar")).toBeInTheDocument();
     });
 
     it("should show color configuration when color column is selected", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       expect(screen.getByText("configuration.color.scale")).toBeInTheDocument();
       expect(screen.getByText("configuration.axes.title")).toBeInTheDocument();
@@ -131,7 +119,7 @@ describe("ColorDimensionConfiguration", () => {
   describe("Color Column Select", () => {
     it("should show all available columns when color select is opened", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderColorDimension();
 
       const colorSelect = screen.getByRole("combobox");
       await user.click(colorSelect);
@@ -145,7 +133,7 @@ describe("ColorDimensionConfiguration", () => {
 
     it("should display column type badges in dropdown", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderColorDimension();
 
       const colorSelect = screen.getByRole("combobox");
       await user.click(colorSelect);
@@ -157,12 +145,10 @@ describe("ColorDimensionConfiguration", () => {
     it("should call removeDataSource when changing color column", async () => {
       const user = userEvent.setup();
       const removeDataSource = vi.fn();
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-          onRemoveDataSource={removeDataSource}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+        onRemoveDataSource: removeDataSource,
+      });
 
       const colorSelects = screen.getAllByRole("combobox");
       const colorSelect = colorSelects[0]; // First combobox is the color select
@@ -175,7 +161,7 @@ describe("ColorDimensionConfiguration", () => {
     it("should call appendDataSource when selecting a column", async () => {
       const user = userEvent.setup();
       const appendDataSource = vi.fn();
-      render(<TestWrapper onAppendDataSource={appendDataSource} />);
+      renderColorDimension({ onAppendDataSource: appendDataSource });
 
       const colorSelect = screen.getByRole("combobox");
       await user.click(colorSelect);
@@ -193,13 +179,11 @@ describe("ColorDimensionConfiguration", () => {
       const user = userEvent.setup();
       const removeDataSource = vi.fn();
       const appendDataSource = vi.fn();
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-          onAppendDataSource={appendDataSource}
-          onRemoveDataSource={removeDataSource}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+        onAppendDataSource: appendDataSource,
+        onRemoveDataSource: removeDataSource,
+      });
 
       const colorSelects = screen.getAllByRole("combobox");
       const colorSelect = colorSelects[0]; // First combobox is the color select
@@ -213,22 +197,18 @@ describe("ColorDimensionConfiguration", () => {
 
   describe("Colorscale Select", () => {
     it("should render colorscale select when color is configured", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       expect(screen.getByText("configuration.color.scale")).toBeInTheDocument();
     });
 
     it("should show all 18 colorscale options when opened", async () => {
       const user = userEvent.setup();
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       const colorscaleSelects = screen.getAllByRole("combobox");
       const colorscaleSelect = colorscaleSelects[1]; // Second combobox is colorscale
@@ -259,11 +239,9 @@ describe("ColorDimensionConfiguration", () => {
 
     it("should display gradient preview for each colorscale option", async () => {
       const user = userEvent.setup();
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       const colorscaleSelects = screen.getAllByRole("combobox");
       const colorscaleSelect = colorscaleSelects[1];
@@ -280,11 +258,9 @@ describe("ColorDimensionConfiguration", () => {
 
   describe("Color Axis Title Input", () => {
     it("should render color axis title input when color is configured", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       expect(
         screen.getByPlaceholderText("configuration.chart.enterColorAxisTitle"),
@@ -293,11 +269,9 @@ describe("ColorDimensionConfiguration", () => {
 
     it("should allow typing in color axis title input", async () => {
       const user = userEvent.setup();
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       const titleInput = screen.getByPlaceholderText("configuration.chart.enterColorAxisTitle");
       await user.type(titleInput, "Temperature (°C)");
@@ -308,22 +282,18 @@ describe("ColorDimensionConfiguration", () => {
 
   describe("Position Select", () => {
     it("should render position select when color is configured", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       expect(screen.getByText("configuration.axes.titlePosition")).toBeInTheDocument();
     });
 
     it("should show position options when opened", async () => {
       const user = userEvent.setup();
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       const positionSelects = screen.getAllByRole("combobox");
       const positionSelect = positionSelects[2]; // Third combobox is position
@@ -337,11 +307,9 @@ describe("ColorDimensionConfiguration", () => {
 
   describe("Show Colorbar Checkbox", () => {
     it("should render showscale checkbox when color is configured", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       const checkbox = screen.getByRole("checkbox");
       expect(checkbox).toBeInTheDocument();
@@ -349,11 +317,9 @@ describe("ColorDimensionConfiguration", () => {
 
     it("should toggle showscale checkbox", async () => {
       const user = userEvent.setup();
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       const checkbox = screen.getByRole("checkbox");
       expect(checkbox).toBeChecked();
@@ -368,21 +334,17 @@ describe("ColorDimensionConfiguration", () => {
 
   describe("Color Scale Preview", () => {
     it("should render color scale preview when color is configured", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       expect(screen.getByText("preview.title")).toBeInTheDocument();
     });
 
     it("should display gradient preview bar", () => {
-      const { container } = render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      const { container } = renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       // The preview div has a gradient background - check it exists
       const previewDiv = container.querySelector(".h-6.w-full.rounded.border");
@@ -392,7 +354,7 @@ describe("ColorDimensionConfiguration", () => {
 
   describe("Conditional Rendering", () => {
     it("should hide all color configuration when no color column selected", () => {
-      render(<TestWrapper />);
+      renderColorDimension();
 
       // Only the section header and color column select should be visible
       expect(screen.getByText("configuration.color.dimensionConfig")).toBeInTheDocument();
@@ -407,11 +369,9 @@ describe("ColorDimensionConfiguration", () => {
     });
 
     it("should show all color configuration when color column is selected", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "temperature", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
+      });
 
       // All elements should be visible
       expect(screen.getByText("configuration.color.dimensionConfig")).toBeInTheDocument();
@@ -424,11 +384,9 @@ describe("ColorDimensionConfiguration", () => {
     });
 
     it("should hide colorbar checkbox when color column name is empty", () => {
-      render(
-        <TestWrapper
-          colorAxisDataSources={[{ field: { columnName: "", role: "color" }, index: 0 }]}
-        />,
-      );
+      renderColorDimension({
+        colorAxisDataSources: [{ field: { columnName: "", role: "color" }, index: 0 }],
+      });
 
       expect(screen.queryByText("configuration.chart.showColorbar")).not.toBeInTheDocument();
     });

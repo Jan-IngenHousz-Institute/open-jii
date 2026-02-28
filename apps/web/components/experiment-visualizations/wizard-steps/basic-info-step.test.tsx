@@ -1,8 +1,5 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { useForm } from "react-hook-form";
+import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import { Form } from "@repo/ui/components";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { BasicInfoStep } from "./basic-info-step";
@@ -30,24 +27,13 @@ describe("BasicInfoStep", () => {
     onPreviewClose: mockOnPreviewClose,
   };
 
-  const TestWrapper = ({
-    defaultValues,
-    ...stepProps
-  }: {
-    defaultValues?: Partial<ChartFormValues>;
-  } & typeof defaultProps) => {
-    const form = useForm<ChartFormValues>({
-      defaultValues: {
-        name: "",
-        description: "",
-        chartFamily: "basic",
-        chartType: "line",
-        ...defaultValues,
-      } as ChartFormValues,
-    });
-
-    return (
-      <Form {...form}>
+  function renderBasicInfoStep(
+    opts: { defaultValues?: Partial<ChartFormValues> } & Partial<typeof defaultProps> = {},
+  ) {
+    const { defaultValues, ...stepPropOverrides } = opts;
+    const stepProps = { ...defaultProps, ...stepPropOverrides };
+    return renderWithForm<ChartFormValues>(
+      (form) => (
         <BasicInfoStep
           form={form}
           step={{
@@ -58,9 +44,20 @@ describe("BasicInfoStep", () => {
           }}
           {...stepProps}
         />
-      </Form>
+      ),
+      {
+        useFormProps: {
+          defaultValues: {
+            name: "",
+            description: "",
+            chartFamily: "basic",
+            chartType: "line",
+            ...defaultValues,
+          } as ChartFormValues,
+        },
+      },
     );
-  };
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,7 +65,7 @@ describe("BasicInfoStep", () => {
 
   describe("Rendering", () => {
     it("should render the basic info form fields", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderBasicInfoStep();
 
       expect(screen.getByText("form.details.title")).toBeInTheDocument();
       expect(screen.getByText("form.details.subtitle")).toBeInTheDocument();
@@ -77,7 +74,7 @@ describe("BasicInfoStep", () => {
     });
 
     it("should render name input field with placeholder", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderBasicInfoStep();
 
       const nameInput = screen.getByPlaceholderText("form.details.namePlaceholder");
       expect(nameInput).toBeInTheDocument();
@@ -85,7 +82,7 @@ describe("BasicInfoStep", () => {
     });
 
     it("should render description textarea with placeholder and help text", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderBasicInfoStep();
 
       const descriptionTextarea = screen.getByPlaceholderText(
         "form.details.descriptionPlaceholder",
@@ -96,14 +93,14 @@ describe("BasicInfoStep", () => {
     });
 
     it("should render wizard step buttons", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderBasicInfoStep();
 
       expect(screen.getByRole("button", { name: "experiments.back" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "experiments.next" })).toBeInTheDocument();
     });
 
     it("should render chart preview modal component", () => {
-      render(<TestWrapper {...defaultProps} />);
+      renderBasicInfoStep();
 
       expect(screen.getByTestId("chart-preview-modal")).toBeInTheDocument();
     });
@@ -112,7 +109,7 @@ describe("BasicInfoStep", () => {
   describe("Form Interaction", () => {
     it("should allow typing in the name field", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper {...defaultProps} />);
+      renderBasicInfoStep();
 
       const nameInput = screen.getByPlaceholderText("form.details.namePlaceholder");
       await user.type(nameInput, "My Visualization");
@@ -122,7 +119,7 @@ describe("BasicInfoStep", () => {
 
     it("should allow typing in the description field", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper {...defaultProps} />);
+      renderBasicInfoStep();
 
       const descriptionTextarea = screen.getByPlaceholderText(
         "form.details.descriptionPlaceholder",
@@ -133,15 +130,12 @@ describe("BasicInfoStep", () => {
     });
 
     it("should display pre-filled values when provided", () => {
-      render(
-        <TestWrapper
-          {...defaultProps}
-          defaultValues={{
-            name: "Existing Name",
-            description: "Existing Description",
-          }}
-        />,
-      );
+      renderBasicInfoStep({
+        defaultValues: {
+          name: "Existing Name",
+          description: "Existing Description",
+        },
+      });
 
       const nameInput = screen.getByPlaceholderText("form.details.namePlaceholder");
       const descriptionTextarea = screen.getByPlaceholderText(
@@ -155,35 +149,35 @@ describe("BasicInfoStep", () => {
 
   describe("Wizard Navigation", () => {
     it("should disable previous button on first step", () => {
-      render(<TestWrapper {...defaultProps} stepIndex={0} />);
+      renderBasicInfoStep({ stepIndex: 0 });
 
       const previousButton = screen.getByRole("button", { name: "experiments.back" });
       expect(previousButton).toBeDisabled();
     });
 
     it("should enable previous button on later steps", () => {
-      render(<TestWrapper {...defaultProps} stepIndex={1} />);
+      renderBasicInfoStep({ stepIndex: 1 });
 
       const previousButton = screen.getByRole("button", { name: "experiments.back" });
       expect(previousButton).not.toBeDisabled();
     });
 
     it("should show next button when not on last step", () => {
-      render(<TestWrapper {...defaultProps} stepIndex={0} totalSteps={4} />);
+      renderBasicInfoStep({ stepIndex: 0, totalSteps: 4 });
 
       const nextButton = screen.getByRole("button", { name: "experiments.next" });
       expect(nextButton).toBeInTheDocument();
     });
 
     it("should show submit button on last step", () => {
-      render(<TestWrapper {...defaultProps} stepIndex={3} totalSteps={4} />);
+      renderBasicInfoStep({ stepIndex: 3, totalSteps: 4 });
 
       const submitButton = screen.getByRole("button", { name: "common.create" });
       expect(submitButton).toBeInTheDocument();
     });
 
     it("should disable buttons when submitting", () => {
-      render(<TestWrapper {...defaultProps} isSubmitting={true} />);
+      renderBasicInfoStep({ isSubmitting: true });
 
       const previousButton = screen.getByRole("button", { name: "experiments.back" });
       const nextButton = screen.getByRole("button", { name: "experiments.next" });
@@ -195,14 +189,14 @@ describe("BasicInfoStep", () => {
 
   describe("Chart Preview Modal", () => {
     it("should show preview modal as closed by default", () => {
-      render(<TestWrapper {...defaultProps} isPreviewOpen={false} />);
+      renderBasicInfoStep({ isPreviewOpen: false });
 
       const modal = screen.getByTestId("chart-preview-modal");
       expect(modal).toHaveTextContent("Closed");
     });
 
     it("should show preview modal as open when isPreviewOpen is true", () => {
-      render(<TestWrapper {...defaultProps} isPreviewOpen={true} />);
+      renderBasicInfoStep({ isPreviewOpen: true });
 
       const modal = screen.getByTestId("chart-preview-modal");
       expect(modal).toHaveTextContent("Open");
@@ -211,7 +205,7 @@ describe("BasicInfoStep", () => {
 
   describe("Step Props", () => {
     it("should pass correct props to WizardStepButtons", () => {
-      render(<TestWrapper {...defaultProps} stepIndex={2} totalSteps={5} isSubmitting={true} />);
+      renderBasicInfoStep({ stepIndex: 2, totalSteps: 5, isSubmitting: true });
 
       // Verify step navigation behavior
       const previousButton = screen.getByRole("button", { name: "experiments.back" });
@@ -224,7 +218,7 @@ describe("BasicInfoStep", () => {
     });
 
     it("should pass experimentId to ChartPreviewModal", () => {
-      render(<TestWrapper {...defaultProps} experimentId="test-exp-456" />);
+      renderBasicInfoStep({ experimentId: "test-exp-456" });
 
       // Modal should be rendered (we can't easily test the prop without inspecting)
       expect(screen.getByTestId("chart-preview-modal")).toBeInTheDocument();

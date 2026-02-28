@@ -1,5 +1,4 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { FormProvider, useForm } from "react-hook-form";
+import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
@@ -9,77 +8,37 @@ vi.mock("../../shared/display-options-section", () => ({
   default: vi.fn(() => <div data-testid="display-options-section">Display Options</div>),
 }));
 
-HTMLElement.prototype.hasPointerCapture = () => false;
-HTMLElement.prototype.scrollIntoView = () => {
-  // noop
+const defaultConfig = {
+  mode: "markers",
+  marker: { size: 6, symbol: "circle" },
 };
+
+function renderScatterAppearance(config: Record<string, unknown> = defaultConfig) {
+  return renderWithForm<ChartFormValues>(
+    (form) => <ScatterChartAppearanceConfigurator form={form} />,
+    {
+      useFormProps: {
+        defaultValues: { config } as ChartFormValues,
+      },
+    },
+  );
+}
 
 describe("ScatterChartAppearanceConfigurator", () => {
   it("should render display options section", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     expect(screen.getByTestId("display-options-section")).toBeInTheDocument();
   });
 
   it("should render scatter chart options section header", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     expect(screen.getByText(/scatterChartOptions/i)).toBeInTheDocument();
   });
 
   it("should render mode select field", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     const comboboxes = screen.getAllByRole("combobox");
     expect(comboboxes.length).toBeGreaterThanOrEqual(1);
@@ -87,24 +46,7 @@ describe("ScatterChartAppearanceConfigurator", () => {
   });
 
   it("should display selected mode value", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "lines+markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance({ mode: "lines+markers", marker: { size: 6, symbol: "circle" } });
 
     expect(screen.getByText(/linesMarkers/i)).toBeInTheDocument();
   });
@@ -112,25 +54,15 @@ describe("ScatterChartAppearanceConfigurator", () => {
   it("should allow changing mode value", async () => {
     const user = userEvent.setup();
 
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
+    renderWithForm<ChartFormValues>(
+      (form) => (
+        <>
           <ScatterChartAppearanceConfigurator form={form} />
           <div data-testid="current-mode">{form.watch("config.mode")}</div>
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+        </>
+      ),
+      { useFormProps: { defaultValues: { config: defaultConfig } as ChartFormValues } },
+    );
 
     expect(screen.getByTestId("current-mode")).toHaveTextContent("markers");
 
@@ -144,24 +76,7 @@ describe("ScatterChartAppearanceConfigurator", () => {
   it("should render mode options", async () => {
     const user = userEvent.setup();
 
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     const comboboxes = screen.getAllByRole("combobox");
     await user.click(comboboxes[0]);
@@ -173,71 +88,20 @@ describe("ScatterChartAppearanceConfigurator", () => {
   });
 
   it("should render marker size slider", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     expect(screen.getByText(/markerSize/i)).toBeInTheDocument();
     expect(screen.getByRole("slider")).toBeInTheDocument();
   });
 
   it("should display marker size badge", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 10, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance({ mode: "markers", marker: { size: 10, symbol: "circle" } });
 
     expect(screen.getByText("10px")).toBeInTheDocument();
   });
 
   it("should have correct slider attributes", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     const slider = screen.getByRole("slider");
     expect(slider).toHaveAttribute("aria-valuemin", "1");
@@ -246,24 +110,7 @@ describe("ScatterChartAppearanceConfigurator", () => {
   });
 
   it("should render marker shape select field", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     expect(screen.getByText(/markerShape/i)).toBeInTheDocument();
     const comboboxes = screen.getAllByRole("combobox");
@@ -271,24 +118,7 @@ describe("ScatterChartAppearanceConfigurator", () => {
   });
 
   it("should display selected marker shape", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "square" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance({ mode: "markers", marker: { size: 6, symbol: "square" } });
 
     expect(screen.getByText(/markerSymbols\.square/i)).toBeInTheDocument();
   });
@@ -296,25 +126,15 @@ describe("ScatterChartAppearanceConfigurator", () => {
   it("should allow changing marker shape", async () => {
     const user = userEvent.setup();
 
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
+    renderWithForm<ChartFormValues>(
+      (form) => (
+        <>
           <ScatterChartAppearanceConfigurator form={form} />
           <div data-testid="current-symbol">{form.watch("config.marker.symbol")}</div>
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+        </>
+      ),
+      { useFormProps: { defaultValues: { config: defaultConfig } as ChartFormValues } },
+    );
 
     expect(screen.getByTestId("current-symbol")).toHaveTextContent("circle");
 
@@ -328,24 +148,7 @@ describe("ScatterChartAppearanceConfigurator", () => {
   it("should render all marker shape options", async () => {
     const user = userEvent.setup();
 
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     const comboboxes = screen.getAllByRole("combobox");
     await user.click(comboboxes[1]); // Second combobox is marker shape
@@ -361,93 +164,25 @@ describe("ScatterChartAppearanceConfigurator", () => {
   });
 
   it("should display default marker size of 6px", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     expect(screen.getByText("6px")).toBeInTheDocument();
   });
 
   it("should display minimum marker size of 1px", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 1, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance({ mode: "markers", marker: { size: 1, symbol: "circle" } });
 
     expect(screen.getByText("1px")).toBeInTheDocument();
   });
 
   it("should display maximum marker size of 20px", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 20, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance({ mode: "markers", marker: { size: 20, symbol: "circle" } });
 
     expect(screen.getByText("20px")).toBeInTheDocument();
   });
 
   it("should display default marker shape as circle", () => {
-    function TestComponent() {
-      const form = useForm<ChartFormValues>({
-        defaultValues: {
-          config: {
-            mode: "markers",
-            marker: { size: 6, symbol: "circle" },
-          },
-        },
-      });
-
-      return (
-        <FormProvider {...form}>
-          <ScatterChartAppearanceConfigurator form={form} />
-        </FormProvider>
-      );
-    }
-
-    render(<TestComponent />);
+    renderScatterAppearance();
 
     expect(screen.getByText(/markerSymbols\.circle/i)).toBeInTheDocument();
   });

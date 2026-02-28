@@ -54,6 +54,8 @@ vi.mock("@repo/i18n", () => ({
     t: (key: string) => key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
+  Trans: ({ i18nKey, children }: { i18nKey?: string; children?: unknown }) =>
+    children ?? i18nKey ?? null,
   defaultLocale: "en-US",
   locales: ["en-US"],
   namespaces: ["common", "questionCard", "registration", "settings", "experiments"],
@@ -73,6 +75,8 @@ vi.mock("@repo/i18n/client", () => ({
     t: (key: string) => key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
+  Trans: ({ i18nKey, children }: { i18nKey?: string; children?: unknown }) =>
+    children ?? i18nKey ?? null,
 }));
 
 const initTranslationsMock = vi.fn().mockResolvedValue({

@@ -1,16 +1,10 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { FormProvider, useForm } from "react-hook-form";
+import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import type { DataColumn } from "@repo/api";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import XAxisConfiguration from "./x-axis-configuration";
-
-HTMLElement.prototype.hasPointerCapture = () => false;
-HTMLElement.prototype.scrollIntoView = () => {
-  // noop
-};
 
 // Mock table data
 const mockColumns: DataColumn[] = [
@@ -20,59 +14,61 @@ const mockColumns: DataColumn[] = [
   { name: "pressure", type_name: "INT", type_text: "INT" },
 ];
 
-// Test wrapper component with form context
-function TestWrapper({
-  defaultValues,
-  columns = mockColumns,
-  xAxisDataSources,
-}: {
-  defaultValues?: Partial<ChartFormValues>;
-  columns?: DataColumn[];
-  xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
-}) {
-  const methods = useForm<ChartFormValues>({
-    defaultValues: {
-      name: "",
-      chartFamily: "basic",
-      chartType: "line",
-      config: {
-        xAxisTitle: defaultValues?.config?.xAxisTitle ?? "",
-        xAxisType: defaultValues?.config?.xAxisType ?? "linear",
+function renderXAxisConfig(
+  opts: {
+    defaultValues?: Partial<ChartFormValues>;
+    columns?: DataColumn[];
+    xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
+  } = {},
+) {
+  return renderWithForm<ChartFormValues>(
+    (form) => (
+      <XAxisConfiguration
+        form={form}
+        columns={opts.columns ?? mockColumns}
+        xAxisDataSources={opts.xAxisDataSources}
+      />
+    ),
+    {
+      useFormProps: {
+        defaultValues: {
+          name: "",
+          chartFamily: "basic",
+          chartType: "line",
+          config: {
+            xAxisTitle: opts.defaultValues?.config?.xAxisTitle ?? "",
+            xAxisType: opts.defaultValues?.config?.xAxisType ?? "linear",
+          },
+          dataConfig: {
+            tableName: opts.defaultValues?.dataConfig?.tableName ?? "test-table",
+            dataSources: opts.defaultValues?.dataConfig?.dataSources ?? [
+              { tableName: "test-table", columnName: "", role: "x-axis", alias: "" },
+            ],
+          },
+        } as ChartFormValues,
       },
-      dataConfig: {
-        tableName: defaultValues?.dataConfig?.tableName ?? "test-table",
-        dataSources: defaultValues?.dataConfig?.dataSources ?? [
-          { tableName: "test-table", columnName: "", role: "x-axis", alias: "" },
-        ],
-      },
-    } as ChartFormValues,
-  });
-
-  return (
-    <FormProvider {...methods}>
-      <XAxisConfiguration form={methods} columns={columns} xAxisDataSources={xAxisDataSources} />
-    </FormProvider>
+    },
   );
 }
 
 describe("XAxisConfiguration", () => {
   describe("Rendering", () => {
     it("should render X-axis column select field", () => {
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       expect(screen.getByText(/configuration\.columns\.xAxis/i)).toBeInTheDocument();
       expect(screen.getByText(/configuration\.columns\.select/i)).toBeInTheDocument();
     });
 
     it("should render axis title input field", () => {
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       expect(screen.getByText(/configuration\.axes\.title/i)).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/enterAxisTitle/i)).toBeInTheDocument();
     });
 
     it("should render axis type select field", () => {
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const typeLabels = screen.getAllByText(/configuration\.axes\.type/i);
       expect(typeLabels.length).toBeGreaterThanOrEqual(1);
@@ -81,31 +77,29 @@ describe("XAxisConfiguration", () => {
 
   describe("Column Select", () => {
     it("should display placeholder when no column is selected", () => {
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       expect(screen.getByText(/configuration\.columns\.select/i)).toBeInTheDocument();
     });
 
     it("should display selected column value", () => {
-      render(
-        <TestWrapper
-          defaultValues={{
-            dataConfig: {
-              tableName: "test-table",
-              dataSources: [
-                { tableName: "test-table", columnName: "time", role: "x-axis", alias: "" },
-              ],
-            },
-          }}
-        />,
-      );
+      renderXAxisConfig({
+        defaultValues: {
+          dataConfig: {
+            tableName: "test-table",
+            dataSources: [
+              { tableName: "test-table", columnName: "time", role: "x-axis", alias: "" },
+            ],
+          },
+        },
+      });
 
       expect(screen.getByText("time")).toBeInTheDocument();
     });
 
     it("should show all available columns when opened", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const trigger = screen.getByRole("combobox", { name: /xAxis/i });
       await user.click(trigger);
@@ -118,7 +112,7 @@ describe("XAxisConfiguration", () => {
 
     it("should display column type badges", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const trigger = screen.getByRole("combobox", { name: /xAxis/i });
       await user.click(trigger);
@@ -130,7 +124,7 @@ describe("XAxisConfiguration", () => {
 
     it("should allow selecting a column", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const trigger = screen.getByRole("combobox", { name: /xAxis/i });
       await user.click(trigger);
@@ -143,7 +137,7 @@ describe("XAxisConfiguration", () => {
 
     it("should auto-fill axis title when column is selected", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const trigger = screen.getByRole("combobox", { name: /xAxis/i });
       await user.click(trigger);
@@ -157,7 +151,7 @@ describe("XAxisConfiguration", () => {
 
     it("should always update axis title when column changes, even if title exists", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper defaultValues={{ config: { xAxisTitle: "Existing Title" } }} />);
+      renderXAxisConfig({ defaultValues: { config: { xAxisTitle: "Existing Title" } } });
 
       const trigger = screen.getByRole("combobox", { name: /xAxis/i });
       await user.click(trigger);
@@ -172,14 +166,14 @@ describe("XAxisConfiguration", () => {
 
   describe("Axis Title Input", () => {
     it("should display default empty title", () => {
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const input = screen.getByPlaceholderText(/enterAxisTitle/i);
       expect(input).toHaveValue("");
     });
 
     it("should display provided title value", () => {
-      render(<TestWrapper defaultValues={{ config: { xAxisTitle: "Time (seconds)" } }} />);
+      renderXAxisConfig({ defaultValues: { config: { xAxisTitle: "Time (seconds)" } } });
 
       const input = screen.getByPlaceholderText(/enterAxisTitle/i);
       expect(input).toHaveValue("Time (seconds)");
@@ -187,7 +181,7 @@ describe("XAxisConfiguration", () => {
 
     it("should allow typing in title input", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const input = screen.getByPlaceholderText(/enterAxisTitle/i);
       await user.type(input, "Custom Title");
@@ -197,7 +191,7 @@ describe("XAxisConfiguration", () => {
 
     it("should allow clearing title input", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper defaultValues={{ config: { xAxisTitle: "Initial Title" } }} />);
+      renderXAxisConfig({ defaultValues: { config: { xAxisTitle: "Initial Title" } } });
 
       const input = screen.getByPlaceholderText(/enterAxisTitle/i);
       await user.clear(input);
@@ -208,20 +202,20 @@ describe("XAxisConfiguration", () => {
 
   describe("Axis Type Select", () => {
     it("should display default linear type", () => {
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       expect(screen.getByText(/configuration\.axisTypes\.linear/i)).toBeInTheDocument();
     });
 
     it("should display selected axis type", () => {
-      render(<TestWrapper defaultValues={{ config: { xAxisType: "log" } }} />);
+      renderXAxisConfig({ defaultValues: { config: { xAxisType: "log" } } });
 
       expect(screen.getByText(/configuration\.axisTypes\.log/i)).toBeInTheDocument();
     });
 
     it("should show all axis type options when opened", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const triggers = screen.getAllByRole("combobox");
       const typeSelect = triggers.find((trigger) => {
@@ -243,7 +237,7 @@ describe("XAxisConfiguration", () => {
 
     it("should allow changing axis type to log", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const triggers = screen.getAllByRole("combobox");
       const typeSelect = triggers.find((trigger) => trigger.textContent.includes("linear"));
@@ -260,7 +254,7 @@ describe("XAxisConfiguration", () => {
 
     it("should allow changing axis type to date", async () => {
       const user = userEvent.setup();
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       const triggers = screen.getAllByRole("combobox");
       const typeSelect = triggers.find((trigger) => trigger.textContent.includes("linear"));
@@ -278,14 +272,14 @@ describe("XAxisConfiguration", () => {
 
   describe("Layout", () => {
     it("should render fields in a grid layout", () => {
-      const { container } = render(<TestWrapper />);
+      const { container } = renderXAxisConfig();
 
       const grid = container.querySelector(".grid");
       expect(grid).toBeInTheDocument();
     });
 
     it("should have all three fields visible", () => {
-      render(<TestWrapper />);
+      renderXAxisConfig();
 
       // Column select
       expect(screen.getByRole("combobox", { name: /xAxis/i })).toBeInTheDocument();

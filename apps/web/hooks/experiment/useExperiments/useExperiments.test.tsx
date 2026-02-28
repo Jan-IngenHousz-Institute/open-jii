@@ -24,11 +24,10 @@ describe("useExperiments", () => {
     vi.mocked(usePathname).mockReturnValue("/platform/experiments");
     mockSearchParams.get.mockReturnValue(null);
     mockSearchParams.toString.mockReturnValue("");
+    server.mount(contract.experiments.listExperiments, { body: [] });
   });
 
   it("initializes with defaults and fetches experiments", async () => {
-    server.mount(contract.experiments.listExperiments, { body: [] });
-
     const { result } = renderHook(() => useExperiments({}));
     expect(result.current.filter).toBe("member");
     expect(result.current.status).toBeUndefined();

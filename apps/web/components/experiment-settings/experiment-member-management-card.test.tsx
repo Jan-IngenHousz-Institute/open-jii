@@ -76,12 +76,17 @@ function mountAddMember() {
   });
 }
 
+function mountInvitations() {
+  server.mount(contract.users.listInvitations, { body: [] });
+}
+
 function mountRemoveMember() {
   return server.mount(contract.experiments.removeExperimentMember);
 }
 
 describe("ExperimentMemberManagement", () => {
   it("renders loading skeleton", () => {
+    mountInvitations();
     render(
       <ExperimentMemberManagement
         experimentId={experimentId}
@@ -95,6 +100,7 @@ describe("ExperimentMemberManagement", () => {
   });
 
   it("renders error card", () => {
+    mountInvitations();
     render(
       <ExperimentMemberManagement
         experimentId={experimentId}
@@ -108,6 +114,7 @@ describe("ExperimentMemberManagement", () => {
   });
 
   it("renders title, description, and existing members", () => {
+    mountInvitations();
     render(
       <ExperimentMemberManagement
         experimentId={experimentId}
@@ -124,6 +131,7 @@ describe("ExperimentMemberManagement", () => {
   });
 
   it("adds a member successfully", async () => {
+    mountInvitations();
     mountUserSearch();
     const addSpy = mountAddMember();
 
@@ -152,6 +160,7 @@ describe("ExperimentMemberManagement", () => {
   });
 
   it("removes a member", async () => {
+    mountInvitations();
     const removeSpy = mountRemoveMember();
 
     render(

@@ -5,13 +5,18 @@ import RootLayout, { metadata } from "../layout";
 
 describe("RootLayout", () => {
   it("renders children", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
     const { getByTestId } = render(
       <RootLayout>
         <div data-testid="child">Content</div>
       </RootLayout>,
+      { container },
     );
 
     expect(getByTestId("child")).toBeInTheDocument();
+    document.body.removeChild(container);
   });
 
   it("exports correct metadata", () => {
