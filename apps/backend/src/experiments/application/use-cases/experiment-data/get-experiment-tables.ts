@@ -1,16 +1,21 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { ExperimentTableName } from "@repo/api";
-
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import {
+  STATIC_TABLE_CONFIG,
+  MACRO_TABLE_CONFIG,
+} from "../../../core/models/experiment-data.model";
+import type { ExperimentTableMetadata } from "../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 export interface TableMetadataDto {
-  name: string;
+  identifier: string;
+  tableType: "static" | "macro";
   displayName: string;
   totalRows: number;
   defaultSortColumn?: string;
@@ -23,32 +28,11 @@ export type ExperimentTablesMetadataDto = TableMetadataDto[];
 export class GetExperimentTablesUseCase {
   private readonly logger = new Logger(GetExperimentTablesUseCase.name);
 
-  // Static table properties for known physical tables
-  private readonly tableProperties: Record<
-    string,
-    { displayName: string; defaultSortColumn?: string; errorColumn?: string }
-  >;
-
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
-  ) {
-    // Initialize table properties using logical table names from ExperimentTableName
-    this.tableProperties = {
-      [ExperimentTableName.RAW_DATA]: {
-        displayName: "Raw Data",
-        defaultSortColumn: "timestamp",
-      },
-      [ExperimentTableName.DEVICE]: {
-        displayName: "Device Metadata",
-        defaultSortColumn: "processed_timestamp",
-      },
-      [ExperimentTableName.RAW_AMBYTE_DATA]: {
-        displayName: "Ambyte Raw Data",
-        defaultSortColumn: "processed_at",
-      },
-    };
-  }
+    private readonly macroRepository: MacroRepository,
+  ) {}
 
   async execute(
     experimentId: string,
@@ -106,31 +90,77 @@ export class GetExperimentTablesUseCase {
           return failure(AppError.internal("Failed to retrieve table metadata"));
         }
 
-        const tables = metadataResult.value.map(({ tableName, rowCount }) => {
-          const isKnownTable = tableName in this.tableProperties;
-          const properties = this.tableProperties[tableName];
+        const staticMetadata = metadataResult.value.filter((m) => m.tableType === "static");
+        const macroMetadata = metadataResult.value.filter((m) => m.tableType === "macro");
 
-          if (isKnownTable) {
-            return {
-              name: tableName,
-              displayName: properties.displayName,
-              totalRows: rowCount,
-              defaultSortColumn: properties.defaultSortColumn,
-              errorColumn: properties.errorColumn,
-            };
-          }
+        const macroNamesMap = await this.resolveMacroNames(experimentId, macroMetadata);
 
-          return {
-            name: tableName,
-            displayName: `Processed Data (${tableName})`,
-            totalRows: rowCount,
-            defaultSortColumn: "timestamp",
-            errorColumn: "macro_error",
-          };
-        });
+        const tables = [
+          ...staticMetadata.map((m) => this.mapStaticTable(m)),
+          ...macroMetadata.map((m) => this.mapMacroTable(m, macroNamesMap)),
+        ];
 
         return success(tables);
       },
     );
+  }
+
+  private mapStaticTable({
+    identifier,
+    tableType,
+    rowCount,
+  }: ExperimentTableMetadata): TableMetadataDto {
+    const config = STATIC_TABLE_CONFIG[identifier];
+    return {
+      identifier,
+      tableType,
+      displayName: config?.displayName ?? identifier,
+      totalRows: rowCount,
+      defaultSortColumn: config?.defaultSortColumn,
+      errorColumn: config?.errorColumn,
+    };
+  }
+
+  private mapMacroTable(
+    { identifier, tableType, rowCount }: ExperimentTableMetadata,
+    macroNamesMap: Map<string, { name: string; filename: string }>,
+  ): TableMetadataDto {
+    const macroInfo = macroNamesMap.get(identifier);
+    const displayName = macroInfo
+      ? `${MACRO_TABLE_CONFIG.displayName} (${macroInfo.name})`
+      : `${MACRO_TABLE_CONFIG.displayName} (${identifier})`;
+
+    return {
+      identifier,
+      tableType,
+      displayName,
+      totalRows: rowCount,
+      defaultSortColumn: MACRO_TABLE_CONFIG.defaultSortColumn,
+      errorColumn: MACRO_TABLE_CONFIG.errorColumn,
+    };
+  }
+
+  private async resolveMacroNames(
+    experimentId: string,
+    macroMetadata: ExperimentTableMetadata[],
+  ): Promise<Map<string, { name: string; filename: string }>> {
+    if (macroMetadata.length === 0) {
+      return new Map();
+    }
+
+    const macroIds = macroMetadata.map((m) => m.identifier);
+    const result = await this.macroRepository.findNamesByIds(macroIds);
+
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to resolve macro display names, falling back to IDs",
+        operation: "getExperimentTables",
+        experimentId,
+        error: result.error.message,
+      });
+      return new Map();
+    }
+
+    return result.value;
   }
 }

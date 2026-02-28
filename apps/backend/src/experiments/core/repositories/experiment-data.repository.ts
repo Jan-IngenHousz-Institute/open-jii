@@ -2,31 +2,15 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
+import { STATIC_TABLE_CONFIG, MACRO_TABLE_CONFIG } from "../models/experiment-data.model";
+import type {
+  ExperimentTableMetadata,
+  SchemaDataDto,
+  TableDataDto,
+} from "../models/experiment-data.model";
 import { ExperimentDto } from "../models/experiment.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
-
-export interface SchemaDataDto {
-  columns: {
-    name: string;
-    type_name: string;
-    type_text: string;
-  }[];
-  rows: Record<string, string | null>[];
-  totalRows: number;
-  truncated: boolean;
-}
-
-export interface TableDataDto {
-  name: string;
-  catalog_name: string;
-  schema_name: string;
-  data?: SchemaDataDto;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  totalRows: number;
-}
 
 /**
  * Repository for experiment data operations
@@ -63,7 +47,7 @@ export class ExperimentDataRepository {
     } = params;
 
     const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-      tableName,
+      identifier: tableName,
       includeSchemas: true,
     });
 
@@ -80,11 +64,7 @@ export class ExperimentDataRepository {
 
     const queryResult = this.buildQuery(
       experimentId,
-      tableName,
-      {
-        macroSchema: metadata.macroSchema ?? undefined,
-        questionsSchema: metadata.questionsSchema ?? undefined,
-      },
+      metadata,
       columns,
       orderBy,
       orderDirection,
@@ -111,80 +91,55 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Build query for experiment data based on table name
-   * @param tableName - Logical table name from ExperimentTableName enum or macro name
-   * @param schemas - Optional schemas from metadata table (macroSchema, questionsSchema)
+   * Build query for experiment data using table metadata for type-aware configuration.
    */
   private buildQuery(
     experimentId: string,
-    tableName: string,
-    schemas?: { macroSchema?: string; questionsSchema?: string },
+    metadata: ExperimentTableMetadata,
     columns?: string[],
     orderBy?: string,
     orderDirection?: "ASC" | "DESC",
     limit?: number,
     offset?: number,
   ): Result<string> {
-    // Define exceptColumns based on table type
-    const MACRO_EXCEPT_COLUMNS = [
-      "experiment_id",
-      "raw_id",
-      "macro_id",
-      "macro_name",
-      "macro_filename",
-      "date",
-    ];
+    const { identifier: tableName, tableType, macroSchema, questionsSchema } = metadata;
 
-    // Table configuration: defines which columns to exclude and which variant columns exist
-    const tableConfig: Record<
-      string,
-      { exceptColumns: string[]; variantColumns: ("macro_output" | "questions_data")[] }
-    > = {
-      raw_data: {
-        exceptColumns: ["experiment_id"],
-        variantColumns: ["questions_data"], // raw_data only has questions_data, not macro_output
-      },
-      device: {
-        exceptColumns: ["experiment_id"],
-        variantColumns: [],
-      },
-      raw_ambyte_data: {
-        exceptColumns: ["experiment_id"],
-        variantColumns: [],
-      },
-    };
+    const config = (() => {
+      if (tableType === "macro") return MACRO_TABLE_CONFIG;
+      return STATIC_TABLE_CONFIG[tableName];
+    })();
 
-    // Default for macro tables (any table not in the map above)
-    const config = tableConfig[tableName] ?? {
-      exceptColumns: MACRO_EXCEPT_COLUMNS,
-      variantColumns: ["macro_output", "questions_data"],
-    };
+    if (!config) {
+      return failure(
+        AppError.internal(
+          `No table configuration found for static table '${tableName}'`,
+          "UNKNOWN_TABLE_CONFIG",
+        ),
+      );
+    }
 
     const exceptColumns = [...config.exceptColumns];
-
-    // Build variants array based on available schemas and table's variant columns
     const variants: { columnName: string; schema: string }[] = [];
 
-    // Handle macro_output if this table supports it
     if (config.variantColumns.includes("macro_output")) {
-      if (schemas?.macroSchema) {
-        variants.push({ columnName: "macro_output", schema: schemas.macroSchema });
+      if (macroSchema) {
+        variants.push({ columnName: "macro_output", schema: macroSchema });
       } else {
         exceptColumns.push("macro_output");
       }
     }
 
-    // Handle questions_data if this table supports it
     if (config.variantColumns.includes("questions_data")) {
-      if (schemas?.questionsSchema) {
-        variants.push({ columnName: "questions_data", schema: schemas.questionsSchema });
+      if (questionsSchema) {
+        variants.push({ columnName: "questions_data", schema: questionsSchema });
       } else {
         exceptColumns.push("questions_data");
       }
     }
 
-    const query = this.databricksPort.buildExperimentQuery({
+    return this.databricksPort.buildExperimentQuery({
       tableName,
+      tableType,
       experimentId,
       columns,
       variants: variants.length > 0 ? variants : undefined,
@@ -194,8 +149,6 @@ export class ExperimentDataRepository {
       limit,
       offset,
     });
-
-    return success(query);
   }
 
   /**

@@ -897,4 +897,94 @@ describe("MacroRepository", () => {
       expect(result.isFailure()).toBe(true);
     });
   });
+
+  describe("findNamesByIds", () => {
+    it("should return empty map for empty ids array", async () => {
+      const result = await repository.findNamesByIds([]);
+
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Map);
+      expect(result.value.size).toBe(0);
+    });
+
+    it("should return names for existing macro IDs", async () => {
+      // Arrange - create two macros
+      const macro1Dto: CreateMacroDto = {
+        name: "Macro Alpha",
+        description: "First macro",
+        language: "python" as const,
+        code: "cHl0aG9uIGNvZGU=",
+      };
+      const macro2Dto: CreateMacroDto = {
+        name: "Macro Beta",
+        description: "Second macro",
+        language: "r" as const,
+        code: "ciBjb2Rl",
+      };
+
+      const create1 = await repository.create(macro1Dto, testUserId);
+      assertSuccess(create1);
+      const macro1 = create1.value[0];
+
+      const create2 = await repository.create(macro2Dto, testUserId);
+      assertSuccess(create2);
+      const macro2 = create2.value[0];
+
+      // Act
+      const result = await repository.findNamesByIds([macro1.id, macro2.id]);
+
+      // Assert
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Map);
+      expect(result.value.size).toBe(2);
+
+      const entry1 = result.value.get(macro1.id);
+      expect(entry1).toBeDefined();
+      expect(entry1?.name).toBe("Macro Alpha");
+      expect(entry1?.filename).toBe(generateHashedFilename(macro1.id));
+
+      const entry2 = result.value.get(macro2.id);
+      expect(entry2).toBeDefined();
+      expect(entry2?.name).toBe("Macro Beta");
+      expect(entry2?.filename).toBe(generateHashedFilename(macro2.id));
+    });
+
+    it("should return only found macros when some IDs don't exist", async () => {
+      // Arrange - create one macro
+      const macroDto: CreateMacroDto = {
+        name: "Only Macro",
+        description: "The only one",
+        language: "python" as const,
+        code: "cHl0aG9uIGNvZGU=",
+      };
+
+      const createResult = await repository.create(macroDto, testUserId);
+      assertSuccess(createResult);
+      const macro = createResult.value[0];
+
+      const nonExistentId = faker.string.uuid();
+
+      // Act
+      const result = await repository.findNamesByIds([macro.id, nonExistentId]);
+
+      // Assert
+      assertSuccess(result);
+      expect(result.value.size).toBe(1);
+      expect(result.value.has(macro.id)).toBe(true);
+      expect(result.value.has(nonExistentId)).toBe(false);
+    });
+
+    it("should return empty map when no IDs match", async () => {
+      // Arrange
+      const nonExistentIds = [faker.string.uuid(), faker.string.uuid()];
+
+      // Act
+      const result = await repository.findNamesByIds(nonExistentIds);
+
+      // Assert
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Map);
+      expect(result.value.size).toBe(0);
+    });
+  });
 });

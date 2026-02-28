@@ -93,12 +93,14 @@ vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
 // Sample tables for testing - tables don't contain columns
 const mockTables: ExperimentTableMetadata[] = [
   {
-    name: "measurements",
+    identifier: "measurements",
+    tableType: "static",
     displayName: "Measurements",
     totalRows: 100,
   },
   {
-    name: "sensors",
+    identifier: "sensors",
+    tableType: "static",
     displayName: "Sensors",
     totalRows: 50,
   },
@@ -208,7 +210,7 @@ describe("DataSourceStep", () => {
       }
 
       // Find the matching table and add its columns
-      const tableInfo = mockTables.find((t) => t.name === tableName);
+      const tableInfo = mockTables.find((t) => t.identifier === tableName);
       const columnsData = mockTableMetadataWithColumns[tableName];
 
       return {

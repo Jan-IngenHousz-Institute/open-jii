@@ -9,6 +9,7 @@ import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapt
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
+import { MacroModule } from "../macros/macro.module";
 import { UserModule } from "../users/user.module";
 // Services
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
@@ -80,7 +81,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule, EmailModule, AnalyticsModule, UserModule],
+  imports: [DatabricksModule, AwsModule, EmailModule, AnalyticsModule, UserModule, MacroModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,

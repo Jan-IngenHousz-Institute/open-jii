@@ -666,17 +666,16 @@ def experiment_table_metadata():
     macro_metadata = (
         dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
         .filter("macro_output IS NOT NULL")
-        .groupBy("experiment_id", "macro_filename")
+        .groupBy("experiment_id", "macro_id")
         .agg(
-            F.max("macro_name").alias("table_name"),
             F.count("*").alias("row_count"),
             F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
             F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
         .select(
             F.col("experiment_id"),
-            F.col("table_name"),
-            F.col("macro_filename"),
+            F.col("macro_id").alias("identifier"),
+            F.lit("macro").alias("table_type"),
             F.col("row_count"),
             F.col("macro_schema"),
             F.col("questions_schema")
@@ -692,8 +691,8 @@ def experiment_table_metadata():
         )
         .select(
             F.col("experiment_id"),
-            F.lit("raw_data").alias("table_name"),
-            F.lit(None).cast("string").alias("macro_filename"),
+            F.lit("raw_data").alias("identifier"),
+            F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
             F.col("questions_schema")
@@ -706,8 +705,8 @@ def experiment_table_metadata():
         .agg(F.count("*").alias("row_count"))
         .select(
             F.col("experiment_id"),
-            F.lit("device").alias("table_name"),
-            F.lit(None).cast("string").alias("macro_filename"),
+            F.lit("device").alias("identifier"),
+            F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
             F.lit(None).cast("string").alias("questions_schema")
@@ -720,8 +719,8 @@ def experiment_table_metadata():
         .agg(F.count("*").alias("row_count"))
         .select(
             F.col("experiment_id"),
-            F.lit("raw_ambyte_data").alias("table_name"),
-            F.lit(None).cast("string").alias("macro_filename"),
+            F.lit("raw_ambyte_data").alias("identifier"),
+            F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
             F.lit(None).cast("string").alias("questions_schema")

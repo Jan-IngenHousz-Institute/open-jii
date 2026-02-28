@@ -186,7 +186,7 @@ export function DataSourceStep({
                           </div>
                         ) : (
                           tables.map((table) => (
-                            <SelectItem key={table.name} value={table.name}>
+                            <SelectItem key={table.identifier} value={table.identifier}>
                               {t("form.dataSource.tableInfo", {
                                 name: table.displayName,
                               })}

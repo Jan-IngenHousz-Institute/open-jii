@@ -1,9 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, asc, eq, ilike, macros, profiles } from "@repo/database";
+import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -134,6 +134,35 @@ export class MacroRepository {
       const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
 
       return results as unknown as MacroDto[];
+    });
+  }
+
+  /**
+   * Find multiple macros by their IDs
+   * Returns a map of id -> { name, filename } for display name resolution
+   */
+  async findNamesByIds(
+    ids: string[],
+  ): Promise<Result<Map<string, { name: string; filename: string }>>> {
+    if (ids.length === 0) {
+      return success(new Map());
+    }
+
+    return tryCatch(async () => {
+      const results = await this.database
+        .select({
+          id: macros.id,
+          name: macros.name,
+          filename: macros.filename,
+        })
+        .from(macros)
+        .where(inArray(macros.id, ids));
+
+      const map = new Map<string, { name: string; filename: string }>();
+      for (const row of results) {
+        map.set(row.id, { name: row.name, filename: row.filename });
+      }
+      return map;
     });
   }
 }
