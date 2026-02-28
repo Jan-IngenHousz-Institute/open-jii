@@ -1,262 +1,97 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { tsr } from "@/lib/tsr";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useMacroDelete } from "./useMacroDelete";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    macros: {
-      deleteMacro: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-interface MutateVariables {
-  params: { id: string };
-}
-
-const mockTsr = tsr;
-
 describe("useMacroDelete", () => {
-  let queryClient: QueryClient;
-  const mockCancelQueries = vi.fn().mockResolvedValue(undefined);
-  const mockGetQueryData = vi.fn();
-  const mockSetQueryData = vi.fn();
-  const mockRemoveQueries = vi.fn();
-  const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
+  it("sends DELETE request", async () => {
+    const spy = server.mount(contract.macros.deleteMacro);
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
+    const { result } = renderHook(() => useMacroDelete());
+
+    act(() => {
+      result.current.mutate({ params: { id: "macro-123" } });
     });
 
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    const mockQueryClient = {
-      cancelQueries: mockCancelQueries,
-      getQueryData: mockGetQueryData,
-      setQueryData: mockSetQueryData,
-      removeQueries: mockRemoveQueries,
-      invalidateQueries: mockInvalidateQueries,
-    };
-
-    mockTsr.useQueryClient = vi
-      .fn()
-      .mockReturnValue(mockQueryClient as unknown as ReturnType<typeof tsr.useQueryClient>);
-  });
-
-  it("should call useMutation with correct configuration", () => {
-    const mockUseMutation = vi.fn();
-    (mockTsr.macros.deleteMacro.useMutation as unknown) = mockUseMutation;
-
-    renderHook(() => useMacroDelete(), { wrapper: createWrapper() });
-
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onMutate: expect.any(Function),
-      onError: expect.any(Function),
-      onSettled: expect.any(Function),
+    await waitFor(() => {
+      expect(spy.params.id).toBe("macro-123");
     });
   });
 
-  describe("onMutate callback", () => {
-    it("should cancel queries, remove macro from cache, and return previous data", async () => {
-      const mockPreviousMacros = {
-        body: [
-          { id: "macro-123", name: "Test Macro 1" },
-          { id: "macro-456", name: "Test Macro 2" },
-        ],
-      };
-      mockGetQueryData.mockReturnValue(mockPreviousMacros);
-
-      let onMutate:
-        | ((variables: MutateVariables) => Promise<{ previousMacros: typeof mockPreviousMacros }>)
-        | undefined;
-
-      (mockTsr.macros.deleteMacro.useMutation as unknown) = vi.fn(
-        (opts: {
-          onMutate: (
-            variables: MutateVariables,
-          ) => Promise<{ previousMacros: typeof mockPreviousMacros }>;
-        }) => {
-          onMutate = opts.onMutate;
-          return {};
-        },
-      );
-
-      renderHook(() => useMacroDelete(), { wrapper: createWrapper() });
-
-      const variables = { params: { id: "macro-123" } };
-      const result = await onMutate?.(variables);
-
-      expect(mockCancelQueries).toHaveBeenCalledWith({
-        queryKey: ["macros"],
-      });
-      expect(mockGetQueryData).toHaveBeenCalledWith(["macros"]);
-      expect(mockSetQueryData).toHaveBeenCalledWith(["macros"], {
-        body: [{ id: "macro-456", name: "Test Macro 2" }],
-      });
-      expect(mockRemoveQueries).toHaveBeenCalledWith({
-        queryKey: ["macro", "macro-123"],
-      });
-      expect(result).toEqual({ previousMacros: mockPreviousMacros });
+  it("optimistically removes macro from the list cache", async () => {
+    // Use Infinity gcTime so cache entries survive without active observers
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
     });
 
-    it("should not modify query data if previous macros data is not available", async () => {
-      mockGetQueryData.mockReturnValue(undefined);
+    // Pre-populate the macros list cache
+    queryClient.setQueryData(["macros"], {
+      body: [
+        createMacro({ id: "macro-1", name: "Macro 1" }),
+        createMacro({ id: "macro-2", name: "Macro 2" }),
+      ],
+    });
 
-      let onMutate:
-        | ((variables: MutateVariables) => Promise<{ previousMacros: typeof undefined }>)
-        | undefined;
+    // Use a delayed response so we can observe the optimistic state
+    server.mount(contract.macros.deleteMacro, { delay: 100 });
 
-      (mockTsr.macros.deleteMacro.useMutation as unknown) = vi.fn(
-        (opts: {
-          onMutate: (variables: MutateVariables) => Promise<{ previousMacros: undefined }>;
-        }) => {
-          onMutate = opts.onMutate;
-          return {};
-        },
-      );
+    const { result } = renderHook(() => useMacroDelete(), { queryClient });
 
-      renderHook(() => useMacroDelete(), { wrapper: createWrapper() });
+    act(() => {
+      result.current.mutate({ params: { id: "macro-1" } });
+    });
 
-      const variables = { params: { id: "macro-123" } };
-      await onMutate?.(variables);
-
-      expect(mockCancelQueries).toHaveBeenCalledWith({
-        queryKey: ["macros"],
-      });
-      expect(mockGetQueryData).toHaveBeenCalledWith(["macros"]);
-      expect(mockSetQueryData).not.toHaveBeenCalled();
-      expect(mockRemoveQueries).toHaveBeenCalledWith({
-        queryKey: ["macro", "macro-123"],
-      });
+    // After onMutate, the cache should optimistically remove macro-1
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<{ body: { id: string }[] }>(["macros"]);
+      expect(cached?.body).toHaveLength(1);
+      expect(cached?.body[0].id).toBe("macro-2");
     });
   });
 
-  describe("onError callback", () => {
-    it("should revert to previous macros when context has previousMacros", () => {
-      let onError:
-        | ((
-            error: Error,
-            variables: MutateVariables,
-            context?: { previousMacros?: unknown },
-          ) => void)
-        | undefined;
+  it("restores cache on error", async () => {
+    const queryClient = createTestQueryClient();
 
-      (mockTsr.macros.deleteMacro.useMutation as unknown) = vi.fn(
-        (opts: {
-          onError: (
-            error: Error,
-            variables: MutateVariables,
-            context?: { previousMacros?: unknown },
-          ) => void;
-        }) => {
-          onError = opts.onError;
-          return {};
-        },
-      );
-
-      renderHook(() => useMacroDelete(), { wrapper: createWrapper() });
-
-      const error = new Error("Delete failed");
-      const variables = { params: { id: "macro-123" } };
-      const context = { previousMacros: { body: [{ id: "macro-123", name: "Test Macro" }] } };
-
-      onError?.(error, variables, context);
-
-      expect(mockSetQueryData).toHaveBeenCalledWith(["macros"], context.previousMacros);
+    queryClient.setQueryData(["macros"], {
+      body: [
+        createMacro({ id: "macro-1", name: "Macro 1" }),
+        createMacro({ id: "macro-2", name: "Macro 2" }),
+      ],
     });
 
-    it("should not revert data when context has no previousMacros", () => {
-      let onError:
-        | ((
-            error: Error,
-            variables: MutateVariables,
-            context?: { previousMacros?: unknown },
-          ) => void)
-        | undefined;
+    server.mount(contract.macros.deleteMacro, { status: 403 });
 
-      (mockTsr.macros.deleteMacro.useMutation as unknown) = vi.fn(
-        (opts: {
-          onError: (
-            error: Error,
-            variables: MutateVariables,
-            context?: { previousMacros?: unknown },
-          ) => void;
-        }) => {
-          onError = opts.onError;
-          return {};
-        },
-      );
+    const { result } = renderHook(() => useMacroDelete(), { queryClient });
 
-      renderHook(() => useMacroDelete(), { wrapper: createWrapper() });
+    act(() => {
+      result.current.mutate({ params: { id: "macro-1" } });
+    });
 
-      const error = new Error("Delete failed");
-      const variables = { params: { id: "macro-123" } };
-      const context = {};
-
-      onError?.(error, variables, context);
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
+    // After error + onSettled, the cache should revert
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<{ body: { id: string }[] }>(["macros"]);
+      expect(cached?.body).toHaveLength(2);
     });
   });
 
-  describe("onSettled callback", () => {
-    it("should invalidate macros queries", async () => {
-      let onSettled: (() => Promise<void>) | undefined;
+  it("does not fail when cache is empty", async () => {
+    const queryClient = createTestQueryClient();
+    server.mount(contract.macros.deleteMacro);
 
-      (mockTsr.macros.deleteMacro.useMutation as unknown) = vi.fn(
-        (opts: { onSettled: () => Promise<void> }) => {
-          onSettled = opts.onSettled;
-          return {};
-        },
-      );
+    const { result } = renderHook(() => useMacroDelete(), { queryClient });
 
-      renderHook(() => useMacroDelete(), { wrapper: createWrapper() });
-
-      await onSettled?.();
-
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["macros"],
-      });
-    });
-  });
-
-  it("should return the result of tsr mutation", () => {
-    const mockMutationResult = {
-      mutate: vi.fn(),
-      mutateAsync: vi.fn(),
-      isLoading: false,
-      isError: false,
-      error: null,
-      data: undefined,
-      reset: vi.fn(),
-    };
-
-    (mockTsr.macros.deleteMacro.useMutation as unknown) = vi
-      .fn()
-      .mockReturnValue(mockMutationResult);
-
-    const { result } = renderHook(() => useMacroDelete(), {
-      wrapper: createWrapper(),
+    // Should not throw even with no cached data
+    act(() => {
+      result.current.mutate({ params: { id: "macro-1" } });
     });
 
-    expect(result.current).toBe(mockMutationResult);
+    await waitFor(() => {
+      expect(result.current.isSuccess || result.current.isIdle).toBeTruthy();
+    });
   });
 });

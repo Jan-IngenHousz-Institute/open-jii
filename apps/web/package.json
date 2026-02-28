@@ -12,6 +12,7 @@
     "lint": "eslint",
     "check-types": "tsc --noEmit",
     "test": "vitest",
+    "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"
@@ -60,6 +61,7 @@
     "eslint": "catalog:",
     "jsdom": "catalog:testing",
     "monaco-editor": "0.52.0",
+    "msw": "^2.12.10",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:testing"

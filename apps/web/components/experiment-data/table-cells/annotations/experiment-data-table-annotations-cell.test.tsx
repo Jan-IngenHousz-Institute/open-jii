@@ -1,52 +1,11 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { formatDate } from "~/util/date";
 
 import type { Annotation } from "@repo/api";
 
 import { ExperimentDataTableAnnotationsCell } from "./experiment-data-table-annotations-cell";
-
-// Mock i18n to return translation keys
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, params?: Record<string, unknown>) => {
-      if (params) {
-        return `${key}:${JSON.stringify(params)}`;
-      }
-      return key;
-    },
-  }),
-}));
-
-// Mock UI components to make popover and dialog testable
-vi.mock("@repo/ui/components", () => ({
-  Popover: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PopoverTrigger: ({ children }: { children: React.ReactNode }) => children,
-  Button: ({
-    children,
-    onClick,
-    title,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    title?: string;
-    [key: string]: unknown;
-  }) => (
-    <button onClick={onClick} title={title} {...props}>
-      {children}
-    </button>
-  ),
-  Badge: ({ children, variant }: { children: React.ReactNode; variant?: string }) => (
-    <span className={variant}>{children}</span>
-  ),
-}));
-
-// Mock date utility
-vi.mock("~/util/date", () => ({
-  formatDate: (date: string) => `formatted-${date}`,
-}));
 
 const sampleAnnotations: Annotation[] = [
   {
@@ -109,23 +68,25 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     expect(screen.getByText(/common.add/)).toBeInTheDocument();
   });
 
-  it("should open comments popover and show details", () => {
+  it("should open comments popover and show details", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} />);
 
     const commentBadge = screen.getByText("1");
-    fireEvent.click(commentBadge);
+    await user.click(commentBadge);
 
     expect(screen.getByText(/experimentDataAnnotations.comments/)).toBeInTheDocument();
     expect(screen.getByText("This is a comment")).toBeInTheDocument();
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.getByText("formatted-2023-01-01T00:00:00Z")).toBeInTheDocument();
+    expect(screen.getByText(formatDate("2023-01-01T00:00:00Z"))).toBeInTheDocument();
   });
 
-  it("should open flags popover and show details", () => {
+  it("should open flags popover and show details", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} />);
 
     const flagBadge = screen.getByText("2");
-    fireEvent.click(flagBadge);
+    await user.click(flagBadge);
 
     expect(screen.getByText(/experimentDataAnnotations.flags/)).toBeInTheDocument();
     expect(screen.getByText("This is an outlier")).toBeInTheDocument();
@@ -134,11 +95,12 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     expect(screen.getByText("Bob Wilson")).toBeInTheDocument();
   });
 
-  it("should show flag type badges in flags popover", () => {
+  it("should show flag type badges in flags popover", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} />);
 
     const flagBadge = screen.getByText("2");
-    fireEvent.click(flagBadge);
+    await user.click(flagBadge);
 
     // Check flag types are displayed - they appear as "experimentDataAnnotations.flagTypes.outlier" and "experimentDataAnnotations.flagTypes.needs_review"
     expect(screen.getByText("experimentDataAnnotations.flagTypes.outlier")).toBeInTheDocument();
@@ -147,61 +109,66 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     ).toBeInTheDocument();
   });
 
-  it("should call onAddAnnotation when add comment is clicked in comments popover", () => {
+  it("should call onAddAnnotation when add comment is clicked in comments popover", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} />);
 
     const commentBadge = screen.getByText("1");
-    fireEvent.click(commentBadge);
+    await user.click(commentBadge);
 
     const addButton = screen.getAllByTitle(/experimentDataAnnotations.addComment/)[0];
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["row-123"], "comment");
   });
 
-  it("should call onDeleteAnnotations when delete comments is clicked", () => {
+  it("should call onDeleteAnnotations when delete comments is clicked", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} />);
 
     const commentBadge = screen.getByText("1");
-    fireEvent.click(commentBadge);
+    await user.click(commentBadge);
 
     const deleteButton = screen.getByTitle(
       /experimentDataAnnotations.bulkActions.removeAllComments/,
     );
-    fireEvent.click(deleteButton);
+    await user.click(deleteButton);
 
     expect(mockProps.onDeleteAnnotations).toHaveBeenCalledWith(["row-123"], "comment");
   });
 
-  it("should call onAddAnnotation when add flag is clicked in flags popover", () => {
+  it("should call onAddAnnotation when add flag is clicked in flags popover", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} />);
 
     const flagBadge = screen.getByText("2");
-    fireEvent.click(flagBadge);
+    await user.click(flagBadge);
 
     const addButton = screen.getByTitle(/experimentDataAnnotations.addFlag/);
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["row-123"], "flag");
   });
 
-  it("should call onDeleteAnnotations when delete flags is clicked", () => {
+  it("should call onDeleteAnnotations when delete flags is clicked", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} />);
 
     const flagBadge = screen.getByText("2");
-    fireEvent.click(flagBadge);
+    await user.click(flagBadge);
 
     const deleteButton = screen.getByTitle(/experimentDataAnnotations.bulkActions.removeAllFlags/);
-    fireEvent.click(deleteButton);
+    await user.click(deleteButton);
 
     expect(mockProps.onDeleteAnnotations).toHaveBeenCalledWith(["row-123"], "flag");
   });
 
-  it("should handle empty annotations popover actions", () => {
+  it("should handle empty annotations popover actions", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} data="[]" />);
 
     const addButton = screen.getByText(/common.add/);
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     expect(screen.getByText(/experimentDataAnnotations.annotations/)).toBeInTheDocument();
     expect(screen.getByText("experimentDataAnnotations.noAnnotations")).toBeInTheDocument();
@@ -210,31 +177,34 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     ).toBeInTheDocument();
   });
 
-  it("should call onAddAnnotation from empty state for comments", () => {
+  it("should call onAddAnnotation from empty state for comments", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} data="[]" />);
 
     const addButton = screen.getByText(/common.add/);
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     const addCommentButton = screen.getByTitle(/experimentDataAnnotations.addComment/);
-    fireEvent.click(addCommentButton);
+    await user.click(addCommentButton);
 
     expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["row-123"], "comment");
   });
 
-  it("should call onAddAnnotation from empty state for flags", () => {
+  it("should call onAddAnnotation from empty state for flags", async () => {
+    const user = userEvent.setup();
     render(<ExperimentDataTableAnnotationsCell {...mockProps} data="[]" />);
 
     const addButton = screen.getByText(/common.add/);
-    fireEvent.click(addButton);
+    await user.click(addButton);
 
     const addFlagButton = screen.getByTitle(/experimentDataAnnotations.addFlag/);
-    fireEvent.click(addFlagButton);
+    await user.click(addFlagButton);
 
     expect(mockProps.onAddAnnotation).toHaveBeenCalledWith(["row-123"], "flag");
   });
 
-  it("should handle annotations without createdByName", () => {
+  it("should handle annotations without createdByName", async () => {
+    const user = userEvent.setup();
     const annotationsWithoutName = [
       {
         id: "1",
@@ -252,7 +222,7 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     );
 
     const commentBadge = screen.getByText("1");
-    fireEvent.click(commentBadge);
+    await user.click(commentBadge);
 
     expect(screen.getByText("experimentDataAnnotations.unknownUser")).toBeInTheDocument();
     expect(screen.getByText("Anonymous comment")).toBeInTheDocument();

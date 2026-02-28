@@ -1,35 +1,7 @@
-import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SuccessStep } from "./success-step";
-
-globalThis.React = React;
-
-// Mock translation
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock components from @repo/ui
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-  }: {
-    children: React.ReactNode;
-    onClick: () => void;
-    className?: string;
-  }) => (
-    <button onClick={onClick} className={className}>
-      {children}
-    </button>
-  ),
-}));
 
 describe("SuccessStep", () => {
   const mockOnClose = vi.fn();
@@ -53,11 +25,12 @@ describe("SuccessStep", () => {
     expect(screen.getByText("uploadModal.success.close")).toBeInTheDocument();
   });
 
-  it("calls onClose when close button is clicked", () => {
+  it("calls onClose when close button is clicked", async () => {
+    const user = userEvent.setup();
     render(<SuccessStep onClose={mockOnClose} />);
 
     const closeButton = screen.getByText("uploadModal.success.close");
-    fireEvent.click(closeButton);
+    await user.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalled();
   });

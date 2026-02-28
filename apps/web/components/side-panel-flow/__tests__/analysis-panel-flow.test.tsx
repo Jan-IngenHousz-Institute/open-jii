@@ -1,82 +1,52 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
 
-// Keep React on global for JSX in some deps
-globalThis.React = React;
-
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
-// Mock scrollIntoView
 Element.prototype.scrollIntoView = vi.fn();
 
-// Minimal i18n mock (keeps labels predictable)
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
-// Mock useLocale hook
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en-US",
-}));
-
-// Mock useDebounce hook
+// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
-  useDebounce: (value: string, _delay: number) => [value, true], // Return [debouncedValue, isDebounced]
+  useDebounce: (value: string, _delay: number) => [value, true],
 }));
 
-// Mock data
+// Test data — factory provides all required Macro fields
 const mockMacros = [
-  {
-    id: "macro-1",
+  createMacro({
     name: "Plot Temperature",
     description: "Visualize temperature data",
     language: "python",
     createdByName: "John Doe",
-  },
-  {
-    id: "macro-2",
+  }),
+  createMacro({
     name: "Plot Humidity",
     description: "Visualize humidity data",
     language: "r",
     createdByName: "Jane Smith",
-  },
-  {
-    id: "macro-3",
+  }),
+  createMacro({
     name: "Statistical Analysis",
     description: "Perform statistical analysis on data",
     language: "javascript",
     createdByName: "Bob Wilson",
-  },
-];
-
-// Mock the useMacros hook
-vi.mock("~/hooks/macro/useMacros/useMacros", () => ({
-  useMacros: vi.fn(({ search }: { search?: string }) => {
-    const filteredMacros = search
-      ? mockMacros.filter((macro) => macro.name.toLowerCase().includes(search.toLowerCase()))
-      : mockMacros;
-
-    return {
-      data: filteredMacros,
-    };
   }),
-}));
+];
 
 describe("<AnalysisPanel />", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    server.use(
+      http.get("http://localhost:3020/api/v1/macros", ({ request }) => {
+        const url = new URL(request.url);
+        const search = url.searchParams.get("search");
+        const filtered = search
+          ? mockMacros.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()))
+          : mockMacros;
+        return HttpResponse.json(filtered);
+      }),
+    );
   });
 
   const openDropdown = async (): Promise<HTMLButtonElement> => {
@@ -109,17 +79,16 @@ describe("<AnalysisPanel />", () => {
     const search = screen.getByPlaceholderText("experiments.searchMacros");
     await userEvent.type(search, "humidity");
 
-    // Wait for debounce delay
-    await new Promise((resolve) => setTimeout(resolve, 350));
-
-    // Expect the filtered option to be present and others (like temperature) to be absent
-    expect(screen.getByRole("heading", { name: /Plot Humidity/i })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /Plot Temperature/i })).not.toBeInTheDocument();
+    // Wait for React Query to return filtered results
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /Plot Humidity/i })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /Plot Temperature/i })).not.toBeInTheDocument();
+    });
 
     // Select it - click the macro item itself
     const macroItem = screen.getByRole("option", { name: /Plot Humidity/i });
     await userEvent.click(macroItem);
-    expect(onChange).toHaveBeenCalledWith("macro-2");
+    expect(onChange).toHaveBeenCalledWith(mockMacros[1].id);
 
     // Popover should be closed (search input disappears)
     expect(screen.queryByPlaceholderText("experiments.searchMacros")).not.toBeInTheDocument();

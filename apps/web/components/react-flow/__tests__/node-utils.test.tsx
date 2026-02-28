@@ -1,15 +1,10 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import type { Node } from "@xyflow/react";
 import { Position } from "@xyflow/react";
-import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { toPosition, createNewNode, BaseNodeWrapper, FlowContextProvider } from "../node-utils";
 
-globalThis.React = React;
-
-// --- mock BaseNode so we don't need full implementation
 vi.mock("../base-node", () => ({
   BaseNode: (props: Node) => <div data-testid="BaseNode" data-props={JSON.stringify(props)} />,
 }));

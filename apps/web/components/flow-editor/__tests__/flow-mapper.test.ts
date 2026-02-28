@@ -1,3 +1,4 @@
+import { createFlow } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
 import type { Flow } from "@repo/api";
@@ -8,26 +9,23 @@ import type { FlowNodeDataWithSpec } from "../flow-mapper";
 
 // Helper to build a minimal valid Flow object
 function buildApiFlow(overrides: Partial<Flow["graph"]> = {}): Flow {
-  const baseGraph = {
-    nodes: [
-      {
-        id: "start-node",
-        type: "question" as const,
-        name: "Start",
-        content: { kind: "open_ended", text: "Welcome", required: false },
-        isStart: true,
-      },
-    ],
-    edges: [],
-    ...overrides,
-  };
-  return {
+  return createFlow({
     id: "11111111-1111-1111-1111-111111111111",
     experimentId: "22222222-2222-2222-2222-222222222222",
-    graph: baseGraph as Flow["graph"],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+    graph: {
+      nodes: [
+        {
+          id: "start-node",
+          type: "question" as const,
+          name: "Start",
+          content: { kind: "open_ended", text: "Welcome", required: false },
+          isStart: true,
+        },
+      ],
+      edges: [],
+      ...overrides,
+    },
+  });
 }
 
 describe("FlowMapper.toReactFlow", () => {

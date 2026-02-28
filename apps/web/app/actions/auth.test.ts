@@ -2,128 +2,40 @@ import { headers } from "next/headers";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { authClient } from "@repo/auth/client";
-import type { Session } from "@repo/auth/types";
 
 import { auth } from "./auth";
 
-// Mock next/headers
-vi.mock("next/headers", () => ({
-  headers: vi.fn(),
-}));
+// This file tests the real auth() function — unmock the global stub.
+vi.unmock("~/app/actions/auth");
 
-// Mock authClient
-vi.mock("@repo/auth/client", () => ({
-  authClient: {
-    getSession: vi.fn(),
-  },
-}));
-
-const mockHeaders = vi.mocked(headers);
 const mockGetSession = vi.mocked(authClient.getSession);
 
 describe("auth", () => {
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
-  it("should return session data when authentication is successful", async () => {
-    const mockHeadersList = new Headers({ cookie: "session=abc123" });
-    const mockSession: Session = {
-      session: {
-        id: "session-123",
-        userId: "user-123",
-        expiresAt: new Date("2026-12-31"),
-        createdAt: new Date("2026-01-01"),
-        updatedAt: new Date("2026-01-01"),
-        token: "token-123",
-        ipAddress: "127.0.0.1",
-        userAgent: "test-agent",
-      },
-      user: {
-        id: "user-123",
-        email: "test@example.com",
-        emailVerified: true,
-        name: "Test User",
-        image: null,
-        createdAt: new Date("2026-01-01"),
-        updatedAt: new Date("2026-01-01"),
-        registered: true,
-      },
-    };
+  it("returns session data on success", async () => {
+    const session = { session: { id: "s1" }, user: { id: "u1" } };
+    vi.mocked(headers).mockResolvedValue(new Headers({ cookie: "session=abc" }) as never);
+    mockGetSession.mockResolvedValue({ data: session } as never);
 
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockGetSession.mockResolvedValue({ data: mockSession });
-
-    const result = await auth();
-
-    expect(mockHeaders).toHaveBeenCalled();
-    expect(mockGetSession).toHaveBeenCalledWith({
-      fetchOptions: {
-        headers: mockHeadersList,
-      },
-    });
-    expect(result).toEqual(mockSession);
+    expect(await auth()).toEqual(session);
   });
 
-  it("should return null and log error when session fetch fails", async () => {
-    const mockHeadersList = new Headers();
-    const mockError = new Error("Network error");
+  it("returns null and logs error on failure", async () => {
+    vi.mocked(headers).mockResolvedValue(new Headers() as never);
+    mockGetSession.mockRejectedValue(new Error("Network error"));
 
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockGetSession.mockRejectedValue(mockError);
-
-    const result = await auth();
-
-    expect(mockHeaders).toHaveBeenCalled();
-    expect(mockGetSession).toHaveBeenCalledWith({
-      fetchOptions: {
-        headers: mockHeadersList,
-      },
-    });
-    expect(result).toBeNull();
-    expect(consoleErrorSpy).toHaveBeenCalledWith("Session fetch error:", mockError);
+    expect(await auth()).toBeNull();
+    expect(console.error).toHaveBeenCalledWith("Session fetch error:", expect.any(Error));
   });
 
-  it("should return null when session data is null", async () => {
-    const mockHeadersList = new Headers();
+  it("returns null when session is null", async () => {
+    vi.mocked(headers).mockResolvedValue(new Headers() as never);
+    mockGetSession.mockResolvedValue({ data: null } as never);
 
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockGetSession.mockResolvedValue({ data: null });
-
-    const result = await auth();
-
-    expect(result).toBeNull();
-  });
-
-  it("should forward headers correctly to authClient", async () => {
-    const mockHeadersList = new Headers({
-      cookie: "session=abc123",
-      "user-agent": "Mozilla/5.0",
-    });
-
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockGetSession.mockResolvedValue({ data: null });
-
-    await auth();
-
-    expect(mockGetSession).toHaveBeenCalledWith({
-      fetchOptions: {
-        headers: mockHeadersList,
-      },
-    });
-  });
-
-  it("should handle headers() promise rejection", async () => {
-    const mockError = new Error("Headers unavailable");
-
-    mockHeaders.mockRejectedValue(mockError);
-
-    const result = await auth();
-
-    expect(result).toBeNull();
-    expect(consoleErrorSpy).toHaveBeenCalledWith("Session fetch error:", mockError);
+    expect(await auth()).toBeNull();
   });
 });

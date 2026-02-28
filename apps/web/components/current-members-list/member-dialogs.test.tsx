@@ -1,15 +1,7 @@
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { MemberDialogs } from "./member-dialogs";
-
-// Minimal mock for i18n - just returns the key
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 describe("<MemberDialogs />", () => {
   it("shows last admin warning dialog for leave action", () => {
@@ -55,7 +47,7 @@ describe("<MemberDialogs />", () => {
     expect(screen.getByText("experimentSettings.lastAdminDemoteWarning")).toBeInTheDocument();
   });
 
-  it("shows leave confirmation dialog with cancel and confirm buttons", () => {
+  it("shows leave confirmation dialog with cancel and confirm buttons", async () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
 
@@ -77,11 +69,12 @@ describe("<MemberDialogs />", () => {
     expect(screen.getByText("experimentSettings.confirmLeaveMessage")).toBeInTheDocument();
 
     const confirmButton = screen.getByRole("button", { name: "experimentSettings.confirmLeave" });
-    fireEvent.click(confirmButton);
+    const user = userEvent.setup();
+    await user.click(confirmButton);
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("shows demote confirmation dialog with cancel and confirm buttons", () => {
+  it("shows demote confirmation dialog with cancel and confirm buttons", async () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
 
@@ -105,7 +98,8 @@ describe("<MemberDialogs />", () => {
     const confirmButton = screen.getByRole("button", {
       name: "experimentSettings.confirmDemote",
     });
-    fireEvent.click(confirmButton);
+    const user = userEvent.setup();
+    await user.click(confirmButton);
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 

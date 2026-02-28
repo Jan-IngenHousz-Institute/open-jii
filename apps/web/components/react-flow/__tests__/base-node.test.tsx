@@ -1,6 +1,5 @@
 // BaseNode.test.tsx
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { Position } from "@xyflow/react";
 import type { Node } from "@xyflow/react";
 import React from "react";
@@ -25,7 +24,6 @@ const baseNodeDefaults = {
   measured: { width: 100, height: 60 },
 };
 
-// --- mock node-content ---
 vi.mock("../node-content", () => ({
   NodeContent: (props: {
     title: string;
@@ -95,11 +93,12 @@ describe("BaseNode", () => {
     expect(screen.getByTestId("node-content")).toBeInTheDocument();
   });
 
-  it("calls onNodeDelete when delete clicked", () => {
+  it("calls onNodeDelete when delete clicked", async () => {
     const onDelete = vi.fn();
     render(<BaseNode nodes={[node]} onNodeDelete={onDelete} {...node} {...baseNodeDefaults} />);
     const btn = screen.getByRole("button", { name: /delete node/i });
-    fireEvent.click(btn);
+    const user = userEvent.setup();
+    await user.click(btn);
     expect(onDelete).toHaveBeenCalledWith("n1");
   });
 
@@ -116,7 +115,7 @@ describe("BaseNode", () => {
     expect(screen.queryByRole("button", { name: /delete node/i })).toBeNull();
   });
 
-  it("calls onNodeSelect with the node when clicked", () => {
+  it("calls onNodeSelect with the node when clicked", async () => {
     const onSelect = vi.fn();
     render(
       <BaseNode
@@ -127,11 +126,12 @@ describe("BaseNode", () => {
         {...baseNodeDefaults}
       />,
     );
-    fireEvent.click(screen.getByText("My Node"));
+    const user = userEvent.setup();
+    await user.click(screen.getByText("My Node"));
     expect(onSelect).toHaveBeenCalledWith(node);
   });
 
-  it("calls onNodeSelect with null if node not found", () => {
+  it("calls onNodeSelect with null if node not found", async () => {
     const onSelect = vi.fn();
     render(
       <BaseNode
@@ -142,7 +142,8 @@ describe("BaseNode", () => {
         {...baseNodeDefaults}
       />,
     );
-    fireEvent.click(screen.getByText("My Node"));
+    const user = userEvent.setup();
+    await user.click(screen.getByText("My Node"));
     expect(onSelect).toHaveBeenCalledWith(null);
   });
 

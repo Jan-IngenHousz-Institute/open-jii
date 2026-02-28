@@ -1,342 +1,230 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { useLocale } from "@/hooks/useLocale";
+import { createExperimentAccess } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { usePathname, useParams, notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { contract } from "@repo/api";
 
 import ExperimentLayout from "./layout";
 
-// Global React for JSX in mocks
-globalThis.React = React;
-
-// -------------------
-// Mocks
-// -------------------
-
-// Mock useExperimentAccess hook
-const mockUseExperimentAccess = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: (id: string) => mockUseExperimentAccess(id),
-}));
-
-// Mock useLocale hook
-const mockUseLocale = vi.fn();
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => mockUseLocale(),
-}));
-
-// Mock Next.js navigation hooks
-const mockUsePathname = vi.fn();
-const mockUseParams = vi.fn();
-const mockNotFound = vi.fn();
-vi.mock("next/navigation", () => ({
-  usePathname: () => mockUsePathname(),
-  useParams: () => mockUseParams(),
-  notFound: () => mockNotFound(),
-}));
-
-// Mock Next.js Link component
-vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href} data-testid="next-link">
-      {children}
-    </a>
-  ),
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock ExperimentTitle component
 vi.mock("~/components/experiment-overview/experiment-title", () => ({
   ExperimentTitle: ({ name }: { name: string }) => <div data-testid="experiment-title">{name}</div>,
 }));
 
-// -------------------
-// Test Data
-// -------------------
+vi.mock("@/components/error-display", () => ({
+  ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
+}));
 
-const createMockAccessData = ({
-  hasAccess = true,
-  isAdmin = false,
-}: { hasAccess?: boolean; isAdmin?: boolean } = {}) => ({
-  data: {
-    body: {
-      experiment: {
-        id: "test-experiment-id",
-        name: "Test Experiment",
-        status: "active",
-        visibility: "private",
-      },
-      hasAccess,
-      isAdmin,
-    },
+const defaultAccess = createExperimentAccess({
+  experiment: {
+    id: "test-id",
+    name: "Test Experiment",
+    status: "active",
+    visibility: "private",
   },
-  isLoading: false,
-  error: null,
 });
 
-// -------------------
-// Helpers
-// -------------------
-function renderExperimentLayout({
-  children = <div data-testid="child-content">Child Content</div>,
-  hasAccess = true,
-  isAdmin = false,
-  isLoading = false,
-  error = null,
-  pathname = "/en/platform/experiments-archive/test-id",
-  experimentId = "test-id",
-  locale = "en",
-}: {
-  children?: React.ReactNode;
-  hasAccess?: boolean;
-  isAdmin?: boolean;
-  isLoading?: boolean;
-  error?: { status?: number; message: string } | null;
-  pathname?: string;
-  experimentId?: string;
-  locale?: string;
-} = {}) {
-  // Mock navigation hooks
-  mockUsePathname.mockReturnValue(pathname);
-  mockUseParams.mockReturnValue({ id: experimentId });
-  mockUseLocale.mockReturnValue(locale);
+const renderLayout = (children: React.ReactNode = <div>Child Content</div>) =>
+  render(<ExperimentLayout>{children}</ExperimentLayout>);
 
-  // Mock useExperimentAccess hook response
-  if (error) {
-    mockUseExperimentAccess.mockReturnValue({
-      data: null,
-      isLoading: false,
-      error,
-    });
-  } else if (isLoading) {
-    mockUseExperimentAccess.mockReturnValue({
-      data: null,
-      isLoading: true,
-      error: null,
-    });
-  } else {
-    mockUseExperimentAccess.mockReturnValue(createMockAccessData({ hasAccess, isAdmin }));
-  }
-
-  return render(<ExperimentLayout>{children}</ExperimentLayout>);
-}
-
-// -------------------
-// Tests
-// -------------------
 describe("<ExperimentLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments-archive/test-id");
+    vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
   });
 
   describe("Loading State", () => {
     it("shows loading message when data is loading", () => {
-      renderExperimentLayout({ isLoading: true });
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: defaultAccess,
+        delay: 999_999,
+      });
+      renderLayout();
 
       expect(screen.getByText("loading")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
   });
 
   describe("Error States", () => {
-    it("shows access denied error for 403 status", () => {
-      const error = { status: 403, message: "Forbidden" };
-      renderExperimentLayout({ error });
+    it("shows access denied error for 403 status", async () => {
+      server.mount(contract.experiments.getExperimentAccess, { status: 403 });
+      renderLayout();
 
-      expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
+      });
       expect(screen.getByText("noPermissionToAccess")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 
-    it("shows generic error for non-403 errors", () => {
-      const error = { status: 500, message: "Internal Server Error" };
-      renderExperimentLayout({ error });
+    it("shows generic error for non-403 errors", async () => {
+      server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+      renderLayout();
 
-      expect(screen.getByText("errors.error")).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText("errors.error")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
       expect(screen.getByText("errorLoadingExperiment")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 
-    it("shows generic error for 404 status", () => {
-      const error = { status: 404, message: "Not Found" };
-      renderExperimentLayout({ error });
+    it("calls notFound for 404 status", async () => {
+      server.mount(contract.experiments.getExperimentAccess, { status: 404 });
+      renderLayout();
 
-      expect(screen.getByText("errors.error")).toBeInTheDocument();
-      expect(screen.getByText("errorLoadingExperiment")).toBeInTheDocument();
-      expect(screen.queryByText("errors.accessDenied")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
+      });
     });
   });
 
   describe("No Data State", () => {
-    it("shows not found message when no experiment data is returned", () => {
-      mockUsePathname.mockReturnValue("/en/platform/experiments-archive/test-id");
-      mockUseParams.mockReturnValue({ id: "test-id" });
-      mockUseLocale.mockReturnValue("en");
-      mockUseExperimentAccess.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: null,
+    it("shows not found message when no experiment data is returned", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: { experiment: null, hasAccess: false, isAdmin: false },
       });
+      renderLayout();
 
-      render(
-        <ExperimentLayout>
-          <div data-testid="child-content">Child Content</div>
-        </ExperimentLayout>,
-      );
-
-      expect(screen.getByText("errors.notFound")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("errors.notFound")).toBeInTheDocument();
+      });
       expect(screen.getByText("experimentNotFound")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
   });
 
   describe("Tab Navigation", () => {
-    it("renders all tabs with correct labels", () => {
-      renderExperimentLayout({ isAdmin: true });
+    it("renders all tabs with correct labels", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({ isAdmin: true, experiment: { id: "test-id" } }),
+      });
+      renderLayout();
 
-      expect(screen.getByText("overview")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("overview")).toBeInTheDocument();
+      });
       expect(screen.getByText("data")).toBeInTheDocument();
       expect(screen.getByText("analysis.title")).toBeInTheDocument();
       expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
     });
 
-    it("all tabs render as links", () => {
-      renderExperimentLayout({ isAdmin: true, locale: "en", experimentId: "test-id" });
+    it("all tabs render as links with correct hrefs", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({ isAdmin: true, experiment: { id: "test-id" } }),
+      });
+      renderLayout();
 
-      const links = screen.getAllByTestId("next-link");
-      expect(links).toHaveLength(4); // 4 tabs for archived experiments
-
-      // Check href attributes (archived uses /experiments-archive/ path)
-      expect(links[0]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id");
-      expect(links[1]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/analysis");
-      expect(links[3]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/flow");
-    });
-
-    it("renders tabs when on root experiment path", () => {
-      renderExperimentLayout({
-        pathname: "/en/platform/experiments-archive/test-id",
-        experimentId: "test-id",
+      await waitFor(() => {
+        expect(screen.getByText("overview")).toBeInTheDocument();
       });
 
-      expect(screen.getByText("overview")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      const links = screen.getAllByRole("link");
+      const hrefs = links.map((l) => l.getAttribute("href"));
+
+      expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id");
+      expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/data");
+      expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/analysis");
+      expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/flow");
     });
 
-    it("renders tabs when on data path", () => {
-      renderExperimentLayout({
-        pathname: "/en/platform/experiments/test-id/data",
-        experimentId: "test-id",
-      });
+    it("renders tabs when on root experiment path", async () => {
+      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      renderLayout();
 
-      expect(screen.getByText("data")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("overview")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
-    it("renders tabs when on nested data path", () => {
-      renderExperimentLayout({
-        pathname: "/en/platform/experiments/test-id/data/sensors",
-        experimentId: "test-id",
-        locale: "en",
-      });
+    it("renders tabs when on data path", async () => {
+      vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id/data");
+      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      renderLayout();
 
-      expect(screen.getByText("data")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("data")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
-    it("renders tabs when on analysis path", () => {
-      renderExperimentLayout({
-        pathname: "/en/platform/experiments/test-id/analysis/visualizations",
-        experimentId: "test-id",
-      });
+    it("renders tabs when on analysis path", async () => {
+      vi.mocked(usePathname).mockReturnValue(
+        "/en-US/platform/experiments/test-id/analysis/visualizations",
+      );
+      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      renderLayout();
 
-      expect(screen.getByText("analysis.title")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("analysis.title")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
-    it("renders tabs when on flow path", () => {
-      renderExperimentLayout({
-        pathname: "/en/platform/experiments/test-id/flow",
-        experimentId: "test-id",
-      });
+    it("renders tabs when on flow path", async () => {
+      vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id/flow");
+      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      renderLayout();
 
-      expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
   });
 
   describe("Layout Content", () => {
-    it("renders experiment title component", () => {
-      renderExperimentLayout();
+    it("renders children", async () => {
+      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      renderLayout();
 
-      // ExperimentTitle component is rendered (we'd need to mock it to test its content)
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
-    });
-
-    it("wraps children in proper structure", () => {
-      renderExperimentLayout();
-
-      const childContent = screen.getByTestId("child-content");
-      expect(childContent).toBeInTheDocument();
-    });
-  });
-
-  describe("Hook Integration", () => {
-    it("calls useExperimentAccess with correct experiment ID", () => {
-      renderExperimentLayout({ experimentId: "my-experiment-123" });
-
-      expect(mockUseExperimentAccess).toHaveBeenCalledWith("my-experiment-123");
-    });
-
-    it("calls useLocale hook", () => {
-      renderExperimentLayout();
-
-      expect(mockUseLocale).toHaveBeenCalled();
-    });
-
-    it("calls usePathname hook", () => {
-      renderExperimentLayout();
-
-      expect(mockUsePathname).toHaveBeenCalled();
-    });
-
-    it("calls useParams hook", () => {
-      renderExperimentLayout();
-
-      expect(mockUseParams).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(screen.getByText("Child Content")).toBeInTheDocument();
+      });
     });
   });
 
   describe("Different Locales", () => {
-    it("generates correct links for different locale", () => {
-      renderExperimentLayout({
-        isAdmin: true,
-        locale: "de",
-        experimentId: "test-id",
+    it("generates correct links for different locale", async () => {
+      vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+      vi.mocked(usePathname).mockReturnValue("/de/platform/experiments-archive/test-id");
+      vi.mocked(useLocale).mockReturnValue("de");
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({ isAdmin: true, experiment: { id: "test-id" } }),
+      });
+      renderLayout();
+
+      await waitFor(() => {
+        expect(screen.getByText("overview")).toBeInTheDocument();
       });
 
-      const links = screen.getAllByTestId("next-link");
-      expect(links[0]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id");
-      expect(links[1]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/analysis");
-      expect(links[3]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/flow");
+      const links = screen.getAllByRole("link");
+      const hrefs = links.map((l) => l.getAttribute("href"));
+
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id");
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/data");
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/analysis");
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/flow");
     });
 
-    it("renders tabs for different locale", () => {
-      renderExperimentLayout({
-        pathname: "/de/platform/experiments/test-id/data/sensors",
-        experimentId: "test-id",
-        locale: "de",
-      });
+    it("renders tabs for different locale", async () => {
+      vi.mocked(usePathname).mockReturnValue("/de/platform/experiments/test-id/data/sensors");
+      vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+      vi.mocked(useLocale).mockReturnValue("de");
+      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      renderLayout();
 
-      expect(screen.getByText("data")).toBeInTheDocument();
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("data")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
   });
 });

@@ -1,43 +1,21 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { ExperimentDataTableChart } from "./experiment-data-table-chart";
 
-// Mock lucide-react icons
-vi.mock("lucide-react", () => ({
-  Pin: () => (
-    <div data-testid="pin-icon" className="lucide-pin">
-      pin
-    </div>
-  ),
-  X: () => (
-    <div data-testid="x-icon" className="lucide-x">
-      ✕
-    </div>
-  ),
-}));
-
-// Mock translations
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        close: "Close",
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
-
 // Mock the LineChart component from @repo/ui/components
-vi.mock("@repo/ui/components", () => ({
-  LineChart: vi.fn(({ data, config }) => (
-    <div data-testid="line-chart" data-config={JSON.stringify(config)}>
-      {JSON.stringify(data)}
-    </div>
-  )),
-}));
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    LineChart: vi.fn(({ data, config }: { data: unknown; config: unknown }) => (
+      <div data-testid="line-chart" data-config={JSON.stringify(config)}>
+        {JSON.stringify(data)}
+      </div>
+    )),
+  };
+});
 
 interface ChartData {
   name: string;
@@ -121,7 +99,8 @@ describe("ExperimentDataTableChart", () => {
     expect(screen.queryByRole("button", { name: /close/i })).not.toBeInTheDocument();
   });
 
-  it("calls onClose when close button is clicked", () => {
+  it("calls onClose when close button is clicked", async () => {
+    const user = userEvent.setup();
     const mockOnClose = vi.fn();
 
     render(
@@ -135,7 +114,7 @@ describe("ExperimentDataTableChart", () => {
     );
 
     const closeButton = screen.getByRole("button", { name: /close/i });
-    fireEvent.click(closeButton);
+    await user.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalled();
   });

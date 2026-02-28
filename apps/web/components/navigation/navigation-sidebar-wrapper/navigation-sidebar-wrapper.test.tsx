@@ -1,124 +1,10 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { SidebarProvider } from "@repo/ui/components";
 
 import { NavigationSidebarWrapper } from "./navigation-sidebar-wrapper";
-
-globalThis.React = React;
-
-// Mock window.matchMedia
-window.matchMedia = () =>
-  ({
-    matches: false,
-    media: "",
-    onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }) as unknown as MediaQueryList;
-
-// Mock @repo/i18n/server
-vi.mock("@repo/i18n/server", () => ({
-  __esModule: true,
-  default: vi.fn(() => {
-    const t = (key: string) => key;
-    return Promise.resolve({ t });
-  }),
-}));
-
-// Mock navigation-config
-vi.mock("@/components/navigation/navigation-config", () => ({
-  mainNavigation: {
-    dashboard: {
-      titleKey: "navigation.dashboard",
-      url: (locale: string) => `/${locale}/platform`,
-      icon: "Home",
-      items: [
-        {
-          titleKey: "sidebar.overview",
-          namespace: "navigation",
-          url: (locale: string) => `/${locale}/platform/overview`,
-        },
-      ],
-    },
-    experiments: {
-      titleKey: "sidebar.experiments",
-      url: (locale: string) => `/${locale}/platform/experiments`,
-      icon: "Microscope",
-      items: [
-        {
-          titleKey: "sidebar.newExperiment",
-          namespace: "navigation",
-          url: (locale: string) => `/${locale}/platform/experiments/new`,
-        },
-        {
-          titleKey: "sidebar.allExperiments",
-          namespace: "navigation",
-          url: (locale: string) => `/${locale}/platform/experiments`,
-        },
-      ],
-    },
-    protocols: {
-      titleKey: "sidebar.protocols",
-      url: (locale: string) => `/${locale}/platform/protocols`,
-      icon: "FileSliders",
-      items: [
-        {
-          titleKey: "sidebar.newProtocol",
-          namespace: "navigation",
-          url: (locale: string) => `/${locale}/platform/protocols/new`,
-        },
-        {
-          titleKey: "sidebar.allProtocols",
-          namespace: "navigation",
-          url: (locale: string) => `/${locale}/platform/protocols`,
-        },
-      ],
-    },
-    macros: {
-      titleKey: "sidebar.macros",
-      url: (locale: string) => `/${locale}/platform/macros`,
-      icon: "Code",
-      items: [
-        {
-          titleKey: "sidebar.newMacro",
-          namespace: "navigation",
-          url: (locale: string) => `/${locale}/platform/macros/new`,
-        },
-        {
-          titleKey: "sidebar.allMacros",
-          namespace: "navigation",
-          url: (locale: string) => `/${locale}/platform/macros`,
-        },
-      ],
-    },
-  },
-  createNavigation: {
-    buttonKey: "navigation.create",
-    items: [
-      {
-        titleKey: "navigation.protocol",
-        url: (locale: string) => `/${locale}/platform/protocols/new`,
-        namespace: "common",
-      },
-      {
-        titleKey: "navigation.experiment",
-        url: (locale: string) => `/${locale}/platform/experiments/new`,
-        namespace: "navigation",
-      },
-      {
-        titleKey: "navigation.macro",
-        url: (locale: string) => `/${locale}/platform/macros/new`,
-        namespace: "navigation",
-      },
-    ],
-  },
-}));
 
 // Mock AppSidebar component
 vi.mock("../navigation-sidebar/navigation-sidebar", () => ({
@@ -179,9 +65,9 @@ describe("NavigationSidebarWrapper", () => {
     // Check dashboard navigation
     expect(navigationData.navDashboard).toHaveLength(1);
     expect(navigationData.navDashboard[0]).toMatchObject({
-      title: "navigation.dashboard",
+      title: "dashboard.title",
       url: "/en/platform",
-      icon: "Home",
+      icon: "LayoutDashboard",
       isActive: true,
     });
 
@@ -190,7 +76,7 @@ describe("NavigationSidebarWrapper", () => {
     expect(navigationData.navExperiments[0]).toMatchObject({
       title: "sidebar.experiments",
       url: "/en/platform/experiments",
-      icon: "Microscope",
+      icon: "Leaf",
       isActive: true,
     });
     expect(navigationData.navExperiments[0].items).toHaveLength(2);
@@ -199,7 +85,7 @@ describe("NavigationSidebarWrapper", () => {
       url: "/en/platform/experiments/new",
     });
     expect(navigationData.navExperiments[0].items[1]).toMatchObject({
-      title: "sidebar.allExperiments",
+      title: "sidebar.overview",
       url: "/en/platform/experiments",
     });
   });

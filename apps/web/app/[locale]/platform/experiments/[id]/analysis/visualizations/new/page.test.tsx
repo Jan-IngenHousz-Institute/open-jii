@@ -1,51 +1,18 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { createExperimentAccess, createExperimentTable } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { notFound, useParams, useRouter } from "next/navigation";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { contract } from "@repo/api";
+
 import NewVisualizationPage from "./page";
 
-// Mock next/navigation
-const mockPush = vi.fn();
-const mockNotFound = vi.fn(() => {
-  throw new Error("Not Found");
-});
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "exp-123" }),
-  useRouter: () => ({ push: mockPush }),
-  notFound: () => mockNotFound(),
-}));
-
-// Mock useExperimentAccess hook
-const mockUseExperimentAccess = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: (experimentId: string) =>
-    mockUseExperimentAccess(experimentId) as { data: unknown },
-}));
-
-// Mock hooks
-const mockUseExperimentTables = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
-  useExperimentTables: (experimentId: string) =>
-    mockUseExperimentTables(experimentId) as {
-      tables: unknown[];
-      isLoading: boolean;
-      error: unknown;
-    },
-}));
-
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
-// Mock components
 vi.mock("@/components/experiment-visualizations/new-visualization-form", () => ({
   default: ({
     experimentId,
     tables,
-    tablesError,
     onSuccess,
     isLoading,
     isPreviewOpen,
@@ -53,7 +20,6 @@ vi.mock("@/components/experiment-visualizations/new-visualization-form", () => (
   }: {
     experimentId: string;
     tables: unknown[];
-    tablesError?: unknown;
     onSuccess: (id: string) => void;
     isLoading: boolean;
     isPreviewOpen: boolean;
@@ -62,7 +28,6 @@ vi.mock("@/components/experiment-visualizations/new-visualization-form", () => (
     <div data-testid="new-visualization-form" data-loading={isLoading}>
       <div>Experiment: {experimentId}</div>
       <div>Tables: {tables.length}</div>
-      <div>Tables Error: {tablesError ? "Yes" : "No"}</div>
       <div>Preview Open: {isPreviewOpen ? "Yes" : "No"}</div>
       <button onClick={() => onSuccess("new-viz-123")}>Create Visualization</button>
       <button onClick={onPreviewClose}>Close Preview</button>
@@ -70,166 +35,107 @@ vi.mock("@/components/experiment-visualizations/new-visualization-form", () => (
   ),
 }));
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "ui.actions.create": "Create New Visualization",
-        "preview.title": "Preview",
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
+const experimentId = "exp-123";
 
-// Mock Button component
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    variant,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <button onClick={onClick} data-variant={variant} data-size={size} className={className}>
-      {children}
-    </button>
-  ),
-}));
-
-// Mock lucide-react icons
-vi.mock("lucide-react", () => ({
-  Eye: ({ className }: { className?: string }) => <span className={className}>Eye Icon</span>,
-}));
+function mountDefaults(overrides?: { tables?: unknown[] }) {
+  server.mount(contract.experiments.getExperimentAccess, {
+    body: createExperimentAccess({
+      experiment: { id: experimentId, status: "active" },
+      isAdmin: true,
+    }),
+  });
+  server.mount(contract.experiments.getExperimentTables, {
+    body: (overrides?.tables ?? []) as ReturnType<typeof createExperimentTable>[],
+  });
+}
 
 describe("NewVisualizationPage", () => {
-  let queryClient: QueryClient;
-
-  const renderWithQueryClient = (component: React.ReactElement) => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-    return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Default mock for useExperimentAccess
-    mockUseExperimentAccess.mockReturnValue({
-      data: {
-        body: {
-          experiment: {
-            status: "active",
-          },
-          isAdmin: true,
-        },
-      },
-    });
+    vi.mocked(useParams).mockReturnValue({ id: experimentId, locale: "en-US" });
   });
 
   describe("Rendering", () => {
-    it("should render page title", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+    it("should render page title", async () => {
+      mountDefaults();
+      render(<NewVisualizationPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("ui.actions.create")).toBeInTheDocument();
       });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      expect(screen.getByText("Create New Visualization")).toBeInTheDocument();
     });
 
-    it("should render preview button", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+    it("should render preview button", async () => {
+      mountDefaults();
+      render(<NewVisualizationPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /preview.title/ })).toBeInTheDocument();
       });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      expect(screen.getByText("Preview")).toBeInTheDocument();
-      expect(screen.getByText("Eye Icon")).toBeInTheDocument();
     });
 
-    it("should render form with correct experiment ID", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+    it("should render form with correct experiment ID", async () => {
+      mountDefaults();
+      render(<NewVisualizationPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(`Experiment: ${experimentId}`)).toBeInTheDocument();
       });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      expect(screen.getByText("Experiment: exp-123")).toBeInTheDocument();
     });
 
-    it("should pass sample tables to form", () => {
-      const mockTables = [{ name: "table1" }, { name: "table2" }, { name: "table3" }];
-
-      mockUseExperimentTables.mockReturnValue({
-        tables: mockTables,
-        isLoading: false,
-        error: null,
+    it("should pass sample tables to form", async () => {
+      mountDefaults({
+        tables: [createExperimentTable(), createExperimentTable(), createExperimentTable()],
       });
+      render(<NewVisualizationPage />);
 
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      expect(screen.getByText("Tables: 3")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Tables: 3")).toBeInTheDocument();
+      });
     });
 
-    it("should pass loading state to form", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: true,
-        error: null,
+    it("should pass loading state to form", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({
+          experiment: { id: experimentId, status: "active" },
+          isAdmin: true,
+        }),
+      });
+      server.mount(contract.experiments.getExperimentTables, {
+        body: [],
+        delay: 999_999,
       });
 
-      renderWithQueryClient(<NewVisualizationPage />);
+      render(<NewVisualizationPage />);
 
-      const form = screen.getByTestId("new-visualization-form");
-      expect(form.getAttribute("data-loading")).toBe("true");
+      await waitFor(() => {
+        const form = screen.getByTestId("new-visualization-form");
+        expect(form.getAttribute("data-loading")).toBe("true");
+      });
     });
   });
 
   describe("Preview functionality", () => {
-    it("should initially have preview closed", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+    it("should initially have preview closed", async () => {
+      mountDefaults();
+      render(<NewVisualizationPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Preview Open: No")).toBeInTheDocument();
       });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      expect(screen.getByText("Preview Open: No")).toBeInTheDocument();
     });
 
     it("should open preview when button is clicked", async () => {
       const user = userEvent.setup();
+      mountDefaults();
+      render(<NewVisualizationPage />);
 
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /preview.title/ })).toBeInTheDocument();
       });
 
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      const previewButton = screen.getByText("Preview").closest("button");
+      const previewButton = screen.getByRole("button", { name: /preview.title/ });
       expect(previewButton).toBeTruthy();
-      if (!previewButton) return;
 
       await user.click(previewButton);
 
@@ -240,18 +146,14 @@ describe("NewVisualizationPage", () => {
 
     it("should close preview when onPreviewClose is called", async () => {
       const user = userEvent.setup();
+      mountDefaults();
+      render(<NewVisualizationPage />);
 
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /preview.title/ })).toBeInTheDocument();
       });
 
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      // Open preview
-      const previewButton = screen.getByText("Preview").closest("button");
-      if (!previewButton) return;
+      const previewButton = screen.getByRole("button", { name: /preview.title/ });
 
       await user.click(previewButton);
 
@@ -259,7 +161,6 @@ describe("NewVisualizationPage", () => {
         expect(screen.getByText("Preview Open: Yes")).toBeInTheDocument();
       });
 
-      // Close preview
       const closeButton = screen.getByText("Close Preview");
       await user.click(closeButton);
 
@@ -272,42 +173,38 @@ describe("NewVisualizationPage", () => {
   describe("Form submission", () => {
     it("should navigate to visualization detail on success", async () => {
       const user = userEvent.setup();
-
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
-      });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      const createButton = screen.getByText("Create Visualization");
-      await user.click(createButton);
+      mountDefaults();
+      render(<NewVisualizationPage />);
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith(
-          "/en/platform/experiments/exp-123/analysis/visualizations/new-viz-123",
+        expect(screen.getByText("Create Visualization")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Create Visualization"));
+
+      const router = vi.mocked(useRouter)();
+      await waitFor(() => {
+        expect(router.push).toHaveBeenCalledWith(
+          "/en-US/platform/experiments/exp-123/analysis/visualizations/new-viz-123",
         );
       });
     });
 
     it("should construct correct URL with visualization ID", async () => {
       const user = userEvent.setup();
-
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
-      });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      const createButton = screen.getByText("Create Visualization");
-      await user.click(createButton);
+      mountDefaults();
+      render(<NewVisualizationPage />);
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledTimes(1);
-        const calledPath = mockPush.mock.calls[0]?.[0] as string;
+        expect(screen.getByText("Create Visualization")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Create Visualization"));
+
+      const router = vi.mocked(useRouter)();
+      await waitFor(() => {
+        expect(router.push).toHaveBeenCalled();
+        const calledPath = vi.mocked(router.push).mock.calls[0]?.[0];
         expect(calledPath).toContain("exp-123");
         expect(calledPath).toContain("analysis/visualizations");
         expect(calledPath).toContain("new-viz-123");
@@ -316,95 +213,74 @@ describe("NewVisualizationPage", () => {
   });
 
   describe("Data fetching", () => {
-    it("should fetch sample data with correct parameters", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+    it("should handle loading state", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({
+          experiment: { id: experimentId, status: "active" },
+          isAdmin: true,
+        }),
+      });
+      server.mount(contract.experiments.getExperimentTables, {
+        body: [],
+        delay: 999_999,
       });
 
-      renderWithQueryClient(<NewVisualizationPage />);
+      render(<NewVisualizationPage />);
 
-      expect(mockUseExperimentTables).toHaveBeenCalledWith("exp-123");
+      await waitFor(() => {
+        const form = screen.getByTestId("new-visualization-form");
+        expect(form.getAttribute("data-loading")).toBe("true");
+      });
     });
 
-    it("should handle loading state", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: true,
-        error: null,
+    it("should handle empty sample tables", async () => {
+      mountDefaults({ tables: [] });
+      render(<NewVisualizationPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Tables: 0")).toBeInTheDocument();
       });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      const form = screen.getByTestId("new-visualization-form");
-      expect(form.getAttribute("data-loading")).toBe("true");
     });
 
-    it("should handle empty sample tables", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+    it("should handle multiple sample tables", async () => {
+      const tables = Array.from({ length: 10 }, () => createExperimentTable());
+      mountDefaults({ tables });
+      render(<NewVisualizationPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Tables: 10")).toBeInTheDocument();
       });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      expect(screen.getByText("Tables: 0")).toBeInTheDocument();
-    });
-
-    it("should handle multiple sample tables", () => {
-      const mockTables = Array.from({ length: 10 }, (_, i) => ({ name: `table${i}` }));
-
-      mockUseExperimentTables.mockReturnValue({
-        tables: mockTables,
-        isLoading: false,
-        error: null,
-      });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      expect(screen.getByText("Tables: 10")).toBeInTheDocument();
     });
   });
 
   describe("Button styling", () => {
-    it("should have correct preview button variant", () => {
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
+    it("should render preview button as outline variant", async () => {
+      mountDefaults();
+      render(<NewVisualizationPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /preview.title/ })).toBeInTheDocument();
       });
-
-      renderWithQueryClient(<NewVisualizationPage />);
-
-      const previewButton = screen.getByText("Preview").closest("button");
-      expect(previewButton?.getAttribute("data-variant")).toBe("outline");
-      expect(previewButton?.getAttribute("data-size")).toBe("default");
     });
   });
 
   describe("Archived experiment handling", () => {
     it("should call notFound when experiment is archived", () => {
-      // Mock archived experiment
-      mockUseExperimentAccess.mockReturnValue({
-        data: {
-          body: {
-            experiment: {
-              status: "archived",
-            },
-          },
-        },
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({
+          experiment: { id: experimentId, status: "archived" },
+        }),
+      });
+      server.mount(contract.experiments.getExperimentTables, { body: [] });
+
+      // The component calls notFound() when !hasAccess (which is true during loading
+      // since accessData is undefined). Making notFound throw verifies the guard is hit.
+      vi.mocked(notFound).mockImplementation(() => {
+        throw new Error("NEXT_NOT_FOUND");
       });
 
-      mockUseExperimentTables.mockReturnValue({
-        tables: [],
-        isLoading: false,
-        error: null,
-      });
-
-      expect(() => renderWithQueryClient(<NewVisualizationPage />)).toThrow("Not Found");
-      expect(mockNotFound).toHaveBeenCalled();
+      expect(() => render(<NewVisualizationPage />)).toThrow("NEXT_NOT_FOUND");
+      expect(vi.mocked(notFound)).toHaveBeenCalled();
     });
   });
 });

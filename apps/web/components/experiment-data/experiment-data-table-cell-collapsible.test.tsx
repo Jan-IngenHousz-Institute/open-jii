@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -28,27 +27,13 @@ vi.mock("./table-cells/variant/experiment-data-table-variant-cell", () => ({
   ),
 }));
 
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  TableRow: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <tr data-testid="table-row" className={className}>
-      {children}
-    </tr>
-  ),
-  TableCell: ({
-    children,
-    colSpan,
-    className,
-  }: {
-    children: React.ReactNode;
-    colSpan?: number;
-    className?: string;
-  }) => (
-    <td data-testid="table-cell" colSpan={colSpan} className={className}>
-      {children}
-    </td>
-  ),
-}));
+function renderInTable(ui: React.ReactElement) {
+  return render(
+    <table>
+      <tbody>{ui}</tbody>
+    </table>,
+  );
+}
 
 describe("ExperimentDataTableCellCollapsible", () => {
   const defaultProps = {
@@ -77,15 +62,15 @@ describe("ExperimentDataTableCellCollapsible", () => {
   });
 
   it("renders VariantExpandedContent for VARIANT type", () => {
-    render(<ExperimentDataTableCellCollapsible {...defaultProps} columnType="VARIANT" />);
+    renderInTable(<ExperimentDataTableCellCollapsible {...defaultProps} columnType="VARIANT" />);
 
     expect(screen.getByTestId("variant-content")).toHaveTextContent("some data");
-    expect(screen.getByTestId("table-row")).toBeInTheDocument();
-    expect(screen.getByTestId("table-cell")).toHaveAttribute("colSpan", "6");
+    expect(screen.getByRole("row")).toBeInTheDocument();
+    expect(screen.getByRole("cell")).toHaveAttribute("colSpan", "6");
   });
 
   it("renders ArrayExpandedContent for ARRAY<STRUCT<...>> type", () => {
-    render(
+    renderInTable(
       <ExperimentDataTableCellCollapsible
         {...defaultProps}
         columnType="ARRAY<STRUCT<field:string>>"
@@ -96,24 +81,24 @@ describe("ExperimentDataTableCellCollapsible", () => {
   });
 
   it("renders MapExpandedContent for MAP type", () => {
-    render(<ExperimentDataTableCellCollapsible {...defaultProps} columnType="MAP" />);
+    renderInTable(<ExperimentDataTableCellCollapsible {...defaultProps} columnType="MAP" />);
     expect(screen.getByTestId("map-content")).toHaveTextContent("some data");
   });
 
   it("renders MapExpandedContent for MAP<...> type", () => {
-    render(
+    renderInTable(
       <ExperimentDataTableCellCollapsible {...defaultProps} columnType="MAP<string,string>" />,
     );
     expect(screen.getByTestId("map-content")).toHaveTextContent("some data");
   });
 
   it("renders StructExpandedContent for STRUCT type", () => {
-    render(<ExperimentDataTableCellCollapsible {...defaultProps} columnType="STRUCT" />);
+    renderInTable(<ExperimentDataTableCellCollapsible {...defaultProps} columnType="STRUCT" />);
     expect(screen.getByTestId("struct-content")).toHaveTextContent("some data");
   });
 
   it("renders StructExpandedContent for STRUCT<...> type", () => {
-    render(
+    renderInTable(
       <ExperimentDataTableCellCollapsible {...defaultProps} columnType="STRUCT<field:string>" />,
     );
     expect(screen.getByTestId("struct-content")).toHaveTextContent("some data");

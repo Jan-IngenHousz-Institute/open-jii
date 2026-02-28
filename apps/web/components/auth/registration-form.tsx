@@ -24,6 +24,7 @@ import {
   Dialog,
   DialogTrigger,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components";
@@ -93,8 +94,8 @@ export function RegistrationForm({
           organization: data.organization,
         },
       });
-    } catch (error) {
-      console.error("Registration error:", error);
+    } catch {
+      // Error already surfaced via mutation state
     } finally {
       setIsPending(false);
     }
@@ -198,6 +199,9 @@ export function RegistrationForm({
                     <DialogContent className="max-w-lg">
                       <DialogHeader>
                         <DialogTitle>{termsData.title}</DialogTitle>
+                        <DialogDescription className="sr-only">
+                          {t("auth.termsDialogDescription")}
+                        </DialogDescription>
                       </DialogHeader>
                       <ScrollArea className="h-64 w-full rounded-md border p-4">
                         {termsData.content}

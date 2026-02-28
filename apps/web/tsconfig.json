@@ -13,6 +13,7 @@
       "@/components/*": ["./components/*"],
       "@/util/*": ["./util/*"],
       "@/hooks/*": ["./hooks/*"],
+      "@/test/*": ["./test/*"],
       "@repo/cms/lib/*": ["../../packages/cms/src/lib/*"],
       "@/lib/*": ["./lib/*"]
     },

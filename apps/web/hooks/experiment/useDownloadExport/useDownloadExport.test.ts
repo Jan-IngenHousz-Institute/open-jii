@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useDownloadExport } from "./useDownloadExport";
@@ -10,27 +10,11 @@ vi.mock("~/env", () => ({
   },
 }));
 
-// Mock @tanstack/react-query
-const mockMutate = vi.fn();
-let capturedMutationFn: ((exportId: string) => Promise<void>) | undefined;
-
-vi.mock("@tanstack/react-query", () => ({
-  useMutation: (options: { mutationFn: (exportId: string) => Promise<void> }) => {
-    capturedMutationFn = options.mutationFn;
-    return {
-      mutate: mockMutate,
-      isPending: false,
-      variables: undefined,
-    };
-  },
-}));
-
 describe("useDownloadExport", () => {
   const experimentId = "exp-123";
 
   beforeEach(() => {
     vi.clearAllMocks();
-    capturedMutationFn = undefined;
     URL.createObjectURL = vi.fn().mockReturnValue("blob:test-url");
     URL.revokeObjectURL = vi.fn();
   });
@@ -43,21 +27,12 @@ describe("useDownloadExport", () => {
     const { result } = renderHook(() => useDownloadExport(experimentId));
 
     expect(result.current.downloadExport).toBeDefined();
+    expect(typeof result.current.downloadExport).toBe("function");
     expect(result.current.isDownloading).toBe(false);
     expect(result.current.downloadingExportId).toBeUndefined();
   });
 
-  it("should call mutate when downloadExport is invoked", () => {
-    const { result } = renderHook(() => useDownloadExport(experimentId));
-
-    act(() => {
-      result.current.downloadExport("export-456");
-    });
-
-    expect(mockMutate).toHaveBeenCalledWith("export-456");
-  });
-
-  it("should fetch the correct URL with credentials", async () => {
+  it("should fetch the correct URL with credentials and trigger download", async () => {
     const mockBlob = new Blob(["test data"], { type: "text/csv" });
     const mockResponse = {
       ok: true,
@@ -70,35 +45,41 @@ describe("useDownloadExport", () => {
 
     vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as never);
 
-    renderHook(() => useDownloadExport(experimentId));
-
-    expect(capturedMutationFn).toBeDefined();
-    const exportId = "export-456";
-
-    // Mock DOM methods for download
     const mockLink = {
       href: "",
       download: "",
       click: vi.fn(),
     };
-    vi.spyOn(document, "createElement").mockReturnValue(mockLink as unknown as HTMLAnchorElement);
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation(
+      (tag: string, options?: ElementCreationOptions) => {
+        if (tag === "a") return mockLink as unknown as HTMLAnchorElement;
+        return originalCreateElement(tag, options);
+      },
+    );
     vi.spyOn(document.body, "appendChild").mockImplementation((node) => node);
     vi.spyOn(document.body, "removeChild").mockImplementation((node) => node);
 
-    if (capturedMutationFn) await capturedMutationFn(exportId);
+    const { result } = renderHook(() => useDownloadExport(experimentId));
 
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      `http://localhost:3020/api/v1/experiments/${experimentId}/data/exports/${exportId}`,
-      { credentials: "include" },
-    );
+    act(() => {
+      result.current.downloadExport("export-456");
+    });
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(document.createElement).toHaveBeenCalledWith("a");
-    expect(mockLink.href).toBe("blob:test-url");
-    expect(mockLink.download).toBe("export-456.csv");
-    expect(mockLink.click).toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test-url");
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `http://localhost:3020/api/v1/experiments/${experimentId}/data/exports/export-456`,
+        { credentials: "include" },
+      );
+    });
+
+    await waitFor(() => {
+      expect(document.createElement).toHaveBeenCalledWith("a");
+      expect(mockLink.href).toBe("blob:test-url");
+      expect(mockLink.download).toBe("export-456.csv");
+      expect(mockLink.click).toHaveBeenCalled();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test-url");
+    });
   });
 
   it("should use fallback filename when Content-Disposition is missing", async () => {
@@ -114,31 +95,53 @@ describe("useDownloadExport", () => {
 
     vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as never);
 
-    renderHook(() => useDownloadExport(experimentId));
-
     const mockLink = { href: "", download: "", click: vi.fn() };
-    vi.spyOn(document, "createElement").mockReturnValue(mockLink as unknown as HTMLAnchorElement);
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation(
+      (tag: string, options?: ElementCreationOptions) => {
+        if (tag === "a") return mockLink as unknown as HTMLAnchorElement;
+        return originalCreateElement(tag, options);
+      },
+    );
     vi.spyOn(document.body, "appendChild").mockImplementation((node) => node);
     vi.spyOn(document.body, "removeChild").mockImplementation((node) => node);
 
-    const exportId = "789";
-    if (capturedMutationFn) await capturedMutationFn(exportId);
+    const { result } = renderHook(() => useDownloadExport(experimentId));
 
-    expect(mockLink.download).toBe("export-789");
+    act(() => {
+      result.current.downloadExport("789");
+    });
+
+    await waitFor(() => {
+      expect(mockLink.download).toBe("export-789");
+    });
   });
 
-  it("should throw error when response is not ok", async () => {
+  it("should not create download link when response is not ok", async () => {
     const mockResponse = {
       ok: false,
       statusText: "Not Found",
     };
 
     vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as never);
+    const createElementSpy = vi.spyOn(document, "createElement");
 
-    renderHook(() => useDownloadExport(experimentId));
+    const { result } = renderHook(() => useDownloadExport(experimentId));
 
-    if (capturedMutationFn) {
-      await expect(capturedMutationFn("export-999")).rejects.toThrow("Download failed: Not Found");
-    }
+    act(() => {
+      result.current.downloadExport("export-999");
+    });
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalled();
+    });
+
+    // Wait for mutation to settle
+    await waitFor(() => {
+      expect(result.current.isDownloading).toBe(false);
+    });
+
+    // Download link should not have been created
+    expect(createElementSpy).not.toHaveBeenCalledWith("a");
   });
 });

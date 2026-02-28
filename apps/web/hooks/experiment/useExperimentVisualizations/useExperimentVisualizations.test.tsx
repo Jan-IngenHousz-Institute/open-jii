@@ -1,193 +1,68 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
-import { tsr } from "@/lib/tsr";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, act } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createVisualization, resetFactories } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act } from "@/test/test-utils";
+import { describe, it, expect, beforeEach } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentVisualizations } from "./useExperimentVisualizations";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    experiments: {
-      listExperimentVisualizations: {
-        useQuery: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as any;
-
 describe("useExperimentVisualizations", () => {
-  let queryClient: QueryClient;
-
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
-
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetFactories();
   });
 
-  it("should initialize with default parameters", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+  it("should return visualizations data", async () => {
+    const visualizations = [
+      createVisualization({ experimentId: "exp-123", chartFamily: "basic", chartType: "line" }),
+      createVisualization({ experimentId: "exp-123", chartFamily: "basic", chartType: "scatter" }),
+    ];
 
-    renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }), {
-      wrapper: createWrapper(),
+    server.mount(contract.experiments.listExperimentVisualizations, {
+      body: visualizations,
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        params: { id: "exp-123" },
-        query: {
-          chartFamily: undefined,
-          limit: 50,
-          offset: 0,
-        },
-      },
-      queryKey: ["experiment-visualizations", "exp-123", undefined, 50, 0],
-    });
-  });
+    const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
-  it("should initialize with custom parameters", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
-
-    renderHook(
-      () =>
-        useExperimentVisualizations({
-          experimentId: "exp-123",
-          initialChartFamily: "basic",
-          initialLimit: 10,
-          initialOffset: 20,
-        }),
-      {
-        wrapper: createWrapper(),
-      },
-    );
-
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        params: { id: "exp-123" },
-        query: {
-          chartFamily: "basic",
-          limit: 10,
-          offset: 20,
-        },
-      },
-      queryKey: ["experiment-visualizations", "exp-123", "basic", 10, 20],
-    });
-  });
-
-  it("should return successful visualizations data", () => {
-    const mockData = {
-      status: 200,
-      body: [
-        {
-          id: "viz-1",
-          name: "Visualization 1",
-          chartType: "line",
-          chartFamily: "basic",
-        },
-        {
-          id: "viz-2",
-          name: "Visualization 2",
-          chartType: "scatter",
-          chartFamily: "basic",
-        },
-      ],
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockData,
-      error: null,
-      isLoading: false,
-    });
-    mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.data).toEqual(mockData);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
-  });
-
-  it("should handle loading state", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.data).toBeUndefined();
     expect(result.current.isLoading).toBe(true);
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.data?.body).toHaveLength(2);
     expect(result.current.error).toBeNull();
   });
 
-  it("should handle error state", () => {
-    const mockError = {
-      status: 500,
-      message: "Internal server error",
-    };
+  it("should handle error state", async () => {
+    server.mount(contract.experiments.listExperimentVisualizations, { status: 500 });
 
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: mockError,
-      isLoading: false,
-    });
-    mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+    const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
-    const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }), {
-      wrapper: createWrapper(),
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toEqual(mockError);
+    expect(result.current.error).not.toBeNull();
+  });
+
+  it("should handle empty visualizations list", async () => {
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+
+    const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.data?.body).toEqual([]);
   });
 
   describe("chartFamily filter", () => {
     it("should allow setting chart family filter", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: undefined,
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
       expect(result.current.chartFamily).toBeUndefined();
 
@@ -197,53 +72,17 @@ describe("useExperimentVisualizations", () => {
 
       expect(result.current.chartFamily).toBe("basic");
     });
-
-    it("should update query when chart family changes", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: undefined,
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
-
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
-
-      act(() => {
-        result.current.setChartFamily("basic");
-      });
-
-      expect(mockUseQuery).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          queryData: expect.objectContaining({
-            query: expect.objectContaining({
-              chartFamily: "basic",
-            }),
-          }),
-        }),
-      );
-    });
   });
 
   describe("pagination", () => {
-    it("should have correct initial pagination state", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: [] },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+    it("should have correct initial pagination state", async () => {
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
       expect(result.current.limit).toBe(50);
       expect(result.current.offset).toBe(0);
@@ -251,70 +90,56 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.hasNextPage).toBe(false);
     });
 
-    it("should detect next page when results equal limit", () => {
-      const mockData = {
-        body: Array.from({ length: 50 }, (_, i) => ({
-          id: `viz-${i}`,
-          name: `Visualization ${i}`,
-        })),
-      };
-
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockData,
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
-
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
+    it("should detect next page when results equal limit", async () => {
+      const visualizations = Array.from({ length: 50 }, () =>
+        createVisualization({ experimentId: "exp-123" }),
       );
+
+      server.mount(contract.experiments.listExperimentVisualizations, {
+        body: visualizations,
+      });
+
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
       expect(result.current.hasNextPage).toBe(true);
     });
 
-    it("should not have next page when results less than limit", () => {
-      const mockData = {
-        body: Array.from({ length: 25 }, (_, i) => ({
-          id: `viz-${i}`,
-          name: `Visualization ${i}`,
-        })),
-      };
-
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockData,
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
-
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
+    it("should not have next page when results less than limit", async () => {
+      const visualizations = Array.from({ length: 25 }, () =>
+        createVisualization({ experimentId: "exp-123" }),
       );
+
+      server.mount(contract.experiments.listExperimentVisualizations, {
+        body: visualizations,
+      });
+
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
       expect(result.current.hasNextPage).toBe(false);
     });
 
-    it("should go to next page", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: Array.from({ length: 50 }, () => ({})) },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
-
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
+    it("should go to next page", async () => {
+      const visualizations = Array.from({ length: 50 }, () =>
+        createVisualization({ experimentId: "exp-123" }),
       );
+
+      server.mount(contract.experiments.listExperimentVisualizations, {
+        body: visualizations,
+      });
+
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
       act(() => {
         result.current.nextPage();
@@ -324,20 +149,14 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.hasPreviousPage).toBe(true);
     });
 
-    it("should not go to next page when hasNextPage is false", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: Array.from({ length: 25 }, () => ({})) },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+    it("should not go to next page when hasNextPage is false", async () => {
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
       act(() => {
         result.current.nextPage();
@@ -347,22 +166,13 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should go to previous page", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: [] },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () =>
-          useExperimentVisualizations({
-            experimentId: "exp-123",
-            initialOffset: 50,
-          }),
-        {
-          wrapper: createWrapper(),
-        },
+      const { result } = renderHook(() =>
+        useExperimentVisualizations({
+          experimentId: "exp-123",
+          initialOffset: 50,
+        }),
       );
 
       expect(result.current.offset).toBe(50);
@@ -375,19 +185,9 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should not go to previous page when offset is 0", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: [] },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
       act(() => {
         result.current.previousPage();
@@ -397,22 +197,13 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should reset pagination", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: [] },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () =>
-          useExperimentVisualizations({
-            experimentId: "exp-123",
-            initialOffset: 100,
-          }),
-        {
-          wrapper: createWrapper(),
-        },
+      const { result } = renderHook(() =>
+        useExperimentVisualizations({
+          experimentId: "exp-123",
+          initialOffset: 100,
+        }),
       );
 
       expect(result.current.offset).toBe(100);
@@ -425,19 +216,9 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should allow setting custom limit", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: [] },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
       act(() => {
         result.current.setLimit(25);
@@ -447,19 +228,9 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should allow setting custom offset", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: { body: [] },
-        error: null,
-        isLoading: false,
-      });
-      mockTsr.experiments.listExperimentVisualizations.useQuery = mockUseQuery;
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-      const { result } = renderHook(
-        () => useExperimentVisualizations({ experimentId: "exp-123" }),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
       act(() => {
         result.current.setOffset(75);

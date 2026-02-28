@@ -1,42 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createExperiment } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { ExperimentTitle } from "./experiment-title";
 
-globalThis.React = React;
-
-// ---------- Mocks ----------
-const mutateAsyncMock = vi.fn();
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentUpdate/useExperimentUpdate", () => ({
-  useExperimentUpdate: () => ({
-    mutateAsync: mutateAsyncMock,
-    isPending: false,
-  }),
-}));
-
-vi.mock("lucide-react", () => ({
-  Check: () => <span data-testid="icon-check">Check</span>,
-  X: () => <span data-testid="icon-x">X</span>,
-  Eye: () => <span data-testid="icon-eye">Eye</span>,
-  EyeOff: () => <span data-testid="icon-eye-off">EyeOff</span>,
-}));
-
-// ---------- Helpers ----------
 function renderComponent(
   props: {
     experimentId?: string;
@@ -47,7 +17,6 @@ function renderComponent(
     isArchived?: boolean;
   } = {},
 ) {
-  const queryClient = new QueryClient();
   const defaultProps = {
     experimentId: props.experimentId ?? "exp-123",
     name: props.name ?? "Test Experiment",
@@ -57,18 +26,10 @@ function renderComponent(
     isArchived: props.isArchived ?? false,
   };
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ExperimentTitle {...defaultProps} />
-    </QueryClientProvider>,
-  );
+  return render(<ExperimentTitle {...defaultProps} />);
 }
 
 describe("ExperimentTitle", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("renders experiment title", () => {
     renderComponent({ name: "My Experiment" });
     expect(screen.getByText("My Experiment")).toBeInTheDocument();
@@ -94,16 +55,14 @@ describe("ExperimentTitle", () => {
     expect(screen.getByText("status.published")).toBeInTheDocument();
   });
 
-  it("renders public visibility badge with eye icon", () => {
+  it("renders public visibility badge", () => {
     renderComponent({ visibility: "public" });
     expect(screen.getByText("public")).toBeInTheDocument();
-    expect(screen.getByTestId("icon-eye")).toBeInTheDocument();
   });
 
-  it("renders private visibility badge with eye-off icon", () => {
+  it("renders private visibility badge", () => {
     renderComponent({ visibility: "private" });
     expect(screen.getByText("private")).toBeInTheDocument();
-    expect(screen.getByTestId("icon-eye-off")).toBeInTheDocument();
   });
 
   it("enters edit mode when title is clicked with access", async () => {
@@ -157,6 +116,9 @@ describe("ExperimentTitle", () => {
   });
 
   it("saves title successfully", async () => {
+    const spy = server.mount(contract.experiments.updateExperiment, {
+      body: createExperiment({ id: "exp-456" }),
+    });
     const user = userEvent.setup();
     renderComponent({ experimentId: "exp-456", name: "Old Title", hasAccess: true });
 
@@ -170,20 +132,15 @@ describe("ExperimentTitle", () => {
     const saveButton = screen.getByLabelText("Save");
     await user.click(saveButton);
 
-    expect(mutateAsyncMock).toHaveBeenCalledWith(
-      {
-        params: { id: "exp-456" },
-        body: { name: "New Title" },
-      },
-      expect.objectContaining({
-        onSuccess: expect.any(Function) as unknown,
-        onError: expect.any(Function) as unknown,
-        onSettled: expect.any(Function) as unknown,
-      }),
-    );
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({ name: "New Title" });
+    expect(spy.params).toMatchObject({ id: "exp-456" });
   });
 
   it("does not save if title is unchanged", async () => {
+    const spy = server.mount(contract.experiments.updateExperiment, {
+      body: createExperiment(),
+    });
     const user = userEvent.setup();
     renderComponent({ name: "Same Title", hasAccess: true });
 
@@ -193,10 +150,13 @@ describe("ExperimentTitle", () => {
     const saveButton = screen.getByLabelText("Save");
     await user.click(saveButton);
 
-    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    expect(spy.called).toBe(false);
   });
 
   it("does not save if title is empty", async () => {
+    const spy = server.mount(contract.experiments.updateExperiment, {
+      body: createExperiment(),
+    });
     const user = userEvent.setup();
     renderComponent({ name: "Some Title", hasAccess: true });
 
@@ -209,6 +169,6 @@ describe("ExperimentTitle", () => {
     const saveButton = screen.getByLabelText("Save");
     await user.click(saveButton);
 
-    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    expect(spy.called).toBe(false);
   });
 });

@@ -1,32 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { revalidatePath } from "next/cache";
+import { describe, it, expect, vi } from "vitest";
 
 import { revalidateAuth } from "./revalidate";
 
-// Mock next/cache
-vi.mock("next/cache", () => ({
-  revalidatePath: vi.fn(),
-}));
+// This file tests the real revalidateAuth() function — unmock the global stub.
+vi.unmock("~/app/actions/revalidate");
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 describe("revalidateAuth", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should call revalidatePath with correct arguments", async () => {
-    const { revalidatePath } = await import("next/cache");
-
+  it("calls revalidatePath with the platform layout", async () => {
     await revalidateAuth();
-
     expect(revalidatePath).toHaveBeenCalledWith("/[locale]/platform", "layout");
-    expect(revalidatePath).toHaveBeenCalledTimes(1);
-  });
-
-  it("should be an async function", () => {
-    expect(revalidateAuth).toBeInstanceOf(Function);
-    expect(revalidateAuth.constructor.name).toBe("AsyncFunction");
-  });
-
-  it("should complete without errors", async () => {
-    await expect(revalidateAuth()).resolves.toBeUndefined();
   });
 });

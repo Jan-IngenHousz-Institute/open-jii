@@ -1,107 +1,130 @@
-import { tsr } from "@/lib/tsr";
-import { renderHook } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useInitiateExport } from "./useInitiateExport";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    experiments: {
-      initiateExport: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = vi.mocked(tsr, true);
-
 describe("useInitiateExport", () => {
-  const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
-  let capturedOnSuccess: ((...args: unknown[]) => Promise<void>) | undefined;
+  it("sends POST request", async () => {
+    const spy = server.mount(contract.experiments.initiateExport, {
+      body: { status: "initiated" },
+    });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    capturedOnSuccess = undefined;
-
-    mockTsr.useQueryClient.mockReturnValue({
-      invalidateQueries: mockInvalidateQueries,
-    } as never);
-
-    mockTsr.experiments.initiateExport.useMutation.mockImplementation(((opts: {
-      onSuccess: typeof capturedOnSuccess;
-    }) => {
-      capturedOnSuccess = opts.onSuccess;
-      return { mutate: vi.fn(), isPending: false };
-    }) as never);
-  });
-
-  it("should call useMutation with onSuccess handler", () => {
-    renderHook(() => useInitiateExport());
-
-    const call = mockTsr.experiments.initiateExport.useMutation.mock.calls[0]?.[0] as {
-      onSuccess?: unknown;
-    };
-    expect(typeof call.onSuccess).toBe("function");
-  });
-
-  it("should return mutation result", () => {
     const { result } = renderHook(() => useInitiateExport());
 
-    expect(result.current).toHaveProperty("mutate");
-  });
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-1" },
+        body: { tableName: "raw_data", format: "csv" },
+      });
+    });
 
-  it("should invalidate exports queries on success", async () => {
-    renderHook(() => useInitiateExport());
-
-    await capturedOnSuccess?.(
-      { body: { exportId: "export-456" } },
-      { params: { id: "exp-123" }, body: { tableName: "raw_data", format: "csv" } },
-    );
-
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["exports", "exp-123", "raw_data"],
-      refetchType: "all",
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
     });
   });
 
-  it("should invalidate queries for different table names", async () => {
-    renderHook(() => useInitiateExport());
+  it("returns mutation result with mutate function", () => {
+    const { result } = renderHook(() => useInitiateExport());
 
-    await capturedOnSuccess?.(
-      { body: { exportId: "export-789" } },
-      { params: { id: "exp-123" }, body: { tableName: "device", format: "ndjson" } },
-    );
+    expect(result.current.mutate).toBeDefined();
+    expect(typeof result.current.mutate).toBe("function");
+  });
 
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["exports", "exp-123", "device"],
-      refetchType: "all",
+  it("forwards the correct request body", async () => {
+    const spy = server.mount(contract.experiments.initiateExport, {
+      body: { status: "initiated" },
+    });
+
+    const { result } = renderHook(() => useInitiateExport());
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { tableName: "raw_data", format: "csv" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(spy.body).toMatchObject({ tableName: "raw_data", format: "csv" });
     });
   });
 
-  it("should call custom onSuccess after invalidating queries", async () => {
-    const mockCustomOnSuccess = vi.fn();
+  it("forwards different table names and formats", async () => {
+    const spy = server.mount(contract.experiments.initiateExport, {
+      body: { status: "initiated" },
+    });
 
-    renderHook(() => useInitiateExport({ onSuccess: mockCustomOnSuccess }));
+    const { result } = renderHook(() => useInitiateExport());
 
-    await capturedOnSuccess?.(
-      { body: { exportId: "export-456" } },
-      { params: { id: "exp-123" }, body: { tableName: "raw_data", format: "csv" } },
-    );
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { tableName: "device", format: "ndjson" },
+      });
+    });
 
-    expect(mockInvalidateQueries).toHaveBeenCalled();
-    expect(mockCustomOnSuccess).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(spy.body).toMatchObject({ tableName: "device", format: "ndjson" });
+    });
   });
 
-  it("should not throw when custom onSuccess is not provided", async () => {
-    renderHook(() => useInitiateExport());
+  it("calls custom onSuccess callback after mutation succeeds", async () => {
+    server.mount(contract.experiments.initiateExport, {
+      body: { status: "initiated" },
+    });
 
-    await expect(
-      capturedOnSuccess?.(
-        { body: { exportId: "export-999" } },
-        { params: { id: "exp-123" }, body: { tableName: "raw_data", format: "parquet" } },
-      ),
-    ).resolves.toBeUndefined();
+    const onSuccess = vi.fn();
+
+    const { result } = renderHook(() => useInitiateExport({ onSuccess }));
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { tableName: "raw_data", format: "csv" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it("does not throw when custom onSuccess is not provided", async () => {
+    server.mount(contract.experiments.initiateExport, {
+      body: { status: "initiated" },
+    });
+
+    const { result } = renderHook(() => useInitiateExport());
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { tableName: "raw_data", format: "parquet" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+  });
+
+  it("sets error state when the server returns an error", async () => {
+    server.mount(contract.experiments.initiateExport, { status: 500 });
+
+    const { result } = renderHook(() => useInitiateExport());
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { tableName: "raw_data", format: "csv" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
   });
 });

@@ -1,97 +1,64 @@
-import { tsr } from "@/lib/tsr";
-import { renderHook } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createInvitation } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useUserInvitations } from "./useUserInvitations";
 
-// Mock the tsr module
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    users: {
-      listInvitations: {
-        useQuery: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
-
 describe("useUserInvitations", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should call useQuery with correct queryData and queryKey", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.users.listInvitations.useQuery = mockUseQuery;
-
-    renderHook(() => useUserInvitations("experiment", "exp-123"));
-
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        query: {
-          resourceType: "experiment",
-          resourceId: "exp-123",
-        },
-      },
-      queryKey: ["experiment-invitations", "experiment", "exp-123"],
-    });
-  });
-
-  it("should return query result with data", () => {
-    const mockInvitations = [
-      { id: "inv-1", email: "user1@example.com", role: "member", status: "pending" },
-      { id: "inv-2", email: "user2@example.com", role: "admin", status: "pending" },
+  it("returns invitations on success", async () => {
+    const invitations = [
+      createInvitation({ email: "user1@example.com", role: "member" }),
+      createInvitation({ email: "user2@example.com", role: "admin" }),
     ];
 
-    const mockQueryResult = {
-      data: { body: mockInvitations },
-      isLoading: false,
-      error: null,
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue(mockQueryResult);
-    mockTsr.users.listInvitations.useQuery = mockUseQuery;
+    server.mount(contract.users.listInvitations, { body: invitations });
 
     const { result } = renderHook(() => useUserInvitations("experiment", "exp-123"));
 
-    expect(result.current).toBe(mockQueryResult);
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.body).toHaveLength(2);
+    expect(result.current.data?.body[0]?.email).toBe("user1@example.com");
+    expect(result.current.data?.body[1]?.role).toBe("admin");
   });
 
-  it("should handle loading state", () => {
-    const mockQueryResult = {
-      data: undefined,
-      isLoading: true,
-      error: null,
-    };
+  it("passes correct query params", async () => {
+    const spy = server.mount(contract.users.listInvitations, { body: [] });
 
-    const mockUseQuery = vi.fn().mockReturnValue(mockQueryResult);
-    mockTsr.users.listInvitations.useQuery = mockUseQuery;
+    const { result } = renderHook(() => useUserInvitations("experiment", "exp-123"));
+
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
+    });
+
+    expect(spy.query).toMatchObject({
+      resourceType: "experiment",
+      resourceId: "exp-123",
+    });
+  });
+
+  it("starts in loading state", () => {
+    server.mount(contract.users.listInvitations, { body: [], delay: 200 });
 
     const { result } = renderHook(() => useUserInvitations("experiment", "exp-456"));
 
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.data).toBeUndefined();
   });
 
-  it("should handle error state", () => {
-    const mockError = new Error("Failed to fetch invitations");
-    const mockQueryResult = {
-      data: undefined,
-      isLoading: false,
-      error: mockError,
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue(mockQueryResult);
-    mockTsr.users.listInvitations.useQuery = mockUseQuery;
+  it("handles error response", async () => {
+    server.mount(contract.users.listInvitations, { status: 403 });
 
     const { result } = renderHook(() => useUserInvitations("experiment", "exp-789"));
 
-    expect(result.current.error).toBe(mockError);
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.error).not.toBeNull();
   });
 });

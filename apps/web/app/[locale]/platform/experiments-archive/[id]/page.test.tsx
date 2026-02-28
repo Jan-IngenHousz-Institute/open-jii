@@ -1,50 +1,14 @@
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
-import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { createExperimentAccess } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import React from "react";
+import { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
+
+import { contract } from "@repo/api";
 
 import ExperimentOverviewPage from "./page";
 
-globalThis.React = React;
-
-// Mock react.use to return a params-like object { id }
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-experiment-id" }),
-  };
-});
-
-// Mock hooks used by the page
-vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
-  useExperimentAccess: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentLocations/useExperimentLocations", () => ({
-  useExperimentLocations: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentMembers/useExperimentMembers", () => ({
-  useExperimentMembers: vi.fn(),
-}));
-
-vi.mock("@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations", () => ({
-  useExperimentVisualizations: vi.fn(),
-}));
-
-// Mock translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
-
-// Mock ErrorDisplay
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
     <div data-testid="error-display">
@@ -54,118 +18,112 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-// Mock next/navigation notFound
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
+vi.mock("~/components/experiment-overview/experiment-description", () => ({
+  ExperimentDescription: () => <section aria-label="description" />,
+}));
+vi.mock("~/components/experiment-overview/experiment-details/experiment-details-card", () => ({
+  ExperimentDetailsCard: () => <section aria-label="details" />,
+}));
+vi.mock(
+  "~/components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols",
+  () => ({
+    ExperimentLinkedProtocols: () => <section aria-label="protocols" />,
+  }),
+);
+vi.mock("~/components/experiment-overview/experiment-measurements", () => ({
+  ExperimentMeasurements: () => <section aria-label="measurements" />,
+}));
+vi.mock("@/components/experiment-visualizations/experiment-visualizations-display", () => ({
+  default: () => <section aria-label="visualizations" />,
 }));
 
-// Helper to render with QueryClient
-const renderWithQueryClient = (ui: React.ReactElement) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
-};
+const archivedAccess = createExperimentAccess({
+  experiment: { id: "test-experiment-id", name: "Test", status: "archived" },
+});
+
+function mountDefaults(accessOverride?: Parameters<typeof server.mount>[1]) {
+  server.mount(
+    contract.experiments.getExperimentAccess,
+    accessOverride ?? { body: archivedAccess },
+  );
+  server.mount(contract.experiments.getExperimentLocations, { body: [] });
+  server.mount(contract.experiments.listExperimentMembers, { body: [] });
+  server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+}
+
+const props = { params: Promise.resolve({ id: "test-experiment-id" }) };
 
 beforeEach(() => {
   vi.clearAllMocks();
-
-  // Default safe returns
-  vi.mocked(useExperimentLocations).mockReturnValue({
-    data: undefined,
-    isLoading: false,
-  } as ReturnType<typeof useExperimentLocations>);
-  vi.mocked(useExperimentMembers).mockReturnValue({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-  } as ReturnType<typeof useExperimentMembers>);
-  vi.mocked(useExperimentVisualizations).mockReturnValue({
-    data: undefined,
-    isLoading: false,
-  } as ReturnType<typeof useExperimentVisualizations>);
+  vi.mocked(use).mockReturnValue({ id: "test-experiment-id" });
 });
 
 describe("<ExperimentOverviewPage />", () => {
   it("shows loading when experiment is loading", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    } as ReturnType<typeof useExperimentAccess>);
-
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
+    mountDefaults({ body: archivedAccess, delay: 999_999 });
+    render(<ExperimentOverviewPage {...props} />);
 
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
-  it("renders ErrorDisplay when there is an error loading", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("fail"),
-    } as ReturnType<typeof useExperimentAccess>);
+  it("renders ErrorDisplay when there is an error loading", async () => {
+    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
+    render(<ExperimentOverviewPage {...props} />);
 
-    expect(screen.getByTestId("error-title")).toHaveTextContent("failedToLoad");
-    expect(screen.getByTestId("error-message")).toHaveTextContent("fail");
-  });
-
-  it("shows notFound text when experiment data is missing", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    } as ReturnType<typeof useExperimentAccess>);
-
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
-
-    expect(screen.getByText("notFound")).toBeInTheDocument();
-  });
-
-  it("shows notFound text when experiment is missing from body", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: { body: { experiment: undefined, hasAccess: false } },
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useExperimentAccess>);
-
-    renderWithQueryClient(
-      <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-    );
-
-    expect(screen.getByText("notFound")).toBeInTheDocument();
-  });
-
-  it("calls notFound when experiment is not archived", () => {
-    vi.mocked(useExperimentAccess).mockReturnValue({
-      data: {
-        body: {
-          experiment: { status: "active", name: "Test", id: "123" },
-          hasAccess: true,
-        },
-      },
-      isLoading: false,
-      error: null,
-    } as ReturnType<typeof useExperimentAccess>);
-
-    vi.mocked(notFound).mockImplementation(() => {
-      throw new Error("notFound");
+    await waitFor(() => {
+      expect(screen.getByTestId("error-title")).toHaveTextContent("failedToLoad");
     });
+  });
 
-    expect(() =>
-      renderWithQueryClient(
-        <ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />,
-      ),
-    ).toThrow("notFound");
+  it("shows notFound text when experiment data is missing", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: { experiment: null, hasAccess: false, isAdmin: false },
+    });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+
+    render(<ExperimentOverviewPage {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("notFound")).toBeInTheDocument();
+    });
+  });
+
+  it("shows notFound text when experiment is missing from body", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: { experiment: undefined, hasAccess: false, isAdmin: false },
+    });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+
+    render(<ExperimentOverviewPage {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("notFound")).toBeInTheDocument();
+    });
+  });
+
+  it("calls notFound when experiment is not archived", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { status: "active", name: "Test", id: "123" },
+        hasAccess: true,
+      }),
+    });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+
+    render(<ExperimentOverviewPage {...props} />);
+
+    await waitFor(() => {
+      expect(vi.mocked(notFound)).toHaveBeenCalled();
+    });
   });
 });

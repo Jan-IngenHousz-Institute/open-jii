@@ -1,39 +1,29 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { InstructionPanel } from "../instruction-panel";
 
-// --- Mocks ---
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
 interface MockRichTextareaProps {
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
   isDisabled?: boolean;
 }
-vi.mock("@repo/ui/components", async (orig) => {
-  const actualMod = await orig();
-  const { Card, CardHeader, CardTitle, CardContent } = actualMod as {
-    Card: React.ComponentType<React.PropsWithChildren<{ className?: string }>>;
-    CardHeader: React.ComponentType<React.PropsWithChildren>;
-    CardTitle: React.ComponentType<React.PropsWithChildren<{ className?: string }>>;
-    CardContent: React.ComponentType<React.PropsWithChildren>;
+vi.mock("@repo/ui/components", async () => {
+  const actual = await vi.importActual("@repo/ui/components");
+  return {
+    ...actual,
+    RichTextarea: ({ value, onChange, placeholder, isDisabled }: MockRichTextareaProps) => (
+      <textarea
+        aria-label="rich-textarea"
+        placeholder={placeholder}
+        value={value}
+        disabled={isDisabled}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    ),
   };
-  const RichTextarea = ({ value, onChange, placeholder, isDisabled }: MockRichTextareaProps) => (
-    <textarea
-      aria-label="rich-textarea"
-      placeholder={placeholder}
-      value={value}
-      disabled={isDisabled}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  );
-  return { Card, CardHeader, CardTitle, CardContent, RichTextarea };
 });
 
 describe("<InstructionPanel />", () => {
@@ -51,7 +41,8 @@ describe("<InstructionPanel />", () => {
     render(<InstructionPanel value="" onChange={onChange} disabled={false} />);
 
     const textarea = screen.getByLabelText<HTMLTextAreaElement>("rich-textarea");
-    await userEvent.type(textarea, "ABC");
+    const user = userEvent.setup();
+    await user.type(textarea, "ABC");
 
     // Should be called once per character with that character (since parent isn't updating value)
     const calls = onChange.mock.calls.map((c) => c[0]);
@@ -64,7 +55,8 @@ describe("<InstructionPanel />", () => {
 
     const textarea = screen.getByLabelText<HTMLTextAreaElement>("rich-textarea");
     expect(textarea).toBeDisabled();
-    await userEvent.type(textarea, "X");
+    const user = userEvent.setup();
+    await user.type(textarea, "X");
     expect(onChange).not.toHaveBeenCalled();
   });
 });

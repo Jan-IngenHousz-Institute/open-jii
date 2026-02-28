@@ -3,79 +3,59 @@ import { describe, it, expect } from "vitest";
 import { mainNavigation, userNavigation, iconMap } from "./navigation-config";
 
 describe("navigation-config", () => {
-  const testLocale = "en-US";
+  const locale = "en-US";
 
-  describe("iconMap", () => {
-    it("exports all required icons", () => {
-      expect(iconMap.LayoutDashboard).toBeDefined();
-      expect(iconMap.Leaf).toBeDefined();
-      expect(iconMap.FileSliders).toBeDefined();
-      expect(iconMap.Code).toBeDefined();
-      expect(iconMap.Settings).toBeDefined();
-      expect(iconMap.LogOut).toBeDefined();
-      expect(iconMap.User).toBeDefined();
-      expect(iconMap.CirclePlus).toBeDefined();
-      expect(iconMap.Archive).toBeDefined();
-      expect(iconMap.BookOpen).toBeDefined();
-      expect(iconMap.RadioReceiver).toBeDefined();
-      expect(iconMap.Webcam).toBeDefined();
-      expect(iconMap.LifeBuoy).toBeDefined();
-      expect(iconMap.HelpCircle).toBeDefined();
-    });
+  it("exports all required icons", () => {
+    const requiredIcons = [
+      "LayoutDashboard",
+      "Leaf",
+      "FileSliders",
+      "Code",
+      "Settings",
+      "LogOut",
+      "User",
+      "CirclePlus",
+      "Archive",
+      "BookOpen",
+      "RadioReceiver",
+      "Webcam",
+      "LifeBuoy",
+      "HelpCircle",
+    ] as const;
+    requiredIcons.forEach((icon) => expect(iconMap[icon]).toBeDefined());
   });
 
   describe("mainNavigation", () => {
-    it("generates dashboard URL correctly", () => {
-      const url = mainNavigation.dashboard.url(testLocale);
-      expect(url).toBe(`/${testLocale}/platform`);
+    it.each([
+      ["dashboard", `/${locale}/platform`],
+      ["experiments", `/${locale}/platform/experiments`],
+      ["protocols", `/${locale}/platform/protocols`],
+      ["macros", `/${locale}/platform/macros`],
+    ] as const)("%s generates correct URL", (key, expected) => {
+      expect(mainNavigation[key].url(locale)).toBe(expected);
     });
 
-    it("generates experiments URLs correctly", () => {
-      const url = mainNavigation.experiments.url(testLocale);
-      expect(url).toBe(`/${testLocale}/platform/experiments`);
-
-      mainNavigation.experiments.items.forEach((item) => {
-        const itemUrl = item.url(testLocale);
-        expect(itemUrl).toContain(`/${testLocale}/platform/experiments`);
-      });
-    });
-
-    it("generates protocols URLs correctly", () => {
-      const url = mainNavigation.protocols.url(testLocale);
-      expect(url).toBe(`/${testLocale}/platform/protocols`);
-
-      mainNavigation.protocols.items.forEach((item) => {
-        const itemUrl = item.url(testLocale);
-        expect(itemUrl).toContain(`/${testLocale}/platform/protocols`);
-      });
-    });
-
-    it("generates macros URLs correctly", () => {
-      const url = mainNavigation.macros.url(testLocale);
-      expect(url).toBe(`/${testLocale}/platform/macros`);
-
-      mainNavigation.macros.items.forEach((item) => {
-        const itemUrl = item.url(testLocale);
-        expect(itemUrl).toContain(`/${testLocale}/platform/macros`);
-      });
+    it("generates sub-item URLs containing parent path", () => {
+      for (const key of ["experiments", "protocols", "macros"] as const) {
+        mainNavigation[key].items.forEach((item) => {
+          expect(item.url(locale)).toContain(mainNavigation[key].url(locale));
+        });
+      }
     });
   });
 
   describe("userNavigation", () => {
-    it("generates account URL correctly", () => {
-      const url = userNavigation.account.url(testLocale);
-      expect(url).toBe(`/${testLocale}/platform/account/settings`);
+    it("generates account URL", () => {
+      expect(userNavigation.account.url(locale)).toBe(`/${locale}/platform/account/settings`);
     });
 
-    it("generates support URL correctly", () => {
-      const url = userNavigation.support.url(testLocale);
-      expect(url).toBe("https://docs.openjii.org");
+    it("generates support URL (external)", () => {
+      expect(userNavigation.support.url(locale)).toBe("https://docs.openjii.org");
       expect(userNavigation.support.external).toBe(true);
     });
 
-    it("generates FAQ URL correctly", () => {
-      const url = userNavigation.faq.url(testLocale);
-      expect(url).toBe(`/${testLocale}/faq`);
+    it("generates FAQ URL", () => {
+      expect(userNavigation.faq.url(locale)).toBe(`/${locale}/faq`);
     });
   });
 });

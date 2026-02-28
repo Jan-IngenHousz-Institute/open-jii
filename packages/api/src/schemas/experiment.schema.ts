@@ -964,6 +964,7 @@ export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsB
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
+export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;

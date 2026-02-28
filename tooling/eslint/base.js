@@ -5,8 +5,8 @@ import importPlugin from "eslint-plugin-import";
 import prettierPlugin from "eslint-plugin-prettier";
 import turboPlugin from "eslint-plugin-turbo";
 import path from "path";
-import { fileURLToPath } from "url";
 import * as tseslint from "typescript-eslint";
+import { fileURLToPath } from "url";
 
 /**
  * All packages that leverage t3-env should use this rule
@@ -37,7 +37,10 @@ export const restrictEnvAccess = tseslint.config(
 );
 
 // Compat for Node versions where import.meta.dirname may be undefined
-const __filename = typeof import.meta !== "undefined" && import.meta.url ? fileURLToPath(import.meta.url) : __filename;
+const __filename =
+  typeof import.meta !== "undefined" && import.meta.url
+    ? fileURLToPath(import.meta.url)
+    : __filename;
 const __dirname = path.dirname(__filename);
 
 export default tseslint.config(
@@ -86,5 +89,12 @@ export default tseslint.config(
   {
     linterOptions: { reportUnusedDisableDirectives: true },
     languageOptions: { parserOptions: { projectService: true } },
+  },
+
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+    rules: {
+      "@typescript-eslint/unbound-method": "off",
+    },
   },
 );

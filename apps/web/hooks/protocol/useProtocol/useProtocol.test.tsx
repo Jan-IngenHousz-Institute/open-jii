@@ -1,163 +1,65 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
 
-import { tsr } from "../../../lib/tsr";
+import { contract } from "@repo/api";
+
 import { useProtocol } from "./useProtocol";
 
-// Mock the tsr client
-vi.mock("../../../lib/tsr", () => ({
-  tsr: {
-    protocols: {
-      getProtocol: {
-        useQuery: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
-
 describe("useProtocol", () => {
-  let queryClient: QueryClient;
+  it("does not fetch when protocolId is empty", () => {
+    const { result } = renderHook(() => useProtocol(""));
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
-
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.fetchStatus).toBe("idle");
   });
 
-  it("should call useQuery with correct parameters", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
-      typeof mockTsr.protocols.getProtocol.useQuery
-    >;
+  it("returns protocol data", async () => {
+    const protocol = createProtocol({ id: "protocol-123" });
+    server.mount(contract.protocols.getProtocol, { body: protocol });
 
-    renderHook(() => useProtocol("protocol-123"), {
-      wrapper: createWrapper(),
+    const { result } = renderHook(() => useProtocol("protocol-123"));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
     });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: "protocol-123" } },
-      queryKey: ["protocol", "protocol-123"],
-      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
+    expect(result.current.data?.body).toMatchObject({
+      id: "protocol-123",
+      name: protocol.name,
     });
-  });
-
-  it("should return successful protocol data", () => {
-    const mockData = {
-      status: 200,
-      body: {
-        id: "protocol-123",
-        name: "Test Protocol",
-        description: "A test protocol",
-      },
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockData,
-      error: null,
-      isLoading: false,
-    });
-    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
-      typeof mockTsr.protocols.getProtocol.useQuery
-    >;
-
-    const { result } = renderHook(() => useProtocol("protocol-123"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.data).toEqual(mockData);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
-  it("should handle 404 error for non-existent protocol", () => {
-    const mockError = {
-      status: 404,
-      message: "Protocol not found",
-    };
+  it("handles 404 error for non-existent protocol", async () => {
+    server.mount(contract.protocols.getProtocol, { status: 404 });
 
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: mockError,
-      isLoading: false,
-    });
-    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
-      typeof mockTsr.protocols.getProtocol.useQuery
-    >;
+    const { result } = renderHook(() => useProtocol("non-existent"));
 
-    const { result } = renderHook(() => useProtocol("non-existent"), {
-      wrapper: createWrapper(),
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.error).toEqual(mockError);
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.data?.body).toBeUndefined();
   });
 
-  it("should handle loading state", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
-      typeof mockTsr.protocols.getProtocol.useQuery
-    >;
+  it("uses different query keys per protocol ID", async () => {
+    server.mount(contract.protocols.getProtocol, { body: createProtocol() });
 
-    const { result } = renderHook(() => useProtocol("protocol-123"), {
-      wrapper: createWrapper(),
+    // Render same hook with two different IDs — they should fire separate queries
+    const { result: r1 } = renderHook(() => useProtocol("p-1"));
+    const { result: r2 } = renderHook(() => useProtocol("p-2"));
+
+    await waitFor(() => {
+      expect(r1.current.data).toBeDefined();
+      expect(r2.current.data).toBeDefined();
     });
 
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.error).toBeNull();
-  });
-
-  it("should use different query keys for different protocol IDs", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: false,
-    });
-    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
-      typeof mockTsr.protocols.getProtocol.useQuery
-    >;
-
-    const wrapper = createWrapper();
-
-    renderHook(() => useProtocol("protocol-1"), { wrapper });
-    renderHook(() => useProtocol("protocol-2"), { wrapper });
-
-    expect(mockUseQuery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: ["protocol", "protocol-1"],
-      }),
-    );
-
-    expect(mockUseQuery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: ["protocol", "protocol-2"],
-      }),
-    );
+    // Both should have resolved independently
+    expect(r1.current.isLoading).toBe(false);
+    expect(r2.current.isLoading).toBe(false);
   });
 });

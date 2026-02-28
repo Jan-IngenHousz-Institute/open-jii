@@ -1,109 +1,18 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
-import React from "react";
+import { createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { CreateUserProfileBody } from "@repo/api";
+import { contract } from "@repo/api";
 import type { Session } from "@repo/auth/types";
+import { toast } from "@repo/ui/hooks";
 
 import { AccountSettings } from "./account-settings";
-
-globalThis.React = React;
-
-// ---------- Types ----------
-interface MutateArg {
-  body: CreateUserProfileBody;
-}
-interface OnSuccessCfg {
-  onSuccess?: () => void;
-}
-
-type HookResult =
-  | { data: undefined; isLoading: true; error: null }
-  | { data: undefined; isLoading: false; error: unknown }
-  | {
-      data: { status: number; body: CreateUserProfileBody };
-      isLoading: false;
-      error: null;
-    };
-
-type MinimalFormValues = Partial<CreateUserProfileBody>;
-interface MinimalForm {
-  getValues: () => MinimalFormValues;
-}
-
-const { mutateSpy, routerBackSpy, toastSpy, createCfgRef } = vi.hoisted(() => {
-  return {
-    mutateSpy: vi.fn<(arg: MutateArg) => unknown>(),
-    routerBackSpy: vi.fn<() => void>(),
-    toastSpy: vi.fn<(arg: { description: string }) => void>(),
-    createCfgRef: { current: undefined as OnSuccessCfg | undefined },
-  };
-});
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: "en" },
-  }),
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ back: routerBackSpy }),
-}));
 
 vi.mock("./danger-zone-card", () => ({
   DangerZoneCard: () => <div data-testid="danger-zone-card" />,
 }));
 
-vi.mock("@repo/ui/hooks", () => ({
-  toast: (arg: { description: string }) => toastSpy(arg),
-}));
-
-vi.mock("@repo/ui/components", () => {
-  const Form = ({
-    children,
-    onSubmit,
-    ...props
-  }: React.PropsWithChildren & React.FormHTMLAttributes<HTMLFormElement>) => (
-    <form
-      {...props}
-      onSubmit={(e) => {
-        e.preventDefault();
-        // 👇 manually call mutateSpy with default values
-        mutateSpy({
-          body: {
-            firstName: "Ada",
-            lastName: "Lovelace",
-            bio: "Math enjoyer",
-            organization: "Analytical Engines Inc.",
-          },
-        });
-        toastSpy({ description: "settings.saved" });
-        onSubmit?.(e);
-      }}
-    >
-      {children}
-    </form>
-  );
-
-  const Button = ({
-    children,
-    type = "button",
-    ...props
-  }: React.PropsWithChildren & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button type={type} {...props}>
-      {children}
-    </button>
-  );
-
-  return {
-    Form,
-    Button,
-  };
-});
-
-// Mock ErrorDisplay to avoid depending on inner layout
 vi.mock("../error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div data-testid="error-display">{title}</div>,
 }));
@@ -113,40 +22,30 @@ vi.mock("./profile-picture-card", () => ({
 }));
 
 vi.mock("./profile-card", () => ({
-  ProfileCard: ({ form }: { form: MinimalForm }) => {
-    const values = form.getValues();
+  ProfileCard: ({
+    form,
+  }: {
+    form: {
+      getValues: () => {
+        firstName?: string;
+        lastName?: string;
+        bio?: string;
+        organization?: string;
+      };
+    };
+  }) => {
+    const { firstName, lastName, bio, organization } = form.getValues();
     return (
       <div data-testid="profile-card">
-        <div data-testid="values">
-          <span data-testid="firstName">{values.firstName ?? ""}</span>
-          <span data-testid="lastName">{values.lastName ?? ""}</span>
-          <span data-testid="bio">{values.bio ?? ""}</span>
-          <span data-testid="organization">{values.organization ?? ""}</span>
-        </div>
+        <span data-testid="firstName">{firstName ?? ""}</span>
+        <span data-testid="lastName">{lastName ?? ""}</span>
+        <span data-testid="bio">{bio ?? ""}</span>
+        <span data-testid="organization">{organization ?? ""}</span>
       </div>
     );
   },
 }));
 
-// Data hook mock
-const useGetUserProfileMock = vi.fn<(userId: string) => HookResult>();
-vi.mock("~/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
-  useGetUserProfile: (userId: string) => useGetUserProfileMock(userId),
-}));
-
-// Create hook mock
-let isPendingFlag = false;
-vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
-  useCreateUserProfile: (cfg: OnSuccessCfg) => {
-    createCfgRef.current = cfg;
-    return {
-      mutate: mutateSpy,
-      isPending: isPendingFlag,
-    };
-  },
-}));
-
-// ---------- Helpers ----------
 const session: Session = {
   user: {
     id: "u-1",
@@ -156,149 +55,125 @@ const session: Session = {
   } as unknown as Session["user"],
 } as Session;
 
-const renderSut = (sess: Session | null = session) => render(<AccountSettings session={sess} />);
+const profile = createUserProfile({
+  userId: "u-1",
+  firstName: "Ada",
+  lastName: "Lovelace",
+  bio: "Math enjoyer",
+  organization: "Analytical Engines Inc.",
+});
 
-// ---------- Tests ----------
+function mountGetProfile(options = {}) {
+  return server.mount(contract.users.getUserProfile, {
+    body: profile,
+    status: 200,
+    ...options,
+  });
+}
+
+function mountCreateProfile(options = {}) {
+  return server.mount(contract.users.createUserProfile, {
+    body: {},
+    status: 201,
+    ...options,
+  });
+}
+
 describe("<AccountSettings />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    isPendingFlag = false;
   });
 
-  it("shows loading gate while profile is loading", () => {
-    useGetUserProfileMock.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    });
-
-    renderSut();
+  it("shows loading state while profile is being fetched", () => {
+    mountGetProfile({ delay: 999_999 });
+    render(<AccountSettings session={session} />);
     expect(screen.getByText(/settings.loading/i)).toBeInTheDocument();
   });
 
-  it("shows error gate when hook returns an error", () => {
-    useGetUserProfileMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("boom"),
+  it("shows error display when profile fetch fails", async () => {
+    server.mount(contract.users.getUserProfile, {
+      status: 404,
+      body: { message: "Not found" },
     });
-
-    renderSut();
-    expect(screen.getByTestId("error-display")).toHaveTextContent("settings.errorTitle");
+    render(<AccountSettings session={session} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("error-display")).toHaveTextContent("settings.errorTitle");
+    });
   });
 
-  it("renders with empty defaults if user profile does not exist", () => {
-    useGetUserProfileMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    });
-
-    renderSut();
-
-    expect(screen.getByTestId("profile-picture-card")).toBeInTheDocument();
-    const vals = within(screen.getByTestId("profile-card")).getByTestId("values");
-    expect(within(vals).getByTestId("firstName")).toHaveTextContent("");
-    expect(within(vals).getByTestId("lastName")).toHaveTextContent("");
-    expect(within(vals).getByTestId("bio")).toHaveTextContent("");
-    expect(within(vals).getByTestId("organization")).toHaveTextContent("");
+  it("renders form with empty defaults when session is null", () => {
+    render(<AccountSettings session={null} />);
+    const card = screen.getByTestId("profile-card");
+    expect(within(card).getByTestId("firstName")).toHaveTextContent("");
+    expect(within(card).getByTestId("lastName")).toHaveTextContent("");
+    expect(within(card).getByTestId("bio")).toHaveTextContent("");
+    expect(within(card).getByTestId("organization")).toHaveTextContent("");
   });
 
-  it("renders with existing profile values as defaults", () => {
-    useGetUserProfileMock.mockReturnValue({
-      data: {
-        status: 200,
-        body: {
-          firstName: "Ada",
-          lastName: "Lovelace",
-          bio: "Math enjoyer",
-          organization: "Analytical Engines Inc.",
-        },
-      },
-      isLoading: false,
-      error: null,
+  it("renders form populated with existing profile data", async () => {
+    mountGetProfile();
+    render(<AccountSettings session={session} />);
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("profile-card")).getByTestId("firstName")).toHaveTextContent(
+        "Ada",
+      );
     });
 
-    renderSut();
-
-    const vals = within(screen.getByTestId("profile-card")).getByTestId("values");
-    expect(within(vals).getByTestId("firstName")).toHaveTextContent("Ada");
-    expect(within(vals).getByTestId("lastName")).toHaveTextContent("Lovelace");
-    expect(within(vals).getByTestId("bio")).toHaveTextContent("Math enjoyer");
-    expect(within(vals).getByTestId("organization")).toHaveTextContent("Analytical Engines Inc.");
+    const card = screen.getByTestId("profile-card");
+    expect(within(card).getByTestId("lastName")).toHaveTextContent("Lovelace");
+    expect(within(card).getByTestId("bio")).toHaveTextContent("Math enjoyer");
+    expect(within(card).getByTestId("organization")).toHaveTextContent("Analytical Engines Inc.");
   });
 
-  it("navigates back when Cancel is clicked", () => {
-    useGetUserProfileMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    });
-
-    renderSut();
-
-    fireEvent.click(screen.getByRole("button", { name: /settings.cancel/i }));
-    expect(routerBackSpy).toHaveBeenCalledTimes(1);
+  it("navigates back when Cancel is clicked", async () => {
+    const { router } = render(<AccountSettings session={null} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /settings.cancel/i }));
+    expect(router.back).toHaveBeenCalledTimes(1);
   });
 
-  it("submits with current form values and triggers toast on success", () => {
-    useGetUserProfileMock.mockReturnValue({
-      data: {
-        status: 200,
-        body: {
-          firstName: "Ada",
-          lastName: "Lovelace",
-          bio: "Math enjoyer",
-          organization: "Analytical Engines Inc.",
-        },
-      },
-      isLoading: false,
-      error: null,
+  it("submits profile and shows success toast", async () => {
+    mountGetProfile();
+    const spy = mountCreateProfile();
+    render(<AccountSettings session={session} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("profile-card")).toBeInTheDocument();
     });
 
-    renderSut();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /settings.save/i }));
 
-    mutateSpy.mockImplementation((arg: MutateArg) => {
-      createCfgRef.current?.onSuccess?.();
-      return arg;
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      bio: "Math enjoyer",
+      organization: "Analytical Engines Inc.",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /settings.save/i }));
-
-    expect(mutateSpy).toHaveBeenCalledWith({
-      body: {
-        firstName: "Ada",
-        lastName: "Lovelace",
-        bio: "Math enjoyer",
-        organization: "Analytical Engines Inc.",
-      },
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith({ description: "settings.saved" });
     });
-    expect(toastSpy).toHaveBeenCalledWith({ description: "settings.saved" });
   });
 
-  it('shows "settings.saving" and disables the submit button when pending', () => {
-    isPendingFlag = true;
-    useGetUserProfileMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
+  it("shows saving state while submission is in flight", async () => {
+    mountGetProfile();
+    mountCreateProfile({ delay: 999_999 });
+    render(<AccountSettings session={session} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("profile-card")).toBeInTheDocument();
     });
 
-    renderSut();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /settings.save/i }));
 
-    const btn = screen.getByRole("button", { name: /settings.saving/i });
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute("aria-busy", "true");
-  });
-
-  it("renders with no crash when there is no session (edge case)", () => {
-    useGetUserProfileMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
+    await waitFor(() => {
+      const btn = screen.getByRole("button", { name: /settings.saving/i });
+      expect(btn).toBeDisabled();
+      expect(btn).toHaveAttribute("aria-busy", "true");
     });
-
-    renderSut(null);
-    expect(screen.getByTestId("profile-card")).toBeInTheDocument();
   });
 });

@@ -1,24 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-import { renderHook } from "@testing-library/react";
+import { renderHook } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import type { ExperimentDataResponse, AnnotationType, AnnotationContent } from "@repo/api";
 
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
-
-// Mock the parseAnnotations function
-vi.mock(
-  "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell",
-  () => ({
-    parseAnnotations: vi.fn((str: string): unknown[] => {
-      try {
-        return JSON.parse(str) as unknown[];
-      } catch {
-        return [];
-      }
-    }),
-  }),
-);
 
 // Mock structuredClone for older test environments
 Object.assign(global, {
