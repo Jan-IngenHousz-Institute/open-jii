@@ -12,7 +12,6 @@ import { NavUser } from "./nav-user";
 
 const baseUser = { id: "u-1", email: "ada@example.com", avatar: "https://example.com/a.png" };
 
-/** Override the user profile MSW handler for a specific test. */
 function useProfileOverride(profile: { firstName?: string; lastName?: string } | null) {
   if (profile === null) {
     server.mount(contract.users.getUserProfile, { status: 404 });

@@ -1,9 +1,3 @@
-/**
- * useExperimentLocationsUpdate hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.updateExperimentLocations.useMutation` →
- * `PUT /api/v1/experiments/:id/locations`. MSW intercepts that request.
- */
 import { createLocation } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
@@ -14,7 +8,7 @@ import { contract } from "@repo/api";
 import { useExperimentLocationsUpdate } from "./useExperimentLocationsUpdate";
 
 describe("useExperimentLocationsUpdate", () => {
-  it("sends PUT request via MSW", async () => {
+  it("sends PUT request", async () => {
     const spy = server.mount(contract.experiments.updateExperimentLocations, {
       body: [createLocation()],
     });

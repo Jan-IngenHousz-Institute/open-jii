@@ -1,9 +1,3 @@
-/**
- * useMacro hook test — MSW-based.
- *
- * The real hook calls `tsr.macros.getMacro.useQuery` →
- * `GET /api/v1/macros/:id`. MSW intercepts that request.
- */
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
@@ -14,7 +8,7 @@ import { contract } from "@repo/api";
 import { useMacro } from "./useMacro";
 
 describe("useMacro", () => {
-  it("returns unwrapped macro data from MSW", async () => {
+  it("returns unwrapped macro data", async () => {
     const macro = createMacro({ id: "m-1", name: "My Macro", code: 'print("hi")' });
     server.mount(contract.macros.getMacro, { body: macro });
 

@@ -8,11 +8,6 @@ import { contract } from "@repo/api";
 
 import DataLayout from "../layout";
 
-// -------------------
-// Mocks
-// -------------------
-
-// Mock error display component
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
     <div data-testid="error-display">
@@ -22,14 +17,8 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-// -------------------
-// Test Data
-// -------------------
 const mockParams = { id: "test-experiment-id", locale: "en-US" };
 
-// -------------------
-// Tests
-// -------------------
 describe("<DataLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

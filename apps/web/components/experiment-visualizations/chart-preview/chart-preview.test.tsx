@@ -9,7 +9,6 @@ import { contract } from "@repo/api";
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreview } from "./chart-preview";
 
-// Pragmatic: ExperimentVisualizationRenderer uses Plotly via dynamic import — no jsdom support
 vi.mock("../experiment-visualization-renderer", () => ({
   default: ({ visualization }: { visualization: { name: string } }) => (
     <div role="img" aria-label={visualization.name} />

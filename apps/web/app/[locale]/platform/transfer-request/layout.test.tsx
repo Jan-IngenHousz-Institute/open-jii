@@ -5,9 +5,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import TransferRequestLayout from "./layout";
 
-// -------------------
-// Helpers
-// -------------------
 function renderTransferRequestLayout({
   children = <div data-testid="child-content">Child Content</div>,
   pathname = "/en/platform/transfer-request",
@@ -23,9 +20,6 @@ function renderTransferRequestLayout({
   return render(<TransferRequestLayout>{children}</TransferRequestLayout>);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<TransferRequestLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -134,7 +128,6 @@ describe("<TransferRequestLayout />", () => {
     it("renders within a Card component", () => {
       const { container } = renderTransferRequestLayout();
 
-      // Card should be present (checking for class structure)
       expect(container.querySelector('[class*="space-y-6"]')).toBeInTheDocument();
     });
 

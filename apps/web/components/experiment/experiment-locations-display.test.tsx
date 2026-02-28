@@ -4,8 +4,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ExperimentLocationsDisplay } from "./experiment-locations-display";
 
-/* --------------------------------- Mocks -------------------------------- */
-
 // Leaflet map cannot render in jsdom (canvas/WebGL) — pragmatic exception.
 // The mock exposes received props so we can verify the component passes
 // the right data to the map without needing a real map renderer.
@@ -33,8 +31,6 @@ vi.mock("next/dynamic", () => ({
       </div>
     )),
 }));
-
-/* --------------------------------- Tests -------------------------------- */
 
 describe("ExperimentLocationsDisplay", () => {
   beforeEach(() => {

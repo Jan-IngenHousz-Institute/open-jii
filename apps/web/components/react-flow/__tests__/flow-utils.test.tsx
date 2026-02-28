@@ -9,7 +9,6 @@ import {
   handleNodeDrop,
 } from "../flow-utils";
 
-// --- mocks ---
 vi.mock("../../flow-editor/flow-mapper", () => ({
   FlowMapper: {
     toApiGraph: vi.fn(),

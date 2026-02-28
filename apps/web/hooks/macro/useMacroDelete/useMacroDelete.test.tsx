@@ -1,12 +1,3 @@
-/**
- * useMacroDelete hook test — MSW-based.
- *
- * The real hook calls `tsr.macros.deleteMacro.useMutation` →
- * `DELETE /api/v1/macros/:id`. MSW intercepts that request.
- *
- * Tests verify: optimistic removal from cache, rollback on error,
- * cache invalidation on settle.
- */
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -18,7 +9,7 @@ import { contract } from "@repo/api";
 import { useMacroDelete } from "./useMacroDelete";
 
 describe("useMacroDelete", () => {
-  it("sends DELETE request via MSW", async () => {
+  it("sends DELETE request", async () => {
     const spy = server.mount(contract.macros.deleteMacro);
 
     const { result } = renderHook(() => useMacroDelete());

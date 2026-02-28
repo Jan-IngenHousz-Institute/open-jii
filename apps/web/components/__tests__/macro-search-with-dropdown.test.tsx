@@ -6,9 +6,7 @@ import type { Macro } from "@repo/api";
 
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
-// --------------------
 // Mocks
-// --------------------
 
 interface PopoverPropsCaptured {
   availableMacros: Macro[];
@@ -33,9 +31,7 @@ vi.mock("../macro-search-popover", () => ({
   },
 }));
 
-// --------------------
 // Test data & helpers
-// --------------------
 const macros: Macro[] = [
   createMacro({ id: "m1" }),
   createMacro({ id: "m2" }),
@@ -61,9 +57,7 @@ function renderWidget(over: Partial<React.ComponentProps<typeof MacroSearchWithD
   };
 }
 
-// --------------------
 // Tests
-// --------------------
 describe("<MacroSearchWithDropdown />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

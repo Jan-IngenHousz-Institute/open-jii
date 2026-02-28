@@ -5,7 +5,6 @@ import { describe, it, expect, vi } from "vitest";
 
 import { toPosition, createNewNode, BaseNodeWrapper, FlowContextProvider } from "../node-utils";
 
-// --- mock BaseNode so we don't need full implementation
 vi.mock("../base-node", () => ({
   BaseNode: (props: Node) => <div data-testid="BaseNode" data-props={JSON.stringify(props)} />,
 }));

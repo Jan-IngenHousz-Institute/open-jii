@@ -10,8 +10,6 @@ import { Form } from "@repo/ui/components";
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { DataSourceStep } from "./data-source-step";
 
-/* --------------------------------- Mocks --------------------------------- */
-
 // Select — pragmatic mock (Radix Select portal/pointer issues in jsdom)
 vi.mock("@repo/ui/components", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
@@ -35,7 +33,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-// Sibling chart configurators (Rule 5)
 vi.mock("../chart-configurators/data", () => ({
   LineChartDataConfigurator: ({ columns }: { columns: DataColumn[] }) => (
     <div data-testid="line-chart-configurator">Columns: {columns.length}</div>
@@ -45,7 +42,6 @@ vi.mock("../chart-configurators/data", () => ({
   ),
 }));
 
-// Sibling preview modal (Rule 5)
 vi.mock("../chart-preview/chart-preview-modal", () => ({
   ChartPreviewModal: ({
     experimentId,
@@ -70,8 +66,6 @@ vi.mock("../chart-preview/chart-preview-modal", () => ({
 vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: vi.fn(),
 }));
-
-/* -------------------------------- Fixtures -------------------------------- */
 
 const mockTables: ExperimentTableMetadata[] = [
   {
@@ -103,8 +97,6 @@ const columnsByTable: Record<string, { rawColumns: DataColumn[] }> = {
     ],
   },
 };
-
-/* -------------------------------- Helpers --------------------------------- */
 
 const defaultProps = {
   onNext: vi.fn(),
@@ -166,8 +158,6 @@ function setupExperimentData() {
     } as never;
   });
 }
-
-/* --------------------------------- Tests --------------------------------- */
 
 describe("DataSourceStep", () => {
   it("renders the data source form with table dropdown", () => {

@@ -9,8 +9,6 @@ import { useSession } from "@repo/auth/client";
 
 import { ExperimentDetailsCard } from "./experiment-details-card";
 
-// ---------- Mocks ----------
-
 vi.mock("../../experiment-settings/experiment-info-card", () => ({
   ExperimentInfoCard: ({ experimentId }: { experimentId: string }) => (
     <div data-testid="experiment-info-card">{experimentId}</div>
@@ -61,7 +59,6 @@ vi.mock("./experiment-locations-section", () => ({
   ),
 }));
 
-// ---------- Test Data ----------
 const mockExperiment = createExperiment({
   id: "exp-123",
   name: "Test Experiment",
@@ -90,7 +87,6 @@ const mockMembers: ExperimentMember[] = [
   },
 ];
 
-// ---------- Helpers ----------
 function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsCard>> = {}) {
   const defaultProps: React.ComponentProps<typeof ExperimentDetailsCard> = {
     experimentId: "exp-123",

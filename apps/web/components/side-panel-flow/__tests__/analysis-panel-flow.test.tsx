@@ -64,7 +64,6 @@ vi.mock("../../../lib/tsr", () => ({
 
 describe("<AnalysisPanel />", () => {
   beforeEach(() => {
-    // Dynamic MSW handler — filters macros based on "search" query param
     server.use(
       http.get("http://localhost:3020/api/v1/macros", ({ request }) => {
         const url = new URL(request.url);

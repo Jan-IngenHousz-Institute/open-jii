@@ -1,9 +1,3 @@
-/**
- * useListExports hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.listExports.useQuery` →
- * `GET /api/v1/experiments/:id/data/exports?tableName=…`. MSW intercepts that request.
- */
 import { createExportRecord } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
@@ -17,7 +11,7 @@ describe("useListExports", () => {
   const experimentId = "test-experiment-id";
   const tableName = "raw_data";
 
-  it("fetches exports from MSW", async () => {
+  it("fetches exports", async () => {
     const mockExports = [
       createExportRecord({
         exportId: "export-1",

@@ -8,8 +8,6 @@ import type { Session } from "@repo/auth/types";
 
 import { AccountSettings } from "./account-settings";
 
-// ── Child component mocks (each tested separately) ─────────────
-
 vi.mock("./danger-zone-card", () => ({
   DangerZoneCard: () => <div data-testid="danger-zone-card" />,
 }));
@@ -47,8 +45,6 @@ vi.mock("./profile-card", () => ({
   },
 }));
 
-// ── Fixtures ────────────────────────────────────────────────────
-
 const session: Session = {
   user: {
     id: "u-1",
@@ -81,8 +77,6 @@ function mountCreateProfile(options = {}) {
     ...options,
   });
 }
-
-// ── Tests ───────────────────────────────────────────────────────
 
 describe("<AccountSettings />", () => {
   beforeEach(() => {

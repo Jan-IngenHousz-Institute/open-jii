@@ -1,9 +1,3 @@
-/**
- * useExperimentVisualizationDelete hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.deleteExperimentVisualization.useMutation` →
- * `DELETE /api/v1/experiments/:id/visualizations/:visualizationId`. MSW intercepts that request.
- */
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -13,7 +7,7 @@ import { contract } from "@repo/api";
 import { useExperimentVisualizationDelete } from "./useExperimentVisualizationDelete";
 
 describe("useExperimentVisualizationDelete", () => {
-  it("sends DELETE request via MSW", async () => {
+  it("sends DELETE request", async () => {
     const spy = server.mount(contract.experiments.deleteExperimentVisualization);
 
     const { result } = renderHook(() =>

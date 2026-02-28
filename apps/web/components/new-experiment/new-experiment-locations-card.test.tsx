@@ -1,15 +1,3 @@
-/**
- * NewExperimentLocationsCard — MSW-based test.
- *
- * `useLocationGeocode` (GET /api/v1/locations/geocode) and
- * `useLocationSearch` (GET /api/v1/locations/search) run for real;
- * MSW intercepts the HTTP requests.
- *
- * Legitimately mocked:
- *  - Map component — complex leaflet rendering, tested separately
- *  - useDebounce — timing utility (no HTTP)
- *  - Form — passed as prop, not the system under test
- */
 import { createPlace } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
@@ -105,7 +93,7 @@ describe("NewExperimentLocationsCard", () => {
     expect(lastMapProps?.locations).toEqual(locs);
   });
 
-  it("passes search results from MSW to Map", async () => {
+  it("passes search results to Map", async () => {
     const results = [createPlace({ label: "Amsterdam", latitude: 52.37, longitude: 4.9 })];
     server.mount(contract.experiments.searchPlaces, { body: results });
 
@@ -130,7 +118,7 @@ describe("NewExperimentLocationsCard", () => {
     );
   });
 
-  it("handles geocoded location via MSW on add-location", async () => {
+  it("handles geocoded location on add-location", async () => {
     server.mount(contract.experiments.geocodeLocation, {
       body: [
         createPlace({
@@ -164,7 +152,6 @@ describe("NewExperimentLocationsCard", () => {
   });
 
   it("handles empty/missing search data", () => {
-    // Default MSW handler returns [], so searchResults should be []
     render(<NewExperimentLocationsCard form={mockForm} />);
     expect(lastMapProps?.searchResults).toEqual([]);
   });

@@ -9,8 +9,6 @@ import { useSession } from "@repo/auth/client";
 
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
 
-/* ---------------------------------- Mocks ---------------------------------- */
-
 // Override global session mock with a logged-in user
 beforeEach(() => {
   vi.mocked(useSession).mockReturnValue({
@@ -18,12 +16,10 @@ beforeEach(() => {
   } as ReturnType<typeof useSession>);
 });
 
-// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 
-// MemberList — sibling component (Rule 5)
 vi.mock("../current-members-list/current-members-list", () => ({
   MemberList: ({
     members,
@@ -51,8 +47,6 @@ vi.mock("../current-members-list/current-members-list", () => ({
   ),
 }));
 
-/* ---------------------------------- Helpers ---------------------------------- */
-
 type FormMember = NonNullable<CreateExperimentBody["members"]>[number];
 
 function renderMembersCard(initialMembers: FormMember[] = []) {
@@ -75,8 +69,6 @@ const users = [
   createUserProfile({ userId: "user-1", firstName: "Alice", lastName: "Tester" }),
   createUserProfile({ userId: "user-2", firstName: "Bob", lastName: "Tester" }),
 ];
-
-/* ---------------------------------- Tests ---------------------------------- */
 
 describe("<NewExperimentMembersCard />", () => {
   it("renders title and description", () => {

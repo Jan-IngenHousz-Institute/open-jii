@@ -4,7 +4,6 @@ import { describe, it, expect, vi } from "vitest";
 
 import { InstructionPanel } from "../instruction-panel";
 
-// --- Mocks ---
 interface MockRichTextareaProps {
   value: string;
   onChange: (val: string) => void;

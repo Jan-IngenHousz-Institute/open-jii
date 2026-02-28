@@ -26,8 +26,6 @@ vi.mock("./protocol-card", () => ({
   ),
 }));
 
-/* --------------------------------- Helpers -------------------------------- */
-
 const PROTO_UUID_1 = "00000000-0000-4000-8000-000000000010";
 const PROTO_UUID_2 = "00000000-0000-4000-8000-000000000020";
 
@@ -48,8 +46,6 @@ function mountProtocol(name = "Test Protocol") {
     body: createProtocol({ name }),
   });
 }
-
-/* ---------------------------------- Tests --------------------------------- */
 
 describe("ExperimentLinkedProtocols", () => {
   it("renders loading state", () => {

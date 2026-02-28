@@ -12,8 +12,6 @@ interface QuestionSpec {
   validationMessage?: string;
 }
 
-// ---------- Mocks ----------
-
 // Stub child panels so we can trigger onChange easily
 vi.mock("../instruction-panel", () => ({
   InstructionPanel: ({
@@ -165,7 +163,6 @@ vi.mock("../edge-panel", () => {
   return { EdgeSidePanel };
 });
 
-// ---------- Helpers ----------
 type NodeData = Record<string, unknown>;
 const makeNode = (id: string, data: NodeData = {}): Node => ({
   id,
@@ -201,7 +198,6 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof ExperimentSi
   return { ...utils, props };
 }
 
-// ---------- Tests ----------
 describe("<ExperimentSidePanel />", () => {
   beforeEach(() => vi.clearAllMocks());
 

@@ -12,8 +12,6 @@ import {
   ExperimentDataRows,
 } from "./experiment-data-utils";
 
-/* ── Sibling cell component mocks (Rule 5 — each has its own test file) ── */
-
 vi.mock("./table-cells/array/experiment-data-table-array-cell", () => ({
   ExperimentDataTableArrayCell: ({ data }: { data: string }) => {
     try {
@@ -83,8 +81,6 @@ vi.mock("./experiment-data-table-cell-collapsible", () => ({
     <>{children}</>
   ),
 }));
-
-/* ── formatValue ── */
 
 describe("formatValue", () => {
   it.each([
@@ -159,8 +155,6 @@ describe("formatValue", () => {
   });
 });
 
-/* ── LoadingRows ── */
-
 describe("LoadingRows", () => {
   it("renders the correct number of skeleton cells", () => {
     render(
@@ -175,8 +169,6 @@ describe("LoadingRows", () => {
     expect(cells).toHaveLength(6);
   });
 });
-
-/* ── ExperimentTableHeader ── */
 
 describe("ExperimentTableHeader", () => {
   function makeHeaderGroup(
@@ -316,8 +308,6 @@ describe("ExperimentTableHeader", () => {
     expect(screen.getByText("name").closest("th")).not.toHaveClass("cursor-pointer");
   });
 });
-
-/* ── ExperimentDataRows ── */
 
 describe("ExperimentDataRows", () => {
   it("shows 'No results found' when rows is empty", () => {

@@ -4,7 +4,6 @@ import { vi, describe, it, expect } from "vitest";
 
 import VisualizationDetailPage from "./page";
 
-// Mock ExperimentVisualizationDetails component
 vi.mock(
   "../../../../../../../../components/experiment-visualizations/experiment-visualization-details",
   () => ({

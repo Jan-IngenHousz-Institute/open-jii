@@ -1,9 +1,3 @@
-/**
- * useExperimentLocationsAdd hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.addExperimentLocations.useMutation` →
- * `POST /api/v1/experiments/:id/locations`. MSW intercepts that request.
- */
 import { createLocation } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
@@ -14,7 +8,7 @@ import { contract } from "@repo/api";
 import { useExperimentLocationsAdd } from "./useExperimentLocationsAdd";
 
 describe("useExperimentLocationsAdd", () => {
-  it("sends POST request via MSW", async () => {
+  it("sends POST request", async () => {
     const spy = server.mount(contract.experiments.addExperimentLocations, {
       body: [createLocation()],
     });

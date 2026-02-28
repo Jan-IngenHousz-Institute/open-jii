@@ -1,9 +1,3 @@
-/**
- * useExperimentProtocolAdd hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.addExperimentProtocols.useMutation` →
- * `POST /api/v1/experiments/:id/protocols`. MSW intercepts that request.
- */
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
@@ -13,7 +7,7 @@ import { contract } from "@repo/api";
 import { useExperimentProtocolAdd } from "./useExperimentProtocolAdd";
 
 describe("useExperimentProtocolAdd", () => {
-  it("sends POST request via MSW using addProtocols", async () => {
+  it("sends POST request using addProtocols", async () => {
     const spy = server.mount(contract.experiments.addExperimentProtocols, {
       body: { success: true },
     });

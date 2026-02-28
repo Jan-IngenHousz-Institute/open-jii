@@ -9,7 +9,6 @@ import { contract } from "@repo/api";
 
 import ExperimentOverviewPage from "./page";
 
-// Mock ErrorDisplay (keep — presentational stub)
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
     <div data-testid="error-display">
@@ -19,7 +18,6 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-// Mock heavy child components to keep tests focused
 vi.mock("~/components/experiment-overview/experiment-description", () => ({
   ExperimentDescription: () => <section aria-label="description" />,
 }));
@@ -43,7 +41,6 @@ const archivedAccess = createExperimentAccess({
   experiment: { id: "test-experiment-id", name: "Test", status: "archived" },
 });
 
-/** Mount all 4 endpoints with sensible defaults for "happy path". */
 function mountDefaults(accessOverride?: Parameters<typeof server.mount>[1]) {
   server.mount(
     contract.experiments.getExperimentAccess,

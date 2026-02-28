@@ -1,9 +1,3 @@
-/**
- * useProtocol hook test — MSW-based.
- *
- * The real hook calls `tsr.protocols.getProtocol.useQuery` →
- * `GET /api/v1/protocols/:id`. MSW intercepts that request.
- */
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
@@ -14,7 +8,7 @@ import { contract } from "@repo/api";
 import { useProtocol } from "./useProtocol";
 
 describe("useProtocol", () => {
-  it("returns protocol data from MSW", async () => {
+  it("returns protocol data", async () => {
     const protocol = createProtocol({ id: "protocol-123" });
     server.mount(contract.protocols.getProtocol, { body: protocol });
 

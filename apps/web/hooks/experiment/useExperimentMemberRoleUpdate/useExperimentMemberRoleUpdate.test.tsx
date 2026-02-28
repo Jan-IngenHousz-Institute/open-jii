@@ -1,9 +1,3 @@
-/**
- * useExperimentMemberRoleUpdate hook test — MSW-based.
- *
- * The real hook calls `tsr.experiments.updateExperimentMemberRole.useMutation` →
- * `PATCH /api/v1/experiments/:id/members/:memberId`. MSW intercepts that request.
- */
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
@@ -13,7 +7,7 @@ import { contract } from "@repo/api";
 import { useExperimentMemberRoleUpdate } from "./useExperimentMemberRoleUpdate";
 
 describe("useExperimentMemberRoleUpdate", () => {
-  it("sends PATCH request via MSW", async () => {
+  it("sends PATCH request", async () => {
     const spy = server.mount(contract.experiments.updateExperimentMemberRole, {
       body: { success: true },
     });

@@ -9,7 +9,6 @@ import { contract, ExperimentTableName } from "@repo/api";
 
 import ExperimentDataPage from "./page";
 
-// Mock ExperimentDataTable (sibling — Rule 5)
 vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ExperimentDataTable: ({
     experimentId,
@@ -34,7 +33,6 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ),
 }));
 
-// Mock UI components — pragmatic (NavTabs relies on URL-based routing; Skeleton needs testid for query)
 vi.mock("@repo/ui/components", async () => {
   const actual = await vi.importActual("@repo/ui/components");
   return {
@@ -57,7 +55,6 @@ vi.mock("@repo/ui/components", async () => {
   };
 });
 
-// Mock DataUploadModal (sibling — Rule 5)
 vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () => ({
   DataUploadModal: ({
     experimentId,
@@ -76,8 +73,6 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
     />
   ),
 }));
-
-/* --------------------------------- Helpers -------------------------------- */
 
 const EXP_ID = "test-experiment-id";
 const PARAMS = Promise.resolve({ id: EXP_ID, locale: "en-US" });
@@ -101,13 +96,10 @@ const mockTablesData = [
   },
 ];
 
-/** Mount both query endpoints with sensible archived defaults. */
 function mountDefaults() {
   server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
   server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
 }
-
-/* ---------------------------------- Tests --------------------------------- */
 
 beforeEach(() => {
   vi.clearAllMocks();

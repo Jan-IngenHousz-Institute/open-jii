@@ -60,8 +60,6 @@ function mountMeasurements(rows: Record<string, unknown>[] = [], opts?: { status
   });
 }
 
-/* ---------------------------------- Tests --------------------------------- */
-
 describe("ExperimentMeasurements", () => {
   it("renders loading then empty state when no measurements", async () => {
     mountMeasurements([]);

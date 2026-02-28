@@ -10,7 +10,6 @@ vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: (...args: unknown[]): unknown => mockUseExperimentData(...args),
 }));
 
-// Sibling mocks (Rule 5) — annotation components, export modal, chart
 vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
   BulkActionsBar: () => <div>BulkActionsBar</div>,
 }));
@@ -27,7 +26,6 @@ vi.mock("./table-chart/experiment-data-table-chart", () => ({
   ExperimentDataTableChart: () => <div>Chart</div>,
 }));
 
-// Utility component mocks (tested in experiment-data-utils.test.tsx)
 vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
   ExperimentTableHeader: ({ headerGroups }: { headerGroups: unknown[] }) => (
     <thead>
@@ -48,8 +46,6 @@ vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
   ),
   formatValue: (v: unknown) => v,
 }));
-
-/* ── Test fixtures ── */
 
 const mockColumns: ColumnDef<Record<string, unknown>>[] = [
   { id: "name", accessorKey: "name", header: "Name" },
@@ -89,8 +85,6 @@ const defaultProps = {
   pageSize: 10,
   defaultSortColumn: "timestamp",
 };
-
-/* ── Tests ── */
 
 describe("ExperimentDataTable", () => {
   it("shows loading skeletons when no metadata exists yet", () => {
