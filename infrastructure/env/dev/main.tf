@@ -859,6 +859,7 @@ module "opennext_waf" {
   environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
+  enable_bot_control = true
 
   large_body_bypass_routes = [
     {
@@ -1068,7 +1069,7 @@ module "backend_alb" {
   cloudfront_header_value = var.api_cloudfront_header_value
 
   # Enable access logs for better security and troubleshooting
-  enable_access_logs = true
+  enable_access_logs = false
   access_logs_bucket = module.logs_bucket.bucket_id
 
   tags = {
@@ -1333,6 +1334,7 @@ module "backend_waf" {
   environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
+  enable_bot_control = true
 
   large_body_bypass_routes = [
     {

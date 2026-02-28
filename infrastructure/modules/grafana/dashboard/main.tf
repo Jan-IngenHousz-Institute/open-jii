@@ -712,9 +712,16 @@ EOT
       query_type     = ""
       datasource_uid = "__expr__"
 
-      model = <<EOT
-{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
-EOT
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
 
       relative_time_range {
         from = 0
