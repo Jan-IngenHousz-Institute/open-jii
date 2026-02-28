@@ -122,10 +122,10 @@ function renderHook<TResult, TProps = undefined>(
     );
   }
 
-  const hookResult = rtlRenderHook(hook, {
+  const hookResult = rtlRenderHook<TResult, TProps>(hook as (props: TProps) => TResult, {
     wrapper: Wrapper,
     ...(initialProps !== undefined && { initialProps }),
-  } as Parameters<typeof rtlRenderHook>[1]);
+  });
   // eslint-disable-next-line react-hooks/rules-of-hooks -- useRouter is globally mocked in setup.ts
   const router = useRouter();
   return { ...hookResult, router } as {
