@@ -1,16 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterEach, vi } from "vitest";
 
-import { server } from "./msw/server";
-
-beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 afterEach(() => {
-  server.resetHandlers();
   cleanup();
   vi.clearAllMocks();
 });
-afterAll(() => server.close());
 
 // ResizeObserver is not implemented in jsdom but used by Radix UI / shadcn
 global.ResizeObserver = class ResizeObserver {
@@ -179,6 +174,13 @@ vi.mock("posthog-js/react", () => {
 
 vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
+}));
+
+vi.mock("~/lib/contentful", () => ({
+  getContentfulClients: vi.fn().mockResolvedValue({
+    client: {},
+    previewClient: {},
+  }),
 }));
 
 // vi.fn() so tests can override: vi.mocked(useLocale).mockReturnValue("de-DE")

@@ -1,0 +1,799 @@
+
+> web@0.1.0 test /Users/petar/Projects/JII/open-jii/apps/web
+> vitest
+
+
+ DEV  v3.2.4 /Users/petar/Projects/JII/open-jii/apps/web
+      Coverage enabled with v8
+
+ ✓ app/[locale]/platform/macros/__tests__/page.test.tsx (2 tests) 1731ms
+   ✓ MacroPage > renders heading, description, and create button  1727ms
+ ✓ app/__tests__/not-found.test.tsx (1 test) 1733ms
+   ✓ NotFound > renders 404 page with error messages and navigation links  1732ms
+ ✓ app/[locale]/platform/protocols/page.test.tsx (2 tests) 1735ms
+   ✓ ProtocolPage > renders heading, description, and create button  1731ms
+ ✓ app/[locale]/platform/experiments/page.test.tsx (4 tests) 1737ms
+   ✓ ExperimentPage > renders heading and description  1729ms
+ ✓ app/[locale]/(info)/layout.test.tsx (3 tests) 1738ms
+   ✓ InfoGroupLayout > renders children within navbar and footer  1730ms
+ ✓ components/auth/email-login-form.test.tsx (14 tests) 902ms
+ ✓ components/account-settings/danger-zone-card.test.tsx (16 tests) 1759ms
+ ✓ components/experiment-visualizations/chart-configurators/data/shared/x-axis-configuration.test.tsx (21 tests) 635ms
+ ✓ components/protocol-settings/__tests__/protocol-details-card.test.tsx (9 tests) 739ms
+ ✓ components/auth/registration-form.test.tsx (16 tests) 770ms
+ ✓ components/experiment-visualizations/chart-configurators/data/shared/y-axis-configuration.test.tsx (30 tests) 861ms
+ ✓ components/experiment-visualizations/chart-configurators/data/shared/color-dimension-configuration.test.tsx (25 tests) 894ms
+ ✓ components/question-card/bulk-add-options-dialog/bulk-add-options-dialog.test.tsx (8 tests) 623ms
+ ✓ hooks/experiment/useExperimentVisualizations/useExperimentVisualizations.test.tsx (14 tests) 477ms
+ ✓ hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData.test.tsx (6 tests) 445ms
+ ✓ components/experiment-data/data-upload-modal/data-upload-modal.test.tsx (9 tests) 578ms
+   ✓ DataUploadModal > resets state when modal is closed  381ms
+ ✓ hooks/experiment/useExperimentData/useExperimentData.test.tsx (17 tests) 404ms
+ ✓ components/experiment-visualizations/chart-configurators/appearance/basic/scatter-chart/scatter-chart-appearance-configurator.test.tsx (17 tests) 472ms
+ ✓ components/current-members-list/current-members-list.test.tsx (11 tests) 563ms
+ ✓ components/transfer-request-form.test.tsx (5 tests) 450ms
+ ✓ components/macro-settings/macro-details-card.test.tsx (5 tests) 361ms
+ ✓ components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell.test.tsx (17 tests) 358ms
+stderr | components/experiment-data/annotations/add-annotation-dialog.test.tsx > AddAnnotationDialog > uses different textarea rows for comments vs flags
+Select is changing from uncontrolled to controlled. Components should not switch from controlled to uncontrolled (or vice versa). Decide between using a controlled or uncontrolled value for the lifetime of the component.
+
+ ✓ components/experiment-data/annotations/add-annotation-dialog.test.tsx (11 tests) 383ms
+ ✓ hooks/locations/useLocationGeocode.test.ts (6 tests) 341ms
+ ✓ components/experiment-visualizations/chart-configurators/appearance/basic/line-chart/line-chart-appearance-configurator.test.tsx (17 tests) 371ms
+ ✓ hooks/experiment/useInitiateExport/useInitiateExport.test.ts (7 tests) 329ms
+ ✓ components/experiment-visualizations/wizard-steps/chart-type-step.test.tsx (20 tests) 336ms
+ ✓ components/experiment-visualizations/experiment-visualization-details.test.tsx (13 tests) 345ms
+ ✓ app/[locale]/platform/experiments/[id]/analysis/visualizations/[visualizationId]/edit/page.test.tsx (18 tests) 334ms
+ ✓ hooks/profile/useGetUserProfile/useGetUserProfile.test.tsx (5 tests) 288ms
+ ✓ components/navigation/nav-user/nav-user.test.tsx (7 tests) 290ms
+ ✓ components/__tests__/macro-search-popover.test.tsx (17 tests) 300ms
+ ✓ hooks/locations/useLocationSearch.test.ts (5 tests) 287ms
+ ✓ components/experiment-visualizations/chart-configurators/appearance/shared/display-options-section.test.tsx (16 tests) 295ms
+ ✓ app/[locale]/platform/macros/[id]/__tests__/layout.test.tsx (25 tests) 277ms
+ ✓ components/current-members-list/member-item.test.tsx (10 tests) 278ms
+ ✓ components/experiment-data/annotations/bulk-actions-bar.test.tsx (12 tests) 304ms
+ ✓ hooks/useTransferRequestCreate/useTransferRequestCreate.test.tsx (5 tests) 281ms
+ ✓ components/experiment-overview/experiment-title.test.tsx (14 tests) 262ms
+ ✓ components/experiment-data/data-export-modal/__tests__/export-list-step.test.tsx (10 tests) 269ms
+ ✓ components/experiment-data/data-export-modal/__tests__/data-export-modal.test.tsx (8 tests) 258ms
+ ✓ components/experiment-overview/experiment-description.test.tsx (11 tests) 255ms
+ ✓ components/side-panel-flow/__tests__/analysis-panel-flow.test.tsx (3 tests) 263ms
+ ✓ components/side-panel-flow/__tests__/question-panel.test.tsx (6 tests) 246ms
+ ✓ components/flow-editor/__tests__/flow-editor.test.tsx (8 tests) 269ms
+ ✓ components/side-panel-flow/__tests__/side-panel-flow.test.tsx (14 tests) 240ms
+ ✓ components/experiment-visualizations/wizard-steps/basic-info-step.test.tsx (17 tests) 238ms
+ ✓ hooks/experiment/useExperimentTables/useExperimentTables.test.ts (4 tests) 238ms
+ ✓ components/experiment-visualizations/chart-preview/chart-preview-modal.test.tsx (19 tests) 236ms
+ ✓ app/[locale]/platform/experiments/[id]/data/page.test.tsx (13 tests) 236ms
+ ✓ components/protocol-search-popover.test.tsx (13 tests) 250ms
+ ✓ components/experiment-data/experiment-data-table.test.tsx (10 tests) 250ms
+ ✓ components/navigation/unified-navbar/unified-navbar.test.tsx (12 tests) 246ms
+ ✓ hooks/experiment/useExperimentLocations/useExperimentLocations.test.ts (4 tests) 237ms
+ ✓ hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate.test.tsx (4 tests) 227ms
+ ✓ hooks/experiment/useListExports/useListExports.test.ts (4 tests) 238ms
+ ✓ hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate.test.tsx (4 tests) 227ms
+ ✓ app/[locale]/platform/experiments/[id]/analysis/visualizations/new/page.test.tsx (15 tests) 212ms
+ ✓ components/experiment-overview/experiment-linked-protocols/protocol-card.test.tsx (12 tests) 207ms
+ ✓ components/new-protocol/__tests__/new-protocol.test.tsx (7 tests) 213ms
+ ✓ components/new-experiment/new-experiment-members-card.test.tsx (4 tests) 202ms
+ ✓ hooks/protocol/useProtocol/useProtocol.test.tsx (4 tests) 186ms
+ ✓ components/experiment-data/data-export-modal/__tests__/format-selection-step.test.tsx (5 tests) 191ms
+ ✓ components/new-experiment/steps/review-step/review-step.test.tsx (18 tests) 190ms
+ ✓ components/experiment-settings/experiment-member-management-card.test.tsx (5 tests) 199ms
+ ✓ components/experiment-data/annotations/delete-annotations-dialog.test.tsx (9 tests) 189ms
+ ✓ hooks/macro/useMacros/useMacros.test.tsx (3 tests) 183ms
+ ✓ hooks/experiment/useExperimentVisualization/useExperimentVisualization.test.ts (3 tests) 183ms
+ ✓ hooks/useTransferRequests/useTransferRequests.test.tsx (3 tests) 182ms
+ ✓ components/new-macro/new-macro.test.tsx (5 tests) 173ms
+ ✓ hooks/experiment/useExperimentUpdate/useExperimentUpdate.test.tsx (4 tests) 174ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/layout.test.tsx (14 tests) 173ms
+ ✓ components/navigation/navigation-topbar/navigation-topbar.test.tsx (6 tests) 187ms
+ ✓ components/__tests__/list-experiments.test.tsx (4 tests) 173ms
+ ✓ components/question-card/select-options-editor/select-options-editor.test.tsx (14 tests) 180ms
+ ✓ hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate.test.tsx (3 tests) 171ms
+ ✓ components/cookie-banner.test.tsx (6 tests) 174ms
+ ✓ components/protocol-settings/protocol-info-card.test.tsx (6 tests) 173ms
+ ✓ hooks/experiment/annotations/useExperimentAnnotationDelete/useExperimentAnnotationDelete.test.tsx (3 tests) 174ms
+ ✓ hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate.test.tsx (3 tests) 174ms
+ ✓ hooks/experiment/useDownloadExport/useDownloadExport.test.ts (4 tests) 175ms
+ ✓ hooks/macro/useMacroCreate/useMacroCreate.test.tsx (3 tests) 175ms
+ ✓ hooks/experiment/useExperimentLocationsAdd/useExperimentLocationsAdd.test.tsx (3 tests) 174ms
+ ✓ hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk.test.tsx (3 tests) 174ms
+ ✓ hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete.test.tsx (3 tests) 175ms
+ ✓ hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd.test.tsx (3 tests) 174ms
+ ✓ hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk.test.tsx (3 tests) 175ms
+ ✓ components/experiment-data/data-upload-modal/steps/file-upload-step.test.tsx (7 tests) 168ms
+ ✓ components/experiment-settings/experiment-archive.test.tsx (5 tests) 162ms
+ ✓ components/account-settings/account-settings.test.tsx (7 tests) 143ms
+ ✓ app/[locale]/platform/macros/[id]/__tests__/page.test.tsx (14 tests) 159ms
+ ✓ components/experiment-overview/experiment-measurements.test.tsx (8 tests) 149ms
+ ✓ hooks/experiment/useExperiments/useExperiments.test.tsx (9 tests) 150ms
+ ✓ components/__tests__/question-card.test.tsx (6 tests) 157ms
+ ✓ components/experiment-settings/experiment-location-management-card.test.tsx (7 tests) 143ms
+ ✓ app/[locale]/platform/transfer-request/history/page.test.tsx (15 tests) 137ms
+ ✓ components/list-macros.test.tsx (4 tests) 154ms
+ ✓ app/[locale]/platform/experiments/[id]/flow/page.test.tsx (8 tests) 142ms
+ ✓ app/[locale]/platform/experiments/[id]/analysis/visualizations/page.test.tsx (11 tests) 148ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/data/page.test.tsx (9 tests) 149ms
+ ✓ hooks/experiment/useExperimentAccess/useExperimentAccess.test.tsx (2 tests) 130ms
+ ✓ components/side-panel-flow/__tests__/edge-panel.test.tsx (4 tests) 132ms
+ ✓ hooks/macro/useMacro/useMacro.test.tsx (2 tests) 129ms
+ ✓ components/experiment-settings/experiment-delete.test.tsx (4 tests) 131ms
+ ✓ hooks/macro/useMacroDelete/useMacroDelete.test.tsx (4 tests) 130ms
+ ✓ components/experiment-visualizations/wizard-steps/appearance-step.test.tsx (21 tests) 121ms
+ ✓ components/experiment-visualizations/wizard-steps/data-source-step.test.tsx (13 tests) 123ms
+ ✓ hooks/macro/useMacroUpdate/useMacroUpdate.test.tsx (4 tests) 123ms
+ ✓ hooks/experiment/useExperimentDataUpload/useExperimentDataUpload.test.tsx (3 tests) 122ms
+ ✓ components/question-card/question-card.test.tsx (15 tests) 131ms
+ ✓ components/side-panel-flow/__tests__/measurement-panel.test.tsx (5 tests) 121ms
+ ✓ components/experiment-data/data-upload-modal/steps/sensor-selection-step.test.tsx (11 tests) 113ms
+ ✓ components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols.test.tsx (9 tests) 118ms
+ ✓ components/macro-settings/macro-info-card.test.tsx (4 tests) 117ms
+ ✓ components/experiment-settings/experiment-visibility-card.test.tsx (5 tests) 118ms
+ ✓ components/current-members-list/member-dialogs.test.tsx (5 tests) 110ms
+ ✓ components/experiment-overview/experiment-details/experiment-details-card.test.tsx (10 tests) 106ms
+ ✓ components/new-experiment/new-experiment-locations-card.test.tsx (7 tests) 104ms
+ ✓ components/experiment-overview/experiment-details/experiment-locations-section.test.tsx (11 tests) 104ms
+ ✓ app/[locale]/platform/experiments/[id]/page.test.tsx (3 tests) 98ms
+ ✓ components/experiment-data/table-cells/map/experiment-data-table-map-cell.test.tsx (23 tests) 104ms
+ ✓ components/experiment-visualizations/experiment-visualizations-list.test.tsx (20 tests) 104ms
+ ✓ components/new-experiment/new-experiment-visibility-card.test.tsx (5 tests) 107ms
+ ✓ components/experiment-data/table-cells/error/experiment-data-table-error-cell.test.tsx (7 tests) 104ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/page.test.tsx (5 tests) 92ms
+ ✓ components/experiment-visualizations/edit-visualization-form.test.tsx (5 tests) 94ms
+ ✓ components/experiment-visualizations/new-visualization-form.test.tsx (5 tests) 92ms
+ ✓ components/experiment-data/table-cells/variant/experiment-data-table-variant-cell.test.tsx (17 tests) 106ms
+ ✓ components/experiment-data/table-cells/chart/experiment-data-table-chart-cell.test.tsx (13 tests) 94ms
+ ✓ app/[locale]/platform/macros/[id]/settings/__tests__/page.test.tsx (10 tests) 91ms
+ ✓ components/question-card/delete-all-options-dialog/delete-all-options-dialog.test.tsx (6 tests) 99ms
+ ✓ components/auth/oauth-login-form.test.tsx (11 tests) 94ms
+ ✓ app/[locale]/(info)/blog/page.test.tsx (4 tests) 86ms
+ ✓ hooks/experiment/useExperimentProtocolAdd/useExperimentProtocolAdd.test.tsx (4 tests) 88ms
+ ✓ app/[locale]/platform/protocols/[id]/__tests__/layout.test.tsx (7 tests) 88ms
+ ✓ app/[locale]/platform/transfer-request/layout.test.tsx (13 tests) 91ms
+ ✓ components/macro-code-viewer.test.tsx (9 tests) 92ms
+ ✓ app/[locale]/platform/experiments/[id]/analysis/layout.test.tsx (18 tests) 91ms
+ ✓ components/experiment-visualizations/chart-configurators/data/basic/scatter-chart/scatter-chart-data-configurator.test.tsx (13 tests) 83ms
+ ✓ components/experiment-data/table-cells/array/experiment-data-table-array-cell.test.tsx (17 tests) 85ms
+ ✓ app/[locale]/platform/experiments/[id]/layout.test.tsx (6 tests) 78ms
+ ✓ components/experiment-visualizations/chart-preview/chart-preview.test.tsx (6 tests) 82ms
+ ✓ components/react-flow/__tests__/base-node.test.tsx (10 tests) 81ms
+ ✓ components/language-switcher.test.tsx (5 tests) 89ms
+ ✓ components/experiment-data/experiment-data-utils.test.tsx (24 tests) 84ms
+ ✓ components/experiment-data/table-cells/struct/experiment-data-table-struct-cell.test.tsx (17 tests) 82ms
+ ✓ app/[locale]/(info)/cookie-settings/page.test.tsx (5 tests) 84ms
+ ✓ components/new-experiment/__tests__/new-experiment.test.tsx (2 tests) 81ms
+ ✓ components/navigation/navigation-sidebar/navigation-sidebar.test.tsx (3 tests) 75ms
+ ✓ components/experiment-visualizations/chart-renderers/basic/line-chart/line-chart-renderer.test.tsx (19 tests) 78ms
+ ✓ components/experiment-visualizations/experiment-visualizations-display.test.tsx (4 tests) 77ms
+ ✓ components/side-panel-flow/__tests__/instruction-panel.test.tsx (3 tests) 61ms
+ ✓ components/macro-code-editor.test.tsx (12 tests) 74ms
+ ✓ components/__tests__/macro-search-with-dropdown.test.tsx (8 tests) 71ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/data/__tests__/layout.test.tsx (6 tests) 67ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/flow/page.test.tsx (4 tests) 69ms
+ ✓ components/experiment-data/table-chart/experiment-data-table-chart.test.tsx (13 tests) 69ms
+ ✓ app/[locale]/platform/experiments/[id]/data/__tests__/layout.test.tsx (6 tests) 63ms
+ ✓ components/experiment-data/data-upload-modal/steps/success-step.test.tsx (7 tests) 61ms
+ ✓ components/experiment-overview-cards.test.tsx (8 tests) 67ms
+ ✓ app/[locale]/platform/__tests__/not-found.test.tsx (5 tests) 65ms
+ ✓ app/[locale]/platform/account/settings/__tests__/layout.test.tsx (4 tests) 66ms
+ ✓ components/account-settings/__tests__/profile-card.test.tsx (6 tests) 62ms
+ ✓ components/auth/error-content.test.tsx (6 tests) 55ms
+ ✓ components/protocol-overview-cards.test.tsx (5 tests) 57ms
+ ✓ components/macro-overview-cards.test.tsx (5 tests) 56ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/analysis/layout.test.tsx (4 tests) 56ms
+ ✓ components/experiment-visualizations/chart-renderers/basic/scatter-chart/scatter-chart-renderer.test.tsx (14 tests) 54ms
+ ✓ app/[locale]/(auth)/login/page.test.tsx (3 tests) 51ms
+ ✓ components/dashboard/dashboard-banner.test.tsx (5 tests) 57ms
+ ✓ components/experiment-visualizations/experiment-visualization-renderer.test.tsx (11 tests) 52ms
+ ✓ components/react-flow/__tests__/node-handles.test.tsx (12 tests) 51ms
+ ✓ components/macro-settings/macro-settings.test.tsx (3 tests) 50ms
+ ✓ app/[locale]/(info)/blog/[slug]/page.test.tsx (5 tests) 52ms
+ ✓ components/new-macro/new-macro-details-card.test.tsx (4 tests) 60ms
+ ✓ app/__tests__/locale-layout.test.tsx (2 tests) 48ms
+ ✓ app/[locale]/(auth)/register/page.test.tsx (3 tests) 48ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/analysis/visualizations/page.test.tsx (4 tests) 51ms
+ ✓ components/__tests__/protocol-search-with-dropdown.test.tsx (5 tests) 56ms
+ ✓ app/[locale]/page.test.tsx (6 tests) 46ms
+ ✓ app/[locale]/platform/transfer-request/page.test.tsx (9 tests) 48ms
+ ✓ app/[locale]/platform/page.test.tsx (1 test) 45ms
+ ✓ app/[locale]/(auth)/login-error/page.test.tsx (3 tests) 48ms
+ ✓ components/dashboard/dashboard-section.test.tsx (2 tests) 43ms
+ ✓ app/[locale]/platform/experiments/new/page.test.tsx (1 test) 41ms
+ ✓ app/[locale]/(info)/about/page.test.tsx (4 tests) 44ms
+ ✓ app/[locale]/(info)/blog/not-found.test.tsx (2 tests) 44ms
+ ✓ components/experiment-data/experiment-data-table-cell-collapsible.test.tsx (8 tests) 46ms
+ ✓ components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item.test.tsx (3 tests) 39ms
+ ✓ app/[locale]/(auth)/verify-request/page.test.tsx (2 tests) 42ms
+ ✓ components/account-settings/__tests__/profile-picture-card.test.tsx (3 tests) 46ms
+ ✓ app/[locale]/(info)/cookie-policy/page.test.tsx (4 tests) 44ms
+ ✓ app/[locale]/platform/macros/new/__tests__/page.test.tsx (1 test) 40ms
+ ✓ app/[locale]/(info)/policies/page.test.tsx (5 tests) 37ms
+ ✓ components/dashboard/user-experiments-section.test.tsx (2 tests) 44ms
+ ✓ components/experiment-data/table-cells/text/experiment-data-table-text-cell.test.tsx (14 tests) 36ms
+ ✓ components/auth/auth-hero-section.test.tsx (3 tests) 26ms
+ ✓ components/navigation/navigation-breadcrumbs/navigation-breadcrumbs.test.tsx (4 tests) 36ms
+ ✓ components/__tests__/protocol-code-editor.test.tsx (4 tests | 1 skipped) 34ms
+ ✓ components/experiment-data/table-cells/user/experiment-data-table-user-cell.test.tsx (17 tests) 35ms
+ ✓ components/experiment/experiment-locations-display.test.tsx (6 tests) 32ms
+ ✓ components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper.test.tsx (12 tests) 29ms
+ ✓ components/experiment-visualizations/chart-configurators/data/basic/line-chart/line-chart-data-configurator.test.tsx (6 tests) 26ms
+ ✓ components/navigation/nav-items/nav-items.test.tsx (4 tests) 24ms
+ ✓ components/question-card/text-answer-display/text-answer-display.test.tsx (4 tests) 21ms
+ ✓ components/question-card/boolean-answer-display/boolean-answer-display.test.tsx (4 tests) 21ms
+ ✓ components/question-card/number-answer-display/number-answer-display.test.tsx (4 tests) 21ms
+ ✓ components/auth/terms-and-conditions-dialog.test.tsx (4 tests) 19ms
+ ✓ components/experiment-settings/experiment-info-card.test.tsx (3 tests) 20ms
+ ✓ hooks/experiment/annotations/useExperimentAnnotationOptimisticUpdate/useExperimentAnnotationOptimisticUpdate.test.ts (22 tests) 24ms
+ ✓ components/auth/login-form.test.tsx (3 tests) 25ms
+ ✓ app/[locale]/platform/layout.test.tsx (3 tests) 23ms
+stderr | app/__tests__/layout.test.tsx > RootLayout > renders children
+In HTML, <html> cannot be a child of <div>.
+This will cause a hydration error.
+
+ ✓ app/__tests__/layout.test.tsx (2 tests) 23ms
+ ✓ app/[locale]/platform/experiments/[id]/analysis/visualizations/[visualizationId]/page.test.tsx (6 tests) 19ms
+ ✓ components/dashboard/blog-posts-section.test.tsx (3 tests) 18ms
+ ✓ components/react-flow/__tests__/node-utils.test.tsx (8 tests) 19ms
+ ✓ app/[locale]/platform/experiments-archive/page.test.tsx (1 test) 16ms
+ ✓ app/[locale]/platform/account/settings/page.test.tsx (4 tests) 17ms
+ ✓ app/[locale]/platform/protocols/new/page.test.tsx (1 test) 17ms
+ ✓ hooks/useDebounce.test.tsx (5 tests) 16ms
+ ✓ app/[locale]/(info)/terms-and-conditions/page.test.tsx (4 tests) 15ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/analysis/visualizations/[visualizationId]/page.test.tsx (4 tests) 15ms
+ ✓ app/[locale]/(info)/faq/page.test.tsx (4 tests) 16ms
+ ✓ hooks/breadcrumbs/useBreadcrumbs.test.tsx (5 tests) 16ms
+ ✓ hooks/auth/useUpdateUser/useUpdateUser.test.tsx (1 test) 11ms
+ ✓ hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate.test.tsx (5 tests) 12ms
+ ✓ components/ExperimentStatusBadge.test.tsx (4 tests) 18ms
+ ✓ hooks/user-invitation/useUserInvitationRevoke/useUserInvitationRevoke.test.tsx (5 tests) 12ms
+ ✓ hooks/user-invitation/useUserInvitationRoleUpdate/useUserInvitationRoleUpdate.test.tsx (5 tests) 12ms
+ ✓ hooks/auth/useSignOut/useSignOut.test.tsx (1 test) 11ms
+ ✓ hooks/auth/useVerifyEmail/useVerifyEmail.test.tsx (1 test) 11ms
+ ✓ hooks/user-invitation/useUserInvitations/useUserInvitations.test.tsx (4 tests) 11ms
+ ✓ hooks/auth/useSignInEmail/useSignInEmail.test.tsx (1 test) 11ms
+ ✓ lib/posthog-server.test.ts (13 tests) 9ms
+ ✓ components/flow-editor/__tests__/flow-mapper.test.ts (14 tests) 7ms
+ ✓ components/flow-editor/__tests__/flow-conversion.test.ts (9 tests) 6ms
+ ✓ components/experiment-data/data-upload-modal/data-upload-validation.test.ts (17 tests) 5ms
+ ✓ components/experiment-visualizations/chart-configurators/chart-configurator-util.test.ts (27 tests) 5ms
+ ✓ app/actions/breadcrumbs.test.ts (9 tests) 5ms
+ ✓ components/navigation/navigation-config.test.ts (9 tests) 3ms
+ ✓ app/actions/auth.test.ts (3 tests) 4ms
+ ✓ components/react-flow/__tests__/flow-utils.test.tsx (8 tests) 4ms
+ ✓ util/__tests__/base64.test.ts (8 tests) 4ms
+ ✓ util/query-retry.test.ts (18 tests) 3ms
+ ✓ app/[locale]/platform/experiments/[id]/analysis/page.test.tsx (4 tests) 3ms
+ ✓ app/[locale]/platform/experiments-archive/[id]/analysis/page.test.tsx (2 tests) 3ms
+ ✓ app/[locale]/(info)/blog/[...notFound]/page.test.tsx (1 test) 3ms
+ ✓ app/actions/revalidate.test.ts (1 test) 3ms
+ ✓ util/format-file-size.test.ts (7 tests) 3ms
+ ✓ util/format-row-count.test.ts (5 tests) 3ms
+
+ Test Files  250 passed (250)
+      Tests  1941 passed | 1 skipped (1942)
+   Start at  16:08:30
+   Duration  57.84s (transform 2.29s, setup 51.18s, collect 187.30s, tests 45.48s, environment 67.88s, prepare 11.79s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   88.14 |    86.87 |   85.75 |   88.14 |                   
+ web               |      50 |       50 |   66.66 |      50 |                   
+  env.ts           |   86.66 |       50 |     100 |   86.66 | 44-49             
+  middleware.ts    |       0 |        0 |       0 |       0 | 1-49              
+  next-env.d.ts    |       0 |        0 |       0 |       0 |                   
+ web/app           |     100 |    66.66 |     100 |     100 |                   
+  layout.tsx       |     100 |      100 |     100 |     100 |                   
+  not-found.tsx    |     100 |       50 |     100 |     100 | 30                
+ web/app/[locale]  |     100 |    88.88 |     100 |     100 |                   
+  layout.tsx       |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |    83.33 |     100 |     100 | 30                
+ ...]/(auth)/login |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...h)/login-error |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...auth)/register |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...verify-request |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...locale]/(info) |     100 |       50 |     100 |     100 |                   
+  layout.tsx       |     100 |       50 |     100 |     100 | 23                
+ ...]/(info)/about |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...e]/(info)/blog |     100 |     87.5 |     100 |     100 |                   
+  not-found.tsx    |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |    86.66 |     100 |     100 | 23,73             
+ .../[...notFound] |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...o)/blog/[slug] |     100 |    93.33 |     100 |     100 |                   
+  page.tsx         |     100 |    93.33 |     100 |     100 | 21                
+ .../cookie-policy |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...ookie-settings |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...le]/(info)/faq |     100 |    83.33 |     100 |     100 |                   
+  page.tsx         |     100 |    83.33 |     100 |     100 | 15                
+ ...info)/policies |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...and-conditions |     100 |    83.33 |     100 |     100 |                   
+  page.tsx         |     100 |    83.33 |     100 |     100 | 15                
+ ...cale]/platform |     100 |    92.85 |     100 |     100 |                   
+  layout.tsx       |     100 |    85.71 |     100 |     100 | 17                
+  not-found.tsx    |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...count/settings |     100 |    69.23 |     100 |     100 |                   
+  layout.tsx       |     100 |    66.66 |     100 |     100 | ...24-133,177-181 
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...rm/experiments |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...iments-archive |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...s-archive/[id] |     100 |    89.74 |     100 |     100 |                   
+  layout.tsx       |     100 |    95.45 |     100 |     100 | 89                
+  page.tsx         |     100 |    82.35 |     100 |     100 | 53,80-90          
+ .../[id]/analysis |      98 |       90 |     100 |      98 |                   
+  layout.tsx       |   97.77 |    88.88 |     100 |   97.77 | 24                
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...visualizations |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...sualizationId] |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...hive/[id]/data |   97.29 |       92 |      50 |   97.29 |                   
+  layout.tsx       |      90 |     87.5 |     100 |      90 | 31-32             
+  page.tsx         |   98.43 |    94.11 |   33.33 |   98.43 | 73-74             
+ ...hive/[id]/flow |     100 |    81.81 |     100 |     100 |                   
+  page.tsx         |     100 |    81.81 |     100 |     100 | 40,65             
+ ...periments/[id] |   98.14 |    75.67 |     100 |   98.14 |                   
+  layout.tsx       |   98.95 |    77.77 |     100 |   98.95 | 93                
+  page.tsx         |   96.96 |    73.68 |     100 |   96.96 | 61-62             
+ .../[id]/analysis |      98 |       90 |     100 |      98 |                   
+  layout.tsx       |   97.77 |    88.88 |     100 |   97.77 | 24                
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...visualizations |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...sualizationId] |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...zationId]/edit |     100 |    93.33 |     100 |     100 |                   
+  page.tsx         |     100 |    93.33 |     100 |     100 | 97                
+ ...alizations/new |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...ents/[id]/data |   97.33 |       92 |      50 |   97.33 |                   
+  layout.tsx       |      90 |     87.5 |     100 |      90 | 31-32             
+  page.tsx         |   98.46 |    94.11 |   33.33 |   98.46 | 73-74             
+ ...ents/[id]/flow |   74.77 |       90 |   16.66 |   74.77 |                   
+  page.tsx         |   74.77 |       90 |   16.66 |   74.77 | ...64,68-80,92-93 
+ ...xperiments/new |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...latform/macros |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...rm/macros/[id] |    98.9 |    96.96 |     100 |    98.9 |                   
+  layout.tsx       |     100 |      100 |     100 |     100 |                   
+  page.tsx         |   98.27 |    95.23 |     100 |   98.27 | 65-66             
+ .../[id]/settings |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...orm/macros/new |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...form/protocols |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...protocols/[id] |   41.42 |    81.25 |   66.66 |   41.42 |                   
+  layout.tsx       |     100 |    86.66 |     100 |     100 | 59-60             
+  page.tsx         |       0 |        0 |       0 |       0 | 1-99              
+ .../[id]/settings |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-75              
+ .../protocols/new |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...ansfer-request |     100 |      100 |     100 |     100 |                   
+  layout.tsx       |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...equest/history |     100 |    88.88 |     100 |     100 |                   
+  page.tsx         |     100 |    88.88 |     100 |     100 | 62                
+ web/app/actions   |   95.04 |    88.57 |     100 |   95.04 |                   
+  auth.ts          |     100 |      100 |     100 |     100 |                   
+  breadcrumbs.ts   |   94.05 |    87.09 |     100 |   94.05 | 42-43,75-76,86-87 
+  revalidate.ts    |     100 |      100 |     100 |     100 |                   
+ ...i/enable-draft |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-91              
+ web/components    |    78.3 |    80.93 |   79.34 |    78.3 |                   
+  ...atusBadge.tsx |     100 |      100 |     100 |     100 |                   
+  ...ie-banner.tsx |     100 |      100 |     100 |     100 |                   
+  ...cols-list.tsx |       0 |        0 |       0 |       0 | 1-103             
+  ...r-display.tsx |      75 |    28.57 |     100 |      75 | 32-36,40          
+  ...ment-data.tsx |       0 |      100 |     100 |       0 | 3-62              
+  ...iew-cards.tsx |     100 |      100 |     100 |     100 |                   
+  ...-overview.tsx |       0 |      100 |     100 |       0 | 3-93              
+  ...de-viewer.tsx |       0 |      100 |     100 |       0 | 3-115             
+  ...-switcher.tsx |     100 |    94.11 |     100 |     100 | 44                
+  legend-flow.tsx  |     100 |      100 |      50 |     100 |                   
+  ...periments.tsx |     100 |      100 |     100 |     100 |                   
+  list-macros.tsx  |     100 |      100 |   66.66 |     100 |                   
+  ...protocols.tsx |       0 |      100 |     100 |       0 | 3-25              
+  ...de-editor.tsx |   79.51 |    82.14 |      70 |   79.51 | ...55-180,183-184 
+  ...de-viewer.tsx |    84.8 |    80.95 |    87.5 |    84.8 | ...4,82-83,91-105 
+  ...iew-cards.tsx |   94.17 |    58.82 |     100 |   94.17 | 36,38,40,49,51,53 
+  ...h-popover.tsx |     100 |      100 |      80 |     100 |                   
+  ...-dropdown.tsx |     100 |    91.66 |      50 |     100 | 52                
+  map.tsx          |     100 |      100 |       0 |     100 |                   
+  ...de-editor.tsx |   65.84 |       50 |   57.14 |   65.84 | ...27-232,249-251 
+  ...iew-cards.tsx |     100 |    88.88 |     100 |     100 | 71                
+  ...h-popover.tsx |     100 |      100 |   71.42 |     100 |                   
+  ...-dropdown.tsx |     100 |    83.33 |      50 |     100 | 52,95             
+  ...uest-form.tsx |     100 |     90.9 |     100 |     100 | 158               
+  ...-provider.tsx |       0 |      100 |     100 |       0 | 4-27              
+  ...h-popover.tsx |   83.25 |    70.96 |   76.92 |   83.25 | ...89,296-301,306 
+ ...count-settings |     100 |    86.79 |     100 |     100 |                   
+  ...-settings.tsx |     100 |    86.36 |     100 |     100 | 46-48             
+  ...zone-card.tsx |     100 |       84 |     100 |     100 | 59-60,116,203     
+  profile-card.tsx |     100 |      100 |     100 |     100 |                   
+  ...ture-card.tsx |     100 |      100 |     100 |     100 |                   
+ ...omponents/auth |   98.11 |    86.36 |   95.83 |   98.11 |                   
+  ...o-section.tsx |     100 |      100 |     100 |     100 |                   
+  ...ogin-form.tsx |   93.78 |    78.37 |    87.5 |   93.78 | ...17,128-137,205 
+  ...r-content.tsx |     100 |      100 |     100 |     100 |                   
+  login-form.tsx   |     100 |    83.33 |     100 |     100 | 51                
+  ...ogin-form.tsx |   99.13 |    94.11 |     100 |   99.13 | 26                
+  ...tion-form.tsx |     100 |    89.47 |     100 |     100 | 77,86             
+  ...ns-dialog.tsx |     100 |      100 |     100 |     100 |                   
+ ...t-members-list |   89.97 |    91.66 |   66.66 |   89.97 |                   
+  ...bers-list.tsx |   81.91 |    85.71 |      60 |   81.91 | ...62-163,177-183 
+  ...r-dialogs.tsx |     100 |      100 |     100 |     100 |                   
+  member-item.tsx  |     100 |      100 |     100 |     100 |                   
+ ...ents/dashboard |   97.84 |     90.9 |      80 |   97.84 |                   
+  ...s-section.tsx |     100 |       80 |     100 |     100 | 15                
+  ...rd-banner.tsx |     100 |      100 |     100 |     100 |                   
+  ...d-section.tsx |     100 |      100 |     100 |     100 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-3               
+  ...s-section.tsx |     100 |      100 |     100 |     100 |                   
+ ...nts/experiment |     100 |      100 |     100 |     100 |                   
+  ...s-display.tsx |     100 |      100 |     100 |     100 |                   
+ ...xperiment-data |   86.24 |    84.05 |   81.57 |   86.24 |                   
+  ...llapsible.tsx |   95.65 |    94.11 |     100 |   95.65 | 58-59             
+  ...ata-table.tsx |   82.12 |    95.83 |   53.84 |   82.12 | ...60-268,444-452 
+  ...ata-utils.tsx |   90.53 |    73.97 |   93.75 |   90.53 | ...73,281,305-311 
+ ...ta/annotations |     100 |    97.91 |     100 |     100 |                   
+  ...on-dialog.tsx |     100 |      100 |     100 |     100 |                   
+  ...tions-bar.tsx |     100 |    94.73 |     100 |     100 | 81                
+  ...ns-dialog.tsx |     100 |      100 |     100 |     100 |                   
+ ...a-export-modal |     100 |     90.9 |     100 |     100 |                   
+  ...ort-modal.tsx |     100 |     90.9 |     100 |     100 | 75                
+ ...rt-modal/steps |   96.29 |    80.85 |      75 |   96.29 |                   
+  ...list-step.tsx |   95.16 |    78.04 |   66.66 |   95.16 | 212,222-235       
+  ...tion-step.tsx |     100 |      100 |     100 |     100 |                   
+ ...a-upload-modal |     100 |      100 |     100 |     100 |                   
+  ...oad-modal.tsx |     100 |      100 |     100 |     100 |                   
+  ...validation.ts |     100 |      100 |     100 |     100 |                   
+ ...ad-modal/steps |    86.3 |    84.37 |     100 |    86.3 |                   
+  ...load-step.tsx |   75.91 |    77.27 |     100 |   75.91 | ...30-156,168-171 
+  ...tion-step.tsx |     100 |      100 |     100 |     100 |                   
+  success-step.tsx |     100 |      100 |     100 |     100 |                   
+ ...ls/annotations |   96.73 |    84.84 |     100 |   96.73 |                   
+  ...ions-cell.tsx |   96.73 |    84.84 |     100 |   96.73 | ...17-122,130-132 
+ ...le-cells/array |   89.89 |    81.48 |     100 |   89.89 |                   
+  ...rray-cell.tsx |   89.89 |    81.48 |     100 |   89.89 | ...39-41,43-46,92 
+ ...le-cells/chart |   94.66 |    76.92 |     100 |   94.66 |                   
+  ...hart-cell.tsx |   94.66 |    76.92 |     100 |   94.66 | 35-37,39          
+ ...le-cells/error |     100 |      100 |     100 |     100 |                   
+  ...rror-cell.tsx |     100 |      100 |     100 |     100 |                   
+ ...able-cells/map |   96.19 |     92.1 |     100 |   96.19 |                   
+  ...-map-cell.tsx |   96.19 |     92.1 |     100 |   96.19 | 44-45,63-64       
+ ...e-cells/struct |   97.53 |    96.55 |     100 |   97.53 |                   
+  ...ruct-cell.tsx |   97.53 |    96.55 |     100 |   97.53 | 43-44             
+ ...ble-cells/text |     100 |     87.5 |     100 |     100 |                   
+  ...text-cell.tsx |     100 |     87.5 |     100 |     100 | 15                
+ ...ble-cells/user |      96 |    94.73 |     100 |      96 |                   
+  ...user-cell.tsx |      96 |    94.73 |     100 |      96 | 39-40             
+ ...-cells/variant |   96.73 |    82.35 |     100 |   96.73 |                   
+  ...iant-cell.tsx |   96.73 |    82.35 |     100 |   96.73 | 58,91-92          
+ ...ta/table-chart |     100 |      100 |     100 |     100 |                   
+  ...ble-chart.tsx |     100 |      100 |     100 |     100 |                   
+ ...iment-overview |   97.34 |    97.01 |      85 |   97.34 |                   
+  ...scription.tsx |   95.65 |      100 |   77.77 |   95.65 | 90-91,100-105     
+  ...surements.tsx |     100 |      100 |     100 |     100 |                   
+  ...ent-title.tsx |   96.89 |    92.59 |      90 |   96.89 | 77-78,91,105      
+ ...riment-details |   99.48 |    96.15 |     100 |   99.48 |                   
+  ...ails-card.tsx |   99.02 |     92.3 |     100 |   99.02 | 117               
+  ...s-section.tsx |     100 |      100 |     100 |     100 |                   
+ ...nked-protocols |     100 |    97.91 |     100 |     100 |                   
+  ...protocols.tsx |     100 |      100 |     100 |     100 |                   
+  ...ocol-card.tsx |     100 |    95.23 |     100 |     100 | 128               
+ ...iment-settings |   72.95 |    79.52 |    67.5 |   72.95 |                   
+  ...t-archive.tsx |   98.85 |       92 |   83.33 |   98.85 | 102               
+  ...nt-delete.tsx |     100 |    81.81 |   83.33 |     100 | 56,91             
+  ...info-card.tsx |   96.87 |    66.66 |     100 |   96.87 | 38                
+  ...ment-card.tsx |   86.04 |    71.87 |      80 |   86.04 | ...31-135,142-166 
+  ...ment-card.tsx |   69.84 |    87.17 |   58.33 |   69.84 | ...66-188,281-322 
+  ...ment-card.tsx |       0 |      100 |     100 |       0 | 3-143             
+  ...lity-card.tsx |   64.91 |       25 |      20 |   64.91 | ...90-115,138,143 
+  ...lity-form.tsx |   92.37 |    66.66 |      75 |   92.37 | 59-66,123         
+ ...visualizations |    90.6 |    92.22 |   62.96 |    90.6 |                   
+  ...tion-form.tsx |      80 |      100 |   42.85 |      80 | ...99-106,114-120 
+  ...n-details.tsx |     100 |    86.95 |     100 |     100 | 72,79,149         
+  ...-renderer.tsx |   94.91 |      100 |      50 |   94.91 | 18-20             
+  ...s-display.tsx |   94.82 |    86.66 |     100 |   94.82 | 92-97,131         
+  ...ions-list.tsx |     100 |    95.83 |     100 |     100 | 55                
+  ...tion-form.tsx |   75.59 |    88.88 |   42.85 |   75.59 | ...10-116,127-130 
+ ...-configurators |     100 |      100 |     100 |     100 |                   
+  ...rator-util.ts |     100 |      100 |     100 |     100 |                   
+ ...ors/appearance |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-3               
+ ...sic/line-chart |     100 |      100 |      80 |     100 |                   
+  ...figurator.tsx |     100 |      100 |      80 |     100 |                   
+ .../scatter-chart |     100 |      100 |      80 |     100 |                   
+  ...figurator.tsx |     100 |      100 |      80 |     100 |                   
+ ...earance/shared |     100 |      100 |     100 |     100 |                   
+  ...s-section.tsx |     100 |      100 |     100 |     100 |                   
+ ...igurators/data |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-2               
+ ...sic/line-chart |     100 |      100 |     100 |     100 |                   
+  ...figurator.tsx |     100 |      100 |     100 |     100 |                   
+ .../scatter-chart |     100 |      100 |     100 |     100 |                   
+  ...figurator.tsx |     100 |      100 |     100 |     100 |                   
+ ...rs/data/shared |    99.5 |       86 |     100 |    99.5 |                   
+  ...iguration.tsx |     100 |    90.47 |     100 |     100 | 161,176           
+  ...iguration.tsx |   98.98 |       70 |     100 |   98.98 | 54                
+  ...iguration.tsx |   99.11 |    89.47 |     100 |   99.11 | 80-81             
+ .../chart-preview |     100 |      100 |     100 |     100 |                   
+  ...iew-modal.tsx |     100 |      100 |     100 |     100 |                   
+  ...t-preview.tsx |     100 |      100 |     100 |     100 |                   
+ ...hart-renderers |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-2               
+ ...sic/line-chart |    99.2 |     92.5 |     100 |    99.2 |                   
+  ...-renderer.tsx |    99.2 |     92.5 |     100 |    99.2 | 77                
+ .../scatter-chart |   84.84 |     84.9 |     100 |   84.84 |                   
+  ...-renderer.tsx |   84.84 |     84.9 |     100 |   84.84 | 60-87             
+ ...s/wizard-steps |   91.85 |    89.83 |   72.22 |   91.85 |                   
+  ...ance-step.tsx |     100 |      100 |   66.66 |     100 |                   
+  ...info-step.tsx |     100 |      100 |      75 |     100 |                   
+  ...type-step.tsx |     100 |      100 |      80 |     100 |                   
+  ...urce-step.tsx |   78.33 |    81.81 |   66.66 |   78.33 | ...16-219,227-231 
+ ...ts/flow-editor |   87.69 |    85.71 |   76.92 |   87.69 |                   
+  flow-editor.tsx  |   81.72 |    90.14 |      50 |   81.72 | ...27-231,267-269 
+  flow-mapper.ts   |   95.53 |    82.35 |     100 |   95.53 | ...31,251,273-274 
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+ ...macro-settings |   94.04 |    63.15 |   72.72 |   94.04 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-3               
+  ...ails-card.tsx |    91.6 |    55.55 |   83.33 |    91.6 | 68-78             
+  ...info-card.tsx |     100 |       75 |   66.66 |     100 | 98                
+  ...-settings.tsx |     100 |       80 |     100 |     100 | 35                
+ ...nts/navigation |     100 |      100 |     100 |     100 |                   
+  ...ion-config.ts |     100 |      100 |     100 |     100 |                   
+ ...tion/nav-items |     100 |      100 |     100 |     100 |                   
+  nav-items.tsx    |     100 |      100 |     100 |     100 |                   
+ ...ation/nav-user |   59.06 |    81.81 |     100 |   59.06 |                   
+  nav-user.tsx     |   59.06 |    81.81 |     100 |   59.06 | 67-159            
+ ...on-breadcrumbs |   96.07 |     92.3 |     100 |   96.07 |                   
+  ...eadcrumbs.tsx |   96.07 |     92.3 |     100 |   96.07 | 47-48             
+ ...obile-nav-item |     100 |      100 |     100 |     100 |                   
+  ...-nav-item.tsx |     100 |      100 |     100 |     100 |                   
+ ...gation-sidebar |     100 |      100 |     100 |     100 |                   
+  ...n-sidebar.tsx |     100 |      100 |     100 |     100 |                   
+ ...idebar-wrapper |   97.56 |      100 |     100 |   97.56 |                   
+  ...r-wrapper.tsx |   97.56 |      100 |     100 |   97.56 | 34-35             
+ ...igation-topbar |     100 |    78.94 |    37.5 |     100 |                   
+  ...on-topbar.tsx |     100 |    78.94 |    37.5 |     100 | 105,177-189       
+ ...unified-navbar |   92.28 |       94 |   66.66 |   92.28 |                   
+  ...ed-navbar.tsx |   92.28 |       94 |   66.66 |   92.28 | ...57-158,342-347 
+ ...new-experiment |   75.51 |    82.27 |   58.62 |   75.51 |                   
+  embargo-utils.ts |     100 |    70.58 |     100 |     100 | 5,12-14,25,35     
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+  ...ails-card.tsx |    7.14 |      100 |       0 |    7.14 | 25-66             
+  ...ions-card.tsx |     100 |    94.11 |     100 |     100 | 27                
+  ...bers-card.tsx |      96 |    78.26 |      50 |      96 | 88-92             
+  ...cols-card.tsx |       0 |      100 |     100 |       0 | 3-95              
+  ...lity-card.tsx |   97.22 |      100 |      75 |   97.22 | 107-109           
+  ...xperiment.tsx |   75.34 |       75 |      40 |   75.34 | ...43-145,148-152 
+ ...periment/steps |   31.57 |      100 |       0 |   31.57 |                   
+  form-step.tsx    |   31.57 |      100 |       0 |   31.57 | 29-40,60-105      
+ ...ps/review-step |   85.08 |    58.62 |   88.88 |   85.08 |                   
+  ...s-section.tsx |     100 |       50 |     100 |     100 | 35                
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+  ...s-section.tsx |     100 |       80 |     100 |     100 | 38                
+  ...y-section.tsx |   98.68 |    43.75 |     100 |   98.68 | 83                
+  ...s-section.tsx |       0 |      100 |     100 |       0 | 4-46              
+  review-step.tsx  |     100 |      100 |     100 |     100 |                   
+ ...ents/new-macro |     100 |    73.33 |     100 |     100 |                   
+  ...ails-card.tsx |     100 |       75 |     100 |     100 | 61                
+  new-macro.tsx    |     100 |    72.72 |     100 |     100 | 42,131-145        
+ ...s/new-protocol |   55.17 |       75 |   85.71 |   55.17 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-2               
+  ...ails-card.tsx |       0 |      100 |     100 |       0 | 4-95              
+  new-protocol.tsx |     100 |       80 |     100 |     100 | 78-90             
+ ...tocol-settings |   88.06 |    72.22 |    90.9 |   88.06 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-3               
+  ...ails-card.tsx |     100 |    72.72 |     100 |     100 | 107,151-156       
+  ...info-card.tsx |     100 |       80 |     100 |     100 | 103               
+  ...-settings.tsx |       0 |      100 |     100 |       0 | 3-42              
+ .../question-card |   85.96 |    81.81 |      80 |   85.96 |                   
+  ...tion-card.tsx |     100 |       90 |     100 |     100 | 57                
+  test-setup.ts    |       0 |        0 |       0 |       0 | 1-18              
+ ...answer-display |     100 |      100 |     100 |     100 |                   
+  ...r-display.tsx |     100 |      100 |     100 |     100 |                   
+ ...options-dialog |     100 |      100 |     100 |     100 |                   
+  ...ns-dialog.tsx |     100 |      100 |     100 |     100 |                   
+ ...options-dialog |     100 |      100 |     100 |     100 |                   
+  ...ns-dialog.tsx |     100 |      100 |     100 |     100 |                   
+ ...answer-display |     100 |      100 |     100 |     100 |                   
+  ...r-display.tsx |     100 |      100 |     100 |     100 |                   
+ ...options-editor |   96.37 |      100 |   71.42 |   96.37 |                   
+  ...ns-editor.tsx |   96.37 |      100 |   71.42 |   96.37 | 32-33,36-38       
+ ...answer-display |     100 |      100 |     100 |     100 |                   
+  ...r-display.tsx |     100 |      100 |     100 |     100 |                   
+ ...nts/react-flow |   83.15 |       92 |   88.23 |   83.15 |                   
+  base-node.tsx    |     100 |      100 |     100 |     100 |                   
+  flow-utils.ts    |   89.55 |       85 |     100 |   89.55 | 22-27,56          
+  node-config.ts   |   97.95 |    66.66 |     100 |   97.95 | 64                
+  node-content.tsx |    10.2 |      100 |       0 |    10.2 | 24-74             
+  node-handles.tsx |     100 |      100 |     100 |     100 |                   
+  node-utils.tsx   |   85.18 |     87.5 |      80 |   85.18 | 64-78             
+ ...ide-panel-flow |   96.36 |    79.43 |   92.59 |   96.36 |                   
+  ...sis-panel.tsx |     100 |       80 |     100 |     100 | 36                
+  edge-panel.tsx   |     100 |    80.95 |     100 |     100 | 28,38,49          
+  ...ion-panel.tsx |     100 |      100 |     100 |     100 |                   
+  ...ent-panel.tsx |     100 |      100 |     100 |     100 |                   
+  ...ion-panel.tsx |    83.5 |    63.15 |   77.77 |    83.5 | 74-81,84-91       
+  ...anel-flow.tsx |   98.38 |    82.45 |     100 |   98.38 | 47-48,211-212     
+ ...ic-flow-viewer |       0 |       50 |      50 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+  ...ow-viewer.tsx |       0 |      100 |     100 |       0 | 3-83              
+ web/hooks         |   55.93 |    63.63 |     100 |   55.93 |                   
+  useDebounce.ts   |     100 |      100 |     100 |     100 |                   
+  useLocale.ts     |       0 |      100 |     100 |       0 | 3-15              
+  ...ostHogAuth.ts |       0 |      100 |     100 |       0 | 3-35              
+  useUserSearch.ts |     100 |       20 |     100 |     100 | 19-23             
+ web/hooks/auth    |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+ ...useSignInEmail |     100 |      100 |     100 |     100 |                   
+  ...ignInEmail.ts |     100 |      100 |     100 |     100 |                   
+ ...uth/useSignOut |     100 |      100 |     100 |     100 |                   
+  useSignOut.ts    |     100 |      100 |     100 |     100 |                   
+ .../useUpdateUser |     100 |      100 |     100 |     100 |                   
+  useUpdateUser.ts |     100 |      100 |     100 |     100 |                   
+ ...useVerifyEmail |     100 |      100 |     100 |     100 |                   
+  ...erifyEmail.ts |     100 |      100 |     100 |     100 |                   
+ ...ks/breadcrumbs |     100 |      100 |     100 |     100 |                   
+  ...readcrumbs.ts |     100 |      100 |     100 |     100 |                   
+ ...tAnnotationAdd |   72.22 |      100 |     100 |   72.22 |                   
+  ...otationAdd.ts |   72.22 |      100 |     100 |   72.22 | 26-36,46          
+ ...otationAddBulk |   72.22 |      100 |     100 |   72.22 |                   
+  ...ionAddBulk.ts |   72.22 |      100 |     100 |   72.22 | 26-36,46          
+ ...notationDelete |   83.87 |      100 |     100 |   83.87 |                   
+  ...tionDelete.ts |   83.87 |      100 |     100 |   83.87 | 26-31,41          
+ ...tionDeleteBulk |   72.22 |      100 |     100 |   72.22 |                   
+  ...DeleteBulk.ts |   72.22 |      100 |     100 |   72.22 | 26-36,46          
+ ...timisticUpdate |     100 |    95.74 |     100 |     100 |                   
+  ...sticUpdate.ts |     100 |    95.74 |     100 |     100 | 123,160           
+ ...DownloadExport |     100 |      100 |     100 |     100 |                   
+  ...loadExport.ts |     100 |      100 |     100 |     100 |                   
+ .../useExperiment |     100 |      100 |     100 |     100 |                   
+  useExperiment.ts |     100 |      100 |     100 |     100 |                   
+ ...perimentAccess |     100 |      100 |     100 |     100 |                   
+  ...mentAccess.ts |     100 |      100 |     100 |     100 |                   
+ ...perimentCreate |   85.18 |      100 |      80 |   85.18 |                   
+  ...mentCreate.ts |   85.18 |      100 |      80 |   85.18 | 27-30             
+ ...ExperimentData |   85.98 |    92.85 |   71.42 |   85.98 |                   
+  ...rimentData.ts |   85.98 |    92.85 |   71.42 |   85.98 | ...29-148,159-160 
+ ...mentDataUpload |   85.29 |    83.33 |     100 |   85.29 |                   
+  ...DataUpload.ts |   85.29 |    83.33 |     100 |   85.29 | 21-25             
+ ...perimentDelete |   74.28 |    57.14 |     100 |   74.28 |                   
+  ...mentDelete.ts |   74.28 |    57.14 |     100 |   74.28 | 26-32,44-45       
+ ...ExperimentFlow |     100 |      100 |     100 |     100 |                   
+  ...rimentFlow.ts |     100 |      100 |     100 |     100 |                   
+ ...mentFlowCreate |     100 |      100 |   33.33 |     100 |                   
+  ...FlowCreate.ts |     100 |      100 |   33.33 |     100 |                   
+ ...mentFlowUpdate |     100 |      100 |   33.33 |     100 |                   
+  ...FlowUpdate.ts |     100 |      100 |   33.33 |     100 |                   
+ ...imentLocations |     100 |      100 |     100 |     100 |                   
+  ...tLocations.ts |     100 |      100 |     100 |     100 |                   
+ ...ntLocationsAdd |     100 |      100 |     100 |     100 |                   
+  ...cationsAdd.ts |     100 |      100 |     100 |     100 |                   
+ ...ocationsUpdate |     100 |      100 |     100 |     100 |                   
+  ...ionsUpdate.ts |     100 |      100 |     100 |     100 |                   
+ ...imentMemberAdd |   73.33 |    57.14 |      75 |   73.33 |                   
+  ...tMemberAdd.ts |   73.33 |    57.14 |      75 |   73.33 | 41-45,51-57       
+ ...ntMemberRemove |      60 |       60 |      75 |      60 |                   
+  ...mberRemove.ts |      60 |       60 |      75 |      60 | 26-32,38-44       
+ ...mberRoleUpdate |   62.16 |    57.14 |     100 |   62.16 |                   
+  ...RoleUpdate.ts |   62.16 |    57.14 |     100 |   62.16 | 26-34,41-45       
+ ...erimentMembers |     100 |      100 |     100 |     100 |                   
+  ...entMembers.ts |     100 |      100 |     100 |     100 |                   
+ ...entProtocolAdd |   86.15 |    46.66 |     100 |   86.15 |                   
+  ...rotocolAdd.ts |   86.15 |    46.66 |     100 |   86.15 | 42-46,52-53,71-72 
+ ...ProtocolRemove |       0 |        0 |       0 |       0 |                   
+  ...ocolRemove.ts |       0 |        0 |       0 |       0 | 1-56              
+ ...imentProtocols |       0 |        0 |       0 |       0 |                   
+  ...tProtocols.ts |       0 |        0 |       0 |       0 | 1-13              
+ ...perimentTables |     100 |      100 |     100 |     100 |                   
+  ...mentTables.ts |     100 |      100 |     100 |     100 |                   
+ ...perimentUpdate |   81.35 |    66.66 |     100 |   81.35 |                   
+  ...mentUpdate.ts |   81.35 |    66.66 |     100 |   81.35 | 42-50,61-62       
+ ...tVisualization |     100 |      100 |     100 |     100 |                   
+  ...ualization.ts |     100 |      100 |     100 |     100 |                   
+ ...lizationCreate |   84.37 |    85.71 |     100 |   84.37 |                   
+  ...tionCreate.ts |   84.37 |    85.71 |     100 |   84.37 | 31-35             
+ ...ualizationData |     100 |      100 |     100 |     100 |                   
+  ...zationData.ts |     100 |      100 |     100 |     100 |                   
+ ...lizationDelete |   84.37 |    85.71 |     100 |   84.37 |                   
+  ...tionDelete.ts |   84.37 |    85.71 |     100 |   84.37 | 31-35             
+ ...lizationUpdate |   84.37 |    85.71 |     100 |   84.37 |                   
+  ...tionUpdate.ts |   84.37 |    85.71 |     100 |   84.37 | 31-35             
+ ...Visualizations |     100 |      100 |     100 |     100 |                   
+  ...alizations.ts |     100 |      100 |     100 |     100 |                   
+ ...useExperiments |     100 |    86.36 |     100 |     100 |                   
+  ...xperiments.ts |     100 |    86.36 |     100 |     100 | 30,54,75          
+ ...InitiateExport |     100 |      100 |     100 |     100 |                   
+  ...iateExport.ts |     100 |      100 |     100 |     100 |                   
+ ...useListExports |     100 |      100 |     100 |     100 |                   
+  ...istExports.ts |     100 |      100 |     100 |     100 |                   
+ ...ooks/locations |     100 |      100 |     100 |     100 |                   
+  ...ionGeocode.ts |     100 |      100 |     100 |     100 |                   
+  ...tionSearch.ts |     100 |      100 |     100 |     100 |                   
+ ...macro/useMacro |     100 |      100 |     100 |     100 |                   
+  useMacro.ts      |     100 |      100 |     100 |     100 |                   
+ ...useMacroCreate |     100 |      100 |     100 |     100 |                   
+  ...acroCreate.ts |     100 |      100 |     100 |     100 |                   
+ ...useMacroDelete |     100 |      100 |     100 |     100 |                   
+  ...acroDelete.ts |     100 |      100 |     100 |     100 |                   
+ ...useMacroUpdate |   68.85 |    54.54 |     100 |   68.85 |                   
+  ...acroUpdate.ts |   68.85 |    54.54 |     100 |   68.85 | ...57,64-65,68-69 
+ ...acro/useMacros |     100 |      100 |     100 |     100 |                   
+  useMacros.ts     |     100 |      100 |     100 |     100 |                   
+ ...ateUserProfile |     100 |      100 |     100 |     100 |                   
+  ...serProfile.ts |     100 |      100 |     100 |     100 |                   
+ .../useDeleteUser |     100 |      100 |     100 |     100 |                   
+  useDeleteUser.ts |     100 |      100 |     100 |     100 |                   
+ ...GetUserProfile |   92.85 |       75 |     100 |   92.85 |                   
+  ...serProfile.ts |   92.85 |       75 |     100 |   92.85 | 14                
+ ...ol/useProtocol |     100 |      100 |     100 |     100 |                   
+  useProtocol.ts   |     100 |      100 |     100 |     100 |                   
+ ...ProtocolCreate |   85.18 |      100 |      80 |   85.18 |                   
+  ...ocolCreate.ts |   85.18 |      100 |      80 |   85.18 | 32-35             
+ ...ProtocolDelete |   69.44 |    57.14 |      80 |   69.44 |                   
+  ...ocolDelete.ts |   69.44 |    57.14 |      80 |   69.44 | 30-34,41-44,59-60 
+ ...ProtocolSearch |     100 |      100 |     100 |     100 |                   
+  ...ocolSearch.ts |     100 |      100 |     100 |     100 |                   
+ ...ProtocolUpdate |   82.35 |       80 |      80 |   82.35 |                   
+  ...ocolUpdate.ts |   82.35 |       80 |      80 |   82.35 | 34-37,54-55       
+ ...l/useProtocols |       0 |        0 |       0 |       0 |                   
+  useProtocols.ts  |       0 |        0 |       0 |       0 | 1-28              
+ ...rRequestCreate |      92 |     87.5 |     100 |      92 |                   
+  ...uestCreate.ts |      92 |     87.5 |     100 |      92 | 32-33             
+ ...ansferRequests |     100 |      100 |     100 |     100 |                   
+  ...erRequests.ts |     100 |      100 |     100 |     100 |                   
+ ...vitationCreate |     100 |      100 |     100 |     100 |                   
+  ...tionCreate.ts |     100 |      100 |     100 |     100 |                   
+ ...vitationRevoke |     100 |      100 |     100 |     100 |                   
+  ...tionRevoke.ts |     100 |      100 |     100 |     100 |                   
+ ...tionRoleUpdate |     100 |      100 |     100 |     100 |                   
+  ...RoleUpdate.ts |     100 |      100 |     100 |     100 |                   
+ ...serInvitations |     100 |      100 |     100 |     100 |                   
+  ...nvitations.ts |     100 |      100 |     100 |     100 |                   
+ web/lib           |   41.36 |    82.35 |    87.5 |   41.36 |                   
+  contentful.ts    |       0 |      100 |     100 |       0 | 2-66              
+  ...ie-consent.ts |   48.14 |       40 |      50 |   48.14 | ...28,30-34,40-48 
+  ...hog-config.ts |     100 |      100 |     100 |     100 |                   
+  ...hog-server.ts |     100 |      100 |     100 |     100 |                   
+  secrets.ts       |       0 |      100 |     100 |       0 | 2-97              
+  tsr.ts           |     100 |      100 |     100 |     100 |                   
+ web/providers     |    37.5 |    42.85 |     100 |    37.5 |                   
+  ...gProvider.tsx |   81.81 |    33.33 |     100 |   81.81 | 34-40             
+  ...yProvider.tsx |       0 |      100 |     100 |       0 | 3-33              
+ web/test          |   98.28 |     90.9 |   95.83 |   98.28 |                   
+  factories.ts     |   99.28 |       90 |     100 |   99.28 | 308,310           
+  test-utils.tsx   |    94.2 |     92.3 |    87.5 |    94.2 | 61-65             
+ web/test/msw      |     100 |      100 |     100 |     100 |                   
+  handlers.ts      |     100 |      100 |     100 |     100 |                   
+  mount.ts         |     100 |      100 |     100 |     100 |                   
+  server.ts        |     100 |      100 |     100 |     100 |                   
+ web/util          |     100 |    93.75 |     100 |     100 |                   
+  apiError.ts      |     100 |      100 |     100 |     100 |                   
+  base64.ts        |     100 |      100 |     100 |     100 |                   
+  date.ts          |     100 |       50 |     100 |     100 | 7                 
+  ...-file-size.ts |     100 |      100 |     100 |     100 |                   
+  ...-row-count.ts |     100 |      100 |     100 |     100 |                   
+  query-retry.ts   |     100 |      100 |     100 |     100 |                   
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+  searchParams.ts  |     100 |       50 |     100 |     100 | 6                 
+-------------------|---------|----------|---------|---------|-------------------
+ PASS  Waiting for file changes...
+       press h to show help, press q to quit
