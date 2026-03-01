@@ -8,12 +8,13 @@
 
 # DBTITLE 1,Imports
 import json
-import logging
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, ArrayType, BooleanType, LongType, MapType
 from enrich.transfer_metadata import execute_transfers
 
-logger = logging.getLogger(__name__)
+def log(msg: str) -> None:
+    """Print to stdout so output appears in Databricks notebook cells."""
+    print(f"[project_transfer] {msg}")
 
 # COMMAND ----------
 
@@ -98,7 +99,7 @@ questions = spark.read.schema(QUESTIONS_SCHEMA).parquet(f"{PHOTOSYNQ_DATA_PATH}/
 # DBTITLE 1,Validate Pending Requests
 pending = spark.table(TRANSFER_TABLE).filter("status = 'pending'")
 pending_count = pending.count()
-logger.info(f"Pending requests: {pending_count}")
+log(f"Pending requests: {pending_count}")
 
 if pending_count > 0:
     validation = (
@@ -123,7 +124,7 @@ if pending_count > 0:
         WHEN MATCHED THEN UPDATE SET t.status = v.new_status
     """)
     for row in validation.collect():
-        logger.info(f"  {row.request_id}: {row.new_status}")
+        log(f"  {row.request_id}: {row.new_status}")
 
 # COMMAND ----------
 
@@ -132,8 +133,17 @@ if pending_count > 0:
 requests = spark.table(TRANSFER_TABLE).filter(F.col("status") == "approved")
 
 if requests.count() == 0:
-    logger.info("No approved requests to process")
+    log("No approved requests to process")
     dbutils.notebook.exit(json.dumps({"status": "success", "transfers": []}))
+
+# Split: requests whose experiment_id is already populated had their backend call
+# succeed on a previous run — skip the backend for those and re-use stored columns.
+new_requests = requests.filter(F.col("experiment_id").isNull())
+recovery_requests = requests.filter(F.col("experiment_id").isNotNull())
+recovery_count = recovery_requests.count()
+
+if recovery_count > 0:
+    log(f"Found {recovery_count} approved request(s) with stored backend response (recovery)")
 
 # COMMAND ----------
 
@@ -285,8 +295,9 @@ project_data = (
         F.lit(None).cast("string").alias("macro_id"),
         F.lit(None).cast("string").alias("macro_filename"),
         # PhotosynQ `time` is Unix epoch in milliseconds; divide by 1000 to get seconds
-        (F.col("m.time").cast("double") / 1000).cast("timestamp").alias("timestamp"),
-        F.to_date((F.col("m.time").cast("double") / 1000).cast("timestamp")).cast("string").alias("date"),
+        # Use try_cast to tolerate empty/malformed time strings (returns NULL instead of failing)
+        F.expr("CAST(try_cast(`m`.`time` AS DOUBLE) / 1000 AS TIMESTAMP)").alias("timestamp"),
+        F.expr("CAST(CAST(try_cast(`m`.`time` AS DOUBLE) / 1000 AS TIMESTAMP) AS DATE)").cast("string").alias("date"),
         F.when(
             F.col("m.user_answers").isNotNull() & (F.size("m.user_answers") > 0),
             F.expr("""
@@ -310,36 +321,106 @@ project_data = (
 # COMMAND ----------
 
 # DBTITLE 1,Backend Transfer
-protocols_agg = protocols.groupBy("transfer_id").agg(
-    F.collect_list(
-        F.struct(F.col("name"), F.col("description"), F.col("code"), F.col("family"))
-    ).alias("protocols_list")
-)
+transfer_results = None
 
-macros_agg = macros.groupBy("transfer_id").agg(
-    F.collect_list(
-        F.struct(F.col("name"), F.col("description"), F.col("language"), F.col("code"))
-    ).alias("macros_list")
-)
-
-transfers = (
-    metadata.alias("m")
-    .join(protocols_agg.alias("p"), F.col("m.transfer_id") == F.col("p.transfer_id"), "left")
-    .join(macros_agg.alias("mc"), F.col("m.transfer_id") == F.col("mc.transfer_id"), "left")
-    .select(
-        F.col("m.transfer_id"),
-        F.col("m.project_id"),
-        F.col("m.name").alias("project_name"),
-        F.col("m.description").alias("project_description"),
-        F.col("m.creator_user_id"),
-        F.col("m.questions"),
-        F.col("m.locations"),
-        F.col("p.protocols_list"),
-        F.col("mc.macros_list"),
+if new_requests.count() > 0:
+    protocols_agg = protocols.groupBy("transfer_id").agg(
+        F.collect_list(
+            F.struct(F.col("name"), F.col("description"), F.col("code"), F.col("family"))
+        ).alias("protocols_list")
     )
-)
 
-transfer_results = execute_transfers(transfers, ENVIRONMENT, dbutils, spark)
+    macros_agg = macros.groupBy("transfer_id").agg(
+        F.collect_list(
+            F.struct(F.col("name"), F.col("description"), F.col("language"), F.col("code"))
+        ).alias("macros_list")
+    )
+
+    transfers = (
+        metadata
+        # Only send new transfers to the backend — not recovery ones
+        .filter(
+            F.col("transfer_id").isin(
+                [r["request_id"] for r in new_requests.select("request_id").collect()]
+            )
+        )
+        .alias("m")
+        .join(protocols_agg.alias("p"), F.col("m.transfer_id") == F.col("p.transfer_id"), "left")
+        .join(macros_agg.alias("mc"), F.col("m.transfer_id") == F.col("mc.transfer_id"), "left")
+        .select(
+            F.col("m.transfer_id"),
+            F.col("m.project_id"),
+            F.col("m.name").alias("project_name"),
+            F.col("m.description").alias("project_description"),
+            F.col("m.creator_user_id"),
+            F.col("m.questions"),
+            F.col("m.locations"),
+            F.col("p.protocols_list"),
+            F.col("mc.macros_list"),
+        )
+    )
+
+    new_results = execute_transfers(transfers, ENVIRONMENT, dbutils, spark)
+
+    # Persist backend response columns so a re-run skips the backend call
+    new_successful = new_results.filter(F.col("success") == True)
+    if new_successful.count() > 0:
+        new_successful.select(
+            F.col("transfer_id").alias("request_id"),
+            F.col("experiment_id"),
+            F.col("protocol_id"),
+            F.col("macro_id"),
+            F.col("macro_filename"),
+            F.col("macro_name"),
+            F.col("flow_id"),
+        ).createOrReplaceTempView("_backend_results")
+        spark.sql(f"""
+            MERGE INTO {TRANSFER_TABLE} t
+            USING _backend_results u ON t.request_id = u.request_id
+            WHEN MATCHED THEN UPDATE SET
+                t.experiment_id = u.experiment_id,
+                t.protocol_id = u.protocol_id,
+                t.macro_id = u.macro_id,
+                t.macro_filename = u.macro_filename,
+                t.macro_name = u.macro_name,
+                t.flow_id = u.flow_id
+        """)
+        log("Persisted backend response columns")
+
+    # Mark failed ones immediately
+    new_failed = new_results.filter(F.col("success") == False)
+    if new_failed.count() > 0:
+        new_failed.select(
+            F.col("transfer_id").alias("request_id"),
+        ).createOrReplaceTempView("_failed_updates")
+        spark.sql(f"""
+            MERGE INTO {TRANSFER_TABLE} t
+            USING _failed_updates u ON t.request_id = u.request_id
+            WHEN MATCHED THEN UPDATE SET t.status = 'failed'
+        """)
+
+    transfer_results = new_results
+
+# Build results for recovery requests (backend already succeeded, use stored columns)
+if recovery_count > 0:
+    recovered_results = recovery_requests.select(
+        F.col("request_id").alias("transfer_id"),
+        F.col("project_id_old").alias("project_id"),
+        F.col("user_id").alias("creator_user_id"),
+        F.col("experiment_id"),
+        F.col("protocol_id"),
+        F.col("macro_id"),
+        F.col("macro_filename"),
+        F.col("macro_name"),
+        F.col("flow_id"),
+        F.lit(True).alias("success"),
+        F.lit(None).cast("string").alias("error"),
+    )
+    transfer_results = (
+        transfer_results.unionByName(recovered_results)
+        if transfer_results is not None
+        else recovered_results
+    )
 
 # COMMAND ----------
 
@@ -376,28 +457,26 @@ for row in successful.select("experiment_id", "transfer_id").collect():
     experiment_id = row["experiment_id"]
     transfer_id = row["transfer_id"]
     output_path = f"{VOLUME_BASE}/{experiment_id}/photosynq_transfer"
-    enriched.filter(F.col("experiment_id") == experiment_id).write.mode("overwrite").parquet(output_path)
-    logger.info(f"Wrote import data to {output_path}")
+    try:
+        enriched.filter(F.col("experiment_id") == experiment_id).write.mode("overwrite").parquet(output_path)
+        log(f"Wrote import data to {output_path}")
+        spark.sql(f"""
+            UPDATE {TRANSFER_TABLE}
+            SET status = 'completed'
+            WHERE request_id = '{transfer_id}'
+        """)
+        log(f"  {transfer_id}: completed")
+    except Exception as e:
+        log(f"  {transfer_id}: parquet write failed - {e}")
+        spark.sql(f"""
+            UPDATE {TRANSFER_TABLE}
+            SET status = 'partial_failed'
+            WHERE request_id = '{transfer_id}'
+        """)
 
-# Bulk-update transfer statuses (completed + failed) via MERGE
-status_updates = transfer_results.select(
-    F.col("transfer_id").alias("request_id"),
-    F.when(F.col("success") == True, F.lit("completed"))
-    .otherwise(F.lit("failed"))
-    .alias("new_status"),
-)
-status_updates.createOrReplaceTempView("_status_updates")
-spark.sql(f"""
-    MERGE INTO {TRANSFER_TABLE} t
-    USING _status_updates u ON t.request_id = u.request_id
-    WHEN MATCHED THEN UPDATE SET t.status = u.new_status
-""")
-
-for row in successful.select("transfer_id").collect():
-    logger.info(f"  {row['transfer_id']}: completed")
 for row in transfer_results.filter(F.col("success") == False).select("transfer_id", "error").collect():
     error_msg = row["error"] or "Unknown error"
-    logger.info(f"  {row['transfer_id']}: failed - {error_msg}")
+    log(f"  {row['transfer_id']}: failed - {error_msg}")
 
 # COMMAND ----------
 
@@ -407,5 +486,5 @@ output = {
     "transfers": [row.asDict() for row in transfer_results.collect()],
 }
 
-logger.info(json.dumps(output, indent=2))
+log(json.dumps(output, indent=2))
 dbutils.notebook.exit(json.dumps(output))

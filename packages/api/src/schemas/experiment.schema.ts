@@ -242,6 +242,7 @@ export const zAnnotationRowsAffected = z.object({
 export const zTransferRequestStatus = z.enum([
   "pending",
   "approved",
+  "partial_failed",
   "completed",
   "rejected",
   "failed",

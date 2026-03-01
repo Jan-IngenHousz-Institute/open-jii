@@ -7494,7 +7494,14 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["pending", "approved", "completed", "rejected", "failed"]
+                      "enum": [
+                        "pending",
+                        "approved",
+                        "partial_failed",
+                        "completed",
+                        "rejected",
+                        "failed"
+                      ]
                     },
                     "requestedAt": {
                       "type": "string",
@@ -7604,7 +7611,14 @@
                       },
                       "status": {
                         "type": "string",
-                        "enum": ["pending", "approved", "completed", "rejected", "failed"]
+                        "enum": [
+                          "pending",
+                          "approved",
+                          "partial_failed",
+                          "completed",
+                          "rejected",
+                          "failed"
+                        ]
                       },
                       "requestedAt": {
                         "type": "string",

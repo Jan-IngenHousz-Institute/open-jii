@@ -8,7 +8,6 @@ takes a DataFrame, fetches secrets, calls the backend, returns enriched DataFram
 
 import json
 import base64
-import logging
 from typing import Dict, Any, List, Optional
 
 from pyspark.sql import DataFrame
@@ -21,7 +20,10 @@ from pyspark.sql.types import (
 
 from .backend_client import BackendClient
 
-logger = logging.getLogger(__name__)
+
+def log(msg: str) -> None:
+    """Print to stdout so output appears in Databricks notebook cells."""
+    print(f"[transfer_metadata] {msg}")
 
 # Output schema for the backend_transfer table
 TRANSFER_RESULT_SCHEMA = StructType([
@@ -47,11 +49,8 @@ def _transfer_name(name: str) -> str:
     to stay within the 255-character database limit."""
     max_base = _NAME_MAX_LENGTH - len(_TRANSFER_SUFFIX)
     if len(name) > max_base:
-        logger.warning(
-            "Name truncated from %d to %d chars: '%s…'",
-            len(name),
-            max_base,
-            name[:40],
+        log(
+            f"Name truncated from {len(name)} to {max_base} chars: '{name[:40]}…'"
         )
     return name[:max_base] + _TRANSFER_SUFFIX
 
@@ -131,10 +130,8 @@ def _build_questions_payload(
         kind = _VALUE_TYPE_TO_KIND.get(vt, "open_ended")
         text = q.get("question_text") or q.get("label")
         if text and len(text) > 64:
-            logger.warning(
-                "Question text truncated from %d to 64 chars: '%s…'",
-                len(text),
-                text[:40],
+            log(
+                f"Question text truncated from {len(text)} to 64 chars: '{text[:40]}…'"
             )
         text = text[:64] if text else text  # webhook max length
 
@@ -254,7 +251,7 @@ def _call_transfer_webhook(
         }
 
     except Exception as e:
-        logger.error(f"Transfer {transfer_id} failed: {e}")
+        log(f"Transfer {transfer_id} failed: {e}")
         return {
             "transfer_id": transfer_id,
             "project_id": project_id,
