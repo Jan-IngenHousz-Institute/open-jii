@@ -184,6 +184,48 @@ def get_export_file_path(directory_path):
 
 # COMMAND ----------
 
+# DBTITLE 1,Export Experiment Metadata Sidecar
+EXPERIMENT_METADATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_metadata"
+
+
+def export_metadata_sidecar():
+    """
+    Export user-defined experiment metadata as a JSON sidecar file alongside the data export.
+    The sidecar is written to the same export directory so it travels with the data on download.
+    This is best-effort — if no metadata exists or the query fails, we skip silently.
+    """
+    try:
+        metadata_df = spark.sql(
+            f"SELECT columns, rows, identifier_column_id, experiment_question_id "
+            f"FROM {EXPERIMENT_METADATA_TABLE} "
+            f"WHERE experiment_id = '{EXPERIMENT_ID}' LIMIT 1"
+        )
+
+        if metadata_df.count() == 0:
+            logger.info("No experiment metadata found, skipping sidecar export")
+            return None
+
+        row = metadata_df.first()
+        sidecar = {
+            "experiment_id": EXPERIMENT_ID,
+            "table_name": TABLE_NAME,
+            "identifier_column_id": row["identifier_column_id"],
+            "experiment_question_id": row["experiment_question_id"],
+            "columns": json.loads(row["columns"]) if row["columns"] else [],
+            "rows": json.loads(row["rows"]) if row["rows"] else [],
+        }
+
+        sidecar_path = f"{OUTPUT_PATH}/_metadata.json"
+        dbutils.fs.put(sidecar_path, json.dumps(sidecar, default=str, indent=2), overwrite=True)
+        logger.info(f"Experiment metadata sidecar written to {sidecar_path}")
+        return _strip_dbfs_prefix(sidecar_path)
+
+    except Exception as e:
+        logger.warning(f"Could not export metadata sidecar (non-fatal): {e}")
+        return None
+
+# COMMAND ----------
+
 # DBTITLE 1,Create Export Metadata on Completion
 def create_export_metadata(file_path, row_count):
     """
@@ -252,6 +294,9 @@ def main():
     
     # Get actual file path
     file_path = get_export_file_path(output_path)
+
+    # Export experiment metadata as a sidecar file alongside the data
+    metadata_sidecar_path = export_metadata_sidecar()
     
     # Create export metadata record
     create_export_metadata(file_path, row_count)
@@ -266,6 +311,7 @@ def main():
         "export_id": EXPORT_ID,
         "write_time": write_time,
         "file_path": file_path,
+        "metadata_sidecar_path": metadata_sidecar_path,
     }
     
     logger.info("="*80)

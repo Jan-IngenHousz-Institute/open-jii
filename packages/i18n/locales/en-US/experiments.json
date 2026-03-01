@@ -94,7 +94,10 @@
     "description": "View, download and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
     "uploadData": "Upload Data",
     "noData": "No measurements recorded yet. Use the openJII mobile app to add measurements.",
-    "readMore": "Read more"
+    "readMore": "Read more",
+    "uploadMetadata": "Upload Metadata",
+    "editMetadata": "Edit Metadata",
+    "uploadSensorData": "Upload Sensor Data"
   },
   "experiment": "Experiment",
   "detailsTitle": "Details",
@@ -231,8 +234,29 @@
     }
   },
   "uploadModal": {
-    "title": "Upload Sensor Data",
-    "description": "Upload sensor data to your experiment for analysis",
+    "title": "Upload Data",
+    "description": "Add sensor data or metadata to your experiment",
+    "comingSoon": "Coming Soon",
+    "sections": {
+      "sensorData": "Sensor Data",
+      "sensorDataDescription": "Upload measurement data from sensors",
+      "metadata": "Metadata",
+      "metadataDescription": "Add plot or plant metadata (e.g., harvest moment, genotype)"
+    },
+    "options": {
+      "multispeq": {
+        "label": "MultispeQ",
+        "description": "MultispeQ sensor data upload"
+      },
+      "ambyte": {
+        "label": "Ambyte",
+        "description": "Upload Ambyte sensor folders containing measurement data"
+      },
+      "metadata": {
+        "label": "Plot/Plant Metadata",
+        "description": "Import metadata from CSV or Excel (e.g., harvest moment, genotype, treatment)"
+      }
+    },
     "sensorFamily": {
       "label": "Select Sensor Family",
       "description": "Choose the type of sensor data you want to upload"
@@ -260,6 +284,20 @@
       "uploading": "Uploading...",
       "uploadingDescription": "Please wait while your files are being processed"
     },
+    "metadata": {
+      "title": "Import Metadata",
+      "description": "Import plot or plant metadata from a CSV/Excel file or paste from clipboard",
+      "importPrompt": "Import your metadata",
+      "supportedFormats": "Supports CSV, TSV, and Excel files (.xlsx, .xls)",
+      "pasteHint": "Tip: You can also paste directly with {{shortcut}}",
+      "uploadFile": "Upload File",
+      "pasteClipboard": "Paste from Clipboard",
+      "pasting": "Pasting...",
+      "rowCount": "{{count}} rows imported",
+      "replaceData": "Replace Data",
+      "clearData": "Clear Data",
+      "saveMetadata": "Save Metadata"
+    },
     "uploading": {
       "title": "Uploading Data",
       "description": "Please wait while we process your sensor data..."
@@ -267,6 +305,8 @@
     "success": {
       "title": "Upload Successful",
       "description": "Your sensor data has been successfully uploaded to the experiment. It has been queued for processing and will appear in the experiment data overview in a few minutes.",
+      "metadataTitle": "Metadata Saved",
+      "metadataDescription": "Your metadata has been successfully saved to the experiment. It will be available in the Data tab and included in downloads.",
       "close": "Close"
     },
     "error": {

@@ -1,16 +1,18 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { BarChart3, Upload } from "lucide-react";
+import { BarChart3, Database, FileSpreadsheet, Pencil, Upload } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
 import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
+import type { UploadStep } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { env } from "~/env";
 import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
+import { tsr } from "~/lib/tsr";
 
 import { useTranslation } from "@repo/i18n/client";
 import {
@@ -32,6 +34,24 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
+  const [uploadModalStep, setUploadModalStep] = React.useState<UploadStep>("selection");
+
+  // Check if metadata already exists for this experiment
+  const { data: metadataResponse } = tsr.experiments.getExperimentMetadata.useQuery({
+    queryData: { params: { id } },
+    queryKey: ["experiment", id, "metadata"],
+  });
+  const hasMetadata = metadataResponse?.body != null && metadataResponse.body.columns.length > 0;
+
+  const openMetadataUpload = () => {
+    setUploadModalStep("metadata-upload");
+    setUploadModalOpen(true);
+  };
+
+  const openSensorDataUpload = () => {
+    setUploadModalStep("file-upload");
+    setUploadModalOpen(true);
+  };
 
   if (isLoading || isLoadingTables) {
     return (
@@ -89,10 +109,20 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
             <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
           </div>
-          <Button onClick={() => setUploadModalOpen(true)} disabled={!hasAccess}>
-            <Upload className="mr-2 h-4 w-4" />
-            {t("experimentData.uploadData")}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={openMetadataUpload} disabled={!hasAccess}>
+              {hasMetadata ? (
+                <Pencil className="mr-2 h-4 w-4" />
+              ) : (
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+              )}
+              {hasMetadata ? t("experimentData.editMetadata") : t("experimentData.uploadMetadata")}
+            </Button>
+            <Button onClick={openSensorDataUpload} disabled={!hasAccess}>
+              <Database className="mr-2 h-4 w-4" />
+              {t("experimentData.uploadSensorData")}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col items-center justify-center py-12">
@@ -115,6 +145,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           experimentId={id}
           open={uploadModalOpen}
           onOpenChange={setUploadModalOpen}
+          initialStep={uploadModalStep}
         />
       </div>
     );
@@ -127,10 +158,20 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
           <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
         </div>
-        <Button onClick={() => setUploadModalOpen(true)} disabled={!hasAccess}>
-          <Upload className="mr-2 h-4 w-4" />
-          {t("experimentData.uploadData")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={openMetadataUpload} disabled={!hasAccess}>
+            {hasMetadata ? (
+              <Pencil className="mr-2 h-4 w-4" />
+            ) : (
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+            )}
+            {hasMetadata ? t("experimentData.editMetadata") : t("experimentData.uploadMetadata")}
+          </Button>
+          <Button onClick={openSensorDataUpload} disabled={!hasAccess}>
+            <Database className="mr-2 h-4 w-4" />
+            {t("experimentData.uploadSensorData")}
+          </Button>
+        </div>
       </div>
 
       <NavTabs defaultValue={tables[0].identifier} className="max-w-full">
@@ -157,7 +198,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         ))}
       </NavTabs>
 
-      <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
+      <DataUploadModal
+        experimentId={id}
+        open={uploadModalOpen}
+        onOpenChange={setUploadModalOpen}
+        initialStep={uploadModalStep}
+      />
     </div>
   );
 }

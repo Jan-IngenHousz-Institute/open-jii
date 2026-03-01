@@ -82,6 +82,17 @@ vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
   useExperimentTables: (): unknown => mockUseExperimentTables(),
 }));
 
+const mockMetadataUseQuery = vi.fn();
+vi.mock("~/lib/tsr", () => ({
+  tsr: {
+    experiments: {
+      getExperimentMetadata: {
+        useQuery: (...args: unknown[]): unknown => mockMetadataUseQuery(...args),
+      },
+    },
+  },
+}));
+
 vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ExperimentDataTable: ({
     experimentId,
@@ -185,6 +196,7 @@ describe("ExperimentDataPage", () => {
     mockUseTranslation.mockReturnValue({
       t: (key: string) => key,
     });
+    mockMetadataUseQuery.mockReturnValue({ data: null });
   });
 
   it("renders the experiment data page with tabs when loaded", async () => {
@@ -193,7 +205,8 @@ describe("ExperimentDataPage", () => {
     await waitFor(() => {
       expect(screen.getByText("experimentData.title")).toBeInTheDocument();
       expect(screen.getByText("experimentData.description")).toBeInTheDocument();
-      expect(screen.getByTestId("button")).toBeInTheDocument();
+      const buttons = screen.getAllByTestId("button");
+      expect(buttons.length).toBeGreaterThanOrEqual(2);
       expect(screen.getByTestId("nav-tabs")).toBeInTheDocument();
       expect(screen.getByTestId("nav-tabs-list")).toBeInTheDocument();
     });
@@ -362,15 +375,14 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("renders upload button with correct styling", async () => {
-    const { container } = render(<ExperimentDataPage params={defaultProps.params} />);
+  it("renders upload buttons with correct styling", async () => {
+    render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      const button = screen.getByTestId("button");
-      expect(button).toHaveTextContent("experimentData.uploadData");
-
-      const uploadIcon = container.querySelector("svg");
-      expect(uploadIcon).toBeInTheDocument();
+      const buttons = screen.getAllByTestId("button");
+      const buttonTexts = buttons.map((b) => b.textContent);
+      expect(buttonTexts).toContain("experimentData.uploadMetadata");
+      expect(buttonTexts).toContain("experimentData.uploadSensorData");
     });
   });
 

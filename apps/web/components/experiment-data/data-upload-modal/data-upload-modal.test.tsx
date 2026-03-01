@@ -8,22 +8,17 @@ import { DataUploadModal } from "./data-upload-modal";
 globalThis.React = React;
 
 // Mock the step components
-vi.mock("./steps/sensor-selection-step", () => ({
-  SensorSelectionStep: ({ onSensorSelect }: { onSensorSelect: (id: string) => void }) => (
-    <div data-testid="sensor-selection-step">
-      <button onClick={() => onSensorSelect("ambyte")} data-testid="select-ambyte">
+vi.mock("./steps/data-selection-step", () => ({
+  DataSelectionStep: ({ onOptionSelect }: { onOptionSelect: (option: { id: string }) => void }) => (
+    <div data-testid="data-selection-step">
+      <button onClick={() => onOptionSelect({ id: "ambyte" })} data-testid="select-ambyte">
         Select Ambyte
+      </button>
+      <button onClick={() => onOptionSelect({ id: "metadata" })} data-testid="select-metadata">
+        Select Metadata
       </button>
     </div>
   ),
-  SENSOR_FAMILIES: [
-    {
-      id: "ambyte",
-      label: "Ambyte",
-      disabled: false,
-      description: "uploadModal.sensorTypes.ambyte.description",
-    },
-  ],
 }));
 
 vi.mock("./steps/file-upload-step", () => ({
@@ -39,6 +34,25 @@ vi.mock("./steps/file-upload-step", () => ({
         Back
       </button>
       <button onClick={onUploadSuccess} data-testid="upload-success">
+        Upload Success
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("./steps/metadata-upload-step", () => ({
+  MetadataUploadStep: ({
+    onBack,
+    onUploadSuccess,
+  }: {
+    onBack: () => void;
+    onUploadSuccess: () => void;
+  }) => (
+    <div data-testid="metadata-upload-step">
+      <button onClick={onBack} data-testid="metadata-back-button">
+        Back
+      </button>
+      <button onClick={onUploadSuccess} data-testid="metadata-upload-success">
         Upload Success
       </button>
     </div>
@@ -105,10 +119,11 @@ describe("DataUploadModal", () => {
     expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
   });
 
-  it("starts with sensor selection step", () => {
+  it("starts with data selection step", () => {
     renderModal();
-    expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
+    expect(screen.getByTestId("data-selection-step")).toBeInTheDocument();
     expect(screen.queryByTestId("file-upload-step")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("metadata-upload-step")).not.toBeInTheDocument();
     expect(screen.queryByTestId("success-step")).not.toBeInTheDocument();
   });
 
@@ -120,11 +135,23 @@ describe("DataUploadModal", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
-      expect(screen.queryByTestId("sensor-selection-step")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("data-selection-step")).not.toBeInTheDocument();
     });
   });
 
-  it("goes back to sensor selection from file upload step", async () => {
+  it("transitions to metadata upload step when metadata is selected", async () => {
+    renderModal();
+
+    const selectMetadataButton = screen.getByTestId("select-metadata");
+    fireEvent.click(selectMetadataButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("metadata-upload-step")).toBeInTheDocument();
+      expect(screen.queryByTestId("data-selection-step")).not.toBeInTheDocument();
+    });
+  });
+
+  it("goes back to data selection from file upload step", async () => {
     renderModal();
 
     // Go to file upload step
@@ -138,8 +165,27 @@ describe("DataUploadModal", () => {
     fireEvent.click(screen.getByTestId("back-button"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
+      expect(screen.getByTestId("data-selection-step")).toBeInTheDocument();
       expect(screen.queryByTestId("file-upload-step")).not.toBeInTheDocument();
+    });
+  });
+
+  it("goes back to data selection from metadata upload step", async () => {
+    renderModal();
+
+    // Go to metadata upload step
+    fireEvent.click(screen.getByTestId("select-metadata"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("metadata-upload-step")).toBeInTheDocument();
+    });
+
+    // Go back
+    fireEvent.click(screen.getByTestId("metadata-back-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data-selection-step")).toBeInTheDocument();
+      expect(screen.queryByTestId("metadata-upload-step")).not.toBeInTheDocument();
     });
   });
 
@@ -219,8 +265,8 @@ describe("DataUploadModal", () => {
       />,
     );
 
-    // Should be back to sensor selection
-    expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
+    // Should be back to data selection
+    expect(screen.getByTestId("data-selection-step")).toBeInTheDocument();
     expect(screen.queryByTestId("file-upload-step")).not.toBeInTheDocument();
   });
 

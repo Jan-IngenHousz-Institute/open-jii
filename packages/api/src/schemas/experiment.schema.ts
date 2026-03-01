@@ -789,11 +789,19 @@ export const zExperimentDataQuery = z.object({
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
 });
 
+export const zLinkedMetadataRow = z.object({
+  dataRowId: z.string().describe("The value from the data row used for matching"),
+  metadata: z.record(z.string(), z.unknown()).describe("Metadata key-value pairs for this row"),
+});
+
 export const zExperimentDataTable = z.object({
   name: z.string().describe("Technical name of the table used for queries and operations"),
   catalog_name: z.string().describe("Catalog name"),
   schema_name: z.string().describe("Schema name"),
   data: zExperimentData.optional(),
+  linkedMetadata: z.array(zLinkedMetadataRow).optional().describe(
+    "Metadata rows linked to data rows via identifierColumnId and experimentQuestionId",
+  ),
   page: z.number().int(),
   pageSize: z.number().int(),
   totalPages: z.number().int(),
@@ -970,6 +978,7 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
+export type LinkedMetadataRow = z.infer<typeof zLinkedMetadataRow>;
 export type ColumnInfo = z.infer<typeof zColumnInfo>;
 export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
 export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
@@ -1014,3 +1023,43 @@ export type TransferRequestStatus = z.infer<typeof zTransferRequestStatus>;
 export type TransferRequest = z.infer<typeof zTransferRequest>;
 export type CreateTransferRequestBody = z.infer<typeof zCreateTransferRequestBody>;
 export type TransferRequestList = z.infer<typeof zTransferRequestList>;
+
+// --- Experiment Metadata Schemas ---
+export const zMetadataColumnType = z.enum(["string", "number", "boolean", "date"]);
+
+export const zMetadataColumn = z.object({
+  id: z.string().min(1, "Column ID is required"),
+  name: z.string().min(1, "Column name is required").max(255),
+  type: zMetadataColumnType.default("string"),
+});
+
+export const zMetadataRow = z
+  .record(z.string(), z.unknown())
+  .and(z.object({ _id: z.string().min(1, "Row ID is required") }));
+
+export const zExperimentMetadata = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  columns: z.array(zMetadataColumn),
+  rows: z.array(zMetadataRow),
+  identifierColumnId: z.string().nullable().optional(),
+  experimentQuestionId: z.string().nullable().optional(),
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zUpsertExperimentMetadataBody = z.object({
+  columns: z.array(zMetadataColumn).min(1, "At least one column is required"),
+  rows: z.array(zMetadataRow),
+  identifierColumnId: z.string().nullable().optional(),
+  experimentQuestionId: z.string().nullable().optional(),
+});
+
+// Metadata types
+export type MetadataColumnType = z.infer<typeof zMetadataColumnType>;
+export type MetadataColumn = z.infer<typeof zMetadataColumn>;
+export type MetadataRow = z.infer<typeof zMetadataRow>;
+export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
+export type UpsertExperimentMetadataBody = z.infer<typeof zUpsertExperimentMetadataBody>;

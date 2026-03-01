@@ -83,8 +83,13 @@ export interface DatabricksPort {
   /**
    * Execute a SQL query in a specific schema.
    * Uses INLINE disposition and JSON_ARRAY format.
+   * Optionally accepts parameterized query parameters for safe value binding.
    */
-  executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
+  executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    parameters?: { name: string; value?: string | null; type?: string }[],
+  ): Promise<Result<SchemaData>>;
 
   /**
    * Upload data to Databricks for a specific experiment.

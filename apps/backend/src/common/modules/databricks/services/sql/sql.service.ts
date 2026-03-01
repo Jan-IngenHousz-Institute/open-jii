@@ -7,7 +7,7 @@ import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, failure, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
-import { ExecuteStatementRequest, SchemaData, StatementResponse } from "./sql.types";
+import { ExecuteStatementRequest, SchemaData, StatementParameter, StatementResponse } from "./sql.types";
 
 @Injectable()
 export class DatabricksSqlService {
@@ -38,7 +38,11 @@ export class DatabricksSqlService {
     private readonly configService: DatabricksConfigService,
   ) {}
 
-  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    parameters?: StatementParameter[],
+  ): Promise<Result<SchemaData>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.authService.getAccessToken();
@@ -59,6 +63,7 @@ export class DatabricksSqlService {
           wait_timeout: "50s", // Maximum supported wait time
           disposition: "INLINE",
           format: "JSON_ARRAY",
+          ...(parameters && parameters.length > 0 ? { parameters } : {}),
         };
 
         try {
