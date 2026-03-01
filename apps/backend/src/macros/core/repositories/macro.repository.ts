@@ -1,4 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
+import { z } from "zod";
 
 import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
@@ -164,13 +165,16 @@ export class MacroRepository {
   }
 
   /**
-   * Find multiple macros by their IDs
-   * Returns a map of id -> { name, filename } for display name resolution
+   * Find multiple macros by their IDs.
+   * Non-UUID identifiers are silently excluded to avoid PostgreSQL cast errors.
+   * Returns a map keyed by macro UUID -> { name, filename }.
    */
   async findNamesByIds(
     ids: string[],
   ): Promise<Result<Map<string, { name: string; filename: string }>>> {
-    if (ids.length === 0) {
+    const uuids = ids.filter((id) => z.string().uuid().safeParse(id).success);
+
+    if (uuids.length === 0) {
       return success(new Map());
     }
 
@@ -182,7 +186,7 @@ export class MacroRepository {
           filename: macros.filename,
         })
         .from(macros)
-        .where(inArray(macros.id, ids));
+        .where(inArray(macros.id, uuids));
 
       const map = new Map<string, { name: string; filename: string }>();
       for (const row of results) {

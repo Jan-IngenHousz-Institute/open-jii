@@ -97,6 +97,24 @@ RAW_AMBYTE_TABLE = "raw_ambyte_data"
 ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
 RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
 
+# Legacy macro identifiers that need mapping to actual macro UUIDs.
+# Some data was sent prior to the implementation of proper macro ID handling, so we maintain a mapping of legacy identifiers to actual UUIDs for correct processing.
+LEGACY_MACRO_ID_MAP_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-legacy/internal/legacy_macro_id_map.json"
+
+def _load_legacy_macro_id_map() -> dict[str, str]:
+    """Load legacy→UUID mapping from a volume JSON file. Returns empty dict on failure."""
+    import json
+    try:
+        with open(LEGACY_MACRO_ID_MAP_PATH) as f:
+            mapping = json.load(f)
+        print(f"[INFO] Loaded {len(mapping)} legacy macro ID mappings from {LEGACY_MACRO_ID_MAP_PATH}")
+        return mapping
+    except Exception as e:
+        print(f"[WARN] Legacy macro ID map not found or unreadable at {LEGACY_MACRO_ID_MAP_PATH}: {e}")
+        return {}
+
+LEGACY_MACRO_ID_MAP: dict[str, str] = _load_legacy_macro_id_map()
+
 # COMMAND ----------
 
 # DBTITLE 1,Bronze Layer - Raw Data Processing
@@ -196,6 +214,13 @@ def clean_data():
         )
     )
 
+    def _remap_macro_id(id_col):
+        """Remap legacy macro identifiers to actual UUIDs via chained CASE expression."""
+        result = id_col
+        for legacy_id, actual_id in LEGACY_MACRO_ID_MAP.items():
+            result = F.when(id_col == F.lit(legacy_id), F.lit(actual_id)).otherwise(result)
+        return result
+
     df = df.withColumn(
         "macros",
         F.when(
@@ -220,6 +245,19 @@ def clean_data():
                     )
                 """)
             ).otherwise(F.array())
+        )
+    )
+
+    # Apply legacy macro ID remapping
+    df = df.withColumn(
+        "macros",
+        F.transform(
+            F.col("macros"),
+            lambda m: F.struct(
+                _remap_macro_id(m["id"]).alias("id"),
+                m["name"].alias("name"),
+                m["filename"].alias("filename")
+            )
         )
     )
 
@@ -316,13 +354,14 @@ def clean_data():
         .withColumn("hour", F.hour("timestamp"))
         .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
         # Build macros array from macro columns (empty when no macro)
+        # Apply legacy macro ID remapping inline
         .withColumn(
             "macros",
             F.when(
                 F.col("macro_id").isNotNull(),
                 F.array(
                     F.struct(
-                        F.col("macro_id").alias("id"),
+                        _remap_macro_id(F.col("macro_id")).alias("id"),
                         F.coalesce(F.col("macro_name"), F.col("macro_filename"), F.col("macro_id")).alias("name"),
                         F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("filename")
                     )
