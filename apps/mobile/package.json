@@ -48,6 +48,7 @@
     "expo-network": "~8.0.8",
     "expo-router": "~6.0.15",
     "expo-secure-store": "~15.0.8",
+    "expo-sharing": "^55.0.11",
     "expo-status-bar": "~3.0.8",
     "expo-symbols": "~1.0.7",
     "expo-web-browser": "~15.0.9",
