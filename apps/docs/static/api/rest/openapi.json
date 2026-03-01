@@ -7494,7 +7494,14 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["pending", "completed", "rejected"]
+                      "enum": [
+                        "pending",
+                        "approved",
+                        "partial_failed",
+                        "completed",
+                        "rejected",
+                        "failed"
+                      ]
                     },
                     "requestedAt": {
                       "type": "string",
@@ -7604,7 +7611,14 @@
                       },
                       "status": {
                         "type": "string",
-                        "enum": ["pending", "completed", "rejected"]
+                        "enum": [
+                          "pending",
+                          "approved",
+                          "partial_failed",
+                          "completed",
+                          "rejected",
+                          "failed"
+                        ]
                       },
                       "requestedAt": {
                         "type": "string",
@@ -7622,6 +7636,389 @@
                       "requestedAt"
                     ]
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/project-transfer": {
+      "post": {
+        "description": "Creates experiment, protocol, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
+        "summary": "Execute project transfer from Databricks",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "x-api-key-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-databricks-signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-databricks-timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "experiments.projectTransfer",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experiment": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User ID of experiment creator/admin"
+                      },
+                      "locations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 255
+                            },
+                            "latitude": {
+                              "type": "number",
+                              "minimum": -90,
+                              "maximum": 90
+                            },
+                            "longitude": {
+                              "type": "number",
+                              "minimum": -180,
+                              "maximum": 180
+                            },
+                            "country": {
+                              "type": "string"
+                            },
+                            "region": {
+                              "type": "string"
+                            },
+                            "municipality": {
+                              "type": "string"
+                            },
+                            "postalCode": {
+                              "type": "string"
+                            },
+                            "addressLabel": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["name", "latitude", "longitude"]
+                        }
+                      }
+                    },
+                    "required": ["name", "createdBy"]
+                  },
+                  "protocol": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "code": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      },
+                      "family": {
+                        "default": "multispeq",
+                        "type": "string",
+                        "enum": ["multispeq", "ambit"]
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User ID of protocol creator"
+                      }
+                    },
+                    "required": ["name", "code", "createdBy"]
+                  },
+                  "macro": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "language": {
+                        "default": "javascript",
+                        "type": "string",
+                        "enum": ["python", "r", "javascript"]
+                      },
+                      "code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Base64 encoded macro code"
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User ID of macro creator"
+                      }
+                    },
+                    "required": ["name", "code", "createdBy"]
+                  },
+                  "questions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": ["yes_no", "open_ended", "multi_choice", "number"]
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "options": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "required": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["kind", "text"]
+                    }
+                  }
+                },
+                "required": ["experiment"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "protocolId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "macroId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "macroFilename": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "flowId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "experimentId",
+                    "protocolId",
+                    "macroId",
+                    "macroFilename",
+                    "flowId"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iot/credentials": {
+      "get": {
+        "description": "Returns temporary AWS credentials for authenticated users to connect to AWS IoT Core. Credentials are valid for 15 minutes. Requires active Better Auth session.",
+        "summary": "Get IoT credentials",
+        "tags": ["iot"],
+        "parameters": [],
+        "operationId": "iot.getCredentials",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessKeyId": {
+                      "type": "string",
+                      "description": "AWS Access Key ID for temporary credentials"
+                    },
+                    "secretAccessKey": {
+                      "type": "string",
+                      "description": "AWS Secret Access Key for temporary credentials"
+                    },
+                    "sessionToken": {
+                      "type": "string",
+                      "description": "AWS Session Token for temporary credentials"
+                    },
+                    "expiration": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO 8601 date string when credentials expire"
+                    }
+                  },
+                  "required": ["accessKeyId", "secretAccessKey", "sessionToken", "expiration"]
                 }
               }
             }
@@ -9268,6 +9665,504 @@
                     }
                   },
                   "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations": {
+      "post": {
+        "description": "Creates an invitation for a user to join a resource.",
+        "summary": "Create invitation",
+        "tags": ["users"],
+        "parameters": [],
+        "operationId": "users.createInvitation",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resourceType": {
+                    "type": "string",
+                    "enum": ["platform", "experiment"]
+                  },
+                  "resourceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "role": {
+                    "default": "member",
+                    "type": "string",
+                    "enum": ["admin", "member"]
+                  }
+                },
+                "required": ["resourceType", "resourceId", "email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resourceType": {
+                      "type": "string",
+                      "enum": ["platform", "experiment"]
+                    },
+                    "resourceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["pending", "accepted", "revoked"]
+                    },
+                    "invitedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "invitedByName": {
+                      "type": "string"
+                    },
+                    "resourceName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "resourceType",
+                    "resourceId",
+                    "email",
+                    "role",
+                    "status",
+                    "invitedBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "description": "Returns all pending invitations for a given resource.",
+        "summary": "List invitations",
+        "tags": ["users"],
+        "parameters": [
+          {
+            "name": "resourceType",
+            "in": "query",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["platform", "experiment"]
+                }
+              }
+            }
+          },
+          {
+            "name": "resourceId",
+            "in": "query",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "users.listInvitations",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "resourceType": {
+                        "type": "string",
+                        "enum": ["platform", "experiment"]
+                      },
+                      "resourceId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": ["pending", "accepted", "revoked"]
+                      },
+                      "invitedBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "invitedByName": {
+                        "type": "string"
+                      },
+                      "resourceName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "resourceType",
+                      "resourceId",
+                      "email",
+                      "role",
+                      "status",
+                      "invitedBy",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/{invitationId}": {
+      "patch": {
+        "description": "Updates the role on a pending invitation.",
+        "summary": "Update invitation role",
+        "tags": ["users"],
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the invitation"
+          }
+        ],
+        "operationId": "users.updateInvitationRole",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "member"],
+                    "description": "New role to assign to the invitation"
+                  }
+                },
+                "required": ["role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resourceType": {
+                      "type": "string",
+                      "enum": ["platform", "experiment"]
+                    },
+                    "resourceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["pending", "accepted", "revoked"]
+                    },
+                    "invitedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "invitedByName": {
+                      "type": "string"
+                    },
+                    "resourceName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "resourceType",
+                    "resourceId",
+                    "email",
+                    "role",
+                    "status",
+                    "invitedBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Revokes a pending invitation so it can no longer be accepted.",
+        "summary": "Revoke invitation",
+        "tags": ["users"],
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the invitation"
+          }
+        ],
+        "operationId": "users.revokeInvitation",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
                 }
               }
             }

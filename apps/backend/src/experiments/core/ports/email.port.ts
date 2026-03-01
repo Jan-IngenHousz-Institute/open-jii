@@ -38,4 +38,17 @@ export interface EmailPort {
     projectIdOld: string,
     projectUrlOld: string,
   ): Promise<Result<void>>;
+
+  /**
+   * Sends a notification email when a project transfer has been completed
+   *
+   * @param email - The email address to send the notification to
+   * @param experimentId - The ID of the created experiment
+   * @param experimentName - The name of the created experiment
+   */
+  sendProjectTransferComplete(
+    email: string,
+    experimentId: string,
+    experimentName: string,
+  ): Promise<Result<void>>;
 }

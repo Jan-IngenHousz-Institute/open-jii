@@ -9,7 +9,11 @@ import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapt
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
+import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
+import { DATABRICKS_PORT as MACRO_DATABRICKS_PORT } from "../macros/core/ports/databricks.port";
 import { MacroModule } from "../macros/macro.module";
+import { CreateProtocolUseCase } from "../protocols/application/use-cases/create-protocol/create-protocol";
+import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
 import { UserModule } from "../users/user.module";
 // Services
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
@@ -50,6 +54,7 @@ import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { CreateTransferRequestUseCase } from "./application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
+import { ExecuteProjectTransferUseCase } from "./application/use-cases/project-transfer/execute-project-transfer";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
@@ -79,6 +84,7 @@ import { ExperimentProtocolsController } from "./presentation/experiment-protoco
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
+import { ProjectTransferWebhookController } from "./presentation/project-transfer-webhook.controller";
 
 @Module({
   imports: [DatabricksModule, AwsModule, EmailModule, AnalyticsModule, UserModule, MacroModule],
@@ -93,6 +99,7 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
     ProjectTransferRequestsController,
+    ProjectTransferWebhookController,
   ],
   providers: [
     // Port implementations
@@ -112,6 +119,10 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
     },
+    {
+      provide: MACRO_DATABRICKS_PORT,
+      useExisting: DatabricksAdapter,
+    },
 
     // Repositories
     ExperimentRepository,
@@ -124,6 +135,13 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     FlowRepository,
     LocationRepository,
     ProjectTransferRequestsRepository,
+
+    // External domain repositories (for project transfer)
+    ProtocolRepository,
+
+    // External domain use cases (for project transfer)
+    CreateProtocolUseCase,
+    CreateMacroUseCase,
 
     // Services
     EmbargoProcessorService,
@@ -182,6 +200,9 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     // Project transfer request use cases
     CreateTransferRequestUseCase,
     ListTransferRequestsUseCase,
+
+    // Project transfer webhook use case
+    ExecuteProjectTransferUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
 })

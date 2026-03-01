@@ -43,6 +43,8 @@ import {
   zCreateTransferRequestBody,
   zTransferRequest,
   zTransferRequestList,
+  zProjectTransferWebhookPayload,
+  zProjectTransferWebhookResponse,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -62,6 +64,7 @@ import {
   zCreateExperimentVisualizationResponse,
   zUpdateExperimentVisualizationResponse,
 } from "../schemas/experiment.schema";
+import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
 
 const c = initContract();
 
@@ -606,5 +609,21 @@ export const experimentContract = c.router({
       500: zErrorResponse,
     },
     summary: "List all transfer requests for the authenticated user",
+  },
+
+  projectTransfer: {
+    method: "POST",
+    path: "/api/v1/webhooks/project-transfer",
+    body: zProjectTransferWebhookPayload,
+    headers: zWebhookAuthHeader,
+    responses: {
+      201: zProjectTransferWebhookResponse,
+      400: zWebhookErrorResponse,
+      401: zWebhookErrorResponse,
+      500: zWebhookErrorResponse,
+    },
+    summary: "Execute project transfer from Databricks",
+    description:
+      "Creates experiment, protocol, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
   },
 });

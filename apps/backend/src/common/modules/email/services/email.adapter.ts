@@ -68,4 +68,16 @@ export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort {
       email,
     );
   }
+
+  async sendProjectTransferComplete(
+    email: string,
+    experimentId: string,
+    experimentName: string,
+  ): Promise<Result<void>> {
+    return this.notificationService.sendProjectTransferComplete(
+      email,
+      experimentId,
+      experimentName,
+    );
+  }
 }

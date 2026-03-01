@@ -126,4 +126,8 @@ export enum ErrorCodes {
   // ==================== Services ====================
   // Location: src/experiments/application/services/
   EMBARGO_PROCESSING_FAILED = "EMBARGO_PROCESSING_FAILED", // Failed to process embargoes
+
+  // ==================== Domain Operations - Project Transfer ====================
+  // Location: src/experiments/application/use-cases/project-transfer/
+  PROJECT_TRANSFER_FAILED = "PROJECT_TRANSFER_FAILED", // Project transfer webhook failed
 }
