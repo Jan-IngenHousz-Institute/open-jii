@@ -1,5 +1,5 @@
 /**
- * Device protocol interface - handles device-specific command/response patterns
+ * Device driver interface - handles device-specific command/response patterns
  */
 import type { ITransportAdapter } from "../transport/interface";
 
@@ -11,9 +11,9 @@ export interface CommandResult<T = unknown> {
   checksum?: string;
 }
 
-/** Abstract device protocol interface */
-export interface IDeviceProtocol {
-  /** Initialize protocol with a transport adapter */
+/** Abstract device driver interface */
+export interface IDeviceDriver {
+  /** Initialize driver with a transport adapter */
   initialize(transport: ITransportAdapter): void;
 
   /** Execute a command and return the result */
@@ -22,12 +22,12 @@ export interface IDeviceProtocol {
   /** Get device information (battery, version, etc.) */
   getDeviceInfo?(): Promise<Record<string, unknown>>;
 
-  /** Cleanup and destroy protocol */
+  /** Cleanup and destroy driver */
   destroy(): Promise<void>;
 }
 
-/** Base class for device protocols */
-export abstract class DeviceProtocol implements IDeviceProtocol {
+/** Base class for device drivers */
+export abstract class DeviceDriver implements IDeviceDriver {
   protected transport?: ITransportAdapter;
   protected initialized = false;
 
@@ -47,7 +47,7 @@ export abstract class DeviceProtocol implements IDeviceProtocol {
 
   protected ensureInitialized(): void {
     if (!this.initialized || !this.transport) {
-      throw new Error("Protocol not initialized. Call initialize() first.");
+      throw new Error("Driver not initialized. Call initialize() first.");
     }
   }
 }

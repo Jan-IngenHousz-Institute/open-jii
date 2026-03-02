@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { IDeviceProtocol, CommandResult } from "../protocol/base";
+import type { IDeviceDriver, CommandResult } from "../driver/driver-base";
 import type { ITransportAdapter } from "../transport/interface";
 import { CommandExecutor } from "./command-executor";
 
@@ -15,7 +15,7 @@ function createMockTransport(): ITransportAdapter {
   };
 }
 
-function createMockProtocol(): IDeviceProtocol {
+function createMockDriver(): IDeviceDriver {
   return {
     initialize: vi.fn(),
     execute: vi.fn().mockResolvedValue({ success: true, data: "result" }),
@@ -24,73 +24,73 @@ function createMockProtocol(): IDeviceProtocol {
 }
 
 describe("CommandExecutor", () => {
-  let protocol: IDeviceProtocol;
+  let driver: IDeviceDriver;
   let transport: ITransportAdapter;
 
   beforeEach(() => {
-    protocol = createMockProtocol();
+    driver = createMockDriver();
     transport = createMockTransport();
   });
 
-  it("should initialize protocol with transport on construction", () => {
-    new CommandExecutor(protocol, transport);
-    expect(protocol.initialize).toHaveBeenCalledWith(transport);
+  it("should initialize driver with transport on construction", () => {
+    new CommandExecutor(driver, transport);
+    expect(driver.initialize).toHaveBeenCalledWith(transport);
   });
 
   describe("execute", () => {
     it("should execute a string command and return data", async () => {
-      vi.mocked(protocol.execute).mockResolvedValue({
+      vi.mocked(driver.execute).mockResolvedValue({
         success: true,
         data: { value: 42 },
       });
 
-      const executor = new CommandExecutor(protocol, transport);
+      const executor = new CommandExecutor(driver, transport);
       const result = await executor.execute<{ value: number }>("test-command");
 
-      expect(protocol.execute).toHaveBeenCalledWith("test-command");
+      expect(driver.execute).toHaveBeenCalledWith("test-command");
       expect(result).toEqual({ value: 42 });
     });
 
     it("should execute an object command", async () => {
       const cmd = { command: "RUN", params: { speed: 5 } };
-      vi.mocked(protocol.execute).mockResolvedValue({
+      vi.mocked(driver.execute).mockResolvedValue({
         success: true,
         data: "ok",
       });
 
-      const executor = new CommandExecutor(protocol, transport);
+      const executor = new CommandExecutor(driver, transport);
       await executor.execute(cmd);
 
-      expect(protocol.execute).toHaveBeenCalledWith(cmd);
+      expect(driver.execute).toHaveBeenCalledWith(cmd);
     });
 
-    it("should throw the protocol error when execution fails", async () => {
+    it("should throw the driver error when execution fails", async () => {
       const error = new Error("Device error");
-      vi.mocked(protocol.execute).mockResolvedValue({
+      vi.mocked(driver.execute).mockResolvedValue({
         success: false,
         error,
       });
 
-      const executor = new CommandExecutor(protocol, transport);
+      const executor = new CommandExecutor(driver, transport);
       await expect(executor.execute("fail")).rejects.toThrow("Device error");
     });
 
     it("should throw generic error when execution fails without error object", async () => {
-      vi.mocked(protocol.execute).mockResolvedValue({
+      vi.mocked(driver.execute).mockResolvedValue({
         success: false,
       } as CommandResult);
 
-      const executor = new CommandExecutor(protocol, transport);
+      const executor = new CommandExecutor(driver, transport);
       await expect(executor.execute("fail")).rejects.toThrow("Command execution failed");
     });
   });
 
   describe("destroy", () => {
-    it("should call protocol destroy", async () => {
-      const executor = new CommandExecutor(protocol, transport);
+    it("should call driver destroy", async () => {
+      const executor = new CommandExecutor(driver, transport);
       await executor.destroy();
 
-      expect(protocol.destroy).toHaveBeenCalled();
+      expect(driver.destroy).toHaveBeenCalled();
     });
   });
 });

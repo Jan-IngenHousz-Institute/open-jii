@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ITransportAdapter } from "../../transport/interface";
 import { MULTISPEQ_COMMANDS } from "./commands";
 import { MULTISPEQ_FRAMING } from "./config";
-import { MultispeqProtocol } from "./protocol";
+import { MultispeqDriver } from "./driver";
 
 function createMockTransport(): ITransportAdapter & {
   simulateData: (data: string) => void;
@@ -25,31 +25,31 @@ function createMockTransport(): ITransportAdapter & {
   };
 }
 
-describe("MultispeqProtocol", () => {
-  let protocol: MultispeqProtocol;
+describe("MultispeqDriver", () => {
+  let driver: MultispeqDriver;
   let transport: ReturnType<typeof createMockTransport>;
 
   beforeEach(() => {
-    protocol = new MultispeqProtocol();
+    driver = new MultispeqDriver();
     transport = createMockTransport();
   });
 
   describe("initialize", () => {
     it("should set up data handler on transport", () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
       expect(transport.onDataReceived).toHaveBeenCalledWith(expect.any(Function));
     });
   });
 
   describe("execute", () => {
     it("should throw when not initialized", async () => {
-      await expect(protocol.execute("test")).rejects.toThrow(
-        "Protocol not initialized. Call initialize() first.",
+      await expect(driver.execute("test")).rejects.toThrow(
+        "Driver not initialized. Call initialize() first.",
       );
     });
 
     it("should send command with line ending", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       // Simulate response arriving after send
       vi.mocked(transport.send).mockImplementation(() => {
@@ -57,21 +57,21 @@ describe("MultispeqProtocol", () => {
         return Promise.resolve();
       });
 
-      const result = await protocol.execute("test-cmd");
+      const result = await driver.execute("test-cmd");
 
       expect(transport.send).toHaveBeenCalledWith(`test-cmd${MULTISPEQ_FRAMING.LINE_ENDING}`);
       expect(result.success).toBe(true);
     });
 
     it("should stringify object commands", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData('{"ok":true}CHECKSUM1\n'), 0);
         return Promise.resolve();
       });
 
-      await protocol.execute({ command: "RUN" });
+      await driver.execute({ command: "RUN" });
 
       expect(transport.send).toHaveBeenCalledWith(
         `{"command":"RUN"}${MULTISPEQ_FRAMING.LINE_ENDING}`,
@@ -79,14 +79,14 @@ describe("MultispeqProtocol", () => {
     });
 
     it("should extract checksum from response (last 8 chars)", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData('{"value":42}ABCD1234\n'), 0);
         return Promise.resolve();
       });
 
-      const result = await protocol.execute("cmd");
+      const result = await driver.execute("cmd");
 
       expect(result.success).toBe(true);
       expect(result.checksum).toBe("ABCD1234");
@@ -94,7 +94,7 @@ describe("MultispeqProtocol", () => {
     });
 
     it("should buffer incomplete messages until newline", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => {
@@ -106,14 +106,14 @@ describe("MultispeqProtocol", () => {
         return Promise.resolve();
       });
 
-      const result = await protocol.execute("cmd");
+      const result = await driver.execute("cmd");
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ value: 1 });
     });
 
     it("should return raw string when response is not valid JSON", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       // "battery:85" + 8-char checksum + newline
       vi.mocked(transport.send).mockImplementation(() => {
@@ -121,7 +121,7 @@ describe("MultispeqProtocol", () => {
         return Promise.resolve();
       });
 
-      const result = await protocol.execute("battery");
+      const result = await driver.execute("battery");
 
       expect(result.success).toBe(true);
       // extractChecksum removes last 8 chars, tryParseJson returns raw string
@@ -129,11 +129,11 @@ describe("MultispeqProtocol", () => {
     });
 
     it("should return failure on transport error", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       vi.mocked(transport.send).mockRejectedValue(new Error("Send failed"));
 
-      const result = await protocol.execute("cmd");
+      const result = await driver.execute("cmd");
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toBe("Send failed");
@@ -142,7 +142,7 @@ describe("MultispeqProtocol", () => {
 
   describe("getDeviceInfo", () => {
     it("should return parsed device_info JSON when available", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       const deviceInfoJson = {
         device_name: "MultispeQ",
@@ -158,7 +158,7 @@ describe("MultispeqProtocol", () => {
         return Promise.resolve();
       });
 
-      const info = await protocol.getDeviceInfo();
+      const info = await driver.getDeviceInfo();
 
       expect(transport.send).toHaveBeenCalledWith(`device_info${MULTISPEQ_FRAMING.LINE_ENDING}`);
       expect(info.device_battery).toBe(92);
@@ -167,7 +167,7 @@ describe("MultispeqProtocol", () => {
     });
 
     it("should fall back to battery command when device_info fails", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       let callCount = 0;
       vi.mocked(transport.send).mockImplementation(() => {
@@ -181,13 +181,13 @@ describe("MultispeqProtocol", () => {
         return Promise.resolve();
       });
 
-      const info = await protocol.getDeviceInfo();
+      const info = await driver.getDeviceInfo();
 
       expect(info.device_battery).toBe(85);
     });
 
     it("should fall back to battery when device_info returns non-object", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       let callCount = 0;
       vi.mocked(transport.send).mockImplementation(() => {
@@ -202,17 +202,17 @@ describe("MultispeqProtocol", () => {
         return Promise.resolve();
       });
 
-      const info = await protocol.getDeviceInfo();
+      const info = await driver.getDeviceInfo();
 
       expect(info.device_battery).toBe(70);
     });
 
     it("should return empty info when both commands fail", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       vi.mocked(transport.send).mockRejectedValue(new Error("timeout"));
 
-      const info = await protocol.getDeviceInfo();
+      const info = await driver.getDeviceInfo();
 
       expect(info).toEqual({});
     });
@@ -220,8 +220,8 @@ describe("MultispeqProtocol", () => {
 
   describe("destroy", () => {
     it("should clean up emitter and buffer", async () => {
-      protocol.initialize(transport);
-      await protocol.destroy();
+      driver.initialize(transport);
+      await driver.destroy();
 
       expect(transport.disconnect).toHaveBeenCalled();
     });
@@ -230,10 +230,10 @@ describe("MultispeqProtocol", () => {
   describe("waitForResponse timeout", () => {
     it("should return failure on response timeout", async () => {
       vi.useFakeTimers();
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       // Don't simulate any response so the timeout fires
-      const resultPromise = protocol.execute("cmd");
+      const resultPromise = driver.execute("cmd");
 
       await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
 
@@ -247,7 +247,7 @@ describe("MultispeqProtocol", () => {
 
   describe("getDeviceInfo edge cases", () => {
     it("should return empty info when battery fallback value is NaN", async () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       let callCount = 0;
       vi.mocked(transport.send).mockImplementation(() => {
@@ -262,7 +262,7 @@ describe("MultispeqProtocol", () => {
         return Promise.resolve();
       });
 
-      const info = await protocol.getDeviceInfo();
+      const info = await driver.getDeviceInfo();
 
       expect(info).toEqual({});
     });

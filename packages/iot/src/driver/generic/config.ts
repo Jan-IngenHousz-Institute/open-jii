@@ -1,9 +1,10 @@
 /**
  * Generic device configuration
- * Optional BLE service UUIDs if using Bluetooth
+ * For Arduino, Raspberry Pi, custom sensors, weather stations, etc.
+ * Supports BLE, Serial, and other transport types.
  */
 
-/** Default BLE UUIDs for generic devices (can be overridden) */
+/** Default BLE UUIDs for generic devices (Nordic UART Service, can be overridden) */
 export const GENERIC_BLE_UUIDS = {
   /** Default service UUID - devices can use their own */
   SERVICE: "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART Service
@@ -45,4 +46,13 @@ export const GENERIC_SERIAL_DEFAULTS = {
   dataBits: 8 as const,
   stopBits: 1 as const,
   parity: "none" as const,
-};
+} as const;
+
+/** Generic device framing constants */
+export const GENERIC_FRAMING = {
+  /** Command line ending */
+  LINE_ENDING: "\n",
+
+  /** Default response timeout in ms */
+  DEFAULT_TIMEOUT: 10_000,
+} as const;
