@@ -408,7 +408,7 @@ module "centrum_pipeline" {
     "pipelines.trigger.interval" = "120 seconds"
   }
 
-  continuous_mode  = true
+  continuous_mode  = false
   development_mode = true
   serverless       = false
 
@@ -432,6 +432,54 @@ module "centrum_pipeline" {
   }
 
   depends_on = [module.node_cluster_policy]
+}
+
+module "pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Pipeline-Scheduler-DEV"
+  description = "Orchestrates central pipeline execution"
+
+  # Schedule: Every 30 minutes between 6am and 6pm UTC, weekdays only (Mon-Fri)
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0/30 6-18 ? * MON-FRI"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key         = "trigger_centrum_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.centrum_pipeline.pipeline_id
+    }
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
 }
 
 module "centrum_backup_job" {
@@ -635,6 +683,124 @@ module "data_legacy_volume" {
     node_service_principal = {
       principal  = module.node_service_principal.service_principal_application_id
       privileges = ["READ_VOLUME", "WRITE_VOLUME"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Centrum schema tables
+# ──────────────────────────────────────────────────────────────────────────────
+
+module "openjii_project_transfer_requests_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "openjii_project_transfer_requests"
+  table_type   = "MANAGED"
+  comment      = "Delta table for user requests with status tracking"
+
+  columns = [
+    { name = "request_id", type = "STRING", comment = "UUID" },
+    { name = "user_id", type = "STRING", comment = "openJII user ID" },
+    { name = "user_email", type = "STRING", comment = "Derived from authenticated user; user-input" },
+    { name = "source_platform", type = "STRING", comment = "e.g. \"photosynq\"" },
+    { name = "project_id_old", type = "STRING" },
+    { name = "project_url_old", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "requested_at", type = "TIMESTAMP" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "protocol_id", type = "STRING" },
+    { name = "macro_id", type = "STRING" },
+    { name = "macro_filename", type = "STRING" },
+    { name = "macro_name", type = "STRING" },
+    { name = "flow_id", type = "STRING" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "experiment_annotations_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_annotations"
+  table_type   = "MANAGED"
+  comment      = "Stores annotations related to various experiments conducted by users"
+
+  columns = [
+    { name = "id", type = "STRING" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "user_id", type = "STRING" },
+    { name = "user_name", type = "STRING" },
+    { name = "table_name", type = "STRING" },
+    { name = "row_id", type = "STRING" },
+    { name = "type", type = "STRING" },
+    { name = "content_text", type = "STRING" },
+    { name = "flag_type", type = "STRING" },
+    { name = "created_at", type = "TIMESTAMP" },
+    { name = "updated_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "experiment_export_metadata_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_export_metadata"
+  table_type   = "MANAGED"
+  comment      = "Metadata related to experiment data exports"
+
+  columns = [
+    { name = "export_id", type = "STRING" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "table_name", type = "STRING" },
+    { name = "format", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "file_path", type = "STRING" },
+    { name = "row_count", type = "INT" },
+    { name = "file_size", type = "INT" },
+    { name = "created_by", type = "STRING" },
+    { name = "created_at", type = "TIMESTAMP" },
+    { name = "completed_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
     }
   }
 

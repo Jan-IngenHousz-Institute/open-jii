@@ -191,6 +191,14 @@ export class AppError extends Error {
   ): AppError {
     return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
   }
+
+  static conflict(
+    message = "Resource already exists",
+    code = "CONFLICT",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.CONFLICT, details);
+  }
 }
 
 /**

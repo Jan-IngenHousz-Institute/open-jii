@@ -3,6 +3,7 @@
 import { useTranslation } from "@repo/i18n";
 
 import { useProtocol } from "../../hooks/protocol/useProtocol/useProtocol";
+import { ProtocolCompatibleMacrosCard } from "./protocol-compatible-macros-card";
 import { ProtocolDetailsCard } from "./protocol-details-card";
 import { ProtocolInfoCard } from "./protocol-info-card";
 
@@ -34,6 +35,9 @@ export function ProtocolSettings({ protocolId }: ProtocolSettingsProps) {
         initialCode={protocol.code}
         initialFamily={protocol.family}
       />
+
+      {/* Compatible Macros Card */}
+      <ProtocolCompatibleMacrosCard protocolId={protocolId} />
 
       {/* Protocol Info Card - Last */}
       <ProtocolInfoCard protocolId={protocolId} protocol={protocol} />

@@ -3,10 +3,12 @@
 import { ErrorDisplay } from "@/components/error-display";
 import MacroCodeViewer from "@/components/macro-code-viewer";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
+import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { decodeBase64 } from "@/util/base64";
 import { formatDate } from "@/util/date";
-import { CalendarIcon, CodeIcon, UserIcon } from "lucide-react";
-import React, { use } from "react";
+import { CalendarIcon, CodeIcon, ExternalLink, UserIcon } from "lucide-react";
+import Link from "next/link";
+import { use } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -51,6 +53,15 @@ const getLanguageColor = (language: string) => {
 export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useMacro(id);
+  const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(id);
+  const compatibleProtocols =
+    (compatibleProtocolsData?.body as
+      | {
+          macroId: string;
+          protocol: { id: string; name: string; family: string };
+          addedAt: string;
+        }[]
+      | undefined) ?? [];
   const { t } = useTranslation(["macro", "common"]);
 
   if (isLoading) {
@@ -114,6 +125,38 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
           </CardHeader>
           <CardContent>
             <RichTextRenderer content={macro.description} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Compatible Protocols (read-only) */}
+      {compatibleProtocols.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("macroSettings.compatibleProtocols")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {compatibleProtocols.map((entry) => (
+                <div key={entry.protocol.id} className="flex items-center gap-2">
+                  <Link
+                    href={`/platform/protocols/${entry.protocol.id}`}
+                    className="text-sm font-medium hover:underline"
+                  >
+                    {entry.protocol.name}
+                  </Link>
+                  <Link
+                    href={`/platform/protocols/${entry.protocol.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
+                  </Link>
+                  <span className="text-muted-foreground text-xs">{entry.protocol.family}</span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

@@ -138,9 +138,14 @@ if requests.count() == 0:
 
 # Split: requests whose experiment_id is already populated had their backend call
 # succeed on a previous run — skip the backend for those and re-use stored columns.
-new_requests = requests.filter(F.col("experiment_id").isNull())
-recovery_requests = requests.filter(F.col("experiment_id").isNotNull())
-recovery_count = recovery_requests.count()
+# Snapshot request_id lists so the mid-notebook MERGE (which writes experiment_id back
+# to the table) doesn't cause the recovery split to pick up newly-updated rows.
+_new_ids = [r["request_id"] for r in requests.filter(F.col("experiment_id").isNull()).select("request_id").collect()]
+_recovery_ids = [r["request_id"] for r in requests.filter(F.col("experiment_id").isNotNull()).select("request_id").collect()]
+
+new_requests = requests.filter(F.col("request_id").isin(_new_ids))
+recovery_requests = requests.filter(F.col("request_id").isin(_recovery_ids))
+recovery_count = len(_recovery_ids)
 
 if recovery_count > 0:
     log(f"Found {recovery_count} approved request(s) with stored backend response (recovery)")
@@ -453,12 +458,28 @@ enriched = (
     )
 )
 
+written_experiments = set()
+
 for row in successful.select("experiment_id", "transfer_id").collect():
     experiment_id = row["experiment_id"]
     transfer_id = row["transfer_id"]
     output_path = f"{VOLUME_BASE}/{experiment_id}/photosynq_transfer"
+
+    # Guard: skip duplicate experiment_id within this run — the downstream Auto Loader
+    # stream will crash if files are overwritten mid-read.
+    if experiment_id in written_experiments:
+        log(f"  {transfer_id}: skipped (already written {experiment_id} this run)")
+        spark.sql(f"""
+            UPDATE {TRANSFER_TABLE}
+            SET status = 'completed'
+            WHERE request_id = '{transfer_id}'
+        """)
+        log(f"  {transfer_id}: completed")
+        continue
+
     try:
         enriched.filter(F.col("experiment_id") == experiment_id).write.mode("overwrite").parquet(output_path)
+        written_experiments.add(experiment_id)
         log(f"Wrote import data to {output_path}")
         spark.sql(f"""
             UPDATE {TRANSFER_TABLE}

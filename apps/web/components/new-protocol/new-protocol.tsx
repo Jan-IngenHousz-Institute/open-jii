@@ -1,18 +1,32 @@
 "use client";
 
+import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
-import type { CreateProtocolRequestBody } from "@repo/api";
+import type { CreateProtocolRequestBody, Macro } from "@repo/api";
 import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Form, FormField } from "@repo/ui/components";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Form,
+  FormField,
+} from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
+import { useMacros } from "../../hooks/macro/useMacros/useMacros";
+import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 import ProtocolCodeEditor from "../protocol-code-editor";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 
@@ -22,9 +36,42 @@ export function NewProtocolForm() {
   const locale = useLocale();
   const [isCodeValid, setIsCodeValid] = useState(true);
 
-  const { mutate: createProtocol, isPending } = useProtocolCreate({
-    onSuccess: (id: string) => router.push(`/${locale}/platform/protocols/${id}`),
+  // Selected macros (local state before protocol creation)
+  const [selectedMacros, setSelectedMacros] = useState<Macro[]>([]);
+
+  // Macro search
+  const [macroSearch, setMacroSearch] = useState("");
+  const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
+  const { data: macroList } = useMacros({
+    search: debouncedMacroSearch || undefined,
   });
+
+  const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
+
+  const { mutate: createProtocol, isPending } = useProtocolCreate({
+    onSuccess: (id: string) => {
+      // Link selected macros after protocol creation, then redirect
+      if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
+        addMacrosMutationRef.current
+          .mutateAsync({
+            params: { id },
+            body: { macroIds: selectedMacros.map((m) => m.id) },
+          })
+          .catch(() => {
+            // Protocol was created successfully, macro linking failed - still redirect
+          })
+          .finally(() => {
+            router.push(`/${locale}/platform/protocols/${id}`);
+          });
+        return;
+      }
+      router.push(`/${locale}/platform/protocols/${id}`);
+    },
+  });
+
+  // Placeholder protocolId for the hook - actual call uses the real ID via mutateAsync
+  const addMacrosMutation = useAddCompatibleMacro("");
+  addMacrosMutationRef.current = addMacrosMutation;
 
   const form = useForm<CreateProtocolRequestBody>({
     resolver: zodResolver(zCreateProtocolRequestBody),
@@ -51,6 +98,28 @@ export function NewProtocolForm() {
     });
     toast({ description: t("protocols.protocolCreated") });
   }
+
+  const selectedMacroIds = useMemo(
+    () => new Set(selectedMacros.map((m) => m.id)),
+    [selectedMacros],
+  );
+
+  const availableMacros: Macro[] = useMemo(
+    () => (macroList ?? []).filter((m) => !selectedMacroIds.has(m.id)),
+    [macroList, selectedMacroIds],
+  );
+
+  const handleAddMacro = (macroId: string) => {
+    const macro = macroList?.find((m) => m.id === macroId);
+    if (macro) {
+      setSelectedMacros((prev) => [...prev, macro]);
+      setMacroSearch("");
+    }
+  };
+
+  const handleRemoveMacro = (macroId: string) => {
+    setSelectedMacros((prev) => prev.filter((m) => m.id !== macroId));
+  };
 
   const isDisabled = useMemo(() => {
     return isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid;
@@ -81,6 +150,51 @@ export function NewProtocolForm() {
             />
           </div>
         </div>
+
+        {/* Compatible Macros Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("newProtocol.compatibleMacros")}</CardTitle>
+            <CardDescription>{t("newProtocol.compatibleMacrosDescription")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedMacros.length > 0 && (
+              <div className="space-y-2">
+                {selectedMacros.map((macro) => (
+                  <div
+                    key={macro.id}
+                    className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium">{macro.name}</span>
+                      <span className="text-muted-foreground text-xs">{macro.language}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => handleRemoveMacro(macro.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <MacroSearchWithDropdown
+              availableMacros={availableMacros}
+              value=""
+              placeholder={t("protocolSettings.addCompatibleMacro")}
+              loading={!isDebounced}
+              searchValue={macroSearch}
+              onSearchChange={setMacroSearch}
+              onAddMacro={handleAddMacro}
+              isAddingMacro={false}
+            />
+          </CardContent>
+        </Card>
 
         <div className="flex gap-2">
           <Button type="button" onClick={cancel}>

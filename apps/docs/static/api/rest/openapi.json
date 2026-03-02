@@ -2300,9 +2300,14 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": {
+                      "identifier": {
                         "type": "string",
-                        "description": "Technical name of the table used for queries and operations"
+                        "description": "Stable identifier: static table name or macro UUID"
+                      },
+                      "tableType": {
+                        "type": "string",
+                        "enum": ["static", "macro"],
+                        "description": "Whether this is a static table or a macro table"
                       },
                       "displayName": {
                         "type": "string",
@@ -2321,7 +2326,7 @@
                         "description": "Column name that contains error information if any"
                       }
                     },
-                    "required": ["name", "displayName", "totalRows"]
+                    "required": ["identifier", "tableType", "displayName", "totalRows"]
                   }
                 }
               }
@@ -7895,6 +7900,10 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "macroName": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "flowId": {
                       "type": "string",
                       "format": "uuid",
@@ -7910,6 +7919,7 @@
                     "protocolId",
                     "macroId",
                     "macroFilename",
+                    "macroName",
                     "flowId"
                   ]
                 }
@@ -8598,6 +8608,302 @@
         }
       }
     },
+    "/api/v1/macros/{id}/protocols": {
+      "get": {
+        "description": "Returns protocols that are marked as compatible with this macro",
+        "summary": "List compatible protocols for a macro",
+        "tags": ["macros"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "macros.listCompatibleProtocols",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "macroId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "protocol": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "family": {
+                            "type": "string"
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": ["id", "name", "family", "createdBy"]
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["macroId", "protocol", "addedAt"]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Links protocols as compatible with this macro (creator only)",
+        "summary": "Add compatible protocols to a macro",
+        "tags": ["macros"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "macros.addCompatibleProtocols",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "protocolIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": ["protocolIds"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "macroId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "protocol": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "family": {
+                            "type": "string"
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": ["id", "name", "family", "createdBy"]
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["macroId", "protocol", "addedAt"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/macros/{id}/protocols/{protocolId}": {
+      "delete": {
+        "description": "Unlinks a protocol from this macro's compatibility list (creator only)",
+        "summary": "Remove a compatible protocol from a macro",
+        "tags": ["macros"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "protocolId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "macros.removeCompatibleProtocol",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/protocols": {
       "get": {
         "description": "Returns a list of protocols based on the specified filter criteria",
@@ -9105,6 +9411,310 @@
         "responses": {
           "204": {
             "description": "204"
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols/{id}/macros": {
+      "get": {
+        "description": "Returns macros that are marked as compatible with this protocol",
+        "summary": "List compatible macros for a protocol",
+        "tags": ["protocols"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "protocols.listCompatibleMacros",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "protocolId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "macro": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "filename": {
+                            "type": "string"
+                          },
+                          "language": {
+                            "type": "string",
+                            "enum": ["python", "r", "javascript"]
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": ["id", "name", "filename", "language", "createdBy"]
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["protocolId", "macro", "addedAt"]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Links macros as compatible with this protocol (creator only)",
+        "summary": "Add compatible macros to a protocol",
+        "tags": ["protocols"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "protocols.addCompatibleMacros",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "macroIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": ["macroIds"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "protocolId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "macro": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "filename": {
+                            "type": "string"
+                          },
+                          "language": {
+                            "type": "string",
+                            "enum": ["python", "r", "javascript"]
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": ["id", "name", "filename", "language", "createdBy"]
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["protocolId", "macro", "addedAt"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols/{id}/macros/{macroId}": {
+      "delete": {
+        "description": "Unlinks a macro from this protocol's compatibility list (creator only)",
+        "summary": "Remove a compatible macro from a protocol",
+        "tags": ["protocols"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "macroId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "protocols.removeCompatibleMacro",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
           },
           "404": {
             "description": "404",

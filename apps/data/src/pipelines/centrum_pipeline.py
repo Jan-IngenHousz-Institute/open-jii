@@ -279,19 +279,6 @@ def clean_data():
                 F.col("device_id"),
                 F.col("timestamp"),
                 F.col("sample"),
-                F.col("ingestion_timestamp")
-            )
-        )
-    )
-
-    df = df.withColumn(
-        "new_id",
-        F.abs(
-            F.hash(
-                F.col("experiment_id"),
-                F.col("device_id"),
-                F.col("timestamp"),
-                F.col("sample"),
                 F.col("ingestion_timestamp"),
                 F.col("kinesis_sequence_number")
             )
@@ -305,7 +292,7 @@ def clean_data():
         F.expr("""
             transform(annotations, a -> struct(
                 coalesce(a.id, uuid()) as id,
-                coalesce(a.rowId, cast(new_id as string)) as rowId,
+                coalesce(a.rowId, cast(id as string)) as rowId,
                 a.type as type,
                 a.content as content,
                 a.createdBy as createdBy,
@@ -321,7 +308,6 @@ def clean_data():
     # Select final columns for bronze-sourced silver data
     bronze_clean = df.select(
         "id",
-        "new_id",
         "device_id",
         "device_name",
         "device_version",
@@ -348,7 +334,6 @@ def clean_data():
     imported_clean = (
         imported_df
         .withColumn("id", F.col("id").cast("long"))
-        .withColumn("new_id", F.col("id").cast("long"))
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
@@ -381,7 +366,6 @@ def clean_data():
         .withColumn("skip_macro_processing", F.lit(True))
         .select(
             "id",
-            "new_id",
             "device_id",
             "device_name",
             "device_version",
@@ -558,7 +542,7 @@ def experiment_raw_data():
             )
         )
         .select(
-            F.col("new_id").alias("id"),
+            "id",
             "experiment_id",
             "device_id",
             "device_name",
@@ -1071,6 +1055,7 @@ def raw_imported_data():
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("recursiveFileLookup", "true")
+        .option("ignoreMissingFiles", "true")
         .schema(imported_data_schema)
         .load(imported_path)
     )
