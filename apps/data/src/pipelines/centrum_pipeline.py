@@ -73,7 +73,7 @@ sensor_schema = StructType([
 # DBTITLE 1,Configuration
 
 ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
-CATALOG_NAME = "open_jii_dev"
+CATALOG_NAME = spark.conf.get("CATALOG_NAME")
 
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
