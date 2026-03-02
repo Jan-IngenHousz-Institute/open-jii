@@ -43,5 +43,6 @@ import { MacroController } from "./presentation/macro.controller";
     UpdateMacroUseCase,
     DeleteMacroUseCase,
   ],
+  exports: [MacroRepository],
 })
 export class MacroModule {}

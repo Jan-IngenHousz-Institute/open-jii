@@ -133,10 +133,10 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </Button>
       </div>
 
-      <NavTabs defaultValue={tables[0].name} className="max-w-full">
+      <NavTabs defaultValue={tables[0].identifier} className="max-w-full">
         <NavTabsList>
           {tables.map((table) => (
-            <NavTabsTrigger key={table.name} value={table.name}>
+            <NavTabsTrigger key={table.identifier} value={table.identifier}>
               <span className="truncate">
                 {table.displayName} ({table.totalRows})
               </span>
@@ -144,10 +144,10 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           ))}
         </NavTabsList>
         {tables.map((table) => (
-          <NavTabsContent key={table.name} value={table.name} className="mt-6">
+          <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
             <ExperimentDataTable
               experimentId={id}
-              tableName={table.name}
+              tableName={table.identifier}
               displayName={table.displayName}
               defaultSortColumn={table.defaultSortColumn}
               errorColumn={table.errorColumn}

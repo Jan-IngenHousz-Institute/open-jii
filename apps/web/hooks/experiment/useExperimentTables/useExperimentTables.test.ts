@@ -44,7 +44,8 @@ describe("useExperimentTables", () => {
   it("should return tables, isLoading, and error from useQuery", () => {
     const mockTables = [
       {
-        name: "table1",
+        identifier: "table1",
+        tableType: "static",
         displayName: "Table 1",
         totalRows: 100,
         defaultSortColumn: "id",
@@ -141,7 +142,8 @@ describe("useExperimentTables", () => {
   it("should include table metadata in tables", () => {
     const mockTablesWithMetadata = [
       {
-        name: "measurements",
+        identifier: "measurements",
+        tableType: "static",
         displayName: "Measurements",
         totalRows: 500,
         defaultSortColumn: "timestamp",
@@ -161,7 +163,7 @@ describe("useExperimentTables", () => {
     const { result } = renderHook(() => useExperimentTables(mockExperimentId));
 
     expect(result.current.tables).toEqual(mockTablesWithMetadata);
-    expect(result.current.tables?.[0].name).toBe("measurements");
+    expect(result.current.tables?.[0].identifier).toBe("measurements");
     expect(result.current.tables?.[0].displayName).toBe("Measurements");
     expect(result.current.tables?.[0].totalRows).toBe(500);
     expect(result.current.tables?.[0].defaultSortColumn).toBe("timestamp");

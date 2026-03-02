@@ -58,7 +58,8 @@ describe("NewVisualizationForm", () => {
 
   const mockExperimentTableMetadatas: ExperimentTableMetadata[] = [
     {
-      name: "measurements",
+      identifier: "measurements",
+      tableType: "static",
       displayName: "Measurements",
       totalRows: 100,
       columns: [
@@ -67,7 +68,8 @@ describe("NewVisualizationForm", () => {
       ],
     },
     {
-      name: "observations",
+      identifier: "observations",
+      tableType: "static",
       displayName: "Observations",
       totalRows: 50,
       columns: [

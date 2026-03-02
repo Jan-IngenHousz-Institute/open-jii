@@ -1,6 +1,7 @@
 import { createTransport } from "nodemailer";
 
 import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
+import { renderProjectTransferComplete } from "@repo/transactional/render/project-transfer-complete";
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
 import { TestHarness } from "../../../../../test/test-harness";
@@ -14,6 +15,10 @@ vi.mock("@repo/transactional/render/added-user-notification", () => ({
 
 vi.mock("@repo/transactional/render/transfer-request-confirmation", () => ({
   renderTransferRequestConfirmation: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/project-transfer-complete", () => ({
+  renderProjectTransferComplete: vi.fn(),
 }));
 
 vi.mock("nodemailer", () => ({
@@ -39,6 +44,9 @@ describe("NotificationsService", () => {
   const mockRenderTransferRequestConfirmation = renderTransferRequestConfirmation as ReturnType<
     typeof vi.fn
   >;
+  const mockRenderProjectTransferComplete = renderProjectTransferComplete as ReturnType<
+    typeof vi.fn
+  >;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -58,6 +66,11 @@ describe("NotificationsService", () => {
     });
 
     mockRenderTransferRequestConfirmation.mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
+
+    mockRenderProjectTransferComplete.mockResolvedValue({
       html: MOCK_HTML_CONTENT,
       text: MOCK_TEXT_CONTENT,
     });
@@ -680,6 +693,160 @@ describe("NotificationsService", () => {
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: String error message");
+    });
+  });
+
+  describe("sendProjectTransferComplete", () => {
+    const MOCK_EMAIL = "test@example.com";
+    const MOCK_EXPERIMENT_ID = "exp-456";
+    const MOCK_EXPERIMENT_NAME = "Transferred Experiment";
+
+    it("should successfully send project transfer complete email", async () => {
+      // Arrange
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+
+      // Act
+      const result = await service.sendProjectTransferComplete(
+        MOCK_EMAIL,
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      // Verify transport creation
+      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
+
+      // Verify email render function was called
+      expect(mockRenderProjectTransferComplete).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        experimentName: MOCK_EXPERIMENT_NAME,
+        experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
+      });
+
+      // Verify sendMail was called with correct parameters
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: {
+          name: "openJII",
+          address: "noreply@localhost",
+        },
+        subject: "Project Transfer Complete - openJII",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("should handle email with rejected addresses", async () => {
+      // Arrange
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [MOCK_EMAIL],
+        pending: [],
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+
+      // Act
+      const result = await service.sendProjectTransferComplete(
+        MOCK_EMAIL,
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
+    });
+
+    it("should handle nodemailer transport creation errors", async () => {
+      // Arrange
+      const transportError = new Error("Failed to create transport");
+      mockCreateTransport.mockImplementation(() => {
+        throw transportError;
+      });
+
+      // Act
+      const result = await service.sendProjectTransferComplete(
+        MOCK_EMAIL,
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: Failed to create transport");
+    });
+
+    it("should handle email rendering errors", async () => {
+      // Arrange
+      const renderError = new Error("Failed to render email template");
+      mockRenderProjectTransferComplete.mockRejectedValue(renderError);
+
+      const mockTransport = {
+        sendMail: vi.fn(),
+      };
+      mockCreateTransport.mockReturnValue(mockTransport);
+
+      // Act
+      const result = await service.sendProjectTransferComplete(
+        MOCK_EMAIL,
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(
+        "Failed to send email: Failed to render email template",
+      );
+    });
+
+    it("should handle sendMail errors", async () => {
+      // Arrange
+      const sendMailError = new Error("SMTP connection failed");
+      const mockSendMail = vi.fn().mockImplementation(() => {
+        throw sendMailError;
+      });
+
+      const mockTransport = {
+        sendMail: mockSendMail,
+      };
+
+      mockCreateTransport.mockReturnValue(mockTransport);
+
+      // Act
+      const result = await service.sendProjectTransferComplete(
+        MOCK_EMAIL,
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
     });
   });
 });

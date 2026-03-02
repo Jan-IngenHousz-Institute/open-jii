@@ -22,8 +22,11 @@ const statusBadgeVariants = cva("", {
   variants: {
     status: {
       pending: "bg-badge-stale",
+      approved: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      partial_failed: "bg-destructive text-destructive-foreground",
       completed: "bg-badge-active",
       rejected: "bg-destructive text-destructive-foreground",
+      failed: "bg-destructive text-destructive-foreground",
     },
   },
   defaultVariants: {
