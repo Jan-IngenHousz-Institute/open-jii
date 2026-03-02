@@ -1,30 +1,22 @@
 /**
  * MultispeQ protocol commands
  * Device-specific command definitions
+ *
+ * The MultispeQ device accepts two types of commands:
+ * 1. Simple string commands (e.g. "battery", "sleep")
+ * 2. Protocol JSON arrays (Record<string, unknown>[]) for measurements
  */
 
-/** Common MultispeQ commands */
+/** Simple MultispeQ string commands */
 export const MULTISPEQ_COMMANDS = {
-  /** Get device information (battery, version, ID) */
-  GET_DEVICE_INFO: "1001",
+  /** Query battery level — returns "battery:<number>" */
+  BATTERY: "battery",
 
-  /** Get device status */
-  GET_STATUS: "1002",
+  /** Put the device to sleep (power off) */
+  SLEEP: "sleep",
 
-  /** Run a measurement */
-  RUN_MEASUREMENT: "1003",
-
-  /** Stop current measurement */
-  STOP_MEASUREMENT: "1004",
-
-  /** Get measurement data */
-  GET_DATA: "1005",
-
-  /** Set device parameter */
-  SET_PARAMETER: "1006",
-
-  /** Reset device */
-  RESET: "1007",
+  /** Confirmation / handshake command */
+  HELLO: "hello",
 } as const;
 
 export type MultispeqCommand = (typeof MULTISPEQ_COMMANDS)[keyof typeof MULTISPEQ_COMMANDS];
