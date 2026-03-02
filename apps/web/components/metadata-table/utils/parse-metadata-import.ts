@@ -150,16 +150,17 @@ export async function parseClipboard(): Promise<{
   rows: MetadataRow[];
 }> {
   let text: string | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   try {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error("timeout")), 3000);
     });
     text = await Promise.race([navigator.clipboard.readText(), timeoutPromise]);
-    clearTimeout(timeoutId);
   } catch {
     text = null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!text) {
