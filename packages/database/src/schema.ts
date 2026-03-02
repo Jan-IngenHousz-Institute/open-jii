@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { primaryKey, check } from "drizzle-orm/pg-core";
+import { primaryKey, check, uniqueIndex } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -210,6 +210,9 @@ export const invitations = pgTable(
       "resource_id_check",
       sql`(${table.resourceType} = 'platform' AND ${table.resourceId} IS NULL) OR (${table.resourceType} != 'platform' AND ${table.resourceId} IS NOT NULL)`,
     ),
+    uniqueIndex("invitations_pending_unique")
+      .on(table.resourceType, table.resourceId, table.email)
+      .where(sql`${table.status} = 'pending'`),
   ],
 );
 
