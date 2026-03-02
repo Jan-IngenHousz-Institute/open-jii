@@ -1,7 +1,6 @@
 import PostHog from "posthog-react-native";
 import { getEnvVar } from "~/stores/environment-store";
 
-
 /**
  * PostHog host — use the official endpoint directly.
  * The reverse-proxy (/ingest) is only useful for the web app
