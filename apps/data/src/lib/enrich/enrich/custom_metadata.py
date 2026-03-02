@@ -1,8 +1,8 @@
 """
-User Metadata Enrichment (Experiment Metadata)
+Custom Metadata Enrichment
 
 Provides utilities for enriching Databricks DataFrames with user-uploaded
-experiment metadata by joining on a question answer as the primary key.
+custom metadata by joining on a question answer as the primary key.
 
 The `experiment_metadata` table (written by the backend) stores a single
 VARIANT blob per experiment with the shape:
@@ -18,16 +18,16 @@ Join logic per measurement row:
     2. From the row's questions_data VARIANT, get the answer for that question
     3. Extract identifierColumnId    → e.g. "col_abc123"
     4. Find the metadata row where   row[identifierColumnId] == answer
-    5. Attach that row as a VARIANT  `user_metadata` column
+    5. Attach that row as a VARIANT  `custom_metadata` column
 """
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, ArrayType, MapType
 
 
-def add_metadata_column(df, metadata_df):
+def add_custom_metadata_column(df, metadata_df):
     """
-    Enrich measurement rows with user-uploaded metadata.
+    Enrich measurement rows with user-uploaded custom metadata.
 
     Joins on `experiment_id` (1:1), then resolves the per-row match
     via the dynamic question-answer key.
@@ -39,7 +39,7 @@ def add_metadata_column(df, metadata_df):
             Expected columns: experiment_id, metadata (VARIANT)
 
     Returns:
-        DataFrame with an additional `user_metadata` VARIANT column.
+        DataFrame with an additional `custom_metadata` VARIANT column.
         NULL when no metadata exists or no matching row is found.
     """
     try:
@@ -99,7 +99,7 @@ def add_metadata_column(df, metadata_df):
         # Find the matching metadata row: the one where row[identifierColumnId] == join_key.
         # filter() returns an array; take the first match and convert back to VARIANT.
         enriched = enriched.withColumn(
-            "user_metadata",
+            "custom_metadata",
             F.when(
                 F.col("_meta_join_key").isNotNull()
                 & F.col("_meta_rows").isNotNull(),
@@ -127,10 +127,10 @@ def add_metadata_column(df, metadata_df):
             "_meta_join_key",
         )
 
-        print("Metadata enrichment join completed successfully")
+        print("Custom metadata enrichment join completed successfully")
         return enriched
 
     except Exception as e:
         print(f"Warning: Could not join with experiment metadata table: {str(e)}")
-        print("Continuing without user metadata enrichment...")
-        return df.withColumn("user_metadata", F.lit(None).cast("string"))
+        print("Continuing without custom metadata enrichment...")
+        return df.withColumn("custom_metadata", F.lit(None).cast("string"))

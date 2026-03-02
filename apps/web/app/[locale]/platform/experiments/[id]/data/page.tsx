@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { BarChart3, Database, FileSpreadsheet, Pencil, Upload } from "lucide-react";
+import { BarChart3, Database, FileSpreadsheet, Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
