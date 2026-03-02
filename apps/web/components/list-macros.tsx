@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import React from "react";
 import { MacroOverviewCards } from "~/components/macro-overview-cards";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 
