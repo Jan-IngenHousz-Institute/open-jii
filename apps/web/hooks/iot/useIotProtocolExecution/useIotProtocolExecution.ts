@@ -2,48 +2,64 @@
 
 import { useCallback } from "react";
 
-import type { IDeviceProtocol } from "@repo/iot";
+import type { SensorFamily } from "@repo/api";
+import type { CommandResult, IDeviceDriver } from "@repo/iot";
 
-export function useIotProtocolExecution(protocol: IDeviceProtocol | null, isConnected: boolean) {
+// ── Pure helpers ─────────────────────────────────────────────────────────────
+
+/** Throw if the command result indicates failure, otherwise return its data. */
+function unwrap<T>(result: CommandResult<T>, fallbackMessage: string): T {
+  if (!result.success) {
+    throw new Error(result.error?.message ?? fallbackMessage);
+  }
+  return result.data as T;
+}
+
+/** Try to parse a string as JSON; return the original value for anything else. */
+function parseResponseData(data: unknown): unknown {
+  if (typeof data !== "string") return data;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return data;
+  }
+}
+
+// ── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useIotProtocolExecution(
+  driver: IDeviceDriver | null,
+  isConnected: boolean,
+  sensorFamily: SensorFamily,
+) {
   const executeProtocol = useCallback(
     async (protocolCode: Record<string, unknown>[]) => {
-      if (!protocol || !isConnected) {
+      if (!driver || !isConnected) {
         throw new Error("Not connected to device");
       }
 
-      // Load protocol definition on the device
-      const setResult = await protocol.execute({
-        command: "SET_CONFIG",
-        params: { protocol: protocolCode },
-      });
-      if (!setResult.success) {
-        throw new Error(setResult.error?.message ?? "Failed to load protocol on device");
+      if (sensorFamily === "multispeq") {
+        // MultispeQ: send the protocol JSON array directly — device runs the measurement
+        const result = await driver.execute(protocolCode);
+        return parseResponseData(unwrap(result, "Protocol execution failed"));
       }
 
-      // Execute the loaded protocol
-      const runResult = await protocol.execute({ command: "RUN" });
-      if (!runResult.success) {
-        throw new Error(runResult.error?.message ?? "Failed to run protocol");
-      }
+      // Generic / Ambit: load config → run → retrieve data
+      unwrap(
+        await driver.execute({ command: "SET_CONFIG", params: { protocol: protocolCode } }),
+        "Failed to load protocol on device",
+      );
 
-      // Retrieve measurement results
-      const dataResult = await protocol.execute({ command: "GET_DATA" });
-      if (!dataResult.success) {
-        throw new Error(dataResult.error?.message ?? "Failed to get measurement data");
-      }
+      unwrap(await driver.execute({ command: "RUN" }), "Failed to run protocol");
 
-      let data = dataResult.data;
-      if (typeof data === "string") {
-        try {
-          data = JSON.parse(data);
-        } catch {
-          // keep the string as-is if it's not valid JSON
-        }
-      }
+      const data = unwrap(
+        await driver.execute({ command: "GET_DATA" }),
+        "Failed to get measurement data",
+      );
 
-      return data;
+      return parseResponseData(data);
     },
-    [protocol, isConnected],
+    [driver, isConnected, sensorFamily],
   );
 
   return { executeProtocol };
