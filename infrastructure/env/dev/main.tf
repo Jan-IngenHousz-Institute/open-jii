@@ -375,7 +375,7 @@ module "centrum_pipeline" {
     "pipelines.trigger.interval" = "120 seconds"
   }
 
-  continuous_mode  = true
+  continuous_mode  = false
   development_mode = true
   serverless       = false
 
@@ -399,6 +399,71 @@ module "centrum_pipeline" {
   }
 
   depends_on = [module.node_cluster_policy]
+}
+
+module "pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Pipeline-Scheduler-DEV"
+  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 6am and 6pm"
+
+  # Schedule: Every 30 minutes between 6am and 6pm UTC, weekdays only (Mon-Fri)
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0,30 6-18 * * 1-5"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key          = "trigger_centrum_pipeline"
+      task_type    = "pipeline"
+      compute_type = "serverless"
+      pipeline_id  = module.centrum_pipeline.pipeline_id
+    },
+    {
+      key           = "trigger_experiment_pipelines"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
+      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipelines_orchestrator_task"
+
+      parameters = {
+        "catalog_name"            = module.databricks_catalog.catalog_name
+        "central_schema"          = "centrum"
+        "experiment_status_table" = "experiment_status"
+        "environment"             = upper(var.environment)
+      }
+
+      depends_on = "trigger_centrum_pipeline"
+    },
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
 }
 
 module "centrum_backup_job" {
