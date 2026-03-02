@@ -104,11 +104,16 @@ def export_data(df):
         log(f"Exporting to {FORMAT.upper()}: {OUTPUT_PATH}")
         
         if FORMAT == "csv":
-            # CSV doesn't support complex types (structs, arrays, maps)
+            # CSV doesn't support complex types (structs, arrays, maps, variants)
             # Convert them to JSON strings
             for field in df.schema.fields:
+                type_name = field.dataType.typeName()
                 if isinstance(field.dataType, (StructType, ArrayType, MapType)):
                     df = df.withColumn(field.name, to_json(col(field.name)))
+                elif type_name == "variant":
+                    # VARIANT is a Databricks-specific type; cast to string
+                    # which produces a JSON representation
+                    df = df.withColumn(field.name, col(field.name).cast("string"))
             
             df.coalesce(1).write.mode("overwrite").option("header", True).csv(OUTPUT_PATH)
         elif FORMAT == "ndjson":
