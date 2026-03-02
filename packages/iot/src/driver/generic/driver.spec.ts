@@ -79,7 +79,7 @@ describe("GenericDeviceDriver", () => {
       expect(transport.send).toHaveBeenCalledWith(expect.stringContaining('"command":"PING"'));
       const sentValue = vi.mocked(transport.send).mock.calls[0]?.[0];
       expect(sentValue).toBeDefined();
-      expect(sentValue!.endsWith(GENERIC_FRAMING.LINE_ENDING)).toBe(true);
+      expect(sentValue.endsWith(GENERIC_FRAMING.LINE_ENDING)).toBe(true);
     });
 
     it("should wrap string commands in object", async () => {
@@ -280,9 +280,7 @@ describe("GenericDeviceDriver", () => {
         return Promise.resolve();
       });
 
-      await expect(driver.setConfig({ config: {} })).rejects.toThrow(
-        "Failed to set configuration",
-      );
+      await expect(driver.setConfig({ config: {} })).rejects.toThrow("Failed to set configuration");
     });
   });
 
