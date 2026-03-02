@@ -1,5 +1,5 @@
 /**
- * Generic device protocol commands
+ * Generic device commands
  * Simple command set for any custom device (Arduino, RPi, sensors, etc.)
  */
 

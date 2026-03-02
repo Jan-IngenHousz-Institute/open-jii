@@ -1,5 +1,5 @@
 /**
- * Generic device protocol types
+ * Generic device driver types
  * For Arduino, Raspberry Pi, custom sensors, weather stations, etc.
  */
 

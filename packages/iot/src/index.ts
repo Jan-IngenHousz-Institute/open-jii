@@ -6,20 +6,20 @@
 // Core exports
 export * from "./core/types";
 export * from "./transport/interface";
-export * from "./protocol/base";
+export * from "./driver/driver-base";
 export * from "./core/command-executor";
 
-// Protocol exports - MultispeQ
-export * from "./protocol/multispeq/interface";
-export * from "./protocol/multispeq/commands";
-export * from "./protocol/multispeq/protocol";
-export * from "./protocol/multispeq/config";
+// Driver exports - MultispeQ
+export * from "./driver/multispeq/interface";
+export * from "./driver/multispeq/commands";
+export * from "./driver/multispeq/driver";
+export * from "./driver/multispeq/config";
 
-// Protocol exports - Generic
-export * from "./protocol/generic/interface";
-export * from "./protocol/generic/commands";
-export * from "./protocol/generic/protocol";
-export * from "./protocol/generic/config";
+// Driver exports - Generic
+export * from "./driver/generic/interface";
+export * from "./driver/generic/commands";
+export * from "./driver/generic/driver";
+export * from "./driver/generic/config";
 
 // Utility exports
 export * from "./utils/emitter";

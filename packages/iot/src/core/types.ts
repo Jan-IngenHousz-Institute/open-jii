@@ -16,7 +16,7 @@ export interface Device {
   name: string;
   /** Transport type used for connection */
   transportType: TransportType;
-  /** Device type (protocol handler) */
+  /** Device type (driver) */
   deviceType: DeviceType;
   /** Signal strength (for wireless connections) */
   rssi?: number;

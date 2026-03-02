@@ -1,18 +1,18 @@
 /**
- * Protocol Layer
- * Device-specific protocol implementations
+ * Driver Layer
+ * Device-specific driver implementations
  */
 
-export * from "./base";
+export * from "./driver-base";
 
-// MultispeQ protocol
+// MultispeQ driver
 export * from "./multispeq/interface";
 export * from "./multispeq/commands";
-export * from "./multispeq/protocol";
+export * from "./multispeq/driver";
 export * from "./multispeq/config";
 
-// Generic device protocol
+// Generic device driver
 export * from "./generic/interface";
 export * from "./generic/commands";
-export * from "./generic/protocol";
+export * from "./generic/driver";
 export * from "./generic/config";
