@@ -26,7 +26,7 @@ variable "tasks" {
   type = list(object({
     key          = string
     task_type    = string
-    compute_type = string
+    compute_type = optional(string, "serverless")
 
     # For notebook tasks
     notebook_path = optional(string)

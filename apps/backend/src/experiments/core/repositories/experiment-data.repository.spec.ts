@@ -26,7 +26,6 @@ describe("ExperimentDataRepository", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     createdBy: faker.string.uuid(),
-    pipelineId: faker.string.uuid(),
   } as ExperimentDto;
 
   beforeAll(async () => {
