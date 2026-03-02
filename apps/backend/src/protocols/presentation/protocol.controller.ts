@@ -141,9 +141,13 @@ export class ProtocolController {
   ) {}
 
   @TsRestHandler(contract.protocols.listProtocols)
-  listProtocols() {
+  listProtocols(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.listProtocols, async ({ query }) => {
-      const result = await this.listProtocolsUseCase.execute(query.search);
+      const result = await this.listProtocolsUseCase.execute(
+        query.search,
+        query.filter,
+        session.user.id,
+      );
 
       if (result.isSuccess()) {
         // Transform the code field to ensure it's a proper Record<string, unknown>

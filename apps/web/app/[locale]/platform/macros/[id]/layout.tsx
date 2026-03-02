@@ -1,27 +1,55 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
-import { useLocale } from "@/hooks/useLocale";
-import Link from "next/link";
-import { notFound, usePathname, useParams } from "next/navigation";
+import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { notFound, useParams } from "next/navigation";
+import { parseApiError } from "~/util/apiError";
 
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Tabs, TabsList, TabsTrigger } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
 interface MacroLayoutProps {
   children: React.ReactNode;
 }
 
-export default function MacroLayout({ children }: MacroLayoutProps) {
-  const pathname = usePathname();
-  const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation(["macro", "navigation"]);
-  const { t: tCommon } = useTranslation("common");
-  const locale = useLocale();
-  const { isLoading, error } = useMacro(id);
+const getLanguageDisplay = (language: string) => {
+  switch (language) {
+    case "python":
+      return "Python";
+    case "r":
+      return "R";
+    case "javascript":
+      return "JavaScript";
+    default:
+      return language;
+  }
+};
 
-  // Loading
+const getLanguageColor = (language: string) => {
+  switch (language) {
+    case "python":
+      return "bg-badge-published";
+    case "r":
+      return "bg-badge-stale";
+    case "javascript":
+      return "bg-badge-provisioningFailed";
+    default:
+      return "bg-badge-archived";
+  }
+};
+
+export default function MacroLayout({ children }: MacroLayoutProps) {
+  const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation(["macro", "common"]);
+  const { t: tCommon } = useTranslation("common");
+  const { data: session } = useSession();
+  const { data: macroData, isLoading, error } = useMacro(id);
+  const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -30,17 +58,14 @@ export default function MacroLayout({ children }: MacroLayoutProps) {
     );
   }
 
-  // Error handling
   if (error) {
     const errorObj = error as { status?: number };
     const errorStatus = errorObj.status;
 
-    // Handle 404 Not Found or 400 Bad Request (e.g., invalid UUID) - show not found page
     if (errorStatus === 404 || errorStatus === 400) {
       notFound();
     }
 
-    // Show generic error for other types
     return (
       <div className="space-y-6">
         <div>
@@ -54,38 +79,50 @@ export default function MacroLayout({ children }: MacroLayoutProps) {
     );
   }
 
-  // Determine active tab from URL
-  const getActiveTab = () => {
-    if (pathname.endsWith("/settings")) return "settings";
-    if (pathname.endsWith(`/macros/${id}`)) return "overview";
-    return "overview";
-  };
+  if (!macroData) {
+    return null;
+  }
 
-  const activeTab = getActiveTab();
+  const macro = macroData;
+  const isCreator = session?.user.id === macro.createdBy;
+
+  const handleTitleSave = async (newName: string) => {
+    await updateMacro(
+      {
+        params: { id },
+        body: { name: newName },
+      },
+      {
+        onSuccess: () => {
+          toast({ description: t("macros.macroUpdated") });
+        },
+        onError: (err) => {
+          toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        },
+      },
+    );
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{t("macros.macro")}</h3>
-        <p className="text-muted-foreground text-sm">{t("macros.manageMacroDescription")}</p>
-      </div>
+      <InlineEditableTitle
+        name={macro.name}
+        hasAccess={isCreator}
+        onSave={handleTitleSave}
+        isPending={isUpdating}
+        badges={
+          <>
+            <Badge className={getLanguageColor(macro.language)}>
+              {getLanguageDisplay(macro.language)}
+            </Badge>
+            {macro.sortOrder !== null && (
+              <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>
+            )}
+          </>
+        }
+      />
 
-      <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview" asChild>
-            <Link href={`/platform/macros/${id}`} locale={locale}>
-              {t("macros.overview")}
-            </Link>
-          </TabsTrigger>
-          <TabsTrigger value="settings" asChild>
-            <Link href={`/platform/macros/${id}/settings`} locale={locale}>
-              {t("navigation.settings")}
-            </Link>
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="mx-4 mt-6">{children}</div>
-      </Tabs>
+      {children}
     </div>
   );
 }

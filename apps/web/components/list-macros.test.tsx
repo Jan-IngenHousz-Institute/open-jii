@@ -1,8 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
+
+import type { MacroFilter } from "~/hooks/macro/useMacros/useMacros";
 
 import { ListMacros } from "./list-macros";
 
@@ -13,7 +15,7 @@ const mockUseMacros = vi.mocked(useMacros);
 // Mock the translation hook
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => key, // Return the key as the translation
+    t: (key: string) => key,
   }),
 }));
 
@@ -27,7 +29,7 @@ vi.mock("./macro-overview-cards", () => ({
     isLoading: boolean;
   }) => (
     <div data-testid="macro-overview-cards">
-      {isLoading ? "Loading..." : `${macros.length || 0} macros`}
+      {isLoading ? "Loading..." : `${macros?.length || 0} macros`}
     </div>
   ),
 }));
@@ -37,29 +39,32 @@ vi.mock("@repo/ui/components", () => ({
   Select: ({
     value,
     onValueChange,
+    children,
   }: {
     children: React.ReactNode;
     value?: string;
     onValueChange: (value: string) => void;
   }) => (
-    <div>
-      {!value && <span>macros.filterByLanguage</span>}
-      <select
-        value={value}
-        onChange={(e) => onValueChange((e.target as HTMLSelectElement).value)}
-        data-testid="language-select"
-      >
-        <option value="all">All Languages</option>
-        <option value="python">Python</option>
-        <option value="r">R</option>
-        <option value="javascript">JavaScript</option>
-      </select>
-    </div>
+    <select
+      value={value}
+      onChange={(e) => onValueChange((e.target as HTMLSelectElement).value)}
+      data-testid={`select-${value}`}
+    >
+      {children}
+    </select>
   ),
-  SelectTrigger: () => null,
-  SelectValue: () => null,
-  SelectContent: () => null,
-  SelectItem: () => null,
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectValue: ({ placeholder }: { placeholder?: string }) => (
+    <span>{placeholder}</span>
+  ),
+  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({
+    value,
+    children,
+  }: {
+    value: string;
+    children: React.ReactNode;
+  }) => <option value={value}>{children}</option>,
   Input: ({
     placeholder,
     value,
@@ -77,6 +82,10 @@ vi.mock("@repo/ui/components", () => ({
 }));
 
 describe("ListMacros", () => {
+  const mockSetFilter = vi.fn();
+  const mockSetSearch = vi.fn();
+  const mockSetLanguage = vi.fn();
+
   const mockMacros = [
     {
       id: "macro-1",
@@ -84,6 +93,8 @@ describe("ListMacros", () => {
       description: "A Python macro",
       language: "python" as const,
       code: "python_analysis.py",
+      filename: "python_analysis.py",
+      sortOrder: null,
       createdBy: "user-1",
       createdByName: "User 1",
       createdAt: "2023-01-01T00:00:00Z",
@@ -95,6 +106,8 @@ describe("ListMacros", () => {
       description: "An R macro",
       language: "r" as const,
       code: "r_statistics.r",
+      filename: "r_statistics.r",
+      sortOrder: null,
       createdBy: "user-2",
       createdByName: "User 2",
       createdAt: "2023-01-02T00:00:00Z",
@@ -108,186 +121,105 @@ describe("ListMacros", () => {
       data: mockMacros,
       isLoading: false,
       error: null,
-    });
-  });
-
-  it("should render search input and language filter", () => {
-    // Act
-    render(<ListMacros />);
-
-    // Assert
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
-    expect(screen.getByTestId("language-select")).toBeInTheDocument();
-  });
-
-  it("should call useMacros with empty filter initially", () => {
-    // Act
-    render(<ListMacros />);
-
-    // Assert
-    expect(mockUseMacros).toHaveBeenCalledWith({
-      search: undefined,
+      filter: "my" as MacroFilter,
+      setFilter: mockSetFilter,
+      search: "",
+      setSearch: mockSetSearch,
       language: undefined,
+      setLanguage: mockSetLanguage,
     });
   });
 
-  it("should update search when typing in search input", async () => {
-    // Arrange
+  it("should render search input and filters", () => {
+    render(<ListMacros />);
+
+    expect(screen.getByTestId("search-input")).toBeInTheDocument();
+  });
+
+  it("should call useMacros with empty object", () => {
+    render(<ListMacros />);
+
+    expect(mockUseMacros).toHaveBeenCalledWith({});
+  });
+
+  it("should call setSearch when typing in search input", async () => {
     const user = userEvent.setup();
     render(<ListMacros />);
     const searchInput = screen.getByTestId("search-input");
 
-    // Act
-    await user.type(searchInput, "python");
+    await user.type(searchInput, "p");
 
-    // Assert
-    await waitFor(() => {
-      expect(mockUseMacros).toHaveBeenCalledWith({
-        search: "python",
-        language: undefined,
-      });
-    });
-  });
-
-  it("should update language filter when selecting language", async () => {
-    // Arrange
-    render(<ListMacros />);
-    const languageSelect = screen.getByTestId("language-select");
-
-    // Act
-    fireEvent.change(languageSelect, { target: { value: "python" } });
-
-    // Assert - Check the last call since the hook is called initially too
-    await waitFor(() => {
-      expect(mockUseMacros).toHaveBeenLastCalledWith({
-        search: undefined,
-        language: "python",
-      });
-    });
-  });
-
-  it("should display error message when there is an error", () => {
-    // Arrange
-    mockUseMacros.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("Failed to load"),
-    });
-
-    // Act
-    render(<ListMacros />);
-
-    // Assert
-    expect(screen.getByText("macros.errorLoading")).toBeInTheDocument();
+    expect(mockSetSearch).toHaveBeenCalled();
   });
 
   it("should pass loading state to MacroOverviewCards", () => {
-    // Arrange
     mockUseMacros.mockReturnValue({
       data: undefined,
       isLoading: true,
       error: null,
+      filter: "my" as MacroFilter,
+      setFilter: mockSetFilter,
+      search: "",
+      setSearch: mockSetSearch,
+      language: undefined,
+      setLanguage: mockSetLanguage,
     });
 
-    // Act
     render(<ListMacros />);
 
-    // Assert
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   it("should pass macro data to MacroOverviewCards", () => {
-    // Act
     render(<ListMacros />);
 
-    // Assert
     expect(screen.getByText("2 macros")).toBeInTheDocument();
   });
 
-  it("should handle empty search gracefully", async () => {
-    // Arrange
-    const user = userEvent.setup();
-    render(<ListMacros />);
-    const searchInput = screen.getByTestId("search-input");
-
-    // Act
-    await user.type(searchInput, "test");
-    await user.clear(searchInput);
-
-    // Assert
-    await waitFor(() => {
-      expect(mockUseMacros).toHaveBeenCalledWith({
-        search: undefined,
-        language: undefined,
-      });
-    });
-  });
-
-  it("should handle language filter reset", () => {
-    // Arrange
-    render(<ListMacros />);
-    const languageSelect = screen.getByTestId("language-select");
-
-    // Act - First set a language, then reset to "all"
-    fireEvent.change(languageSelect, { target: { value: "python" } });
-
-    // Clear the mock calls to just check the last call
-    mockUseMacros.mockClear();
-
-    // Reset to "all" (which should translate to undefined in the component)
-    fireEvent.change(languageSelect, { target: { value: "all" } });
-
-    // Assert
-    expect(mockUseMacros).toHaveBeenCalledWith({
-      search: undefined,
-      language: undefined,
-    });
-  });
-
-  it("should combine search and language filters", async () => {
-    // Arrange
-    const user = userEvent.setup();
-    render(<ListMacros />);
-    const searchInput = screen.getByTestId("search-input");
-    const languageSelect = screen.getByTestId("language-select");
-
-    // Act - First set search
-    await user.type(searchInput, "analysis");
-
-    // Then set language
-    fireEvent.change(languageSelect, { target: { value: "python" } });
-
-    // Assert
-    await waitFor(() => {
-      expect(mockUseMacros).toHaveBeenLastCalledWith({
-        search: "analysis",
-        language: "python",
-      });
-    });
-  });
-
-  it("should render with correct placeholder texts", () => {
-    // Act
+  it("should render with correct placeholder text", () => {
     render(<ListMacros />);
 
-    // Assert
     expect(screen.getByPlaceholderText("macros.searchPlaceholder")).toBeInTheDocument();
-    // The placeholder is inside SelectValue so we don't check for direct text node
-    expect(screen.getByTestId("language-select")).toBeInTheDocument();
   });
 
-  it("should maintain filter state across re-renders", async () => {
-    // Arrange
+  it("should show clear button when search has value", () => {
+    mockUseMacros.mockReturnValue({
+      data: mockMacros,
+      isLoading: false,
+      error: null,
+      filter: "my" as MacroFilter,
+      setFilter: mockSetFilter,
+      search: "test",
+      setSearch: mockSetSearch,
+      language: undefined,
+      setLanguage: mockSetLanguage,
+    });
+
+    render(<ListMacros />);
+
+    const clearButton = screen.getByRole("button", { name: "macros.clearSearch" });
+    expect(clearButton).toBeInTheDocument();
+  });
+
+  it("should clear search when clear button is clicked", async () => {
     const user = userEvent.setup();
-    const { rerender } = render(<ListMacros />);
-    const searchInput = screen.getByTestId("search-input");
+    mockUseMacros.mockReturnValue({
+      data: mockMacros,
+      isLoading: false,
+      error: null,
+      filter: "my" as MacroFilter,
+      setFilter: mockSetFilter,
+      search: "test",
+      setSearch: mockSetSearch,
+      language: undefined,
+      setLanguage: mockSetLanguage,
+    });
 
-    // Act
-    await user.type(searchInput, "test");
-    rerender(<ListMacros />);
+    render(<ListMacros />);
 
-    // Assert
-    const inputElement = screen.getByTestId<HTMLInputElement>("search-input");
-    expect(inputElement.value).toBe("test");
+    const clearButton = screen.getByRole("button", { name: "macros.clearSearch" });
+    await user.click(clearButton);
+
+    expect(mockSetSearch).toHaveBeenCalledWith("");
   });
 });

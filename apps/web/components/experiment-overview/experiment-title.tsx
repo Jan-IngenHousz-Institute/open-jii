@@ -1,14 +1,14 @@
 "use client";
 
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
-import { Check, Eye, EyeOff, X } from "lucide-react";
-import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
-import { Badge, Button, CardTitle, Input } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
-import { cva } from "@repo/ui/lib/utils";
+
+import { InlineEditableTitle } from "../shared/inline-editable-title";
 
 interface ExperimentTitleProps {
   experimentId: string;
@@ -28,46 +28,13 @@ export function ExperimentTitle({
   isArchived = false,
 }: ExperimentTitleProps) {
   const { t } = useTranslation("experiments");
-
-  // Title editing state
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
 
-  const titleVariants = cva("text-2xl transition-all duration-300", {
-    variants: {
-      editable: {
-        true: "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      editable: false,
-    },
-  });
-
-  const handleTitleClick = () => {
-    if (hasAccess && !isArchived) {
-      setEditedTitle(name);
-      setIsEditingTitle(true);
-    }
-  };
-
-  const handleTitleCancel = () => {
-    setIsEditingTitle(false);
-    setEditedTitle("");
-  };
-
-  const handleTitleSave = async () => {
-    if (!editedTitle.trim() || editedTitle === name) {
-      setIsEditingTitle(false);
-      return;
-    }
-
+  const handleSave = async (newName: string) => {
     await updateExperiment(
       {
         params: { id: experimentId },
-        body: { name: editedTitle },
+        body: { name: newName },
       },
       {
         onSuccess: () => {
@@ -76,19 +43,8 @@ export function ExperimentTitle({
         onError: (err) => {
           toast({ description: parseApiError(err)?.message, variant: "destructive" });
         },
-        onSettled: () => {
-          setIsEditingTitle(false);
-        },
       },
     );
-  };
-
-  const handleTitleBlur = (e: React.FocusEvent) => {
-    const next = e.relatedTarget as HTMLElement | null;
-
-    if (next?.dataset.role === "edit-action") return;
-
-    handleTitleCancel();
   };
 
   const getStatusBadge = (status: string) => {
@@ -107,56 +63,27 @@ export function ExperimentTitle({
   };
 
   return (
-    <div className="flex items-center justify-between">
-      {isEditingTitle ? (
-        <div className="flex items-center gap-2">
-          <Input
-            value={editedTitle}
-            onChange={(e) => setEditedTitle(e.target.value)}
-            className="text-2xl font-semibold"
-            disabled={isUpdating}
-            autoFocus
-            onBlur={handleTitleBlur}
-          />
-          <Button
-            variant="secondary"
-            onClick={handleTitleCancel}
-            disabled={isUpdating}
-            data-role="edit-action"
-            aria-label="Cancel"
+    <InlineEditableTitle
+      name={name}
+      hasAccess={hasAccess && !isArchived}
+      onSave={handleSave}
+      isPending={isUpdating}
+      badges={
+        <>
+          {getStatusBadge(status)}
+          <Badge
+            variant="outline"
+            className={`ml-2 flex items-center gap-1 capitalize ${visibility === "private" ? "text-muted-foreground" : ""}`}
           >
-            <X className="h-6 w-6" />
-          </Button>
-          <Button
-            onClick={handleTitleSave}
-            disabled={isUpdating}
-            data-role="edit-action"
-            aria-label="Save"
-          >
-            <Check className="h-6 w-6" />
-          </Button>
-        </div>
-      ) : (
-        <CardTitle
-          className={titleVariants({
-            editable: hasAccess && !isArchived,
-          })}
-          onClick={handleTitleClick}
-        >
-          {name}
-        </CardTitle>
-      )}
-
-      <div className="flex items-center gap-2">
-        {getStatusBadge(status)}
-        <Badge
-          variant="outline"
-          className={`ml-2 flex items-center gap-1 capitalize ${visibility === "private" ? "text-muted-foreground" : ""}`}
-        >
-          {visibility === "public" ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-          {visibility}
-        </Badge>
-      </div>
-    </div>
+            {visibility === "public" ? (
+              <Eye className="h-3 w-3" />
+            ) : (
+              <EyeOff className="h-3 w-3" />
+            )}
+            {visibility}
+          </Badge>
+        </>
+      }
+    />
   );
 }

@@ -19,6 +19,8 @@ import {
 export interface MacroFilter {
   search?: string;
   language?: "python" | "r" | "javascript";
+  filter?: "my";
+  userId?: string;
 }
 
 @Injectable()
@@ -68,6 +70,10 @@ export class MacroRepository {
 
       if (filter?.language) {
         conditions.push(eq(macros.language, filter.language));
+      }
+
+      if (filter?.filter === "my" && filter?.userId) {
+        conditions.push(eq(macros.createdBy, filter.userId));
       }
 
       // Apply all conditions with AND logic if there are any

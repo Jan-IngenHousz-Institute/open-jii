@@ -1,11 +1,10 @@
-import { formatDate } from "@/util/date";
-import { Calendar, ChevronRight, User } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import React from "react";
 
 import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Badge, Skeleton } from "@repo/ui/components";
+import { Badge, RichTextRenderer, Skeleton } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
 
 const cardVariants = cva(
@@ -56,6 +55,7 @@ const getLanguageColor = (language: string) => {
 
 export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProps) {
   const { t } = useTranslation(["macro", "common"]);
+  const locale = useLocale();
 
   if (isLoading) {
     return (
@@ -68,57 +68,50 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
   }
 
   if (!macros || macros.length === 0) {
-    return <span>{t("macros.noMacros")}</span>;
+    return (
+      <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
+        {t("macros.noMacros")}
+      </div>
+    );
   }
 
   return (
-    <>
-      {/* Macros Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {macros.map((macro) => {
-          const isPreferred = macro.sortOrder !== null;
-          return (
-            <Link key={macro.id} href={`/platform/macros/${macro.id}`}>
-              <div className={cardVariants({ featured: isPreferred })}>
-                <div className="mb-auto">
-                  <div className="mb-2 flex items-start gap-2">
-                    <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
-                      {macro.name}
-                    </h3>
-                    {isPreferred && (
-                      <div className="shrink-0">
-                        <Badge className={"bg-secondary/30 text-primary"}>
-                          {t("common.preferred")}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    className={`text-muted-dark mb-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${getLanguageColor(
-                      macro.language,
-                    )}`}
-                  >
-                    {getLanguageDisplay(macro.language)}
-                  </span>
-                  <div className="mt-2 space-y-2 text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      <span>{macro.createdByName ?? t("common.unknown")}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {t("common.updated")} {formatDate(macro.updatedAt)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {macros.map((macro) => {
+        const isPreferred = macro.sortOrder !== null;
+        return (
+          <Link key={macro.id} href={`/${locale}/platform/macros/${macro.id}`}>
+            <div className={cardVariants({ featured: isPreferred })}>
+              <div className="inline-flex gap-1">
+                <Badge className={getLanguageColor(macro.language)}>
+                  {getLanguageDisplay(macro.language)}
+                </Badge>
+                {isPreferred && (
+                  <Badge className="bg-secondary/30 text-primary">
+                    {t("common.preferred")}
+                  </Badge>
+                )}
               </div>
-            </Link>
-          );
-        })}
-      </div>
-    </>
+              <div className="mb-auto">
+                <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+                  {macro.name}
+                </h3>
+                <div className="overflow-hidden text-sm text-gray-500">
+                  <RichTextRenderer
+                    content={macro.description ?? " "}
+                    truncate
+                    maxLines={2}
+                  />
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-gray-400">
+                {t("macros.lastUpdate")}: {new Date(macro.updatedAt).toLocaleDateString()}
+              </p>
+              <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+            </div>
+          </Link>
+        );
+      })}
+    </div>
   );
 }
