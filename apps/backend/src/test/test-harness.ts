@@ -25,7 +25,6 @@ import {
   organizations,
   flows,
   macros,
-  eq,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
