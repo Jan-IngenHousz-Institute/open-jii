@@ -478,7 +478,7 @@ for row in successful.select("experiment_id", "transfer_id").collect():
         continue
 
     try:
-        enriched.filter(F.col("experiment_id") == experiment_id).write.mode("error").parquet(output_path)
+        enriched.filter(F.col("experiment_id") == experiment_id).write.mode("overwrite").parquet(output_path)
         written_experiments.add(experiment_id)
         log(f"Wrote import data to {output_path}")
         spark.sql(f"""
