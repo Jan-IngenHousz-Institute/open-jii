@@ -414,6 +414,32 @@ export class TestHarness {
   }
 
   /**
+   * Helper to create a macro for testing
+   */
+  public async createMacro(data: {
+    name: string;
+    description?: string;
+    language?: "python" | "r" | "javascript";
+    code?: string;
+    createdBy: string;
+  }) {
+    const macroId = crypto.randomUUID();
+    const [macro] = await this.database
+      .insert(macros)
+      .values({
+        id: macroId,
+        name: data.name,
+        filename: `macro_${macroId.replace(/-/g, "").substring(0, 16)}`,
+        description: data.description ?? "Test macro description",
+        language: data.language ?? "python",
+        code: data.code ?? btoa("print('hello')"),
+        createdBy: data.createdBy,
+      })
+      .returning();
+    return macro;
+  }
+
+  /**
    * Helper to associate a protocol with an experiment
    */
   public async addExperimentProtocol(experimentId: string, protocolId: string, order = 0) {

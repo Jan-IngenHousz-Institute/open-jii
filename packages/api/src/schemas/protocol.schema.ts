@@ -57,6 +57,32 @@ export const zProtocolErrorResponse = z.object({
   statusCode: z.number(),
 });
 
+// Protocol-Macro compatibility schemas
+export const zCompatibleMacroSummary = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  filename: z.string(),
+  language: z.enum(["python", "r", "javascript"]),
+  createdBy: z.string().uuid(),
+});
+
+export const zProtocolMacroEntry = z.object({
+  protocolId: z.string().uuid(),
+  macro: zCompatibleMacroSummary,
+  addedAt: z.string().datetime(),
+});
+
+export const zProtocolMacroList = z.array(zProtocolMacroEntry);
+
+export const zAddCompatibleMacrosBody = z.object({
+  macroIds: z.array(z.string().uuid()).min(1),
+});
+
+export const zProtocolMacroPathParams = z.object({
+  id: z.string().uuid(),
+  macroId: z.string().uuid(),
+});
+
 // Infer types from Zod schemas
 export type SensorFamily = z.infer<typeof zSensorFamily>;
 export type Protocol = z.infer<typeof zProtocol>;
@@ -67,3 +93,7 @@ export type ProtocolIdPathParam = z.infer<typeof zProtocolIdPathParam>;
 export type CreateProtocolRequestBody = z.infer<typeof zCreateProtocolRequestBody>;
 export type UpdateProtocolRequestBody = z.infer<typeof zUpdateProtocolRequestBody>;
 export type ProtocolErrorResponse = z.infer<typeof zProtocolErrorResponse>;
+export type CompatibleMacroSummary = z.infer<typeof zCompatibleMacroSummary>;
+export type ProtocolMacroEntry = z.infer<typeof zProtocolMacroEntry>;
+export type ProtocolMacroList = z.infer<typeof zProtocolMacroList>;
+export type AddCompatibleMacrosBody = z.infer<typeof zAddCompatibleMacrosBody>;
