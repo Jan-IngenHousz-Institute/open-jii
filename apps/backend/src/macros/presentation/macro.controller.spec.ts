@@ -569,6 +569,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       .values({
         name: `ctrl-protocol-${faker.string.alphanumeric(8)}`,
         description: "controller test protocol",
+        code: [{}],
         family: "multispeq",
         createdBy: userId,
       })

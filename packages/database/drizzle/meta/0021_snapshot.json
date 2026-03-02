@@ -1,5 +1,5 @@
 {
-  "id": "2322eb27-ff90-4ee6-99e0-6b8a246fc5a0",
+  "id": "93e18930-3d49-485e-b2c3-2658eb2de5ea",
   "prevId": "53d9ac3f-d653-46d2-942b-7224cbdb4a26",
   "version": "7",
   "dialect": "postgresql",
@@ -585,18 +585,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "pipeline_id": {
-          "name": "pipeline_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "schema_name": {
-          "name": "schema_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1088,73 +1076,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.protocol_macros": {
-      "name": "protocol_macros",
-      "schema": "",
-      "columns": {
-        "protocol_id": {
-          "name": "protocol_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "macro_id": {
-          "name": "macro_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "added_at": {
-          "name": "added_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "protocol_macros_protocol_id_protocols_id_fk": {
-          "name": "protocol_macros_protocol_id_protocols_id_fk",
-          "tableFrom": "protocol_macros",
-          "tableTo": "protocols",
-          "columnsFrom": [
-            "protocol_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "protocol_macros_macro_id_macros_id_fk": {
-          "name": "protocol_macros_macro_id_macros_id_fk",
-          "tableFrom": "protocol_macros",
-          "tableTo": "macros",
-          "columnsFrom": [
-            "macro_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "protocol_macros_protocol_id_macro_id_pk": {
-          "name": "protocol_macros_protocol_id_macro_id_pk",
-          "columns": [
-            "protocol_id",
-            "macro_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
