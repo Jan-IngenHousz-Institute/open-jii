@@ -131,7 +131,8 @@ export enum ErrorCodes {
 
   // ==================== Domain Operations - Experiments Metadata ====================
   // Location: src/experiments/application/use-cases/
-  EXPERIMENT_METADATA_UPSERT_FAILED = "EXPERIMENT_METADATA_UPSERT_FAILED", // Failed to upsert metadata
+  EXPERIMENT_METADATA_CREATE_FAILED = "EXPERIMENT_METADATA_CREATE_FAILED", // Failed to create metadata
+  EXPERIMENT_METADATA_UPDATE_FAILED = "EXPERIMENT_METADATA_UPDATE_FAILED", // Failed to update metadata
   EXPERIMENT_METADATA_DELETE_FAILED = "EXPERIMENT_METADATA_DELETE_FAILED", // Failed to delete metadata
   EXPERIMENT_METADATA_FETCH_FAILED = "EXPERIMENT_METADATA_FETCH_FAILED", // Failed to fetch metadata
 

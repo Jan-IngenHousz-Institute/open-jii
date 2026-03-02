@@ -6,6 +6,7 @@ import { Result, failure, success, AppError } from "../../../common/utils/fp-uti
 import type {
   ExperimentMetadataDto,
   CreateExperimentMetadataDto,
+  UpdateExperimentMetadataDto,
 } from "../models/experiment-metadata.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
@@ -60,10 +61,10 @@ export class ExperimentMetadataRepository {
 
   // --- Repository methods ---
 
-  async findByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto | null>> {
+  async findAllByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto[]>> {
     this.logger.log({
-      msg: "Finding metadata by experiment ID",
-      operation: "findByExperimentId",
+      msg: "Finding all metadata by experiment ID",
+      operation: "findAllByExperimentId",
       experimentId,
     });
 
@@ -75,7 +76,7 @@ export class ExperimentMetadataRepository {
       SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
       FROM ${this.metadataTable}
       WHERE experiment_id = ${this.formatSqlValue(experimentId)}
-      LIMIT 1
+      ORDER BY created_at DESC
     `;
 
     const result = await this.databricksPort.executeSqlQuery(
@@ -87,21 +88,17 @@ export class ExperimentMetadataRepository {
       return failure(AppError.internal(`Failed to find metadata: ${result.error.message}`));
     }
 
-    if (result.value.rows.length === 0) {
-      return success(null);
-    }
-
-    return success(this.mapRowToDto(result.value.columns, result.value.rows[0]));
+    return success(result.value.rows.map((row) => this.mapRowToDto(result.value.columns, row)));
   }
 
-  async upsert(
+  async create(
     experimentId: string,
     dto: CreateExperimentMetadataDto,
     userId: string,
   ): Promise<Result<ExperimentMetadataDto>> {
     this.logger.log({
-      msg: "Upserting metadata",
-      operation: "upsert",
+      msg: "Creating metadata",
+      operation: "create",
       experimentId,
     });
 
@@ -109,44 +106,9 @@ export class ExperimentMetadataRepository {
       return failure(AppError.validationError("Invalid experiment ID or user ID format"));
     }
 
-    // Check if metadata already exists
-    const existing = await this.findByExperimentId(experimentId);
-    if (existing.isFailure()) {
-      return failure(existing.error);
-    }
-
     const now = new Date();
     const isoNow = now.toISOString();
     const metadataJson = JSON.stringify(dto.metadata);
-
-    if (existing.value) {
-      // UPDATE
-      const updateQuery = `
-        UPDATE ${this.metadataTable}
-        SET metadata = PARSE_JSON(${this.formatSqlValue(metadataJson)}),
-            updated_at = ${this.formatSqlValue(isoNow)}
-        WHERE metadata_id = ${this.formatSqlValue(existing.value.metadataId)}
-      `;
-
-      const updateResult = await this.databricksPort.executeSqlQuery(
-        this.databricksPort.CENTRUM_SCHEMA_NAME,
-        updateQuery,
-      );
-
-      if (updateResult.isFailure()) {
-        return failure(
-          AppError.internal(`Failed to update metadata: ${updateResult.error.message}`),
-        );
-      }
-
-      return success({
-        ...existing.value,
-        metadata: dto.metadata,
-        updatedAt: now,
-      });
-    }
-
-    // INSERT
     const metadataId = randomUUID();
 
     const insertQuery = `
@@ -181,10 +143,38 @@ export class ExperimentMetadataRepository {
     });
   }
 
-  async deleteByExperimentId(experimentId: string): Promise<Result<boolean>> {
+  async deleteByMetadataId(metadataId: string): Promise<Result<boolean>> {
     this.logger.log({
-      msg: "Deleting metadata by experiment ID",
-      operation: "deleteByExperimentId",
+      msg: "Deleting metadata by metadata ID",
+      operation: "deleteByMetadataId",
+      metadataId,
+    });
+
+    if (!this.validate.uuid(metadataId).success) {
+      return failure(AppError.validationError("Invalid metadata ID format"));
+    }
+
+    const query = `
+      DELETE FROM ${this.metadataTable}
+      WHERE metadata_id = ${this.formatSqlValue(metadataId)}
+    `;
+
+    const result = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      query,
+    );
+
+    if (result.isFailure()) {
+      return failure(AppError.internal(`Failed to delete metadata: ${result.error.message}`));
+    }
+
+    return success(true);
+  }
+
+  async deleteAllByExperimentId(experimentId: string): Promise<Result<boolean>> {
+    this.logger.log({
+      msg: "Deleting all metadata by experiment ID",
+      operation: "deleteAllByExperimentId",
       experimentId,
     });
 
@@ -209,6 +199,66 @@ export class ExperimentMetadataRepository {
     return success(true);
   }
 
+  async update(
+    metadataId: string,
+    dto: UpdateExperimentMetadataDto,
+    _userId: string,
+  ): Promise<Result<ExperimentMetadataDto>> {
+    this.logger.log({
+      msg: "Updating metadata",
+      operation: "update",
+      metadataId,
+    });
+
+    if (!this.validate.uuid(metadataId).success) {
+      return failure(AppError.validationError("Invalid metadata ID format"));
+    }
+
+    const now = new Date();
+    const isoNow = now.toISOString();
+    const metadataJson = JSON.stringify(dto.metadata);
+
+    const updateQuery = `
+      UPDATE ${this.metadataTable}
+      SET metadata = PARSE_JSON(${this.formatSqlValue(metadataJson)}),
+          updated_at = ${this.formatSqlValue(isoNow)}
+      WHERE metadata_id = ${this.formatSqlValue(metadataId)}
+    `;
+
+    const updateResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      updateQuery,
+    );
+
+    if (updateResult.isFailure()) {
+      return failure(AppError.internal(`Failed to update metadata: ${updateResult.error.message}`));
+    }
+
+    // Fetch the updated row to return the full DTO
+    const selectQuery = `
+      SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
+      FROM ${this.metadataTable}
+      WHERE metadata_id = ${this.formatSqlValue(metadataId)}
+    `;
+
+    const selectResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      selectQuery,
+    );
+
+    if (selectResult.isFailure()) {
+      return failure(
+        AppError.internal(`Failed to fetch updated metadata: ${selectResult.error.message}`),
+      );
+    }
+
+    if (selectResult.value.rows.length === 0) {
+      return failure(AppError.notFound(`Metadata with ID ${metadataId} not found`));
+    }
+
+    return success(this.mapRowToDto(selectResult.value.columns, selectResult.value.rows[0]));
+  }
+
   /** Map a raw Databricks row to ExperimentMetadataDto */
   private mapRowToDto(columns: { name: string }[], row: (string | null)[]): ExperimentMetadataDto {
     const colIndex = (name: string) => columns.findIndex((c) => c.name === name);
@@ -224,12 +274,12 @@ export class ExperimentMetadataRepository {
     }
 
     return {
-      metadataId: row[colIndex("metadata_id")] as string,
-      experimentId: row[colIndex("experiment_id")] as string,
+      metadataId: row[colIndex("metadata_id")] ?? "",
+      experimentId: row[colIndex("experiment_id")] ?? "",
       metadata,
-      createdBy: row[colIndex("created_by")] as string,
-      createdAt: new Date(row[colIndex("created_at")] as string),
-      updatedAt: new Date(row[colIndex("updated_at")] as string),
+      createdBy: row[colIndex("created_by")] ?? "",
+      createdAt: new Date(row[colIndex("created_at")] ?? ""),
+      updatedAt: new Date(row[colIndex("updated_at")] ?? ""),
     };
   }
 }

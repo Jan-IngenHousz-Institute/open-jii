@@ -11,8 +11,8 @@ import { ExperimentMetadataRepository } from "../../../core/repositories/experim
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
-export class UpsertExperimentMetadataUseCase {
-  private readonly logger = new Logger(UpsertExperimentMetadataUseCase.name);
+export class CreateExperimentMetadataUseCase {
+  private readonly logger = new Logger(CreateExperimentMetadataUseCase.name);
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
@@ -25,8 +25,8 @@ export class UpsertExperimentMetadataUseCase {
     userId: string,
   ): Promise<Result<ExperimentMetadataDto>> {
     this.logger.log({
-      msg: "Upserting experiment metadata",
-      operation: "upsertExperimentMetadata",
+      msg: "Creating experiment metadata",
+      operation: "createExperimentMetadata",
       experimentId,
       userId,
     });
@@ -45,9 +45,9 @@ export class UpsertExperimentMetadataUseCase {
       }) => {
         if (!experiment) {
           this.logger.warn({
-            msg: "Experiment not found for metadata upsert",
+            msg: "Experiment not found for metadata creation",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "upsertExperimentMetadata",
+            operation: "createExperimentMetadata",
             experimentId,
             userId,
           });
@@ -56,21 +56,21 @@ export class UpsertExperimentMetadataUseCase {
 
         if (!hasArchiveAccess) {
           this.logger.warn({
-            msg: "Unauthorized metadata upsert attempt",
+            msg: "Unauthorized metadata creation attempt",
             errorCode: ErrorCodes.FORBIDDEN,
-            operation: "upsertExperimentMetadata",
+            operation: "createExperimentMetadata",
             experimentId,
             userId,
           });
           return failure(AppError.forbidden("You do not have write access to this experiment"));
         }
 
-        const result = await this.experimentMetadataRepository.upsert(experimentId, data, userId);
+        const result = await this.experimentMetadataRepository.create(experimentId, data, userId);
 
         if (result.isSuccess()) {
           this.logger.log({
-            msg: "Experiment metadata upserted successfully",
-            operation: "upsertExperimentMetadata",
+            msg: "Experiment metadata created successfully",
+            operation: "createExperimentMetadata",
             experimentId,
             metadataId: result.value.metadataId,
             userId,
@@ -78,9 +78,9 @@ export class UpsertExperimentMetadataUseCase {
           });
         } else {
           this.logger.error({
-            msg: "Failed to upsert experiment metadata",
-            errorCode: ErrorCodes.EXPERIMENT_METADATA_UPSERT_FAILED,
-            operation: "upsertExperimentMetadata",
+            msg: "Failed to create experiment metadata",
+            errorCode: ErrorCodes.EXPERIMENT_METADATA_CREATE_FAILED,
+            operation: "createExperimentMetadata",
             experimentId,
             userId,
             error: result.error.message,

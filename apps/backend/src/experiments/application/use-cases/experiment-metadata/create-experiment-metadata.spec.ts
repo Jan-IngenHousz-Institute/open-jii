@@ -5,12 +5,12 @@ import type {
   CreateExperimentMetadataDto,
 } from "../../../core/models/experiment-metadata.model";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
-import { UpsertExperimentMetadataUseCase } from "./upsert-experiment-metadata";
+import { CreateExperimentMetadataUseCase } from "./create-experiment-metadata";
 
-describe("UpsertExperimentMetadataUseCase", () => {
+describe("CreateExperimentMetadataUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
-  let useCase: UpsertExperimentMetadataUseCase;
+  let useCase: CreateExperimentMetadataUseCase;
   let metadataRepository: ExperimentMetadataRepository;
 
   beforeAll(async () => {
@@ -20,7 +20,7 @@ describe("UpsertExperimentMetadataUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-    useCase = testApp.module.get(UpsertExperimentMetadataUseCase);
+    useCase = testApp.module.get(CreateExperimentMetadataUseCase);
     metadataRepository = testApp.module.get(ExperimentMetadataRepository);
     vi.restoreAllMocks();
   });
@@ -37,9 +37,9 @@ describe("UpsertExperimentMetadataUseCase", () => {
     metadata: { location: "GH 8.3", sampleCount: 10 },
   };
 
-  it("should upsert experiment metadata successfully", async () => {
+  it("should create experiment metadata successfully", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Metadata Upsert Test",
+      name: "Metadata Create Test",
       userId: testUserId,
     });
 
@@ -52,13 +52,14 @@ describe("UpsertExperimentMetadataUseCase", () => {
       updatedAt: new Date("2025-01-01"),
     };
 
-    vi.spyOn(metadataRepository, "upsert").mockResolvedValue(success(mockResult));
+    vi.spyOn(metadataRepository, "create").mockResolvedValue(success(mockResult));
 
     const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
 
     expect(result.isSuccess()).toBe(true);
     expect(result.value).toEqual(mockResult);
-    expect(metadataRepository.upsert).toHaveBeenCalledWith(
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(metadataRepository.create).toHaveBeenCalledWith(
       experiment.id,
       sampleMetadata,
       testUserId,
@@ -77,7 +78,7 @@ describe("UpsertExperimentMetadataUseCase", () => {
 
   it("should return FORBIDDEN if user does not have archive access", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Forbidden Metadata Upsert Test",
+      name: "Forbidden Metadata Create Test",
       userId: testUserId,
     });
 
@@ -91,13 +92,13 @@ describe("UpsertExperimentMetadataUseCase", () => {
     expect(result.error.message).toBe("You do not have write access to this experiment");
   });
 
-  it("should propagate repository failure on upsert", async () => {
+  it("should propagate repository failure on create", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Metadata Upsert Failure Test",
+      name: "Metadata Create Failure Test",
       userId: testUserId,
     });
 
-    vi.spyOn(metadataRepository, "upsert").mockResolvedValue(
+    vi.spyOn(metadataRepository, "create").mockResolvedValue(
       failure(AppError.internal("Databricks unavailable")),
     );
 
@@ -108,9 +109,9 @@ describe("UpsertExperimentMetadataUseCase", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("should allow members with archive access to upsert metadata", async () => {
+  it("should allow members with archive access to create metadata", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Member Upsert Test",
+      name: "Member Create Test",
       userId: testUserId,
     });
 
@@ -126,7 +127,7 @@ describe("UpsertExperimentMetadataUseCase", () => {
       updatedAt: new Date("2025-01-01"),
     };
 
-    vi.spyOn(metadataRepository, "upsert").mockResolvedValue(success(mockResult));
+    vi.spyOn(metadataRepository, "create").mockResolvedValue(success(mockResult));
 
     const result = await useCase.execute(experiment.id, sampleMetadata, memberId);
 

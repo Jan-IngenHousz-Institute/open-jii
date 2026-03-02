@@ -16,10 +16,7 @@ export class GetExperimentMetadataUseCase {
     private readonly experimentMetadataRepository: ExperimentMetadataRepository,
   ) {}
 
-  async execute(
-    experimentId: string,
-    userId: string,
-  ): Promise<Result<ExperimentMetadataDto | null>> {
+  async execute(experimentId: string, userId: string): Promise<Result<ExperimentMetadataDto[]>> {
     this.logger.log({
       msg: "Fetching experiment metadata",
       operation: "getExperimentMetadata",
@@ -60,7 +57,7 @@ export class GetExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        const result = await this.experimentMetadataRepository.findByExperimentId(experimentId);
+        const result = await this.experimentMetadataRepository.findAllByExperimentId(experimentId);
 
         if (result.isFailure()) {
           this.logger.error({

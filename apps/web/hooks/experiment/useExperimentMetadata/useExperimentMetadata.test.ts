@@ -7,7 +7,7 @@ import { useExperimentMetadata } from "./useExperimentMetadata";
 vi.mock("@/lib/tsr", () => ({
   tsr: {
     experiments: {
-      getExperimentMetadata: {
+      listExperimentMetadata: {
         useQuery: vi.fn(),
       },
     },
@@ -25,11 +25,11 @@ describe("useExperimentMetadata", () => {
 
   it("should call useQuery with correct parameters", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: null },
+      data: { body: [] },
       isLoading: false,
       error: null,
     });
-    mockTsr.experiments.getExperimentMetadata.useQuery = mockUseQuery;
+    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
 
     renderHook(() => useExperimentMetadata(mockExperimentId));
 
@@ -42,21 +42,23 @@ describe("useExperimentMetadata", () => {
   it("should return the query result directly", () => {
     const mockReturnValue = {
       data: {
-        body: {
-          metadataId: "meta-uuid",
-          experimentId: mockExperimentId,
-          metadata: { location: "Lab A" },
-          createdBy: "user-uuid",
-          createdAt: "2025-01-01T00:00:00.000Z",
-          updatedAt: "2025-01-02T00:00:00.000Z",
-        },
+        body: [
+          {
+            metadataId: "meta-uuid",
+            experimentId: mockExperimentId,
+            metadata: { location: "Lab A" },
+            createdBy: "user-uuid",
+            createdAt: "2025-01-01T00:00:00.000Z",
+            updatedAt: "2025-01-02T00:00:00.000Z",
+          },
+        ],
       },
       isLoading: false,
       error: null,
     };
 
     const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.getExperimentMetadata.useQuery = mockUseQuery;
+    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
 
     const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
 
@@ -73,7 +75,7 @@ describe("useExperimentMetadata", () => {
     };
 
     const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.getExperimentMetadata.useQuery = mockUseQuery;
+    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
 
     const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
 
@@ -91,7 +93,7 @@ describe("useExperimentMetadata", () => {
     };
 
     const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.getExperimentMetadata.useQuery = mockUseQuery;
+    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
 
     const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
 
@@ -100,19 +102,19 @@ describe("useExperimentMetadata", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("should handle null metadata response (no metadata exists)", () => {
+  it("should handle empty metadata response (no metadata exists)", () => {
     const mockReturnValue = {
-      data: { body: null },
+      data: { body: [] },
       isLoading: false,
       error: null,
     };
 
     const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.getExperimentMetadata.useQuery = mockUseQuery;
+    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
 
     const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
 
-    expect(result.current.data?.body).toBeNull();
+    expect(result.current.data?.body).toEqual([]);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -120,11 +122,11 @@ describe("useExperimentMetadata", () => {
   it("should pass through experiment ID correctly", () => {
     const differentExperimentId = "another-experiment-id";
     const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: null },
+      data: { body: [] },
       isLoading: false,
       error: null,
     });
-    mockTsr.experiments.getExperimentMetadata.useQuery = mockUseQuery;
+    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
 
     renderHook(() => useExperimentMetadata(differentExperimentId));
 
