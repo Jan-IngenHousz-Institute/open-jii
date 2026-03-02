@@ -155,9 +155,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
             <h5 className="text-destructive mb-2 text-base font-medium">
               {t("macroSettings.dangerZone")}
             </h5>
-            <p className="text-muted-foreground mb-4 text-sm">
-              {t("macroSettings.deleteWarning")}
-            </p>
+            <p className="text-muted-foreground mb-4 text-sm">{t("macroSettings.deleteWarning")}</p>
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="destructive">{t("macroSettings.deleteMacro")}</Button>

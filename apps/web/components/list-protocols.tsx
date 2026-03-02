@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import { X } from "lucide-react";
+import React from "react";
 import { ProtocolOverviewCards } from "~/components/protocol-overview-cards";
 import { useProtocols } from "~/hooks/protocol/useProtocols/useProtocols";
 

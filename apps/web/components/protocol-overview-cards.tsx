@@ -48,40 +48,34 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {protocols.map((protocol) => {
-          const isPreferred = protocol.sortOrder !== null;
-          return (
-            <Link key={protocol.id} href={`/${locale}/platform/protocols/${protocol.id}`}>
-              <div className={cardVariants({ featured: isPreferred })}>
-                <div className="inline-flex gap-1">
-                  <Badge variant="outline" className="capitalize">
-                    {protocol.family}
-                  </Badge>
-                  {isPreferred && (
-                    <Badge className="bg-secondary/30 text-primary">
-                      {t("common.preferred")}
-                    </Badge>
-                  )}
-                </div>
-                <div className="mb-auto">
-                  <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-                    {protocol.name}
-                  </h3>
-                  <div className="overflow-hidden text-sm text-gray-500">
-                    <RichTextRenderer
-                      content={protocol.description ?? " "}
-                      truncate
-                      maxLines={2}
-                    />
-                  </div>
-                </div>
-                <p className="mt-4 text-xs text-gray-400">
-                  {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
-                </p>
-                <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+        const isPreferred = protocol.sortOrder !== null;
+        return (
+          <Link key={protocol.id} href={`/${locale}/platform/protocols/${protocol.id}`}>
+            <div className={cardVariants({ featured: isPreferred })}>
+              <div className="inline-flex gap-1">
+                <Badge variant="outline" className="capitalize">
+                  {protocol.family}
+                </Badge>
+                {isPreferred && (
+                  <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+                )}
               </div>
-            </Link>
-          );
-        })}
+              <div className="mb-auto">
+                <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+                  {protocol.name}
+                </h3>
+                <div className="overflow-hidden text-sm text-gray-500">
+                  <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-gray-400">
+                {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
+              </p>
+              <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

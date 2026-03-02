@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import React from "react"; // Required: auto JSX transform not active in vitest
+import React from "react";
+// Required: auto JSX transform not active in vitest
 import { describe, it, expect, vi } from "vitest";
 
 import { MacroOverviewCards } from "./macro-overview-cards";
@@ -168,5 +169,4 @@ describe("<MacroOverviewCards />", () => {
     expect(links[1]).toHaveAttribute("href", "/en/platform/macros/macro2");
     expect(links[2]).toHaveAttribute("href", "/en/platform/macros/macro3");
   });
-
 });
