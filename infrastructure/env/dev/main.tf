@@ -612,6 +612,124 @@ module "data_legacy_volume" {
   depends_on = [module.databricks_catalog]
 }
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Centrum schema tables
+# ──────────────────────────────────────────────────────────────────────────────
+
+module "openjii_project_transfer_requests_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "openjii_project_transfer_requests"
+  table_type   = "MANAGED"
+  comment      = "Delta table for user requests with status tracking"
+
+  columns = [
+    { name = "request_id", type = "STRING", comment = "UUID" },
+    { name = "user_id", type = "STRING", comment = "openJII user ID" },
+    { name = "user_email", type = "STRING", comment = "Derived from authenticated user; user-input" },
+    { name = "source_platform", type = "STRING", comment = "e.g. \"photosynq\"" },
+    { name = "project_id_old", type = "STRING" },
+    { name = "project_url_old", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "requested_at", type = "TIMESTAMP" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "protocol_id", type = "STRING" },
+    { name = "macro_id", type = "STRING" },
+    { name = "macro_filename", type = "STRING" },
+    { name = "macro_name", type = "STRING" },
+    { name = "flow_id", type = "STRING" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "experiment_annotations_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_annotations"
+  table_type   = "MANAGED"
+  comment      = "Stores annotations related to various experiments conducted by users"
+
+  columns = [
+    { name = "id", type = "STRING" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "user_id", type = "STRING" },
+    { name = "user_name", type = "STRING" },
+    { name = "table_name", type = "STRING" },
+    { name = "row_id", type = "STRING" },
+    { name = "type", type = "STRING" },
+    { name = "content_text", type = "STRING" },
+    { name = "flag_type", type = "STRING" },
+    { name = "created_at", type = "TIMESTAMP" },
+    { name = "updated_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "experiment_export_metadata_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_export_metadata"
+  table_type   = "MANAGED"
+  comment      = "Metadata related to experiment data exports"
+
+  columns = [
+    { name = "export_id", type = "STRING" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "table_name", type = "STRING" },
+    { name = "format", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "file_path", type = "STRING" },
+    { name = "row_count", type = "INT" },
+    { name = "file_size", type = "INT" },
+    { name = "created_by", type = "STRING" },
+    { name = "created_at", type = "TIMESTAMP" },
+    { name = "completed_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
 module "data_export_job" {
   source = "../../modules/databricks/job"
 

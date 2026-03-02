@@ -105,7 +105,7 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(fileName);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/${experiment.schemaName}/data-imports/${sourceType}/${directoryName}/${fileName}`,
+        filePath: `/Volumes/main/${databricksPort.CENTRUM_SCHEMA_NAME}/data-imports/${sourceType}/${directoryName}/${fileName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
@@ -136,7 +136,7 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(fileName);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/${experiment.schemaName}/data-imports/${sourceType}/${directoryName}/${fileName}`,
+        filePath: `/Volumes/main/${databricksPort.CENTRUM_SCHEMA_NAME}/data-imports/${sourceType}/${directoryName}/${fileName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
@@ -159,7 +159,7 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(originalFileName);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/${experiment.schemaName}/data-imports/${sourceType}/${directoryName}/${expectedTrimmedName}`,
+        filePath: `/Volumes/main/${databricksPort.CENTRUM_SCHEMA_NAME}/data-imports/${sourceType}/${directoryName}/${expectedTrimmedName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
@@ -209,7 +209,7 @@ describe("UploadAmbyteDataUseCase", () => {
         const file = createMockFile(testCase.fileName);
 
         const mockUploadResponse = {
-          filePath: `/Volumes/main/${experiment.schemaName}/data-imports/${sourceType}/${directoryName}/${testCase.expectedPath}`,
+          filePath: `/Volumes/main/${databricksPort.CENTRUM_SCHEMA_NAME}/data-imports/${sourceType}/${directoryName}/${testCase.expectedPath}`,
         };
 
         vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
@@ -255,7 +255,7 @@ describe("UploadAmbyteDataUseCase", () => {
         const file = createMockFile(fileName);
 
         const mockUploadResponse = {
-          filePath: `/Volumes/main/${experiment.schemaName}/data-imports/${sourceType}/${directoryName}/unknown_ambyte/${fileName}`,
+          filePath: `/Volumes/main/${databricksPort.CENTRUM_SCHEMA_NAME}/data-imports/${sourceType}/${directoryName}/unknown_ambyte/${fileName}`,
         };
 
         vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
@@ -371,7 +371,7 @@ describe("UploadAmbyteDataUseCase", () => {
       const file = createMockFile(fileName, largeContent);
 
       const mockUploadResponse = {
-        filePath: `/Volumes/main/${experiment.schemaName}/data-imports/${sourceType}/${directoryName}/${fileName}`,
+        filePath: `/Volumes/main/${databricksPort.CENTRUM_SCHEMA_NAME}/data-imports/${sourceType}/${directoryName}/${fileName}`,
       };
 
       vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
