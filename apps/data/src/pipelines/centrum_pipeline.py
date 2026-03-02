@@ -16,6 +16,7 @@ from datetime import datetime
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
+from enrich.experiment_metadata import add_metadata_column
 from openjii import decompress_sample
 
 # COMMAND ----------
@@ -96,6 +97,8 @@ ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
 ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
 RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
+ANNOTATIONS_SOURCE_TABLE = "experiment_annotations_source"
+METADATA_SOURCE_TABLE = "experiment_metadata_source"
 
 # Legacy macro identifiers that need mapping to actual macro UUIDs.
 # Some data was sent prior to the implementation of proper macro ID handling, so we maintain a mapping of legacy identifiers to actual UUIDs for correct processing.
@@ -456,6 +459,7 @@ def experiment_status():
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported"
     }
@@ -623,6 +627,7 @@ def experiment_device_data():
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported"
     }
@@ -860,7 +865,9 @@ def experiment_table_metadata():
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
     }
 )
 def experiment_contributors():
@@ -878,10 +885,43 @@ def experiment_contributors():
 
 # COMMAND ----------
 
+# DBTITLE 1,Gold Layer - Annotations Source (DLT mirror)
+@dlt.table(
+    name=ANNOTATIONS_SOURCE_TABLE,
+    comment="Gold layer: DLT-tracked mirror of the experiment_annotations table for incremental refresh support.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+    }
+)
+def experiment_annotations_source():
+    """DLT mirror of the backend-managed experiment_annotations table."""
+    return spark.read.table(f"{CATALOG_NAME}.centrum.experiment_annotations")
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Metadata Source (DLT mirror)
+@dlt.table(
+    name=METADATA_SOURCE_TABLE,
+    comment="Gold layer: DLT-tracked mirror of the experiment_metadata table for incremental refresh support.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.feature.variantType-preview": "supported",
+    }
+)
+def experiment_metadata_source():
+    """DLT mirror of the backend-managed experiment_metadata table."""
+    return spark.read.table(f"{CATALOG_NAME}.centrum.experiment_metadata")
+
+# COMMAND ----------
+
 # DBTITLE 1,Gold Layer - Enriched Experiment Raw Data
 @dlt.table(
     name=ENRICHED_RAW_DATA_VIEW,
-    comment="Enriched materialized view: Raw data with questions, user struct, and annotations. Incrementally refreshed.",
+    comment="Enriched materialized view: Raw data with questions, user struct, and annotations. Qualified for incremental refresh.",
     table_properties={
         "quality": "gold",
         "delta.enableRowTracking": "true",
@@ -894,9 +934,11 @@ def experiment_contributors():
     }
 )
 def enriched_experiment_raw_data():
-    """Enriched raw data with user profiles and annotations."""
+    """Enriched raw data with user profiles, annotations, and user metadata."""
     raw_data = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
+    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
     
     enriched = (
         raw_data
@@ -922,20 +964,16 @@ def enriched_experiment_raw_data():
         )
     )
     
-    return add_annotation_column(
-        enriched,
-        table_name="experiment_raw_data",
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
+    enriched = add_annotation_column(enriched, annotations_source)
+    
+    return add_metadata_column(enriched, metadata_source)
 
 # COMMAND ----------
 
 # DBTITLE 1,Gold Layer - Enriched Raw Ambyte Data
 @dlt.table(
     name=ENRICHED_RAW_AMBYTE_DATA_VIEW,
-    comment="Enriched materialized view: Raw ambyte data with annotations. Incrementally refreshed.",
+    comment="Enriched materialized view: Raw ambyte data with annotations. Qualified for incremental refresh.",
     table_properties={
         "quality": "gold",
         "delta.enableRowTracking": "true",
@@ -949,23 +987,20 @@ def enriched_experiment_raw_data():
 def enriched_raw_ambyte_data():
     """Enriched ambyte data with annotations."""
     raw_ambyte = dlt.read(RAW_AMBYTE_TABLE).drop("_rescued_data")
+    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
     
-    return add_annotation_column(
-        raw_ambyte,
-        table_name="raw_ambyte_data",
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
+    return add_annotation_column(raw_ambyte, annotations_source)
 
 # COMMAND ----------
 
 # DBTITLE 1,Gold Layer - Enriched Experiment Macro Data
 @dlt.table(
     name=ENRICHED_MACRO_DATA_VIEW,
-    comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Incrementally refreshed.",
+    comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Qualified for incremental refresh.",
     table_properties={
         "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
         "delta.enableDeletionVectors": "true",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
@@ -974,9 +1009,11 @@ def enriched_raw_ambyte_data():
     }
 )
 def enriched_experiment_macro_data():
-    """Enriched macro data with user profiles and annotations."""
+    """Enriched macro data with user profiles, annotations, and user metadata."""
     macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
+    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
     
     enriched = (
         macro_data
@@ -1006,13 +1043,9 @@ def enriched_experiment_macro_data():
         )
     )
     
-    return add_annotation_column(
-        enriched,
-        table_name="experiment_macro_data",  # Generic macro data table name
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
+    enriched = add_annotation_column(enriched, annotations_source)
+    
+    return add_metadata_column(enriched, metadata_source)
 
 # COMMAND ----------
 
@@ -1082,7 +1115,9 @@ def raw_imported_data():
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
     },
     partition_cols=["experiment_id"]
 )

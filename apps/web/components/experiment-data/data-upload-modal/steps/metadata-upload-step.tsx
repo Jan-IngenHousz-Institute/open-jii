@@ -4,6 +4,7 @@ import { MetadataProvider, MetadataTable, useMetadata } from "@/components/metad
 import type { MetadataColumn, MetadataRow } from "@/components/metadata-table";
 import { parseClipboardText } from "@/components/metadata-table/utils/parse-metadata-import";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
+import { useExperimentMetadataUpsert } from "@/hooks/experiment/useExperimentMetadataUpsert/useExperimentMetadataUpsert";
 import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Trash2, Upload } from "lucide-react";
 import * as React from "react";
 import { useRef, useState, useEffect } from "react";
@@ -31,22 +32,26 @@ export function MetadataUploadStep({
   onBack,
   onUploadSuccess,
 }: MetadataUploadStepProps) {
-  const handleSave = (
+  const upsertMutation = useExperimentMetadataUpsert();
+
+  const handleSave = async (
     columns: MetadataColumn[],
     rows: MetadataRow[],
     identifierColumnId: string | null,
     experimentQuestionId: string | null,
   ): Promise<void> => {
-    // TODO: Implement API call to save metadata
-    console.log("Saving metadata:", {
-      experimentId,
-      columns,
-      rows,
-      identifierColumnId,
-      experimentQuestionId,
+    await upsertMutation.mutateAsync({
+      params: { id: experimentId },
+      body: {
+        metadata: {
+          columns,
+          rows,
+          identifierColumnId,
+          experimentQuestionId,
+        },
+      },
     });
     onUploadSuccess();
-    return Promise.resolve();
   };
 
   return (

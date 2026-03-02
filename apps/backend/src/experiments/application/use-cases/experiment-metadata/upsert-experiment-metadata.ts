@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import type {
   ExperimentMetadataDto,
@@ -24,26 +25,12 @@ export class UpsertExperimentMetadataUseCase {
     userId: string,
   ): Promise<Result<ExperimentMetadataDto>> {
     this.logger.log({
-      msg: "Upserting metadata for experiment",
+      msg: "Upserting experiment metadata",
       operation: "upsertExperimentMetadata",
       experimentId,
       userId,
-      columnCount: data.columns.length,
-      rowCount: data.rows.length,
     });
 
-    // Validate input
-    if (data.columns.length === 0) {
-      this.logger.warn({
-        msg: "No columns provided for metadata",
-        operation: "upsertExperimentMetadata",
-        experimentId,
-        userId,
-      });
-      return failure(AppError.badRequest("At least one column is required"));
-    }
-
-    // Check if experiment exists and if user has write access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
@@ -58,7 +45,8 @@ export class UpsertExperimentMetadataUseCase {
       }) => {
         if (!experiment) {
           this.logger.warn({
-            msg: "Attempt to upsert metadata for non-existent experiment",
+            msg: "Experiment not found for metadata upsert",
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "upsertExperimentMetadata",
             experimentId,
             userId,
@@ -68,7 +56,8 @@ export class UpsertExperimentMetadataUseCase {
 
         if (!hasArchiveAccess) {
           this.logger.warn({
-            msg: "User does not have write access to experiment",
+            msg: "Unauthorized metadata upsert attempt",
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "upsertExperimentMetadata",
             experimentId,
             userId,
@@ -76,88 +65,29 @@ export class UpsertExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have write access to this experiment"));
         }
 
-        // Check if metadata already exists
-        const existingResult =
-          await this.experimentMetadataRepository.findByExperimentId(experimentId);
+        const result = await this.experimentMetadataRepository.upsert(experimentId, data, userId);
 
-        if (existingResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to check existing metadata",
-            operation: "upsertExperimentMetadata",
-            experimentId,
-            userId,
-            error: existingResult.error.message,
-          });
-          return failure(AppError.internal("Failed to check existing metadata"));
-        }
-
-        const existing = existingResult.value;
-
-        if (existing) {
-          // Update existing metadata
-          this.logger.debug({
-            msg: "Updating existing metadata",
-            operation: "upsertExperimentMetadata",
-            experimentId,
-            metadataId: existing.id,
-          });
-
-          const updateResult = await this.experimentMetadataRepository.update(existing.id, data);
-
-          if (updateResult.isFailure() || !updateResult.value) {
-            this.logger.error({
-              msg: "Failed to update metadata",
-              operation: "upsertExperimentMetadata",
-              experimentId,
-              userId,
-            });
-            return failure(AppError.internal("Failed to update metadata"));
-          }
-
+        if (result.isSuccess()) {
           this.logger.log({
-            msg: "Successfully updated metadata for experiment",
+            msg: "Experiment metadata upserted successfully",
             operation: "upsertExperimentMetadata",
             experimentId,
-            metadataId: updateResult.value.id,
+            metadataId: result.value.metadataId,
+            userId,
             status: "success",
           });
-
-          return updateResult as Result<ExperimentMetadataDto>;
-        }
-
-        // Create new metadata
-        this.logger.debug({
-          msg: "Creating new metadata",
-          operation: "upsertExperimentMetadata",
-          experimentId,
-        });
-
-        const createResult = await this.experimentMetadataRepository.create(
-          experimentId,
-          data,
-          userId,
-        );
-
-        if (createResult.isFailure()) {
+        } else {
           this.logger.error({
-            msg: "Failed to create metadata",
+            msg: "Failed to upsert experiment metadata",
+            errorCode: ErrorCodes.EXPERIMENT_METADATA_UPSERT_FAILED,
             operation: "upsertExperimentMetadata",
             experimentId,
             userId,
-            error: createResult.error.message,
+            error: result.error.message,
           });
-          return failure(AppError.internal("Failed to create metadata"));
         }
 
-        this.logger.log({
-          msg: "Successfully created metadata for experiment",
-          operation: "upsertExperimentMetadata",
-          experimentId,
-          metadataId: createResult.value.id,
-          status: "success",
-        });
-
-        return createResult;
+        return result;
       },
     );
   }

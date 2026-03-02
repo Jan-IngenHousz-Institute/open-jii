@@ -58,6 +58,10 @@ vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
   useExperimentFlow: () => ({ data: null, isLoading: false, error: null }),
 }));
 
+vi.mock("@/hooks/experiment/useExperimentMetadataUpsert/useExperimentMetadataUpsert", () => ({
+  useExperimentMetadataUpsert: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 // Mock translation – return the key so we can assert on it
 vi.mock("@repo/i18n/client", () => ({
   useTranslation: () => ({

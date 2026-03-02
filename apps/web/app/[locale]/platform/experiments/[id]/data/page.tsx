@@ -11,8 +11,8 @@ import type { UploadStep } from "~/components/experiment-data/data-upload-modal/
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { env } from "~/env";
 import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useExperimentMetadata } from "~/hooks/experiment/useExperimentMetadata/useExperimentMetadata";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
-import { tsr } from "~/lib/tsr";
 
 import { useTranslation } from "@repo/i18n/client";
 import {
@@ -37,11 +37,9 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const [uploadModalStep, setUploadModalStep] = React.useState<UploadStep>("selection");
 
   // Check if metadata already exists for this experiment
-  const { data: metadataResponse } = tsr.experiments.getExperimentMetadata.useQuery({
-    queryData: { params: { id } },
-    queryKey: ["experiment", id, "metadata"],
-  });
-  const hasMetadata = metadataResponse?.body != null && metadataResponse.body.columns.length > 0;
+  const { data: metadataResponse } = useExperimentMetadata(id);
+  const hasMetadata =
+    metadataResponse?.body != null && Object.keys(metadataResponse.body.metadata).length > 0;
 
   const openMetadataUpload = () => {
     setUploadModalStep("metadata-upload");

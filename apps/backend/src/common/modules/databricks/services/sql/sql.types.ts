@@ -1,9 +1,3 @@
-export interface StatementParameter {
-  name: string;
-  value?: string | null;
-  type?: string;
-}
-
 export interface ExecuteStatementRequest {
   statement: string;
   warehouse_id: string;
@@ -14,7 +8,6 @@ export interface ExecuteStatementRequest {
   format: string;
   byte_limit?: number;
   row_limit?: number;
-  parameters?: StatementParameter[];
 }
 
 export interface StatementResponse {
