@@ -142,5 +142,4 @@ describe("ExperimentOverviewCards", () => {
       expect(screen.getByTestId("status-badge")).toHaveTextContent("stale");
     });
   });
-
 });

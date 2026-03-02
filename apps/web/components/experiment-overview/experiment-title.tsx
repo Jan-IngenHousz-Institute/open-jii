@@ -75,11 +75,7 @@ export function ExperimentTitle({
             variant="outline"
             className={`ml-2 flex items-center gap-1 capitalize ${visibility === "private" ? "text-muted-foreground" : ""}`}
           >
-            {visibility === "public" ? (
-              <Eye className="h-3 w-3" />
-            ) : (
-              <EyeOff className="h-3 w-3" />
-            )}
+            {visibility === "public" ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             {visibility}
           </Badge>
         </>

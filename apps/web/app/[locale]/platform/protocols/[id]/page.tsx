@@ -78,7 +78,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
     await updateProtocol(
       {
         params: { id },
-        body: { code: editedCode as Record<string, unknown>[] },
+        body: { code: editedCode },
       },
       {
         onSuccess: () => {
@@ -135,11 +135,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
                     <X className="mr-1 h-4 w-4" />
                     {t("common.cancel")}
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleCodeSave}
-                    disabled={isUpdating || !isCodeValid}
-                  >
+                  <Button size="sm" onClick={handleCodeSave} disabled={isUpdating || !isCodeValid}>
                     <Check className="mr-1 h-4 w-4" />
                     {t("common.save")}
                   </Button>

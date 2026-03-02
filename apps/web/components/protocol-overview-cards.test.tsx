@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import React from "react"; // Required: auto JSX transform not active in vitest
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { ProtocolOverviewCards } from "./protocol-overview-cards";
@@ -167,5 +167,4 @@ describe("<ProtocolOverviewCards />", () => {
     expect(links[1]).toHaveAttribute("href", "/en/platform/protocols/protocol2");
     expect(links[2]).toHaveAttribute("href", "/en/platform/protocols/protocol3");
   });
-
 });
