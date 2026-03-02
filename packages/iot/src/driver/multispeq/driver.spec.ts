@@ -2,7 +2,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ITransportAdapter } from "../../transport/interface";
-import { MULTISPEQ_COMMANDS } from "./commands";
 import { MULTISPEQ_FRAMING } from "./config";
 import { MultispeqDriver } from "./driver";
 
