@@ -2,9 +2,10 @@ import { faker } from "@faker-js/faker";
 
 import { macros } from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
+import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { ListCompatibleMacrosUseCase } from "./list-compatible-macros";
 
 describe("ListCompatibleMacrosUseCase", () => {
@@ -94,5 +95,33 @@ describe("ListCompatibleMacrosUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
+  });
+
+  it("should return INTERNAL_ERROR when protocolRepository.findOne fails", async () => {
+    const protocolRepo = testApp.module.get(ProtocolRepository);
+    vi.spyOn(protocolRepo, "findOne").mockResolvedValueOnce(
+      failure(AppError.internal("db error")),
+    );
+
+    const result = await useCase.execute(faker.string.uuid());
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("should return INTERNAL_ERROR when protocolMacroRepository.listMacros fails", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "List Failure Protocol",
+      createdBy: testUserId,
+    });
+
+    vi.spyOn(protocolMacroRepository, "listMacros").mockResolvedValueOnce(
+      failure(AppError.internal("db error")),
+    );
+
+    const result = await useCase.execute(protocol.id);
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 });

@@ -18,7 +18,7 @@ import {
 } from "@repo/ui/components";
 
 import { useMacros } from "../../hooks/macro/useMacros/useMacros";
-import { useAddCompatibleMacros } from "../../hooks/protocol/useAddCompatibleMacros/useAddCompatibleMacros";
+import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
@@ -34,7 +34,7 @@ export function ProtocolCompatibleMacrosCard({ protocolId }: ProtocolCompatibleM
   const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(protocolId);
   const compatibleMacros = useMemo(() => compatibleData?.body ?? [], [compatibleData]);
 
-  const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacros(protocolId);
+  const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacro(protocolId);
   const { mutateAsync: removeMacro, isPending: isRemoving } = useRemoveCompatibleMacro(protocolId);
 
   // Macro search for the add dropdown

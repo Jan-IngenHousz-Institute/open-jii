@@ -298,4 +298,17 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
 
     expect(useProtocolCompatibleMacros).toHaveBeenCalledWith("", false);
   });
+
+  it("should not call onChange when disabled and macro is added via dropdown", () => {
+    vi.mocked(useProtocolCompatibleMacros).mockReturnValue({
+      data: undefined,
+    } as never);
+
+    render(<AnalysisPanel selectedMacroId="" onChange={defaultOnChange} disabled />);
+
+    expect(lastDropdownProps).not.toBeNull();
+    void lastDropdownProps?.onAddMacro("macro-1");
+
+    expect(defaultOnChange).not.toHaveBeenCalled();
+  });
 });

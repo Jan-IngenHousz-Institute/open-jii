@@ -2,7 +2,7 @@ import { tsr } from "@/lib/tsr";
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-import { useAddCompatibleMacros } from "./useAddCompatibleMacros";
+import { useAddCompatibleMacro } from "./useAddCompatibleMacro";
 
 vi.mock("@/lib/tsr", () => ({
   tsr: {
@@ -17,7 +17,7 @@ vi.mock("@/lib/tsr", () => ({
 
 const mockTsr = vi.mocked(tsr, true);
 
-describe("useAddCompatibleMacros", () => {
+describe("useAddCompatibleMacro", () => {
   const mockProtocolId = "test-protocol-id";
   const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
   let capturedOnSettled: ((...args: unknown[]) => Promise<void>) | undefined;
@@ -39,7 +39,7 @@ describe("useAddCompatibleMacros", () => {
   });
 
   it("should call useMutation with onSettled handler", () => {
-    renderHook(() => useAddCompatibleMacros(mockProtocolId));
+    renderHook(() => useAddCompatibleMacro(mockProtocolId));
 
     expect(mockTsr.protocols.addCompatibleMacros.useMutation.mock.calls).toHaveLength(1);
     const call = mockTsr.protocols.addCompatibleMacros.useMutation.mock.calls[0]?.[0] as {
@@ -49,14 +49,14 @@ describe("useAddCompatibleMacros", () => {
   });
 
   it("should return mutation result", () => {
-    const { result } = renderHook(() => useAddCompatibleMacros(mockProtocolId));
+    const { result } = renderHook(() => useAddCompatibleMacro(mockProtocolId));
 
     expect(result.current).toHaveProperty("mutateAsync");
     expect(result.current).toHaveProperty("isPending");
   });
 
   it("should invalidate correct query key on settled", async () => {
-    renderHook(() => useAddCompatibleMacros(mockProtocolId));
+    renderHook(() => useAddCompatibleMacro(mockProtocolId));
 
     await capturedOnSettled?.();
 
@@ -67,7 +67,7 @@ describe("useAddCompatibleMacros", () => {
 
   it("should invalidate with different protocol IDs", async () => {
     const differentId = "other-protocol-id";
-    renderHook(() => useAddCompatibleMacros(differentId));
+    renderHook(() => useAddCompatibleMacro(differentId));
 
     await capturedOnSettled?.();
 

@@ -5,7 +5,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { useMacros } from "../../../hooks/macro/useMacros/useMacros";
-import { useAddCompatibleMacros } from "../../../hooks/protocol/useAddCompatibleMacros/useAddCompatibleMacros";
+import { useAddCompatibleMacro } from "../../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 // Import mocked hooks for test configuration
 import { useProtocolCompatibleMacros } from "../../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
@@ -90,8 +90,8 @@ vi.mock("../../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatib
   useProtocolCompatibleMacros: vi.fn(),
 }));
 
-vi.mock("../../../hooks/protocol/useAddCompatibleMacros/useAddCompatibleMacros", () => ({
-  useAddCompatibleMacros: vi.fn(),
+vi.mock("../../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro", () => ({
+  useAddCompatibleMacro: vi.fn(),
 }));
 
 vi.mock("../../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro", () => ({
@@ -152,7 +152,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
       isLoading: false,
     } as never);
 
-    vi.mocked(useAddCompatibleMacros).mockReturnValue({
+    vi.mocked(useAddCompatibleMacro).mockReturnValue({
       mutateAsync: mockAddMacro,
       isPending: false,
     } as never);
@@ -265,7 +265,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should pass isAdding state to MacroSearchWithDropdown", () => {
-    vi.mocked(useAddCompatibleMacros).mockReturnValue({
+    vi.mocked(useAddCompatibleMacro).mockReturnValue({
       mutateAsync: mockAddMacro,
       isPending: true,
     } as never);
