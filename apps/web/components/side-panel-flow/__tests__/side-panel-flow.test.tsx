@@ -110,14 +110,17 @@ vi.mock("../analysis-panel", () => ({
     selectedMacroId,
     onChange,
     disabled,
+    upstreamProtocolId,
   }: {
     selectedMacroId: string;
     onChange: (macroId: string) => void;
     disabled?: boolean;
+    upstreamProtocolId?: string;
   }) => (
     <div>
       <span>AnalysisPanel</span>
       <div data-testid="ap-macro">{selectedMacroId}</div>
+      <div data-testid="ap-upstream-protocol">{upstreamProtocolId ?? ""}</div>
       <button type="button" onClick={() => onChange("macro-updated")} disabled={disabled}>
         Apply Analysis Change
       </button>
@@ -440,6 +443,135 @@ describe("<ExperimentSidePanel />", () => {
     // Should not have the info icon
     const infoIcon = container.querySelector("svg.lucide-info");
     expect(infoIcon).toBeFalsy();
+  });
+
+  describe("findUpstreamProtocolId via AnalysisPanel", () => {
+    it("passes upstream protocol ID from a directly connected MEASUREMENT node", () => {
+      const measurementNode: Node = {
+        id: "measure-1",
+        type: "MEASUREMENT",
+        position: { x: 0, y: 0 },
+        data: { protocolId: "proto-upstream-1" },
+      };
+      const analysisNode: Node = {
+        id: "analysis-1",
+        type: "ANALYSIS",
+        position: { x: 100, y: 0 },
+        data: { macroId: "macro-1" },
+      };
+      const edge: Edge = { id: "e1", source: "measure-1", target: "analysis-1" };
+
+      renderPanel({
+        selectedNode: analysisNode,
+        nodeType: "ANALYSIS",
+        nodes: [measurementNode, analysisNode],
+        edges: [edge],
+      });
+
+      expect(screen.getByTestId("ap-upstream-protocol").textContent).toBe("proto-upstream-1");
+    });
+
+    it("walks multiple edges to find upstream MEASUREMENT node", () => {
+      const measurementNode: Node = {
+        id: "m1",
+        type: "MEASUREMENT",
+        position: { x: 0, y: 0 },
+        data: { protocolId: "proto-deep" },
+      };
+      const middleNode: Node = {
+        id: "mid",
+        type: "QUESTION",
+        position: { x: 50, y: 0 },
+        data: {},
+      };
+      const analysisNode: Node = {
+        id: "a1",
+        type: "ANALYSIS",
+        position: { x: 100, y: 0 },
+        data: { macroId: "" },
+      };
+      const edges: Edge[] = [
+        { id: "e1", source: "m1", target: "mid" },
+        { id: "e2", source: "mid", target: "a1" },
+      ];
+
+      renderPanel({
+        selectedNode: analysisNode,
+        nodeType: "ANALYSIS",
+        nodes: [measurementNode, middleNode, analysisNode],
+        edges: edges,
+      });
+
+      expect(screen.getByTestId("ap-upstream-protocol").textContent).toBe("proto-deep");
+    });
+
+    it("returns empty when no upstream MEASUREMENT node exists", () => {
+      const questionNode: Node = {
+        id: "q1",
+        type: "QUESTION",
+        position: { x: 0, y: 0 },
+        data: {},
+      };
+      const analysisNode: Node = {
+        id: "a1",
+        type: "ANALYSIS",
+        position: { x: 100, y: 0 },
+        data: { macroId: "" },
+      };
+      const edge: Edge = { id: "e1", source: "q1", target: "a1" };
+
+      renderPanel({
+        selectedNode: analysisNode,
+        nodeType: "ANALYSIS",
+        nodes: [questionNode, analysisNode],
+        edges: [edge],
+      });
+
+      expect(screen.getByTestId("ap-upstream-protocol").textContent).toBe("");
+    });
+
+    it("returns empty when MEASUREMENT node has no protocolId", () => {
+      const measurementNode: Node = {
+        id: "m1",
+        type: "MEASUREMENT",
+        position: { x: 0, y: 0 },
+        data: { protocolId: "" },
+      };
+      const analysisNode: Node = {
+        id: "a1",
+        type: "ANALYSIS",
+        position: { x: 100, y: 0 },
+        data: { macroId: "" },
+      };
+      const edge: Edge = { id: "e1", source: "m1", target: "a1" };
+
+      renderPanel({
+        selectedNode: analysisNode,
+        nodeType: "ANALYSIS",
+        nodes: [measurementNode, analysisNode],
+        edges: [edge],
+      });
+
+      expect(screen.getByTestId("ap-upstream-protocol").textContent).toBe("");
+    });
+
+    it("returns empty when analysis node has no edges", () => {
+      const analysisNode: Node = {
+        id: "a1",
+        type: "ANALYSIS",
+        position: { x: 100, y: 0 },
+        data: { macroId: "" },
+      };
+
+      renderPanel({
+        selectedNode: analysisNode,
+        nodeType: "ANALYSIS",
+        nodes: [analysisNode],
+        edges: [],
+      });
+
+      expect(screen.getByTestId("ap-upstream-protocol").textContent).toBe("");
+    });
   });
 
   it("does not call callbacks when panel is disabled", async () => {

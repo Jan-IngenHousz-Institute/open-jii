@@ -82,6 +82,7 @@
     "experimentId": "Experiment ID",
     "descriptionTitle": "Beschrijving",
     "searchUsers": "Gebruikers zoeken",
+    "emailAlreadyInvited": "Dit e-mailadres is al uitgenodigd of is al lid",
     "startTypingToSearch": "Begin met typen om te zoeken"
   },
   "newExperiment": {
@@ -140,7 +141,21 @@
     "noEmail": "Geen e-mail",
     "joined": "Toegetreden",
     "cannotRemoveLastAdmin": "Kan laatste admin niet verwijderen",
-    "removeMember": "Lid verwijderen"
+    "removeMember": "Lid verwijderen",
+    "roleMember": "Lid",
+    "roleAdmin": "Admin",
+    "roleUpdated": "Rol succesvol bijgewerkt",
+    "pendingInvitations": "Openstaande verzoeken",
+    "invitationRevoked": "Uitnodiging succesvol ingetrokken",
+    "revoke": "Intrekken",
+    "collaborators": "Medewerkers",
+    "collaboratorsDescription": "Beheer wie toegang heeft tot dit experiment",
+    "memberAdded": "Lid succesvol toegevoegd",
+    "invitationSent": "Uitnodiging succesvol verzonden",
+    "memberRemoved": "Lid succesvol verwijderd",
+    "memberManagementError": "Fout bij het laden van leden. Probeer het opnieuw.",
+    "currentMembers": "Huidige leden",
+    "pendingInvite": "Uitnodiging in afwachting"
   },
   "jii": {
     "institute": "Jan IngenHousz Instituut",
@@ -323,7 +338,9 @@
     "codeTitle": "Protocol code",
     "codeDescription": "Definieer de code structuur voor je protocol",
     "codePlaceholder": "Voer protocol code in als JSON",
-    "finalizeSetup": "Protocol maken"
+    "finalizeSetup": "Protocol maken",
+    "compatibleMacros": "Compatibele macro's",
+    "compatibleMacrosDescription": "Selecteer optioneel compatibele macro's voor dit protocol"
   },
   "protocolSettings": {
     "loading": "Protocol instellingen laden...",
@@ -348,7 +365,11 @@
     "code": "Protocol code",
     "codePlaceholder": "Voer protocol code in als JSON",
     "codeDescription": "Definieer de JSON-structuur en logica voor je protocol",
-    "family": "Sensor familie"
+    "family": "Sensor familie",
+    "compatibleMacros": "Compatibele macro's",
+    "compatibleMacrosDescription": "Macro's waarvan bekend is dat ze werken met dit protocol. Deze worden aanbevolen in de flow builder.",
+    "noCompatibleMacros": "Nog geen compatibele macro's gekoppeld.",
+    "addCompatibleMacro": "Zoek en voeg een compatibele macro toe..."
   },
   "experimentDataTable": {
     "noData": "Geen gegevens ontvangen",

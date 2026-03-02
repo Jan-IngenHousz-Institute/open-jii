@@ -5,13 +5,16 @@ import { StatusCodes } from "http-status-codes";
 import type { UserMetadataWebhookPayload, WebhookErrorResponse } from "@repo/api";
 import { contract } from "@repo/api";
 
+import { failure, AppError } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
+import { GetUsersMetadataUseCase } from "../application/use-cases/get-users-metadata/get-users-metadata";
 import { UserRepository } from "../core/repositories/user.repository";
 
 describe("UserWebhookController", () => {
   const testApp = TestHarness.App;
   let userRepository: UserRepository;
+  let getUsersMetadataUseCase: GetUsersMetadataUseCase;
 
   const apiKeyId = process.env.DATABRICKS_WEBHOOK_API_KEY_ID ?? "test-api-key-id";
   const webhookSecret = process.env.DATABRICKS_WEBHOOK_SECRET ?? "test-webhook-secret";
@@ -23,6 +26,7 @@ describe("UserWebhookController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     userRepository = testApp.module.get(UserRepository);
+    getUsersMetadataUseCase = testApp.module.get(GetUsersMetadataUseCase);
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
@@ -341,6 +345,28 @@ describe("UserWebhookController", () => {
         .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload)
         .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 500 when use case returns failure", async () => {
+      vi.spyOn(getUsersMetadataUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Database connection lost")),
+      );
+
+      const webhookPayload: UserMetadataWebhookPayload = {
+        userIds: [faker.string.uuid()],
+      };
+
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const payload = `${timestamp}:${stableStringify(webhookPayload)}`;
+      const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
+
+      await testApp
+        .post(contract.users.getUserMetadata.path)
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
+        .send(webhookPayload)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
 
     it("should handle duplicate user IDs gracefully", async () => {

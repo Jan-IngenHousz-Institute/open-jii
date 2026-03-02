@@ -138,6 +138,41 @@ resource "databricks_job" "this" {
     }
   }
 
+  # Trigger configuration (file_arrival, periodic, or table_update)
+  dynamic "trigger" {
+    for_each = var.trigger != null ? [1] : []
+    content {
+      pause_status = var.trigger.pause_status
+
+      dynamic "file_arrival" {
+        for_each = var.trigger.file_arrival != null ? [1] : []
+        content {
+          url                               = var.trigger.file_arrival.url
+          min_time_between_triggers_seconds = var.trigger.file_arrival.min_time_between_triggers_seconds
+          wait_after_last_change_seconds    = var.trigger.file_arrival.wait_after_last_change_seconds
+        }
+      }
+
+      dynamic "periodic" {
+        for_each = var.trigger.periodic != null ? [1] : []
+        content {
+          interval = var.trigger.periodic.interval
+          unit     = var.trigger.periodic.unit
+        }
+      }
+
+      dynamic "table_update" {
+        for_each = var.trigger.table_update != null ? [1] : []
+        content {
+          table_names                       = var.trigger.table_update.table_names
+          condition                         = var.trigger.table_update.condition
+          min_time_between_triggers_seconds = var.trigger.table_update.min_time_between_triggers_seconds
+          wait_after_last_change_seconds    = var.trigger.table_update.wait_after_last_change_seconds
+        }
+      }
+    }
+  }
+
   # Email notifications
   dynamic "email_notifications" {
     for_each = var.email_notifications != null ? [1] : []

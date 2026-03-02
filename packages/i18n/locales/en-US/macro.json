@@ -56,7 +56,9 @@
     "detailsTitle": "Macro Details",
     "detailsDescription": "Set the name, description and language for your macro",
     "codeTitle": "Macro Code",
-    "finalizeSetup": "Create Macro"
+    "finalizeSetup": "Create Macro",
+    "compatibleProtocols": "Compatible Protocols",
+    "compatibleProtocolsDescription": "Optionally select protocols compatible with this macro"
   },
   "macroSettings": {
     "loading": "Loading macro...",
@@ -79,7 +81,11 @@
     "deleteMacro": "Delete Macro",
     "cancel": "Cancel",
     "delete": "Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "compatibleProtocols": "Compatible Protocols",
+    "compatibleProtocolsDescription": "Protocols that are known to work with this macro.",
+    "noCompatibleProtocols": "No compatible protocols linked yet.",
+    "addCompatibleProtocol": "Search and add a compatible protocol..."
   },
   "errors": {
     "failedToLoadMacro": "Failed to load macro"

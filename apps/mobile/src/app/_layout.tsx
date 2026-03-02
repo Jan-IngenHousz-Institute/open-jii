@@ -11,6 +11,7 @@ import { ConfiguredQueryClientProvider } from "~/components/configured-query-cli
 import { PythonMacroProvider } from "~/components/python-macro-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useTheme } from "~/hooks/use-theme";
+import { PostHogProvider } from "~/providers/PostHogProvider";
 
 function RootLayoutNav() {
   const theme = useTheme();
@@ -78,9 +79,11 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <RootLayoutContent />
-    </ThemeProvider>
+    <PostHogProvider>
+      <ThemeProvider>
+        <RootLayoutContent />
+      </ThemeProvider>
+    </PostHogProvider>
   );
 }
 

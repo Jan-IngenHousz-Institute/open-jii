@@ -120,7 +120,8 @@ describe("EditVisualizationForm", () => {
 
   const mockExperimentTableMetadatas: ExperimentTableMetadata[] = [
     {
-      name: "test_table",
+      identifier: "test_table",
+      tableType: "static",
       displayName: "Test Table",
       totalRows: 100,
       columns: [

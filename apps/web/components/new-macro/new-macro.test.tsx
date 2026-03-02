@@ -1,5 +1,5 @@
 import * as base64Utils from "@/util/base64";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
@@ -109,6 +109,43 @@ vi.mock("~/hooks/macro/useMacroCreate/useMacroCreate", () => ({
     mutate: mockMutate,
     isPending: false,
   }),
+}));
+
+// Mock hooks added by protocol-macro compatibility feature
+const mockProtocolList = [
+  { id: "proto-1", name: "Temperature Protocol", family: "multispeq" },
+  { id: "proto-2", name: "Humidity Protocol", family: "ambit" },
+];
+
+vi.mock("@/hooks/protocol/useProtocolSearch/useProtocolSearch", () => ({
+  useProtocolSearch: () => ({ protocols: mockProtocolList }),
+}));
+
+vi.mock("@/hooks/useDebounce", () => ({
+  useDebounce: (value: string) => [value, true],
+}));
+
+vi.mock("@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol", () => ({
+  useAddCompatibleProtocol: () => ({ mutateAsync: vi.fn() }),
+}));
+
+interface DropdownPropsCaptured {
+  availableProtocols: { id: string; name: string }[];
+  value: string;
+  placeholder: string;
+  loading: boolean;
+  searchValue: string;
+  onSearchChange: (v: string) => void;
+  onAddProtocol: (id: string) => void;
+  isAddingProtocol: boolean;
+}
+let lastDropdownProps: DropdownPropsCaptured | null = null;
+
+vi.mock("../protocol-search-with-dropdown", () => ({
+  ProtocolSearchWithDropdown: (props: DropdownPropsCaptured) => {
+    lastDropdownProps = props;
+    return <div data-testid="protocol-search-dropdown" />;
+  },
 }));
 
 vi.mock("~/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
@@ -287,6 +324,7 @@ vi.mock("@/util/base64", () => ({
 describe("NewMacroForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastDropdownProps = null;
   });
 
   it("should render form elements", () => {
@@ -458,5 +496,76 @@ describe("NewMacroForm", () => {
     // Since the actual behavior is tested in the component, we just verify
     // that the select exists and can be interacted with
     expect(screen.getByTestId("select")).toBeInTheDocument();
+  });
+
+  describe("Compatible Protocols Section", () => {
+    it("should render the compatible protocols card", () => {
+      render(<NewMacroForm />);
+
+      expect(screen.getByText("newMacro.compatibleProtocols")).toBeInTheDocument();
+      expect(screen.getByText("newMacro.compatibleProtocolsDescription")).toBeInTheDocument();
+    });
+
+    it("should render ProtocolSearchWithDropdown", () => {
+      render(<NewMacroForm />);
+
+      expect(screen.getByTestId("protocol-search-dropdown")).toBeInTheDocument();
+    });
+
+    it("should pass available protocols to the dropdown", () => {
+      render(<NewMacroForm />);
+
+      expect(lastDropdownProps).not.toBeNull();
+      const ids = lastDropdownProps?.availableProtocols.map((p) => p.id);
+      expect(ids).toContain("proto-1");
+      expect(ids).toContain("proto-2");
+    });
+
+    it("should add a protocol when onAddProtocol is called and show it in the list", () => {
+      render(<NewMacroForm />);
+
+      // Add a protocol via the dropdown callback
+      act(() => {
+        lastDropdownProps?.onAddProtocol("proto-1");
+      });
+
+      // The protocol should now be displayed in the selected list
+      expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
+      expect(screen.getByText("multispeq")).toBeInTheDocument();
+    });
+
+    it("should filter out already-selected protocols from available list", () => {
+      render(<NewMacroForm />);
+
+      // Add proto-1
+      act(() => {
+        lastDropdownProps?.onAddProtocol("proto-1");
+      });
+
+      // After re-render, proto-1 should be filtered out
+      expect(lastDropdownProps?.availableProtocols.map((p) => p.id)).not.toContain("proto-1");
+      expect(lastDropdownProps?.availableProtocols.map((p) => p.id)).toContain("proto-2");
+    });
+
+    it("should remove a protocol when its remove button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<NewMacroForm />);
+
+      // Add a protocol first
+      act(() => {
+        lastDropdownProps?.onAddProtocol("proto-1");
+      });
+      expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
+
+      // Click the remove button (it's the button inside the selected protocol row)
+      const removeButtons = screen.getAllByRole("button").filter((btn) => {
+        return btn.closest(".flex.items-center.justify-between");
+      });
+      expect(removeButtons.length).toBeGreaterThan(0);
+      await user.click(removeButtons[0]);
+
+      // Protocol should be removed from the list
+      expect(screen.queryByText("Temperature Protocol")).not.toBeInTheDocument();
+    });
   });
 });
