@@ -152,10 +152,12 @@ export async function parseClipboard(): Promise<{
   let text: string | null = null;
 
   try {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("timeout")), 3000);
+      timeoutId = setTimeout(() => reject(new Error("timeout")), 3000);
     });
     text = await Promise.race([navigator.clipboard.readText(), timeoutPromise]);
+    clearTimeout(timeoutId);
   } catch {
     text = null;
   }
