@@ -272,6 +272,25 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     expect(useProtocolCompatibleMacros).toHaveBeenCalledWith("proto-1", true);
   });
 
+  it("should sort compatible macros first in the dropdown list", () => {
+    vi.mocked(useProtocolCompatibleMacros).mockReturnValue({
+      data: {
+        body: [
+          { macro: { id: "macro-3", name: "Statistical Summary", language: "javascript" } },
+        ],
+      },
+    } as never);
+
+    render(
+      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamProtocolId="proto-1" />,
+    );
+
+    expect(lastDropdownProps).not.toBeNull();
+    const macroIds = lastDropdownProps?.availableMacros.map((m) => m.id);
+    // macro-3 is compatible, so it should be sorted first
+    expect(macroIds?.[0]).toBe("macro-3");
+  });
+
   it("should call useProtocolCompatibleMacros with empty string and enabled=false when no upstreamProtocolId", () => {
     vi.mocked(useProtocolCompatibleMacros).mockReturnValue({
       data: undefined,

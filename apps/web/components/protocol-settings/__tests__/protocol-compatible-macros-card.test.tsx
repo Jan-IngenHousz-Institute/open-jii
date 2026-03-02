@@ -250,6 +250,32 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     expect(screen.getByText("protocolSettings.compatibleMacrosDescription")).toBeInTheDocument();
   });
 
+  it("should call add mutation when a macro is added via the dropdown", async () => {
+    render(<ProtocolCompatibleMacrosCard protocolId="proto-1" />);
+
+    expect(lastDropdownProps).not.toBeNull();
+
+    // Simulate adding a macro via the dropdown callback
+    await lastDropdownProps?.onAddMacro("macro-3");
+
+    expect(mockAddMacro).toHaveBeenCalledWith({
+      params: { id: "proto-1" },
+      body: { macroIds: ["macro-3"] },
+    });
+  });
+
+  it("should pass isAdding state to MacroSearchWithDropdown", () => {
+    vi.mocked(useAddCompatibleMacro).mockReturnValue({
+      mutateAsync: mockAddMacro,
+      isPending: true,
+    } as never);
+
+    render(<ProtocolCompatibleMacrosCard protocolId="proto-1" />);
+
+    expect(lastDropdownProps).not.toBeNull();
+    expect(lastDropdownProps?.isAddingMacro).toBe(true);
+  });
+
   it("should disable remove buttons while removal is pending", () => {
     vi.mocked(useRemoveCompatibleMacro).mockReturnValue({
       mutateAsync: mockRemoveMacro,

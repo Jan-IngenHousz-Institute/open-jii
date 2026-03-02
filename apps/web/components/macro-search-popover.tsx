@@ -23,15 +23,13 @@ const macroItemVariants = cva(
   "mb-1 flex items-center justify-between gap-2 rounded border p-2.5 relative",
   {
     variants: {
-      variant: {
-        default: "border-gray-200 bg-white",
-        preferred:
-          "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
-        recommended: "border-l-4 border-l-emerald-400 border-gray-200 bg-emerald-50/40",
+      featured: {
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
+        false: "border-gray-200 bg-white",
       },
     },
     defaultVariants: {
-      variant: "default",
+      featured: false,
     },
   },
 );
@@ -73,12 +71,13 @@ function MacroList({
       {macros.map((macro) => {
         const isPreferred = macro.sortOrder !== null;
         const isRecommended = recommendedMacroIds?.has(macro.id) ?? false;
-        const variant = isRecommended ? "recommended" : isPreferred ? "preferred" : "default";
+        const hasRecommendedMacros = recommendedMacroIds && recommendedMacroIds.size > 0;
+        const isFeatured = isRecommended || (!hasRecommendedMacros && isPreferred);
         return (
           <CommandItem
             key={macro.id}
             value={macro.id}
-            className={macroItemVariants({ variant })}
+            className={macroItemVariants({ featured: isFeatured })}
             onSelect={() => handleAddMacro(macro.id)}
             disabled={isAddingMacro}
           >
@@ -99,9 +98,13 @@ function MacroList({
                   <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
                 </Link>
 
-                {isPreferred && !isRecommended && (
+                {isFeatured && (
                   <div className="ml-auto">
-                    <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+                    <Badge className={"bg-secondary/30 text-primary"}>
+                      {isRecommended
+                        ? (recommendedReason ?? t("common.recommended"))
+                        : t("common.preferred")}
+                    </Badge>
                   </div>
                 )}
               </div>
@@ -116,13 +119,6 @@ function MacroList({
                 <div className="text-muted-foreground truncate text-xs">
                   <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
                   <span className="font-medium">{macro.createdByName}</span>
-                </div>
-              )}
-
-              {/* Compatibility reason */}
-              {isRecommended && (
-                <div className="truncate text-xs italic text-emerald-600">
-                  {recommendedReason ?? t("common.recommended")}
                 </div>
               )}
             </div>
