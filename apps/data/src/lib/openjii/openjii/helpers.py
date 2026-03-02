@@ -122,7 +122,7 @@ def explode_set_data(df, set_column='set'):
     return result
 
 
-def get_table_metadata(experiment_id, table_name, catalog_name, schema_name="centrum"):
+def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="centrum"):
     """
     Fetch metadata for a specific experiment table.
     
@@ -130,8 +130,8 @@ def get_table_metadata(experiment_id, table_name, catalog_name, schema_name="cen
     -----------
     experiment_id : str
         The experiment identifier
-    table_name : str
-        The table name (e.g., 'raw_data', 'device', or macro filename)
+    identifier : str
+        The table identifier (e.g., 'raw_data', 'device', or macro filename)
     catalog_name : str
         The catalog name (e.g., 'open_jii_dev')
     schema_name : str, optional
@@ -140,7 +140,7 @@ def get_table_metadata(experiment_id, table_name, catalog_name, schema_name="cen
     Returns:
     --------
     dict
-        Dictionary with keys: table_name, row_count, macro_schema, questions_schema
+        Dictionary with keys: identifier, row_count, macro_schema, questions_schema
     """
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import col
@@ -149,17 +149,17 @@ def get_table_metadata(experiment_id, table_name, catalog_name, schema_name="cen
     
     metadata_df = (
         spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata")
-        .filter((col("experiment_id") == experiment_id) & (col("table_name") == table_name))
-        .select("table_name", "row_count", "macro_schema", "questions_schema")
+        .filter((col("experiment_id") == experiment_id) & (col("identifier") == identifier))
+        .select("identifier", "row_count", "macro_schema", "questions_schema")
     )
     
     rows = metadata_df.collect()
     if not rows:
-        raise ValueError(f"No metadata found for experiment {experiment_id}, table {table_name}")
+        raise ValueError(f"No metadata found for experiment {experiment_id}, identifier {identifier}")
     
     row = rows[0]
     return {
-        "table_name": row.table_name,
+        "identifier": row.identifier,
         "row_count": row.row_count,
         "macro_schema": row.macro_schema,
         "questions_schema": row.questions_schema,
@@ -208,7 +208,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     from pyspark.sql.functions import col, from_json
     
     spark = SparkSession.builder.getOrCreate()
-    metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name)
+    metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
     
     # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT)
     def normalize_schema(schema):
@@ -226,7 +226,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     df = spark.table(source_table).filter(col("experiment_id") == experiment_id)
     
     if table_type == "macro":
-        df = df.filter(col("macro_filename") == table_name)
+        df = df.filter(col("macro_id") == table_name)
     
     # Parse variant columns and build expansion/exclusion lists
     expand_cols = []
