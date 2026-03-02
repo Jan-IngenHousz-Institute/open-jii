@@ -35,18 +35,21 @@ describe("DeleteExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(metadataRepository, "deleteByExperimentId").mockResolvedValue(success(true));
+    const metadataId = "metadata-uuid-1";
+    vi.spyOn(metadataRepository, "deleteByMetadataId").mockResolvedValue(success(true));
 
-    const result = await useCase.execute(experiment.id, testUserId);
+    const result = await useCase.execute(experiment.id, metadataId, testUserId);
 
     expect(result.isSuccess()).toBe(true);
-    expect(metadataRepository.deleteByExperimentId).toHaveBeenCalledWith(experiment.id);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(metadataRepository.deleteByMetadataId).toHaveBeenCalledWith(metadataId);
   });
 
   it("should return NOT_FOUND if experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
+    const metadataId = "metadata-uuid-1";
 
-    const result = await useCase.execute(nonExistentId, testUserId);
+    const result = await useCase.execute(nonExistentId, metadataId, testUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
@@ -60,8 +63,9 @@ describe("DeleteExperimentMetadataUseCase", () => {
     });
 
     const otherUserId = await testApp.createTestUser({});
+    const metadataId = "metadata-uuid-1";
 
-    const result = await useCase.execute(experiment.id, otherUserId);
+    const result = await useCase.execute(experiment.id, metadataId, otherUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
@@ -75,11 +79,12 @@ describe("DeleteExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(metadataRepository, "deleteByExperimentId").mockResolvedValue(
+    const metadataId = "metadata-uuid-1";
+    vi.spyOn(metadataRepository, "deleteByMetadataId").mockResolvedValue(
       failure(AppError.internal("Databricks connection failed")),
     );
 
-    const result = await useCase.execute(experiment.id, testUserId);
+    const result = await useCase.execute(experiment.id, metadataId, testUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);

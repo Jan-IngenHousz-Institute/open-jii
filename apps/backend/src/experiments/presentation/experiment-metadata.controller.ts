@@ -8,9 +8,10 @@ import { contract } from "@repo/api";
 
 import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { CreateExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/get-experiment-metadata";
-import { UpsertExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/upsert-experiment-metadata";
+import { UpdateExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/update-experiment-metadata";
 
 @Controller()
 export class ExperimentMetadataController {
@@ -18,18 +19,19 @@ export class ExperimentMetadataController {
 
   constructor(
     private readonly getExperimentMetadataUseCase: GetExperimentMetadataUseCase,
-    private readonly upsertExperimentMetadataUseCase: UpsertExperimentMetadataUseCase,
+    private readonly createExperimentMetadataUseCase: CreateExperimentMetadataUseCase,
+    private readonly updateExperimentMetadataUseCase: UpdateExperimentMetadataUseCase,
     private readonly deleteExperimentMetadataUseCase: DeleteExperimentMetadataUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.getExperimentMetadata)
-  getExperimentMetadata(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.getExperimentMetadata, async ({ params }) => {
+  @TsRestHandler(contract.experiments.listExperimentMetadata)
+  listExperimentMetadata(@Session() session: UserSession) {
+    return tsRestHandler(contract.experiments.listExperimentMetadata, async ({ params }) => {
       const { id: experimentId } = params;
 
       this.logger.log({
-        msg: "Processing get metadata request",
-        operation: "getMetadata",
+        msg: "Processing list metadata request",
+        operation: "listMetadata",
         experimentId,
         userId: session.user.id,
       });
@@ -38,15 +40,16 @@ export class ExperimentMetadataController {
 
       if (result.isSuccess()) {
         this.logger.log({
-          msg: "Successfully retrieved metadata",
-          operation: "getMetadata",
+          msg: "Successfully listed metadata",
+          operation: "listMetadata",
           experimentId,
+          count: result.value.length,
           status: "success",
         });
 
         return {
           status: StatusCodes.OK as const,
-          body: result.value ? formatDates(result.value) : null,
+          body: result.value.map(formatDates),
         };
       }
 
@@ -54,21 +57,21 @@ export class ExperimentMetadataController {
     });
   }
 
-  @TsRestHandler(contract.experiments.upsertExperimentMetadata)
-  upsertExperimentMetadata(@Session() session: UserSession) {
+  @TsRestHandler(contract.experiments.createExperimentMetadata)
+  createExperimentMetadata(@Session() session: UserSession) {
     return tsRestHandler(
-      contract.experiments.upsertExperimentMetadata,
+      contract.experiments.createExperimentMetadata,
       async ({ params, body }) => {
         const { id: experimentId } = params;
 
         this.logger.log({
-          msg: "Processing upsert metadata request",
-          operation: "upsertMetadata",
+          msg: "Processing create metadata request",
+          operation: "createMetadata",
           experimentId,
           userId: session.user.id,
         });
 
-        const result = await this.upsertExperimentMetadataUseCase.execute(
+        const result = await this.createExperimentMetadataUseCase.execute(
           experimentId,
           body,
           session.user.id,
@@ -76,10 +79,52 @@ export class ExperimentMetadataController {
 
         if (result.isSuccess()) {
           this.logger.log({
-            msg: "Successfully upserted metadata",
-            operation: "upsertMetadata",
+            msg: "Successfully created metadata",
+            operation: "createMetadata",
             experimentId,
             metadataId: result.value.metadataId,
+            status: "success",
+          });
+
+          return {
+            status: StatusCodes.CREATED as const,
+            body: formatDates(result.value),
+          };
+        }
+
+        return handleFailure(result, this.logger);
+      },
+    );
+  }
+
+  @TsRestHandler(contract.experiments.updateExperimentMetadata)
+  updateExperimentMetadata(@Session() session: UserSession) {
+    return tsRestHandler(
+      contract.experiments.updateExperimentMetadata,
+      async ({ params, body }) => {
+        const { id: experimentId, metadataId } = params;
+
+        this.logger.log({
+          msg: "Processing update metadata request",
+          operation: "updateMetadata",
+          experimentId,
+          metadataId,
+          userId: session.user.id,
+        });
+
+        const result = await this.updateExperimentMetadataUseCase.execute(
+          experimentId,
+          metadataId,
+          body,
+          session.user.id,
+        );
+
+        if (result.isSuccess()) {
+          this.logger.log({
+            msg: "Successfully updated metadata",
+            operation: "updateMetadata",
+            experimentId,
+            metadataId,
             status: "success",
           });
 
@@ -97,17 +142,19 @@ export class ExperimentMetadataController {
   @TsRestHandler(contract.experiments.deleteExperimentMetadata)
   deleteExperimentMetadata(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.deleteExperimentMetadata, async ({ params }) => {
-      const { id: experimentId } = params;
+      const { id: experimentId, metadataId } = params;
 
       this.logger.log({
         msg: "Processing delete metadata request",
         operation: "deleteMetadata",
         experimentId,
+        metadataId,
         userId: session.user.id,
       });
 
       const result = await this.deleteExperimentMetadataUseCase.execute(
         experimentId,
+        metadataId,
         session.user.id,
       );
 
@@ -116,6 +163,7 @@ export class ExperimentMetadataController {
           msg: "Successfully deleted metadata",
           operation: "deleteMetadata",
           experimentId,
+          metadataId,
           status: "success",
         });
 

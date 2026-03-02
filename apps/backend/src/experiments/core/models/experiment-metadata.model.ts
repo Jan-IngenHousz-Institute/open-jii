@@ -21,3 +21,7 @@ export interface ExperimentMetadataDto {
 export interface CreateExperimentMetadataDto {
   metadata: Record<string, unknown>;
 }
+
+export interface UpdateExperimentMetadataDto {
+  metadata: Record<string, unknown>;
+}

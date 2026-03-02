@@ -2,13 +2,7 @@
 import { faker } from "@faker-js/faker";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
-import {
-  AppError,
-  assertFailure,
-  assertSuccess,
-  failure,
-  success,
-} from "../../../common/utils/fp-utils";
+import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
@@ -95,24 +89,25 @@ describe("ExperimentMetadataRepository", () => {
     await testApp.teardown();
   });
 
-  describe("findByExperimentId", () => {
-    it("should return metadata when found", async () => {
+  describe("findAllByExperimentId", () => {
+    it("should return metadata array when found", async () => {
       const schemaData = buildMetadataSchemaData();
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(schemaData));
 
-      const result = await repository.findByExperimentId(mockExperimentId);
+      const result = await repository.findAllByExperimentId(mockExperimentId);
 
       assertSuccess(result);
-      expect(result.value).not.toBeNull();
-      expect(result.value!.metadataId).toBe(mockMetadataId);
-      expect(result.value!.experimentId).toBe(mockExperimentId);
-      expect(result.value!.metadata).toEqual(mockMetadata);
-      expect(result.value!.createdBy).toBe(mockUserId);
-      expect(result.value!.createdAt).toBeInstanceOf(Date);
-      expect(result.value!.updatedAt).toBeInstanceOf(Date);
+      const metadataList = result.value;
+      expect(metadataList).toHaveLength(1);
+      expect(metadataList[0].metadataId).toBe(mockMetadataId);
+      expect(metadataList[0].experimentId).toBe(mockExperimentId);
+      expect(metadataList[0].metadata).toEqual(mockMetadata);
+      expect(metadataList[0].createdBy).toBe(mockUserId);
+      expect(metadataList[0].createdAt).toBeInstanceOf(Date);
+      expect(metadataList[0].updatedAt).toBeInstanceOf(Date);
     });
 
-    it("should return null when no metadata exists", async () => {
+    it("should return empty array when no metadata exists", async () => {
       const schemaData: SchemaData = {
         ...buildMetadataSchemaData(),
         rows: [],
@@ -120,10 +115,10 @@ describe("ExperimentMetadataRepository", () => {
       };
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(schemaData));
 
-      const result = await repository.findByExperimentId(mockExperimentId);
+      const result = await repository.findAllByExperimentId(mockExperimentId);
 
       assertSuccess(result);
-      expect(result.value).toBeNull();
+      expect(result.value).toEqual([]);
     });
 
     it("should use escaped experiment ID in the SQL query", async () => {
@@ -131,7 +126,7 @@ describe("ExperimentMetadataRepository", () => {
         success(buildMetadataSchemaData()),
       );
 
-      await repository.findByExperimentId(mockExperimentId);
+      await repository.findAllByExperimentId(mockExperimentId);
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
@@ -140,7 +135,7 @@ describe("ExperimentMetadataRepository", () => {
     });
 
     it("should reject invalid experiment ID format", async () => {
-      const result = await repository.findByExperimentId("not-a-uuid");
+      const result = await repository.findAllByExperimentId("not-a-uuid");
 
       expect(result.isFailure()).toBe(true);
     });
@@ -150,24 +145,19 @@ describe("ExperimentMetadataRepository", () => {
         failure(AppError.internal("Databricks connection failed")),
       );
 
-      const result = await repository.findByExperimentId(mockExperimentId);
+      const result = await repository.findAllByExperimentId(mockExperimentId);
 
       expect(result.isFailure()).toBe(true);
     });
   });
 
-  describe("upsert", () => {
-    const upsertDto = { metadata: mockMetadata };
+  describe("create", () => {
+    const createDto = { metadata: mockMetadata };
 
-    it("should create metadata when none exists", async () => {
-      // First call: SELECT returns empty, second call: INSERT succeeds
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(
-          success({ ...emptySchemaData, columns: buildMetadataSchemaData().columns }),
-        )
-        .mockResolvedValueOnce(success(emptySchemaData));
+    it("should create metadata and return the new record", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
 
-      const result = await repository.upsert(mockExperimentId, upsertDto, mockUserId);
+      const result = await repository.create(mockExperimentId, createDto, mockUserId);
 
       assertSuccess(result);
       expect(result.value.experimentId).toBe(mockExperimentId);
@@ -177,88 +167,38 @@ describe("ExperimentMetadataRepository", () => {
       expect(result.value.createdAt).toBeInstanceOf(Date);
     });
 
-    it("should update metadata when it already exists", async () => {
-      const existingData = buildMetadataSchemaData();
-      const newMetadata = { columns: [], rows: [{ _id: "r1", foo: "bar" }] };
-
-      // First call: SELECT returns existing, second call: UPDATE succeeds
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(success(existingData))
-        .mockResolvedValueOnce(success(emptySchemaData));
-
-      const result = await repository.upsert(
-        mockExperimentId,
-        { metadata: newMetadata },
-        mockUserId,
-      );
-
-      assertSuccess(result);
-      expect(result.value.metadataId).toBe(mockMetadataId);
-      expect(result.value.metadata).toEqual(newMetadata);
-    });
-
     it("should use PARSE_JSON in INSERT query", async () => {
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(
-          success({ ...emptySchemaData, columns: buildMetadataSchemaData().columns }),
-        )
-        .mockResolvedValueOnce(success(emptySchemaData));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
 
-      await repository.upsert(mockExperimentId, upsertDto, mockUserId);
+      await repository.create(mockExperimentId, createDto, mockUserId);
 
-      // Second call is the INSERT
-      const insertCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[1];
+      const insertCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       expect(insertCall[1]).toContain("PARSE_JSON");
       expect(insertCall[1]).toContain("INSERT INTO");
     });
 
-    it("should use PARSE_JSON in UPDATE query", async () => {
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(success(buildMetadataSchemaData()))
-        .mockResolvedValueOnce(success(emptySchemaData));
-
-      await repository.upsert(mockExperimentId, upsertDto, mockUserId);
-
-      // Second call is the UPDATE
-      const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[1];
-      expect(updateCall[1]).toContain("PARSE_JSON");
-      expect(updateCall[1]).toContain("UPDATE");
-    });
-
     it("should reject invalid experiment ID", async () => {
-      const result = await repository.upsert("bad-id", upsertDto, mockUserId);
+      const result = await repository.create("bad-id", createDto, mockUserId);
 
       expect(result.isFailure()).toBe(true);
     });
 
     it("should return failure when INSERT fails", async () => {
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(
-          success({ ...emptySchemaData, columns: buildMetadataSchemaData().columns }),
-        )
-        .mockResolvedValueOnce(failure(AppError.internal("Insert failed")));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        failure(AppError.internal("Insert failed")),
+      );
 
-      const result = await repository.upsert(mockExperimentId, upsertDto, mockUserId);
-
-      expect(result.isFailure()).toBe(true);
-    });
-
-    it("should return failure when UPDATE fails", async () => {
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(success(buildMetadataSchemaData()))
-        .mockResolvedValueOnce(failure(AppError.internal("Update failed")));
-
-      const result = await repository.upsert(mockExperimentId, upsertDto, mockUserId);
+      const result = await repository.create(mockExperimentId, createDto, mockUserId);
 
       expect(result.isFailure()).toBe(true);
     });
   });
 
-  describe("deleteByExperimentId", () => {
-    it("should delete metadata by experiment_id", async () => {
+  describe("deleteByMetadataId", () => {
+    it("should delete metadata by metadata_id", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
 
-      const result = await repository.deleteByExperimentId(mockExperimentId);
+      const result = await repository.deleteByMetadataId(mockMetadataId);
 
       assertSuccess(result);
       expect(result.value).toBe(true);
@@ -269,8 +209,8 @@ describe("ExperimentMetadataRepository", () => {
       );
     });
 
-    it("should reject invalid experiment ID", async () => {
-      const result = await repository.deleteByExperimentId("not-valid");
+    it("should reject invalid metadata ID", async () => {
+      const result = await repository.deleteByMetadataId("not-valid");
 
       expect(result.isFailure()).toBe(true);
     });
@@ -280,7 +220,68 @@ describe("ExperimentMetadataRepository", () => {
         failure(AppError.internal("Delete failed")),
       );
 
-      const result = await repository.deleteByExperimentId(mockExperimentId);
+      const result = await repository.deleteByMetadataId(mockMetadataId);
+
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("update", () => {
+    const updateDto = { metadata: { location: "Lab C", count: 99 } };
+
+    it("should update metadata and return the updated record", async () => {
+      const updatedSchemaData = buildMetadataSchemaData({
+        metadata: updateDto.metadata,
+        updatedAt: "2026-02-01T10:00:00.000Z",
+      });
+
+      vi.spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValueOnce(success(emptySchemaData)) // UPDATE
+        .mockResolvedValueOnce(success(updatedSchemaData)); // SELECT
+
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId);
+
+      assertSuccess(result);
+      expect(result.value.metadataId).toBe(mockMetadataId);
+      expect(result.value.metadata).toEqual(updateDto.metadata);
+    });
+
+    it("should use PARSE_JSON in UPDATE query", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValueOnce(success(emptySchemaData))
+        .mockResolvedValueOnce(success(buildMetadataSchemaData()));
+
+      await repository.update(mockMetadataId, updateDto, mockUserId);
+
+      const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
+      expect(updateCall[1]).toContain("PARSE_JSON");
+      expect(updateCall[1]).toContain("UPDATE");
+    });
+
+    it("should reject invalid metadata ID", async () => {
+      const result = await repository.update("bad-id", updateDto, mockUserId);
+
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should return failure when UPDATE fails", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        failure(AppError.internal("Update failed")),
+      );
+
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId);
+
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should return NOT_FOUND when metadata row does not exist after update", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValueOnce(success(emptySchemaData)) // UPDATE succeeds
+        .mockResolvedValueOnce(
+          success({ ...emptySchemaData, columns: buildMetadataSchemaData().columns }),
+        ); // SELECT returns empty
+
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId);
 
       expect(result.isFailure()).toBe(true);
     });

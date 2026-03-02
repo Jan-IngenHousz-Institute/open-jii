@@ -4,7 +4,7 @@ import { MetadataProvider, MetadataTable, useMetadata } from "@/components/metad
 import type { MetadataColumn, MetadataRow } from "@/components/metadata-table";
 import { parseClipboardText } from "@/components/metadata-table/utils/parse-metadata-import";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
-import { useExperimentMetadataUpsert } from "@/hooks/experiment/useExperimentMetadataUpsert/useExperimentMetadataUpsert";
+import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
 import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Trash2, Upload } from "lucide-react";
 import * as React from "react";
 import { useRef, useState, useEffect } from "react";
@@ -32,7 +32,7 @@ export function MetadataUploadStep({
   onBack,
   onUploadSuccess,
 }: MetadataUploadStepProps) {
-  const upsertMutation = useExperimentMetadataUpsert();
+  const createMutation = useExperimentMetadataCreate();
 
   const handleSave = async (
     columns: MetadataColumn[],
@@ -40,7 +40,7 @@ export function MetadataUploadStep({
     identifierColumnId: string | null,
     experimentQuestionId: string | null,
   ): Promise<void> => {
-    await upsertMutation.mutateAsync({
+    await createMutation.mutateAsync({
       params: { id: experimentId },
       body: {
         metadata: {

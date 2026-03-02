@@ -38,8 +38,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   // Check if metadata already exists for this experiment
   const { data: metadataResponse } = useExperimentMetadata(id);
-  const hasMetadata =
-    metadataResponse?.body != null && Object.keys(metadataResponse.body.metadata).length > 0;
+  const hasMetadata = metadataResponse?.body != null && metadataResponse.body.length > 0;
 
   const openMetadataUpload = () => {
     setUploadModalStep("metadata-upload");

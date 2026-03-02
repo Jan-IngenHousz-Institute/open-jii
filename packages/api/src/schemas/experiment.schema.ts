@@ -1078,19 +1078,6 @@ export type ProjectTransferWebhookResponse = z.infer<typeof zProjectTransferWebh
 
 // --- Experiment Metadata Schemas ---
 
-/**
- * Experiment metadata stored as a single VARIANT blob in Databricks.
- * The `metadata` field holds arbitrary JSON (columns, rows, etc.) – the
- * backend is agnostic to its shape so the frontend can evolve freely.
- *
- * Databricks table: experiment_metadata
- *   metadata_id   STRING   (PK, UUID)
- *   experiment_id STRING   (FK)
- *   metadata      VARIANT  (arbitrary JSON)
- *   created_by    STRING
- *   created_at    TIMESTAMP
- *   updated_at    TIMESTAMP
- */
 export const zExperimentMetadata = z.object({
   metadataId: z.string().uuid(),
   experimentId: z.string().uuid(),
@@ -1100,10 +1087,20 @@ export const zExperimentMetadata = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const zUpsertExperimentMetadataBody = z.object({
+export const zCreateExperimentMetadataBody = z.object({
   metadata: z.record(z.string(), z.unknown()),
+});
+
+export const zUpdateExperimentMetadataBody = z.object({
+  metadata: z.record(z.string(), z.unknown()),
+});
+
+export const zMetadataPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  metadataId: z.string().uuid().describe("ID of the metadata record"),
 });
 
 // Metadata types
 export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
-export type UpsertExperimentMetadataBody = z.infer<typeof zUpsertExperimentMetadataBody>;
+export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetadataBody>;
+export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;
