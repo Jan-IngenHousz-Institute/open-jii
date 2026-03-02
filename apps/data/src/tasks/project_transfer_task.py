@@ -469,6 +469,12 @@ for row in successful.select("experiment_id", "transfer_id").collect():
     # stream will crash if files are overwritten mid-read.
     if experiment_id in written_experiments:
         log(f"  {transfer_id}: skipped (already written {experiment_id} this run)")
+        spark.sql(f"""
+            UPDATE {TRANSFER_TABLE}
+            SET status = 'completed'
+            WHERE request_id = '{transfer_id}'
+        """)
+        log(f"  {transfer_id}: completed")
         continue
 
     try:
