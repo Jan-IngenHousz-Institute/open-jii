@@ -113,7 +113,7 @@ def export_data(df):
                     # VARIANT already stores JSON; cast to string for CSV compatibility
                     df = df.withColumn(field.name, col(field.name).cast("string"))
             
-            df.coalesce(1).write.mode("overwrite").option("header", True).csv(OUTPUT_PATH)
+            df.coalesce(1).write.mode("overwrite").option("header", True).option("escape", '"').csv(OUTPUT_PATH)
         elif FORMAT == "ndjson":
             # Write as newline-delimited JSON (NDJSON/JSONL)
             # Each line is a valid JSON object, which is standard for big data exports
