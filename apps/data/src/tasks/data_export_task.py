@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import to_json, col, lit
-from pyspark.sql.types import StructType, ArrayType, MapType
+from pyspark.sql.types import StructType, ArrayType, MapType, VariantType
 from pyspark.dbutils import DBUtils
 
 # Import openjii utilities
@@ -104,11 +104,14 @@ def export_data(df):
         log(f"Exporting to {FORMAT.upper()}: {OUTPUT_PATH}")
         
         if FORMAT == "csv":
-            # CSV doesn't support complex types (structs, arrays, maps)
+            # CSV doesn't support complex types (structs, arrays, maps, variants)
             # Convert them to JSON strings
             for field in df.schema.fields:
                 if isinstance(field.dataType, (StructType, ArrayType, MapType)):
                     df = df.withColumn(field.name, to_json(col(field.name)))
+                elif isinstance(field.dataType, VariantType):
+                    # VARIANT already stores JSON; cast to string for CSV compatibility
+                    df = df.withColumn(field.name, col(field.name).cast("string"))
             
             df.coalesce(1).write.mode("overwrite").option("header", True).csv(OUTPUT_PATH)
         elif FORMAT == "ndjson":
