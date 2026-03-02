@@ -15,5 +15,5 @@ output "authenticated_role_arn" {
 
 output "developer_provider_name" {
   description = "Developer provider name for API calls (environment-specific)"
-  value       = var.create_auth_role ? local.developer_provider_name_full : null
+  value       = local.developer_provider_name_full
 }

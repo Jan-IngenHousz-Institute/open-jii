@@ -8,7 +8,7 @@ resource "aws_cognito_identity_pool" "this" {
   identity_pool_name               = var.identity_pool_name
   allow_unauthenticated_identities = var.allow_unauthenticated_identities
 
-  developer_provider_name = var.create_auth_role ? local.developer_provider_name_full : null
+  developer_provider_name = local.developer_provider_name_full
 }
 
 resource "aws_iam_role" "unauth" {

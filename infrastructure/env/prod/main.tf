@@ -86,7 +86,7 @@ module "cognito" {
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
   allow_unauthenticated_identities = true # change after mobile app is ready and we want to disable unauthenticated access
-  create_auth_role                 = false
+  create_auth_role                 = true
 }
 
 module "vpc" {
@@ -367,6 +367,7 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
+    "CATALOG_NAME"               = module.databricks_catalog.catalog_name
     "BRONZE_TABLE"               = "raw_data"
     "SILVER_TABLE"               = "clean_data"
     "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
