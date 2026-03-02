@@ -1,7 +1,7 @@
 /**
- * Generic command executor for device protocols
+ * Generic command executor for device drivers
  */
-import type { IDeviceProtocol } from "../protocol/base";
+import type { IDeviceDriver } from "../driver/driver-base";
 import type { ITransportAdapter } from "../transport/interface";
 
 export interface ICommandExecutor {
@@ -11,14 +11,14 @@ export interface ICommandExecutor {
 
 export class CommandExecutor implements ICommandExecutor {
   constructor(
-    private readonly protocol: IDeviceProtocol,
+    private readonly driver: IDeviceDriver,
     private readonly transport: ITransportAdapter,
   ) {
-    this.protocol.initialize(this.transport);
+    this.driver.initialize(this.transport);
   }
 
   async execute<T = unknown>(command: string | object): Promise<T> {
-    const result = await this.protocol.execute<T>(command);
+    const result = await this.driver.execute<T>(command);
 
     if (!result.success) {
       throw result.error ?? new Error("Command execution failed");
@@ -28,6 +28,6 @@ export class CommandExecutor implements ICommandExecutor {
   }
 
   async destroy(): Promise<void> {
-    await this.protocol.destroy();
+    await this.driver.destroy();
   }
 }

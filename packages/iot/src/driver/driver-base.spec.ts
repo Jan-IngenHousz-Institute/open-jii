@@ -2,11 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ITransportAdapter } from "../transport/interface";
-import { DeviceProtocol } from "./base";
-import type { CommandResult } from "./base";
+import { DeviceDriver } from "./driver-base";
+import type { CommandResult } from "./driver-base";
 
 // Concrete subclass for testing the abstract base class
-class TestProtocol extends DeviceProtocol {
+class TestDriver extends DeviceDriver {
   async execute<T = unknown>(_command: string | object): Promise<CommandResult<T>> {
     this.ensureInitialized();
     return Promise.resolve({ success: true, data: "test" as unknown as T });
@@ -28,63 +28,63 @@ function createMockTransport(): ITransportAdapter {
   };
 }
 
-describe("DeviceProtocol", () => {
-  let protocol: TestProtocol;
+describe("DeviceDriver", () => {
+  let driver: TestDriver;
   let transport: ITransportAdapter;
 
   beforeEach(() => {
-    protocol = new TestProtocol();
+    driver = new TestDriver();
     transport = createMockTransport();
   });
 
   describe("initialize", () => {
     it("should set transport and mark as initialized", () => {
-      protocol.initialize(transport);
+      driver.initialize(transport);
 
       // Should not throw after initialization
-      expect(() => protocol.testEnsureInitialized()).not.toThrow();
+      expect(() => driver.testEnsureInitialized()).not.toThrow();
     });
   });
 
   describe("ensureInitialized", () => {
     it("should throw when not initialized", () => {
-      expect(() => protocol.testEnsureInitialized()).toThrow(
-        "Protocol not initialized. Call initialize() first.",
+      expect(() => driver.testEnsureInitialized()).toThrow(
+        "Driver not initialized. Call initialize() first.",
       );
     });
 
     it("should not throw after initialization", () => {
-      protocol.initialize(transport);
-      expect(() => protocol.testEnsureInitialized()).not.toThrow();
+      driver.initialize(transport);
+      expect(() => driver.testEnsureInitialized()).not.toThrow();
     });
   });
 
   describe("execute", () => {
     it("should throw when not initialized", async () => {
-      await expect(protocol.execute("test")).rejects.toThrow(
-        "Protocol not initialized. Call initialize() first.",
+      await expect(driver.execute("test")).rejects.toThrow(
+        "Driver not initialized. Call initialize() first.",
       );
     });
 
     it("should succeed when initialized", async () => {
-      protocol.initialize(transport);
-      const result = await protocol.execute("test");
+      driver.initialize(transport);
+      const result = await driver.execute("test");
       expect(result.success).toBe(true);
     });
   });
 
   describe("destroy", () => {
     it("should disconnect transport and mark as uninitialized", async () => {
-      protocol.initialize(transport);
-      await protocol.destroy();
+      driver.initialize(transport);
+      await driver.destroy();
 
       expect(transport.disconnect).toHaveBeenCalled();
-      expect(() => protocol.testEnsureInitialized()).toThrow();
+      expect(() => driver.testEnsureInitialized()).toThrow();
     });
 
     it("should handle destroy when not initialized", async () => {
       // Should not throw
-      await expect(protocol.destroy()).resolves.toBeUndefined();
+      await expect(driver.destroy()).resolves.toBeUndefined();
     });
   });
 });

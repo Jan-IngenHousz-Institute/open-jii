@@ -1,13 +1,18 @@
 /**
- * Generic Device Protocol Implementation
+ * Generic Device Driver Implementation
  * Works with any device implementing the simple command interface
+ * (Arduino, Raspberry Pi, custom sensors, weather stations, etc.)
+ *
+ * Commands are sent as JSON objects terminated with \n.
+ * Responses are JSON objects (newline-delimited or complete).
  */
 import type { ITransportAdapter } from "../../transport/interface";
 import { Emitter } from "../../utils/emitter";
-import { DeviceProtocol } from "../base";
-import type { CommandResult } from "../base";
+import { DeviceDriver } from "../driver-base";
+import type { CommandResult } from "../driver-base";
 import { GENERIC_COMMANDS } from "./commands";
 import type { GenericCommandWithParams, CustomCommandWithParams } from "./commands";
+import { GENERIC_FRAMING } from "./config";
 import type {
   GenericDeviceEvents,
   GenericDeviceInfo,
@@ -16,7 +21,7 @@ import type {
   GenericMeasurementData,
 } from "./interface";
 
-export class GenericDeviceProtocol extends DeviceProtocol {
+export class GenericDeviceDriver extends DeviceDriver {
   private emitter: Emitter<GenericDeviceEvents>;
   private responseBuffer = "";
 
@@ -91,7 +96,7 @@ export class GenericDeviceProtocol extends DeviceProtocol {
         throw new Error("Transport not initialized");
       }
 
-      await this.transport.send(cmdString + "\n");
+      await this.transport.send(cmdString + GENERIC_FRAMING.LINE_ENDING);
 
       // Wait for response
       const response = await this.waitForResponse<T>();
@@ -109,7 +114,9 @@ export class GenericDeviceProtocol extends DeviceProtocol {
     }
   }
 
-  private async waitForResponse<T>(timeout = 10000): Promise<GenericCommandResponse<T>> {
+  private async waitForResponse<T>(
+    timeout = GENERIC_FRAMING.DEFAULT_TIMEOUT,
+  ): Promise<GenericCommandResponse<T>> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         cleanup();
@@ -254,7 +261,7 @@ export class GenericDeviceProtocol extends DeviceProtocol {
     await super.destroy();
   }
 
-  /** Listen to protocol events */
+  /** Listen to driver events */
   on<K extends keyof GenericDeviceEvents>(
     event: K,
     listener: (data: GenericDeviceEvents[K]) => void,

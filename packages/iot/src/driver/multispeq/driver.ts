@@ -1,5 +1,5 @@
 /**
- * MultispeQ Protocol Implementation
+ * MultispeQ Driver Implementation
  *
  * MultispeQ devices communicate via Bluetooth Classic or USB Serial.
  * Commands are sent as strings (or JSON) terminated with \r\n.
@@ -14,8 +14,8 @@ import {
   addLineEnding,
   removeLineEnding,
 } from "../../utils/framing";
-import { DeviceProtocol } from "../base";
-import type { CommandResult } from "../base";
+import { DeviceDriver } from "../driver-base";
+import type { CommandResult } from "../driver-base";
 import { MULTISPEQ_COMMANDS } from "./commands";
 import { MULTISPEQ_FRAMING } from "./config";
 import type {
@@ -25,10 +25,10 @@ import type {
 } from "./interface";
 
 /**
- * MultispeQ protocol handler
- * Implements the MultispeQ device communication protocol with checksums and JSON framing
+ * MultispeQ device driver
+ * Implements the MultispeQ device communication with checksums and JSON framing
  */
-export class MultispeqProtocol extends DeviceProtocol {
+export class MultispeqDriver extends DeviceDriver {
   private emitter = new Emitter<MultispeqStreamEvents>();
   private dataBuffer: string[] = [];
   private pendingResponse: Promise<MultispeqCommandResult> | null = null;

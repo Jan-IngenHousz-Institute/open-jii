@@ -1,5 +1,5 @@
 /**
- * MultispeQ protocol types
+ * MultispeQ driver types
  */
 
 /** MultispeQ-specific events */
