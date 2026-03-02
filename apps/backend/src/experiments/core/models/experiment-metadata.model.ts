@@ -1,39 +1,23 @@
-import type {
-  MetadataColumn,
-  MetadataRow,
-  ExperimentMetadata,
-  UpsertExperimentMetadataBody,
-} from "@repo/api";
-
-// Re-export API types for use in backend
-export type { MetadataColumn, MetadataRow };
-
-// Internal DTO with Date objects (for repository layer)
+/**
+ * Internal DTO for experiment metadata.
+ *
+ * Maps 1-to-1 to the Databricks table:
+ *   metadata_id   STRING   (PK)
+ *   experiment_id STRING
+ *   metadata      VARIANT  (arbitrary JSON)
+ *   created_by    STRING
+ *   created_at    TIMESTAMP
+ *   updated_at    TIMESTAMP
+ */
 export interface ExperimentMetadataDto {
-  id: string;
+  metadataId: string;
   experimentId: string;
-  columns: MetadataColumn[];
-  rows: MetadataRow[];
-  identifierColumnId?: string | null;
-  experimentQuestionId?: string | null;
+  metadata: Record<string, unknown>;
   createdBy: string;
-  createdByName?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// API response type (with string dates)
-export type ExperimentMetadataResponse = ExperimentMetadata;
-
-export type CreateExperimentMetadataDto = UpsertExperimentMetadataBody;
-
-export type UpdateExperimentMetadataDto = Partial<CreateExperimentMetadataDto>;
-
-// Helper to convert internal DTO to API response
-export function toApiResponse(dto: ExperimentMetadataDto): ExperimentMetadataResponse {
-  return {
-    ...dto,
-    createdAt: dto.createdAt.toISOString(),
-    updatedAt: dto.updatedAt.toISOString(),
-  };
+export interface CreateExperimentMetadataDto {
+  metadata: Record<string, unknown>;
 }

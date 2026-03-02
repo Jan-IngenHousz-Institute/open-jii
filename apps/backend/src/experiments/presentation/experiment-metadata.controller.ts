@@ -6,11 +6,11 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
 
+import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { DeleteExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/get-experiment-metadata";
 import { UpsertExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/upsert-experiment-metadata";
-import { toApiResponse } from "../core/models/experiment-metadata.model";
 
 @Controller()
 export class ExperimentMetadataController {
@@ -46,7 +46,7 @@ export class ExperimentMetadataController {
 
         return {
           status: StatusCodes.OK as const,
-          body: result.value ? toApiResponse(result.value) : null,
+          body: result.value ? formatDates(result.value) : null,
         };
       }
 
@@ -66,8 +66,6 @@ export class ExperimentMetadataController {
           operation: "upsertMetadata",
           experimentId,
           userId: session.user.id,
-          columnCount: body.columns.length,
-          rowCount: body.rows.length,
         });
 
         const result = await this.upsertExperimentMetadataUseCase.execute(
@@ -81,13 +79,13 @@ export class ExperimentMetadataController {
             msg: "Successfully upserted metadata",
             operation: "upsertMetadata",
             experimentId,
-            metadataId: result.value.id,
+            metadataId: result.value.metadataId,
             status: "success",
           });
 
           return {
             status: StatusCodes.OK as const,
-            body: toApiResponse(result.value),
+            body: formatDates(result.value),
           };
         }
 

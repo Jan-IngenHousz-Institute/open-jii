@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
@@ -20,13 +21,12 @@ export class GetExperimentMetadataUseCase {
     userId: string,
   ): Promise<Result<ExperimentMetadataDto | null>> {
     this.logger.log({
-      msg: "Getting metadata for experiment",
+      msg: "Fetching experiment metadata",
       operation: "getExperimentMetadata",
       experimentId,
       userId,
     });
 
-    // Check if experiment exists and if user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
@@ -40,7 +40,8 @@ export class GetExperimentMetadataUseCase {
       }) => {
         if (!experiment) {
           this.logger.warn({
-            msg: "Attempt to get metadata of non-existent experiment",
+            msg: "Experiment not found for metadata fetch",
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "getExperimentMetadata",
             experimentId,
             userId,
@@ -50,7 +51,8 @@ export class GetExperimentMetadataUseCase {
 
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn({
-            msg: "User does not have access to experiment metadata",
+            msg: "Unauthorized metadata fetch attempt",
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "getExperimentMetadata",
             experimentId,
             userId,
@@ -58,29 +60,20 @@ export class GetExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        const metadataResult =
-          await this.experimentMetadataRepository.findByExperimentId(experimentId);
+        const result = await this.experimentMetadataRepository.findByExperimentId(experimentId);
 
-        if (metadataResult.isFailure()) {
+        if (result.isFailure()) {
           this.logger.error({
-            msg: "Failed to retrieve metadata for experiment",
+            msg: "Failed to fetch experiment metadata",
+            errorCode: ErrorCodes.EXPERIMENT_METADATA_FETCH_FAILED,
             operation: "getExperimentMetadata",
             experimentId,
             userId,
-            error: metadataResult.error.message,
+            error: result.error.message,
           });
-          return failure(AppError.internal("Failed to retrieve experiment metadata"));
         }
 
-        this.logger.debug({
-          msg: "Retrieved metadata for experiment",
-          operation: "getExperimentMetadata",
-          experimentId,
-          userId,
-          hasMetadata: metadataResult.value !== null,
-        });
-
-        return metadataResult;
+        return result;
       },
     );
   }
