@@ -5,12 +5,12 @@ import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompati
 import { useDebounce } from "@/hooks/useDebounce";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 
 import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 
+import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface AnalysisPanelProps {
@@ -31,9 +31,13 @@ export function AnalysisPanel({
   // Macro search state
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroList } = useMacros({
-    search: debouncedMacroSearch || undefined,
+  const { data: macroData } = tsr.macros.listMacros.useQuery({
+    queryData: {
+      query: { search: debouncedMacroSearch || undefined },
+    },
+    queryKey: ["macros", "search", debouncedMacroSearch],
   });
+  const macroList = macroData?.body;
 
   // Fetch the upstream protocol name for recommendation context
   const { data: upstreamProtocol } = useProtocol(upstreamProtocolId ?? "", !!upstreamProtocolId);

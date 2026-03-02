@@ -17,7 +17,7 @@ import {
   CardContent,
 } from "@repo/ui/components";
 
-import { useMacros } from "../../hooks/macro/useMacros/useMacros";
+import { tsr } from "../../lib/tsr";
 import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
@@ -40,9 +40,13 @@ export function ProtocolCompatibleMacrosCard({ protocolId }: ProtocolCompatibleM
   // Macro search for the add dropdown
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroList } = useMacros({
-    search: debouncedMacroSearch || undefined,
+  const { data: macroData } = tsr.macros.listMacros.useQuery({
+    queryData: {
+      query: { search: debouncedMacroSearch || undefined },
+    },
+    queryKey: ["macros", "search", debouncedMacroSearch],
   });
+  const macroList = macroData?.body;
 
   const compatibleMacroIds = useMemo(
     () => new Set(compatibleMacros.map((entry) => entry.macro.id)),

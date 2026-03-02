@@ -25,7 +25,7 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useMacros } from "../../hooks/macro/useMacros/useMacros";
+import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 import ProtocolCodeEditor from "../protocol-code-editor";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
@@ -42,9 +42,13 @@ export function NewProtocolForm() {
   // Macro search
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroList } = useMacros({
-    search: debouncedMacroSearch || undefined,
+  const { data: macroData } = tsr.macros.listMacros.useQuery({
+    queryData: {
+      query: { search: debouncedMacroSearch || undefined },
+    },
+    queryKey: ["macros", "search", debouncedMacroSearch],
   });
+  const macroList = macroData?.body;
 
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 

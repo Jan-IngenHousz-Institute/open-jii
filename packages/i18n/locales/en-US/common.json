@@ -673,7 +673,16 @@
     "notFound": "Protocol not found",
     "notFoundDescription": "The requested protocol could not be found",
     "family": "Sensor Family",
-    "onlyCreatorCanEdit": "Only the protocol creator can access settings"
+    "onlyCreatorCanEdit": "Only the protocol creator can access settings",
+    "filterMy": "My Protocols",
+    "filterAll": "All Protocols",
+    "filterProtocols": "Filter protocols",
+    "clearSearch": "Clear search",
+    "searchProtocols": "Search protocols...",
+    "descriptionPlaceholder": "Add a description...",
+    "detailsTitle": "Details",
+    "codePlaceholder": "Enter protocol code as JSON",
+    "lastUpdate": "Last update"
   },
   "newProtocol": {
     "description": "Set up a new protocol.",

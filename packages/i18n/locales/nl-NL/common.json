@@ -321,7 +321,16 @@
     "notFound": "Protocol niet gevonden",
     "notFoundDescription": "Het gevraagde protocol kon niet worden gevonden",
     "family": "Sensorfamilie",
-    "onlyCreatorCanEdit": "Alleen de protocolmaker kan de instellingen benaderen"
+    "onlyCreatorCanEdit": "Alleen de protocolmaker kan de instellingen benaderen",
+    "filterMy": "Mijn protocollen",
+    "filterAll": "Alle protocollen",
+    "filterProtocols": "Protocollen filteren",
+    "clearSearch": "Zoekopdracht wissen",
+    "searchProtocols": "Protocollen zoeken...",
+    "descriptionPlaceholder": "Beschrijving toevoegen...",
+    "detailsTitle": "Details",
+    "codePlaceholder": "Voer protocol code in als JSON",
+    "lastUpdate": "Laatste update"
   },
   "newProtocol": {
     "description": "Stel een nieuw protocol in.",
