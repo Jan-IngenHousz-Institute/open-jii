@@ -46,7 +46,9 @@
     "bytes": "B",
     "kilobytes": "KB",
     "megabytes": "MB",
-    "comingSoon": "Binnenkort"
+    "comingSoon": "Binnenkort",
+    "showAll": "Alles tonen",
+    "showLess": "Minder tonen"
   },
   "navigation": {
     "experiments": "Experimenten",

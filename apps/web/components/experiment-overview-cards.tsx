@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import React from "react";
 import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
 import type { Experiment } from "@repo/api";
@@ -34,10 +35,8 @@ export function ExperimentOverviewCards({
   }
 
   return (
-    <>
-      {/* Experiments Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {experiments.map((experiment) => {
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {experiments.map((experiment) => {
           const experimentPath = archived
             ? `/platform/experiments-archive/${experiment.id}`
             : `/platform/experiments/${experiment.id}`;
@@ -67,8 +66,7 @@ export function ExperimentOverviewCards({
               </div>
             </Link>
           );
-        })}
-      </div>
-    </>
+      })}
+    </div>
   );
 }
