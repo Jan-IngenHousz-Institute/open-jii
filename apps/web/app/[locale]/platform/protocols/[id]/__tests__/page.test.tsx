@@ -180,9 +180,7 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByText("Water Quality Protocol")).toBeInTheDocument();
     expect(screen.getByText("MultispeQ")).toBeInTheDocument();
     expect(screen.getByText("Dr. Smith")).toBeInTheDocument();
-    expect(screen.getByTestId("rich-text")).toHaveTextContent(
-      "Measures water quality parameters",
-    );
+    expect(screen.getByTestId("rich-text")).toHaveTextContent("Measures water quality parameters");
     expect(screen.getByTestId("json-viewer")).toHaveTextContent('{"key":"value"}');
   });
 

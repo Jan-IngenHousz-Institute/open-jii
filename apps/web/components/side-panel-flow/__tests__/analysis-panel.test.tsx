@@ -275,9 +275,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   it("should sort compatible macros first in the dropdown list", () => {
     vi.mocked(useProtocolCompatibleMacros).mockReturnValue({
       data: {
-        body: [
-          { macro: { id: "macro-3", name: "Statistical Summary", language: "javascript" } },
-        ],
+        body: [{ macro: { id: "macro-3", name: "Statistical Summary", language: "javascript" } }],
       },
     } as never);
 

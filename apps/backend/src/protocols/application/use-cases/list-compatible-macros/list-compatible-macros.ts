@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
-import { ProtocolMacroDto } from "../../../core/models/protocol-macros.model";
+import { ProtocolMacroDto } from "../../../core/models/protocol-macro.model";
 import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 

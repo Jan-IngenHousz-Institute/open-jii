@@ -4,7 +4,7 @@ import { and, eq, inArray, macros, protocolMacros } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { ProtocolMacroDto } from "../models/protocol-macros.model";
+import { ProtocolMacroDto } from "../models/protocol-macro.model";
 
 @Injectable()
 export class ProtocolMacroRepository {
