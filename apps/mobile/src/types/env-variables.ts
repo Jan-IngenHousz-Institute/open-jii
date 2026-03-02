@@ -6,6 +6,7 @@ export interface EnvVariables {
   MQTT_TOPIC: string;
   NEXT_AUTH_URI: string;
   BACKEND_URI: string;
+  POSTHOG_API_KEY: string;
 }
 
 export type EnvVariablesMap = Record<string, EnvVariables>;

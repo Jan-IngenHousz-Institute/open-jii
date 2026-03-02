@@ -29,6 +29,10 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
         process.env.EXPO_PUBLIC_PROD_BACKEND_URI,
         "EXPO_PUBLIC_PROD_BACKEND_URI",
       ),
+      POSTHOG_API_KEY: required(
+        process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
+        "EXPO_PUBLIC_POSTHOG_API_KEY"
+      )
     },
 
     dev: {
@@ -48,6 +52,10 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
         "EXPO_PUBLIC_DEV_NEXT_AUTH_URI",
       ),
       BACKEND_URI: required(process.env.EXPO_PUBLIC_DEV_BACKEND_URI, "EXPO_PUBLIC_DEV_BACKEND_URI"),
+      POSTHOG_API_KEY: required(
+        process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
+        "EXPO_PUBLIC_POSTHOG_API_KEY"
+      )
     },
   };
 }

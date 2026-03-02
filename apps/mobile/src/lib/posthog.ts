@@ -1,31 +1,13 @@
 import PostHog from "posthog-react-native";
-import { getEnvName } from "~/stores/environment-store";
+import { getEnvVar } from "~/stores/environment-store";
+
 
 /**
- * PostHog API key — same project as the web app.
- * Shared key so mobile + web events land in one PostHog project.
+ * PostHog host — use the official endpoint directly.
+ * The reverse-proxy (/ingest) is only useful for the web app
+ * (to dodge ad-blockers). On mobile there's no need for it.
  */
-const POSTHOG_API_KEY = "phc_bAOjcJ4S1mw8I5bSlDHUDmNeOaLuo4dhPiqWmyNdWLd";
-
-/**
- * Reverse proxy hosts per environment.
- * Routes through the web app's /ingest rewrite so requests
- * go to our domain first (same pattern as the Next.js reverse proxy).
- */
-const PROXY_HOSTS: Record<string, string> = {
-  prod: "https://openjii.org/ingest",
-  dev: "https://dev.openjii.org/ingest",
-};
-
-function getPostHogHost(): string {
-  try {
-    const env = getEnvName();
-    return PROXY_HOSTS[env] ?? PROXY_HOSTS.prod;
-  } catch {
-    // Store not rehydrated yet — fall back to prod
-    return PROXY_HOSTS.prod;
-  }
-}
+const POSTHOG_HOST = "https://eu.i.posthog.com";
 
 /**
  * Singleton PostHog client for the mobile app.
@@ -33,11 +15,13 @@ function getPostHogHost(): string {
  */
 let client: PostHog | null = null;
 
-export async function getPostHogClient(): Promise<PostHog> {
+export function getPostHogClient(): PostHog {
   if (client) return client;
 
-  client = await PostHog.initAsync(POSTHOG_API_KEY, {
-    host: getPostHogHost(),
+  const POSTHOG_API_KEY = getEnvVar("POSTHOG_API_KEY");
+
+  client = new PostHog(POSTHOG_API_KEY, {
+    host: POSTHOG_HOST,
     // Autocapture uncaught exceptions, unhandled rejections, and console.error
     errorTracking: {
       autocapture: {
@@ -55,13 +39,5 @@ export async function getPostHogClient(): Promise<PostHog> {
     flushInterval: 5000,
   });
 
-  return client;
-}
-
-/**
- * Get the client synchronously (returns null if not yet initialized).
- * Useful for error boundaries and places where async isn't practical.
- */
-export function getPostHogClientSync(): PostHog | null {
   return client;
 }

@@ -1,6 +1,5 @@
 import { PostHogProvider as RNPostHogProvider } from "posthog-react-native";
-import { useEffect, useState, type ReactNode } from "react";
-import PostHog from "posthog-react-native";
+import { useRef, type ReactNode } from "react";
 import { getPostHogClient } from "~/lib/posthog";
 
 /**
@@ -9,18 +8,12 @@ import { getPostHogClient } from "~/lib/posthog";
  * so usePostHog() works throughout the app.
  */
 export function PostHogProvider({ children }: { children: ReactNode }) {
-  const [client, setClient] = useState<PostHog | null>(null);
+  const client = useRef(getPostHogClient())
 
-  useEffect(() => {
-    getPostHogClient()
-      .then(setClient)
-      .catch((err) => console.warn("[PostHog] init failed:", err));
-  }, []);
-
-  if (!client) {
+  if (!client.current) {
     // Render children immediately — analytics just won't be available yet
     return <>{children}</>;
   }
 
-  return <RNPostHogProvider client={client}>{children}</RNPostHogProvider>;
+  return <RNPostHogProvider client={client.current}>{children}</RNPostHogProvider>;
 }
