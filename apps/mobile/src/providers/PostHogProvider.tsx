@@ -1,5 +1,6 @@
 import { PostHogProvider as RNPostHogProvider } from "posthog-react-native";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { getPostHogClient } from "~/lib/posthog";
 
 export function PostHogProvider({ children }: { children: ReactNode }) {
