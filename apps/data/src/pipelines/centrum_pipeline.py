@@ -947,7 +947,7 @@ def experiment_annotations_source():
 )
 def experiment_metadata_source():
     """DLT mirror of the backend-managed experiment_metadata table."""
-    return spark.read.table(f"{CATALOG_NAME}.centrum.experiment_metadata")
+    return spark.read.table(f"{CATALOG_NAME}.centrum.experiment_custom_metadata")
 
 # COMMAND ----------
 

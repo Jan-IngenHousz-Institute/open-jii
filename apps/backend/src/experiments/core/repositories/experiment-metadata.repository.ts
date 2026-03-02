@@ -30,7 +30,7 @@ export class ExperimentMetadataRepository {
   constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
 
   private get metadataTable(): string {
-    return `${this.databricksPort.CATALOG_NAME}.${this.databricksPort.CENTRUM_SCHEMA_NAME}.experiment_metadata`;
+    return `${this.databricksPort.CATALOG_NAME}.${this.databricksPort.CENTRUM_SCHEMA_NAME}.experiment_custom_metadata`;
   }
 
   // --- Validation ---
