@@ -52,3 +52,35 @@ export async function exportMeasurementsToFile(): Promise<void> {
     dialogTitle: "Export Measurements",
   });
 }
+export async function exportSingleMeasurementToFile(measurement: {
+  topic: string;
+  measurementResult: object;
+  metadata: { experimentName: string; protocolName: string; timestamp: string };
+}): Promise<void> {
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    totalCount: 1,
+    syncedCount: 0,
+    unsyncedCount: 1,
+    measurements: [
+      {
+        status: "unsynced" as const,
+        timestamp: measurement.metadata.timestamp,
+        experimentName: measurement.metadata.experimentName,
+        data: measurement,
+      },
+    ],
+  };
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileName = `measurement-rescue-${timestamp}.json`;
+
+  const file = new File(Paths.cache, fileName);
+  file.create();
+  file.write(JSON.stringify(exportData, null, 2));
+
+  await Sharing.shareAsync(file.uri, {
+    mimeType: "application/json",
+    dialogTitle: "Save Measurement",
+  });
+}

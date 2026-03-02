@@ -1,7 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
+import { Alert } from "react-native";
 import { toast } from "sonner-native";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { exportSingleMeasurementToFile } from "~/services/export-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { compressSample } from "~/utils/compress-sample";
@@ -64,6 +66,31 @@ function prepareMeasurementForUpload({
   return payload;
 }
 
+function promptMeasurementFileSave(measurement: {
+  topic: string;
+  measurementResult: object;
+  metadata: { experimentName: string; protocolName: string; timestamp: string };
+}) {
+  Alert.alert(
+    "Something went wrong",
+    "Could not save the measurement. Would you like to save it as a file instead?",
+    [
+      { text: "Dismiss", style: "cancel" },
+      {
+        text: "Save to File",
+        onPress: async () => {
+          try {
+            await exportSingleMeasurementToFile(measurement);
+          } catch (exportError) {
+            console.error("Failed to export measurement to file:", exportError);
+            toast.error("Could not save measurement. Please try again.");
+          }
+        },
+      },
+    ],
+  );
+}
+
 export function useMeasurementUpload() {
   const queryClient = useQueryClient();
   const { saveFailedUpload } = useFailedUploads();
@@ -105,33 +132,33 @@ export function useMeasurementUpload() {
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });
 
+      const failedUploadData = {
+        topic,
+        measurementResult: measurementData,
+        metadata: {
+          experimentName,
+          protocolName: protocolId,
+          timestamp: measurementData.timestamp,
+        },
+      };
+
       try {
         await sendMqttEvent(topic, measurementData);
         toast.success("Measurement uploaded!");
-        // Save successful upload for history
-        await saveSuccessfulUpload({
-          topic,
-          measurementResult: measurementData,
-          metadata: {
-            experimentName,
-            protocolName: protocolId,
-            timestamp: measurementData.timestamp,
-          },
-        });
+        await saveSuccessfulUpload(failedUploadData);
         await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
-      } catch (e: any) {
-        console.log("Upload failed", e);
+        return;
+      } catch (uploadError) {
+        console.error("Upload failed:", uploadError);
         toast.error("Upload not available, upload it later from Recent");
-        await saveFailedUpload({
-          topic,
-          measurementResult: measurementData,
-          metadata: {
-            experimentName,
-            protocolName: protocolId,
-            timestamp: measurementData.timestamp,
-          },
-        });
+      }
+
+      try {
+        await saveFailedUpload(failedUploadData);
         await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+      } catch (storageError) {
+        console.error("Failed to save measurement to local storage:", storageError);
+        promptMeasurementFileSave(failedUploadData);
       }
     },
   );
