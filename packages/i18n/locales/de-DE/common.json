@@ -104,7 +104,7 @@
     "noUsersFound": "Keine Benutzer gefunden für \"{{search}}\"",
     "inviteByEmail": "{{email}} per E-Mail einladen",
     "sendInviteByEmail": "Einladung per E-Mail senden",
-    "emailAlreadyInvited": "Diese E-Mail ist bereits eingeladen oder ist ein Mitglied",
+    "emailAlreadyInvited": "Diese E-Mail wurde bereits eingeladen oder ist bereits Mitglied",
     "searchExperiments": "Experimente suchen...",
     "startTypingToSearch": "Tippen Sie, um zu suchen",
     "searchProtocols": "Protokolle suchen...",
