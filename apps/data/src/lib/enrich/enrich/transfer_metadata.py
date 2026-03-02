@@ -210,7 +210,7 @@ def _call_transfer_webhook(
             # Remap parquet "address" key to the API-expected "name" key
             locations = [
                 {
-                    "name": loc.get("address", loc.get("name", "")),
+                    "name": loc.get("address", loc.get("name", "")) or "Location",
                     "latitude": loc["latitude"],
                     "longitude": loc["longitude"],
                 }
