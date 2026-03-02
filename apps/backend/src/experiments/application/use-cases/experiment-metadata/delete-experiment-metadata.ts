@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
@@ -16,13 +17,12 @@ export class DeleteExperimentMetadataUseCase {
 
   async execute(experimentId: string, userId: string): Promise<Result<void>> {
     this.logger.log({
-      msg: "Deleting metadata for experiment",
+      msg: "Deleting experiment metadata",
       operation: "deleteExperimentMetadata",
       experimentId,
       userId,
     });
 
-    // Check if experiment exists and if user has write access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
@@ -37,7 +37,8 @@ export class DeleteExperimentMetadataUseCase {
       }) => {
         if (!experiment) {
           this.logger.warn({
-            msg: "Attempt to delete metadata for non-existent experiment",
+            msg: "Experiment not found for metadata deletion",
+            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
             operation: "deleteExperimentMetadata",
             experimentId,
             userId,
@@ -47,7 +48,8 @@ export class DeleteExperimentMetadataUseCase {
 
         if (!hasArchiveAccess) {
           this.logger.warn({
-            msg: "User does not have write access to experiment",
+            msg: "Unauthorized metadata deletion attempt",
+            errorCode: ErrorCodes.FORBIDDEN,
             operation: "deleteExperimentMetadata",
             experimentId,
             userId,
@@ -55,38 +57,13 @@ export class DeleteExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have write access to this experiment"));
         }
 
-        // Check if metadata exists
-        const existingResult =
-          await this.experimentMetadataRepository.findByExperimentId(experimentId);
-
-        if (existingResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to check existing metadata",
-            operation: "deleteExperimentMetadata",
-            experimentId,
-            userId,
-            error: existingResult.error.message,
-          });
-          return failure(AppError.internal("Failed to check existing metadata"));
-        }
-
-        if (!existingResult.value) {
-          this.logger.warn({
-            msg: "No metadata found for experiment",
-            operation: "deleteExperimentMetadata",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.notFound("No metadata found for this experiment"));
-        }
-
-        // Delete metadata
         const deleteResult =
           await this.experimentMetadataRepository.deleteByExperimentId(experimentId);
 
         if (deleteResult.isFailure()) {
           this.logger.error({
-            msg: "Failed to delete metadata",
+            msg: "Failed to delete experiment metadata",
+            errorCode: ErrorCodes.EXPERIMENT_METADATA_DELETE_FAILED,
             operation: "deleteExperimentMetadata",
             experimentId,
             userId,
@@ -96,9 +73,10 @@ export class DeleteExperimentMetadataUseCase {
         }
 
         this.logger.log({
-          msg: "Successfully deleted metadata for experiment",
+          msg: "Experiment metadata deleted successfully",
           operation: "deleteExperimentMetadata",
           experimentId,
+          userId,
           status: "success",
         });
 
