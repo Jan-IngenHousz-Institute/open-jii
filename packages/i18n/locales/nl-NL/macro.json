@@ -56,7 +56,9 @@
     "detailsTitle": "Macro-details",
     "detailsDescription": "Stel de naam, beschrijving en taal voor uw macro in",
     "codeTitle": "Macro-code",
-    "finalizeSetup": "Macro maken"
+    "finalizeSetup": "Macro maken",
+    "compatibleProtocols": "Compatibele protocollen",
+    "compatibleProtocolsDescription": "Selecteer optioneel compatibele protocollen voor deze macro"
   },
   "macroSettings": {
     "loading": "Macro laden...",
@@ -80,7 +82,11 @@
     "confirmDelete": "Weet u zeker dat u wilt verwijderen",
     "cancel": "Annuleren",
     "delete": "Verwijderen",
-    "deleting": "Verwijderen..."
+    "deleting": "Verwijderen...",
+    "compatibleProtocols": "Compatibele protocollen",
+    "compatibleProtocolsDescription": "Protocollen waarvan bekend is dat ze werken met deze macro.",
+    "noCompatibleProtocols": "Nog geen compatibele protocollen gekoppeld.",
+    "addCompatibleProtocol": "Zoek en voeg een compatibel protocol toe..."
   },
   "errors": {
     "failedToLoadMacro": "Macro kon niet worden geladen"
