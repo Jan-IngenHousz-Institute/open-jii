@@ -183,28 +183,25 @@ jobs:
         id: verify-deployment
         run: |
           MAX_ATTEMPTS=20
-          SLEEP_SECONDS=15
+          SLEEP_SECONDS=5
           ATTEMPT=0
 
           while (( ATTEMPT < MAX_ATTEMPTS )); do
             ATTEMPT=$((ATTEMPT + 1))
 
-            STATES=$(aws ecs describe-services \
-              --cluster backend-cluster-${{ env.ENV }} \
-              --services backend-${{ env.ENV }} \
+            if ! STATES=$(aws ecs describe-services \
+              --cluster "backend-cluster-${{ env.ENV }}" \
+              --services "backend-${{ env.ENV }}" \
               --query 'services[0].deployments[?status==`PRIMARY`].rolloutState' \
-              --output text)
-
-            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS — rollout state: $STATES"
-
-            if [[ -z "$STATES" ]]; then
-              echo "❌ No PRIMARY deployment found — deployment likely failed or rolled back."
+              --output text 2>&1); then
+              echo "❌ AWS CLI call failed: $STATES"
               exit 1
             fi
 
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS — rollout state: $STATES"
+
             if [[ "$STATES" == "COMPLETED" ]]; then
               echo "✅ Deployment completed successfully: $STATES"
-              echo "success=true" >> $GITHUB_OUTPUT
               exit 0
             fi
 
