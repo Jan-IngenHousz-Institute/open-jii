@@ -60,6 +60,9 @@ export enum ErrorCodes {
   MACRO_UPDATE_FAILED = "MACRO_UPDATE_FAILED", // Failed to update macro
   MACRO_DELETE_FAILED = "MACRO_DELETE_FAILED", // Failed to delete macro
   MACRO_NOT_FOUND = "MACRO_NOT_FOUND", // Macro not found
+  MACRO_PROTOCOLS_ADD_FAILED = "MACRO_PROTOCOLS_ADD_FAILED", // Failed to add compatible protocols
+  MACRO_PROTOCOLS_REMOVE_FAILED = "MACRO_PROTOCOLS_REMOVE_FAILED", // Failed to remove compatible protocol
+  MACRO_PROTOCOLS_LIST_FAILED = "MACRO_PROTOCOLS_LIST_FAILED", // Failed to list compatible protocols
 
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/

@@ -111,6 +111,23 @@ vi.mock("~/hooks/macro/useMacroCreate/useMacroCreate", () => ({
   }),
 }));
 
+// Mock hooks added by protocol-macro compatibility feature
+vi.mock("@/hooks/protocol/useProtocolSearch/useProtocolSearch", () => ({
+  useProtocolSearch: () => ({ protocols: [] }),
+}));
+
+vi.mock("@/hooks/useDebounce", () => ({
+  useDebounce: (value: string) => [value, true],
+}));
+
+vi.mock("@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol", () => ({
+  useAddCompatibleProtocol: () => ({ mutateAsync: vi.fn() }),
+}));
+
+vi.mock("../protocol-search-with-dropdown", () => ({
+  ProtocolSearchWithDropdown: () => <div data-testid="protocol-search-dropdown" />,
+}));
+
 vi.mock("~/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
   useGetUserProfile: () => ({
     data: {

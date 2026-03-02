@@ -9,6 +9,9 @@ import {
   zMacroIdPathParam,
   zCreateMacroRequestBody,
   zUpdateMacroRequestBody,
+  zMacroProtocolList,
+  zAddCompatibleProtocolsBody,
+  zMacroProtocolPathParams,
 } from "../schemas/macro.schema";
 
 const c = initContract();
@@ -76,5 +79,46 @@ export const macroContract = c.router({
     },
     summary: "Delete a macro",
     description: "Deletes a macro by its ID",
+  },
+
+  listCompatibleProtocols: {
+    method: "GET",
+    path: "/api/v1/macros/:id/protocols",
+    pathParams: zMacroIdPathParam,
+    responses: {
+      200: zMacroProtocolList,
+      404: zMacroErrorResponse,
+    },
+    summary: "List compatible protocols for a macro",
+    description: "Returns protocols that are marked as compatible with this macro",
+  },
+
+  addCompatibleProtocols: {
+    method: "POST",
+    path: "/api/v1/macros/:id/protocols",
+    pathParams: zMacroIdPathParam,
+    body: zAddCompatibleProtocolsBody,
+    responses: {
+      201: zMacroProtocolList,
+      400: zMacroErrorResponse,
+      403: zMacroErrorResponse,
+      404: zMacroErrorResponse,
+    },
+    summary: "Add compatible protocols to a macro",
+    description: "Links protocols as compatible with this macro (creator only)",
+  },
+
+  removeCompatibleProtocol: {
+    method: "DELETE",
+    path: "/api/v1/macros/:id/protocols/:protocolId",
+    pathParams: zMacroProtocolPathParams,
+    body: null,
+    responses: {
+      204: null,
+      403: zMacroErrorResponse,
+      404: zMacroErrorResponse,
+    },
+    summary: "Remove a compatible protocol from a macro",
+    description: "Unlinks a protocol from this macro's compatibility list (creator only)",
   },
 });

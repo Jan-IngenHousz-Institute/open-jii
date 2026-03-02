@@ -28,6 +28,23 @@ vi.mock("@/hooks/useLocale", () => ({
   useLocale: () => "en",
 }));
 
+// Mock hooks added by protocol-macro compatibility feature
+vi.mock("@/hooks/macro/useMacros/useMacros", () => ({
+  useMacros: () => ({ data: [] }),
+}));
+
+vi.mock("@/hooks/useDebounce", () => ({
+  useDebounce: (value: string) => [value, true],
+}));
+
+vi.mock("@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro", () => ({
+  useAddCompatibleMacro: () => ({ mutateAsync: vi.fn() }),
+}));
+
+vi.mock("../../macro-search-with-dropdown", () => ({
+  MacroSearchWithDropdown: () => <div data-testid="macro-search-dropdown" />,
+}));
+
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({

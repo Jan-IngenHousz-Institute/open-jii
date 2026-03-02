@@ -338,7 +338,9 @@
     "codeTitle": "Protocol code",
     "codeDescription": "Definieer de code structuur voor je protocol",
     "codePlaceholder": "Voer protocol code in als JSON",
-    "finalizeSetup": "Protocol maken"
+    "finalizeSetup": "Protocol maken",
+    "compatibleMacros": "Compatibele macro's",
+    "compatibleMacrosDescription": "Selecteer optioneel compatibele macro's voor dit protocol"
   },
   "protocolSettings": {
     "loading": "Protocol instellingen laden...",

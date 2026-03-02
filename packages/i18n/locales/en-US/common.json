@@ -690,7 +690,9 @@
     "codeTitle": "Protocol Code",
     "codeDescription": "Define the code structure for your protocol",
     "codePlaceholder": "Enter protocol code as JSON",
-    "finalizeSetup": "Create Protocol"
+    "finalizeSetup": "Create Protocol",
+    "compatibleMacros": "Compatible Macros",
+    "compatibleMacrosDescription": "Optionally select macros compatible with this protocol"
   },
   "protocolSettings": {
     "loading": "Loading protocol settings...",

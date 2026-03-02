@@ -587,7 +587,9 @@
     "codeTitle": "Protokollcode",
     "codeDescription": "Definieren Sie die Code-Struktur für Ihr Protokoll",
     "codePlaceholder": "Protokollcode als JSON eingeben",
-    "finalizeSetup": "Protokoll erstellen"
+    "finalizeSetup": "Protokoll erstellen",
+    "compatibleMacros": "Kompatible Makros",
+    "compatibleMacrosDescription": "Optional kompatible Makros für dieses Protokoll auswählen"
   },
   "protocolSettings": {
     "loading": "Protokolleinstellungen werden geladen...",

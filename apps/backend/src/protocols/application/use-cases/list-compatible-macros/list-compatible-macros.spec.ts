@@ -99,9 +99,7 @@ describe("ListCompatibleMacrosUseCase", () => {
 
   it("should return INTERNAL_ERROR when protocolRepository.findOne fails", async () => {
     const protocolRepo = testApp.module.get(ProtocolRepository);
-    vi.spyOn(protocolRepo, "findOne").mockResolvedValueOnce(
-      failure(AppError.internal("db error")),
-    );
+    vi.spyOn(protocolRepo, "findOne").mockResolvedValueOnce(failure(AppError.internal("db error")));
 
     const result = await useCase.execute(faker.string.uuid());
     expect(result.isSuccess()).toBe(false);

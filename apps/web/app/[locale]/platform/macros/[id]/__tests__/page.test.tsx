@@ -20,6 +20,11 @@ vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
   useMacro: vi.fn(),
 }));
 
+// Mock the useMacroCompatibleProtocols hook
+vi.mock("@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols", () => ({
+  useMacroCompatibleProtocols: () => ({ data: undefined }),
+}));
+
 // Mock the date utility
 vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
@@ -57,7 +62,15 @@ vi.mock("@/components/macro-code-viewer", () => ({
 vi.mock("lucide-react", () => ({
   CalendarIcon: () => <div data-testid="calendar-icon" />,
   CodeIcon: () => <div data-testid="code-icon" />,
+  ExternalLink: () => <div data-testid="external-link-icon" />,
   UserIcon: () => <div data-testid="user-icon" />,
+}));
+
+// Mock next/link
+vi.mock("next/link", () => ({
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
 }));
 
 // Mock UI components
