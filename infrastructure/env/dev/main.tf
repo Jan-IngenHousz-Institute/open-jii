@@ -405,7 +405,7 @@ module "pipeline_scheduler" {
   source = "../../modules/databricks/job"
 
   name        = "Pipeline-Scheduler-DEV"
-  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 6am and 6pm"
+  description = "Orchestrates central pipeline execution"
 
   # Schedule: Every 30 minutes between 6am and 6pm UTC, weekdays only (Mon-Fri)
   # Format: "seconds minutes hours day-of-month month day-of-week"
@@ -429,27 +429,10 @@ module "pipeline_scheduler" {
 
   tasks = [
     {
-      key          = "trigger_centrum_pipeline"
-      task_type    = "pipeline"
-      compute_type = "serverless"
-      pipeline_id  = module.centrum_pipeline.pipeline_id
-    },
-    {
-      key           = "trigger_experiment_pipelines"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
-      # notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/experiment_pipelines_orchestrator_task"
-
-      parameters = {
-        "catalog_name"            = module.databricks_catalog.catalog_name
-        "central_schema"          = "centrum"
-        "experiment_status_table" = "experiment_status"
-        "environment"             = upper(var.environment)
-      }
-
-      depends_on = "trigger_centrum_pipeline"
-    },
+      key         = "trigger_centrum_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.centrum_pipeline.pipeline_id
+    }
   ]
 
   permissions = [
