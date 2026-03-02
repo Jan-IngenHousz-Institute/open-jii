@@ -22,7 +22,7 @@ vi.mock("@repo/ui/components", () => ({
   ),
   RadioGroup: ({
     children,
-    onValueChange,
+    onValueChange: _onValueChange,
     value,
   }: {
     children: React.ReactNode;
@@ -37,7 +37,7 @@ vi.mock("@repo/ui/components", () => ({
   RadioGroupItem: ({
     value,
     disabled,
-    ...props
+    ..._props
   }: {
     value: string;
     disabled?: boolean;
@@ -48,7 +48,8 @@ vi.mock("@repo/ui/components", () => ({
 }));
 
 vi.mock("@repo/ui/lib/utils", () => ({
-  cva: (base: string, config: Record<string, unknown>) => (props: Record<string, unknown>) => base,
+  cva: (base: string, _config: Record<string, unknown>) => (_props: Record<string, unknown>) =>
+    base,
 }));
 
 vi.mock("lucide-react", () => ({

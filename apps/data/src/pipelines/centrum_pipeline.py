@@ -16,7 +16,7 @@ from datetime import datetime
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
-from enrich.experiment_metadata import add_metadata_column
+from enrich.custom_metadata import add_custom_metadata_column
 from openjii import decompress_sample
 
 # COMMAND ----------
@@ -784,6 +784,22 @@ def experiment_macro_data():
 def experiment_table_metadata():
     """Metadata for all experiment tables."""
 
+    # Pre-compute custom_metadata_schema per experiment from the metadata source.
+    # Each experiment's metadata blob has $.rows — an array of VARIANT objects.
+    # We explode the rows and use schema_of_variant_agg to infer the merged schema.
+    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
+    custom_metadata_schemas = (
+        metadata_source
+        .select(
+            F.col("experiment_id"),
+            F.expr("explode(variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row")
+        )
+        .groupBy("experiment_id")
+        .agg(
+            F.expr("nullif(schema_of_variant_agg(_row), 'VOID')").alias("custom_metadata_schema")
+        )
+    )
+
     macro_metadata = (
         dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
         .filter("macro_output IS NOT NULL")
@@ -793,13 +809,15 @@ def experiment_table_metadata():
             F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
             F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
+        .join(custom_metadata_schemas, "experiment_id", "left")
         .select(
             F.col("experiment_id"),
             F.col("macro_id").alias("identifier"),
             F.lit("macro").alias("table_type"),
             F.col("row_count"),
             F.col("macro_schema"),
-            F.col("questions_schema")
+            F.col("questions_schema"),
+            F.col("custom_metadata_schema"),
         )
     )
     
@@ -810,13 +828,15 @@ def experiment_table_metadata():
             F.count("*").alias("row_count"),
             F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
+        .join(custom_metadata_schemas, "experiment_id", "left")
         .select(
             F.col("experiment_id"),
             F.lit("raw_data").alias("identifier"),
             F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
-            F.col("questions_schema")
+            F.col("questions_schema"),
+            F.col("custom_metadata_schema"),
         )
     )
     
@@ -830,7 +850,8 @@ def experiment_table_metadata():
             F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
-            F.lit(None).cast("string").alias("questions_schema")
+            F.lit(None).cast("string").alias("questions_schema"),
+            F.lit(None).cast("string").alias("custom_metadata_schema"),
         )
     )
     
@@ -844,7 +865,8 @@ def experiment_table_metadata():
             F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
-            F.lit(None).cast("string").alias("questions_schema")
+            F.lit(None).cast("string").alias("questions_schema"),
+            F.lit(None).cast("string").alias("custom_metadata_schema"),
         )
     )
     
@@ -966,7 +988,7 @@ def enriched_experiment_raw_data():
     
     enriched = add_annotation_column(enriched, annotations_source)
     
-    return add_metadata_column(enriched, metadata_source)
+    return add_custom_metadata_column(enriched, metadata_source)
 
 # COMMAND ----------
 
@@ -1045,7 +1067,7 @@ def enriched_experiment_macro_data():
     
     enriched = add_annotation_column(enriched, annotations_source)
     
-    return add_metadata_column(enriched, metadata_source)
+    return add_custom_metadata_column(enriched, metadata_source)
 
 # COMMAND ----------
 
