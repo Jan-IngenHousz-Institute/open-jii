@@ -7,7 +7,6 @@
 
 # DBTITLE 1,Imports
 import json
-import logging
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -21,9 +20,11 @@ import sys
 sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/openjii")
 from openjii.helpers import load_experiment_table
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Use print() for logging — Databricks captures stdout/stderr from the
+# driver on the compute cluster, but the Python logging module is often
+# swallowed (especially when running as a Databricks task/workflow).
+def log(msg: str, level: str = "INFO"):
+    print(f"[{level}] {msg}", flush=True)
 
 # COMMAND ----------
 
@@ -54,12 +55,12 @@ VOLUME_BASE_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-exports"
 OUTPUT_BASE_PATH = f"{VOLUME_BASE_PATH}/{EXPERIMENT_ID}/{TABLE_NAME}/{FORMAT}"
 OUTPUT_PATH = f"{OUTPUT_BASE_PATH}/{EXPORT_ID}"
 
-logger.info(f"Exporting data for experiment: {EXPERIMENT_ID}")
-logger.info(f"Table name: {TABLE_NAME}")
-logger.info(f"Format: {FORMAT}")
-logger.info(f"Export ID: {EXPORT_ID}")
-logger.info(f"Catalog: {CATALOG_NAME}")
-logger.info(f"Output path: {OUTPUT_PATH}")
+log(f"Exporting data for experiment: {EXPERIMENT_ID}")
+log(f"Table name: {TABLE_NAME}")
+log(f"Format: {FORMAT}")
+log(f"Export ID: {EXPORT_ID}")
+log(f"Catalog: {CATALOG_NAME}")
+log(f"Output path: {OUTPUT_PATH}")
 
 # COMMAND ----------
 
@@ -70,7 +71,7 @@ def load_data():
     This handles all variant parsing and column selection automatically.
     """
     try:
-        logger.info(f"Loading experiment data using openjii utility")
+        log("Loading experiment data using openjii utility")
         
         # Use openjii utility to load data with proper variant parsing
         df = load_experiment_table(
@@ -81,15 +82,15 @@ def load_data():
         )
         
         row_count = df.count()
-        logger.info(f"Loaded {row_count} rows with parsed variants")
+        log(f"Loaded {row_count} rows with parsed variants")
         
         if row_count == 0:
-            logger.warning("No data found matching the criteria")
+            log("No data found matching the criteria", "WARN")
         
         return df, row_count
     
     except Exception as e:
-        logger.error(f"Error loading data: {e}")
+        log(f"Error loading data: {e}", "ERROR")
         raise
 
 # COMMAND ----------
@@ -100,7 +101,7 @@ def export_data(df):
     Export data in the requested format
     """
     try:
-        logger.info(f"Exporting to {FORMAT.upper()}: {OUTPUT_PATH}")
+        log(f"Exporting to {FORMAT.upper()}: {OUTPUT_PATH}")
         
         if FORMAT == "csv":
             # CSV doesn't support complex types (structs, arrays, maps)
@@ -129,11 +130,11 @@ def export_data(df):
         else:
             raise ValueError(f"Unsupported format: {FORMAT}")
         
-        logger.info(f"{FORMAT.upper()} export completed")
+        log(f"{FORMAT.upper()} export completed")
         return OUTPUT_PATH
     
     except Exception as e:
-        logger.error(f"Error exporting data: {e}")
+        log(f"Error exporting data: {e}", "ERROR")
         raise
 
 # COMMAND ----------
@@ -169,17 +170,17 @@ def get_export_file_path(directory_path):
             # For single file output, return the file path
             # For multi-part output, return the directory path
             if len(data_files) == 1:
-                logger.info(f"Found single data file")
+                log("Found single data file")
                 return _strip_dbfs_prefix(data_files[0])
             else:
-                logger.info(f"Found {len(data_files)} data files")
+                log(f"Found {len(data_files)} data files")
                 return _strip_dbfs_prefix(directory_path)
         else:
-            logger.warning(f"No data files found in {directory_path}")
+            log(f"No data files found in {directory_path}", "WARN")
             return _strip_dbfs_prefix(directory_path)
             
     except Exception as e:
-        logger.error(f"Error listing files: {e}")
+        log(f"Error listing files: {e}", "ERROR")
         return _strip_dbfs_prefix(directory_path)
 
 # COMMAND ----------
@@ -192,14 +193,14 @@ def create_export_metadata(file_path, row_count):
     In-progress exports are tracked via Databricks job runs API, not in this table.
     """
     try:
-        logger.info(f"Creating export metadata for export_id: {EXPORT_ID}")
+        log(f"Creating export metadata for export_id: {EXPORT_ID}")
         
         # Calculate file size if possible
         try:
             files = dbutils.fs.ls(file_path)
             file_size = sum(f.size for f in files if not f.name.startswith("_") and not f.name.startswith("."))
         except Exception as e:
-            logger.warning(f"Could not calculate file size: {e}")
+            log(f"Could not calculate file size: {e}", "WARN")
             file_size = None
         
         # Get current timestamp
@@ -221,10 +222,10 @@ def create_export_metadata(file_path, row_count):
         
         spark.sql(insert_query)
         
-        logger.info(f"Export metadata created successfully with status='completed'")
+        log("Export metadata created successfully with status='completed'")
         
     except Exception as e:
-        logger.error(f"Error creating export metadata: {e}")
+        log(f"Error creating export metadata: {e}", "ERROR")
         # Don't fail the job if metadata creation fails
         pass
 
@@ -235,15 +236,15 @@ def main():
     """
     Main execution function
     """
-    logger.info("="*80)
-    logger.info("Starting data export task")
-    logger.info("="*80)
+    log("=" * 80)
+    log("Starting data export task")
+    log("=" * 80)
     
     # Load data
     df, row_count = load_data()
     
     if row_count == 0:
-        logger.warning("No data to export")
+        log("No data to export", "WARN")
         dbutils.notebook.exit({"status": "no_data", "row_count": 0})
         return
     
@@ -268,12 +269,12 @@ def main():
         "file_path": file_path,
     }
     
-    logger.info("="*80)
-    logger.info("Data export task completed successfully")
-    logger.info(f"Total rows exported: {row_count}")
-    logger.info(f"Format: {FORMAT.upper()}")
-    logger.info(f"File path: {file_path}")
-    logger.info("="*80)
+    log("=" * 80)
+    log("Data export task completed successfully")
+    log(f"Total rows exported: {row_count}")
+    log(f"Format: {FORMAT.upper()}")
+    log(f"File path: {file_path}")
+    log("=" * 80)
     
     # Return results as notebook exit value
     dbutils.notebook.exit(output)

@@ -589,6 +589,50 @@ describe("MacroRepository", () => {
     });
   });
 
+  describe("findByName", () => {
+    it("should return macro by name with creator name", async () => {
+      // Arrange
+      const createMacroDto: CreateMacroDto = {
+        name: "Unique By Name Macro",
+        description: "Find by name test",
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=",
+      };
+
+      const createResult = await repository.create(createMacroDto, testUserId);
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      // Act
+      const result = await repository.findByName(createMacroDto.name);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macro = result.value;
+
+      expect(macro).not.toBeNull();
+      expect(macro).toMatchObject({
+        id: createdMacro.id,
+        name: createMacroDto.name,
+        description: createMacroDto.description,
+        language: createMacroDto.language,
+        createdBy: testUserId,
+        createdByName: testUserName,
+      });
+    });
+
+    it("should return null when no macro with that name exists", async () => {
+      // Act
+      const result = await repository.findByName("Non Existent Macro Name");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
   describe("anonymization", () => {
     it("should return real names for activated profiles", async () => {
       const activeUserId = await testApp.createTestUser({ name: "Active User", activated: true });
@@ -982,6 +1026,46 @@ describe("MacroRepository", () => {
       const result = await repository.findNamesByIds(nonExistentIds);
 
       // Assert
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Map);
+      expect(result.value.size).toBe(0);
+    });
+
+    it("should silently exclude non-UUID identifiers", async () => {
+      // Arrange - create a macro
+      const createResult = await repository.create(
+        {
+          name: "Real Macro",
+          description: "Has a proper UUID",
+          language: "python" as const,
+          code: "cHl0aG9uIGNvZGU=",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult);
+      const macro = createResult.value[0];
+
+      // Act - mix valid UUID with legacy non-UUID identifiers
+      const result = await repository.findNamesByIds([
+        macro.id,
+        "olivia_gh_protocol",
+        "par",
+        "macro_b511b694c985",
+      ]);
+
+      // Assert - only the valid UUID is returned, non-UUIDs are ignored
+      assertSuccess(result);
+      expect(result.value.size).toBe(1);
+      expect(result.value.has(macro.id)).toBe(true);
+    });
+
+    it("should return empty map when all identifiers are non-UUID", async () => {
+      const result = await repository.findNamesByIds([
+        "olivia_gh_protocol",
+        "par",
+        "unza_pirk_dirk_lightpotential14_safe",
+      ]);
+
       assertSuccess(result);
       expect(result.value).toBeInstanceOf(Map);
       expect(result.value.size).toBe(0);

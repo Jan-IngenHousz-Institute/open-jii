@@ -95,6 +95,25 @@ ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
 ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
+RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
+
+# Legacy macro identifiers that need mapping to actual macro UUIDs.
+# Some data was sent prior to the implementation of proper macro ID handling, so we maintain a mapping of legacy identifiers to actual UUIDs for correct processing.
+LEGACY_MACRO_ID_MAP_PATH = f"/Volumes/{CATALOG_NAME}/centrum/data-legacy/internal/legacy_macro_id_map.json"
+
+def _load_legacy_macro_id_map() -> dict[str, str]:
+    """Load legacy→UUID mapping from a volume JSON file. Returns empty dict on failure."""
+    import json
+    try:
+        with open(LEGACY_MACRO_ID_MAP_PATH) as f:
+            mapping = json.load(f)
+        print(f"[INFO] Loaded {len(mapping)} legacy macro ID mappings from {LEGACY_MACRO_ID_MAP_PATH}")
+        return mapping
+    except Exception as e:
+        print(f"[WARN] Legacy macro ID map not found or unreadable at {LEGACY_MACRO_ID_MAP_PATH}: {e}")
+        return {}
+
+LEGACY_MACRO_ID_MAP: dict[str, str] = _load_legacy_macro_id_map()
 
 # COMMAND ----------
 
@@ -166,7 +185,7 @@ def raw_data():
 @dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
 @dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
-    """Silver layer: Clean and standardize sensor data."""
+    """Silver layer: Clean and standardize sensor data, including imported data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
     
     df = (
@@ -195,6 +214,13 @@ def clean_data():
         )
     )
 
+    def _remap_macro_id(id_col):
+        """Remap legacy macro identifiers to actual UUIDs via chained CASE expression."""
+        result = id_col
+        for legacy_id, actual_id in LEGACY_MACRO_ID_MAP.items():
+            result = F.when(id_col == F.lit(legacy_id), F.lit(actual_id)).otherwise(result)
+        return result
+
     df = df.withColumn(
         "macros",
         F.when(
@@ -219,6 +245,19 @@ def clean_data():
                     )
                 """)
             ).otherwise(F.array())
+        )
+    )
+
+    # Apply legacy macro ID remapping
+    df = df.withColumn(
+        "macros",
+        F.transform(
+            F.col("macros"),
+            lambda m: F.struct(
+                _remap_macro_id(m["id"]).alias("id"),
+                m["name"].alias("name"),
+                m["filename"].alias("filename")
+            )
         )
     )
 
@@ -276,9 +315,11 @@ def clean_data():
             ))
         """)
     )
+
+    df = df.withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
     
-    # Select final columns for silver layer
-    return df.select(
+    # Select final columns for bronze-sourced silver data
+    bronze_clean = df.select(
         "id",
         "new_id",
         "device_id",
@@ -297,8 +338,73 @@ def clean_data():
         "date",
         "hour",
         "ingest_latency_ms",
-        "processed_timestamp"
+        "processed_timestamp",
+        "skip_macro_processing"
     )
+
+    # Read imported data and align to the same schema
+    imported_df = dlt.read_stream(RAW_IMPORTED_DATA_TABLE)
+
+    imported_clean = (
+        imported_df
+        .withColumn("id", F.col("id").cast("long"))
+        .withColumn("new_id", F.col("id").cast("long"))
+        .withColumn("processed_timestamp", F.current_timestamp())
+        .withColumn("date", F.to_date("timestamp"))
+        .withColumn("hour", F.hour("timestamp"))
+        .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
+        # Build macros array from macro columns (empty when no macro)
+        # Apply legacy macro ID remapping inline
+        .withColumn(
+            "macros",
+            F.when(
+                F.col("macro_id").isNotNull(),
+                F.array(
+                    F.struct(
+                        _remap_macro_id(F.col("macro_id")).alias("id"),
+                        F.coalesce(F.col("macro_name"), F.col("macro_filename"), F.col("macro_id")).alias("name"),
+                        F.coalesce(F.col("macro_filename"), F.col("macro_id")).alias("filename")
+                    )
+                )
+            ).otherwise(F.array())
+        )
+        # Parse questions from JSON string if present, otherwise empty array
+        .withColumn(
+            "questions",
+            F.when(
+                F.col("questions").isNotNull(),
+                F.from_json(F.col("questions"), ArrayType(question_schema))
+            ).otherwise(F.array())
+        )
+        .withColumn("annotations", F.array())
+        # Mark imported data to skip macro processing
+        .withColumn("skip_macro_processing", F.lit(True))
+        .select(
+            "id",
+            "new_id",
+            "device_id",
+            "device_name",
+            "device_version",
+            "device_battery",
+            "device_firmware",
+            "sample",
+            "output",
+            "macros",
+            "questions",
+            "annotations",
+            "user_id",
+            "experiment_id",
+            "timestamp",
+            "date",
+            "hour",
+            "ingest_latency_ms",
+            "processed_timestamp",
+            "skip_macro_processing"
+        )
+    )
+
+    # Union bronze-sourced data with imported data
+    return bronze_clean.unionByName(imported_clean)
 
 # COMMAND ----------
 
@@ -388,7 +494,7 @@ def experiment_raw_data():
             sanitized = label.lower()
             
             # Replace invalid characters with underscores
-            invalid_chars = ' ,;{}()\n\t='
+            invalid_chars = ' ,;{}()\n\t=.'
             for char in invalid_chars:
                 sanitized = sanitized.replace(char, '_')
             
@@ -424,6 +530,7 @@ def experiment_raw_data():
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
         .withColumn("data", F.expr("parse_json(sample)"))
+        .withColumn("output_data", F.expr("try_parse_json(output)"))
         .withColumn(
             "questions_sanitized",
             F.when(
@@ -461,8 +568,10 @@ def experiment_raw_data():
             "annotations",
             "user_id",
             "data",
+            "output_data",
             "date",
-            "processed_timestamp"
+            "processed_timestamp",
+            "skip_macro_processing"
         )
     )
 
@@ -537,7 +646,7 @@ def experiment_device_data():
 def experiment_macro_data():
     """Process macros with VARIANT output column."""
     
-    # Read from experiment_raw_data and explode macros
+    # Read all rows with macros from experiment_raw_data
     base_df = (
         dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
         .filter("macros IS NOT NULL")
@@ -550,10 +659,12 @@ def experiment_macro_data():
             "timestamp",
             "user_id",
             "data",
+            "output_data",
             "date",
             "processed_timestamp",
             "questions_data",
             "annotations",
+            "skip_macro_processing",
             F.explode("macros").alias("macro")
         )
         .select(
@@ -564,10 +675,12 @@ def experiment_macro_data():
             "timestamp",
             "user_id",
             "data",
+            "output_data",
             "date",
             "processed_timestamp",
             "questions_data",
             "annotations",
+            "skip_macro_processing",
             F.col("macro.id").alias("macro_id"),
             F.col("macro.name").alias("macro_name"),
             F.col("macro.filename").alias("macro_filename")
@@ -612,12 +725,31 @@ def experiment_macro_data():
     
     return (
         base_df
-        .withColumn("macro_result", execute_macro_udf(F.struct("data", "macro_filename", "macro_name")))
+        # Run macro UDF only for non-imported rows (skip_macro_processing != true)
+        .withColumn(
+            "macro_result",
+            F.when(
+                ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
+                execute_macro_udf(F.struct("data", "macro_filename", "macro_name"))
+            )
+        )
+        # For imported rows, use pre-computed output_data; otherwise use UDF result
         .withColumn(
             "macro_output",
-            F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.col("output_data")
+            ).otherwise(
+                F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
+            )
         )
-        .withColumn("macro_error", F.col("macro_result.error"))
+        .withColumn(
+            "macro_error",
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.lit(None).cast("string")
+            ).otherwise(F.col("macro_result.error"))
+        )
         .withColumn(
             "macro_row_id",
             F.abs(
@@ -900,6 +1032,63 @@ def enriched_experiment_macro_data():
 
 # COMMAND ----------
 
+# DBTITLE 1,Raw Imported Data - Streaming Table
+@dlt.table(
+    name=RAW_IMPORTED_DATA_TABLE,
+    comment="Streaming table: Imported measurement data from external platforms (e.g., PhotosynQ transfers), partitioned by experiment_id",
+    table_properties={
+        "quality": "bronze",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true"
+    },
+    partition_cols=["experiment_id"]
+)
+def raw_imported_data():
+    """Streaming ingestion of imported measurement data from parquet files in data-imports volume."""
+    imported_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/photosynq_transfer"
+    
+    imported_data_schema = StructType([
+        StructField("id", StringType(), True),
+        StructField("device_id", StringType(), True),
+        StructField("device_name", StringType(), True),
+        StructField("device_version", StringType(), True),
+        StructField("device_battery", DoubleType(), True),
+        StructField("device_firmware", StringType(), True),
+        StructField("sample", StringType(), True),
+        StructField("output", StringType(), True),
+        StructField("user_id", StringType(), True),
+        StructField("experiment_id", StringType(), True),
+        StructField("timestamp", TimestampType(), True),
+        StructField("macro_id", StringType(), True),
+        StructField("macro_filename", StringType(), True),
+        StructField("macro_name", StringType(), True),
+        StructField("questions", StringType(), True),
+    ])
+    
+    df = (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "parquet")
+        .option("recursiveFileLookup", "true")
+        .schema(imported_data_schema)
+        .load(imported_path)
+    )
+    
+    return (
+        df
+        .withColumn(
+            "id",
+            F.coalesce(
+                F.col("id"),
+                F.abs(F.hash(*[F.col(c) for c in df.columns])).cast("string")
+            )
+        )
+        .withColumn("ingestion_timestamp", F.current_timestamp())
+    )
+
+# COMMAND ----------
+
 # DBTITLE 1,Raw Ambyte Data - Streaming Table
 @dlt.table(
     name=RAW_AMBYTE_TABLE,
@@ -916,14 +1105,42 @@ def raw_ambyte_data():
     """Streaming ingestion of pre-processed Ambyte trace data."""
     processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/processed-ambyte"
     
-    schema_location = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/_schemas/ambyte_schema"
+    from pyspark.sql.types import FloatType, BooleanType, LongType
+
+    ambyte_data_schema = StructType([
+        StructField("Time", TimestampType(), True),
+        StructField("Actinic", IntegerType(), True),
+        StructField("BoardT", FloatType(), True),
+        StructField("Count", IntegerType(), True),
+        StructField("Full", BooleanType(), True),
+        StructField("Leaf", IntegerType(), True),
+        StructField("PAR", FloatType(), True),
+        StructField("PTS", IntegerType(), True),
+        StructField("Ref7", DoubleType(), True),
+        StructField("RefF", LongType(), True),
+        StructField("Res", IntegerType(), True),
+        StructField("Sig7", DoubleType(), True),
+        StructField("SigF", LongType(), True),
+        StructField("Sun", IntegerType(), True),
+        StructField("Temp", FloatType(), True),
+        StructField("Type", StringType(), True),
+        StructField("raw", FloatType(), True),
+        StructField("spec", ArrayType(LongType()), True),
+        StructField("meta_Actinic", FloatType(), True),
+        StructField("meta_Dark", IntegerType(), True),
+        StructField("ambyte_folder", StringType(), True),
+        StructField("ambit_index", IntegerType(), True),
+        StructField("processed_at", TimestampType(), True),
+        StructField("experiment_id", StringType(), True),
+        StructField("id", IntegerType(), True),
+    ])
     
     df = (
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
-        .option("cloudFiles.schemaLocation", schema_location)
         .option("recursiveFileLookup", "true")
+        .schema(ambyte_data_schema)
         .load(processed_path)
     )
     

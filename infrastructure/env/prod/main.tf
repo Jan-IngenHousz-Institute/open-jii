@@ -197,6 +197,9 @@ module "node_cluster_policy" {
       whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
     },
     {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+    },
+    {
       pypi = {
         package = "mini-racer==0.12.4"
       }
@@ -666,6 +669,89 @@ module "data_export_job" {
         USER_ID       = "{{USER_ID}}"
         CATALOG_NAME  = module.databricks_catalog.catalog_name
         ENVIRONMENT   = upper(var.environment)
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+module "project_transfer_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Project-Transfer-Job-PROD"
+  description = "Validates pending project transfer requests, calls the backend webhook for approved transfers, and writes enriched measurement data to the data-imports volume"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Trigger on transfer_requests table changes
+  trigger = {
+    table_update = {
+      table_names                       = ["${module.databricks_catalog.catalog_name}.centrum.openjii_project_transfer_requests"]
+      condition                         = "ANY_UPDATED"
+      min_time_between_triggers_seconds = 60
+    }
+  }
+
+  # Environment configuration for enrich library dependency
+  environments = [
+    {
+      environment_key = "project_transfer"
+      spec = {
+        environment_version = "1"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "transfer_project_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/project_transfer_task"
+
+      parameters = {
+        catalog_name        = module.databricks_catalog.catalog_name
+        ENVIRONMENT         = upper(var.environment)
+        PHOTOSYNQ_DATA_PATH = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/data-legacy/photosynq_merged"
       }
     }
   ]
