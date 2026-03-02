@@ -409,7 +409,7 @@ module "pipeline_scheduler" {
 
   # Schedule: Every 30 minutes between 6am and 6pm UTC, weekdays only (Mon-Fri)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,30 6-18 * * 1-5"
+  schedule = "0 0/30 6-18 ? * MON-FRI"
 
   max_concurrent_runs           = 1
   use_serverless                = true
