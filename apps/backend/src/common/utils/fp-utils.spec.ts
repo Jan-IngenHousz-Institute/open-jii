@@ -189,6 +189,21 @@ describe("Functional Programming Utilities", () => {
       expect(error.code).toBe("VALIDATION_ERROR");
       expect(error.statusCode).toBe(StatusCodes.BAD_REQUEST);
     });
+
+    it("should create conflict error with correct defaults", () => {
+      const error = AppError.conflict();
+      expect(error.message).toBe("Resource already exists");
+      expect(error.code).toBe("CONFLICT");
+      expect(error.statusCode).toBe(StatusCodes.CONFLICT);
+    });
+
+    it("should create conflict error with custom message and details", () => {
+      const error = AppError.conflict("Duplicate entry", "CUSTOM_CONFLICT", { field: "email" });
+      expect(error.message).toBe("Duplicate entry");
+      expect(error.code).toBe("CUSTOM_CONFLICT");
+      expect(error.statusCode).toBe(StatusCodes.CONFLICT);
+      expect(error.details).toEqual({ field: "email" });
+    });
   });
 
   describe("handleFailure", () => {
@@ -323,6 +338,10 @@ describe("Functional Programming Utilities", () => {
         {
           error: AppError.internal(),
           expectedStatus: StatusCodes.INTERNAL_SERVER_ERROR,
+        },
+        {
+          error: AppError.conflict(),
+          expectedStatus: StatusCodes.CONFLICT,
         },
       ];
 
