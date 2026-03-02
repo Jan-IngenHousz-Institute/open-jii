@@ -758,6 +758,42 @@ module "experiment_export_metadata_table" {
   depends_on = [module.databricks_catalog]
 }
 
+module "experiment_custom_metadata_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_custom_metadata"
+  table_type   = "MANAGED"
+  comment      = "User-uploaded custom metadata attached to experiments (1:N). Each record holds an opaque JSON blob as a VARIANT column."
+
+  columns = [
+    { name = "metadata_id", type = "STRING", nullable = false },
+    { name = "experiment_id", type = "STRING", nullable = false },
+    { name = "metadata", type = "VARIANT" },
+    { name = "created_by", type = "STRING", nullable = false },
+    { name = "created_at", type = "TIMESTAMP", nullable = false },
+    { name = "updated_at", type = "TIMESTAMP", nullable = false },
+  ]
+
+  properties = {
+    "delta.feature.variantType-preview" = "supported"
+  }
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
 module "data_export_job" {
   source = "../../modules/databricks/job"
 
