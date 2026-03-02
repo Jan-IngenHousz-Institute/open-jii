@@ -92,11 +92,7 @@ describe("useExperimentMetadataCreate", () => {
       expect(mockCancelQueries).toHaveBeenCalledWith({
         queryKey: ["experiment", "exp-123", "metadata"],
       });
-      expect(mockGetQueryData).toHaveBeenCalledWith([
-        "experiment",
-        "exp-123",
-        "metadata",
-      ]);
+      expect(mockGetQueryData).toHaveBeenCalledWith(["experiment", "exp-123", "metadata"]);
       expect(result).toEqual({ previousData: mockPreviousData });
     });
   });
