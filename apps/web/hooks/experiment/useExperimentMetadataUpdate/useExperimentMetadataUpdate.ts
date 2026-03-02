@@ -1,9 +1,9 @@
 import { tsr } from "@/lib/tsr";
 
-export const useExperimentMetadataUpsert = () => {
+export const useExperimentMetadataUpdate = () => {
   const queryClient = tsr.useQueryClient();
 
-  return tsr.experiments.upsertExperimentMetadata.useMutation({
+  return tsr.experiments.updateExperimentMetadata.useMutation({
     onMutate: async (variables) => {
       await queryClient.cancelQueries({
         queryKey: ["experiment", variables.params.id, "metadata"],

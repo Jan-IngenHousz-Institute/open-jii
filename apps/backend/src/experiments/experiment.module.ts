@@ -38,9 +38,10 @@ import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
 import { UpdateExperimentMemberRoleUseCase } from "./application/use-cases/experiment-members/update-experiment-member-role";
+import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/get-experiment-metadata";
-import { UpsertExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/upsert-experiment-metadata";
+import { UpdateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/update-experiment-metadata";
 import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
@@ -212,7 +213,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExecuteProjectTransferUseCase,
     // Experiment metadata use cases
     GetExperimentMetadataUseCase,
-    UpsertExperimentMetadataUseCase,
+    CreateExperimentMetadataUseCase,
+    UpdateExperimentMetadataUseCase,
     DeleteExperimentMetadataUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],

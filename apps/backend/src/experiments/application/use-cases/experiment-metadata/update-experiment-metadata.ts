@@ -1,24 +1,33 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
-import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
+import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import type {
+  ExperimentMetadataDto,
+  UpdateExperimentMetadataDto,
+} from "../../../core/models/experiment-metadata.model";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
-export class DeleteExperimentMetadataUseCase {
-  private readonly logger = new Logger(DeleteExperimentMetadataUseCase.name);
+export class UpdateExperimentMetadataUseCase {
+  private readonly logger = new Logger(UpdateExperimentMetadataUseCase.name);
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMetadataRepository: ExperimentMetadataRepository,
   ) {}
 
-  async execute(experimentId: string, metadataId: string, userId: string): Promise<Result<void>> {
+  async execute(
+    experimentId: string,
+    metadataId: string,
+    data: UpdateExperimentMetadataDto,
+    userId: string,
+  ): Promise<Result<ExperimentMetadataDto>> {
     this.logger.log({
-      msg: "Deleting experiment metadata",
-      operation: "deleteExperimentMetadata",
+      msg: "Updating experiment metadata",
+      operation: "updateExperimentMetadata",
       experimentId,
       metadataId,
       userId,
@@ -38,9 +47,9 @@ export class DeleteExperimentMetadataUseCase {
       }) => {
         if (!experiment) {
           this.logger.warn({
-            msg: "Experiment not found for metadata deletion",
+            msg: "Experiment not found for metadata update",
             errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "deleteExperimentMetadata",
+            operation: "updateExperimentMetadata",
             experimentId,
             metadataId,
             userId,
@@ -50,9 +59,9 @@ export class DeleteExperimentMetadataUseCase {
 
         if (!hasArchiveAccess) {
           this.logger.warn({
-            msg: "Unauthorized metadata deletion attempt",
+            msg: "Unauthorized metadata update attempt",
             errorCode: ErrorCodes.FORBIDDEN,
-            operation: "deleteExperimentMetadata",
+            operation: "updateExperimentMetadata",
             experimentId,
             metadataId,
             userId,
@@ -60,31 +69,30 @@ export class DeleteExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have write access to this experiment"));
         }
 
-        const deleteResult = await this.experimentMetadataRepository.deleteByMetadataId(metadataId);
+        const result = await this.experimentMetadataRepository.update(metadataId, data, userId);
 
-        if (deleteResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to delete experiment metadata",
-            errorCode: ErrorCodes.EXPERIMENT_METADATA_DELETE_FAILED,
-            operation: "deleteExperimentMetadata",
+        if (result.isSuccess()) {
+          this.logger.log({
+            msg: "Experiment metadata updated successfully",
+            operation: "updateExperimentMetadata",
             experimentId,
             metadataId,
             userId,
-            error: deleteResult.error.message,
+            status: "success",
           });
-          return failure(AppError.internal("Failed to delete metadata"));
+        } else {
+          this.logger.error({
+            msg: "Failed to update experiment metadata",
+            errorCode: ErrorCodes.EXPERIMENT_METADATA_UPDATE_FAILED,
+            operation: "updateExperimentMetadata",
+            experimentId,
+            metadataId,
+            userId,
+            error: result.error.message,
+          });
         }
 
-        this.logger.log({
-          msg: "Experiment metadata deleted successfully",
-          operation: "deleteExperimentMetadata",
-          experimentId,
-          metadataId,
-          userId,
-          status: "success",
-        });
-
-        return success(undefined);
+        return result;
       },
     );
   }

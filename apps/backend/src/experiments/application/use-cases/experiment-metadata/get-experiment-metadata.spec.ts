@@ -45,27 +45,30 @@ describe("GetExperimentMetadataUseCase", () => {
       updatedAt: new Date("2025-01-02"),
     };
 
-    vi.spyOn(metadataRepository, "findByExperimentId").mockResolvedValue(success(mockMetadata));
+    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
+      success([mockMetadata]),
+    );
 
     const result = await useCase.execute(experiment.id, testUserId);
 
     expect(result.isSuccess()).toBe(true);
-    expect(result.value).toEqual(mockMetadata);
-    expect(metadataRepository.findByExperimentId).toHaveBeenCalledWith(experiment.id);
+    expect(result.value).toEqual([mockMetadata]);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(metadataRepository.findAllByExperimentId).toHaveBeenCalledWith(experiment.id);
   });
 
-  it("should return null when no metadata exists", async () => {
+  it("should return empty array when no metadata exists", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "No Metadata Test",
       userId: testUserId,
     });
 
-    vi.spyOn(metadataRepository, "findByExperimentId").mockResolvedValue(success(null));
+    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(success([]));
 
     const result = await useCase.execute(experiment.id, testUserId);
 
     expect(result.isSuccess()).toBe(true);
-    expect(result.value).toBeNull();
+    expect(result.value).toEqual([]);
   });
 
   it("should return NOT_FOUND if experiment does not exist", async () => {
@@ -111,13 +114,15 @@ describe("GetExperimentMetadataUseCase", () => {
       updatedAt: new Date("2025-01-02"),
     };
 
-    vi.spyOn(metadataRepository, "findByExperimentId").mockResolvedValue(success(mockMetadata));
+    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
+      success([mockMetadata]),
+    );
 
     const otherUserId = await testApp.createTestUser({});
     const result = await useCase.execute(experiment.id, otherUserId);
 
     expect(result.isSuccess()).toBe(true);
-    expect(result.value).toEqual(mockMetadata);
+    expect(result.value).toEqual([mockMetadata]);
   });
 
   it("should propagate repository failure", async () => {
@@ -126,7 +131,7 @@ describe("GetExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(metadataRepository, "findByExperimentId").mockResolvedValue(
+    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
       failure(AppError.internal("Databricks unavailable")),
     );
 

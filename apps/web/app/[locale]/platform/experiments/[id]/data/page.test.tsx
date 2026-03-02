@@ -86,7 +86,7 @@ const mockMetadataUseQuery = vi.fn();
 vi.mock("~/lib/tsr", () => ({
   tsr: {
     experiments: {
-      getExperimentMetadata: {
+      listExperimentMetadata: {
         useQuery: (...args: unknown[]): unknown => mockMetadataUseQuery(...args),
       },
     },
