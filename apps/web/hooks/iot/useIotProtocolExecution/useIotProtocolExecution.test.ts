@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import type { IDeviceProtocol } from "@repo/iot";
+import type { IDeviceDriver } from "@repo/iot";
 
 import { useIotProtocolExecution } from "./useIotProtocolExecution";
 
@@ -13,39 +13,136 @@ describe("useIotProtocolExecution", () => {
 
   describe("executeProtocol function", () => {
     it("provides executeProtocol function", () => {
-      const { result } = renderHook(() => useIotProtocolExecution(null, false));
+      const { result } = renderHook(() => useIotProtocolExecution(null, false, "multispeq"));
       expect(typeof result.current.executeProtocol).toBe("function");
     });
 
     it("throws error when not connected", async () => {
-      const { result } = renderHook(() => useIotProtocolExecution(null, false));
+      const { result } = renderHook(() => useIotProtocolExecution(null, false, "multispeq"));
 
       await expect(result.current.executeProtocol([{ test: "command" }])).rejects.toThrow(
         "Not connected to device",
       );
     });
 
-    it("throws error when protocol is null", async () => {
-      const { result } = renderHook(() => useIotProtocolExecution(null, true));
+    it("throws error when driver is null", async () => {
+      const { result } = renderHook(() => useIotProtocolExecution(null, true, "multispeq"));
 
       await expect(result.current.executeProtocol([{ test: "command" }])).rejects.toThrow(
         "Not connected to device",
       );
     });
+  });
 
-    it("executes protocol steps in order", async () => {
+  describe("multispeq execution", () => {
+    it("sends protocol JSON directly as a single command", async () => {
+      const mockExecute = vi
+        .fn()
+        .mockResolvedValueOnce({ success: true, data: { temperature: 25.5 } });
+
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "multispeq"),
+      );
+
+      const protocolCode = [{ command: "measure" }];
+      const data = await result.current.executeProtocol(protocolCode);
+
+      expect(mockExecute).toHaveBeenCalledTimes(1);
+      expect(mockExecute).toHaveBeenCalledWith(protocolCode);
+      expect(data).toEqual({ temperature: 25.5 });
+    });
+
+    it("throws error when execution fails", async () => {
+      const mockExecute = vi.fn().mockResolvedValueOnce({
+        success: false,
+        error: { message: "Device error" },
+      });
+
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "multispeq"),
+      );
+
+      await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
+        "Device error",
+      );
+    });
+
+    it("uses default error message when error.message is undefined", async () => {
+      const mockExecute = vi.fn().mockResolvedValueOnce({
+        success: false,
+        error: {},
+      });
+
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "multispeq"),
+      );
+
+      await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
+        "Protocol execution failed",
+      );
+    });
+
+    it("parses JSON string data from device", async () => {
+      const mockExecute = vi
+        .fn()
+        .mockResolvedValueOnce({ success: true, data: '{"temperature": 27.3}' });
+
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "multispeq"),
+      );
+
+      const data = await result.current.executeProtocol([{ command: "measure" }]);
+      expect(data).toEqual({ temperature: 27.3 });
+    });
+
+    it("keeps string data as-is when JSON parsing fails", async () => {
+      const mockExecute = vi.fn().mockResolvedValueOnce({ success: true, data: "invalid json {}" });
+
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "multispeq"),
+      );
+
+      const data = await result.current.executeProtocol([{ command: "measure" }]);
+      expect(data).toBe("invalid json {}");
+    });
+
+    it("returns non-string data without modification", async () => {
+      const mockData = { raw: true, values: [1, 2, 3] };
+      const mockExecute = vi.fn().mockResolvedValueOnce({ success: true, data: mockData });
+
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "multispeq"),
+      );
+
+      const data = await result.current.executeProtocol([{ command: "measure" }]);
+      expect(data).toEqual(mockData);
+    });
+  });
+
+  describe("generic/ambit execution", () => {
+    it("executes SET_CONFIG, RUN, GET_DATA steps in order", async () => {
       const mockExecute = vi
         .fn()
         .mockResolvedValueOnce({ success: true }) // SET_CONFIG
         .mockResolvedValueOnce({ success: true }) // RUN
         .mockResolvedValueOnce({ success: true, data: { temperature: 25.5 } }); // GET_DATA
 
-      const mockProtocol: Partial<IDeviceProtocol> = {
-        execute: mockExecute,
-      };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       const data = await result.current.executeProtocol([{ command: "test" }]);
@@ -66,10 +163,10 @@ describe("useIotProtocolExecution", () => {
         error: { message: "Config error" },
       });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -86,10 +183,10 @@ describe("useIotProtocolExecution", () => {
           error: { message: "Run error" },
         });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -107,10 +204,10 @@ describe("useIotProtocolExecution", () => {
           error: { message: "Data error" },
         });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -125,14 +222,13 @@ describe("useIotProtocolExecution", () => {
         .mockResolvedValueOnce({ success: true })
         .mockResolvedValueOnce({ success: true, data: '{"temperature": 27.3, "humidity": 65}' });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       const data = await result.current.executeProtocol([{ command: "measure" }]);
-
       expect(data).toEqual({ temperature: 27.3, humidity: 65 });
     });
 
@@ -143,14 +239,13 @@ describe("useIotProtocolExecution", () => {
         .mockResolvedValueOnce({ success: true })
         .mockResolvedValueOnce({ success: true, data: "invalid json {}" });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       const data = await result.current.executeProtocol([{ command: "measure" }]);
-
       expect(data).toBe("invalid json {}");
     });
 
@@ -162,14 +257,13 @@ describe("useIotProtocolExecution", () => {
         .mockResolvedValueOnce({ success: true })
         .mockResolvedValueOnce({ success: true, data: mockData });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       const data = await result.current.executeProtocol([{ command: "measure" }]);
-
       expect(data).toEqual(mockData);
     });
 
@@ -179,10 +273,10 @@ describe("useIotProtocolExecution", () => {
         error: {},
       });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -196,10 +290,10 @@ describe("useIotProtocolExecution", () => {
         error: {},
       });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -217,10 +311,10 @@ describe("useIotProtocolExecution", () => {
           error: {},
         });
 
-      const mockProtocol: Partial<IDeviceProtocol> = { execute: mockExecute };
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockProtocol as IDeviceProtocol, true),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(

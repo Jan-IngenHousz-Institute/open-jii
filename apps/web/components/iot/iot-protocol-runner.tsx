@@ -42,9 +42,9 @@ export function IotProtocolRunner({
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
   const browserSupport = useIotBrowserSupport();
 
-  const { isConnected, isConnecting, error, deviceInfo, protocol, connect, disconnect } =
+  const { isConnected, isConnecting, error, deviceInfo, driver, connect, disconnect } =
     useIotCommunication(sensorFamily, connectionType);
-  const { executeProtocol } = useIotProtocolExecution(protocol, isConnected);
+  const { executeProtocol } = useIotProtocolExecution(driver, isConnected, sensorFamily);
 
   // Disconnect when sensor family changes
   useEffect(() => {

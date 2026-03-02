@@ -29,7 +29,7 @@ vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
     isConnecting: mockIsConnecting,
     error: mockError,
     deviceInfo: mockDeviceInfo,
-    protocol: mockProtocol,
+    driver: mockProtocol,
     connect: mockConnect,
     disconnect: mockDisconnect,
   }),
@@ -457,7 +457,7 @@ describe("IotProtocolRunner", () => {
       const { rerender } = render(<IotProtocolRunner {...defaultProps} />);
 
       // Change sensor family
-      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="generic" />);
+      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambit" />);
 
       await waitFor(() => {
         expect(mockDisconnect).toHaveBeenCalled();
@@ -481,7 +481,7 @@ describe("IotProtocolRunner", () => {
       });
 
       // Change sensor family
-      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="generic" />);
+      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambit" />);
 
       await waitFor(() => {
         expect(screen.getByText("No result")).toBeInTheDocument();
