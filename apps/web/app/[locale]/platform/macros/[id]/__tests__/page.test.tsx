@@ -1,4 +1,5 @@
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
+import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import React from "react";
@@ -22,7 +23,7 @@ vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
 
 // Mock the useMacroCompatibleProtocols hook
 vi.mock("@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols", () => ({
-  useMacroCompatibleProtocols: () => ({ data: undefined }),
+  useMacroCompatibleProtocols: vi.fn(),
 }));
 
 // Mock the date utility
@@ -98,6 +99,7 @@ vi.mock("@repo/ui/components", () => ({
 }));
 
 const mockUseMacro = vi.mocked(useMacro);
+const mockUseMacroCompatibleProtocols = vi.mocked(useMacroCompatibleProtocols);
 
 // Mock data that can be reused across tests
 const mockMacroData = {
@@ -119,6 +121,7 @@ describe("MacroOverviewPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseMacroCompatibleProtocols.mockReturnValue({ data: undefined } as never);
   });
 
   describe("Loading State", () => {
@@ -335,6 +338,104 @@ describe("MacroOverviewPage", () => {
       const badge = screen.getByTestId("badge");
       expect(badge).toHaveTextContent(displayName);
       expect(badge).toHaveClass(colorClass);
+    });
+  });
+
+  describe("Compatible Protocols Section", () => {
+    const mockProtocols = [
+      {
+        macroId: "test-macro-id",
+        protocol: { id: "proto-1", name: "Temperature Protocol", family: "multispeq" },
+        addedAt: "2023-06-01T00:00:00Z",
+      },
+      {
+        macroId: "test-macro-id",
+        protocol: { id: "proto-2", name: "Humidity Protocol", family: "ambit" },
+        addedAt: "2023-06-02T00:00:00Z",
+      },
+    ];
+
+    it("should not render compatible protocols card when there are no protocols", () => {
+      mockUseMacro.mockReturnValue({
+        data: mockMacroData,
+        isLoading: false,
+        error: null,
+      });
+      mockUseMacroCompatibleProtocols.mockReturnValue({
+        data: { body: [] },
+      } as never);
+
+      render(<MacroOverviewPage params={mockParams} />);
+
+      expect(screen.queryByText("macroSettings.compatibleProtocols")).not.toBeInTheDocument();
+    });
+
+    it("should render compatible protocols card when protocols exist", () => {
+      mockUseMacro.mockReturnValue({
+        data: mockMacroData,
+        isLoading: false,
+        error: null,
+      });
+      mockUseMacroCompatibleProtocols.mockReturnValue({
+        data: { body: mockProtocols },
+      } as never);
+
+      render(<MacroOverviewPage params={mockParams} />);
+
+      expect(screen.getByText("macroSettings.compatibleProtocols")).toBeInTheDocument();
+      expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
+      expect(screen.getByText("Humidity Protocol")).toBeInTheDocument();
+    });
+
+    it("should display protocol family labels", () => {
+      mockUseMacro.mockReturnValue({
+        data: mockMacroData,
+        isLoading: false,
+        error: null,
+      });
+      mockUseMacroCompatibleProtocols.mockReturnValue({
+        data: { body: mockProtocols },
+      } as never);
+
+      render(<MacroOverviewPage params={mockParams} />);
+
+      expect(screen.getByText("multispeq")).toBeInTheDocument();
+      expect(screen.getByText("ambit")).toBeInTheDocument();
+    });
+
+    it("should render protocol links with correct hrefs", () => {
+      mockUseMacro.mockReturnValue({
+        data: mockMacroData,
+        isLoading: false,
+        error: null,
+      });
+      mockUseMacroCompatibleProtocols.mockReturnValue({
+        data: { body: mockProtocols },
+      } as never);
+
+      render(<MacroOverviewPage params={mockParams} />);
+
+      const links = screen.getAllByRole("link");
+      const proto1Links = links.filter((l) => l.getAttribute("href")?.includes("proto-1"));
+      expect(proto1Links.length).toBeGreaterThan(0);
+      expect(proto1Links[0]).toHaveAttribute("href", "/platform/protocols/proto-1");
+    });
+
+    it("should add an extra card when compatible protocols exist", () => {
+      mockUseMacro.mockReturnValue({
+        data: mockMacroData,
+        isLoading: false,
+        error: null,
+      });
+      mockUseMacroCompatibleProtocols.mockReturnValue({
+        data: { body: mockProtocols },
+      } as never);
+
+      render(<MacroOverviewPage params={mockParams} />);
+
+      const cards = screen.getAllByTestId("card");
+      // Info card + description card + compatible protocols card + code card = 4
+      expect(cards).toHaveLength(4);
     });
   });
 

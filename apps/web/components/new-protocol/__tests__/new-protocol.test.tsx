@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -29,8 +29,13 @@ vi.mock("@/hooks/useLocale", () => ({
 }));
 
 // Mock hooks added by protocol-macro compatibility feature
+const mockMacroList = [
+  { id: "macro-1", name: "SPAD Macro", language: "python" },
+  { id: "macro-2", name: "Fluorescence Macro", language: "python" },
+];
+
 vi.mock("@/hooks/macro/useMacros/useMacros", () => ({
-  useMacros: () => ({ data: [] }),
+  useMacros: () => ({ data: mockMacroList }),
 }));
 
 vi.mock("@/hooks/useDebounce", () => ({
@@ -41,8 +46,23 @@ vi.mock("@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro", () => ({
   useAddCompatibleMacro: () => ({ mutateAsync: vi.fn() }),
 }));
 
+interface DropdownPropsCaptured {
+  availableMacros: { id: string; name: string }[];
+  value: string;
+  placeholder: string;
+  loading: boolean;
+  searchValue: string;
+  onSearchChange: (v: string) => void;
+  onAddMacro: (id: string) => void;
+  isAddingMacro: boolean;
+}
+let lastDropdownProps: DropdownPropsCaptured | null = null;
+
 vi.mock("../../macro-search-with-dropdown", () => ({
-  MacroSearchWithDropdown: () => <div data-testid="macro-search-dropdown" />,
+  MacroSearchWithDropdown: (props: DropdownPropsCaptured) => {
+    lastDropdownProps = props;
+    return <div data-testid="macro-search-dropdown" />;
+  },
 }));
 
 // Mock i18n
@@ -99,6 +119,7 @@ vi.mock("../new-protocol-details-card", () => ({
 describe("NewProtocolForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastDropdownProps = null;
   });
 
   it("should render the form with all sections", () => {
@@ -299,5 +320,69 @@ describe("NewProtocolForm", () => {
     // The form should initialize with family: "multispeq"
     // This is implicit in the defaultValues
     expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+  });
+
+  describe("Compatible Macros Section", () => {
+    it("should render the compatible macros card", () => {
+      render(<NewProtocolForm />);
+
+      expect(screen.getByText("newProtocol.compatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("newProtocol.compatibleMacrosDescription")).toBeInTheDocument();
+    });
+
+    it("should render MacroSearchWithDropdown", () => {
+      render(<NewProtocolForm />);
+
+      expect(screen.getByTestId("macro-search-dropdown")).toBeInTheDocument();
+    });
+
+    it("should pass available macros to the dropdown", () => {
+      render(<NewProtocolForm />);
+
+      expect(lastDropdownProps).not.toBeNull();
+      const ids = lastDropdownProps?.availableMacros.map((m) => m.id);
+      expect(ids).toContain("macro-1");
+      expect(ids).toContain("macro-2");
+    });
+
+    it("should add a macro when onAddMacro is called and show it in the list", () => {
+      render(<NewProtocolForm />);
+
+      act(() => {
+        lastDropdownProps?.onAddMacro("macro-1");
+      });
+
+      expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
+      expect(screen.getByText("python")).toBeInTheDocument();
+    });
+
+    it("should filter out already-selected macros from available list", () => {
+      render(<NewProtocolForm />);
+
+      act(() => {
+        lastDropdownProps?.onAddMacro("macro-1");
+      });
+
+      expect(lastDropdownProps?.availableMacros.map((m) => m.id)).not.toContain("macro-1");
+      expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-2");
+    });
+
+    it("should remove a macro when its remove button is clicked", async () => {
+      render(<NewProtocolForm />);
+
+      act(() => {
+        lastDropdownProps?.onAddMacro("macro-1");
+      });
+      expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
+
+      // Find the remove button inside the selected macro row
+      const removeButtons = screen.getAllByRole("button").filter((btn) => {
+        return btn.closest(".flex.items-center.justify-between");
+      });
+      expect(removeButtons.length).toBeGreaterThan(0);
+      await userEvent.click(removeButtons[0]);
+
+      expect(screen.queryByText("SPAD Macro")).not.toBeInTheDocument();
+    });
   });
 });
