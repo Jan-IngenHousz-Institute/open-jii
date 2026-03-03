@@ -5,7 +5,6 @@ import { useTranslation } from "@repo/i18n";
 import {
   FormField,
   FormItem,
-  FormLabel,
   FormControl,
   Input,
   FormMessage,
@@ -20,19 +19,14 @@ export function NewProtocolDetailsCard({ form }: NewProtocolDetailsCardProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{t("newProtocol.detailsTitle")}</h3>
-        <p className="text-muted-foreground text-sm">{t("newProtocol.detailsDescription")}</p>
-      </div>
+    <div className="space-y-4">
       <FormField
         control={form.control}
         name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("newProtocol.name")}</FormLabel>
             <FormControl>
-              <Input {...field} trim />
+              <Input {...field} trim placeholder={t("newProtocol.name")} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -43,7 +37,6 @@ export function NewProtocolDetailsCard({ form }: NewProtocolDetailsCardProps) {
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("newProtocol.description_field")}</FormLabel>
             <FormControl>
               <RichTextarea
                 value={field.value ?? ""}

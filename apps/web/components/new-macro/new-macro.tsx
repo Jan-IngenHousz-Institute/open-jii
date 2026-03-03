@@ -20,7 +20,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardHeader,
   Form,
   FormField,
   FormItem,
@@ -143,10 +142,7 @@ export function NewMacroForm() {
           {/* RIGHT SIDE — Sidebar (First on mobile) */}
           <div className="w-full md:order-2 md:w-96">
             <Card className="shadow-none">
-              <CardHeader>
-                <h3 className="text-lg font-semibold">{t("newMacro.detailsTitle")}</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 {/* Programming Language */}
                 <FormField
                   control={form.control}

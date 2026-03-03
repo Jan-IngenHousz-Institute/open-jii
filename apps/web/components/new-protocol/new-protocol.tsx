@@ -17,7 +17,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardHeader,
   Form,
   FormControl,
   FormField,
@@ -143,10 +142,7 @@ export function NewProtocolForm() {
           {/* RIGHT SIDE — Sidebar (First on mobile) */}
           <div className="w-full md:order-2 md:w-96">
             <Card className="shadow-none">
-              <CardHeader>
-                <h3 className="text-lg font-semibold">{t("newProtocol.detailsTitle")}</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 {/* Sensor Family */}
                 <FormField
                   control={form.control}
