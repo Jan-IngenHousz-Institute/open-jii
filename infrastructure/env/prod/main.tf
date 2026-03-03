@@ -86,7 +86,6 @@ module "cognito" {
   environment                      = var.environment
   identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
   allow_unauthenticated_identities = true # change after mobile app is ready and we want to disable unauthenticated access
-  create_auth_role                 = false
 }
 
 module "vpc" {
@@ -195,6 +194,9 @@ module "node_cluster_policy" {
     },
     {
       whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
+    },
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
     },
     {
       pypi = {
@@ -364,6 +366,7 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
+    "CATALOG_NAME"               = module.databricks_catalog.catalog_name
     "BRONZE_TABLE"               = "raw_data"
     "SILVER_TABLE"               = "clean_data"
     "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
@@ -612,6 +615,124 @@ module "data_legacy_volume" {
   depends_on = [module.databricks_catalog]
 }
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Centrum schema tables
+# ──────────────────────────────────────────────────────────────────────────────
+
+module "openjii_project_transfer_requests_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "openjii_project_transfer_requests"
+  table_type   = "MANAGED"
+  comment      = "Delta table for user requests with status tracking"
+
+  columns = [
+    { name = "request_id", type = "STRING", comment = "UUID" },
+    { name = "user_id", type = "STRING", comment = "openJII user ID" },
+    { name = "user_email", type = "STRING", comment = "Derived from authenticated user; user-input" },
+    { name = "source_platform", type = "STRING", comment = "e.g. \"photosynq\"" },
+    { name = "project_id_old", type = "STRING" },
+    { name = "project_url_old", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "requested_at", type = "TIMESTAMP" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "protocol_id", type = "STRING" },
+    { name = "macro_id", type = "STRING" },
+    { name = "macro_filename", type = "STRING" },
+    { name = "macro_name", type = "STRING" },
+    { name = "flow_id", type = "STRING" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "experiment_annotations_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_annotations"
+  table_type   = "MANAGED"
+  comment      = "Stores annotations related to various experiments conducted by users"
+
+  columns = [
+    { name = "id", type = "STRING" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "user_id", type = "STRING" },
+    { name = "user_name", type = "STRING" },
+    { name = "table_name", type = "STRING" },
+    { name = "row_id", type = "STRING" },
+    { name = "type", type = "STRING" },
+    { name = "content_text", type = "STRING" },
+    { name = "flag_type", type = "STRING" },
+    { name = "created_at", type = "TIMESTAMP" },
+    { name = "updated_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "experiment_export_metadata_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_export_metadata"
+  table_type   = "MANAGED"
+  comment      = "Metadata related to experiment data exports"
+
+  columns = [
+    { name = "export_id", type = "STRING" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "table_name", type = "STRING" },
+    { name = "format", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "file_path", type = "STRING" },
+    { name = "row_count", type = "INT" },
+    { name = "file_size", type = "INT" },
+    { name = "created_by", type = "STRING" },
+    { name = "created_at", type = "TIMESTAMP" },
+    { name = "completed_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
 module "data_export_job" {
   source = "../../modules/databricks/job"
 
@@ -666,6 +787,89 @@ module "data_export_job" {
         USER_ID       = "{{USER_ID}}"
         CATALOG_NAME  = module.databricks_catalog.catalog_name
         ENVIRONMENT   = upper(var.environment)
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+module "project_transfer_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Project-Transfer-Job-PROD"
+  description = "Validates pending project transfer requests, calls the backend webhook for approved transfers, and writes enriched measurement data to the data-imports volume"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Trigger on transfer_requests table changes
+  trigger = {
+    table_update = {
+      table_names                       = ["${module.databricks_catalog.catalog_name}.centrum.openjii_project_transfer_requests"]
+      condition                         = "ANY_UPDATED"
+      min_time_between_triggers_seconds = 60
+    }
+  }
+
+  # Environment configuration for enrich library dependency
+  environments = [
+    {
+      environment_key = "project_transfer"
+      spec = {
+        environment_version = "1"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "transfer_project_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/project_transfer_task"
+
+      parameters = {
+        catalog_name        = module.databricks_catalog.catalog_name
+        ENVIRONMENT         = upper(var.environment)
+        PHOTOSYNQ_DATA_PATH = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/data-legacy/photosynq_merged"
       }
     }
   ]

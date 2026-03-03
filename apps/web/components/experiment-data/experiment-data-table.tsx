@@ -437,6 +437,7 @@ export function ExperimentDataTable({
         <DataExportModal
           experimentId={experimentId}
           tableName={tableName}
+          displayName={displayName}
           open={downloadModalOpen}
           onOpenChange={setDownloadModalOpen}
         />

@@ -408,4 +408,26 @@ describe("<MacroSearchPopover />", () => {
     const badge = screen.getByText("common.preferred");
     expect(badge).toBeInTheDocument();
   });
+
+  it("hides preferred badge when recommended macros exist", () => {
+    renderPopover({
+      recommendedMacroIds: new Set(["m1"]),
+      recommendedReason: "Compatible with Test protocol",
+    });
+
+    // Preferred badge should not show for m3 (sortOrder=1) since recommended macros take priority
+    expect(screen.queryByText("common.preferred")).not.toBeInTheDocument();
+    // Recommended macro should show the reason badge instead
+    expect(screen.getByText("Compatible with Test protocol")).toBeInTheDocument();
+  });
+
+  it("shows recommended reason as badge for connected macros", () => {
+    renderPopover({
+      recommendedMacroIds: new Set(["m1", "m2"]),
+      recommendedReason: "Compatible with Water Quality protocol",
+    });
+
+    const badges = screen.getAllByText("Compatible with Water Quality protocol");
+    expect(badges).toHaveLength(2);
+  });
 });

@@ -74,8 +74,11 @@ export const AddedUserNotification = ({
                 </Link>
               </Text>
               <Text className="mb-0 mt-6 text-[14px] leading-relaxed text-gray-500">
-                If you didn't request this verification, you can safely ignore this email. Your
-                account remains secure.
+                If you believe you received this email in error, please contact{" "}
+                <Link href="mailto:openjii@jii.org" className="text-[#005e5e] underline">
+                  openjii@jii.org
+                </Link>
+                .
               </Text>
             </Section>
 

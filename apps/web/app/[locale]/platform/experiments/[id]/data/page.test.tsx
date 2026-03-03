@@ -159,13 +159,19 @@ describe("ExperimentDataPage", () => {
   const mockTablesData = {
     tables: [
       {
-        name: "measurements",
+        identifier: "measurements",
+        tableType: "static",
         displayName: "Measurements",
         totalRows: 100,
         defaultSortColumn: "timestamp",
         errorColumn: "error_code",
       },
-      { name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 },
+      {
+        identifier: ExperimentTableName.DEVICE,
+        tableType: "static",
+        displayName: "Device Metadata",
+        totalRows: 50,
+      },
     ],
     isLoading: false,
     error: null,
@@ -302,7 +308,14 @@ describe("ExperimentDataPage", () => {
 
   it("displays device table when it's the only table", async () => {
     mockUseExperimentTables.mockReturnValue({
-      tables: [{ name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 }],
+      tables: [
+        {
+          identifier: ExperimentTableName.DEVICE,
+          tableType: "static",
+          displayName: "Device Metadata",
+          totalRows: 50,
+        },
+      ],
       isLoading: false,
       error: null,
     });
@@ -431,7 +444,8 @@ describe("ExperimentDataPage", () => {
     mockUseExperimentTables.mockReturnValue({
       tables: [
         {
-          name: longTableName,
+          identifier: longTableName,
+          tableType: "static",
           displayName: "Very Long Table Name That Should Be Truncated",
           totalRows: 100,
         },

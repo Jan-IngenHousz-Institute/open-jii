@@ -40,6 +40,7 @@ export interface UserSearchPopoverProps {
   disabled?: boolean;
   selectedRole?: string;
   onRoleChange?: (role: string) => void;
+  existingEmails?: string[];
 }
 
 export function UserSearchPopover({
@@ -57,13 +58,17 @@ export function UserSearchPopover({
   disabled = false,
   selectedRole = "member",
   onRoleChange,
+  existingEmails = [],
 }: UserSearchPopoverProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
+  const normalizedExistingEmails = existingEmails.map((e) => e.toLowerCase());
   const isEmailSearch = isValidEmail(searchValue.trim());
+  const isEmailAlreadyExists =
+    isEmailSearch && normalizedExistingEmails.includes(searchValue.trim().toLowerCase());
   const hasSelection = !!selectedUser || !!selectedEmail;
-  const canInviteByEmail = isEmailSearch && !!onSelectEmail;
+  const canInviteByEmail = isEmailSearch && !!onSelectEmail && !isEmailAlreadyExists;
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -120,6 +125,7 @@ export function UserSearchPopover({
           loading={loading}
           availableUsers={availableUsers}
           canInviteByEmail={canInviteByEmail}
+          isEmailAlreadyExists={isEmailAlreadyExists}
           searchValue={searchValue}
           handleSelectUser={handleSelectUser}
           handleSelectEmail={handleSelectEmail}
@@ -242,6 +248,7 @@ function PopoverResults({
   loading,
   availableUsers,
   canInviteByEmail,
+  isEmailAlreadyExists,
   searchValue,
   handleSelectUser,
   handleSelectEmail,
@@ -250,6 +257,7 @@ function PopoverResults({
   loading: boolean;
   availableUsers: UserProfile[];
   canInviteByEmail: boolean;
+  isEmailAlreadyExists: boolean;
   searchValue: string;
   handleSelectUser: (user: UserProfile) => void;
   handleSelectEmail: () => void;
@@ -288,6 +296,14 @@ function PopoverResults({
         {canInviteByEmail && (
           <InviteByEmailButton onClick={handleSelectEmail} email={email} t={t} />
         )}
+      </div>
+    );
+  }
+
+  if (isEmailAlreadyExists) {
+    return (
+      <div className="text-muted-foreground p-4 text-center text-sm">
+        {t("experiments.emailAlreadyInvited")}
       </div>
     );
   }

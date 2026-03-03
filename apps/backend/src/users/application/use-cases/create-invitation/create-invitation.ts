@@ -52,6 +52,30 @@ export class CreateInvitationUseCase {
       return success(existingResult.value);
     }
 
+    // Check if the email belongs to an existing experiment member
+    const alreadyMemberResult = await this.invitationRepository.isEmailAlreadyMember(
+      resourceId,
+      email,
+    );
+
+    if (alreadyMemberResult.isFailure()) {
+      this.logger.error({
+        msg: "Failed to check existing membership",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "create-invitation",
+        resourceType,
+        resourceId,
+        email,
+      });
+      return failure(AppError.internal("Failed to check existing membership"));
+    }
+
+    if (alreadyMemberResult.value) {
+      return failure(
+        AppError.conflict("Invitee is already a member of this experiment", ErrorCodes.CONFLICT),
+      );
+    }
+
     const invitationResult = await this.invitationRepository.create(
       resourceType,
       resourceId,

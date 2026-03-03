@@ -4,8 +4,8 @@ import type { ExperimentDataQuery } from "@repo/api";
 
 import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../../common/utils/fp-utils";
+import type { TableDataDto } from "../../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../../core/models/experiment.model";
-import type { TableDataDto } from "../../../../core/repositories/experiment-data.repository";
 import { ExperimentDataRepository } from "../../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 

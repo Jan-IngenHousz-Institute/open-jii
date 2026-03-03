@@ -10,10 +10,10 @@ output "identity_pool_arn" {
 
 output "authenticated_role_arn" {
   description = "ARN of the authenticated IAM role for developer-authenticated identities"
-  value       = var.create_auth_role ? aws_iam_role.auth[0].arn : null
+  value       = aws_iam_role.auth.arn
 }
 
 output "developer_provider_name" {
   description = "Developer provider name for API calls (environment-specific)"
-  value       = var.create_auth_role ? local.developer_provider_name_full : null
+  value       = local.developer_provider_name_full
 }
