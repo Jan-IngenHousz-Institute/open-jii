@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import { saveFailedUpload, getFailedUploadsWithKeys } from "../failed-uploads-storage";
 
 vi.mock("@react-native-async-storage/async-storage", () => ({
@@ -71,9 +72,7 @@ describe("failed-uploads-storage", () => {
 
     it("skips entries with invalid JSON", async () => {
       vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_abc"]);
-      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
-        ["FAILED_UPLOAD_abc", "not-valid-json"],
-      ]);
+      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([["FAILED_UPLOAD_abc", "not-valid-json"]]);
 
       const result = await getFailedUploadsWithKeys();
       expect(result).toHaveLength(0);
