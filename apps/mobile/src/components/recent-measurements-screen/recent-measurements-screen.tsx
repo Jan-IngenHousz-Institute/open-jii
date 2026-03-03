@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { UploadCloud } from "lucide-react-native";
+import { Download, UploadCloud } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { toast } from "sonner-native";
@@ -14,6 +14,7 @@ import type {
 } from "~/hooks/use-all-measurements";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
+import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
@@ -22,6 +23,7 @@ export function RecentMeasurementsScreen() {
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const { measurements, invalidate } = useAllMeasurements(filter);
   const { uploadAll, isUploading, uploadOne, removeFailedUpload, updateMeasurementComment } =
     useFailedUploads();
@@ -93,6 +95,18 @@ export function RecentMeasurementsScreen() {
     ]);
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await exportMeasurementsToFile();
+      toast.success("Measurements exported successfully");
+    } catch {
+      toast.error("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const unsyncedCount = measurements?.filter((m) => m.status === "unsynced").length ?? 0;
 
   const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
@@ -104,15 +118,26 @@ export function RecentMeasurementsScreen() {
       <View className="p-4 pb-0">
         <View className="mb-4 flex-row items-center justify-between">
           <Text className={clsx("text-lg font-semibold", classes.text)}>Recent Measurements</Text>
-          <Button
-            title="Upload All"
-            variant="outline"
-            size="sm"
-            onPress={handleSyncAll}
-            isLoading={isUploading}
-            isDisabled={unsyncedCount === 0}
-            icon={<UploadCloud size={16} color={colors.primary.dark} />}
-          />
+          <View className="flex-row items-center gap-2">
+            <Button
+              title="Export"
+              variant="outline"
+              size="sm"
+              onPress={handleExport}
+              isLoading={isExporting}
+              isDisabled={!measurements || measurements.length === 0}
+              icon={<Download size={16} color={colors.primary.dark} />}
+            />
+            <Button
+              title="Upload All"
+              variant="outline"
+              size="sm"
+              onPress={handleSyncAll}
+              isLoading={isUploading}
+              isDisabled={unsyncedCount === 0}
+              icon={<UploadCloud size={16} color={colors.primary.dark} />}
+            />
+          </View>
         </View>
 
         <View
