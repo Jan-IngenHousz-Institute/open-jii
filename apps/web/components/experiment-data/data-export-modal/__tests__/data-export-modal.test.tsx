@@ -56,10 +56,18 @@ vi.mock("../steps/export-list-step", () => ({
   ),
 }));
 
-// Mock translation
+// Mock translation — append interpolation params so we can assert on them
 vi.mock("@repo/i18n/client", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, params?: Record<string, string>) => {
+      if (params) {
+        const serialized = Object.entries(params)
+          .map(([k, v]) => `${k}:${v}`)
+          .join(",");
+        return `${key}|${serialized}`;
+      }
+      return key;
+    },
   }),
 }));
 
@@ -255,5 +263,17 @@ describe("DataExportModal", () => {
   it("renders dialog header correctly", () => {
     renderModal();
     expect(screen.getByTestId("dialog-header")).toBeInTheDocument();
+  });
+
+  it("shows displayName in description when provided", () => {
+    renderModal({ displayName: "My Experiment Data" });
+    const description = screen.getByTestId("dialog-description");
+    expect(description).toHaveTextContent("tableName:My Experiment Data");
+  });
+
+  it("falls back to tableName in description when displayName is not provided", () => {
+    renderModal();
+    const description = screen.getByTestId("dialog-description");
+    expect(description).toHaveTextContent("tableName:raw_data");
   });
 });

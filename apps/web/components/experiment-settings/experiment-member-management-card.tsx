@@ -223,28 +223,35 @@ export function ExperimentMemberManagement({
 
       <CardContent className="space-y-6">
         {/* Add member section */}
-        <div className="flex gap-2">
-          <UserSearchPopover
-            availableUsers={availableUsers}
-            searchValue={userSearch}
-            onSearchChange={setUserSearch}
-            isAddingUser={isAddingMember}
-            loading={!isDebounced || isFetchingUsers}
-            onSelectUser={(user) => setSelection({ type: "user", user })}
-            onSelectEmail={(email) => setSelection({ type: "email", email })}
-            placeholder={t("experiments.searchUsersPlaceholder")}
-            selectedUser={selectedUser}
-            selectedEmail={selectedEmail}
-            onClearSelection={() => setSelection(null)}
-            disabled={isArchived || currentUserRole !== "admin"}
-            selectedRole={selectedRole}
-            onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
-          />
+        <div className="flex w-full items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <UserSearchPopover
+              availableUsers={availableUsers}
+              searchValue={userSearch}
+              onSearchChange={setUserSearch}
+              isAddingUser={isAddingMember}
+              loading={!isDebounced || isFetchingUsers}
+              onSelectUser={(user) => setSelection({ type: "user", user })}
+              onSelectEmail={(email) => setSelection({ type: "email", email })}
+              placeholder={t("experiments.searchUsersPlaceholder")}
+              selectedUser={selectedUser}
+              selectedEmail={selectedEmail}
+              onClearSelection={() => setSelection(null)}
+              disabled={isArchived || currentUserRole !== "admin"}
+              selectedRole={selectedRole}
+              onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
+              existingEmails={[
+                ...members.map((m) => m.user.email).filter((e): e is string => e != null),
+                ...invitations.map((inv) => inv.email),
+              ]}
+            />
+          </div>
           <Button
             onClick={handleAddMember}
             variant="muted"
             disabled={isAddingMembersDisabled}
             size="default"
+            className="ml-auto shrink-0"
           >
             {t("common.add")}
           </Button>
@@ -282,7 +289,7 @@ export function ExperimentMemberManagement({
             <h4 className="text-foreground font-semibold">
               {t("experimentSettings.pendingInvitations")}
             </h4>
-            <div className="max-h-[120px] space-y-3 overflow-y-auto pr-2">
+            <div className="max-h-[120px] space-y-3 overflow-y-auto">
               {invitations.map((invitation) => (
                 <div key={invitation.id} className="flex items-center justify-between rounded">
                   <div className="flex min-w-0 flex-1 flex-col">

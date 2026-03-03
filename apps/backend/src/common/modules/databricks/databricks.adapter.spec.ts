@@ -182,15 +182,16 @@ describe("DatabricksAdapter", () => {
     it("should successfully retrieve table metadata with schemas", async () => {
       const mockMetadata = {
         columns: [
-          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "identifier", type_name: "string", type_text: "string" },
+          { name: "table_type", type_name: "string", type_text: "string" },
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
           { name: "macro_schema", type_name: "string", type_text: "string" },
           { name: "questions_schema", type_name: "string", type_text: "string" },
         ],
         rows: [
-          ["raw_data", "100", null, null],
-          ["device", "50", null, null],
-          ["some_macro", "25", '{"col1":"int"}', '{"q1":"text"}'],
+          ["raw_data", "static", "100", null, null],
+          ["device", "static", "50", null, null],
+          ["some_macro_id", "macro", "25", '{"col1":"int"}', '{"q1":"text"}'],
         ],
         totalRows: 3,
         truncated: false,
@@ -232,10 +233,23 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual([
-        { tableName: "raw_data", rowCount: 100, macroSchema: null, questionsSchema: null },
-        { tableName: "device", rowCount: 50, macroSchema: null, questionsSchema: null },
         {
-          tableName: "some_macro",
+          identifier: "raw_data",
+          tableType: "static",
+          rowCount: 100,
+          macroSchema: null,
+          questionsSchema: null,
+        },
+        {
+          identifier: "device",
+          tableType: "static",
+          rowCount: 50,
+          macroSchema: null,
+          questionsSchema: null,
+        },
+        {
+          identifier: "some_macro_id",
+          tableType: "macro",
           rowCount: 25,
           macroSchema: '{"col1":"int"}',
           questionsSchema: '{"q1":"text"}',
@@ -246,12 +260,13 @@ describe("DatabricksAdapter", () => {
     it("should retrieve metadata for specific table only", async () => {
       const mockMetadata = {
         columns: [
-          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "identifier", type_name: "string", type_text: "string" },
+          { name: "table_type", type_name: "string", type_text: "string" },
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
           { name: "macro_schema", type_name: "string", type_text: "string" },
           { name: "questions_schema", type_name: "string", type_text: "string" },
         ],
-        rows: [["device", "50", null, null]],
+        rows: [["device", "static", "50", null, null]],
         totalRows: 1,
         truncated: false,
       };
@@ -287,26 +302,33 @@ describe("DatabricksAdapter", () => {
 
       // Execute getExperimentTableMetadata with specific table
       const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
-        tableName: "device",
+        identifier: "device",
       });
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual([
-        { tableName: "device", rowCount: 50, macroSchema: null, questionsSchema: null },
+        {
+          identifier: "device",
+          tableType: "static",
+          rowCount: 50,
+          macroSchema: null,
+          questionsSchema: null,
+        },
       ]);
     });
 
     it("should exclude schemas when includeSchemas is false", async () => {
       const mockMetadata = {
         columns: [
-          { name: "table_name", type_name: "string", type_text: "string" },
+          { name: "identifier", type_name: "string", type_text: "string" },
+          { name: "table_type", type_name: "string", type_text: "string" },
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
         ],
         rows: [
-          ["raw_data", "100"],
-          ["device", "50"],
+          ["raw_data", "static", "100"],
+          ["device", "static", "50"],
         ],
         totalRows: 2,
         truncated: false,
@@ -350,8 +372,8 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual([
-        { tableName: "raw_data", rowCount: 100 },
-        { tableName: "device", rowCount: 50 },
+        { identifier: "raw_data", tableType: "static", rowCount: 100 },
+        { identifier: "device", tableType: "static", rowCount: 50 },
       ]);
     });
 
@@ -392,37 +414,46 @@ describe("DatabricksAdapter", () => {
 
   describe("buildExperimentQuery", () => {
     it("should build query for standard tables (raw_data, device, raw_ambyte_data)", () => {
-      const query = databricksAdapter.buildExperimentQuery({
+      const result = databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",
+        tableType: "static",
         experimentId: "exp-123",
         columns: ["id", "timestamp"],
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("SELECT `id`, `timestamp`");
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
       expect(query).toContain(databricksAdapter.RAW_DATA_TABLE_NAME);
     });
 
-    it("should build query for macro tables with macro_filename filter", () => {
-      const query = databricksAdapter.buildExperimentQuery({
-        tableName: "some_macro_name",
+    it("should build query for macro tables with macro_id filter", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "some_macro_id",
+        tableType: "macro",
         experimentId: "exp-123",
         columns: ["id", "data"],
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("SELECT `id`, `data`");
       expect(query).toContain("WHERE `experiment_id` = 'exp-123'");
-      expect(query).toContain("`macro_filename` = 'some_macro_name'");
+      expect(query).toContain("`macro_id` = 'some_macro_id'");
       expect(query).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
     });
 
     it("should handle VARIANT columns parsing", () => {
-      const query = databricksAdapter.buildExperimentQuery({
+      const result = databricksAdapter.buildExperimentQuery({
         tableName: "device",
+        tableType: "static",
         experimentId: "exp-123",
         variants: [{ columnName: "data", schema: '{"field1":"int"}' }],
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("SELECT");
       expect(query).toContain("* EXCEPT (data, parsed_data)");
       expect(query).toContain("parsed_data.*");
@@ -430,8 +461,9 @@ describe("DatabricksAdapter", () => {
     });
 
     it("should handle all query options (limit, offset, orderBy)", () => {
-      const query = databricksAdapter.buildExperimentQuery({
+      const result = databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",
+        tableType: "static",
         experimentId: "exp-123",
         columns: ["id", "timestamp"],
         orderBy: "timestamp",
@@ -440,6 +472,8 @@ describe("DatabricksAdapter", () => {
         offset: 50,
       });
 
+      assertSuccess(result);
+      const query = result.value;
       expect(query).toContain("ORDER BY `timestamp` DESC");
       expect(query).toContain("LIMIT 100");
       expect(query).toContain("OFFSET 50");

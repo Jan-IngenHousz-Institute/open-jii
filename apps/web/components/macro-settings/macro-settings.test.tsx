@@ -24,6 +24,13 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+// Mock MacroCompatibleProtocolsCard (added by protocol-macro compatibility feature)
+vi.mock("./macro-compatible-protocols-card", () => ({
+  MacroCompatibleProtocolsCard: ({ macroId }: { macroId: string }) => (
+    <div data-testid="macro-compatible-protocols-card">{macroId}</div>
+  ),
+}));
+
 // Mock child components
 interface MockMacroDetailsCardProps {
   macroId: string;

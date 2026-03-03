@@ -3,8 +3,10 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { JsonCodeViewer } from "@/components/json-code-viewer";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { formatDate } from "@/util/date";
-import { CalendarIcon, CodeIcon } from "lucide-react";
+import { CalendarIcon, CodeIcon, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { use } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -17,6 +19,8 @@ interface ProtocolOverviewPageProps {
 export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useProtocol(id);
+  const { data: compatibleMacrosData } = useProtocolCompatibleMacros(id);
+  const compatibleMacros = compatibleMacrosData?.body ?? [];
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -81,6 +85,38 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           <RichTextRenderer content={protocol.description ?? ""} />
         </CardContent>
       </Card>
+
+      {/* Compatible Macros (read-only) */}
+      {compatibleMacros.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("protocolSettings.compatibleMacros")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {compatibleMacros.map((entry) => (
+                <div key={entry.macro.id} className="flex items-center gap-2">
+                  <Link
+                    href={`/platform/macros/${entry.macro.id}`}
+                    className="text-sm font-medium hover:underline"
+                  >
+                    {entry.macro.name}
+                  </Link>
+                  <Link
+                    href={`/platform/macros/${entry.macro.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
+                  </Link>
+                  <span className="text-muted-foreground text-xs">{entry.macro.language}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Code */}
       <Card>

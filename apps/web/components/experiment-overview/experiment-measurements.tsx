@@ -32,7 +32,7 @@ export function ExperimentMeasurements({
 }: ExperimentMeasurementsProps) {
   const locale = useLocale();
   const { tables, isLoading: isLoadingTables } = useExperimentTables(experimentId);
-  const hasDeviceTable = tables?.some((table) => table.name === ExperimentTableName.DEVICE);
+  const hasDeviceTable = tables?.some((table) => table.identifier === ExperimentTableName.DEVICE);
   const {
     tableRows,
     isLoading: isLoadingData,

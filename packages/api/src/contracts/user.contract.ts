@@ -109,6 +109,7 @@ export const userContract = c.router({
       201: zInvitation,
       400: zErrorResponse,
       403: zErrorResponse,
+      409: zErrorResponse,
     },
     summary: "Create invitation",
     description: "Creates an invitation for a user to join a resource.",

@@ -60,6 +60,9 @@ export enum ErrorCodes {
   MACRO_UPDATE_FAILED = "MACRO_UPDATE_FAILED", // Failed to update macro
   MACRO_DELETE_FAILED = "MACRO_DELETE_FAILED", // Failed to delete macro
   MACRO_NOT_FOUND = "MACRO_NOT_FOUND", // Macro not found
+  MACRO_PROTOCOLS_ADD_FAILED = "MACRO_PROTOCOLS_ADD_FAILED", // Failed to add compatible protocols
+  MACRO_PROTOCOLS_REMOVE_FAILED = "MACRO_PROTOCOLS_REMOVE_FAILED", // Failed to remove compatible protocol
+  MACRO_PROTOCOLS_LIST_FAILED = "MACRO_PROTOCOLS_LIST_FAILED", // Failed to list compatible protocols
 
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/
@@ -68,6 +71,9 @@ export enum ErrorCodes {
   PROTOCOL_DELETE_FAILED = "PROTOCOL_DELETE_FAILED", // Failed to delete protocol
   PROTOCOL_NOT_FOUND = "PROTOCOL_NOT_FOUND", // Protocol not found
   PROTOCOL_ASSIGNED = "PROTOCOL_ASSIGNED", // Cannot modify assigned protocol
+  PROTOCOL_MACROS_ADD_FAILED = "PROTOCOL_MACROS_ADD_FAILED", // Failed to add compatible macros
+  PROTOCOL_MACROS_REMOVE_FAILED = "PROTOCOL_MACROS_REMOVE_FAILED", // Failed to remove compatible macro
+  PROTOCOL_MACROS_LIST_FAILED = "PROTOCOL_MACROS_LIST_FAILED", // Failed to list compatible macros
 
   // ==================== Domain Operations - Users ====================
   // Location: src/users/application/use-cases/
@@ -126,4 +132,8 @@ export enum ErrorCodes {
   // ==================== Services ====================
   // Location: src/experiments/application/services/
   EMBARGO_PROCESSING_FAILED = "EMBARGO_PROCESSING_FAILED", // Failed to process embargoes
+
+  // ==================== Domain Operations - Project Transfer ====================
+  // Location: src/experiments/application/use-cases/project-transfer/
+  PROJECT_TRANSFER_FAILED = "PROJECT_TRANSFER_FAILED", // Project transfer webhook failed
 }

@@ -156,9 +156,6 @@ export const experiments = pgTable("experiments", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
-  // Databricks pipeline and schema information
-  pipelineId: varchar("pipeline_id", { length: 255 }),
-  schemaName: varchar("schema_name", { length: 255 }),
   ...timestamps,
 });
 
@@ -279,6 +276,23 @@ export const macros = pgTable("macros", {
     .notNull(),
   ...timestamps,
 });
+
+// Protocol-Macro Compatibility (many-to-many)
+export const protocolMacros = pgTable(
+  "protocol_macros",
+  {
+    protocolId: uuid("protocol_id")
+      .references(() => protocols.id, { onDelete: "cascade" })
+      .notNull(),
+    macroId: uuid("macro_id")
+      .references(() => macros.id, { onDelete: "cascade" })
+      .notNull(),
+    addedAt: timestamp("added_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.protocolId, table.macroId] })],
+);
 
 // Flows Table - stores a single graph JSON per experiment (1:1)
 export const flows = pgTable("flows", {

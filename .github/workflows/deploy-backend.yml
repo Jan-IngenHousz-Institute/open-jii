@@ -168,35 +168,41 @@ jobs:
       - name: Verify ECS deployment status
         id: verify-deployment
         run: |
-          STATES=$(aws ecs describe-services \
-            --cluster backend-cluster-${{ env.ENV }} \
-            --services backend-${{ env.ENV }} \
-            --query 'services[0].deployments[?status==`PRIMARY`].rolloutState' \
-            --output text)
+          MAX_ATTEMPTS=20
+          SLEEP_SECONDS=5
+          ATTEMPT=0
 
-          echo "Detected rollout states for PRIMARY deployment: $STATES"
+          while (( ATTEMPT < MAX_ATTEMPTS )); do
+            ATTEMPT=$((ATTEMPT + 1))
 
-          if [[ -z "$STATES" ]]; then
-            echo "❌ No PRIMARY deployment found — deployment likely failed or rolled back."
-            exit 1
-          fi
+            if ! STATES=$(aws ecs describe-services \
+              --cluster "backend-cluster-${{ env.ENV }}" \
+              --services "backend-${{ env.ENV }}" \
+              --query 'services[0].deployments[?status==`PRIMARY`].rolloutState' \
+              --output text 2>&1); then
+              echo "❌ AWS CLI call failed: $STATES"
+              exit 1
+            fi
 
-          if [[ "$STATES" != "COMPLETED" ]]; then
-            echo "❌ Deployment failed or rolled back: $STATES"
-            exit 1
-          fi
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS — rollout state: $STATES"
 
-          echo "✅ Deployment completed successfully: $STATES"
-          echo "success=true" >> $GITHUB_OUTPUT
+            if [[ "$STATES" == "COMPLETED" ]]; then
+              echo "✅ Deployment completed successfully: $STATES"
+              exit 0
+            fi
 
-      - name: Roll back to previous task definition
-        if: failure() && env.PREV_TASK_DEFINITION_ARN != ''
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ env.PREV_TASK_DEFINITION_ARN }}
-          service: backend-${{ env.ENV }}
-          cluster: backend-cluster-${{ env.ENV }}
-          wait-for-service-stability: true
+            if [[ "$STATES" == "FAILED" ]]; then
+              echo "❌ Deployment failed: $STATES"
+              exit 1
+            fi
+
+            # IN_PROGRESS — wait and retry
+            echo "⏳ Deployment still in progress, waiting ${SLEEP_SECONDS}s..."
+            sleep $SLEEP_SECONDS
+          done
+
+          echo "❌ Timed out waiting for deployment to complete (state: $STATES after $((MAX_ATTEMPTS * SLEEP_SECONDS))s)"
+          exit 1
 
       - name: Clean up
         run: |

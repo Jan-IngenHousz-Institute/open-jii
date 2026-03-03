@@ -9,10 +9,13 @@ import { macroContract } from "@repo/api";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure, isSuccess } from "../../common/utils/fp-utils";
+import { AddCompatibleProtocolsUseCase } from "../application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
+import { ListCompatibleProtocolsUseCase } from "../application/use-cases/list-compatible-protocols/list-compatible-protocols";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
+import { RemoveCompatibleProtocolUseCase } from "../application/use-cases/remove-compatible-protocol/remove-compatible-protocol";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
@@ -29,6 +32,9 @@ export class MacroController {
     private readonly listMacrosUseCase: ListMacrosUseCase,
     private readonly updateMacroUseCase: UpdateMacroUseCase,
     private readonly deleteMacroUseCase: DeleteMacroUseCase,
+    private readonly listCompatibleProtocolsUseCase: ListCompatibleProtocolsUseCase,
+    private readonly addCompatibleProtocolsUseCase: AddCompatibleProtocolsUseCase,
+    private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
   ) {}
 
   @TsRestHandler(macroContract.createMacro)
@@ -119,6 +125,62 @@ export class MacroController {
         return {
           status: StatusCodes.NO_CONTENT,
           body: undefined,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.listCompatibleProtocols)
+  listCompatibleProtocols() {
+    return tsRestHandler(macroContract.listCompatibleProtocols, async ({ params }) => {
+      const result = await this.listCompatibleProtocolsUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK,
+          body: formatDatesList(result.value),
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.addCompatibleProtocols)
+  addCompatibleProtocols(@Session() session: UserSession) {
+    return tsRestHandler(macroContract.addCompatibleProtocols, async ({ params, body }) => {
+      const result = await this.addCompatibleProtocolsUseCase.execute(
+        params.id,
+        body.protocolIds,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.CREATED,
+          body: formatDatesList(result.value),
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.removeCompatibleProtocol)
+  removeCompatibleProtocol(@Session() session: UserSession) {
+    return tsRestHandler(macroContract.removeCompatibleProtocol, async ({ params }) => {
+      const result = await this.removeCompatibleProtocolUseCase.execute(
+        params.id,
+        params.protocolId,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.NO_CONTENT,
+          body: null,
         };
       }
 
