@@ -2,13 +2,14 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
+  Badge,
   Button,
   Card,
   CardHeader,
@@ -22,6 +23,32 @@ import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCom
 import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
 import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
+
+const getLanguageDisplay = (language: string) => {
+  switch (language) {
+    case "python":
+      return "Python";
+    case "r":
+      return "R";
+    case "javascript":
+      return "JavaScript";
+    default:
+      return language;
+  }
+};
+
+const getLanguageColor = (language: string) => {
+  switch (language) {
+    case "python":
+      return "bg-badge-published";
+    case "r":
+      return "bg-badge-stale";
+    case "javascript":
+      return "bg-badge";
+    default:
+      return "bg-badge-archived";
+  }
+};
 
 interface ProtocolCompatibleMacrosCardProps {
   protocolId: string;
@@ -92,39 +119,46 @@ export function ProtocolCompatibleMacrosCard({ protocolId, embedded }: ProtocolC
       {isLoading ? (
         <div className="text-muted-foreground text-sm">{t("common.loading")}</div>
       ) : compatibleMacros.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {compatibleMacros.map((entry) => (
             <div
               key={entry.macro.id}
-              className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+              className="group rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
             >
-              <div className="flex min-w-0 items-center gap-2">
-                <Link
-                  href={`/${locale}/platform/macros/${entry.macro.id}`}
-                  className="truncate text-sm font-medium hover:underline"
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <FileCode2 className="text-muted-foreground h-4 w-4 shrink-0" />
+                    <Link
+                      href={`/${locale}/platform/macros/${entry.macro.id}`}
+                      className="line-clamp-2 text-sm font-semibold hover:underline"
+                    >
+                      {entry.macro.name}
+                    </Link>
+                    <Link
+                      href={`/${locale}/platform/macros/${entry.macro.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                  <Badge className={getLanguageColor(entry.macro.language)}>
+                    {getLanguageDisplay(entry.macro.language)}
+                  </Badge>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  onClick={() => handleRemoveMacro(entry.macro.id)}
+                  disabled={isRemoving}
                 >
-                  {entry.macro.name}
-                </Link>
-                <Link
-                  href={`/${locale}/platform/macros/${entry.macro.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
-                </Link>
-                <span className="text-muted-foreground text-xs">{entry.macro.language}</span>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 shrink-0"
-                onClick={() => handleRemoveMacro(entry.macro.id)}
-                disabled={isRemoving}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           ))}
         </div>
