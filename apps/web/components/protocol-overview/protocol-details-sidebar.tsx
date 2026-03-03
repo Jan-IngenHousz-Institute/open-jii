@@ -52,7 +52,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
   const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
   const { data: compatibleMacrosData } = useProtocolCompatibleMacros(protocolId);
-  const compatibleMacrosCount = compatibleMacrosData?.body?.length ?? 0;
+  const compatibleMacrosCount = compatibleMacrosData?.body.length ?? 0;
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
