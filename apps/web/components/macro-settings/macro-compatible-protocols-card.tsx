@@ -77,6 +77,18 @@ export function MacroCompatibleProtocolsCard({ macroId, embedded }: MacroCompati
 
   const content = (
     <>
+      {/* Add protocol dropdown */}
+      <ProtocolSearchWithDropdown
+        availableProtocols={availableProtocols}
+        value=""
+        placeholder={t("macroSettings.addCompatibleProtocol")}
+        loading={!isDebounced}
+        searchValue={protocolSearch}
+        onSearchChange={setProtocolSearch}
+        onAddProtocol={handleAddProtocol}
+        isAddingProtocol={isAdding}
+      />
+
       {/* List of currently linked protocols */}
       {isLoading ? (
         <div className="text-muted-foreground text-sm">{tCommon("common.loading")}</div>
@@ -122,18 +134,6 @@ export function MacroCompatibleProtocolsCard({ macroId, embedded }: MacroCompati
           {t("macroSettings.noCompatibleProtocols")}
         </p>
       )}
-
-      {/* Add protocol dropdown */}
-      <ProtocolSearchWithDropdown
-        availableProtocols={availableProtocols}
-        value=""
-        placeholder={t("macroSettings.addCompatibleProtocol")}
-        loading={!isDebounced}
-        searchValue={protocolSearch}
-        onSearchChange={setProtocolSearch}
-        onAddProtocol={handleAddProtocol}
-        isAddingProtocol={isAdding}
-      />
     </>
   );
 

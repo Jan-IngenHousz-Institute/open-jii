@@ -76,6 +76,18 @@ export function ProtocolCompatibleMacrosCard({ protocolId, embedded }: ProtocolC
 
   const content = (
     <>
+      {/* Add macro dropdown */}
+      <MacroSearchWithDropdown
+        availableMacros={availableMacros}
+        value=""
+        placeholder={t("protocolSettings.addCompatibleMacro")}
+        loading={!isDebounced}
+        searchValue={macroSearch}
+        onSearchChange={setMacroSearch}
+        onAddMacro={handleAddMacro}
+        isAddingMacro={isAdding}
+      />
+
       {/* List of currently linked macros */}
       {isLoading ? (
         <div className="text-muted-foreground text-sm">{t("common.loading")}</div>
@@ -121,18 +133,6 @@ export function ProtocolCompatibleMacrosCard({ protocolId, embedded }: ProtocolC
           {t("protocolSettings.noCompatibleMacros")}
         </p>
       )}
-
-      {/* Add macro dropdown */}
-      <MacroSearchWithDropdown
-        availableMacros={availableMacros}
-        value=""
-        placeholder={t("protocolSettings.addCompatibleMacro")}
-        loading={!isDebounced}
-        searchValue={macroSearch}
-        onSearchChange={setMacroSearch}
-        onAddMacro={handleAddMacro}
-        isAddingMacro={isAdding}
-      />
     </>
   );
 
