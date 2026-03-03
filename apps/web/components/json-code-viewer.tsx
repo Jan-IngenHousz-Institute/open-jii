@@ -59,7 +59,10 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
     >
       {/* Hover edit overlay */}
       {onEditStart && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:bg-black/5">
+        <div
+          className="pointer-events-none absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:pointer-events-auto group-hover/viewer:bg-black/5"
+          onClick={onEditStart}
+        >
           <div className="rounded-full bg-white p-3 opacity-0 shadow-lg transition-opacity duration-200 group-hover/viewer:opacity-100">
             <Pencil className="h-5 w-5 text-slate-600" />
           </div>
@@ -79,7 +82,10 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleCopy();
+            }}
             className="h-7 w-7 p-0 hover:bg-slate-200"
           >
             {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}

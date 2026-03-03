@@ -1,5 +1,5 @@
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 import { tsr } from "../../../lib/tsr";
 import { useDebounce } from "../../useDebounce";
@@ -57,6 +57,20 @@ export const useProtocols = ({
     },
     queryKey: ["protocols", filter, debouncedSearch],
   });
+
+  // Auto-switch to "all" if user has no protocols of their own on initial load
+  const hasAutoSwitched = useRef(false);
+  useEffect(() => {
+    if (
+      !hasAutoSwitched.current &&
+      filter === "my" &&
+      data?.body.length === 0 &&
+      !debouncedSearch
+    ) {
+      hasAutoSwitched.current = true;
+      setFilter("all");
+    }
+  }, [filter, data?.body, setFilter, debouncedSearch]);
 
   return {
     protocols: data?.body,

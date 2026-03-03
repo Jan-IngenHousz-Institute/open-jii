@@ -1,5 +1,5 @@
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 import type { MacroLanguage } from "@repo/api";
 
@@ -63,6 +63,21 @@ export function useMacros({
     },
     queryKey: ["macros", filter, debouncedSearch, language],
   });
+
+  // Auto-switch to "all" if user has no macros of their own on initial load
+  const hasAutoSwitched = useRef(false);
+  useEffect(() => {
+    if (
+      !hasAutoSwitched.current &&
+      filter === "my" &&
+      query.data?.body.length === 0 &&
+      !debouncedSearch &&
+      !language
+    ) {
+      hasAutoSwitched.current = true;
+      setFilter("all");
+    }
+  }, [filter, query.data?.body, setFilter, debouncedSearch, language]);
 
   return {
     data: query.data?.body,

@@ -16,19 +16,10 @@ interface MacroCodeViewerProps {
   language: CodeLanguage;
   height?: string;
   className?: string;
-  macroName?: string;
   title?: React.ReactNode;
   headerActions?: React.ReactNode;
   onEditStart?: () => void;
 }
-
-const toSnakeCase = (str: string): string => {
-  return str
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^\w_]/g, "")
-    .replace(/_+/g, "_");
-};
 
 const getMonacoLanguage = (language: CodeLanguage): string => {
   switch (language) {
@@ -43,16 +34,16 @@ const getMonacoLanguage = (language: CodeLanguage): string => {
   }
 };
 
-const getLanguageExtension = (language: CodeLanguage): string => {
+const getLanguageLabel = (language: CodeLanguage): string => {
   switch (language) {
     case "python":
-      return ".py";
+      return "Python";
     case "r":
-      return ".R";
+      return "R";
     case "javascript":
-      return ".js";
+      return "JavaScript";
     default:
-      return ".txt";
+      return language;
   }
 };
 
@@ -61,7 +52,6 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
   language,
   height = "400px",
   className = "",
-  macroName = "untitled",
   title,
   headerActions,
   onEditStart,
@@ -118,7 +108,10 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
       >
         {/* Hover edit overlay */}
         {onEditStart && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:bg-black/5">
+          <div
+            className="pointer-events-none absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:pointer-events-auto group-hover/viewer:bg-black/5"
+            onClick={onEditStart}
+          >
             <div className="rounded-full bg-white p-3 opacity-0 shadow-lg transition-opacity duration-200 group-hover/viewer:opacity-100">
               <Pencil className="h-5 w-5 text-slate-600" />
             </div>
@@ -129,9 +122,7 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
           <div className="flex items-center gap-2">
             {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
             {title && <span className="text-slate-300">|</span>}
-            <span className="text-sm font-medium text-slate-600">
-              {toSnakeCase(macroName) + getLanguageExtension(language)}
-            </span>
+            <span className="text-xs font-medium text-slate-600">{getLanguageLabel(language)}</span>
             <div className="text-xs text-slate-500">
               {stats.lines} {t("common.lines")} • {stats.size}
             </div>

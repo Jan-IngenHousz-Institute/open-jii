@@ -10,7 +10,14 @@ import { useDebounce } from "~/hooks/useDebounce";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { findProtocolErrorLine, getErrorMessage, validateProtocolJson } from "@repo/api";
-import { Button, Label } from "@repo/ui/components";
+import {
+  Button,
+  Label,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
 interface ProtocolCodeEditorProps {
@@ -43,6 +50,12 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const [editorCode, setEditorCode] = useState<string | undefined>(undefined);
   const [debouncedEditorCode] = useDebounce(editorCode, 200);
   const isUserEditingRef = useRef(false);
+
+  // Stable refs for callbacks to avoid infinite effect re-runs
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const onValidationChangeRef = useRef(onValidationChange);
+  onValidationChangeRef.current = onValidationChange;
 
   // Check feature flag for validation strategy
   const validationAsWarning = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING);
@@ -117,9 +130,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 
   useEffect(() => {
     if (!debouncedEditorCode) {
-      onChange(debouncedEditorCode);
+      onChangeRef.current(debouncedEditorCode);
       setIsValidJson(true);
-      onValidationChange?.(true);
+      onValidationChangeRef.current?.(true);
       return;
     }
 
@@ -147,8 +160,8 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 
         // Block save only in strict mode
         if (!validationAsWarning) {
-          onChange(undefined);
-          onValidationChange?.(false);
+          onChangeRef.current(undefined);
+          onValidationChangeRef.current?.(false);
           return;
         }
       } else {
@@ -158,13 +171,13 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       }
 
       // Always set valid in warning mode, or when validation passes
-      onValidationChange?.(true);
+      onValidationChangeRef.current?.(true);
 
       // Return parsed value
       if (Array.isArray(parsedValue)) {
-        onChange(parsedValue as Record<string, unknown>[]);
+        onChangeRef.current(parsedValue as Record<string, unknown>[]);
       } else {
-        onChange(debouncedEditorCode);
+        onChangeRef.current(debouncedEditorCode);
       }
     } catch (e) {
       setIsValidJson(false);
@@ -187,10 +200,10 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
         [{ line: errorLine, message: "Invalid JSON syntax" }],
         true, // Always show JSON errors as errors (red)
       );
-      onChange(undefined); // Don't save invalid JSON
-      onValidationChange?.(false);
+      onChangeRef.current(undefined); // Don't save invalid JSON
+      onValidationChangeRef.current?.(false);
     }
-  }, [debouncedEditorCode, onChange, onValidationChange, validationAsWarning]);
+  }, [debouncedEditorCode, validationAsWarning]);
 
   // Handle editor changes and always try to convert to array for validation
   const handleEditorChange = (newValue: string | undefined) => {
@@ -240,14 +253,25 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {headerActions}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopy}
-              className="h-7 w-7 p-0 hover:bg-slate-200"
-            >
-              {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-            </Button>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopy}
+                    className="h-7 w-7 p-0 hover:bg-slate-200"
+                  >
+                    {copied ? (
+                      <Check className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{copied ? "Copied!" : "Copy code"}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
