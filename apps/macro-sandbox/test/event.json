@@ -1,0 +1,19 @@
+{
+  "script": "b3V0cHV0WyJjaGxvcm9waHlsbCJdID0gTWF0aE1FQU4oanNvblsidHJhY2VfMSJdKQ==",
+  "items": [
+    {
+      "id": "sample-1",
+      "data": {
+        "trace_1": [45.2, 46.8, 44.1, 47.3, 45.9]
+      }
+    },
+    {
+      "id": "sample-2",
+      "data": {
+        "trace_1": [38.1, 39.5, 37.8, 40.2, 38.7]
+      }
+    }
+  ],
+  "timeout": 10,
+  "protocol_id": "test-protocol"
+}
