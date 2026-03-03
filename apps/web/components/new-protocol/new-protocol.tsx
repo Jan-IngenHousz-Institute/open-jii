@@ -15,11 +15,6 @@ import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Form,
   FormField,
 } from "@repo/ui/components";
@@ -134,71 +129,66 @@ export function NewProtocolForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <NewProtocolDetailsCard form={form} />
 
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">{t("newProtocol.codeTitle")}</h3>
-          <p className="text-muted-foreground text-sm">{t("newProtocol.codeDescription")}</p>
-          <div className="rounded-md border p-4">
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <ProtocolCodeEditor
-                  value={field.value}
-                  onChange={field.onChange}
-                  onValidationChange={setIsCodeValid}
-                  label={t("newProtocol.code")}
-                  placeholder={t("newProtocol.codePlaceholder")}
-                  error={form.formState.errors.code?.message?.toString()}
-                />
-              )}
+        {/* Code Section */}
+        <FormField
+          control={form.control}
+          name="code"
+          render={({ field }) => (
+            <ProtocolCodeEditor
+              value={field.value}
+              onChange={field.onChange}
+              onValidationChange={setIsCodeValid}
+              label=""
+              placeholder={t("newProtocol.codePlaceholder")}
+              error={form.formState.errors.code?.message?.toString()}
+              title={t("newProtocol.codeTitle")}
             />
-          </div>
-        </div>
+          )}
+        />
 
         {/* Compatible Macros Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("newProtocol.compatibleMacros")}</CardTitle>
-            <CardDescription>{t("newProtocol.compatibleMacrosDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedMacros.length > 0 && (
-              <div className="space-y-2">
-                {selectedMacros.map((macro) => (
-                  <div
-                    key={macro.id}
-                    className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-sm font-medium">{macro.name}</span>
-                      <span className="text-muted-foreground text-xs">{macro.language}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => handleRemoveMacro(macro.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium">{t("newProtocol.compatibleMacros")}</h3>
+            <p className="text-muted-foreground text-sm">{t("newProtocol.compatibleMacrosDescription")}</p>
+          </div>
 
-            <MacroSearchWithDropdown
-              availableMacros={availableMacros}
-              value=""
-              placeholder={t("protocolSettings.addCompatibleMacro")}
-              loading={!isDebounced}
-              searchValue={macroSearch}
-              onSearchChange={setMacroSearch}
-              onAddMacro={handleAddMacro}
-              isAddingMacro={false}
-            />
-          </CardContent>
-        </Card>
+          {selectedMacros.length > 0 && (
+            <div className="space-y-2">
+              {selectedMacros.map((macro) => (
+                <div
+                  key={macro.id}
+                  className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">{macro.name}</span>
+                    <span className="text-muted-foreground text-xs">{macro.language}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => handleRemoveMacro(macro.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <MacroSearchWithDropdown
+            availableMacros={availableMacros}
+            value=""
+            placeholder={t("protocolSettings.addCompatibleMacro")}
+            loading={!isDebounced}
+            searchValue={macroSearch}
+            onSearchChange={setMacroSearch}
+            onAddMacro={handleAddMacro}
+            isAddingMacro={false}
+          />
+        </div>
 
         <div className="flex gap-2">
           <Button type="button" onClick={cancel}>

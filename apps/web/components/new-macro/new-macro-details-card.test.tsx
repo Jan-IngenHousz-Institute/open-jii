@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { useForm } from "react-hook-form";
@@ -11,19 +12,6 @@ import { NewMacroDetailsCard } from "./new-macro-details-card";
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
-  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
-  CardContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-content">{children}</div>
-  ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-header">{children}</div>
-  ),
-  CardTitle: ({ children }: { children: React.ReactNode }) => (
-    <h2 data-testid="card-title">{children}</h2>
-  ),
-  CardDescription: ({ children }: { children: React.ReactNode }) => (
-    <p data-testid="card-description">{children}</p>
-  ),
   FormControl: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="form-control">{children}</div>
   ),
@@ -84,18 +72,18 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("NewMacroDetailsCard", () => {
-  it("should render card structure with correct titles", () => {
+  it("should render section with correct titles", () => {
     render(
       <TestWrapper>
         <NewMacroDetailsCard form={undefined as any} />
       </TestWrapper>,
     );
 
-    expect(screen.getByTestId("card")).toBeInTheDocument();
-    expect(screen.getByTestId("card-header")).toBeInTheDocument();
-    expect(screen.getByTestId("card-content")).toBeInTheDocument();
     expect(screen.getByText("newMacro.detailsTitle")).toBeInTheDocument();
     expect(screen.getByText("newMacro.detailsDescription")).toBeInTheDocument();
+    // Title is rendered as an h3, description as a p
+    expect(screen.getByText("newMacro.detailsTitle").tagName).toBe("H3");
+    expect(screen.getByText("newMacro.detailsDescription").tagName).toBe("P");
   });
 
   it("should render all form fields", () => {
