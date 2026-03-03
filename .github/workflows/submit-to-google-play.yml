@@ -7,6 +7,12 @@ on:
         description: "Version to submit (e.g., 1.2.0). If empty, uses latest mobile release tag."
         required: false
         type: string
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to submit to Google Play"
+        required: true
+        type: string
   release:
     types: [published]
 
@@ -19,9 +25,10 @@ concurrency:
 
 jobs:
   build-aab:
-    # Only run for mobile releases (tag starts with mobile-v) or manual dispatch
+    # Only run for mobile releases (tag starts with mobile-v), workflow_call, or manual dispatch
     if: >
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_call' ||
       startsWith(github.event.release.tag_name, 'mobile-v')
     runs-on: ubuntu-latest
 
