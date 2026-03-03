@@ -1,7 +1,7 @@
 "use client";
 
 import Editor from "@monaco-editor/react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Pencil } from "lucide-react";
 import { useState } from "react";
 import type { FC } from "react";
 
@@ -13,6 +13,7 @@ interface JsonCodeViewerProps {
   className?: string;
   title?: React.ReactNode;
   headerActions?: React.ReactNode;
+  onEditStart?: () => void;
 }
 
 export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
@@ -21,6 +22,7 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
   className = "",
   title,
   headerActions,
+  onEditStart,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -52,8 +54,17 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
 
   return (
     <div
-      className={`overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md ${className}`}
+      className={`group/viewer relative overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md ${onEditStart ? "cursor-pointer" : ""} ${className}`}
+      onClick={onEditStart}
     >
+      {/* Hover edit overlay */}
+      {onEditStart && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:bg-black/5">
+          <div className="rounded-full bg-white p-3 opacity-0 shadow-lg transition-opacity duration-200 group-hover/viewer:opacity-100">
+            <Pencil className="h-5 w-5 text-slate-600" />
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2">
         <div className="flex items-center gap-3">
@@ -65,11 +76,10 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {headerActions}
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleCopy}
+            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
             className="h-7 w-7 p-0 hover:bg-slate-200"
           >
             {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}

@@ -223,7 +223,6 @@ export function NewMacroForm() {
                 value={field.value}
                 onChange={field.onChange}
                 language={form.watch("language")}
-                macroName={form.watch("name")}
                 username={`${userProfile?.body.firstName} ${userProfile?.body.lastName}`}
                 label=""
                 error={form.formState.errors.code?.message?.toString()}
@@ -235,7 +234,7 @@ export function NewMacroForm() {
         )}
 
         <div className="flex gap-2">
-          <Button type="button" onClick={cancel}>
+          <Button type="button" variant="outline" onClick={cancel}>
             {t("newMacro.cancel")}
           </Button>
           <Button type="submit" disabled={isPending}>

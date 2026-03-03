@@ -19,18 +19,9 @@ interface MacroCodeEditorProps {
   error?: string;
   height?: string;
   username?: string;
-  macroName?: string;
   title?: React.ReactNode;
   headerActions?: React.ReactNode;
 }
-
-const toSnakeCase = (str: string): string => {
-  return str
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^\w_]/g, "")
-    .replace(/_+/g, "_");
-};
 
 const getMonacoLanguage = (language: CodeLanguage): string => {
   switch (language) {
@@ -42,19 +33,6 @@ const getMonacoLanguage = (language: CodeLanguage): string => {
       return "typescript"; // Monaco uses typescript for JavaScript with better features
     default:
       return "plaintext";
-  }
-};
-
-const getLanguageExtension = (language: CodeLanguage): string => {
-  switch (language) {
-    case "python":
-      return ".py";
-    case "r":
-      return ".R";
-    case "javascript":
-      return ".js";
-    default:
-      return ".txt";
   }
 };
 
@@ -123,7 +101,6 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   error,
   username,
   height = "400px",
-  macroName = "untitled",
   title,
   headerActions,
 }) => {
@@ -200,9 +177,6 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
           <div className="flex items-center gap-2">
             {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
             {title && <span className="text-slate-300">|</span>}
-            <span className="text-sm font-medium text-slate-600">
-              {toSnakeCase(macroName) + getLanguageExtension(language)}
-            </span>
             <div className="text-xs text-slate-500">
               {stats.lines} lines • {stats.size}
             </div>
