@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import * as base64Utils from "@/util/base64";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -66,6 +67,7 @@ interface MockCodeEditorProps {
   language: string;
   onChange?: (value: string) => void;
   macroName?: string;
+  title?: string;
 }
 
 interface MockNewMacroDetailsCardProps {
@@ -245,8 +247,9 @@ vi.mock("@repo/ui/components", () => ({
 
 vi.mock("../macro-code-editor", () => ({
   __esModule: true,
-  default: ({ language, onChange, macroName }: MockCodeEditorProps & { macroName?: string }) => (
+  default: ({ language, onChange, macroName, title }: MockCodeEditorProps & { macroName?: string }) => (
     <div data-testid="code-editor" data-language={language} data-macro-name={macroName}>
+      {title && <span>{title}</span>}
       <textarea
         data-testid="code-textarea"
         placeholder={`Enter ${language} code here...`}

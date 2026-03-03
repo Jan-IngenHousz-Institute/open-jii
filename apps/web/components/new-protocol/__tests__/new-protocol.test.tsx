@@ -1,6 +1,10 @@
+import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+globalThis.React = React;
 
 import { NewProtocolForm } from "../new-protocol";
 
@@ -93,12 +97,15 @@ vi.mock("../../protocol-code-editor", () => ({
     value,
     onChange,
     onValidationChange,
+    title,
   }: {
     value: Record<string, unknown>[];
     onChange: (v: Record<string, unknown>[]) => void;
     onValidationChange: (v: boolean) => void;
+    title?: string;
   }) => (
     <div data-testid="protocol-code-editor">
+      {title && <span>{title}</span>}
       <textarea
         data-testid="code-editor"
         value={JSON.stringify(value)}
@@ -291,11 +298,10 @@ describe("NewProtocolForm", () => {
     expect(codeEditor).toHaveValue(JSON.stringify([{}]));
   });
 
-  it("should display code section with title and description", () => {
+  it("should display code section with title", () => {
     render(<NewProtocolForm />);
 
     expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.codeDescription")).toBeInTheDocument();
   });
 
   it("should handle code editor changes", () => {
