@@ -171,6 +171,17 @@ export function NewMacroForm() {
             <div className="space-y-2">
               <p className="text-muted-foreground text-sm">{t("newMacro.compatibleProtocols")}</p>
 
+              <ProtocolSearchWithDropdown
+                availableProtocols={availableProtocols}
+                value=""
+                placeholder={t("macroSettings.addCompatibleProtocol")}
+                loading={!isDebounced}
+                searchValue={protocolSearch}
+                onSearchChange={setProtocolSearch}
+                onAddProtocol={handleAddProtocol}
+                isAddingProtocol={false}
+              />
+
               {selectedProtocols.length > 0 && (
                 <div className="space-y-2">
                   {selectedProtocols.map((protocol) => (
@@ -195,17 +206,6 @@ export function NewMacroForm() {
                   ))}
                 </div>
               )}
-
-              <ProtocolSearchWithDropdown
-                availableProtocols={availableProtocols}
-                value=""
-                placeholder={t("macroSettings.addCompatibleProtocol")}
-                loading={!isDebounced}
-                searchValue={protocolSearch}
-                onSearchChange={setProtocolSearch}
-                onAddProtocol={handleAddProtocol}
-                isAddingProtocol={false}
-              />
             </div>
           </div>
         </div>
