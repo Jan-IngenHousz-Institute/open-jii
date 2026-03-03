@@ -15,8 +15,20 @@ import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
+  Card,
+  CardContent,
+  CardHeader,
   Form,
+  FormControl,
   FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -126,77 +138,123 @@ export function NewProtocolForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <NewProtocolDetailsCard form={form} />
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <div className="flex flex-col gap-6 md:flex-row">
+          {/* RIGHT SIDE — Sidebar (First on mobile) */}
+          <div className="w-full md:order-2 md:w-96">
+            <Card className="shadow-none">
+              <CardHeader>
+                <h3 className="text-lg font-semibold">{t("newProtocol.detailsTitle")}</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Sensor Family */}
+                <FormField
+                  control={form.control}
+                  name="family"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("newProtocol.family")}</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("newProtocol.selectFamily")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="multispeq">MultispeQ</SelectItem>
+                          <SelectItem value="ambit" disabled>
+                            Ambit (Coming Soon)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-        {/* Code Section */}
-        <FormField
-          control={form.control}
-          name="code"
-          render={({ field }) => (
-            <ProtocolCodeEditor
-              value={field.value}
-              onChange={field.onChange}
-              onValidationChange={setIsCodeValid}
-              label=""
-              placeholder={t("newProtocol.codePlaceholder")}
-              error={form.formState.errors.code?.message?.toString()}
-              title={t("newProtocol.codeTitle")}
-            />
-          )}
-        />
+                {/* Compatible Macros */}
+                <div
+                  role="separator"
+                  aria-orientation="horizontal"
+                  className="text-muted-foreground border-t"
+                />
 
-        {/* Compatible Macros Section */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">{t("newProtocol.compatibleMacros")}</h3>
-            <p className="text-muted-foreground text-sm">{t("newProtocol.compatibleMacrosDescription")}</p>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium">{t("newProtocol.compatibleMacros")}</h4>
+                    <p className="text-muted-foreground text-sm">{t("newProtocol.compatibleMacrosDescription")}</p>
+                  </div>
+
+                  {selectedMacros.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedMacros.map((macro) => (
+                        <div
+                          key={macro.id}
+                          className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-sm font-medium">{macro.name}</span>
+                            <span className="text-muted-foreground text-xs">{macro.language}</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => handleRemoveMacro(macro.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <MacroSearchWithDropdown
+                    availableMacros={availableMacros}
+                    value=""
+                    placeholder={t("protocolSettings.addCompatibleMacro")}
+                    loading={!isDebounced}
+                    searchValue={macroSearch}
+                    onSearchChange={setMacroSearch}
+                    onAddMacro={handleAddMacro}
+                    isAddingMacro={false}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {selectedMacros.length > 0 && (
-            <div className="space-y-2">
-              {selectedMacros.map((macro) => (
-                <div
-                  key={macro.id}
-                  className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-sm font-medium">{macro.name}</span>
-                    <span className="text-muted-foreground text-xs">{macro.language}</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    onClick={() => handleRemoveMacro(macro.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+          {/* LEFT SIDE — Main Content (Second on mobile) */}
+          <div className="flex-1 space-y-10 md:order-1">
+            <NewProtocolDetailsCard form={form} />
+
+            {/* Code Section */}
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <ProtocolCodeEditor
+                  value={field.value}
+                  onChange={field.onChange}
+                  onValidationChange={setIsCodeValid}
+                  label=""
+                  placeholder={t("newProtocol.codePlaceholder")}
+                  error={form.formState.errors.code?.message?.toString()}
+                  title={t("newProtocol.codeTitle")}
+                />
+              )}
+            />
+
+            <div className="flex gap-2">
+              <Button type="button" onClick={cancel}>
+                {t("newProtocol.cancel")}
+              </Button>
+              <Button type="submit" disabled={isDisabled}>
+                {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
+              </Button>
             </div>
-          )}
-
-          <MacroSearchWithDropdown
-            availableMacros={availableMacros}
-            value=""
-            placeholder={t("protocolSettings.addCompatibleMacro")}
-            loading={!isDebounced}
-            searchValue={macroSearch}
-            onSearchChange={setMacroSearch}
-            onAddMacro={handleAddMacro}
-            isAddingMacro={false}
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <Button type="button" onClick={cancel}>
-            {t("newProtocol.cancel")}
-          </Button>
-          <Button type="submit" disabled={isDisabled}>
-            {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
-          </Button>
+          </div>
         </div>
       </form>
     </Form>
