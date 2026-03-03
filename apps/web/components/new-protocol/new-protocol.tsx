@@ -19,7 +19,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
   Select,
   SelectContent,
@@ -137,7 +136,7 @@ export function NewProtocolForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Details row: name/description + family + compatible macros */}
-        <div className="flex flex-col gap-6 md:flex-row">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start">
           <div className="flex-1">
             <NewProtocolDetailsCard form={form} />
           </div>
@@ -149,7 +148,6 @@ export function NewProtocolForm() {
               name="family"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("newProtocol.family")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
