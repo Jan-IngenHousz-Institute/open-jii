@@ -78,13 +78,11 @@ function promptMeasurementFileSave(measurement: {
       { text: "Dismiss", style: "cancel" },
       {
         text: "Save to File",
-        onPress: async () => {
-          try {
-            await exportSingleMeasurementToFile(measurement);
-          } catch (exportError) {
+        onPress: () => {
+          exportSingleMeasurementToFile(measurement).catch((exportError) => {
             console.error("Failed to export measurement to file:", exportError);
             toast.error("Could not save measurement. Please try again.");
-          }
+          });
         },
       },
     ],
