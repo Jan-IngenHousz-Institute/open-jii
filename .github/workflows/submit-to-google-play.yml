@@ -80,6 +80,41 @@ jobs:
           "
           echo "Set app version to ${{ steps.version.outputs.version }}"
 
+      - name: Generate release notes
+        id: release-notes
+        working-directory: apps/mobile
+        env:
+          RELEASE_BODY: ${{ github.event.release.body || '' }}
+        run: |
+          mkdir -p fastlane/metadata/android/en-US/changelogs
+          if [ -n "$RELEASE_BODY" ]; then
+            echo "$RELEASE_BODY" > fastlane/metadata/android/en-US/changelogs/default.txt
+            echo "has_notes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No release notes available" > fastlane/metadata/android/en-US/changelogs/default.txt
+            echo "has_notes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Job Summary
+        env:
+          RELEASE_BODY: ${{ github.event.release.body || 'N/A (manual dispatch)' }}
+        run: |
+          echo "## 📱 Google Play Submission Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Track** | Internal Testing |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Trigger** | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Notes** | ${{ steps.release-notes.outputs.has_notes == 'true' && '✅ Included' || '⚠️ Not available' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.release-notes.outputs.has_notes }}" = "true" ]; then
+            echo "### 📝 Changes" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "$RELEASE_BODY" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Submit to Google Play
         working-directory: apps/mobile
         run: pnpm run submit-to-google-play
