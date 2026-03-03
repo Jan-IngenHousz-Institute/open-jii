@@ -2,6 +2,8 @@
  * Web Serial Adapter
  * Uses the Web Serial API (Chrome, Edge, Opera - desktop only)
  */
+import type { Logger } from "../../utils/logger/logger";
+import { defaultLogger } from "../../utils/logger/logger";
 import type { ITransportAdapter } from "../interface";
 
 // Web Serial API type declarations
@@ -59,8 +61,11 @@ export class WebSerialAdapter implements ITransportAdapter {
   private statusCallback?: (connected: boolean, error?: Error) => void;
   private reading = false;
 
-  constructor(port: SerialPort) {
+  private readonly log: Logger;
+
+  constructor(port: SerialPort, logger?: Logger) {
     this.port = port;
+    this.log = logger ?? defaultLogger;
     this.setupDisconnectListener();
   }
 
@@ -96,7 +101,7 @@ export class WebSerialAdapter implements ITransportAdapter {
         this.dataCallback?.(text);
       }
     } catch (error) {
-      console.error("Error reading from serial port:", error);
+      this.log.error("Error reading from serial port:", error);
       this.statusCallback?.(false, error as Error);
     } finally {
       this.reader.releaseLock();
@@ -142,7 +147,7 @@ export class WebSerialAdapter implements ITransportAdapter {
         await reader.cancel();
         reader.releaseLock();
       } catch (error) {
-        console.error("Error releasing reader:", error);
+        this.log.error("Error releasing reader:", error);
       }
     }
 
@@ -150,7 +155,7 @@ export class WebSerialAdapter implements ITransportAdapter {
       try {
         writer.releaseLock();
       } catch (error) {
-        console.error("Error releasing writer:", error);
+        this.log.error("Error releasing writer:", error);
       }
     }
 
@@ -158,7 +163,7 @@ export class WebSerialAdapter implements ITransportAdapter {
       try {
         await this.port.close();
       } catch (error) {
-        console.error("Error closing port:", error);
+        this.log.error("Error closing port:", error);
       }
     }
 
@@ -176,7 +181,10 @@ export class WebSerialAdapter implements ITransportAdapter {
   /**
    * Request port from user and connect
    */
-  static async requestAndConnect(options?: SerialOptions): Promise<WebSerialAdapter> {
+  static async requestAndConnect(
+    options?: SerialOptions,
+    logger?: Logger,
+  ): Promise<WebSerialAdapter> {
     if (!WebSerialAdapter.isSupported()) {
       throw new Error("Web Serial not supported in this browser");
     }
@@ -187,7 +195,7 @@ export class WebSerialAdapter implements ITransportAdapter {
       throw new Error("No serial port selected");
     }
 
-    return await WebSerialAdapter.connect(port, options);
+    return await WebSerialAdapter.connect(port, options, logger);
   }
 
   /**
@@ -201,6 +209,7 @@ export class WebSerialAdapter implements ITransportAdapter {
       stopBits: 1,
       parity: "none",
     },
+    logger?: Logger,
   ): Promise<WebSerialAdapter> {
     try {
       await port.open(options);
@@ -214,7 +223,7 @@ export class WebSerialAdapter implements ITransportAdapter {
       throw error;
     }
 
-    const adapter = new WebSerialAdapter(port);
+    const adapter = new WebSerialAdapter(port, logger);
 
     // Set up writer
     if (port.writable) {

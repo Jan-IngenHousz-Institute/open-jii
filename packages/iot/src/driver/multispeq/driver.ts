@@ -6,14 +6,14 @@
  * Responses are newline-terminated with an 8-char checksum before the newline.
  */
 import type { ITransportAdapter } from "../../transport/interface";
-import { Emitter } from "../../utils/emitter";
 import {
   stringifyIfObject,
   tryParseJson,
   extractChecksum,
   addLineEnding,
   removeLineEnding,
-} from "../../utils/framing";
+} from "../../utils/framing/framing";
+import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
 import type { CommandResult } from "../driver-base";
 import { MULTISPEQ_COMMANDS } from "./commands";
@@ -28,10 +28,13 @@ import type {
  * MultispeQ device driver
  * Implements the MultispeQ device communication with checksums and JSON framing
  */
-export class MultispeqDriver extends DeviceDriver {
-  private emitter = new Emitter<MultispeqStreamEvents>();
+export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   private dataBuffer: string[] = [];
-  private pendingResponse: Promise<MultispeqCommandResult> | null = null;
+  private bufferLength = 0;
+
+  constructor(logger?: Logger) {
+    super(logger);
+  }
 
   initialize(transport: ITransportAdapter): void {
     super.initialize(transport);
@@ -44,6 +47,16 @@ export class MultispeqDriver extends DeviceDriver {
     // Buffer data until we receive a complete message (ends with newline)
     this.dataBuffer.push(data);
 
+    // Guard against unbounded buffer growth from malformed/chatty devices
+    this.bufferLength += data.length;
+    if (this.bufferLength > this.maxBufferSize) {
+      this.log.error("MultispeQ receive buffer exceeded max size, discarding data");
+      void this.emitter.emit("bufferOverflow", { discardedBytes: this.bufferLength });
+      this.dataBuffer = [];
+      this.bufferLength = 0;
+      return;
+    }
+
     if (!data.endsWith("\n")) {
       return;
     }
@@ -51,6 +64,7 @@ export class MultispeqDriver extends DeviceDriver {
     // Process complete message
     const fullData = this.dataBuffer.join("");
     this.dataBuffer = [];
+    this.bufferLength = 0;
 
     const cleanData = removeLineEnding(fullData);
     const { data: jsonData, checksum } = extractChecksum(
@@ -71,31 +85,34 @@ export class MultispeqDriver extends DeviceDriver {
   async execute<T = unknown>(command: string | object): Promise<CommandResult<T>> {
     this.ensureInitialized();
 
-    try {
-      // Send command
-      const commandStr = stringifyIfObject(command);
-      const commandWithEnding = addLineEnding(commandStr, MULTISPEQ_FRAMING.LINE_ENDING);
+    // Serialize commands so responses are never mismatched
+    return this.commandQueue.enqueue(async () => {
+      try {
+        // Send command
+        const commandStr = stringifyIfObject(command);
+        const commandWithEnding = addLineEnding(commandStr, MULTISPEQ_FRAMING.LINE_ENDING);
 
-      if (!this.transport) {
-        throw new Error("Transport not initialized");
+        if (!this.transport) {
+          throw new Error("Transport not initialized");
+        }
+
+        await this.transport.send(commandWithEnding);
+
+        // Wait for response
+        const response = await this.waitForResponse();
+
+        return {
+          success: true,
+          data: response.data as T,
+          checksum: response.checksum,
+        } as CommandResult<T>;
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        } as CommandResult<T>;
       }
-
-      await this.transport.send(commandWithEnding);
-
-      // Wait for response
-      const response = await this.waitForResponse();
-
-      return {
-        success: true,
-        data: response.data as T,
-        checksum: response.checksum,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
+    });
   }
 
   async getDeviceInfo(): Promise<MultispeqDeviceInfo> {
@@ -130,17 +147,16 @@ export class MultispeqDriver extends DeviceDriver {
 
       const handler = (payload: MultispeqCommandResult) => {
         clearTimeout(timeout);
-        this.emitter.off("receivedReplyFromDevice", handler);
         resolve(payload);
       };
 
-      this.emitter.on("receivedReplyFromDevice", handler);
+      this.emitter.once("receivedReplyFromDevice", handler);
     });
   }
 
   async destroy(): Promise<void> {
-    this.emitter.removeAllListeners();
     this.dataBuffer = [];
+    this.bufferLength = 0;
     await super.destroy();
   }
 }

@@ -2,7 +2,9 @@
  * Web Bluetooth Adapter
  * Uses the Web Bluetooth API (Chrome, Edge, Opera)
  */
-import { stringifyIfObject } from "../../utils/framing";
+import { stringifyIfObject } from "../../utils/framing/framing";
+import type { Logger } from "../../utils/logger/logger";
+import { defaultLogger } from "../../utils/logger/logger";
 import type { ITransportAdapter } from "../interface";
 
 // Web Bluetooth API type declarations
@@ -87,11 +89,15 @@ export class WebBluetoothAdapter implements ITransportAdapter {
   private statusCallback?: (connected: boolean, error?: Error) => void;
   private dataBuffer: string[] = [];
 
+  private readonly log: Logger;
+
   constructor(
     device: BluetoothDevice,
     private config: WebBluetoothConfig,
+    logger?: Logger,
   ) {
     this.device = device;
+    this.log = logger ?? defaultLogger;
     this.setupDisconnectListener();
   }
 
@@ -140,7 +146,7 @@ export class WebBluetoothAdapter implements ITransportAdapter {
       this.dataBuffer = [];
       this.dataCallback?.(fullData);
     } catch (error) {
-      console.error("Error processing notification:", error);
+      this.log.error("Error processing notification:", error);
     }
   }
 
@@ -176,7 +182,7 @@ export class WebBluetoothAdapter implements ITransportAdapter {
         this.connected = false;
         this.statusCallback?.(false);
       } catch (error) {
-        console.error("Error disconnecting:", error);
+        this.log.error("Error disconnecting:", error);
       }
     }
   }
@@ -191,7 +197,10 @@ export class WebBluetoothAdapter implements ITransportAdapter {
   /**
    * Request device from user and connect
    */
-  static async requestAndConnect(config: WebBluetoothConfig): Promise<WebBluetoothAdapter> {
+  static async requestAndConnect(
+    config: WebBluetoothConfig,
+    logger?: Logger,
+  ): Promise<WebBluetoothAdapter> {
     if (!WebBluetoothAdapter.isSupported()) {
       throw new Error("Web Bluetooth not supported in this browser");
     }
@@ -205,7 +214,7 @@ export class WebBluetoothAdapter implements ITransportAdapter {
       throw new Error("No Bluetooth device selected");
     }
 
-    return await WebBluetoothAdapter.connect(device, config);
+    return await WebBluetoothAdapter.connect(device, config, logger);
   }
 
   /**
@@ -214,8 +223,9 @@ export class WebBluetoothAdapter implements ITransportAdapter {
   static async connect(
     device: BluetoothDevice,
     config: WebBluetoothConfig,
+    logger?: Logger,
   ): Promise<WebBluetoothAdapter> {
-    const adapter = new WebBluetoothAdapter(device, config);
+    const adapter = new WebBluetoothAdapter(device, config, logger);
 
     const gattServer = await device.gatt?.connect();
     if (!gattServer) {

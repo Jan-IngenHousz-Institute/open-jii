@@ -2,18 +2,6 @@
  * Transport adapter interface - abstracts the underlying communication channel
  */
 
-/** Generic transport events for bidirectional communication */
-export interface TransportEvents {
-  /** Data received from device (raw bytes as string) */
-  dataReceived: string;
-  /** Send data to device (raw bytes as string) */
-  sendData: string;
-  /** Connection status changed */
-  statusChanged: { connected: boolean; error?: Error };
-  /** Cleanup and close connection */
-  destroy: void;
-}
-
 /** Abstract transport adapter interface */
 export interface ITransportAdapter {
   /** Check if transport is connected */

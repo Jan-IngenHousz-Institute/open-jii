@@ -5,8 +5,10 @@
 import type { UsbSerial } from "react-native-usb-serialport-for-android";
 import { UsbSerialManager, Parity } from "react-native-usb-serialport-for-android";
 
-import { delay } from "../../utils/async";
-import { toHex, fromHex } from "../../utils/hex";
+import { delay } from "../../utils/async/async";
+import { toHex, fromHex } from "../../utils/hex/hex";
+import type { Logger } from "../../utils/logger/logger";
+import { defaultLogger } from "../../utils/logger/logger";
 import type { ITransportAdapter } from "../interface";
 
 /**
@@ -18,8 +20,11 @@ export class RNUSBSerialAdapter implements ITransportAdapter {
   private dataCallback?: (data: string) => void;
   private statusCallback?: (connected: boolean, error?: Error) => void;
 
-  constructor(port: UsbSerial) {
+  private readonly log: Logger;
+
+  constructor(port: UsbSerial, logger?: Logger) {
     this.port = port;
+    this.log = logger ?? defaultLogger;
     this.setupListeners();
   }
 
@@ -31,7 +36,7 @@ export class RNUSBSerialAdapter implements ITransportAdapter {
         const data = fromHex(event.data);
         this.dataCallback?.(data);
       } catch (error) {
-        console.error("Error decoding hex data:", error);
+        this.log.error("Error decoding hex data:", error);
       }
     });
   }
@@ -64,22 +69,30 @@ export class RNUSBSerialAdapter implements ITransportAdapter {
         this.connected = false;
         this.statusCallback?.(false);
       } catch (error) {
-        console.error("Error disconnecting:", error);
+        this.log.error("Error disconnecting:", error);
       }
     }
   }
 
+  /** Maximum number of permission request attempts before giving up */
+  static MAX_PERMISSION_RETRIES = 5;
+
   /**
    * Static factory method to create and connect to a USB device
    */
-  static async connect(deviceId: number): Promise<RNUSBSerialAdapter> {
-    // Request permission
-    while (true) {
+  static async connect(deviceId: number, logger?: Logger): Promise<RNUSBSerialAdapter> {
+    // Request permission with a bounded retry loop
+    for (let attempt = 0; attempt < RNUSBSerialAdapter.MAX_PERMISSION_RETRIES; attempt++) {
       if (await UsbSerialManager.hasPermission(deviceId)) {
         break;
       }
       if (await UsbSerialManager.tryRequestPermission(deviceId)) {
         break;
+      }
+      if (attempt === RNUSBSerialAdapter.MAX_PERMISSION_RETRIES - 1) {
+        throw new Error(
+          `USB permission denied after ${RNUSBSerialAdapter.MAX_PERMISSION_RETRIES} attempts`,
+        );
       }
       await delay(2000);
     }
@@ -92,7 +105,7 @@ export class RNUSBSerialAdapter implements ITransportAdapter {
       stopBits: 1,
     });
 
-    const adapter = new RNUSBSerialAdapter(port);
+    const adapter = new RNUSBSerialAdapter(port, logger);
     adapter.connected = true;
     adapter.statusCallback?.(true);
 

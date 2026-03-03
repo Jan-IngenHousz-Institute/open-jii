@@ -171,4 +171,84 @@ describe("Emitter", () => {
     // off on an event with no listener set at all
     expect(() => emitter.off("data", vi.fn())).not.toThrow();
   });
+
+  describe("once", () => {
+    it("should call listener only once", async () => {
+      const emitter = new Emitter<TestEvents>();
+      const listener = vi.fn();
+
+      emitter.once("message", listener);
+      await emitter.emit("message", "first");
+      await emitter.emit("message", "second");
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith("first");
+    });
+
+    it("should not interfere with on() listeners", async () => {
+      const emitter = new Emitter<TestEvents>();
+      const onceListener = vi.fn();
+      const onListener = vi.fn();
+
+      emitter.once("message", onceListener);
+      emitter.on("message", onListener);
+
+      await emitter.emit("message", "hello");
+      await emitter.emit("message", "world");
+
+      expect(onceListener).toHaveBeenCalledTimes(1);
+      expect(onListener).toHaveBeenCalledTimes(2);
+    });
+
+    it("should support async once listeners", async () => {
+      const emitter = new Emitter<TestEvents>();
+      let resolved = false;
+
+      emitter.once("message", async () => {
+        await new Promise<void>((r) => setTimeout(r, 5));
+        resolved = true;
+      });
+
+      await emitter.emit("message", "test");
+      expect(resolved).toBe(true);
+    });
+  });
+
+  describe("emit error handling", () => {
+    it("should catch sync listener errors and continue", async () => {
+      const emitter = new Emitter<TestEvents>();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
+      const listener2 = vi.fn();
+
+      emitter.on("message", () => {
+        throw new Error("sync fail");
+      });
+      emitter.on("message", listener2);
+
+      await emitter.emit("message", "hello");
+
+      expect(consoleSpy).toHaveBeenCalledWith("Emitter listener error:", expect.any(Error));
+      expect(listener2).toHaveBeenCalledWith("hello");
+      consoleSpy.mockRestore();
+    });
+
+    it("should catch async listener errors and continue", async () => {
+      const emitter = new Emitter<TestEvents>();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // noop
+      });
+
+      emitter.on("message", () => {
+        throw new Error("async fail");
+      });
+
+      // Should not throw
+      await expect(emitter.emit("message", "hello")).resolves.toBeUndefined();
+
+      expect(consoleSpy).toHaveBeenCalledWith("Emitter listener error:", expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+  });
 });

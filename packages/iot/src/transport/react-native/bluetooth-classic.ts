@@ -5,6 +5,8 @@
 import type { BluetoothDevice } from "react-native-bluetooth-classic";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 
+import type { Logger } from "../../utils/logger/logger";
+import { defaultLogger } from "../../utils/logger/logger";
 import type { ITransportAdapter } from "../interface";
 
 /**
@@ -16,8 +18,11 @@ export class RNBluetoothClassicAdapter implements ITransportAdapter {
   private dataCallback?: (data: string) => void;
   private statusCallback?: (connected: boolean, error?: Error) => void;
 
-  constructor(device: BluetoothDevice) {
+  private readonly log: Logger;
+
+  constructor(device: BluetoothDevice, logger?: Logger) {
     this.device = device;
+    this.log = logger ?? defaultLogger;
     this.setupListeners();
   }
 
@@ -26,7 +31,7 @@ export class RNBluetoothClassicAdapter implements ITransportAdapter {
 
     this.device.onDataReceived((event) => {
       if (typeof event.data !== "string") {
-        console.warn("Received non-string data:", typeof event.data);
+        this.log.warn("Received non-string data:", typeof event.data);
         return;
       }
 
@@ -64,7 +69,7 @@ export class RNBluetoothClassicAdapter implements ITransportAdapter {
         this.connected = false;
         this.statusCallback?.(false);
       } catch (error) {
-        console.error("Error disconnecting:", error);
+        this.log.error("Error disconnecting:", error);
       }
     }
   }
@@ -72,7 +77,7 @@ export class RNBluetoothClassicAdapter implements ITransportAdapter {
   /**
    * Static factory method to create and connect to a device
    */
-  static async connect(deviceId: string): Promise<RNBluetoothClassicAdapter> {
+  static async connect(deviceId: string, logger?: Logger): Promise<RNBluetoothClassicAdapter> {
     try {
       await RNBluetoothClassic.connectToDevice(deviceId);
     } catch {
@@ -81,7 +86,7 @@ export class RNBluetoothClassicAdapter implements ITransportAdapter {
     }
 
     const device = await RNBluetoothClassic.getConnectedDevice(deviceId);
-    const adapter = new RNBluetoothClassicAdapter(device);
+    const adapter = new RNBluetoothClassicAdapter(device, logger);
     adapter.connected = true;
     adapter.statusCallback?.(true);
 
