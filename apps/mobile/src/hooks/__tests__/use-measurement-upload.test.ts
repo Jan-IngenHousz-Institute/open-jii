@@ -119,7 +119,7 @@ describe("useMeasurementUpload", () => {
     mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
     mockSaveFailedUpload.mockRejectedValueOnce(new Error("storage full"));
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     await capturedCallback(baseArgs);
 
@@ -145,7 +145,7 @@ describe("useMeasurementUpload", () => {
     mockSaveFailedUpload.mockRejectedValueOnce(new Error("storage full"));
     mockExportSingle.mockResolvedValueOnce(undefined);
 
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     await capturedCallback(baseArgs);
 
@@ -172,7 +172,7 @@ describe("useMeasurementUpload", () => {
     mockSaveFailedUpload.mockRejectedValueOnce(new Error("storage full"));
     mockExportSingle.mockRejectedValueOnce(new Error("file system error"));
 
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     await capturedCallback(baseArgs);
 
@@ -200,7 +200,7 @@ describe("useMeasurementUpload", () => {
     mockSendMqttEvent.mockRejectedValueOnce(uploadError);
     mockSaveFailedUpload.mockResolvedValueOnce(undefined);
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     await capturedCallback(baseArgs);
 
