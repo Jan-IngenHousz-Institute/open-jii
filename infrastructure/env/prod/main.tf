@@ -1829,3 +1829,8 @@ module "ssm_opennext_outputs" {
     Component   = "ssm-parameters"
   }
 }
+
+module "managed_grafana_workspace" {
+  source      = "../../modules/grafana/workspace"
+  environment = var.environment
+}
