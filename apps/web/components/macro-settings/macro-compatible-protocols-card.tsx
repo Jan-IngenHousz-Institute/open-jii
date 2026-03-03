@@ -25,9 +25,10 @@ import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
 interface MacroCompatibleProtocolsCardProps {
   macroId: string;
+  embedded?: boolean;
 }
 
-export function MacroCompatibleProtocolsCard({ macroId }: MacroCompatibleProtocolsCardProps) {
+export function MacroCompatibleProtocolsCard({ macroId, embedded }: MacroCompatibleProtocolsCardProps) {
   const { t } = useTranslation("macro");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
@@ -74,6 +75,80 @@ export function MacroCompatibleProtocolsCard({ macroId }: MacroCompatibleProtoco
     } as never);
   };
 
+  const content = (
+    <>
+      {/* List of currently linked protocols */}
+      {isLoading ? (
+        <div className="text-muted-foreground text-sm">{tCommon("common.loading")}</div>
+      ) : compatibleProtocols.length > 0 ? (
+        <div className="space-y-2">
+          {compatibleProtocols.map((entry) => (
+            <div
+              key={entry.protocol.id}
+              className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <Link
+                  href={`/${locale}/platform/protocols/${entry.protocol.id}`}
+                  className="truncate text-sm font-medium hover:underline"
+                >
+                  {entry.protocol.name}
+                </Link>
+                <Link
+                  href={`/${locale}/platform/protocols/${entry.protocol.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
+                </Link>
+                <span className="text-muted-foreground text-xs">{entry.protocol.family}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => handleRemoveProtocol(entry.protocol.id)}
+                disabled={isRemoving}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          {t("macroSettings.noCompatibleProtocols")}
+        </p>
+      )}
+
+      {/* Add protocol dropdown */}
+      <ProtocolSearchWithDropdown
+        availableProtocols={availableProtocols}
+        value=""
+        placeholder={t("macroSettings.addCompatibleProtocol")}
+        loading={!isDebounced}
+        searchValue={protocolSearch}
+        onSearchChange={setProtocolSearch}
+        onAddProtocol={handleAddProtocol}
+        isAddingProtocol={isAdding}
+      />
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-sm font-medium">{t("macroSettings.compatibleProtocols")}</h4>
+          <p className="text-muted-foreground text-sm">{t("macroSettings.compatibleProtocolsDescription")}</p>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -81,63 +156,7 @@ export function MacroCompatibleProtocolsCard({ macroId }: MacroCompatibleProtoco
         <CardDescription>{t("macroSettings.compatibleProtocolsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* List of currently linked protocols */}
-        {isLoading ? (
-          <div className="text-muted-foreground text-sm">{tCommon("common.loading")}</div>
-        ) : compatibleProtocols.length > 0 ? (
-          <div className="space-y-2">
-            {compatibleProtocols.map((entry) => (
-              <div
-                key={entry.protocol.id}
-                className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <Link
-                    href={`/${locale}/platform/protocols/${entry.protocol.id}`}
-                    className="truncate text-sm font-medium hover:underline"
-                  >
-                    {entry.protocol.name}
-                  </Link>
-                  <Link
-                    href={`/${locale}/platform/protocols/${entry.protocol.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
-                  </Link>
-                  <span className="text-muted-foreground text-xs">{entry.protocol.family}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0"
-                  onClick={() => handleRemoveProtocol(entry.protocol.id)}
-                  disabled={isRemoving}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            {t("macroSettings.noCompatibleProtocols")}
-          </p>
-        )}
-
-        {/* Add protocol dropdown */}
-        <ProtocolSearchWithDropdown
-          availableProtocols={availableProtocols}
-          value=""
-          placeholder={t("macroSettings.addCompatibleProtocol")}
-          loading={!isDebounced}
-          searchValue={protocolSearch}
-          onSearchChange={setProtocolSearch}
-          onAddProtocol={handleAddProtocol}
-          isAddingProtocol={isAdding}
-        />
+        {content}
       </CardContent>
     </Card>
   );

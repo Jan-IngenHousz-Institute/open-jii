@@ -104,13 +104,19 @@ vi.mock("@/components/macro-code-viewer", () => ({
     language,
     height,
     macroName,
+    title,
+    headerActions,
   }: {
     value: string;
     language: string;
     height: string;
     macroName: string;
+    title?: React.ReactNode;
+    headerActions?: React.ReactNode;
   }) => (
     <div data-testid="macro-code-viewer">
+      {title && <div data-testid="viewer-title">{title}</div>}
+      {headerActions && <div data-testid="viewer-actions">{headerActions}</div>}
       <div data-testid="code-value">{value}</div>
       <div data-testid="code-language">{language}</div>
       <div data-testid="code-height">{height}</div>
@@ -125,14 +131,20 @@ vi.mock("@/components/macro-code-editor", () => ({
     onChange,
     language,
     macroName,
+    title,
+    headerActions,
   }: {
     value: string;
     onChange: (v: string) => void;
     language: string;
     macroName: string;
     label?: string;
+    title?: React.ReactNode;
+    headerActions?: React.ReactNode;
   }) => (
     <div data-testid="macro-code-editor">
+      {title && <div data-testid="editor-title">{title}</div>}
+      {headerActions && <div data-testid="editor-actions">{headerActions}</div>}
       <div data-testid="editor-value">{value}</div>
       <div data-testid="editor-language">{language}</div>
       <div data-testid="editor-macro-name">{macroName}</div>
@@ -415,7 +427,7 @@ describe("MacroOverviewPage", () => {
       expect(screen.queryByTestId("macro-code-editor")).not.toBeInTheDocument();
     });
 
-    it("should render the code section card with title", () => {
+    it("should render the code viewer with title", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -424,8 +436,7 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      expect(screen.getByText("macros.code")).toBeInTheDocument();
-      expect(screen.getByTestId("code-icon")).toBeInTheDocument();
+      expect(screen.getByTestId("viewer-title")).toHaveTextContent("macros.code");
     });
 
     it("should show Edit button for creator when code is present", () => {
@@ -437,8 +448,8 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
+      expect(screen.getByTestId("viewer-actions")).toBeInTheDocument();
       expect(screen.getByText("common.edit")).toBeInTheDocument();
-      expect(screen.getByTestId("pencil-icon")).toBeInTheDocument();
     });
 
     it("should not show Edit button when there is no code", () => {
@@ -632,7 +643,7 @@ describe("MacroOverviewPage", () => {
       expect(layoutDiv).toBeInTheDocument();
     });
 
-    it("should render the code section card", () => {
+    it("should render the code section", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -641,8 +652,7 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      const cards = screen.getAllByTestId("card");
-      expect(cards.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId("macro-code-viewer")).toBeInTheDocument();
     });
 
     it("should render both sidebar and main content in success state", () => {

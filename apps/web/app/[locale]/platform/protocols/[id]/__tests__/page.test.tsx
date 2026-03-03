@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import ProtocolOverviewPage from "../page";
 
+globalThis.React = React;
+
 // Mock React's use function to resolve the params promise synchronously
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
@@ -68,21 +70,44 @@ vi.mock("@/components/error-display", () => ({
 }));
 
 vi.mock("@/components/json-code-viewer", () => ({
-  JsonCodeViewer: ({ value }: { value: unknown; height?: string }) => (
-    <pre data-testid="json-viewer">{JSON.stringify(value)}</pre>
+  JsonCodeViewer: ({
+    value,
+    title,
+    headerActions,
+  }: {
+    value: unknown;
+    height?: string;
+    title?: React.ReactNode;
+    headerActions?: React.ReactNode;
+  }) => (
+    <pre data-testid="json-viewer">
+      {title && <span data-testid="viewer-title">{title}</span>}
+      {headerActions && <span data-testid="viewer-actions">{headerActions}</span>}
+      {JSON.stringify(value)}
+    </pre>
   ),
 }));
 
 vi.mock("@/components/protocol-code-editor", () => ({
   default: ({
     value,
+    title,
+    headerActions,
   }: {
     value: unknown;
     onChange: (v: unknown) => void;
     onValidationChange: (v: boolean) => void;
     label: string;
     placeholder?: string;
-  }) => <div data-testid="protocol-code-editor">{JSON.stringify(value)}</div>,
+    title?: React.ReactNode;
+    headerActions?: React.ReactNode;
+  }) => (
+    <div data-testid="protocol-code-editor">
+      {title && <span data-testid="editor-title">{title}</span>}
+      {headerActions && <span data-testid="editor-actions">{headerActions}</span>}
+      {JSON.stringify(value)}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/protocol-overview/protocol-details-sidebar", () => ({
@@ -126,9 +151,6 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
 vi.mock("lucide-react", () => ({
   Check: ({ className }: { className?: string }) => (
     <span data-testid="check-icon" className={className} />
-  ),
-  CodeIcon: ({ className }: { className?: string }) => (
-    <span data-testid="code-icon" className={className} />
   ),
   Pencil: ({ className }: { className?: string }) => (
     <span data-testid="pencil-icon" className={className} />
@@ -294,7 +316,7 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByTestId("description-has-access")).toHaveTextContent("true");
   });
 
-  it("should render the code card with CodeIcon and code title", () => {
+  it("should render the code viewer with title", () => {
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -303,8 +325,7 @@ describe("ProtocolOverviewPage", () => {
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
-    expect(screen.getByTestId("code-icon")).toBeInTheDocument();
-    expect(screen.getByText("protocols.codeTitle")).toBeInTheDocument();
+    expect(screen.getByTestId("viewer-title")).toHaveTextContent("protocols.codeTitle");
   });
 
   it("should render JsonCodeViewer with protocol code when not editing", () => {

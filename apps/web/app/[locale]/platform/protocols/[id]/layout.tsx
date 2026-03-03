@@ -83,14 +83,9 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
         onSave={handleTitleSave}
         isPending={isUpdating}
         badges={
-          <>
-            {protocol.sortOrder !== null && (
-              <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>
-            )}
-            <Badge variant="outline" className="capitalize">
-              {protocol.family}
-            </Badge>
-          </>
+          protocol.sortOrder !== null ? (
+            <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>
+          ) : undefined
         }
       />
 

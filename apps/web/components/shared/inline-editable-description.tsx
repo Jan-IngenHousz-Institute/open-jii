@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Pencil, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button, RichTextarea, RichTextRenderer } from "@repo/ui/components";
@@ -17,7 +17,7 @@ interface InlineEditableDescriptionProps {
   placeholder?: string;
 }
 
-const descriptionContainerVariants = cva("px-2 -ml-2 transition-all duration-300", {
+const descriptionContainerVariants = cva("min-h-12 px-2 -ml-2 transition-all duration-300", {
   variants: {
     expanded: {
       true: "max-h-none",
@@ -28,7 +28,7 @@ const descriptionContainerVariants = cva("px-2 -ml-2 transition-all duration-300
       false: "",
     },
     editable: {
-      true: "hover:bg-muted cursor-pointer rounded-md",
+      true: "hover:bg-muted cursor-pointer rounded-md group",
       false: "",
     },
   },
@@ -128,6 +128,9 @@ export function InlineEditableDescription({
               })}
               onClick={handleClick}
             >
+              {hasAccess && (
+                <Pencil className="text-muted-foreground absolute right-2 top-2 h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+              )}
               <RichTextRenderer content={description} />
             </div>
 

@@ -20,6 +20,8 @@ interface MacroCodeEditorProps {
   height?: string;
   username?: string;
   macroName?: string;
+  title?: React.ReactNode;
+  headerActions?: React.ReactNode;
 }
 
 const toSnakeCase = (str: string): string => {
@@ -122,6 +124,8 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   username,
   height = "400px",
   macroName = "untitled",
+  title,
+  headerActions,
 }) => {
   const [copied, setCopied] = useState(false);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -194,6 +198,8 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2">
           <div className="flex items-center gap-2">
+            {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
+            {title && <span className="text-slate-300">|</span>}
             <span className="text-sm font-medium text-slate-600">
               {toSnakeCase(macroName) + getLanguageExtension(language)}
             </span>
@@ -201,15 +207,18 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
               {stats.lines} lines • {stats.size}
             </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleCopy}
-            className="h-8 px-2 text-slate-600 hover:text-slate-800"
-          >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              className="h-8 px-2 text-slate-600 hover:text-slate-800"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
 
         {/* Editor */}

@@ -16,32 +16,6 @@ interface MacroLayoutProps {
   children: React.ReactNode;
 }
 
-const getLanguageDisplay = (language: string) => {
-  switch (language) {
-    case "python":
-      return "Python";
-    case "r":
-      return "R";
-    case "javascript":
-      return "JavaScript";
-    default:
-      return language;
-  }
-};
-
-const getLanguageColor = (language: string) => {
-  switch (language) {
-    case "python":
-      return "bg-badge-published";
-    case "r":
-      return "bg-badge-stale";
-    case "javascript":
-      return "bg-badge-provisioningFailed";
-    default:
-      return "bg-badge-archived";
-  }
-};
-
 export default function MacroLayout({ children }: MacroLayoutProps) {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation(["macro", "common"]);
@@ -111,14 +85,9 @@ export default function MacroLayout({ children }: MacroLayoutProps) {
         onSave={handleTitleSave}
         isPending={isUpdating}
         badges={
-          <>
-            <Badge className={getLanguageColor(macro.language)}>
-              {getLanguageDisplay(macro.language)}
-            </Badge>
-            {macro.sortOrder !== null && (
-              <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>
-            )}
-          </>
+          macro.sortOrder !== null ? (
+            <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>
+          ) : undefined
         }
       />
 
