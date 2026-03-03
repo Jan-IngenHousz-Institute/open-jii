@@ -69,7 +69,7 @@ export function ProtocolSearchWithDropdown({
           disabled={disabled}
           className="hover:bg-surface-light w-full justify-start py-6 text-left font-normal"
         >
-          <div className="flex w-full min-w-0 items-start gap-1">
+          <div className="flex min-w-0 flex-1 items-start gap-1">
             {selectedProtocol ? (
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex min-w-0 items-center gap-1">
