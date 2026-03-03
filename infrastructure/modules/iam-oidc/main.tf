@@ -37,112 +37,252 @@ resource "aws_iam_role" "oidc_role" {
 }
 
 locals {
-  # Define all service-specific permissions
+  # ──────────────────────────────────────────────────────────────────────
+  # Service-specific permissions for GitHub Actions OIDC role.
+  # This role is used by BOTH deploy workflows (CI/CD) and OpenTofu
+  # (infrastructure management), so each block covers both use-cases.
+  # ──────────────────────────────────────────────────────────────────────
   service_policies = {
-    s3 = {
-      actions  = ["s3:*"]
-      resource = "*"
-    }
 
-    # Minimal S3 for deployment (NextJS assets only)
-    s3-deploy = {
+    # ── S3: bucket management (Terraform) + object ops (deploy / state) ──
+    s3 = {
       actions = [
+        # Bucket CRUD (Terraform)
+        "s3:CreateBucket",
+        "s3:DeleteBucket",
         "s3:ListBucket",
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation",
+        # Bucket configuration (Terraform)
+        "s3:GetBucketVersioning",
+        "s3:PutBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:PutEncryptionConfiguration",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:GetBucketPolicy",
+        "s3:PutBucketPolicy",
+        "s3:DeleteBucketPolicy",
+        "s3:GetBucketAcl",
+        "s3:PutBucketAcl",
+        "s3:GetBucketOwnershipControls",
+        "s3:PutBucketOwnershipControls",
+        "s3:GetLifecycleConfiguration",
+        "s3:PutLifecycleConfiguration",
+        "s3:GetBucketCors",
+        "s3:PutBucketCors",
+        "s3:GetBucketTagging",
+        "s3:PutBucketTagging",
+        "s3:GetBucketLogging",
+        "s3:PutBucketLogging",
+        "s3:GetBucketObjectLockConfiguration",
+        "s3:GetAccelerateConfiguration",
+        "s3:GetBucketRequestPayment",
+        "s3:GetBucketWebsite",
+        "s3:GetReplicationConfiguration",
+        # Object operations (deploy workflows + Terraform state)
         "s3:GetObject",
         "s3:PutObject",
-        "s3:DeleteObject"
+        "s3:DeleteObject",
+        "s3:ListBucketVersions",
+        "s3:GetObjectVersion",
+        "s3:DeleteObjectVersion",
       ]
       resource = "*"
     }
 
+    # ── ECR: repository management (Terraform) + image push (deploy) ──
     ecr = {
-      actions  = ["ecr:*"]
-      resource = "*"
-    }
-
-    # Minimal ECR for deployment (push/pull images only)
-    ecr-deploy = {
       actions = [
-        "ecr:GetDownloadUrlForLayer",
-        "ecr:BatchGetImage",
+        # Repository CRUD (Terraform)
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:DescribeRepositories",
+        "ecr:PutLifecyclePolicy",
+        "ecr:GetLifecyclePolicy",
+        "ecr:DeleteLifecyclePolicy",
+        "ecr:SetRepositoryPolicy",
+        "ecr:GetRepositoryPolicy",
+        "ecr:DeleteRepositoryPolicy",
+        "ecr:TagResource",
+        "ecr:UntagResource",
+        "ecr:ListTagsForResource",
+        # Image push/pull (deploy workflows)
+        "ecr:GetAuthorizationToken",
         "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer",
         "ecr:PutImage",
         "ecr:InitiateLayerUpload",
         "ecr:UploadLayerPart",
         "ecr:CompleteLayerUpload",
-        "ecr:GetAuthorizationToken",
-        "ecr:DescribeRepositories"
       ]
       resource = "*"
     }
 
+    # ── Lambda: function management (Terraform) + code deploy + invoke ──
     lambda = {
-      actions  = ["lambda:*"]
-      resource = "*"
-    }
-
-    # Minimal Lambda for deployment (NextJS function updates only)
-    lambda-deploy = {
       actions = [
+        # Function CRUD (Terraform)
+        "lambda:CreateFunction",
+        "lambda:DeleteFunction",
         "lambda:GetFunction",
         "lambda:GetFunctionConfiguration",
-        "lambda:UpdateFunctionCode"
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:PublishVersion",
+        "lambda:ListVersionsByFunction",
+        # Alias management (Terraform + deploy)
+        "lambda:CreateAlias",
+        "lambda:DeleteAlias",
+        "lambda:GetAlias",
+        "lambda:UpdateAlias",
+        # Permissions (Terraform)
+        "lambda:AddPermission",
+        "lambda:RemovePermission",
+        "lambda:GetPolicy",
+        # Event source mappings (Terraform)
+        "lambda:CreateEventSourceMapping",
+        "lambda:DeleteEventSourceMapping",
+        "lambda:GetEventSourceMapping",
+        "lambda:UpdateEventSourceMapping",
+        # Function URLs (Terraform)
+        "lambda:CreateFunctionUrlConfig",
+        "lambda:DeleteFunctionUrlConfig",
+        "lambda:GetFunctionUrlConfig",
+        "lambda:UpdateFunctionUrlConfig",
+        # Tags (Terraform)
+        "lambda:TagResource",
+        "lambda:UntagResource",
+        "lambda:ListTags",
+        # Health checks (deploy workflows)
+        "lambda:InvokeFunction",
+        # Concurrency (Terraform)
+        "lambda:PutFunctionConcurrency",
+        "lambda:DeleteFunctionConcurrency",
+        "lambda:GetFunctionConcurrency",
       ]
       resource = "*"
     }
 
+    # ── CloudFront: distribution management (Terraform) + invalidation (deploy) ──
     cloudfront = {
-      actions  = ["cloudfront:*"]
-      resource = "*"
-    }
-
-    # Minimal CloudFront for deployment (invalidations only)
-    cloudfront-deploy = {
       actions = [
+        # Distribution CRUD (Terraform)
+        "cloudfront:CreateDistribution",
+        "cloudfront:UpdateDistribution",
+        "cloudfront:DeleteDistribution",
+        "cloudfront:GetDistribution",
+        "cloudfront:ListDistributions",
+        # Origin Access Control (Terraform)
+        "cloudfront:CreateOriginAccessControl",
+        "cloudfront:UpdateOriginAccessControl",
+        "cloudfront:DeleteOriginAccessControl",
+        "cloudfront:GetOriginAccessControl",
+        "cloudfront:ListOriginAccessControls",
+        # CloudFront Functions (Terraform)
+        "cloudfront:CreateFunction",
+        "cloudfront:UpdateFunction",
+        "cloudfront:DeleteFunction",
+        "cloudfront:GetFunction",
+        "cloudfront:DescribeFunction",
+        "cloudfront:PublishFunction",
+        # Cache / origin request policies (Terraform)
+        "cloudfront:CreateCachePolicy",
+        "cloudfront:UpdateCachePolicy",
+        "cloudfront:DeleteCachePolicy",
+        "cloudfront:GetCachePolicy",
+        "cloudfront:CreateOriginRequestPolicy",
+        "cloudfront:UpdateOriginRequestPolicy",
+        "cloudfront:DeleteOriginRequestPolicy",
+        "cloudfront:GetOriginRequestPolicy",
+        # Tags (Terraform)
+        "cloudfront:TagResource",
+        "cloudfront:UntagResource",
+        "cloudfront:ListTagsForResource",
+        # Invalidation (deploy workflows)
         "cloudfront:CreateInvalidation",
         "cloudfront:GetInvalidation",
-        "cloudfront:ListInvalidations"
       ]
       resource = "*"
     }
 
+    # ── ECS: cluster/service management (Terraform) + deploy + migrations ──
     ecs = {
-      actions  = ["ecs:*"]
-      resource = "*"
-    }
-
-    # Minimal ECS for deployment (update services and run tasks only)
-    ecs-deploy = {
       actions = [
+        # Cluster CRUD (Terraform)
+        "ecs:CreateCluster",
+        "ecs:DeleteCluster",
         "ecs:DescribeClusters",
+        "ecs:UpdateCluster",
+        "ecs:PutClusterCapacityProviders",
+        "ecs:DescribeCapacityProviders",
+        # Service CRUD (Terraform + deploy)
+        "ecs:CreateService",
         "ecs:UpdateService",
+        "ecs:DeleteService",
         "ecs:DescribeServices",
+        "ecs:ListServices",
+        # Task definitions (Terraform + deploy)
         "ecs:RegisterTaskDefinition",
+        "ecs:DeregisterTaskDefinition",
         "ecs:DescribeTaskDefinition",
+        # Task execution (deploy — migrations runner)
         "ecs:RunTask",
-        "ecs:DescribeTasks"
+        "ecs:DescribeTasks",
+        "ecs:ListTasks",
+        "ecs:StopTask",
+        # Tags (Terraform)
+        "ecs:TagResource",
+        "ecs:UntagResource",
+        "ecs:ListTagsForResource",
       ]
       resource = "*"
     }
 
+    # ── DynamoDB: table management (Terraform) ──
     dynamodb = {
-      actions  = ["dynamodb:*"]
+      actions = [
+        "dynamodb:CreateTable",
+        "dynamodb:DeleteTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:UpdateTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:UpdateTimeToLive",
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:TagResource",
+        "dynamodb:UntagResource",
+        "dynamodb:ListTagsOfResource",
+        # State locking (also covered by terraform-backend with resource scope)
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem",
+      ]
       resource = "*"
     }
 
+    # ── IAM: role/policy/user management (Terraform) ──
     iam = {
       actions = [
+        # Roles
         "iam:CreateRole",
         "iam:DeleteRole",
         "iam:GetRole",
         "iam:ListRoles",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:PassRole",
+        "iam:TagRole",
+        # Role policies (inline)
         "iam:PutRolePolicy",
         "iam:DeleteRolePolicy",
         "iam:GetRolePolicy",
         "iam:ListRolePolicies",
+        # Role policies (managed)
         "iam:AttachRolePolicy",
         "iam:DetachRolePolicy",
         "iam:ListAttachedRolePolicies",
+        # Managed policies
         "iam:CreatePolicy",
         "iam:DeletePolicy",
         "iam:GetPolicy",
@@ -151,20 +291,19 @@ locals {
         "iam:CreatePolicyVersion",
         "iam:DeletePolicyVersion",
         "iam:SetDefaultPolicyVersion",
-        "iam:PassRole",
+        "iam:TagPolicy",
+        # OIDC provider (Terraform — self-managing)
         "iam:CreateOpenIDConnectProvider",
         "iam:DeleteOpenIDConnectProvider",
         "iam:GetOpenIDConnectProvider",
+        "iam:TagOpenIDConnectProvider",
+        # Users (SES SMTP user)
         "iam:CreateUser",
         "iam:DeleteUser",
         "iam:GetUser",
+        "iam:TagUser",
         "iam:ListAccessKeys",
         "iam:ListAttachedUserPolicies",
-        "iam:TagRole",
-        "iam:TagPolicy",
-        "iam:TagUser",
-        "iam:TagOpenIDConnectProvider",
-        "iam:UpdateAssumeRolePolicy"
       ]
       resource = "*"
     }
@@ -184,48 +323,210 @@ locals {
         "kms:ScheduleKeyDeletion",
         "kms:EnableKeyRotation",
         "kms:DisableKeyRotation",
-        "kms:GetKeyRotationStatus"
+        "kms:GetKeyRotationStatus",
       ]
       resource = "*"
     }
 
+    # ── CloudWatch Logs: log group management (Terraform) ──
     logs = {
-      actions  = ["logs:*"]
+      actions = [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:DescribeLogGroups",
+        "logs:PutRetentionPolicy",
+        "logs:DeleteRetentionPolicy",
+        "logs:TagResource",
+        "logs:UntagResource",
+        "logs:ListTagsForResource",
+        "logs:ListTagsLogGroup",
+        "logs:TagLogGroup",
+      ]
       resource = "*"
     }
 
+    # ── CloudWatch Metrics: DORA metrics (deploy) + dashboard reads ──
     cloudwatch = {
       actions = [
         "cloudwatch:PutMetricData",
         "cloudwatch:GetMetricData",
         "cloudwatch:GetMetricStatistics",
-        "cloudwatch:ListMetrics"
+        "cloudwatch:ListMetrics",
       ]
       resource = "*"
     }
 
+    # ── SQS: queue management (Terraform — OpenNext revalidation) ──
     sqs = {
-      actions  = ["sqs:*"]
+      actions = [
+        "sqs:CreateQueue",
+        "sqs:DeleteQueue",
+        "sqs:GetQueueAttributes",
+        "sqs:SetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:ListQueues",
+        "sqs:TagQueue",
+        "sqs:UntagQueue",
+        "sqs:ListQueueTags",
+      ]
       resource = "*"
     }
 
+    # ── EC2 / VPC: network infrastructure management (Terraform) ──
     vpc = {
-      actions  = ["ec2:*"]
+      actions = [
+        # VPC
+        "ec2:CreateVpc",
+        "ec2:DeleteVpc",
+        "ec2:DescribeVpcs",
+        "ec2:ModifyVpcAttribute",
+        "ec2:DescribeVpcAttribute",
+        # Subnets
+        "ec2:CreateSubnet",
+        "ec2:DeleteSubnet",
+        "ec2:DescribeSubnets",
+        "ec2:ModifySubnetAttribute",
+        # Security Groups
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSecurityGroupRules",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupEgress",
+        # Route Tables
+        "ec2:CreateRouteTable",
+        "ec2:DeleteRouteTable",
+        "ec2:DescribeRouteTables",
+        "ec2:CreateRoute",
+        "ec2:DeleteRoute",
+        "ec2:ReplaceRoute",
+        "ec2:AssociateRouteTable",
+        "ec2:DisassociateRouteTable",
+        # Internet Gateway
+        "ec2:CreateInternetGateway",
+        "ec2:DeleteInternetGateway",
+        "ec2:AttachInternetGateway",
+        "ec2:DetachInternetGateway",
+        "ec2:DescribeInternetGateways",
+        # NAT Gateway
+        "ec2:CreateNatGateway",
+        "ec2:DeleteNatGateway",
+        "ec2:DescribeNatGateways",
+        # Elastic IP
+        "ec2:AllocateAddress",
+        "ec2:ReleaseAddress",
+        "ec2:DescribeAddresses",
+        # VPC Endpoints
+        "ec2:CreateVpcEndpoint",
+        "ec2:DeleteVpcEndpoints",
+        "ec2:DescribeVpcEndpoints",
+        "ec2:ModifyVpcEndpoint",
+        # Tags
+        "ec2:CreateTags",
+        "ec2:DeleteTags",
+        "ec2:DescribeTags",
+        # Read-only (data sources + plan)
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeAccountAttributes",
+        "ec2:DescribeNetworkAcls",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribePrefixLists",
+        "ec2:DescribeManagedPrefixLists",
+        "ec2:GetManagedPrefixListEntries",
+      ]
       resource = "*"
     }
 
+    # ── RDS: Aurora Serverless cluster management (Terraform) ──
     rds = {
-      actions  = ["rds:*"]
+      actions = [
+        # Cluster
+        "rds:CreateDBCluster",
+        "rds:DeleteDBCluster",
+        "rds:DescribeDBClusters",
+        "rds:ModifyDBCluster",
+        # Instance
+        "rds:CreateDBInstance",
+        "rds:DeleteDBInstance",
+        "rds:DescribeDBInstances",
+        "rds:ModifyDBInstance",
+        # Parameter groups
+        "rds:CreateDBClusterParameterGroup",
+        "rds:DeleteDBClusterParameterGroup",
+        "rds:DescribeDBClusterParameterGroups",
+        "rds:ModifyDBClusterParameterGroup",
+        "rds:DescribeDBClusterParameters",
+        # Subnet groups
+        "rds:CreateDBSubnetGroup",
+        "rds:DeleteDBSubnetGroup",
+        "rds:DescribeDBSubnetGroups",
+        "rds:ModifyDBSubnetGroup",
+        # Tags
+        "rds:AddTagsToResource",
+        "rds:RemoveTagsFromResource",
+        "rds:ListTagsForResource",
+        # Read-only (plan)
+        "rds:DescribeDBEngineVersions",
+        "rds:DescribeGlobalClusters",
+        "rds:DescribeOrderableDBInstanceOptions",
+      ]
       resource = "*"
     }
 
+    # ── Secrets Manager: secret management (Terraform) ──
     secretsmanager = {
-      actions  = ["secretsmanager:*"]
+      actions = [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:DeleteSecret",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:GetResourcePolicy",
+        "secretsmanager:PutResourcePolicy",
+        "secretsmanager:DeleteResourcePolicy",
+        "secretsmanager:TagResource",
+        "secretsmanager:UntagResource",
+        "secretsmanager:RotateSecret",
+        "secretsmanager:CancelRotateSecret",
+      ]
       resource = "*"
     }
 
+    # ── SES: email domain and receipt rules (Terraform) ──
     ses = {
-      actions  = ["ses:*"]
+      actions = [
+        # Domain identity + DKIM
+        "ses:VerifyDomainIdentity",
+        "ses:DeleteIdentity",
+        "ses:GetIdentityVerificationAttributes",
+        "ses:VerifyDomainDkim",
+        "ses:GetIdentityDkimAttributes",
+        "ses:GetIdentityNotificationAttributes",
+        # Mail from
+        "ses:SetIdentityMailFromDomain",
+        "ses:GetIdentityMailFromDomainAttributes",
+        # Configuration set
+        "ses:CreateConfigurationSet",
+        "ses:DeleteConfigurationSet",
+        "ses:DescribeConfigurationSet",
+        "ses:CreateConfigurationSetEventDestination",
+        "ses:DeleteConfigurationSetEventDestination",
+        "ses:UpdateConfigurationSetEventDestination",
+        # Receipt rules
+        "ses:CreateReceiptRuleSet",
+        "ses:DeleteReceiptRuleSet",
+        "ses:DescribeReceiptRuleSet",
+        "ses:CreateReceiptRule",
+        "ses:DeleteReceiptRule",
+        "ses:DescribeReceiptRule",
+        "ses:UpdateReceiptRule",
+        "ses:SetActiveReceiptRuleSet",
+        # Quota (Terraform reads)
+        "ses:GetSendQuota",
+      ]
       resource = "*"
     }
 
@@ -250,41 +551,129 @@ locals {
         "wafv2:ListResourcesForWebACL",
         "wafv2:TagResource",
         "wafv2:UntagResource",
-        "wafv2:ListTagsForResource"
+        "wafv2:ListTagsForResource",
       ]
       resource = "*"
     }
 
+    # ── Route53: hosted zones + DNS records (Terraform + deploy) ──
     route53 = {
-      actions  = ["route53:*"]
+      actions = [
+        # Hosted zone CRUD (Terraform)
+        "route53:CreateHostedZone",
+        "route53:DeleteHostedZone",
+        "route53:GetHostedZone",
+        "route53:ListHostedZones",
+        "route53:UpdateHostedZoneComment",
+        # Records (Terraform + deploy-docs)
+        "route53:ChangeResourceRecordSets",
+        "route53:ListResourceRecordSets",
+        "route53:GetChange",
+        # Tags (Terraform)
+        "route53:ListTagsForResource",
+        "route53:ChangeTagsForResource",
+      ]
       resource = "*"
     }
 
+    # ── Location Service: place index (Terraform) ──
     location-service = {
-      actions  = ["geo:*"]
+      actions = [
+        "geo:CreatePlaceIndex",
+        "geo:DeletePlaceIndex",
+        "geo:DescribePlaceIndex",
+        "geo:UpdatePlaceIndex",
+        "geo:TagResource",
+        "geo:UntagResource",
+        "geo:ListTagsForResource",
+      ]
       resource = "*"
     }
 
+    # ── Timestream: database + table (Terraform) ──
     timestream = {
-      actions  = ["timestream:*"]
+      actions = [
+        "timestream:CreateDatabase",
+        "timestream:DeleteDatabase",
+        "timestream:DescribeDatabase",
+        "timestream:UpdateDatabase",
+        "timestream:CreateTable",
+        "timestream:DeleteTable",
+        "timestream:DescribeTable",
+        "timestream:UpdateTable",
+        "timestream:TagResource",
+        "timestream:UntagResource",
+        "timestream:ListTagsForResource",
+        "timestream:DescribeEndpoints",
+      ]
       resource = "*"
     }
 
+    # ── Kinesis: data stream (Terraform) ──
     kinesis = {
-      actions  = ["kinesis:*"]
+      actions = [
+        "kinesis:CreateStream",
+        "kinesis:DeleteStream",
+        "kinesis:DescribeStream",
+        "kinesis:DescribeStreamSummary",
+        "kinesis:IncreaseStreamRetentionPeriod",
+        "kinesis:DecreaseStreamRetentionPeriod",
+        "kinesis:UpdateShardCount",
+        "kinesis:AddTagsToStream",
+        "kinesis:RemoveTagsFromStream",
+        "kinesis:ListTagsForStream",
+      ]
       resource = "*"
     }
 
+    # ── IoT Core: topic rules + policies + logging (Terraform) ──
     iot = {
-      actions  = ["iot:*"]
+      actions = [
+        # Topic rules
+        "iot:CreateTopicRule",
+        "iot:DeleteTopicRule",
+        "iot:GetTopicRule",
+        "iot:ReplaceTopicRule",
+        # Policies
+        "iot:CreatePolicy",
+        "iot:DeletePolicy",
+        "iot:GetPolicy",
+        "iot:ListPolicyVersions",
+        "iot:DeletePolicyVersion",
+        "iot:CreatePolicyVersion",
+        # Logging
+        "iot:SetLoggingOptions",
+        "iot:GetLoggingOptions",
+        "iot:SetV2LoggingOptions",
+        "iot:GetV2LoggingOptions",
+        # Tags
+        "iot:TagResource",
+        "iot:UntagResource",
+        "iot:ListTagsForResource",
+        # Endpoint (data source)
+        "iot:DescribeEndpoint",
+      ]
       resource = "*"
     }
 
+    # ── Cognito: identity pools only (Terraform) ──
+    # Note: cognito-idp (User Pools) removed — no User Pool resources exist
     cognito = {
-      actions  = ["cognito-identity:*", "cognito-idp:*"]
+      actions = [
+        "cognito-identity:CreateIdentityPool",
+        "cognito-identity:DeleteIdentityPool",
+        "cognito-identity:DescribeIdentityPool",
+        "cognito-identity:UpdateIdentityPool",
+        "cognito-identity:SetIdentityPoolRoles",
+        "cognito-identity:GetIdentityPoolRoles",
+        "cognito-identity:TagResource",
+        "cognito-identity:UntagResource",
+        "cognito-identity:ListTagsForResource",
+      ]
       resource = "*"
     }
 
+    # ── Terraform backend: resource-scoped state access ──
     terraform-backend = {
       actions = [
         "s3:GetObject",
@@ -292,48 +681,140 @@ locals {
         "s3:ListBucket",
         "dynamodb:GetItem",
         "dynamodb:PutItem",
-        "dynamodb:DeleteItem"
+        "dynamodb:DeleteItem",
       ]
       resource = [
         "arn:aws:s3:::open-jii-terraform-state-${var.environment}",
         "arn:aws:s3:::open-jii-terraform-state-${var.environment}/*",
-        "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
+        "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock",
       ]
     }
 
+    # ── SSM: parameter management (Terraform) + deploy config reads ──
     ssm = {
-      actions  = ["ssm:*"]
+      actions = [
+        # Parameter CRUD (Terraform)
+        "ssm:PutParameter",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:DeleteParameter",
+        "ssm:DescribeParameters",
+        "ssm:AddTagsToResource",
+        "ssm:RemoveTagsFromResource",
+        "ssm:ListTagsForResource",
+        # Deploy (get-infrastructure-config composite action)
+        "ssm:GetParametersByPath",
+      ]
       resource = "*"
     }
 
+    # ── ALB: load balancer management (Terraform) ──
     alb = {
-      actions  = ["elasticloadbalancing:*"]
+      actions = [
+        # Load balancer
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:DescribeLoadBalancerAttributes",
+        # Target groups
+        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:DeleteTargetGroup",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:ModifyTargetGroup",
+        "elasticloadbalancing:DescribeTargetGroupAttributes",
+        "elasticloadbalancing:ModifyTargetGroupAttributes",
+        # Listeners
+        "elasticloadbalancing:CreateListener",
+        "elasticloadbalancing:DeleteListener",
+        "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:ModifyListener",
+        # Listener rules
+        "elasticloadbalancing:CreateRule",
+        "elasticloadbalancing:DeleteRule",
+        "elasticloadbalancing:DescribeRules",
+        "elasticloadbalancing:ModifyRule",
+        # Tags
+        "elasticloadbalancing:AddTags",
+        "elasticloadbalancing:RemoveTags",
+        "elasticloadbalancing:DescribeTags",
+        # Health (deploy verification)
+        "elasticloadbalancing:DescribeTargetHealth",
+      ]
       resource = "*"
     }
 
+    # ── EventBridge: rules + targets (Terraform) ──
     eventbridge = {
-      actions  = ["events:*"]
+      actions = [
+        "events:PutRule",
+        "events:DeleteRule",
+        "events:DescribeRule",
+        "events:ListRules",
+        "events:PutTargets",
+        "events:RemoveTargets",
+        "events:ListTargetsByRule",
+        "events:TagResource",
+        "events:UntagResource",
+        "events:ListTagsForResource",
+      ]
       resource = "*"
     }
 
+    # ── ACM: certificate management (Terraform) ──
     acm = {
-      actions  = ["acm:*"]
+      actions = [
+        "acm:RequestCertificate",
+        "acm:DeleteCertificate",
+        "acm:DescribeCertificate",
+        "acm:ListCertificates",
+        "acm:GetCertificate",
+        "acm:AddTagsToCertificate",
+        "acm:RemoveTagsFromCertificate",
+        "acm:ListTagsForCertificate",
+      ]
       resource = "*"
     }
 
+    # ── Service Discovery: Cloud Map namespace + service (Terraform) ──
     servicediscovery = {
-      actions  = ["servicediscovery:*"]
+      actions = [
+        "servicediscovery:CreatePrivateDnsNamespace",
+        "servicediscovery:DeleteNamespace",
+        "servicediscovery:GetNamespace",
+        "servicediscovery:ListNamespaces",
+        "servicediscovery:GetOperation",
+        "servicediscovery:CreateService",
+        "servicediscovery:DeleteService",
+        "servicediscovery:GetService",
+        "servicediscovery:ListServices",
+        "servicediscovery:UpdateService",
+        "servicediscovery:TagResource",
+        "servicediscovery:UntagResource",
+        "servicediscovery:ListTagsForResource",
+      ]
       resource = "*"
     }
 
+    # ── Application Auto Scaling: ECS scaling (Terraform) ──
     autoscaling = {
-      actions  = ["application-autoscaling:*"]
+      actions = [
+        "application-autoscaling:RegisterScalableTarget",
+        "application-autoscaling:DeregisterScalableTarget",
+        "application-autoscaling:DescribeScalableTargets",
+        "application-autoscaling:PutScalingPolicy",
+        "application-autoscaling:DeleteScalingPolicy",
+        "application-autoscaling:DescribeScalingPolicies",
+        "application-autoscaling:TagResource",
+        "application-autoscaling:UntagResource",
+        "application-autoscaling:ListTagsForResource",
+      ]
       resource = "*"
     }
 
     sts = {
       actions = [
-        "sts:GetCallerIdentity"
+        "sts:GetCallerIdentity",
       ]
       resource = "*"
     }
@@ -362,7 +843,7 @@ locals {
         "grafana:CreateWorkspaceServiceAccountToken",
         "grafana:DeleteWorkspaceServiceAccountToken",
         "grafana:ListWorkspaceServiceAccountTokens",
-        "grafana:DescribeWorkspaceConfiguration"
+        "grafana:DescribeWorkspaceConfiguration",
       ]
       resource = "*"
     }
@@ -381,7 +862,7 @@ locals {
         "cloudtrail:GetEventSelectors",
         "cloudtrail:AddTags",
         "cloudtrail:RemoveTags",
-        "cloudtrail:ListTags"
+        "cloudtrail:ListTags",
       ]
       resource = "*"
     }
@@ -397,7 +878,7 @@ locals {
     }
   ]
 
-  # Split policies into 10 groups (AWS limit is 10 inline policies per role)
+  # Split into managed policies (AWS allows max 10 managed per role, 6,144 chars each)
   num_policy_parts    = 10
   statements_per_part = ceil(length(local.all_policy_statements) / local.num_policy_parts)
 
@@ -411,14 +892,24 @@ locals {
   }
 }
 
-resource "aws_iam_role_policy" "oidc_role_inline_policies" {
+# Managed policies instead of inline — AWS inline limit is 10,240 chars
+# combined per role, which enumerated actions exceed. Managed policies
+# allow 6,144 chars each × 10 per role = 61,440 chars total capacity.
+resource "aws_iam_policy" "oidc_role_policies" {
   for_each = local.policy_parts
 
-  name = "${var.role_name}InlinePolicy${each.key}"
-  role = aws_iam_role.oidc_role.id
+  name = "${var.role_name}Policy${each.key}"
+  path = "/"
 
   policy = jsonencode({
     Version   = "2012-10-17"
     Statement = each.value
   })
+}
+
+resource "aws_iam_role_policy_attachment" "oidc_role_policy_attachments" {
+  for_each = local.policy_parts
+
+  role       = aws_iam_role.oidc_role.name
+  policy_arn = aws_iam_policy.oidc_role_policies[each.key].arn
 }

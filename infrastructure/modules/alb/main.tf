@@ -13,18 +13,17 @@ resource "aws_lb" "app_alb" {
 
   # Deletion protection prevents accidental ALB deletion in production
   # Disabled in dev/staging for easier teardown
-  enable_deletion_protection = var.environment == "Prod" ? true : false
+  enable_deletion_protection = var.environment == "prod" ? true : false
 
   # Access logs provide detailed request-level logging for debugging and analytics
-  # Requires S3 bucket and costs ~$0.006 per GB of logs
-  # dynamic "access_logs" { # Temporarily commented out
-  #   for_each = var.enable_access_logs && var.access_logs_bucket != "" ? [1] : []
-  #   content {
-  #     bucket  = var.access_logs_bucket
-  #     prefix  = "${var.service_name}-alb-logs"
-  #     enabled = true
-  #   }
-  # }
+  dynamic "access_logs" {
+    for_each = var.enable_access_logs && var.access_logs_bucket != "" ? [1] : []
+    content {
+      bucket  = var.access_logs_bucket
+      prefix  = "${var.service_name}-alb-logs"
+      enabled = true
+    }
+  }
 
   # Add tags for cost tracking
   tags = merge(
