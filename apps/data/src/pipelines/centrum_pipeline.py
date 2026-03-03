@@ -1055,6 +1055,7 @@ def raw_imported_data():
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("recursiveFileLookup", "true")
+        .option("ignoreMissingFiles", "true")
         .schema(imported_data_schema)
         .load(imported_path)
     )
