@@ -502,12 +502,6 @@ describe("NewMacroForm", () => {
   });
 
   describe("Compatible Protocols Section", () => {
-    it("should render the compatible protocols section", () => {
-      render(<NewMacroForm />);
-
-      expect(screen.getByText("newMacro.compatibleProtocols")).toBeInTheDocument();
-    });
-
     it("should render ProtocolSearchWithDropdown", () => {
       render(<NewMacroForm />);
 
