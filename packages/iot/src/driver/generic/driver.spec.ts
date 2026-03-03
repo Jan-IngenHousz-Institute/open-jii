@@ -6,6 +6,23 @@ import { GENERIC_COMMANDS } from "./commands";
 import { GENERIC_FRAMING } from "./config";
 import { GenericDeviceDriver } from "./driver";
 
+/** Default INFO payload returned by the mock transport */
+const DEFAULT_INFO = {
+  device_name: "TestDevice",
+  device_type: "sensor",
+  device_id: "test-001",
+  capabilities: [
+    "DISCOVER",
+    "SET_CONFIG",
+    "GET_CONFIG",
+    "STOP",
+    "GET_DATA",
+    "RESET",
+    "DISCONNECT",
+    "PING",
+  ],
+};
+
 function createMockTransport(): ITransportAdapter & {
   simulateData: (data: string) => void;
   simulateStatus: (connected: boolean, error?: Error) => void;
@@ -15,7 +32,13 @@ function createMockTransport(): ITransportAdapter & {
 
   return {
     isConnected: vi.fn().mockReturnValue(true),
-    send: vi.fn().mockResolvedValue(undefined),
+    send: vi.fn().mockImplementation(() => {
+      // Auto-respond to INFO during initialize()
+      setTimeout(() => {
+        dataCallback?.(JSON.stringify({ status: "success", data: DEFAULT_INFO }));
+      }, 0);
+      return Promise.resolve();
+    }),
     onDataReceived: vi.fn((cb: (data: string) => void) => {
       dataCallback = cb;
     }),
@@ -32,6 +55,18 @@ function createMockTransport(): ITransportAdapter & {
   };
 }
 
+/**
+ * Helper: initializes a driver with the mock transport.
+ * After initialization, resets send mock so subsequent assertions start clean.
+ */
+async function initDriver(
+  driver: GenericDeviceDriver,
+  transport: ReturnType<typeof createMockTransport>,
+): Promise<void> {
+  await driver.initialize(transport);
+  vi.mocked(transport.send).mockReset().mockResolvedValue(undefined);
+}
+
 describe("GenericDeviceDriver", () => {
   let driver: GenericDeviceDriver;
   let transport: ReturnType<typeof createMockTransport>;
@@ -42,17 +77,212 @@ describe("GenericDeviceDriver", () => {
   });
 
   describe("initialize", () => {
-    it("should set up data and status handlers", () => {
-      driver.initialize(transport);
+    it("should set up data and status handlers", async () => {
+      await initDriver(driver, transport);
 
       expect(transport.onDataReceived).toHaveBeenCalledWith(expect.any(Function));
       expect(transport.onStatusChanged).toHaveBeenCalledWith(expect.any(Function));
     });
 
-    it("should clear response buffer on re-initialize", () => {
-      driver.initialize(transport);
+    it("should clear response buffer on re-initialize", async () => {
+      await initDriver(driver, transport);
       // Just verify it doesn't throw
       expect(transport.onDataReceived).toHaveBeenCalled();
+    });
+
+    it("should auto-probe device info via INFO command", async () => {
+      await driver.initialize(transport);
+      expect(driver.cachedDeviceInfo).toEqual(DEFAULT_INFO);
+    });
+
+    it("should survive INFO failure and disable capability guards", async () => {
+      // Make INFO fail
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.mocked(transport.send)
+        .mockReset()
+        .mockImplementation(() => {
+          setTimeout(() => {
+            transport.simulateData(JSON.stringify({ status: "error", error: "Not supported" }));
+          }, 0);
+          return Promise.resolve();
+        });
+
+      await driver.initialize(transport);
+
+      expect(driver.cachedDeviceInfo).toBeNull();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "INFO probe failed during initialize — capability guards disabled",
+      );
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe("constructor config", () => {
+    it("should use default timeout and lineEnding", async () => {
+      await initDriver(driver, transport);
+
+      vi.mocked(transport.send).mockImplementation(() => {
+        setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
+        return Promise.resolve();
+      });
+
+      await driver.execute({ command: GENERIC_COMMANDS.PING });
+
+      const sentValue = vi.mocked(transport.send).mock.calls[0]?.[0];
+      expect(sentValue).toBeDefined();
+      expect(sentValue.endsWith(GENERIC_FRAMING.LINE_ENDING)).toBe(true);
+    });
+
+    it("should allow overriding lineEnding via config", async () => {
+      const customDriver = new GenericDeviceDriver({ lineEnding: "\r\n" });
+      await initDriver(customDriver, transport);
+
+      vi.mocked(transport.send).mockImplementation(() => {
+        setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
+        return Promise.resolve();
+      });
+
+      await customDriver.execute({ command: GENERIC_COMMANDS.PING });
+
+      const sentValue = vi.mocked(transport.send).mock.calls[0]?.[0];
+      expect(sentValue).toBeDefined();
+      expect(sentValue.endsWith("\r\n")).toBe(true);
+    });
+
+    it("should allow overriding timeout via config", async () => {
+      const customDriver = new GenericDeviceDriver({ timeout: 500 });
+      // Initialize with real timers — INFO probe uses setTimeout(0)
+      await initDriver(customDriver, transport);
+
+      vi.useFakeTimers();
+
+      const resultPromise = customDriver.execute("cmd");
+
+      // Advance past custom timeout (500ms) — should fire before default (10s)
+      await vi.advanceTimersByTimeAsync(501);
+
+      const result = await resultPromise;
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("Response timeout");
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe("capability guards", () => {
+    it("should throw when calling an unsupported optional command", async () => {
+      // Initialize with a device that only supports PING
+      vi.mocked(transport.send)
+        .mockReset()
+        .mockImplementation(() => {
+          setTimeout(() => {
+            transport.simulateData(
+              JSON.stringify({
+                status: "success",
+                data: {
+                  device_name: "LimitedDevice",
+                  device_type: "sensor",
+                  device_id: "ltd-001",
+                  capabilities: ["PING"],
+                },
+              }),
+            );
+          }, 0);
+          return Promise.resolve();
+        });
+
+      await driver.initialize(transport);
+      vi.mocked(transport.send).mockReset().mockResolvedValue(undefined);
+
+      await expect(driver.discoverCommands()).rejects.toThrow("Device does not support DISCOVER");
+      await expect(driver.setConfig({ config: {} })).rejects.toThrow(
+        "Device does not support SET_CONFIG",
+      );
+      await expect(driver.getConfig()).rejects.toThrow("Device does not support GET_CONFIG");
+      await expect(driver.stopMeasurement()).rejects.toThrow("Device does not support STOP");
+      await expect(driver.getData()).rejects.toThrow("Device does not support GET_DATA");
+      await expect(driver.reset()).rejects.toThrow("Device does not support RESET");
+      await expect(driver.disconnect()).rejects.toThrow("Device does not support DISCONNECT");
+    });
+
+    it("should allow supported optional commands", async () => {
+      await initDriver(driver, transport);
+
+      vi.mocked(transport.send).mockImplementation(() => {
+        setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
+        return Promise.resolve();
+      });
+
+      // ping is in DEFAULT_INFO capabilities — should not throw
+      const result = await driver.ping();
+      expect(result).toBe(true);
+    });
+
+    it("should skip guard when capabilities are unknown (INFO failed)", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      // Make INFO fail
+      vi.mocked(transport.send)
+        .mockReset()
+        .mockImplementation(() => {
+          setTimeout(() => {
+            transport.simulateData(JSON.stringify({ status: "error", error: "Unsupported" }));
+          }, 0);
+          return Promise.resolve();
+        });
+
+      await driver.initialize(transport);
+      warnSpy.mockRestore();
+
+      // Now reset mock and have it respond successfully
+      vi.mocked(transport.send)
+        .mockReset()
+        .mockImplementation(() => {
+          setTimeout(
+            () =>
+              transport.simulateData(
+                JSON.stringify({
+                  status: "success",
+                  data: { commands: ["RUN", "STOP"] },
+                }),
+              ),
+            0,
+          );
+          return Promise.resolve();
+        });
+
+      // discoverCommands should succeed without capability guard since deviceInfo is null
+      const commands = await driver.discoverCommands();
+      expect(commands).toEqual(["RUN", "STOP"]);
+    });
+
+    it("should skip guard when device reports no capabilities field", async () => {
+      // Device returns info without capabilities field
+      vi.mocked(transport.send)
+        .mockReset()
+        .mockImplementation(() => {
+          setTimeout(() => {
+            transport.simulateData(
+              JSON.stringify({
+                status: "success",
+                data: { device_name: "BasicDevice" },
+              }),
+            );
+          }, 0);
+          return Promise.resolve();
+        });
+
+      await driver.initialize(transport);
+      vi.mocked(transport.send)
+        .mockReset()
+        .mockImplementation(() => {
+          setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
+          return Promise.resolve();
+        });
+
+      // Should not throw — no capabilities means fail-open
+      const result = await driver.ping();
+      expect(result).toBe(true);
     });
   });
 
@@ -64,7 +294,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should send JSON-encoded command with newline", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -83,7 +313,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should wrap string commands in object", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -98,7 +328,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should return success when response status is success", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -115,7 +345,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should return failure when response status is error", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -132,7 +362,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should handle newline-delimited JSON responses", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -152,7 +382,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("getDeviceInfo", () => {
     it("should send INFO command and return device info", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       const deviceInfo = { device_name: "Arduino", firmware_version: "1.0" };
       vi.mocked(transport.send).mockImplementation(() => {
@@ -169,7 +399,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw on failed getDeviceInfo", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -185,7 +415,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("discoverCommands", () => {
     it("should return list of commands", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -208,7 +438,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("ping", () => {
     it("should return true on successful ping", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -220,7 +450,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should return false on failed ping", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockRejectedValue(new Error("timeout"));
 
@@ -242,7 +472,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("setConfig", () => {
     it("should send SET_CONFIG command with config params", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       const config = { config: { sensorRate: 100 }, id: "cfg-1" };
       vi.mocked(transport.send).mockImplementation(() => {
@@ -258,7 +488,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw on failed setConfig", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -273,7 +503,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw default error when failure has no error message", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "error" })), 0);
@@ -286,7 +516,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("getConfig", () => {
     it("should return device config", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       const config = { config: { sensorRate: 100 }, id: "cfg-1" };
       vi.mocked(transport.send).mockImplementation(() => {
@@ -302,7 +532,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw on failed getConfig", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -319,7 +549,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw default error when data is missing", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -332,7 +562,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("runMeasurement", () => {
     it("should send RUN command", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -345,7 +575,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should send RUN command with params", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -358,7 +588,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw on failed runMeasurement", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -373,7 +603,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw default error on failure without error field", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "error" })), 0);
@@ -386,7 +616,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("stopMeasurement", () => {
     it("should send STOP command", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -399,7 +629,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw on failed stopMeasurement", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -414,7 +644,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw default error on failure without error field", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "error" })), 0);
@@ -427,7 +657,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("getData", () => {
     it("should return measurement data", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       const measurementData = { data: [1.2, 3.4], timestamp: 12345 };
       vi.mocked(transport.send).mockImplementation(() => {
@@ -444,7 +674,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw on failed getData", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -459,7 +689,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw default error when data is missing", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -472,7 +702,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("reset", () => {
     it("should send RESET command", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -485,7 +715,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw on failed reset", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -499,7 +729,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw default error on failure without error field", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "error" })), 0);
@@ -512,7 +742,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("disconnect", () => {
     it("should send DISCONNECT command and destroy", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -528,7 +758,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should ignore disconnect command errors and still destroy", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockRejectedValue(new Error("Already disconnected"));
 
@@ -540,10 +770,12 @@ describe("GenericDeviceDriver", () => {
 
   describe("waitForResponse timeout", () => {
     it("should return error on response timeout", async () => {
-      vi.useFakeTimers();
-      driver.initialize(transport);
+      // Initialize with real timers — INFO probe uses setTimeout(0)
+      await initDriver(driver, transport);
 
-      // Don't simulate any response data, so the timeout will fire
+      vi.useFakeTimers();
+
+      // send resolves but delivers no data → timeout fires
       const resultPromise = driver.execute("cmd");
 
       // Advance past the timeout
@@ -559,7 +791,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("handleDataReceived edge cases", () => {
     it("should parse newline-delimited JSON when buffer is not valid JSON", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       // Send two JSON objects separated by newline — causes JSON.parse on full buffer to fail,
       // triggering the line-by-line parsing path
@@ -584,7 +816,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should keep incomplete trailing data in buffer", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => {
@@ -605,7 +837,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should ignore non-JSON lines in line-by-line parsing", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -624,7 +856,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should skip empty lines in line-by-line parsing", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -642,11 +874,11 @@ describe("GenericDeviceDriver", () => {
       expect(result.data).toBe("ok");
     });
 
-    it("should log connection errors from transport", () => {
+    it("should log connection errors from transport", async () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
         // noop
       });
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       transport.simulateStatus(false, new Error("Connection lost"));
 
@@ -657,11 +889,11 @@ describe("GenericDeviceDriver", () => {
       consoleSpy.mockRestore();
     });
 
-    it("should not log when connected status changes without error", () => {
+    it("should not log when connected status changes without error", async () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
         // noop
       });
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       transport.simulateStatus(false);
 
@@ -672,7 +904,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("discoverCommands error handling", () => {
     it("should throw on failed discoverCommands", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(
@@ -686,7 +918,7 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should throw default error when data is missing", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -699,7 +931,7 @@ describe("GenericDeviceDriver", () => {
 
   describe("getDeviceInfo error handling", () => {
     it("should throw default error when data is missing", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData(JSON.stringify({ status: "success" })), 0);
@@ -712,20 +944,28 @@ describe("GenericDeviceDriver", () => {
 
   describe("destroy", () => {
     it("should clean up emitter and buffer", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
       await driver.destroy();
 
       expect(transport.disconnect).toHaveBeenCalled();
     });
 
     it("should emit destroy event", async () => {
-      driver.initialize(transport);
+      await initDriver(driver, transport);
       const listener = vi.fn();
       driver.on("destroy", listener);
 
       await driver.destroy();
 
       expect(listener).toHaveBeenCalled();
+    });
+
+    it("should clear cached device info", async () => {
+      await driver.initialize(transport);
+      expect(driver.cachedDeviceInfo).not.toBeNull();
+
+      await driver.destroy();
+      expect(driver.cachedDeviceInfo).toBeNull();
     });
   });
 });

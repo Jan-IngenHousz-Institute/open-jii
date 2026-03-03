@@ -12,12 +12,27 @@ export interface GenericDeviceEvents extends Record<string, unknown> {
   destroy: void;
 }
 
-/** Generic device information */
+/** Generic device information (all fields optional — backward-compat shape) */
 export interface GenericDeviceInfo {
   device_name?: string;
   device_type?: string;
   device_version?: string;
   device_id?: string;
+  firmware_version?: string;
+  capabilities?: string[];
+  [key: string]: unknown;
+}
+
+/**
+ * Canonical INFO response schema.
+ * Required fields every well-behaved device should include;
+ * optional fields for richer metadata.
+ */
+export interface GenericInfoResponse {
+  device_name: string;
+  device_type: string;
+  device_id: string;
+  device_version?: string;
   firmware_version?: string;
   capabilities?: string[];
   [key: string]: unknown;

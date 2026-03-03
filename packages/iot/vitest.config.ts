@@ -9,6 +9,7 @@ export default mergeConfig(
       environment: "node",
       coverage: {
         exclude: [
+          "util/logger/**", // Abstract logger
           "**/*.spec.ts", // Test files
           "**/*.test.ts", // Test files
           "**/test/**", // Test utilities
