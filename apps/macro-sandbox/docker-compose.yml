@@ -1,0 +1,64 @@
+# ============================================================
+# Local Development — Lambda Runtime Interface Emulator
+# ============================================================
+# Runs all three macro-sandbox Lambda functions locally.
+# Each exposes the Lambda invoke endpoint on a different port.
+#
+# Usage:
+#   docker compose up --build        # start all three
+#   docker compose up --build python  # start python only
+#
+# Invoke:
+#   curl -XPOST http://localhost:9001/2015-03-31/functions/function/invocations \
+#     -d @test/event.json
+#
+# The AWS Lambda base images (Python, Node.js) include the RIE.
+# The R image uses a custom entry.sh that starts the RIE when
+# AWS_LAMBDA_RUNTIME_API is not set (i.e. running locally).
+# ============================================================
+
+services:
+  python:
+    build:
+      context: .
+      dockerfile: functions/python/Dockerfile
+    ports:
+      - "${PYTHON_PORT:-9001}:8080"
+    environment:
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=1024
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  javascript:
+    build:
+      context: .
+      dockerfile: functions/javascript/Dockerfile
+    ports:
+      - "${JAVASCRIPT_PORT:-9002}:8080"
+    environment:
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=512
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  r:
+    build:
+      context: .
+      dockerfile: functions/r/Dockerfile
+    ports:
+      - "${R_PORT:-9003}:8080"
+    environment:
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=1024
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
