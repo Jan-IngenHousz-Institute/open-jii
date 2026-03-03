@@ -9,7 +9,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
   Input,
   RichTextarea,
@@ -23,33 +22,25 @@ export function NewMacroDetailsCard({ form }: NewMacroDetailsCardProps) {
   const { t } = useTranslation("macro");
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{t("newMacro.detailsTitle")}</h3>
-        <p className="text-muted-foreground text-sm">{t("newMacro.detailsDescription")}</p>
-      </div>
-      {/* Macro Name */}
+    <div className="space-y-4">
       <FormField
         control={form.control}
         name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("newMacro.name")}</FormLabel>
             <FormControl>
-              <Input {...field} trim />
+              <Input {...field} trim placeholder={t("newMacro.name")} />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
 
-      {/* Description */}
       <FormField
         control={form.control}
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("newMacro.description")}</FormLabel>
             <FormControl>
               <RichTextarea
                 value={field.value ?? ""}

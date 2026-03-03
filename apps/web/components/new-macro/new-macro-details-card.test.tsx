@@ -72,20 +72,6 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("NewMacroDetailsCard", () => {
-  it("should render section with correct titles", () => {
-    render(
-      <TestWrapper>
-        <NewMacroDetailsCard form={undefined as any} />
-      </TestWrapper>,
-    );
-
-    expect(screen.getByText("newMacro.detailsTitle")).toBeInTheDocument();
-    expect(screen.getByText("newMacro.detailsDescription")).toBeInTheDocument();
-    // Title is rendered as an h3, description as a p
-    expect(screen.getByText("newMacro.detailsTitle").tagName).toBe("H3");
-    expect(screen.getByText("newMacro.detailsDescription").tagName).toBe("P");
-  });
-
   it("should render all form fields", () => {
     render(
       <TestWrapper>
@@ -93,26 +79,22 @@ describe("NewMacroDetailsCard", () => {
       </TestWrapper>,
     );
 
-    // Should have 2 form fields (name, description)
     const formFields = screen.getAllByTestId("form-field");
     expect(formFields).toHaveLength(2);
 
     const formItems = screen.getAllByTestId("form-item");
     expect(formItems).toHaveLength(2);
-
-    const formLabels = screen.getAllByTestId("form-label");
-    expect(formLabels).toHaveLength(2);
   });
 
-  it("should render form labels with correct text", () => {
+  it("should render inputs with placeholder text", () => {
     render(
       <TestWrapper>
         <NewMacroDetailsCard form={undefined as any} />
       </TestWrapper>,
     );
 
-    expect(screen.getByText("newMacro.name")).toBeInTheDocument();
-    expect(screen.getByText("newMacro.description")).toBeInTheDocument();
+    expect(screen.getByTestId("input")).toHaveAttribute("placeholder", "newMacro.name");
+    expect(screen.getByTestId("rich-textarea")).toHaveAttribute("placeholder", "newMacro.description");
   });
 
   it("should render input components", () => {
