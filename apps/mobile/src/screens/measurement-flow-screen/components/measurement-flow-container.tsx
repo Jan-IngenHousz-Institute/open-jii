@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
@@ -71,25 +71,28 @@ export function MeasurementFlowContainer() {
     isRememberAnswerEnabled,
   ]);
 
-  const seedNextIterationAnswer = (node: FlowNode, answerValue: string) => {
-    const content = node.content as QuestionContent | undefined;
-    if (!content) return;
+  const seedNextIterationAnswer = useCallback(
+    (node: FlowNode, answerValue: string) => {
+      const content = node.content as QuestionContent | undefined;
+      if (!content) return;
 
-    if (content.kind === "multi_choice" && isAutoincrementEnabled(node.id)) {
-      const options = content.options ?? [];
-      if (!options.length) return;
-      const currentIndex = options.indexOf(answerValue);
-      if (currentIndex < 0) return;
-      const nextIndex = (currentIndex + 1) % options.length;
-      const nextValue = options[nextIndex];
-      setAnswer(iterationCount + 1, node.id, nextValue);
-      return;
-    }
+      if (content.kind === "multi_choice" && isAutoincrementEnabled(node.id)) {
+        const options = content.options ?? [];
+        if (!options.length) return;
+        const currentIndex = options.indexOf(answerValue);
+        if (currentIndex < 0) return;
+        const nextIndex = (currentIndex + 1) % options.length;
+        const nextValue = options[nextIndex];
+        setAnswer(iterationCount + 1, node.id, nextValue);
+        return;
+      }
 
-    if (isRememberAnswerEnabled(node.id)) {
-      setAnswer(iterationCount + 1, node.id, answerValue);
-    }
-  };
+      if (isRememberAnswerEnabled(node.id)) {
+        setAnswer(iterationCount + 1, node.id, answerValue);
+      }
+    },
+    [isAutoincrementEnabled, isRememberAnswerEnabled, setAnswer, iterationCount],
+  );
 
   // Auto-skip a question only when we first land on it and it already has an answer
   // (e.g. from "remember answer" or when revisiting). Do not skip when the user
@@ -110,13 +113,11 @@ export function MeasurementFlowContainer() {
   }, [
     currentFlowStep,
     iterationCount,
-    currentNode?.id,
+    currentNode,
     showingOverview,
     returnToOverviewAfterEdit,
     getAnswer,
-    setAnswer,
-    isAutoincrementEnabled,
-    isRememberAnswerEnabled,
+    seedNextIterationAnswer,
     nextStep,
   ]);
 
