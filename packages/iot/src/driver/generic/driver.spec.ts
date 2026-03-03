@@ -97,7 +97,9 @@ describe("GenericDeviceDriver", () => {
 
     it("should survive INFO failure and disable capability guards", async () => {
       // Make INFO fail
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+        // noop
+      });
       vi.mocked(transport.send)
         .mockReset()
         .mockImplementation(() => {
@@ -219,7 +221,9 @@ describe("GenericDeviceDriver", () => {
     });
 
     it("should skip guard when capabilities are unknown (INFO failed)", async () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+        // noop
+      });
 
       // Make INFO fail
       vi.mocked(transport.send)
