@@ -79,7 +79,7 @@ export function CompletedState() {
       </View>
 
       {measurements && measurements.length > 0 && (
-        <View className="flex-row items-center justify-end px-8 pb-1">
+        <View className="flex-row items-center justify-end gap-1 px-8 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />
           <Text className={clsx("text-sm font-normal", classes.textMuted)}>Swipe</Text>
         </View>
