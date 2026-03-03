@@ -17,7 +17,7 @@ export function FlowProgressIndicator() {
   const { currentFlowStep, flowNodes, experimentId } = useMeasurementFlowStore();
   const { selectedExperimentId } = useExperimentSelectionStore();
 
-  const totalSteps = flowNodes.length + 2;
+  const totalSteps = flowNodes.length + 2; // +1 for experiment selection, +1 for completed state of the flow
   const currentStep = experimentId ? currentFlowStep + 2 : 1;
 
   const progress = useSharedValue(0);

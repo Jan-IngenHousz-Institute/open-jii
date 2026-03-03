@@ -10,7 +10,7 @@ export function NoDeviceState() {
         title="Please connect to a device first"
         onPress={() => router.push("/(tabs)/")}
         style={{ height: 44 }}
-      ></Button>
+      />
     </View>
   );
 }
