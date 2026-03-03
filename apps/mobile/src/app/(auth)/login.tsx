@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -54,7 +54,25 @@ export default function LoginScreen() {
   const [otp, setOTP] = useState("");
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const handleOTPVerify = useCallback(async () => {
+    setError("");
+    if (otp?.length !== 6) {
+      setError("Please enter a valid 6-digit code");
+      return;
+    }
 
+    const result = await verifyEmailOTP(email, otp);
+    if (result?.error) {
+      setError(
+        "The code you entered is invalid or has expired. Please try again or request a new one.",
+      );
+      return;
+    }
+
+    // Check if user is registered (similar to web app)
+    // For now, just navigate to tabs - registration flow can be added later
+    router.replace("(tabs)");
+  }, [otp, email, verifyEmailOTP, router]);
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -66,7 +84,7 @@ export default function LoginScreen() {
     if (otp.length === 6 && !verifyLoading) {
       void handleOTPVerify();
     }
-  }, [otp, verifyLoading]);
+  }, [otp, verifyLoading, handleOTPVerify]);
 
   async function handleGitHubLogin() {
     setError("");
@@ -95,26 +113,6 @@ export default function LoginScreen() {
 
     setShowOTPInput(true);
     setCountdown(RESEND_COOLDOWN_SECONDS);
-  }
-
-  async function handleOTPVerify() {
-    setError("");
-    if (otp?.length !== 6) {
-      setError("Please enter a valid 6-digit code");
-      return;
-    }
-
-    const result = await verifyEmailOTP(email, otp);
-    if (result?.error) {
-      setError(
-        "The code you entered is invalid or has expired. Please try again or request a new one.",
-      );
-      return;
-    }
-
-    // Check if user is registered (similar to web app)
-    // For now, just navigate to tabs - registration flow can be added later
-    router.replace("(tabs)");
   }
 
   async function handleResendCode() {
