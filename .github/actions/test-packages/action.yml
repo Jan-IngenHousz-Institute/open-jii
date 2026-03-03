@@ -12,6 +12,9 @@ inputs:
     description: "Skip coverage upload (e.g., for Dependabot PRs)"
     required: false
     default: "false"
+  macro-sb-test-key:
+    description: "AES key for decrypting macro-sandbox test scripts"
+    required: false
 
 runs:
   using: "composite"
@@ -19,6 +22,8 @@ runs:
     - name: Run Tests
       id: run-tests
       shell: bash
+      env:
+        MACRO_SB_TEST_KEY: ${{ inputs.macro-sb-test-key }}
       run: |
         echo "🧪 Testing affected packages"
 
