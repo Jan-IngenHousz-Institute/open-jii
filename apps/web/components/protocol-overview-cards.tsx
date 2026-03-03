@@ -8,6 +8,17 @@ import { useTranslation } from "@repo/i18n";
 import { Badge, RichTextRenderer, Skeleton } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
 
+const getFamilyColor = (family: string) => {
+  switch (family) {
+    case "multispeq":
+      return "bg-badge-published";
+    case "ambit":
+      return "bg-badge-active";
+    default:
+      return "bg-badge-archived";
+  }
+};
+
 const cardVariants = cva(
   "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
   {
@@ -53,7 +64,7 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
           <Link key={protocol.id} href={`/${locale}/platform/protocols/${protocol.id}`}>
             <div className={cardVariants({ featured: isPreferred })}>
               <div className="inline-flex gap-1">
-                <Badge variant="outline" className="capitalize">
+                <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
                   {protocol.family}
                 </Badge>
                 {isPreferred && (
