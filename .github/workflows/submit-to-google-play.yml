@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: google-play-submit
+  cancel-in-progress: false
+
 jobs:
   build-aab:
     # Only run for mobile releases (tag starts with mobile-v) or manual dispatch
