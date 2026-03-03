@@ -3,11 +3,14 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api";
+import type { MacroProtocolList } from "@repo/api";
+import { protocols } from "@repo/database";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
+import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
@@ -15,6 +18,7 @@ import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-mac
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import type { MacroDto, CreateMacroDto, UpdateMacroDto } from "../core/models/macro.model";
 import { generateHashedFilename } from "../core/models/macro.model";
+import { MacroProtocolRepository } from "../core/repositories/macro-protocol.repository";
 
 describe("MacroController", () => {
   const testApp = TestHarness.App;
@@ -530,6 +534,260 @@ describe("MacroController", () => {
       await testApp
         .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+});
+
+describe("MacroController – macro-protocol endpoints", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+  let macroProtocolRepository: MacroProtocolRepository;
+
+  beforeAll(async () => {
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    macroProtocolRepository = testApp.module.get(MacroProtocolRepository);
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  // Helper to create a protocol for tests
+  async function createTestProtocol(userId: string) {
+    const [protocol] = await testApp.database
+      .insert(protocols)
+      .values({
+        name: `ctrl-protocol-${faker.string.alphanumeric(8)}`,
+        description: "controller test protocol",
+        code: [{}],
+        family: "multispeq",
+        createdBy: userId,
+      })
+      .returning();
+    return protocol;
+  }
+
+  describe("listCompatibleProtocols", () => {
+    it("should return 200 with linked protocols", async () => {
+      const macro = await testApp.createMacro({
+        name: "List Protocols Macro",
+        createdBy: testUserId,
+      });
+
+      const protocol1 = await createTestProtocol(testUserId);
+      const protocol2 = await createTestProtocol(testUserId);
+      await macroProtocolRepository.addProtocols(macro.id, [protocol1.id, protocol2.id]);
+
+      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+        id: macro.id,
+      });
+
+      const response: SuperTestResponse<MacroProtocolList> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+      expect(response.body).toHaveLength(2);
+
+      const protocolIds = response.body.map((e) => e.protocol.id);
+      expect(protocolIds).toContain(protocol1.id);
+      expect(protocolIds).toContain(protocol2.id);
+    });
+
+    it("should return 200 with empty array when no protocols linked", async () => {
+      const macro = await testApp.createMacro({
+        name: "Empty Protocols Macro",
+        createdBy: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+        id: macro.id,
+      });
+
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+      expect(response.body).toHaveLength(0);
+    });
+
+    it("should return 401 without auth", async () => {
+      const macro = await testApp.createMacro({
+        name: "Unauth List Macro",
+        createdBy: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+        id: macro.id,
+      });
+
+      await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should return 404 for unknown macro", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+        id: nonExistentId,
+      });
+
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("addCompatibleProtocols", () => {
+    it("should return 201 with valid body", async () => {
+      const macro = await testApp.createMacro({
+        name: "Add Protocols Controller Macro",
+        createdBy: testUserId,
+      });
+
+      const protocol = await createTestProtocol(testUserId);
+
+      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+        id: macro.id,
+      });
+
+      const response: SuperTestResponse<MacroProtocolList> = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ protocolIds: [protocol.id] })
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].protocol.id).toBe(protocol.id);
+    });
+
+    it("should return 401 without auth", async () => {
+      const macro = await testApp.createMacro({
+        name: "Unauth Add Macro",
+        createdBy: testUserId,
+      });
+
+      const protocol = await createTestProtocol(testUserId);
+
+      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+        id: macro.id,
+      });
+
+      await testApp
+        .post(path)
+        .withoutAuth()
+        .send({ protocolIds: [protocol.id] })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should return 403 for non-creator", async () => {
+      const macro = await testApp.createMacro({
+        name: "Forbidden Add Macro",
+        createdBy: testUserId,
+      });
+
+      const otherUserId = await testApp.createTestUser({ email: "other-ctrl@example.com" });
+      const protocol = await createTestProtocol(testUserId);
+
+      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+        id: macro.id,
+      });
+
+      await testApp
+        .post(path)
+        .withAuth(otherUserId)
+        .send({ protocolIds: [protocol.id] })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("should return 404 for unknown macro", async () => {
+      const nonExistentId = faker.string.uuid();
+      const protocol = await createTestProtocol(testUserId);
+
+      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+        id: nonExistentId,
+      });
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ protocolIds: [protocol.id] })
+        .expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("removeCompatibleProtocol", () => {
+    it("should return 204 on successful removal", async () => {
+      const macro = await testApp.createMacro({
+        name: "Remove Protocol Controller Macro",
+        createdBy: testUserId,
+      });
+
+      const protocol = await createTestProtocol(testUserId);
+      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+
+      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+        id: macro.id,
+        protocolId: protocol.id,
+      });
+
+      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
+
+      // Verify it was actually removed
+      const listPath = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+        id: macro.id,
+      });
+      const listResponse = await testApp.get(listPath).withAuth(testUserId).expect(StatusCodes.OK);
+      expect(listResponse.body).toHaveLength(0);
+    });
+
+    it("should return 401 without auth", async () => {
+      const macro = await testApp.createMacro({
+        name: "Unauth Remove Macro",
+        createdBy: testUserId,
+      });
+
+      const protocol = await createTestProtocol(testUserId);
+      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+
+      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+        id: macro.id,
+        protocolId: protocol.id,
+      });
+
+      await testApp.delete(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should return 403 for non-creator", async () => {
+      const macro = await testApp.createMacro({
+        name: "Forbidden Remove Controller Macro",
+        createdBy: testUserId,
+      });
+
+      const otherUserId = await testApp.createTestUser({ email: "other-remove-ctrl@example.com" });
+      const protocol = await createTestProtocol(testUserId);
+      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+
+      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+        id: macro.id,
+        protocolId: protocol.id,
+      });
+
+      await testApp.delete(path).withAuth(otherUserId).expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("should return 404 for unknown macro", async () => {
+      const nonExistentId = faker.string.uuid();
+      const fakeProtocolId = faker.string.uuid();
+
+      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+        id: nonExistentId,
+        protocolId: fakeProtocolId,
+      });
+
+      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
   });
 });

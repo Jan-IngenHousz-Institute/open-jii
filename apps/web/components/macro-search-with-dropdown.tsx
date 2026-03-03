@@ -22,6 +22,8 @@ export interface MacroSearchWithDropdownProps {
   onAddMacro: (macroId: string) => void | Promise<void>;
   isAddingMacro: boolean;
   disabled?: boolean;
+  recommendedMacroIds?: Set<string>;
+  recommendedReason?: string;
 }
 
 export function MacroSearchWithDropdown({
@@ -34,6 +36,8 @@ export function MacroSearchWithDropdown({
   onAddMacro,
   isAddingMacro,
   disabled = false,
+  recommendedMacroIds,
+  recommendedReason,
 }: MacroSearchWithDropdownProps) {
   const [open, setOpen] = useState(false);
   const locale = useLocale();
@@ -109,6 +113,8 @@ export function MacroSearchWithDropdown({
         loading={loading}
         setOpen={setOpen}
         popoverClassName="w-[var(--radix-popover-trigger-width)]"
+        recommendedMacroIds={recommendedMacroIds}
+        recommendedReason={recommendedReason}
       />
     </Popover>
   );

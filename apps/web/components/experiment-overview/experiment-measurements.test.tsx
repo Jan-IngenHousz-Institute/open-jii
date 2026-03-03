@@ -16,7 +16,7 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
       error: null as Error | null,
     })),
     useExperimentTablesSpy: vi.fn(() => ({
-      tables: [{ name: "device", displayName: "Device", totalRows: 10 }],
+      tables: [{ identifier: "device", tableType: "static", displayName: "Device", totalRows: 10 }],
       isLoading: false,
       error: null as Error | null,
     })),
@@ -191,7 +191,9 @@ describe("ExperimentMeasurements", () => {
 
   it("renders empty state when device table is not available", () => {
     useExperimentTablesSpy.mockReturnValue({
-      tables: [{ name: "raw_data", displayName: "Raw Data", totalRows: 5 }],
+      tables: [
+        { identifier: "raw_data", tableType: "static", displayName: "Raw Data", totalRows: 5 },
+      ],
       isLoading: false,
       error: null,
     });

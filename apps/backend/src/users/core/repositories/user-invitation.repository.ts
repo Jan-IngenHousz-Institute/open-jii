@@ -1,6 +1,14 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, invitations, profiles, experiments, experimentMembers } from "@repo/database";
+import {
+  and,
+  eq,
+  invitations,
+  profiles,
+  experiments,
+  experimentMembers,
+  users,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -174,6 +182,28 @@ export class InvitationRepository {
         .where(and(eq(invitations.email, email.toLowerCase()), eq(invitations.status, "pending")));
 
       return result as InvitationDto[];
+    });
+  }
+
+  /**
+   * Checks whether an email address belongs to a user who is already a member of the given experiment.
+   */
+  async isEmailAlreadyMember(resourceId: string, email: string): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({ userId: users.id })
+        .from(users)
+        .innerJoin(
+          experimentMembers,
+          and(
+            eq(experimentMembers.userId, users.id),
+            eq(experimentMembers.experimentId, resourceId),
+          ),
+        )
+        .where(eq(users.email, email.toLowerCase()))
+        .limit(1);
+
+      return result.length > 0;
     });
   }
 

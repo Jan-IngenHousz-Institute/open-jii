@@ -36,6 +36,16 @@ vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true], // Return [debouncedValue, isDebounced]
 }));
 
+// Mock useProtocol (used by AnalysisPanel to fetch upstream protocol name)
+vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
+  useProtocol: () => ({ data: undefined }),
+}));
+
+// Mock useProtocolCompatibleMacros
+vi.mock("@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros", () => ({
+  useProtocolCompatibleMacros: () => ({ data: undefined }),
+}));
+
 // Mock data
 const mockMacros = [
   {

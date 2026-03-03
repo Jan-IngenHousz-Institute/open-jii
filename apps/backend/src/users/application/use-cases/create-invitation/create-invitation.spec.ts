@@ -255,4 +255,52 @@ describe("CreateInvitationUseCase", () => {
 
     assertFailure(result);
   });
+
+  it("should return conflict when email belongs to an existing member", async () => {
+    const memberEmail = "member@example.com";
+    const memberId = await testApp.createTestUser({ email: memberEmail });
+    const { experiment } = await testApp.createExperiment({
+      name: "Already Member Test",
+      userId: testUserId,
+    });
+
+    await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
+
+    const result = await useCase.execute(
+      "experiment",
+      experiment.id,
+      memberEmail,
+      "member",
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(409);
+    expect(result.error.message).toContain("already a member");
+  });
+
+  it("should fail when isEmailAlreadyMember check fails", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Member Check Failure",
+      userId: testUserId,
+    });
+
+    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
+    vi.spyOn(invitationRepo, "isEmailAlreadyMember").mockResolvedValueOnce(
+      failure(AppError.internal("DB error")),
+    );
+
+    const result = await useCase.execute(
+      "experiment",
+      experiment.id,
+      "check-fail@example.com",
+      "member",
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.message).toBe("Failed to check existing membership");
+  });
 });
