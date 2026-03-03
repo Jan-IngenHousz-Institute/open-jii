@@ -502,11 +502,10 @@ describe("NewMacroForm", () => {
   });
 
   describe("Compatible Protocols Section", () => {
-    it("should render the compatible protocols card", () => {
+    it("should render the compatible protocols section", () => {
       render(<NewMacroForm />);
 
       expect(screen.getByText("newMacro.compatibleProtocols")).toBeInTheDocument();
-      expect(screen.getByText("newMacro.compatibleProtocolsDescription")).toBeInTheDocument();
     });
 
     it("should render ProtocolSearchWithDropdown", () => {

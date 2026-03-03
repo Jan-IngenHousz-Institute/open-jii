@@ -18,8 +18,6 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
-  Card,
-  CardContent,
   Form,
   FormField,
   FormItem,
@@ -137,130 +135,116 @@ export function NewMacroForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Details row: name/description + language + compatible protocols */}
         <div className="flex flex-col gap-6 md:flex-row">
-          {/* RIGHT SIDE — Sidebar (First on mobile) */}
-          <div className="w-full md:order-2 md:w-96">
-            <Card className="shadow-none">
-              <CardContent className="space-y-4 pt-6">
-                {/* Programming Language */}
-                <FormField
-                  control={form.control}
-                  name="language"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("newMacro.language")}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("newMacro.selectLanguage")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="python">Python</SelectItem>
-                          <SelectItem value="r" disabled>
-                            R
-                          </SelectItem>
-                          <SelectItem value="javascript">JavaScript</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Compatible Protocols */}
-                <div
-                  role="separator"
-                  aria-orientation="horizontal"
-                  className="text-muted-foreground border-t"
-                />
-
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium">{t("newMacro.compatibleProtocols")}</h4>
-                    <p className="text-muted-foreground text-sm">{t("newMacro.compatibleProtocolsDescription")}</p>
-                  </div>
-
-                  {selectedProtocols.length > 0 && (
-                    <div className="space-y-2">
-                      {selectedProtocols.map((protocol) => (
-                        <div
-                          key={protocol.id}
-                          className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-                        >
-                          <div className="flex min-w-0 items-center gap-2">
-                            <span className="truncate text-sm font-medium">{protocol.name}</span>
-                            <span className="text-muted-foreground text-xs">{protocol.family}</span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 shrink-0"
-                            onClick={() => handleRemoveProtocol(protocol.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <ProtocolSearchWithDropdown
-                    availableProtocols={availableProtocols}
-                    value=""
-                    placeholder={t("macroSettings.addCompatibleProtocol")}
-                    loading={!isDebounced}
-                    searchValue={protocolSearch}
-                    onSearchChange={setProtocolSearch}
-                    onAddProtocol={handleAddProtocol}
-                    isAddingProtocol={false}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex-1">
+            <NewMacroDetailsCard form={form} />
           </div>
 
-          {/* LEFT SIDE — Main Content (Second on mobile) */}
-          <div className="flex-1 space-y-10 md:order-1">
-            <NewMacroDetailsCard form={form} />
+          <div className="w-full space-y-4 md:w-72">
+            {/* Programming Language */}
+            <FormField
+              control={form.control}
+              name="language"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("newMacro.language")}</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("newMacro.selectLanguage")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="python">Python</SelectItem>
+                      <SelectItem value="r" disabled>
+                        R
+                      </SelectItem>
+                      <SelectItem value="javascript">JavaScript</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            {/* Code Editor with Loading State */}
-            {isLoadingUserProfile ? (
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-[500px] w-full" />
-              </div>
-            ) : (
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <MacroCodeEditor
-                    value={field.value}
-                    onChange={field.onChange}
-                    language={form.watch("language")}
-                    macroName={form.watch("name")}
-                    username={`${userProfile?.body.firstName} ${userProfile?.body.lastName}`}
-                    label=""
-                    error={form.formState.errors.code?.message?.toString()}
-                    height="500px"
-                    title={t("newMacro.codeTitle")}
-                  />
-                )}
+            {/* Compatible Protocols */}
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-sm">{t("newMacro.compatibleProtocols")}</p>
+
+              {selectedProtocols.length > 0 && (
+                <div className="space-y-2">
+                  {selectedProtocols.map((protocol) => (
+                    <div
+                      key={protocol.id}
+                      className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm font-medium">{protocol.name}</span>
+                        <span className="text-muted-foreground text-xs">{protocol.family}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => handleRemoveProtocol(protocol.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <ProtocolSearchWithDropdown
+                availableProtocols={availableProtocols}
+                value=""
+                placeholder={t("macroSettings.addCompatibleProtocol")}
+                loading={!isDebounced}
+                searchValue={protocolSearch}
+                onSearchChange={setProtocolSearch}
+                onAddProtocol={handleAddProtocol}
+                isAddingProtocol={false}
               />
-            )}
-
-            <div className="flex gap-2">
-              <Button type="button" onClick={cancel}>
-                {t("newMacro.cancel")}
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? t("newMacro.creating") : t("newMacro.finalizeSetup")}
-              </Button>
             </div>
           </div>
+        </div>
+
+        {/* Code Editor — full width */}
+        {isLoadingUserProfile ? (
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-[500px] w-full" />
+          </div>
+        ) : (
+          <FormField
+            control={form.control}
+            name="code"
+            render={({ field }) => (
+              <MacroCodeEditor
+                value={field.value}
+                onChange={field.onChange}
+                language={form.watch("language")}
+                macroName={form.watch("name")}
+                username={`${userProfile?.body.firstName} ${userProfile?.body.lastName}`}
+                label=""
+                error={form.formState.errors.code?.message?.toString()}
+                height="500px"
+                title={t("newMacro.codeTitle")}
+              />
+            )}
+          />
+        )}
+
+        <div className="flex gap-2">
+          <Button type="button" onClick={cancel}>
+            {t("newMacro.cancel")}
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? t("newMacro.creating") : t("newMacro.finalizeSetup")}
+          </Button>
         </div>
       </form>
     </Form>
