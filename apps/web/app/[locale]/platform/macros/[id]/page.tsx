@@ -14,7 +14,7 @@ import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
+import { Button } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 interface MacroOverviewPageProps {
@@ -110,62 +110,54 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
         />
 
         {/* Code Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <CodeIcon className="h-5 w-5" />
-                {t("macros.code")}
-              </CardTitle>
-              {isCreator && !isEditingCode && macro.code && (
+        {isEditingCode ? (
+          <MacroCodeEditor
+            value={editedCode}
+            onChange={setEditedCode}
+            language={macro.language}
+            macroName={macro.name}
+            label=""
+            title={t("macros.code")}
+            headerActions={
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCodeEditCancel}
+                  disabled={isUpdating}
+                >
+                  <X className="mr-1 h-4 w-4" />
+                  {t("common.cancel")}
+                </Button>
+                <Button size="sm" onClick={handleCodeSave} disabled={isUpdating}>
+                  <Check className="mr-1 h-4 w-4" />
+                  {t("common.save")}
+                </Button>
+              </div>
+            }
+          />
+        ) : macro.code ? (
+          <MacroCodeViewer
+            value={decodeBase64(macro.code)}
+            language={macro.language}
+            height="500px"
+            macroName={macro.name}
+            title={t("macros.code")}
+            headerActions={
+              isCreator ? (
                 <Button variant="outline" size="sm" onClick={handleCodeEditStart}>
                   <Pencil className="mr-1 h-4 w-4" />
                   {t("common.edit")}
                 </Button>
-              )}
-              {isEditingCode && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleCodeEditCancel}
-                    disabled={isUpdating}
-                  >
-                    <X className="mr-1 h-4 w-4" />
-                    {t("common.cancel")}
-                  </Button>
-                  <Button size="sm" onClick={handleCodeSave} disabled={isUpdating}>
-                    <Check className="mr-1 h-4 w-4" />
-                    {t("common.save")}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isEditingCode ? (
-              <MacroCodeEditor
-                value={editedCode}
-                onChange={setEditedCode}
-                language={macro.language}
-                macroName={macro.name}
-                label=""
-              />
-            ) : macro.code ? (
-              <MacroCodeViewer
-                value={decodeBase64(macro.code)}
-                language={macro.language}
-                height="500px"
-                macroName={macro.name}
-              />
-            ) : (
-              <div className="py-8 text-center text-gray-500">
-                <CodeIcon className="mx-auto mb-4 h-12 w-12" />
-                <p>{t("macros.codeNotAvailable")}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="py-8 text-center text-gray-500">
+            <CodeIcon className="mx-auto mb-4 h-12 w-12" />
+            <p>{t("macros.codeNotAvailable")}</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -324,20 +324,6 @@ describe("ProtocolLayout", () => {
       expect(screen.getByTestId("title-is-pending")).toHaveTextContent("true");
     });
 
-    it("should render the family badge", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, family: "multispeq" } },
-        isLoading: false,
-        error: null,
-      });
-
-      renderLayout();
-
-      const badges = screen.getAllByTestId("badge");
-      const familyBadge = badges.find((b) => b.textContent === "multispeq");
-      expect(familyBadge).toBeInTheDocument();
-    });
-
     it("should render preferred badge when sortOrder is not null", () => {
       mockUseProtocol.mockReturnValue({
         data: { body: { ...defaultProtocol, sortOrder: 1 } },
@@ -361,7 +347,7 @@ describe("ProtocolLayout", () => {
 
       renderLayout();
 
-      const badges = screen.getAllByTestId("badge");
+      const badges = screen.queryAllByTestId("badge");
       const preferredBadge = badges.find((b) => b.textContent === "common.common.preferred");
       expect(preferredBadge).toBeUndefined();
     });

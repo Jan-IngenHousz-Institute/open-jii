@@ -7,13 +7,13 @@ import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { Check, CodeIcon, Pencil, X } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import { use, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
+import { Button } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 interface ProtocolOverviewPageProps {
@@ -111,52 +111,47 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
         />
 
         {/* Code Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CodeIcon className="h-5 w-5" />
-                <span>{t("protocols.codeTitle")}</span>
+        {isEditingCode ? (
+          <ProtocolCodeEditor
+            value={editedCode ?? []}
+            onChange={setEditedCode}
+            onValidationChange={setIsCodeValid}
+            label=""
+            placeholder={t("protocols.codePlaceholder")}
+            title={t("protocols.codeTitle")}
+            headerActions={
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCodeEditCancel}
+                  disabled={isUpdating}
+                >
+                  <X className="mr-1 h-4 w-4" />
+                  {t("common.cancel")}
+                </Button>
+                <Button size="sm" onClick={handleCodeSave} disabled={isUpdating || !isCodeValid}>
+                  <Check className="mr-1 h-4 w-4" />
+                  {t("common.save")}
+                </Button>
               </div>
-              {isCreator && !isEditingCode && (
+            }
+          />
+        ) : (
+          <JsonCodeViewer
+            value={protocol.code}
+            height="700px"
+            title={t("protocols.codeTitle")}
+            headerActions={
+              isCreator ? (
                 <Button variant="outline" size="sm" onClick={handleCodeEditStart}>
                   <Pencil className="mr-1 h-4 w-4" />
                   {t("common.edit")}
                 </Button>
-              )}
-              {isEditingCode && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleCodeEditCancel}
-                    disabled={isUpdating}
-                  >
-                    <X className="mr-1 h-4 w-4" />
-                    {t("common.cancel")}
-                  </Button>
-                  <Button size="sm" onClick={handleCodeSave} disabled={isUpdating || !isCodeValid}>
-                    <Check className="mr-1 h-4 w-4" />
-                    {t("common.save")}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isEditingCode ? (
-              <ProtocolCodeEditor
-                value={editedCode ?? []}
-                onChange={setEditedCode}
-                onValidationChange={setIsCodeValid}
-                label=""
-                placeholder={t("protocols.codePlaceholder")}
-              />
-            ) : (
-              <JsonCodeViewer value={protocol.code} height="700px" />
-            )}
-          </CardContent>
-        </Card>
+              ) : undefined
+            }
+          />
+        )}
       </div>
     </div>
   );

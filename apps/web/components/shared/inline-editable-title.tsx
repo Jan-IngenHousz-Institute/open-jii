@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
@@ -18,7 +18,7 @@ interface InlineEditableTitleProps {
 const titleVariants = cva("text-2xl transition-all duration-300", {
   variants: {
     editable: {
-      true: "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2",
+      true: "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2 group",
       false: "",
     },
   },
@@ -98,6 +98,9 @@ export function InlineEditableTitle({
       ) : (
         <CardTitle className={titleVariants({ editable: hasAccess })} onClick={handleClick}>
           {name}
+          {hasAccess && (
+            <Pencil className="text-muted-foreground ml-2 inline h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+          )}
         </CardTitle>
       )}
 

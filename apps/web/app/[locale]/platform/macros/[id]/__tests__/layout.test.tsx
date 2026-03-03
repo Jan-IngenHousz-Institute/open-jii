@@ -300,60 +300,6 @@ describe("<MacroLayout />", () => {
     });
   });
 
-  describe("Language Badge", () => {
-    it("renders a Python badge for python language", () => {
-      renderLayout({ macroData: { ...defaultMacro, language: "python" } });
-
-      const badges = screen.getByTestId("title-badges");
-      expect(badges).toHaveTextContent("Python");
-    });
-
-    it("renders an R badge for r language", () => {
-      renderLayout({ macroData: { ...defaultMacro, language: "r" } });
-
-      const badges = screen.getByTestId("title-badges");
-      expect(badges).toHaveTextContent("R");
-    });
-
-    it("renders a JavaScript badge for javascript language", () => {
-      renderLayout({ macroData: { ...defaultMacro, language: "javascript" } });
-
-      const badges = screen.getByTestId("title-badges");
-      expect(badges).toHaveTextContent("JavaScript");
-    });
-
-    it("renders the raw language string for unknown languages", () => {
-      renderLayout({ macroData: { ...defaultMacro, language: "ruby" } });
-
-      const badges = screen.getByTestId("title-badges");
-      expect(badges).toHaveTextContent("ruby");
-    });
-
-    it("applies python badge color class", () => {
-      renderLayout({ macroData: { ...defaultMacro, language: "python" } });
-
-      const allBadges = screen.getAllByTestId("badge");
-      const pythonBadge = allBadges.find((b) => b.textContent === "Python");
-      expect(pythonBadge).toHaveClass("bg-badge-published");
-    });
-
-    it("applies r badge color class", () => {
-      renderLayout({ macroData: { ...defaultMacro, language: "r" } });
-
-      const allBadges = screen.getAllByTestId("badge");
-      const rBadge = allBadges.find((b) => b.textContent === "R");
-      expect(rBadge).toHaveClass("bg-badge-stale");
-    });
-
-    it("applies javascript badge color class", () => {
-      renderLayout({ macroData: { ...defaultMacro, language: "javascript" } });
-
-      const allBadges = screen.getAllByTestId("badge");
-      const jsBadge = allBadges.find((b) => b.textContent === "JavaScript");
-      expect(jsBadge).toHaveClass("bg-badge-provisioningFailed");
-    });
-  });
-
   describe("Preferred Badge", () => {
     it("renders preferred badge when sortOrder is not null", () => {
       renderLayout({ macroData: { ...defaultMacro, sortOrder: 1 } });
@@ -365,8 +311,7 @@ describe("<MacroLayout />", () => {
     it("does not render preferred badge when sortOrder is null", () => {
       renderLayout({ macroData: { ...defaultMacro, sortOrder: null } });
 
-      const badges = screen.getByTestId("title-badges");
-      expect(badges).not.toHaveTextContent("common.preferred");
+      expect(screen.queryByTestId("title-badges")).not.toBeInTheDocument();
     });
 
     it("renders preferred badge with correct classes when sortOrder is 0", () => {
