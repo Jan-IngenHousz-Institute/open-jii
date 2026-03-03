@@ -223,7 +223,7 @@ export function NewProtocolForm() {
         />
 
         <div className="flex gap-2">
-          <Button type="button" onClick={cancel}>
+          <Button type="button" variant="outline" onClick={cancel}>
             {t("newProtocol.cancel")}
           </Button>
           <Button type="submit" disabled={isDisabled}>

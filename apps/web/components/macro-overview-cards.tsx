@@ -1,9 +1,10 @@
+import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import React from "react";
+import React, { useMemo } from "react";
 
-import type { Macro } from "@repo/api";
+import type { Macro, MacroProtocolEntry } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Badge, RichTextRenderer, Skeleton } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
@@ -48,11 +49,34 @@ const getLanguageColor = (language: string) => {
     case "r":
       return "bg-badge-stale";
     case "javascript":
-      return "bg-badge-provisioningFailed";
+      return "bg-badge";
     default:
       return "bg-badge-archived";
   }
 };
+
+function CompatibleProtocolsList({ macroId }: { macroId: string }) {
+  const { data } = useMacroCompatibleProtocols(macroId);
+  const protocols: MacroProtocolEntry[] = useMemo(
+    () => (data?.body as MacroProtocolEntry[] | undefined) ?? [],
+    [data],
+  );
+
+  if (protocols.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {protocols.map((entry) => (
+        <span
+          key={entry.protocol.id}
+          className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+        >
+          {entry.protocol.name}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProps) {
   const { t } = useTranslation(["macro", "common"]);
@@ -99,7 +123,8 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
                   <RichTextRenderer content={macro.description ?? " "} truncate maxLines={2} />
                 </div>
               </div>
-              <p className="mt-4 text-xs text-gray-400">
+              <CompatibleProtocolsList macroId={macro.id} />
+              <p className="text-xs text-gray-400">
                 {t("macros.lastUpdate")}: {new Date(macro.updatedAt).toLocaleDateString()}
               </p>
               <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />

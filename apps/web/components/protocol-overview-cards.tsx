@@ -1,9 +1,10 @@
+import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import React from "react";
+import React, { useMemo } from "react";
 
-import type { Protocol } from "@repo/api";
+import type { Protocol, ProtocolMacroEntry } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Badge, RichTextRenderer, Skeleton } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
@@ -33,6 +34,29 @@ const cardVariants = cva(
     },
   },
 );
+
+function CompatibleMacrosList({ protocolId }: { protocolId: string }) {
+  const { data } = useProtocolCompatibleMacros(protocolId);
+  const macros: ProtocolMacroEntry[] = useMemo(
+    () => (data?.body as ProtocolMacroEntry[] | undefined) ?? [],
+    [data],
+  );
+
+  if (macros.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {macros.map((entry) => (
+        <span
+          key={entry.macro.id}
+          className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+        >
+          {entry.macro.name}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | undefined }) {
   const { t } = useTranslation("common");
@@ -79,7 +103,8 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
                   <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
                 </div>
               </div>
-              <p className="mt-4 text-xs text-gray-400">
+              <CompatibleMacrosList protocolId={protocol.id} />
+              <p className="text-xs text-gray-400">
                 {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
               </p>
               <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />

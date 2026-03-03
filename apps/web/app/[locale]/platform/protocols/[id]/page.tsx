@@ -7,7 +7,7 @@ import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { Check, Pencil, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { use, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -142,14 +142,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
             value={protocol.code}
             height="700px"
             title={t("protocols.codeTitle")}
-            headerActions={
-              isCreator ? (
-                <Button variant="outline" size="sm" onClick={handleCodeEditStart}>
-                  <Pencil className="mr-1 h-4 w-4" />
-                  {t("common.edit")}
-                </Button>
-              ) : undefined
-            }
+            onEditStart={isCreator ? handleCodeEditStart : undefined}
           />
         )}
       </div>

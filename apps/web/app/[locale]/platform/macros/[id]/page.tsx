@@ -8,7 +8,7 @@ import { InlineEditableDescription } from "@/components/shared/inline-editable-d
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
-import { Check, CodeIcon, Pencil, X } from "lucide-react";
+import { Check, CodeIcon, X } from "lucide-react";
 import { use, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -115,9 +115,8 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
             value={editedCode}
             onChange={setEditedCode}
             language={macro.language}
-            macroName={macro.name}
             label=""
-            title={t("macros.code")}
+            title={t("macros.codeTitle")}
             headerActions={
               <div className="flex gap-2">
                 <Button
@@ -142,15 +141,8 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
             language={macro.language}
             height="500px"
             macroName={macro.name}
-            title={t("macros.code")}
-            headerActions={
-              isCreator ? (
-                <Button variant="outline" size="sm" onClick={handleCodeEditStart}>
-                  <Pencil className="mr-1 h-4 w-4" />
-                  {t("common.edit")}
-                </Button>
-              ) : undefined
-            }
+            title={t("macros.codeTitle")}
+            onEditStart={isCreator ? handleCodeEditStart : undefined}
           />
         ) : (
           <div className="py-8 text-center text-gray-500">

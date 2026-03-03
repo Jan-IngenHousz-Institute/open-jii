@@ -2,7 +2,7 @@
 
 import { Editor } from "@monaco-editor/react";
 import type { OnMount } from "@monaco-editor/react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Pencil } from "lucide-react";
 import React, { useRef, useState } from "react";
 import type { FC } from "react";
 
@@ -19,6 +19,7 @@ interface MacroCodeViewerProps {
   macroName?: string;
   title?: React.ReactNode;
   headerActions?: React.ReactNode;
+  onEditStart?: () => void;
 }
 
 const toSnakeCase = (str: string): string => {
@@ -63,6 +64,7 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
   macroName = "untitled",
   title,
   headerActions,
+  onEditStart,
 }) => {
   const [copied, setCopied] = useState(false);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -110,7 +112,18 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
 
   return (
     <div className={`grid w-full gap-1.5 ${className}`}>
-      <div className="overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md">
+      <div
+        className={`group/viewer relative overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md ${onEditStart ? "cursor-pointer" : ""}`}
+        onClick={onEditStart}
+      >
+        {/* Hover edit overlay */}
+        {onEditStart && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:bg-black/5">
+            <div className="rounded-full bg-white p-3 opacity-0 shadow-lg transition-opacity duration-200 group-hover/viewer:opacity-100">
+              <Pencil className="h-5 w-5 text-slate-600" />
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2">
           <div className="flex items-center gap-2">
@@ -124,12 +137,14 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {headerActions}
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={handleCopy}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopy();
+              }}
               className="h-8 px-2 text-slate-600 hover:text-slate-800"
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
