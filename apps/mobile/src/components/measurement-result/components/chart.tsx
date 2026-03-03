@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View } from "react-native";
 import { CartesianChart, Line } from "victory-native";
 import { useTheme } from "~/hooks/use-theme";
 
@@ -15,14 +15,17 @@ export function Chart({ name, values }: ChartProps) {
   // Validate data
   if (!values || values.length === 0) {
     return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>{name}</Text>
-        <Text style={styles.errorText}>No data available</Text>
+      <View
+        className="my-5 rounded-2xl border px-5 py-5"
+        style={{ borderColor: theme.isDark ? colors.dark.border : colors.light.border }}
+      >
+        <Text className="mb-5 text-center text-xl font-bold">{name}</Text>
+        <Text className="mt-5 text-center text-base">No data available</Text>
       </View>
     );
   }
 
-  // Transform array of numbers into Victory Native XL data format
+  // Transform array into chart data
   const chartData = values.map((value, index) => ({
     x: index + 1,
     y: value,
@@ -30,31 +33,26 @@ export function Chart({ name, values }: ChartProps) {
 
   return (
     <View
-      style={[
-        styles.chartContainer,
-        {
-          backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-          borderColor: theme.isDark ? colors.dark.border : colors.light.border,
-        },
-      ]}
+      className="my-5 rounded-2xl border px-5 py-5"
+      style={{
+        backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
+        borderColor: theme.isDark ? colors.dark.border : colors.light.border,
+      }}
     >
       <Text
-        style={[
-          styles.chartTitle,
-          {
-            color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-          },
-        ]}
+        className="mb-5 text-center text-xl font-bold"
+        style={{
+          color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+        }}
       >
         {name}
       </Text>
+
       <View
-        style={[
-          styles.chartWrapper,
-          {
-            backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
-          },
-        ]}
+        className="h-[280px] rounded-xl p-4"
+        style={{
+          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
+        }}
       >
         <CartesianChart data={chartData} xKey="x" yKeys={["y"]}>
           {({ points }) => <Line points={points.y} color={colors.primary.dark} strokeWidth={2} />}
@@ -63,30 +61,3 @@ export function Chart({ name, values }: ChartProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  chartContainer: {
-    marginVertical: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  chartTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  chartWrapper: {
-    height: 280,
-    borderRadius: 12,
-    padding: 16,
-  },
-  errorText: {
-    textAlign: "center",
-    fontSize: 16,
-    color: "#666",
-    marginTop: 20,
-  },
-});

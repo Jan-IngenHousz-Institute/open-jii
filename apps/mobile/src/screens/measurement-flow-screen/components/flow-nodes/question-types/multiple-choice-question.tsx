@@ -1,7 +1,8 @@
-import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
+import { Check } from "lucide-react-native";
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text } from "react-native";
+import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-types/utils/grid-layout";
 
@@ -12,74 +13,68 @@ interface MultipleChoiceQuestionProps {
   selectedValue: string;
   onSelect: (value: string) => void;
   disabledOptions?: string[];
+  searchTerm?: string;
 }
-
-const optionContainer = cva("items-center justify-center rounded-lg border-2", {
-  variants: {
-    state: {
-      selected: "border-green-500 bg-green-50",
-      disabled: "border-gray-200 bg-gray-100",
-      default: "border-gray-300 bg-white",
-    },
-  },
-});
-
-const optionText = cva("px-2 text-center font-medium", {
-  variants: {
-    state: {
-      selected: "text-green-600 dark:text-green-400",
-      disabled: "text-gray-400 dark:text-gray-500",
-      default: "",
-    },
-  },
-});
 
 export function MultipleChoiceQuestion({
   node,
   selectedValue,
   onSelect,
   disabledOptions = [],
+  searchTerm = "",
 }: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
   const content = node.content;
 
+  // If required, can't deselect by tapping again
+  // if not required, tapping again deselects (sets value to empty string)
+  // Both cases it auto advances on select to the next step
   const handleOptionSelect = (value: string) => {
-    if (disabledOptions.includes(value)) return; // Don't allow selection of disabled options
-    const newValue = selectedValue === value ? "" : value;
+    if (disabledOptions.includes(value)) return;
+
+    let newValue = value;
+
+    // Optional questions keep toggle behavior
+    if (!content.required && selectedValue === value) {
+      newValue = "";
+    }
+
     onSelect(newValue);
   };
+  const filteredOptions =
+    content.options?.filter((option) => option.toLowerCase().includes(searchTerm.toLowerCase())) ??
+    [];
 
-  const numOptions = content.options?.length ?? 0;
+  const numOptions = filteredOptions.length;
   const { buttonHeight, buttonWidth } = calculateGridLayout(numOptions);
 
   return (
-    <View className="flex-1">
-      <View className="flex-row flex-wrap justify-center" style={{ gap: 8 }}>
-        {content.options?.map((option, index) => {
+    <View className="flex-1 gap-2">
+      {content.required && !selectedValue && (
+        <Text className={clsx("text-center text-sm text-red-500")}>
+          Selecting an option is required
+        </Text>
+      )}
+      <View className="flex-row flex-wrap justify-center gap-2">
+        {filteredOptions.map((option, index) => {
           const isSelected = selectedValue === option;
           const isDisabled = disabledOptions.includes(option);
 
-          const state = isSelected ? "selected" : isDisabled ? "disabled" : "default";
           return (
-            <TouchableOpacity
+            <Button
               key={index}
-              className={optionContainer({ state })}
+              title={option}
+              variant={isSelected ? "tertiary" : "light"}
               style={{
                 width: buttonWidth,
                 height: buttonHeight,
               }}
+              textStyle={{ fontSize: numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12 }}
               onPress={() => handleOptionSelect(option)}
-              disabled={isDisabled}
-              activeOpacity={isDisabled ? 1 : 0.7}
-            >
-              <Text
-                className={clsx(optionText({ state }), state === "default" && classes.text)}
-                numberOfLines={2}
-                style={{ fontSize: numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12 }}
-              >
-                {option}
-              </Text>
-            </TouchableOpacity>
+              isDisabled={isDisabled}
+              icon={isSelected ? <Check size={16} color="#005E5E" strokeWidth={3} /> : undefined}
+              iconPosition="right"
+            />
           );
         })}
       </View>

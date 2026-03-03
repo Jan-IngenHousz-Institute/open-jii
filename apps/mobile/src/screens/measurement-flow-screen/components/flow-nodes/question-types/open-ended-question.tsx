@@ -12,7 +12,8 @@ interface OpenEndedQuestionProps {
 }
 
 export function OpenEndedQuestion({ content, value, onChange }: OpenEndedQuestionProps) {
-  const { classes } = useTheme();
+  const theme = useTheme();
+  const { classes, colors } = theme;
   const [internal, setInternal] = useState(value);
 
   const handleChange = (text: string) => {
@@ -21,10 +22,11 @@ export function OpenEndedQuestion({ content, value, onChange }: OpenEndedQuestio
   };
 
   return (
-    <View className="flex-1 items-center justify-center">
+    <View className="flex-1 items-start justify-start gap-2">
       <TextInput
-        className={clsx("w-full rounded-lg border p-4 text-base", classes.input, classes.border)}
+        className={clsx("w-full rounded-lg border p-3 text-base", classes.input, classes.border)}
         placeholder={content.placeholder ?? "Enter your answer..."}
+        placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
         value={internal}
         onChangeText={handleChange}
         multiline
@@ -33,9 +35,7 @@ export function OpenEndedQuestion({ content, value, onChange }: OpenEndedQuestio
         style={{ minHeight: 200 }}
       />
       {content.required && !value && (
-        <Text className={clsx("mt-2 text-sm text-red-500", classes.text)}>
-          This field is required
-        </Text>
+        <Text className={clsx("text-sm text-red-500", classes.text)}>This field is required</Text>
       )}
     </View>
   );

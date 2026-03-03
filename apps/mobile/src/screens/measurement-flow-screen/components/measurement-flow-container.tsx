@@ -1,48 +1,43 @@
-import React, { useEffect, useRef } from "react";
+import clsx from "clsx";
+import React, { useEffect } from "react";
+import { View } from "react-native";
+import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
-import type { FlowNode, QuestionContent } from "../types";
+import type { QuestionContent } from "../types";
+import { ExperimentSelectionStep } from "./experiment-selection-step";
+import { findNextMandatoryStep } from "./flow-nodes/utils/advance-with-answer";
+import { FlowProgressIndicator } from "./flow-progress-indicator";
 import { ActiveState } from "./flow-states/active-state";
 import { CompletedState } from "./flow-states/completed-state";
 import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
-import { QuestionsOverview } from "./flow-states/questions-overview";
 
 export function MeasurementFlowContainer() {
-  const {
-    flowNodes,
-    currentFlowStep,
-    isFlowFinished,
-    showingOverview,
-    returnToOverviewAfterEdit,
-    nextStep,
-  } = useMeasurementFlowStore();
-  const { getAnswer, setAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } =
-    useFlowAnswersStore();
+  const { flowNodes, currentFlowStep, isFlowFinished, setCurrentFlowStep, experimentId } =
+    useMeasurementFlowStore();
   const iterationCount = useMeasurementFlowStore((s) => s.iterationCount);
-  const autoSkipSeededRef = useRef<Set<string>>(new Set());
-
+  const { classes } = useTheme();
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
-
   const isFlowInitialized = flowNodes.length > 0;
-
   const currentNode = flowNodes[currentFlowStep];
 
-  useEffect(() => {
-    autoSkipSeededRef.current = new Set();
-  }, [iterationCount]);
-
+  // When a new iteration starts:
+  //   1. Seed remembered / auto-incremented answers for this iteration from the previous one.
+  //   2. Jump directly to the first step that still needs manual input, skipping over
+  //      questions that already have a seeded answer and instructions (shown only on first run).
   useEffect(() => {
     if (iterationCount === 0 || flowNodes.length === 0) return;
+
+    const { getAnswer, setAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } =
+      useFlowAnswersStore.getState();
 
     for (const node of flowNodes) {
       if (node.type !== "question") continue;
       const content = node.content as QuestionContent | undefined;
       if (!content) continue;
-
-      const existing = getAnswer(iterationCount, node.id)?.trim();
-      if (existing) continue;
+      if (getAnswer(iterationCount, node.id)?.trim()) continue;
 
       const previous = getAnswer(iterationCount - 1, node.id)?.trim();
       if (!previous) continue;
@@ -50,11 +45,9 @@ export function MeasurementFlowContainer() {
       if (content.kind === "multi_choice" && isAutoincrementEnabled(node.id)) {
         const options = content.options ?? [];
         if (!options.length) continue;
-        const currentIndex = options.indexOf(previous);
-        if (currentIndex < 0) continue;
-        const nextIndex = (currentIndex + 1) % options.length;
-        const nextValue = options[nextIndex];
-        setAnswer(iterationCount, node.id, nextValue);
+        const idx = options.indexOf(previous);
+        if (idx < 0) continue;
+        setAnswer(iterationCount, node.id, options[(idx + 1) % options.length]);
         continue;
       }
 
@@ -62,79 +55,42 @@ export function MeasurementFlowContainer() {
         setAnswer(iterationCount, node.id, previous);
       }
     }
-  }, [
-    iterationCount,
-    flowNodes,
-    getAnswer,
-    setAnswer,
-    isAutoincrementEnabled,
-    isRememberAnswerEnabled,
-  ]);
 
-  const seedNextIterationAnswer = (node: FlowNode, answerValue: string) => {
-    const content = node.content as QuestionContent | undefined;
-    if (!content) return;
+    const first = findNextMandatoryStep(-1, flowNodes, iterationCount);
+    setCurrentFlowStep(first < flowNodes.length ? first : 0);
+  }, [iterationCount, flowNodes, setCurrentFlowStep]);
 
-    if (content.kind === "multi_choice" && isAutoincrementEnabled(node.id)) {
-      const options = content.options ?? [];
-      if (!options.length) return;
-      const currentIndex = options.indexOf(answerValue);
-      if (currentIndex < 0) return;
-      const nextIndex = (currentIndex + 1) % options.length;
-      const nextValue = options[nextIndex];
-      setAnswer(iterationCount + 1, node.id, nextValue);
-      return;
-    }
-
-    if (isRememberAnswerEnabled(node.id)) {
-      setAnswer(iterationCount + 1, node.id, answerValue);
-    }
-  };
-
-  // Auto-skip a question only when we first land on it and it already has an answer
-  // (e.g. from "remember answer" or when revisiting). Do not skip when the user
-  // is typing — so we only depend on step/iteration/node, not on currentAnswer.
-  useEffect(() => {
-    if (showingOverview || returnToOverviewAfterEdit) return;
-    if (currentNode?.type !== "question") return;
-    const answer = getAnswer(iterationCount, currentNode.id)?.trim();
-    if (!answer) return;
-
-    const key = `${iterationCount}-${currentNode.id}`;
-    if (!autoSkipSeededRef.current.has(key)) {
-      seedNextIterationAnswer(currentNode, answer);
-      autoSkipSeededRef.current.add(key);
-    }
-
-    nextStep();
-  }, [
-    currentFlowStep,
-    iterationCount,
-    currentNode?.id,
-    showingOverview,
-    returnToOverviewAfterEdit,
-    getAnswer,
-    setAnswer,
-    isAutoincrementEnabled,
-    isRememberAnswerEnabled,
-    nextStep,
-  ]);
+  // Show experiment selection if no experiment is selected yet
+  if (!experimentId) {
+    return (
+      <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
+        <FlowProgressIndicator />
+        <ExperimentSelectionStep />
+      </View>
+    );
+  }
 
   if (!isFlowInitialized) {
     return <LoadingState />;
   }
 
   if (isFlowCompleted && isFlowFinished) {
-    return <CompletedState />;
-  }
-
-  if (showingOverview) {
-    return <QuestionsOverview />;
+    return (
+      <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
+        <FlowProgressIndicator />
+        <CompletedState />
+      </View>
+    );
   }
 
   if (!currentNode) {
     return <EmptyState />;
   }
 
-  return <ActiveState currentNode={currentNode} />;
+  return (
+    <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
+      <FlowProgressIndicator />
+      <ActiveState currentNode={currentNode} />
+    </View>
+  );
 }

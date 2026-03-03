@@ -1,14 +1,15 @@
 import { clsx } from "clsx";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
-interface BackButtonProps {
+interface NextButtonProps {
   onPress: () => void;
+  isDisabled?: boolean;
 }
 
-export function BackButton({ onPress }: BackButtonProps) {
+export function NextButton({ onPress, isDisabled = false }: NextButtonProps) {
   const { classes, colors } = useTheme();
 
   // WORKAROUND: Key with timestamp to force remount on every render
@@ -19,10 +20,15 @@ export function BackButton({ onPress }: BackButtonProps) {
     <TouchableOpacity
       key={renderId}
       onPress={onPress}
-      className={clsx("flex-row items-end justify-end gap-1 rounded-lg p-4")}
+      disabled={isDisabled}
+      className={clsx(
+        "flex-row items-end justify-end gap-1 rounded-lg p-4",
+        classes.card,
+        isDisabled && "opacity-50",
+      )}
     >
-      <ChevronLeft size={18} color={colors.onSurface} />
-      <Text className={clsx("text-md font-medium", classes.text)}>Back</Text>
+      <Text className={clsx("text-md font-medium", classes.text)}>Next</Text>
+      <ChevronRight size={18} color={colors.onSurface} />
     </TouchableOpacity>
   );
 }

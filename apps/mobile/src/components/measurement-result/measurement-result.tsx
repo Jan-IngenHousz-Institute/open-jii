@@ -1,26 +1,24 @@
 import { clsx } from "clsx";
-import {
-  CheckCircle2,
-  FileText,
-  BarChart2,
-  ChevronRight,
-  MessageCircle,
-} from "lucide-react-native";
+import { ChevronRight, MessageCircle } from "lucide-react-native";
 import React, { useState } from "react";
 import { useAsync } from "react-async-hook";
-import { View, Modal, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
+import { TabBar } from "~/components/TabBar";
 import { useTheme } from "~/hooks/use-theme";
 import { applyMacro } from "~/utils/process-scan/process-scan";
 
+import { Chart } from "./components/chart";
+import { KeyValue } from "./components/key-value";
 import { MacroMessages, MacroMessageGroup } from "./components/macro-messages";
-import { ProcessedMeasurementPreview } from "./components/processed-measurement-preview";
-import { RawMeasurementPreview } from "./components/raw-measurement-preview";
+
+const TABS = [
+  { key: "result", label: "Results" },
+  { key: "raw", label: "Raw Data" },
+];
 
 interface MeasurementResultProps {
   rawMeasurement: any;
   macro: any;
-  timestamp?: string;
-  experimentName?: string;
   /** When set, shows a Comment row that calls this on press */
   onCommentPress?: () => void;
 }
@@ -28,13 +26,10 @@ interface MeasurementResultProps {
 export function MeasurementResult({
   rawMeasurement,
   macro,
-  timestamp,
-  experimentName,
   onCommentPress,
 }: MeasurementResultProps) {
   const { classes, colors } = useTheme();
-  const [showRaw, setShowRaw] = useState(false);
-  const [showProcessed, setShowProcessed] = useState(false);
+  const [activeTab, setActiveTab] = useState("result");
 
   const { result: processedMeasurement, error: processingError } = useAsync(async () => {
     return await applyMacro(rawMeasurement, macro);
@@ -45,106 +40,86 @@ export function MeasurementResult({
       ?.map((output) => output.messages)
       .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
 
-  return (
-    <>
-      <View className={clsx("rounded-xl p-4", classes.card, classes.border)}>
-        <View className="mb-3 flex-row items-center gap-2">
-          <CheckCircle2 size={18} color="#10b981" />
-          <Text className={clsx("text-base font-semibold", classes.text)}>Scan successful</Text>
+  const renderRawContent = () => (
+    <Text className={clsx("font-mono text-sm leading-5", classes.text)}>
+      {JSON.stringify(rawMeasurement, null, 2)}
+    </Text>
+  );
+
+  const renderProcessedContent = () => {
+    if (processingError) {
+      return (
+        <View className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+          <Text className={clsx("text-sm text-red-600 dark:text-red-400", classes.text)}>
+            Processing Error: {processingError.message}
+          </Text>
         </View>
+      );
+    }
 
-        <View className="mt-2">
-          <TouchableOpacity
-            className={clsx(
-              "mb-2 flex-row items-center justify-between rounded-lg border px-3 py-3",
-              classes.card,
-              classes.border,
-            )}
-            activeOpacity={0.7}
-            onPress={() => setShowRaw(true)}
-          >
-            <View className="flex-row items-center gap-2">
-              <FileText size={18} color={colors.primary.dark} />
-              <Text className={clsx("text-[15px] font-medium", classes.text)}>View raw data</Text>
-            </View>
-            <ChevronRight size={16} color={colors.primary.dark} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className={clsx(
-              "flex-row items-center justify-between rounded-lg border px-3 py-3",
-              classes.card,
-              classes.border,
-            )}
-            activeOpacity={0.7}
-            onPress={() => setShowProcessed(true)}
-            disabled={!!processingError}
-          >
-            <View className="flex-row items-center gap-2">
-              <BarChart2 size={18} color={processingError ? "#9ca3af" : colors.primary.dark} />
-              <Text
-                className={clsx(
-                  "text-[15px] font-medium",
-                  processingError ? classes.textMuted : classes.text,
-                )}
-              >
-                {processingError ? "Processing failed" : "View result"}
-              </Text>
-            </View>
-            {!processingError && <ChevronRight size={16} color={colors.primary.dark} />}
-          </TouchableOpacity>
-
-          {onCommentPress && (
-            <TouchableOpacity
-              className={clsx(
-                "mt-2 flex-row items-center justify-between rounded-lg border px-3 py-3",
-                classes.card,
-                classes.border,
-              )}
-              activeOpacity={0.7}
-              onPress={onCommentPress}
-            >
-              <View className="flex-row items-center gap-2">
-                <MessageCircle size={18} color={colors.primary.dark} />
-                <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
-              </View>
-              <ChevronRight size={16} color={colors.primary.dark} />
-            </TouchableOpacity>
-          )}
-
-          {processingError && (
-            <View className="mt-2 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
-              <Text className={clsx("text-sm text-red-600 dark:text-red-400", classes.text)}>
-                Processing Error: {processingError.message}
-              </Text>
-            </View>
-          )}
+    if (!processedMeasurement || processedMeasurement.length === 0) {
+      return (
+        <View className="items-center justify-center p-6">
+          <Text className={clsx("text-center text-lg", classes.textSecondary)}>
+            No Data Available
+          </Text>
         </View>
+      );
+    }
 
-        {messageGroups.length > 0 && (
-          <View className="mt-4">
-            <MacroMessages messages={messageGroups} />
-          </View>
-        )}
+    return (
+      <View>
+        {processedMeasurement.map((output, outputIndex) => {
+          return (
+            <View key={outputIndex}>
+              {Object.keys(output)
+                .filter((key) => key !== "messages")
+                .map((key) => {
+                  const value = output[key];
+                  if (typeof value === "string" || typeof value === "number") {
+                    return <KeyValue key={key} value={value} name={key} />;
+                  }
+                  if (Array.isArray(value) && typeof value[0] === "number") {
+                    return <Chart key={key} name={key} values={value} />;
+                  }
+                  return null;
+                })}
+            </View>
+          );
+        })}
       </View>
+    );
+  };
 
-      <Modal visible={showRaw} animationType="slide" presentationStyle="fullScreen">
-        <RawMeasurementPreview
-          data={rawMeasurement}
-          timestamp={timestamp}
-          experimentName={experimentName}
-          onClose={() => setShowRaw(false)}
-        />
-      </Modal>
+  return (
+    <View className="gap-4">
+      {/* Comment button */}
+      {onCommentPress && (
+        <TouchableOpacity
+          className={clsx(
+            "flex-row items-center justify-between rounded-lg border px-3 py-3",
+            classes.card,
+            classes.border,
+          )}
+          activeOpacity={0.7}
+          onPress={onCommentPress}
+        >
+          <View className="flex-row items-center gap-2">
+            <MessageCircle size={18} color={colors.primary.dark} />
+            <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
+          </View>
+          <ChevronRight size={16} color={colors.primary.dark} />
+        </TouchableOpacity>
+      )}
 
-      <Modal visible={showProcessed} animationType="slide" presentationStyle="fullScreen">
-        <ProcessedMeasurementPreview
-          output={processedMeasurement}
-          timestamp={timestamp}
-          experimentName={experimentName}
-          onClose={() => setShowProcessed(false)}
-        />
-      </Modal>
-    </>
+      {/* Macro messages */}
+      {messageGroups.length > 0 && <MacroMessages messages={messageGroups} />}
+
+      {/* Tab bar */}
+      <TabBar tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Tab content */}
+      {activeTab === "raw" ? renderRawContent() : renderProcessedContent()}
+    </View>
   );
 }
