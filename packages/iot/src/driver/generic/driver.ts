@@ -69,7 +69,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
    * continues — capability guards are disabled in that case.
    */
   override async initialize(transport: ITransportAdapter): Promise<void> {
-    super.initialize(transport);
+    await super.initialize(transport);
 
     // Clear any stale response data from a previous session
     this.responseBuffer = "";

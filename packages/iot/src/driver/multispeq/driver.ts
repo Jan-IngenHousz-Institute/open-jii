@@ -37,7 +37,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   }
 
   initialize(transport: ITransportAdapter): void {
-    super.initialize(transport);
+    void super.initialize(transport);
 
     // Set up transport data handler
     transport.onDataReceived((data) => this.handleDataReceived(data));
