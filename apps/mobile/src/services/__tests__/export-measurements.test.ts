@@ -1,4 +1,7 @@
+import * as Sharing from "expo-sharing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { exportSingleMeasurementToFile } from "../export-measurements";
 
 const mockCreate = vi.fn();
 const mockWrite = vi.fn();
@@ -23,9 +26,6 @@ vi.mock("~/services/failed-uploads-storage", () => ({
 vi.mock("~/services/successful-uploads-storage", () => ({
   getSuccessfulUploadsWithKeys: vi.fn().mockResolvedValue([]),
 }));
-
-import * as Sharing from "expo-sharing";
-import { exportSingleMeasurementToFile } from "../export-measurements";
 
 const mockMeasurement = {
   topic: "test/topic",
