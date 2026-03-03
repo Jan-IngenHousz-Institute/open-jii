@@ -39,7 +39,7 @@ describe("DeviceDriver", () => {
 
   describe("initialize", () => {
     it("should set transport and mark as initialized", () => {
-      driver.initialize(transport);
+      void driver.initialize(transport);
 
       // Should not throw after initialization
       expect(() => driver.testEnsureInitialized()).not.toThrow();
@@ -54,7 +54,7 @@ describe("DeviceDriver", () => {
     });
 
     it("should not throw after initialization", () => {
-      driver.initialize(transport);
+      void driver.initialize(transport);
       expect(() => driver.testEnsureInitialized()).not.toThrow();
     });
   });
@@ -67,7 +67,7 @@ describe("DeviceDriver", () => {
     });
 
     it("should succeed when initialized", async () => {
-      driver.initialize(transport);
+      void driver.initialize(transport);
       const result = await driver.execute("test");
       expect(result.success).toBe(true);
     });
@@ -75,7 +75,7 @@ describe("DeviceDriver", () => {
 
   describe("destroy", () => {
     it("should disconnect transport and mark as uninitialized", async () => {
-      driver.initialize(transport);
+      void driver.initialize(transport);
       await driver.destroy();
 
       expect(transport.disconnect).toHaveBeenCalled();

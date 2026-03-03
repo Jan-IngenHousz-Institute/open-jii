@@ -14,7 +14,7 @@ export class CommandExecutor implements ICommandExecutor {
     private readonly driver: IDeviceDriver,
     private readonly transport: ITransportAdapter,
   ) {
-    this.driver.initialize(this.transport);
+    void this.driver.initialize(this.transport);
   }
 
   async execute<T = unknown>(command: string | object): Promise<T> {

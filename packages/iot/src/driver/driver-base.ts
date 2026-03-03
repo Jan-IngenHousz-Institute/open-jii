@@ -72,7 +72,7 @@ export abstract class DeviceDriver<
     this.emitter = new Emitter<EventMap>(this.log);
   }
 
-  initialize(transport: ITransportAdapter): void {
+  initialize(transport: ITransportAdapter): void | Promise<void> {
     this.transport = transport;
     this.initialized = true;
   }
