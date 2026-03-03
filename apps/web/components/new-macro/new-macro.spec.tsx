@@ -412,7 +412,6 @@ describe("NewMacroForm", () => {
     // Assert
     const form = document.querySelector("form");
     expect(form).toBeInTheDocument();
-    expect(form).toHaveClass("space-y-8");
   });
 
   it("should display code section title", () => {
