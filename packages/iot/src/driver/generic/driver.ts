@@ -3,8 +3,24 @@
  * Works with any device implementing the simple command interface
  * (Arduino, Raspberry Pi, custom sensors, weather stations, etc.)
  *
- * Commands are sent as JSON objects terminated with \n.
+ * Commands are sent as JSON objects terminated with a configurable line ending.
  * Responses are JSON objects (newline-delimited or complete).
+ *
+ * ## Custom commands
+ *
+ * Use `execute()` directly to send any command string or object — there is no
+ * need for a separate `executeCustom()` method:
+ *
+ * ```ts
+ * // String shorthand
+ * const result = await driver.execute("MY_CUSTOM_CMD");
+ *
+ * // Object with params
+ * const result = await driver.execute({
+ *   command: "MY_CUSTOM_CMD",
+ *   params: { channel: 2 },
+ * });
+ * ```
  */
 import type { ITransportAdapter } from "../../transport/interface";
 import type { Logger } from "../../utils/logger/logger";
@@ -13,6 +29,7 @@ import type { CommandResult } from "../driver-base";
 import { GENERIC_COMMANDS } from "./commands";
 import type { GenericCommandWithParams, CustomCommandWithParams } from "./commands";
 import { GENERIC_FRAMING } from "./config";
+import type { GenericDriverConfig } from "./config";
 import type {
   GenericDeviceEvents,
   GenericDeviceInfo,
@@ -24,11 +41,34 @@ import type {
 export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
   private responseBuffer = "";
 
-  constructor(logger?: Logger) {
+  /** Resolved driver config (defaults merged with caller overrides) */
+  private readonly config: Readonly<GenericDriverConfig>;
+
+  /** Cached INFO response — populated during initialize() */
+  private deviceInfo: GenericDeviceInfo | null = null;
+
+  /**
+   * @param config  Driver-level overrides (timeout, lineEnding).
+   *                Transport-specific settings belong on the transport itself.
+   * @param logger  Optional logger; defaults to console-backed implementation.
+   */
+  constructor(config?: Partial<GenericDriverConfig>, logger?: Logger) {
     super(logger);
+    this.config = Object.freeze({
+      timeout: config?.timeout ?? GENERIC_FRAMING.DEFAULT_TIMEOUT,
+      lineEnding: config?.lineEnding ?? GENERIC_FRAMING.LINE_ENDING,
+    });
   }
 
-  override initialize(transport: ITransportAdapter): void {
+  /**
+   * Initialize the driver with a transport adapter.
+   *
+   * After wiring up data/status handlers the driver automatically sends an
+   * INFO command to probe the device's identity and capabilities.  If INFO
+   * fails (timeout, unsupported, etc.) the driver logs a warning and
+   * continues — capability guards are disabled in that case.
+   */
+  override async initialize(transport: ITransportAdapter): Promise<void> {
     super.initialize(transport);
 
     // Clear any stale response data from a previous session
@@ -45,6 +85,19 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
         this.log.error("Generic device connection error:", error);
       }
     });
+
+    // Probe device capabilities via INFO (best-effort)
+    try {
+      this.deviceInfo = await this.getDeviceInfo();
+    } catch {
+      this.log.warn("INFO probe failed during initialize — capability guards disabled");
+      this.deviceInfo = null;
+    }
+  }
+
+  /** Cached device info from the INFO probe during initialize(), or `null` if unavailable */
+  get cachedDeviceInfo(): Readonly<GenericDeviceInfo> | null {
+    return this.deviceInfo;
   }
 
   private handleDataReceived(data: string): void {
@@ -107,7 +160,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
           throw new Error("Transport not initialized");
         }
 
-        await this.transport.send(cmdString + GENERIC_FRAMING.LINE_ENDING);
+        await this.transport.send(cmdString + this.config.lineEnding);
 
         // Wait for response
         const response = await this.waitForResponse<T>();
@@ -127,7 +180,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
   }
 
   private async waitForResponse<T>(
-    timeout = GENERIC_FRAMING.DEFAULT_TIMEOUT,
+    timeout = this.config.timeout,
   ): Promise<GenericCommandResponse<T>> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
@@ -149,7 +202,26 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
     });
   }
 
-  /** Get device information */
+  // ─── Capability guard ────────────────────────────────────────────
+
+  /**
+   * Throws if the device reported capabilities and the given command is not
+   * among them.  When capabilities are unknown (INFO failed or device didn't
+   * report them) the guard is a no-op — fail-open for backward compat.
+   */
+  private requireCapability(command: string): void {
+    const caps = this.deviceInfo?.capabilities;
+    if (!caps) return; // unknown → allow
+    if (!caps.includes(command)) {
+      throw new Error(
+        `Device does not support ${command} (not listed in capabilities: [${caps.join(", ")}])`,
+      );
+    }
+  }
+
+  // ─── Required commands ───────────────────────────────────────────
+
+  /** Get device information (always available — required command) */
   async getDeviceInfo(): Promise<GenericDeviceInfo> {
     const result = await this.execute<GenericDeviceInfo>({
       command: GENERIC_COMMANDS.INFO,
@@ -162,8 +234,24 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
     return result.data;
   }
 
+  /** Run measurement based on loaded config (always available — required command) */
+  async runMeasurement(params?: Record<string, unknown>): Promise<void> {
+    const result = await this.execute({
+      command: GENERIC_COMMANDS.RUN,
+      params,
+    });
+
+    if (!result.success) {
+      throw result.error ?? new Error("Failed to run measurement");
+    }
+  }
+
+  // ─── Optional commands (guarded by capabilities) ─────────────────
+
   /** Discover available commands from device */
   async discoverCommands(): Promise<string[]> {
+    this.requireCapability(GENERIC_COMMANDS.DISCOVER);
+
     const result = await this.execute<{ commands: string[] }>({
       command: GENERIC_COMMANDS.DISCOVER,
     });
@@ -177,6 +265,8 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
 
   /** Set configuration/protocol JSON on device */
   async setConfig(config: GenericDeviceConfig): Promise<void> {
+    this.requireCapability(GENERIC_COMMANDS.SET_CONFIG);
+
     const result = await this.execute({
       command: GENERIC_COMMANDS.SET_CONFIG,
       params: config as unknown as Record<string, unknown>,
@@ -189,6 +279,8 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
 
   /** Get current configuration from device */
   async getConfig(): Promise<GenericDeviceConfig> {
+    this.requireCapability(GENERIC_COMMANDS.GET_CONFIG);
+
     const result = await this.execute<GenericDeviceConfig>({
       command: GENERIC_COMMANDS.GET_CONFIG,
     });
@@ -200,20 +292,10 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
     return result.data;
   }
 
-  /** Run measurement based on loaded config */
-  async runMeasurement(params?: Record<string, unknown>): Promise<void> {
-    const result = await this.execute({
-      command: GENERIC_COMMANDS.RUN,
-      params,
-    });
-
-    if (!result.success) {
-      throw result.error ?? new Error("Failed to run measurement");
-    }
-  }
-
   /** Stop current measurement */
   async stopMeasurement(): Promise<void> {
+    this.requireCapability(GENERIC_COMMANDS.STOP);
+
     const result = await this.execute({
       command: GENERIC_COMMANDS.STOP,
     });
@@ -225,6 +307,8 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
 
   /** Get measurement data */
   async getData<T = unknown>(): Promise<GenericMeasurementData<T>> {
+    this.requireCapability(GENERIC_COMMANDS.GET_DATA);
+
     const result = await this.execute<GenericMeasurementData<T>>({
       command: GENERIC_COMMANDS.GET_DATA,
     });
@@ -238,6 +322,8 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
 
   /** Ping device */
   async ping(): Promise<boolean> {
+    this.requireCapability(GENERIC_COMMANDS.PING);
+
     try {
       const result = await this.execute({ command: GENERIC_COMMANDS.PING });
       return result.success;
@@ -248,6 +334,8 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
 
   /** Reset device */
   async reset(): Promise<void> {
+    this.requireCapability(GENERIC_COMMANDS.RESET);
+
     const result = await this.execute({ command: GENERIC_COMMANDS.RESET });
 
     if (!result.success) {
@@ -257,6 +345,8 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
 
   /** Disconnect from device */
   async disconnect(): Promise<void> {
+    this.requireCapability(GENERIC_COMMANDS.DISCONNECT);
+
     try {
       await this.execute({ command: GENERIC_COMMANDS.DISCONNECT });
     } catch {
@@ -269,6 +359,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
   override async destroy(): Promise<void> {
     await this.emitter.emit("destroy", undefined);
     this.responseBuffer = "";
+    this.deviceInfo = null;
     await super.destroy();
   }
 }

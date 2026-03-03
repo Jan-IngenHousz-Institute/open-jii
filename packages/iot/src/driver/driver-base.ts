@@ -17,8 +17,12 @@ export interface CommandResult<T = unknown> {
 
 /** Abstract device driver interface */
 export interface IDeviceDriver {
-  /** Initialize driver with a transport adapter */
-  initialize(transport: ITransportAdapter): void;
+  /**
+   * Initialize driver with a transport adapter.
+   * May be async (e.g. to probe device capabilities during handshake).
+   * Callers should always `await` the result.
+   */
+  initialize(transport: ITransportAdapter): void | Promise<void>;
 
   /** Execute a command and return the result */
   execute<T = unknown>(command: string | object): Promise<CommandResult<T>>;

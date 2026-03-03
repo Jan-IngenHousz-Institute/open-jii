@@ -42,18 +42,25 @@ export { MULTISPEQ_SERIAL_DEFAULTS, MULTISPEQ_FRAMING } from "./driver/multispeq
 export type {
   GenericDeviceEvents,
   GenericDeviceInfo,
+  GenericInfoResponse,
   GenericCommandResponse,
   GenericDeviceConfig,
   GenericMeasurementData,
 } from "./driver/generic/interface";
 export type {
   GenericCommand,
+  GenericRequiredCommand,
+  GenericOptionalCommand,
   GenericCommandWithParams,
   CustomCommandWithParams,
 } from "./driver/generic/commands";
-export { GENERIC_COMMANDS } from "./driver/generic/commands";
+export {
+  GENERIC_COMMANDS,
+  GENERIC_REQUIRED_COMMANDS,
+  GENERIC_OPTIONAL_COMMANDS,
+} from "./driver/generic/commands";
 export { GenericDeviceDriver } from "./driver/generic/driver";
-export type { GenericDeviceTransportConfig } from "./driver/generic/config";
+export type { GenericDeviceTransportConfig, GenericDriverConfig } from "./driver/generic/config";
 export {
   GENERIC_BLE_UUIDS,
   GENERIC_SERIAL_DEFAULTS,

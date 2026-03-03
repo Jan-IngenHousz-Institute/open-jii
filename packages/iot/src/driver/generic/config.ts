@@ -56,3 +56,14 @@ export const GENERIC_FRAMING = {
   /** Default response timeout in ms */
   DEFAULT_TIMEOUT: 10_000,
 } as const;
+
+/**
+ * Driver-level configuration (independent of transport).
+ * Pass to the `GenericDeviceDriver` constructor to override defaults.
+ */
+export interface GenericDriverConfig {
+  /** Response timeout in milliseconds (default: 10 000) */
+  timeout: number;
+  /** Line ending appended to every command (default: "\n") */
+  lineEnding: string;
+}
