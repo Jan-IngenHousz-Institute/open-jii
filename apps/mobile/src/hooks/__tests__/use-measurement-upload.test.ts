@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { useMeasurementUpload } from "../use-measurement-upload";
+
 // Use vi.hoisted so mock fns are available inside vi.mock factories
 const {
   mockInvalidateQueries,
@@ -69,8 +71,6 @@ vi.mock("react-async-hook", () => ({
     return { loading: false, execute: fn };
   },
 }));
-
-import { useMeasurementUpload } from "../use-measurement-upload";
 
 const baseArgs = {
   rawMeasurement: { data: 1 },
@@ -181,9 +181,7 @@ describe("useMeasurementUpload", () => {
 
     await saveButton.onPress();
 
-    expect(mockToastError).toHaveBeenCalledWith(
-      "Could not save measurement. Please try again.",
-    );
+    expect(mockToastError).toHaveBeenCalledWith("Could not save measurement. Please try again.");
 
     vi.restoreAllMocks();
   });
