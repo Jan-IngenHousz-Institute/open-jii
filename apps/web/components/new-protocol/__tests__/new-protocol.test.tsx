@@ -339,12 +339,6 @@ describe("NewProtocolForm", () => {
   });
 
   describe("Compatible Macros Section", () => {
-    it("should render the compatible macros section", () => {
-      render(<NewProtocolForm />);
-
-      expect(screen.getByText("newProtocol.compatibleMacros")).toBeInTheDocument();
-    });
-
     it("should render MacroSearchWithDropdown", () => {
       render(<NewProtocolForm />);
 

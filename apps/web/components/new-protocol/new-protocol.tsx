@@ -168,12 +168,10 @@ export function NewProtocolForm() {
 
             {/* Compatible Macros */}
             <div className="space-y-2">
-              <p className="text-muted-foreground text-sm">{t("newProtocol.compatibleMacros")}</p>
-
               <MacroSearchWithDropdown
                 availableMacros={availableMacros}
                 value=""
-                placeholder={t("protocolSettings.addCompatibleMacro")}
+                placeholder={t("newProtocol.compatibleMacros")}
                 loading={!isDebounced}
                 searchValue={macroSearch}
                 onSearchChange={setMacroSearch}
