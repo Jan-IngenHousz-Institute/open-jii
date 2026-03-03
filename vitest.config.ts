@@ -53,6 +53,19 @@ export default defineConfig({
           // Project-specific configuration for apps
         },
       },
+      {
+        root: "./apps/mobile",
+        test: {
+          ...sharedConfig.test,
+          include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+        },
+        resolve: {
+          alias: {
+            "~": resolve(__dirname, "apps/mobile/src"),
+            "~/": resolve(__dirname, "apps/mobile/src") + "/",
+          },
+        },
+      },
     ],
   },
 });
