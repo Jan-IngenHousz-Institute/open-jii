@@ -29,7 +29,7 @@ vi.mock("./macro-overview-cards", () => ({
     isLoading: boolean;
   }) => (
     <div data-testid="macro-overview-cards">
-      {isLoading ? "Loading..." : `${macros?.length || 0} macros`}
+      {isLoading ? "Loading..." : `${macros.length || 0} macros`}
     </div>
   ),
 }));

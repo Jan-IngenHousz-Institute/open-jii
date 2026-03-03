@@ -72,7 +72,7 @@ export class MacroRepository {
         conditions.push(eq(macros.language, filter.language));
       }
 
-      if (filter?.filter === "my" && filter?.userId) {
+      if (filter?.filter === "my" && filter.userId) {
         conditions.push(eq(macros.createdBy, filter.userId));
       }
 

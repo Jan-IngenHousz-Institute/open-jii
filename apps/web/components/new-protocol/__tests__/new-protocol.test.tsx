@@ -28,14 +28,24 @@ vi.mock("@/hooks/useLocale", () => ({
   useLocale: () => "en",
 }));
 
-// Mock hooks added by protocol-macro compatibility feature
+// Mock tsr (used directly by NewProtocolForm for macro search)
 const mockMacroList = [
   { id: "macro-1", name: "SPAD Macro", language: "python" },
   { id: "macro-2", name: "Fluorescence Macro", language: "python" },
 ];
 
-vi.mock("@/hooks/macro/useMacros/useMacros", () => ({
-  useMacros: () => ({ data: mockMacroList }),
+vi.mock("../../../lib/tsr", () => ({
+  tsr: {
+    macros: {
+      listMacros: {
+        useQuery: vi.fn(() => ({
+          data: { body: mockMacroList },
+          isLoading: false,
+          error: null,
+        })),
+      },
+    },
+  },
 }));
 
 vi.mock("@/hooks/useDebounce", () => ({

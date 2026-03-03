@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
@@ -213,14 +213,8 @@ describe("useMacros", () => {
     });
 
     expect(result.current.language).toBe("python");
-    expect(mockUseQuery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryData: {
-          query: expect.objectContaining({
-            language: "python",
-          }),
-        },
-      }),
-    );
+    const lastCall = mockUseQuery.mock.calls[mockUseQuery.mock.calls.length - 1] as unknown[];
+    const callArg = lastCall[0] as { queryData: { query: Record<string, unknown> } };
+    expect(callArg.queryData.query.language).toBe("python");
   });
 });

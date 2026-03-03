@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { useMacros } from "../../../hooks/macro/useMacros/useMacros";
 import { useAddCompatibleMacro } from "../../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 // Import mocked hooks for test configuration
 import { useProtocolCompatibleMacros } from "../../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
+import { tsr } from "../../../lib/tsr";
 import { ProtocolCompatibleMacrosCard } from "../protocol-compatible-macros-card";
 
 // Keep React on global for JSX in mocks
@@ -98,8 +98,18 @@ vi.mock("../../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMac
   useRemoveCompatibleMacro: vi.fn(),
 }));
 
-vi.mock("../../../hooks/macro/useMacros/useMacros", () => ({
-  useMacros: vi.fn(() => ({ data: [] })),
+vi.mock("../../../lib/tsr", () => ({
+  tsr: {
+    macros: {
+      listMacros: {
+        useQuery: vi.fn(() => ({
+          data: { body: [] },
+          isLoading: false,
+          error: null,
+        })),
+      },
+    },
+  },
 }));
 
 // Capture props passed to MacroSearchWithDropdown
@@ -162,8 +172,10 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
       isPending: false,
     } as never);
 
-    vi.mocked(useMacros).mockReturnValue({
-      data: mockAllMacros,
+    vi.spyOn(tsr.macros.listMacros, "useQuery").mockReturnValue({
+      data: { body: mockAllMacros },
+      isLoading: false,
+      error: null,
     } as never);
   });
 
