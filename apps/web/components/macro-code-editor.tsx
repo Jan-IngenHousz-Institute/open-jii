@@ -7,7 +7,14 @@ import React from "react";
 import { useRef, useState } from "react";
 import type { FC } from "react";
 
-import { Button, Label } from "@repo/ui/components";
+import {
+  Button,
+  Label,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components";
 
 type CodeLanguage = "python" | "r" | "javascript";
 
@@ -183,15 +190,22 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {headerActions}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleCopy}
-              className="h-8 px-2 text-slate-600 hover:text-slate-800"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopy}
+                    className="h-8 px-2 text-slate-600 hover:text-slate-800"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{copied ? "Copied!" : "Copy code"}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 

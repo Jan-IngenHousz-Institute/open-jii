@@ -7,13 +7,19 @@ import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { Check, X } from "lucide-react";
-import { use, useState } from "react";
+import { Check, Circle, Loader2, X } from "lucide-react";
+import { use, useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 interface ProtocolOverviewPageProps {
@@ -25,11 +31,27 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   const { data, isLoading, error } = useProtocol(id);
   const { t } = useTranslation();
   const { data: session } = useSession();
-  const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
+  const {
+    mutateAsync: updateProtocol,
+    mutate: saveProtocol,
+    isPending: isUpdating,
+  } = useProtocolUpdate(id);
 
   const [isEditingCode, setIsEditingCode] = useState(false);
   const [editedCode, setEditedCode] = useState<Record<string, unknown>[] | string | undefined>([]);
-  const [isCodeValid, setIsCodeValid] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<"synced" | "unsynced" | "syncing">("synced");
+  const savedCodeRef = useRef<string>("");
+  const saveFnRef = useRef(saveProtocol);
+  saveFnRef.current = saveProtocol;
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    const ref = saveTimeoutRef;
+    return () => {
+      if (ref.current) clearTimeout(ref.current);
+    };
+  }, []);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -65,31 +87,50 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
 
   const handleCodeEditStart = () => {
     setEditedCode(protocol.code);
+    savedCodeRef.current = JSON.stringify(protocol.code);
+    setSyncStatus("synced");
     setIsEditingCode(true);
   };
 
-  const handleCodeEditCancel = () => {
+  const handleCodeEditClose = () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    if (Array.isArray(editedCode)) {
+      const key = JSON.stringify(editedCode);
+      if (key !== savedCodeRef.current) {
+        saveFnRef.current({ params: { id }, body: { code: editedCode } });
+      }
+    }
     setIsEditingCode(false);
-    setEditedCode([]);
   };
 
-  const handleCodeSave = async () => {
-    if (!Array.isArray(editedCode)) return;
-    await updateProtocol(
-      {
-        params: { id },
-        body: { code: editedCode },
-      },
-      {
-        onSuccess: () => {
-          toast({ description: t("protocols.protocolUpdated") });
-          setIsEditingCode(false);
+  const handleCodeChange = (value: Record<string, unknown>[] | string | undefined) => {
+    setEditedCode(value);
+    if (!Array.isArray(value)) return;
+
+    const key = JSON.stringify(value);
+    if (key === savedCodeRef.current) {
+      setSyncStatus("synced");
+      return;
+    }
+
+    setSyncStatus("unsynced");
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      setSyncStatus("syncing");
+      saveFnRef.current(
+        { params: { id }, body: { code: value } },
+        {
+          onSuccess: () => {
+            savedCodeRef.current = key;
+            setSyncStatus("synced");
+          },
+          onError: (err) => {
+            toast({ description: parseApiError(err)?.message, variant: "destructive" });
+            setSyncStatus("unsynced");
+          },
         },
-        onError: (err) => {
-          toast({ description: parseApiError(err)?.message, variant: "destructive" });
-        },
-      },
-    );
+      );
+    }, 1000);
   };
 
   return (
@@ -114,27 +155,47 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
         {isEditingCode ? (
           <ProtocolCodeEditor
             value={editedCode ?? []}
-            onChange={setEditedCode}
-            onValidationChange={setIsCodeValid}
+            onChange={handleCodeChange}
             label=""
             placeholder={t("protocols.codePlaceholder")}
             title={t("protocols.codeTitle")}
             headerActions={
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCodeEditCancel}
-                  disabled={isUpdating}
-                >
-                  <X className="mr-1 h-4 w-4" />
-                  {t("common.cancel")}
-                </Button>
-                <Button size="sm" onClick={handleCodeSave} disabled={isUpdating || !isCodeValid}>
-                  <Check className="mr-1 h-4 w-4" />
-                  {t("common.save")}
-                </Button>
-              </div>
+              <TooltipProvider delayDuration={200}>
+                <div className="flex items-center gap-3">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex items-center">
+                        {syncStatus === "unsynced" && (
+                          <Circle className="h-4 w-4 fill-amber-500 text-amber-500" />
+                        )}
+                        {syncStatus === "syncing" && (
+                          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                        )}
+                        {syncStatus === "synced" && <Check className="h-4 w-4 text-green-600" />}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {syncStatus === "unsynced" && "Unsaved changes"}
+                      {syncStatus === "syncing" && "Saving..."}
+                      {syncStatus === "synced" && "All changes saved"}
+                    </TooltipContent>
+                  </Tooltip>
+                  <span className="h-4 w-px bg-slate-300" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCodeEditClose}
+                        className="h-7 w-7 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Close editor</TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
             }
           />
         ) : (
