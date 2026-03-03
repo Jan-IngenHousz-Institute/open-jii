@@ -2,6 +2,10 @@
  * Device driver interface - handles device-specific command/response patterns
  */
 import type { ITransportAdapter } from "../transport/interface";
+import { CommandQueue } from "../utils/command-queue/command-queue";
+import { Emitter } from "../utils/emitter/emitter";
+import type { Logger } from "../utils/logger/logger";
+import { defaultLogger } from "../utils/logger/logger";
 
 /** Command execution result */
 export interface CommandResult<T = unknown> {
@@ -26,10 +30,43 @@ export interface IDeviceDriver {
   destroy(): Promise<void>;
 }
 
-/** Base class for device drivers */
-export abstract class DeviceDriver implements IDeviceDriver {
+/** Default maximum receive buffer size (1 MB) before discarding data */
+export const DEFAULT_MAX_BUFFER_SIZE = 1024 * 1024;
+
+/**
+ * Base class for device drivers.
+ *
+ * Provides common infrastructure that every driver needs:
+ * - transport lifecycle (initialize / destroy / ensureInitialized)
+ * - typed event emitter
+ * - command queue (serializes execute() calls so responses are never mismatched)
+ * - receive-buffer overflow protection
+ *
+ * Subclasses supply the `EventMap` type parameter for their own events.
+ */
+export abstract class DeviceDriver<
+  EventMap extends Record<string, unknown> = Record<string, unknown>,
+> implements IDeviceDriver
+{
   protected transport?: ITransportAdapter;
   protected initialized = false;
+
+  /** Override to change the maximum receive buffer size per driver */
+  protected maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;
+
+  /** Logger instance — injected via constructor, defaults to console */
+  protected readonly log: Logger;
+
+  /** Typed event emitter — subclasses emit/listen on their own event map */
+  protected readonly emitter: Emitter<EventMap>;
+
+  /** Serializes execute() calls so only one command is in-flight at a time */
+  protected readonly commandQueue = new CommandQueue();
+
+  constructor(logger?: Logger) {
+    this.log = logger ?? defaultLogger;
+    this.emitter = new Emitter<EventMap>(this.log);
+  }
 
   initialize(transport: ITransportAdapter): void {
     this.transport = transport;
@@ -39,6 +76,7 @@ export abstract class DeviceDriver implements IDeviceDriver {
   abstract execute<T = unknown>(command: string | object): Promise<CommandResult<T>>;
 
   async destroy(): Promise<void> {
+    this.emitter.removeAllListeners();
     if (this.transport) {
       await this.transport.disconnect();
     }
@@ -49,5 +87,15 @@ export abstract class DeviceDriver implements IDeviceDriver {
     if (!this.initialized || !this.transport) {
       throw new Error("Driver not initialized. Call initialize() first.");
     }
+  }
+
+  /** Listen to driver events */
+  on<K extends keyof EventMap>(event: K, listener: (data: EventMap[K]) => void): void {
+    this.emitter.on(event, listener);
+  }
+
+  /** Remove event listener */
+  off<K extends keyof EventMap>(event: K, listener: (data: EventMap[K]) => void): void {
+    this.emitter.off(event, listener);
   }
 }

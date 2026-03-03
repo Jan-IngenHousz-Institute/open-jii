@@ -4,7 +4,9 @@
  */
 import type { Device, BleManager } from "react-native-ble-plx";
 
-import { stringifyIfObject } from "../../utils/framing";
+import { stringifyIfObject } from "../../utils/framing/framing";
+import type { Logger } from "../../utils/logger/logger";
+import { defaultLogger } from "../../utils/logger/logger";
 import type { ITransportAdapter } from "../interface";
 
 export interface RNBLEConfig {
@@ -23,11 +25,15 @@ export class RNBLEAdapter implements ITransportAdapter {
   private statusCallback?: (connected: boolean, error?: Error) => void;
   private dataBuffer: string[] = [];
 
+  private readonly log: Logger;
+
   constructor(
     device: Device,
     private config: RNBLEConfig,
+    logger?: Logger,
   ) {
     this.device = device;
+    this.log = logger ?? defaultLogger;
   }
 
   private async setupNotifications(): Promise<void> {
@@ -40,7 +46,7 @@ export class RNBLEAdapter implements ITransportAdapter {
       this.config.notifyUUID,
       (error, characteristic) => {
         if (error || !characteristic?.value) {
-          console.error("BLE notification error:", error);
+          this.log.error("BLE notification error:", error);
           return;
         }
 
@@ -58,7 +64,7 @@ export class RNBLEAdapter implements ITransportAdapter {
           this.dataBuffer = [];
           this.dataCallback?.(fullData);
         } catch (error) {
-          console.error("Error processing BLE data:", error);
+          this.log.error("Error processing BLE data:", error);
         }
       },
     );
@@ -98,7 +104,7 @@ export class RNBLEAdapter implements ITransportAdapter {
         this.connected = false;
         this.statusCallback?.(false);
       } catch (error) {
-        console.error("Error disconnecting:", error);
+        this.log.error("Error disconnecting:", error);
       }
     }
   }
@@ -110,9 +116,10 @@ export class RNBLEAdapter implements ITransportAdapter {
     deviceId: string,
     bleManager: BleManager,
     config: RNBLEConfig,
+    logger?: Logger,
   ): Promise<RNBLEAdapter> {
     const device = await bleManager.connectToDevice(deviceId, { timeout: 10000 });
-    const adapter = new RNBLEAdapter(device, config);
+    const adapter = new RNBLEAdapter(device, config, logger);
     await adapter.setupNotifications();
     adapter.connected = true;
     adapter.statusCallback?.(true);

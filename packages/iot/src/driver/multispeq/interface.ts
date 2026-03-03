@@ -6,6 +6,7 @@
 export interface MultispeqStreamEvents extends Record<string, unknown> {
   sendCommandToDevice: string | object;
   receivedReplyFromDevice: { data: unknown; checksum: string };
+  bufferOverflow: { discardedBytes: number };
   destroy: void;
 }
 

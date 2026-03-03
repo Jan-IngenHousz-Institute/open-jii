@@ -7,7 +7,7 @@
  * Responses are JSON objects (newline-delimited or complete).
  */
 import type { ITransportAdapter } from "../../transport/interface";
-import { Emitter } from "../../utils/emitter";
+import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
 import type { CommandResult } from "../driver-base";
 import { GENERIC_COMMANDS } from "./commands";
@@ -21,13 +21,11 @@ import type {
   GenericMeasurementData,
 } from "./interface";
 
-export class GenericDeviceDriver extends DeviceDriver {
-  private emitter: Emitter<GenericDeviceEvents>;
+export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
   private responseBuffer = "";
 
-  constructor() {
-    super();
-    this.emitter = new Emitter<GenericDeviceEvents>();
+  constructor(logger?: Logger) {
+    super(logger);
   }
 
   override initialize(transport: ITransportAdapter): void {
@@ -44,13 +42,23 @@ export class GenericDeviceDriver extends DeviceDriver {
     // Setup connection status monitoring
     transport.onStatusChanged((connected: boolean, error?: Error) => {
       if (!connected && error) {
-        console.error("Generic device connection error:", error);
+        this.log.error("Generic device connection error:", error);
       }
     });
   }
 
   private handleDataReceived(data: string): void {
     this.responseBuffer += data;
+
+    // Guard against unbounded buffer growth from malformed/chatty devices
+    if (this.responseBuffer.length > this.maxBufferSize) {
+      this.log.error("Generic device receive buffer exceeded max size, discarding data");
+      void this.emitter.emit("bufferOverflow", {
+        discardedBytes: this.responseBuffer.length,
+      });
+      this.responseBuffer = "";
+      return;
+    }
 
     // Try to parse complete JSON responses (assuming newline-delimited or complete JSON)
     try {
@@ -72,8 +80,9 @@ export class GenericDeviceDriver extends DeviceDriver {
           try {
             const response = JSON.parse(line) as GenericCommandResponse;
             void this.emitter.emit("receivedResponse", response);
-          } catch {
-            // Not valid JSON, ignore
+          } catch (parseError) {
+            // Not valid JSON — emit diagnostic event so consumers can debug
+            void this.emitter.emit("parseError", { line, error: parseError });
           }
         }
       }
@@ -85,33 +94,36 @@ export class GenericDeviceDriver extends DeviceDriver {
   ): Promise<CommandResult<T>> {
     this.ensureInitialized();
 
-    const cmdObject = typeof command === "string" ? { command } : command;
+    // Serialize commands so responses are never mismatched
+    return this.commandQueue.enqueue(async () => {
+      const cmdObject = typeof command === "string" ? { command } : command;
 
-    try {
-      // Send command as JSON
-      const cmdString = JSON.stringify(cmdObject);
-      void this.emitter.emit("sendCommand", cmdObject);
+      try {
+        // Send command as JSON
+        const cmdString = JSON.stringify(cmdObject);
+        void this.emitter.emit("sendCommand", cmdObject);
 
-      if (!this.transport) {
-        throw new Error("Transport not initialized");
+        if (!this.transport) {
+          throw new Error("Transport not initialized");
+        }
+
+        await this.transport.send(cmdString + GENERIC_FRAMING.LINE_ENDING);
+
+        // Wait for response
+        const response = await this.waitForResponse<T>();
+
+        return {
+          success: response.status === "success",
+          data: response.data,
+          error: response.error ? new Error(response.error) : undefined,
+        } as CommandResult<T>;
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        } as CommandResult<T>;
       }
-
-      await this.transport.send(cmdString + GENERIC_FRAMING.LINE_ENDING);
-
-      // Wait for response
-      const response = await this.waitForResponse<T>();
-
-      return {
-        success: response.status === "success",
-        data: response.data,
-        error: response.error ? new Error(response.error) : undefined,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
+    });
   }
 
   private async waitForResponse<T>(
@@ -133,7 +145,7 @@ export class GenericDeviceDriver extends DeviceDriver {
         this.emitter.off("receivedResponse", handleResponse);
       };
 
-      this.emitter.on("receivedResponse", handleResponse);
+      this.emitter.once("receivedResponse", handleResponse);
     });
   }
 
@@ -256,24 +268,7 @@ export class GenericDeviceDriver extends DeviceDriver {
 
   override async destroy(): Promise<void> {
     await this.emitter.emit("destroy", undefined);
-    this.emitter.removeAllListeners();
     this.responseBuffer = "";
     await super.destroy();
-  }
-
-  /** Listen to driver events */
-  on<K extends keyof GenericDeviceEvents>(
-    event: K,
-    listener: (data: GenericDeviceEvents[K]) => void,
-  ): void {
-    this.emitter.on(event, listener);
-  }
-
-  /** Remove event listener */
-  off<K extends keyof GenericDeviceEvents>(
-    event: K,
-    listener: (data: GenericDeviceEvents[K]) => void,
-  ): void {
-    this.emitter.off(event, listener);
   }
 }

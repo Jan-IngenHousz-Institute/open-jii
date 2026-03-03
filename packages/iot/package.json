@@ -3,14 +3,11 @@
   "version": "0.0.1",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./transport": {
-      "types": "./dist/transport/index.d.ts",
-      "default": "./dist/transport/index.js"
     },
     "./transport/web": {
       "types": "./dist/transport/web/index.d.ts",
@@ -19,15 +16,11 @@
     "./transport/react-native": {
       "types": "./dist/transport/react-native/index.d.ts",
       "default": "./dist/transport/react-native/index.js"
-    },
-    "./protocol": {
-      "types": "./dist/protocol/index.d.ts",
-      "default": "./dist/protocol/index.js"
     }
   },
   "private": true,
   "scripts": {
-    "build": "tsc --build --verbose",
+    "build": "tsc --build tsconfig.build.json --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc --watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",

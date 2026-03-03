@@ -9,7 +9,6 @@ export default mergeConfig(
       environment: "node",
       coverage: {
         exclude: [
-          // IoT-specific exclusions (extends base config)
           "**/*.spec.ts", // Test files
           "**/*.test.ts", // Test files
           "**/test/**", // Test utilities

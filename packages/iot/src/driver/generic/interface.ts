@@ -7,6 +7,8 @@
 export interface GenericDeviceEvents extends Record<string, unknown> {
   sendCommand: string | object;
   receivedResponse: unknown;
+  bufferOverflow: { discardedBytes: number };
+  parseError: { line: string; error: unknown };
   destroy: void;
 }
 

@@ -3,7 +3,7 @@ import type { UsbSerial } from "react-native-usb-serialport-for-android";
 import { UsbSerialManager } from "react-native-usb-serialport-for-android";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { toHex, fromHex } from "../../utils/hex";
+import { toHex, fromHex } from "../../utils/hex/hex";
 import { RNUSBSerialAdapter } from "./usb-serial";
 
 vi.mock("react-native-usb-serialport-for-android", () => ({
@@ -175,6 +175,7 @@ describe("RNUSBSerialAdapter", () => {
     });
 
     it("should retry permission request until granted", async () => {
+      vi.useFakeTimers();
       const port = createMockPort();
       vi.mocked(UsbSerialManager.hasPermission)
         .mockResolvedValueOnce(false)
@@ -185,7 +186,14 @@ describe("RNUSBSerialAdapter", () => {
         .mockResolvedValueOnce(false);
       vi.mocked(UsbSerialManager.open).mockResolvedValue(port as never);
 
-      const adapter = await RNUSBSerialAdapter.connect(42);
+      const connectPromise = RNUSBSerialAdapter.connect(42);
+
+      // Advance through the retry delays
+      for (let i = 0; i < 2; i++) {
+        await vi.advanceTimersByTimeAsync(2000);
+      }
+
+      const adapter = await connectPromise;
 
       // First loop: hasPermission=false, tryRequestPermission=false → delay
       // Second loop: hasPermission=false, tryRequestPermission=false → delay
@@ -193,6 +201,7 @@ describe("RNUSBSerialAdapter", () => {
       expect(UsbSerialManager.hasPermission).toHaveBeenCalledTimes(3);
       expect(UsbSerialManager.tryRequestPermission).toHaveBeenCalledTimes(2);
       expect(adapter.isConnected()).toBe(true);
+      vi.useRealTimers();
     });
 
     it("should break on tryRequestPermission success", async () => {
@@ -206,6 +215,24 @@ describe("RNUSBSerialAdapter", () => {
       expect(UsbSerialManager.hasPermission).toHaveBeenCalledTimes(1);
       expect(UsbSerialManager.tryRequestPermission).toHaveBeenCalledTimes(1);
       expect(adapter.isConnected()).toBe(true);
+    });
+
+    it("should throw after max permission retries are exhausted", async () => {
+      vi.useFakeTimers();
+      vi.mocked(UsbSerialManager.hasPermission).mockResolvedValue(false);
+      vi.mocked(UsbSerialManager.tryRequestPermission).mockResolvedValue(false);
+
+      const connectPromise = RNUSBSerialAdapter.connect(42);
+
+      // Attach the rejection expectation before advancing timers so the
+      // rejection is always caught (prevents unhandled-rejection error).
+      const assertion = expect(connectPromise).rejects.toThrow(
+        /USB permission denied after \d+ attempts/,
+      );
+
+      await vi.runAllTimersAsync();
+      await assertion;
+      vi.useRealTimers();
     });
   });
 });
