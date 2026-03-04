@@ -140,7 +140,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     Returns:
     --------
     dict
-        Dictionary with keys: identifier, row_count, macro_schema, questions_schema
+        Dictionary with keys: identifier, row_count, macro_schema, questions_schema, custom_metadata_schema
     """
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import col
@@ -150,7 +150,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     metadata_df = (
         spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata")
         .filter((col("experiment_id") == experiment_id) & (col("identifier") == identifier))
-        .select("identifier", "row_count", "macro_schema", "questions_schema")
+        .select("identifier", "row_count", "macro_schema", "questions_schema", "custom_metadata_schema")
     )
     
     rows = metadata_df.collect()
@@ -163,6 +163,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
         "row_count": row.row_count,
         "macro_schema": row.macro_schema,
         "questions_schema": row.questions_schema,
+        "custom_metadata_schema": row.custom_metadata_schema,
     }
 
 

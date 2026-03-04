@@ -1,6 +1,6 @@
 import { ExperimentTableName } from "@repo/api";
 
-type VariantColumn = "macro_output" | "questions_data";
+type VariantColumn = "macro_output" | "questions_data" | "custom_metadata";
 
 export interface TableConfig {
   displayName: string;
@@ -16,7 +16,7 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
     displayName: "Raw Data",
     defaultSortColumn: "timestamp",
     exceptColumns: ["experiment_id"],
-    variantColumns: ["questions_data"],
+    variantColumns: ["questions_data", "custom_metadata"],
   },
   [ExperimentTableName.DEVICE]: {
     displayName: "Device Metadata",
@@ -38,7 +38,7 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
   defaultSortColumn: "timestamp",
   errorColumn: "macro_error",
   exceptColumns: ["experiment_id", "raw_id", "macro_id", "macro_name", "macro_filename", "date"],
-  variantColumns: ["macro_output", "questions_data"],
+  variantColumns: ["macro_output", "questions_data", "custom_metadata"],
 };
 
 /**
@@ -51,6 +51,7 @@ export interface ExperimentTableMetadata {
   rowCount: number;
   macroSchema?: string | null;
   questionsSchema?: string | null;
+  customMetadataSchema?: string | null;
 }
 
 /**
