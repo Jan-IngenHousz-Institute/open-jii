@@ -362,7 +362,10 @@ locals {
         "grafana:CreateWorkspaceServiceAccountToken",
         "grafana:DeleteWorkspaceServiceAccountToken",
         "grafana:ListWorkspaceServiceAccountTokens",
-        "grafana:DescribeWorkspaceConfiguration"
+        "grafana:DescribeWorkspaceConfiguration",
+        "grafana:TagResource",
+        "grafana:ListTagsForResource",
+        "grafana:UntagResource"
       ]
       resource = "*"
     }
