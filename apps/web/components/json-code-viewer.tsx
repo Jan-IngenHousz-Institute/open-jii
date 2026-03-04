@@ -21,7 +21,6 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
   height = "400px",
   className = "",
   title,
-  headerActions,
   onEditStart,
 }) => {
   const [copied, setCopied] = useState(false);

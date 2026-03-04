@@ -94,7 +94,10 @@ describe("NewMacroDetailsCard", () => {
     );
 
     expect(screen.getByTestId("input")).toHaveAttribute("placeholder", "newMacro.name");
-    expect(screen.getByTestId("rich-textarea")).toHaveAttribute("placeholder", "newMacro.description");
+    expect(screen.getByTestId("rich-textarea")).toHaveAttribute(
+      "placeholder",
+      "newMacro.description",
+    );
   });
 
   it("should render input components", () => {

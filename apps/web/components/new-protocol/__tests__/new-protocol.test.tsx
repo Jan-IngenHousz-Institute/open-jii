@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-globalThis.React = React;
-
 import { NewProtocolForm } from "../new-protocol";
+
+globalThis.React = React;
 
 // Mock next/navigation
 const mockPush = vi.fn();
