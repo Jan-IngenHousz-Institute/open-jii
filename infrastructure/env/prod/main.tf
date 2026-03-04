@@ -1834,3 +1834,31 @@ module "managed_grafana_workspace" {
   source      = "../../modules/grafana/workspace"
   environment = var.environment
 }
+
+module "grafana_dashboard" {
+  source = "../../modules/grafana/dashboard"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  # Required attributes
+  server_function_name       = module.opennext.server_function_name
+  ecs_service_name           = module.backend_ecs.ecs_service_name
+  cloudfront_distribution_id = module.opennext.cloudfront_distribution_id
+  target_group_arn           = module.backend_alb.target_group_arn
+  load_balancer_arn          = module.backend_alb.alb_arn
+  ecs_cluster_name           = module.backend_ecs.ecs_cluster_name
+  slack_webhook_url          = var.slack_webhook_url
+  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+
+  # IoT and Kinesis monitoring
+  kinesis_stream_name = module.kinesis.kinesis_stream_name
+  ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
+  iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
+
+  providers = {
+    grafana.amg = grafana.amg
+  }
+
+  depends_on = [module.managed_grafana_workspace]
+}
