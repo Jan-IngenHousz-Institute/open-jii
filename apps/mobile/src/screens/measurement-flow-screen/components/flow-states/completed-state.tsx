@@ -109,8 +109,8 @@ export function CompletedState() {
               experimentName={measurement.experimentName}
               status={measurement.status}
               questions={
-                (measurement.data.measurementResult as Record<string, unknown>)
-                  ?.questions as AnswerData[]
+                ((measurement.data.measurementResult as Record<string, unknown>)
+                  ?.questions as AnswerData[]) ?? []
               }
               onPress={() => setSelectedMeasurement(measurement)}
               onComment={

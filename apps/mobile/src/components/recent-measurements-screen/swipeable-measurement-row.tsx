@@ -1,5 +1,5 @@
 import { Trash2, UploadCloud } from "lucide-react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -59,7 +59,10 @@ export function SwipeableMeasurementRow({
     CONTAINER_PADDING * 2 + buttonWidthSum + Math.max(0, visibleCount - 1) * BUTTON_GAP;
 
   const actionWidthSV = useSharedValue(actionWidth);
-  actionWidthSV.value = actionWidth;
+
+  useEffect(() => {
+    actionWidthSV.value = actionWidth;
+  }, [actionWidth, actionWidthSV]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])

@@ -154,9 +154,10 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           <Search size={20} color={theme.isDark ? colors.dark.inactive : colors.light.inactive} />
 
           <TextInput
-            className="flex-1 text-base text-black"
+            className="flex-1 text-base"
             placeholder="Search options..."
             placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
+            style={{ color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface }}
             value={searchTerm}
             onChangeText={setSearchTerm}
           />
