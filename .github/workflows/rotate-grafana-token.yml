@@ -21,13 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         environment: [dev, prod]
-        include:
-          - environment: dev
-            workspace_id_secret: GRAFANA_WORKSPACE_ID_DEV
-            service_account_id_secret: GRAFANA_SERVICE_ACCOUNT_ID_DEV
-          - environment: prod
-            workspace_id_secret: GRAFANA_WORKSPACE_ID_PROD
-            service_account_id_secret: GRAFANA_SERVICE_ACCOUNT_ID_PROD
     environment: ${{ matrix.environment }}
     
     steps:
@@ -37,14 +30,26 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set Grafana IDs (dev)
+        if: matrix.environment == 'dev'
+        run: |
+          echo "::add-mask::${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}"
+          echo "::add-mask::${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}"
+          echo "WORKSPACE_ID=${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}" >> $GITHUB_ENV
+          echo "SERVICE_ACCOUNT_ID=${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}" >> $GITHUB_ENV
+
+      - name: Set Grafana IDs (prod)
+        if: matrix.environment == 'prod'
+        run: |
+          echo "::add-mask::${{ secrets.GRAFANA_WORKSPACE_ID_PROD }}"
+          echo "::add-mask::${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD }}"
+          echo "WORKSPACE_ID=${{ secrets.GRAFANA_WORKSPACE_ID_PROD }}" >> $GITHUB_ENV
+          echo "SERVICE_ACCOUNT_ID=${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD }}" >> $GITHUB_ENV
+
       - name: Create New Token
         id: create-token
         run: |
-          WORKSPACE_ID="${{ secrets[matrix.workspace_id_secret] }}"
-          SERVICE_ACCOUNT_ID="${{ secrets[matrix.service_account_id_secret] }}"
-          
-          echo "✅ Using workspace ID: $WORKSPACE_ID"
-          echo "✅ Using service account ID: $SERVICE_ACCOUNT_ID"
+          echo "✅ Using configured Grafana workspace and service account for environment: ${{ matrix.environment }}"
           
           # Create new token (30 days = 2592000 seconds)
           TOKEN_OUTPUT=$(aws grafana create-workspace-service-account-token \
@@ -90,8 +95,6 @@ jobs:
 
       - name: List and Revoke Old Tokens
         run: |
-          WORKSPACE_ID="${{ secrets[matrix.workspace_id_secret] }}"
-          SERVICE_ACCOUNT_ID="${{ secrets[matrix.service_account_id_secret] }}"
           NEW_TOKEN_ID="${{ steps.create-token.outputs.token_id }}"
           
           # List all tokens for this service account
