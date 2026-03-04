@@ -121,7 +121,7 @@ jobs:
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          RELEASES='${{ steps.semantic_release.outputs.releases_created }}'
+          RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
           if [ "$RELEASES" = "{}" ]; then
             echo "No new releases created." >> $GITHUB_STEP_SUMMARY
           else
@@ -133,7 +133,7 @@ jobs:
       - name: Extract mobile version
         id: extract_mobile
         run: |
-          RELEASES='${{ steps.semantic_release.outputs.releases_created }}'
+          RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
           MOBILE_VERSION=$(echo "$RELEASES" | jq -r '.mobile // empty')
           echo "mobile_version=$MOBILE_VERSION" >> $GITHUB_OUTPUT
           if [ -n "$MOBILE_VERSION" ]; then
