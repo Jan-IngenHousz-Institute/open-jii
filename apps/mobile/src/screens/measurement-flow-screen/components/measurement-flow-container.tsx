@@ -23,10 +23,8 @@ export function MeasurementFlowContainer() {
   const isFlowInitialized = flowNodes.length > 0;
   const currentNode = flowNodes[currentFlowStep];
 
-  // When a new iteration starts:
-  //   1. Seed remembered / auto-incremented answers for this iteration from the previous one.
-  //   2. Jump directly to the first step that still needs manual input, skipping over
-  //      questions that already have a seeded answer and instructions (shown only on first run).
+  // On each new iteration, carry forward remembered/auto-incremented answers from the
+  // previous iteration and jump to the first step that still needs manual input.
   useEffect(() => {
     if (iterationCount === 0 || flowNodes.length === 0) return;
 

@@ -58,7 +58,8 @@ export default function TabLayout() {
         <Tabs.Screen
           name="measurement-flow"
           options={{
-            title: "Measure",
+            title: "Flow",
+            tabBarLabel: "Measure",
             headerTransparent: true,
             headerTintColor: "white",
             headerStyle: {

@@ -68,7 +68,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               activeOpacity={0.7}
               className="mb-2 flex-row items-stretch gap-4 rounded-xl bg-[#F6F8FA] p-4"
             >
-              <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <View className="items-center justify-center">
                 <LinearGradient
                   colors={["#002F2F", "#005E5E"]}
                   start={{ x: 0, y: 0 }}
@@ -81,21 +81,13 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
                     justifyContent: "center",
                   }}
                 >
-                  <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>
-                    {position + 1}
-                  </Text>
+                  <Text className={clsx("text-lg font-bold text-white")}>{position + 1}</Text>
                 </LinearGradient>
               </View>
 
               <View className="flex-1 gap-1">
                 <Text className={clsx("text-xs font-medium", classes.textSecondary)}>{label}</Text>
-                <Text
-                  className={clsx(
-                    "text-base font-semibold",
-                    hasAnswer ? classes.text : classes.textSecondary,
-                  )}
-                  numberOfLines={1}
-                >
+                <Text className="text-base font-semibold" numberOfLines={1}>
                   {hasAnswer ? answer : "Not set"}
                 </Text>
               </View>
@@ -103,9 +95,9 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               {(isAutoincrement || isRemember) && (
                 <View className="items-center justify-center">
                   {isAutoincrement ? (
-                    <Repeat2 size={20} color={colors.primary.dark} />
+                    <Repeat2 size={20} color={colors.neutral.black} />
                   ) : (
-                    <Bookmark size={20} color={colors.primary.dark} />
+                    <Bookmark size={20} color={colors.neutral.black} />
                   )}
                 </View>
               )}

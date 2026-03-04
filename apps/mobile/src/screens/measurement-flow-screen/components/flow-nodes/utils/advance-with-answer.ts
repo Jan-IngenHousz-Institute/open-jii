@@ -4,16 +4,9 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { FlowNode } from "../../../types";
 
 /**
- * Returns the index of the first flow step after `fromIndex` that requires
- * manual user interaction (i.e. must not be auto-skipped).
- *
- * Skip rules:
- *  - `instruction` nodes are skipped on iterations > 0
- *  - `question` nodes that have "remember answer" or "auto-increment" enabled are always
- *    skipped, regardless of iteration or current value
- *  - every other node type (measurement, analysis, …) stops the search
- *
- * Returns `flowNodes.length` if every remaining step is skippable (edge case).
+ * Returns the index of the next step after `fromIndex` that needs manual input.
+ * Skips instructions on iterations > 0, and questions with remember/auto-increment enabled.
+ * Returns `flowNodes.length` if no mandatory step remains.
  */
 export function findNextMandatoryStep(
   fromIndex: number,
@@ -33,29 +26,16 @@ export function findNextMandatoryStep(
 }
 
 /**
- * Seeds the answer for the NEXT iteration, then jumps directly to the first
+ * Seeds the answer for the next iteration, then jumps directly to the first
  * step that still needs manual input (skipping over questions that already
  * have a seeded answer for the current iteration).
  */
 export function advanceWithAnswer(node: FlowNode, answerValue: string) {
   const { setAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } =
     useFlowAnswersStore.getState();
-  const {
-    iterationCount,
-    currentFlowStep,
-    nextStep,
-    returnToOverviewAfterEdit,
-    setReturnToOverviewAfterEdit,
-    flowNodes,
-    setCurrentFlowStep,
-  } = useMeasurementFlowStore.getState();
+  const { iterationCount, currentFlowStep, nextStep, flowNodes, setCurrentFlowStep } =
+    useMeasurementFlowStore.getState();
   const content = node.content;
-
-  // Always clear the flag — whether we came from overview or normal flow,
-  // the navigation logic below is identical.
-  if (returnToOverviewAfterEdit) {
-    setReturnToOverviewAfterEdit(false);
-  }
 
   // Seed this answer into the NEXT iteration
   if (content.kind === "multi_choice") {
