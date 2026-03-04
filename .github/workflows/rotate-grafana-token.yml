@@ -1,7 +1,7 @@
-# Grafana Service Account Token Rotation Workflow - Dev Environment
-# Runs every ~15 days to rotate Grafana AMG service account token for dev environment
+# Grafana Service Account Token Rotation Workflow
+# Runs every ~15 days to rotate Grafana AMG service account tokens for all environments
 
-name: Rotate Grafana Token (Dev)
+name: Rotate Grafana Token
 
 on:
   schedule:
@@ -15,9 +15,20 @@ permissions:
 
 jobs:
   rotate-token:
-    name: Rotate Grafana Token - Dev
+    name: Rotate Grafana Token - ${{ matrix.environment }}
     runs-on: ubuntu-latest
-    environment: dev
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod]
+        include:
+          - environment: dev
+            workspace_id_secret: GRAFANA_WORKSPACE_ID_DEV
+            service_account_id_secret: GRAFANA_SERVICE_ACCOUNT_ID_DEV
+          - environment: prod
+            workspace_id_secret: GRAFANA_WORKSPACE_ID_PROD
+            service_account_id_secret: GRAFANA_SERVICE_ACCOUNT_ID_PROD
+    environment: ${{ matrix.environment }}
     
     steps:
       - name: Configure AWS credentials
@@ -29,8 +40,8 @@ jobs:
       - name: Create New Token
         id: create-token
         run: |
-          WORKSPACE_ID="${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}"
-          SERVICE_ACCOUNT_ID="${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}"
+          WORKSPACE_ID="${{ secrets[matrix.workspace_id_secret] }}"
+          SERVICE_ACCOUNT_ID="${{ secrets[matrix.service_account_id_secret] }}"
           
           echo "✅ Using workspace ID: $WORKSPACE_ID"
           echo "✅ Using service account ID: $SERVICE_ACCOUNT_ID"
@@ -69,18 +80,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          # Update GitHub environment secret for dev
+          # Update GitHub environment secret
           echo "$TOKEN_VALUE" | gh secret set "GRAFANA_SERVICE_TOKEN" \
             --repo ${{ github.repository }} \
-            --env dev
+            --env ${{ matrix.environment }}
           
-          echo "✅ Updated GitHub Secret: GRAFANA_SERVICE_TOKEN in environment: dev"
+          echo "✅ Updated GitHub Secret: GRAFANA_SERVICE_TOKEN in environment: ${{ matrix.environment }}"
           echo "   Token will be available as: secrets.GRAFANA_SERVICE_TOKEN"
 
       - name: List and Revoke Old Tokens
         run: |
-          WORKSPACE_ID="${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}"
-          SERVICE_ACCOUNT_ID="${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}"
+          WORKSPACE_ID="${{ secrets[matrix.workspace_id_secret] }}"
+          SERVICE_ACCOUNT_ID="${{ secrets[matrix.service_account_id_secret] }}"
           NEW_TOKEN_ID="${{ steps.create-token.outputs.token_id }}"
           
           # List all tokens for this service account
@@ -113,19 +124,19 @@ jobs:
           echo "✅ Token rotation completed successfully!"
           echo ""
           echo "📋 Rotation Summary:"
-          echo "   Environment: dev"
+          echo "   Environment: ${{ matrix.environment }}"
           echo "   Token Name: ${{ steps.create-token.outputs.token_name }}"
           echo "   Token ID: ${{ steps.create-token.outputs.token_id }}"
           echo "   Created: ${{ steps.create-token.outputs.created_at }}"
           echo "   Expires: ${{ steps.create-token.outputs.expires_at }}"
-          echo "   GitHub Secret: GRAFANA_SERVICE_TOKEN (environment: dev)"
+          echo "   GitHub Secret: GRAFANA_SERVICE_TOKEN (environment: ${{ matrix.environment }})"
           echo ""
           echo "✨ Next rotation scheduled: ~15 days (1st or 15th of month)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "❌ Grafana token rotation failed for environment: dev"
+          echo "❌ Grafana token rotation failed for environment: ${{ matrix.environment }}"
           echo ""
           echo "Workflow: ${{ github.workflow }}"
           echo "Run ID: ${{ github.run_id }}"
