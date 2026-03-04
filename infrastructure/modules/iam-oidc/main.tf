@@ -370,6 +370,18 @@ locals {
       resource = "*"
     }
 
+    sso = {
+      actions = [
+        "sso:DescribeRegisteredRegions",
+        "sso:CreateManagedApplicationInstance",
+        "sso:DeleteManagedApplicationInstance",
+        "sso:GetManagedApplicationInstance",
+        "sso:GetSharedSsoConfiguration",
+        "sso:ListDirectoryAssociations"
+      ]
+      resource = "*"
+    }
+
     cloudtrail = {
       actions = [
         "cloudtrail:CreateTrail",
