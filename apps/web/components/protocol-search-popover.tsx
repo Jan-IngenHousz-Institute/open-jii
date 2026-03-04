@@ -218,7 +218,11 @@ export function ProtocolSearchPopover({
   const hasSearchQuery = searchValue.length > 0;
 
   return (
-    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" side="bottom">
+    <PopoverContent
+      className="w-[var(--radix-popover-trigger-width)] p-0"
+      align="start"
+      side="bottom"
+    >
       <Command shouldFilter={false}>
         <SearchField
           searchValue={searchValue}

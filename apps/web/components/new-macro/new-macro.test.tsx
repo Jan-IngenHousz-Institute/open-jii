@@ -1,5 +1,5 @@
-import "@testing-library/jest-dom/vitest";
 import * as base64Utils from "@/util/base64";
+import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -247,7 +247,12 @@ vi.mock("@repo/ui/components", () => ({
 
 vi.mock("../macro-code-editor", () => ({
   __esModule: true,
-  default: ({ language, onChange, macroName, title }: MockCodeEditorProps & { macroName?: string }) => (
+  default: ({
+    language,
+    onChange,
+    macroName,
+    title,
+  }: MockCodeEditorProps & { macroName?: string }) => (
     <div data-testid="code-editor" data-language={language} data-macro-name={macroName}>
       {title && <span>{title}</span>}
       <textarea

@@ -55,7 +55,10 @@ interface ProtocolCompatibleMacrosCardProps {
   embedded?: boolean;
 }
 
-export function ProtocolCompatibleMacrosCard({ protocolId, embedded }: ProtocolCompatibleMacrosCardProps) {
+export function ProtocolCompatibleMacrosCard({
+  protocolId,
+  embedded,
+}: ProtocolCompatibleMacrosCardProps) {
   const { t } = useTranslation();
   const locale = useLocale();
 
@@ -163,9 +166,7 @@ export function ProtocolCompatibleMacrosCard({ protocolId, embedded }: ProtocolC
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground text-sm">
-          {t("protocolSettings.noCompatibleMacros")}
-        </p>
+        <p className="text-muted-foreground text-sm">{t("protocolSettings.noCompatibleMacros")}</p>
       )}
     </>
   );
@@ -175,7 +176,9 @@ export function ProtocolCompatibleMacrosCard({ protocolId, embedded }: ProtocolC
       <div className="space-y-4">
         <div>
           <h4 className="text-sm font-medium">{t("protocolSettings.compatibleMacros")}</h4>
-          <p className="text-muted-foreground text-sm">{t("protocolSettings.compatibleMacrosDescription")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("protocolSettings.compatibleMacrosDescription")}
+          </p>
         </div>
         {content}
       </div>
@@ -188,9 +191,7 @@ export function ProtocolCompatibleMacrosCard({ protocolId, embedded }: ProtocolC
         <CardTitle>{t("protocolSettings.compatibleMacros")}</CardTitle>
         <CardDescription>{t("protocolSettings.compatibleMacrosDescription")}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {content}
-      </CardContent>
+      <CardContent className="space-y-4">{content}</CardContent>
     </Card>
   );
 }
