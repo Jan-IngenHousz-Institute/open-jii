@@ -128,3 +128,14 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "$RELEASES" | jq -r 'to_entries | .[] | "- **\(.key)**: v\(.value) (tag: `\(.key)-v\(.value)`)"' >> $GITHUB_STEP_SUMMARY
           fi
+
+  submit-to-google-play:
+    name: Submit Mobile to Google Play
+    needs: release
+    if: >
+      needs.release.outputs.releases_created != '{}' &&
+      contains(needs.release.outputs.releases_created, 'mobile')
+    uses: ./.github/workflows/submit-to-google-play.yml
+    with:
+      version: ${{ fromJSON(needs.release.outputs.releases_created).mobile }}
+    secrets: inherit
