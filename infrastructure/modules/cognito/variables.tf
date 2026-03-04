@@ -23,4 +23,5 @@ variable "developer_provider_name" {
 variable "allow_unauthenticated_identities" {
   type        = bool
   description = "Whether to allow unauthenticated identities"
+  default     = true
 }

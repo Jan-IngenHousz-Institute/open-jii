@@ -72,6 +72,19 @@ components:
             type: object
             description: Sensor data payload.
             additionalProperties: true
+            properties:
+              sample:
+                type: string
+                description: >
+                  Sensor sample data. May be a raw JSON string (legacy) or a
+                  gzip+base64 encoded string when _sample_encoding is set.
+              _sample_encoding:
+                type: string
+                enum: ["gzip+base64"]
+                description: >
+                  When present, indicates that the `sample` field has been
+                  compressed (gzip) and base64-encoded to reduce payload size.
+                  Absent on legacy (uncompressed) payloads.
         required:
           - data
       examples:

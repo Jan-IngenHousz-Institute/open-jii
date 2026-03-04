@@ -40,7 +40,10 @@
       "selectTable": "Tabelle auswählen",
       "tableInfo": "{{name}}",
       "noTablesAvailable": "Keine Tabellen verfügbar",
-      "loadingColumns": "Spalten werden geladen..."
+      "failedToLoadTables": "Tabellen für dieses Experiment konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+      "loadingColumns": "Spalten werden geladen...",
+      "failedToLoadColumns": "Spalten für diese Tabelle konnten nicht geladen werden. Die Tabelle existiert möglicherweise nicht mehr.",
+      "noValidColumns": "Keine gültigen Spalten in dieser Tabelle für Diagrammachsen gefunden."
     }
   },
 
@@ -196,7 +199,7 @@
     "yAxisNotConfigured": "Y-Achsen-Spalte nicht konfiguriert",
     "loadingData": "Diagrammdaten werden geladen...",
     "failedToLoadData": "Daten konnten nicht geladen werden",
-    "failedToLoadDataDescription": "Experimentdaten für diese Visualisierung konnten nicht abgerufen werden",
+    "failedToLoadDataDescription": "Experimentdaten für diese Visualisierung konnten nicht abgerufen werden. Bitte überprüfen Sie Ihre Diagramm<configLink>konfiguration</configLink>.",
     "noDataFound": "Keine Daten für diese Visualisierung gefunden",
     "unsupportedChartType": "Nicht unterstützter Diagrammtyp",
     "chartTypeNotSupported": "wird nicht unterstützt"

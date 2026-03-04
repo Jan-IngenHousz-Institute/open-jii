@@ -22,6 +22,7 @@ interface EditVisualizationFormProps {
   experimentId: string;
   visualization: ExperimentVisualization;
   tables: ExperimentTableMetadata[];
+  tablesError?: unknown;
   onSuccess: (visualizationId: string) => void;
   isLoading?: boolean;
   isPreviewOpen: boolean;
@@ -32,6 +33,7 @@ export default function EditVisualizationForm({
   experimentId,
   visualization,
   tables,
+  tablesError,
   onSuccess,
   isLoading: isLoadingTables = false,
   isPreviewOpen = false,
@@ -97,6 +99,7 @@ export default function EditVisualizationForm({
         <DataSourceStep
           {...props}
           tables={tables}
+          tablesError={tablesError}
           experimentId={experimentId}
           isPreviewOpen={isPreviewOpen}
           onPreviewClose={onPreviewClose}

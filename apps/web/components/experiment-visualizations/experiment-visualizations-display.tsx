@@ -18,7 +18,6 @@ import {
   Skeleton,
 } from "@repo/ui/components";
 
-import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 
 interface ExperimentVisualizationsDisplayProps {
@@ -47,26 +46,6 @@ export default function ExperimentVisualizationsDisplay({
   }, [visualizations, selectedVisualizationId]);
 
   const selectedVisualization = visualizations.find((viz) => viz.id === selectedVisualizationId);
-
-  // Get X-axis column for ordering
-  const xDataSources = selectedVisualization?.dataConfig.dataSources.filter(
-    (ds) => ds.role === "x",
-  );
-  const xColumn = xDataSources?.[0]?.columnName;
-
-  // Fetch data for the selected visualization
-  const { data: visualizationData, isLoading: isDataLoading } = useExperimentVisualizationData(
-    experimentId,
-    selectedVisualization
-      ? {
-          tableName: selectedVisualization.dataConfig.tableName,
-          columns: selectedVisualization.dataConfig.dataSources.map((ds) => ds.columnName),
-          orderBy: xColumn,
-          orderDirection: "ASC",
-        }
-      : { tableName: "", columns: [] }, // Fallback when visualization not loaded
-    !!selectedVisualization, // Only fetch when a visualization is selected
-  );
 
   if (isLoading) {
     return (
@@ -165,19 +144,12 @@ export default function ExperimentVisualizationsDisplay({
 
           {selectedVisualization && (
             <div className="mt-6 flex flex-col">
-              {isDataLoading ? (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-muted-foreground">{t("ui.messages.loadingData")}</div>
-                </div>
-              ) : (
-                <ExperimentVisualizationRenderer
-                  visualization={selectedVisualization}
-                  experimentId={experimentId}
-                  data={visualizationData?.rows ?? null}
-                  showTitle={false}
-                  showDescription={false}
-                />
-              )}
+              <ExperimentVisualizationRenderer
+                visualization={selectedVisualization}
+                experimentId={experimentId}
+                showTitle={false}
+                showDescription={false}
+              />
             </div>
           )}
         </CardContent>

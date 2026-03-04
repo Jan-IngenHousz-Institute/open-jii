@@ -18,6 +18,10 @@ const useUserSearchMock = vi.hoisted(() => vi.fn());
 const useExperimentMembersMock = vi.hoisted(() => vi.fn());
 const useExperimentMemberAddMock = vi.hoisted(() => vi.fn());
 const useExperimentMemberRemoveMock = vi.hoisted(() => vi.fn());
+const useUserInvitationCreateMock = vi.hoisted(() => vi.fn());
+const useUserInvitationRevokeMock = vi.hoisted(() => vi.fn());
+const useUserInvitationRoleUpdateMock = vi.hoisted(() => vi.fn());
+const useUserInvitationsMock = vi.hoisted(() => vi.fn());
 
 // --- Regular mocks ---
 vi.mock("@repo/i18n", () => ({
@@ -54,6 +58,25 @@ vi.mock("../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd", 
 
 vi.mock("../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove", () => ({
   useExperimentMemberRemove: useExperimentMemberRemoveMock,
+}));
+
+vi.mock("../../hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate", () => ({
+  useUserInvitationCreate: useUserInvitationCreateMock,
+}));
+
+vi.mock("../../hooks/user-invitation/useUserInvitationRevoke/useUserInvitationRevoke", () => ({
+  useUserInvitationRevoke: useUserInvitationRevokeMock,
+}));
+
+vi.mock(
+  "../../hooks/user-invitation/useUserInvitationRoleUpdate/useUserInvitationRoleUpdate",
+  () => ({
+    useUserInvitationRoleUpdate: useUserInvitationRoleUpdateMock,
+  }),
+);
+
+vi.mock("../../hooks/user-invitation/useUserInvitations/useUserInvitations", () => ({
+  useUserInvitations: useUserInvitationsMock,
 }));
 
 vi.mock("../current-members-list/current-members-list", () => ({
@@ -159,12 +182,28 @@ beforeEach(() => {
     isLoading: false,
   }));
   useExperimentMemberAddMock.mockReturnValue({
-    mutateAsync: vi.fn().mockResolvedValue({ ok: true }),
+    mutateAsync: vi.fn().mockResolvedValue({ status: 200, body: { members: [], invitations: [] } }),
     isPending: false,
   });
   useExperimentMemberRemoveMock.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({ ok: true }),
     isPending: false,
+  });
+  useUserInvitationCreateMock.mockReturnValue({
+    mutateAsync: vi.fn().mockResolvedValue({ status: 201, body: [] }),
+    isPending: false,
+  });
+  useUserInvitationRevokeMock.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+  });
+  useUserInvitationRoleUpdateMock.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+  });
+  useUserInvitationsMock.mockReturnValue({
+    data: { body: [] },
+    isLoading: false,
   });
 });
 
@@ -193,7 +232,13 @@ describe("<ExperimentMemberManagement />", () => {
   });
 
   it("adds a member successfully", async () => {
-    const addSpy = vi.fn().mockResolvedValue({ ok: true });
+    const addSpy = vi.fn().mockImplementation((_body, options?: { onSuccess?: () => void }) => {
+      options?.onSuccess?.();
+      return Promise.resolve({
+        status: 200,
+        body: { members: [membersData[0]], invitations: [] },
+      });
+    });
     useExperimentMemberAddMock.mockReturnValue({ mutateAsync: addSpy, isPending: false });
 
     renderWithClient();
@@ -211,16 +256,22 @@ describe("<ExperimentMemberManagement />", () => {
     fireEvent.click(addBtn);
 
     await waitFor(() => {
-      expect(addSpy).toHaveBeenCalledWith({
-        params: { id: experimentId },
-        body: { members: [{ userId: "u-free", role: "member" }] },
-      });
+      expect(addSpy).toHaveBeenCalledWith(
+        {
+          params: { id: experimentId },
+          body: { members: [{ userId: "u-free", role: "member" }] },
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
+      );
       expect(toastMock).toHaveBeenCalled();
     });
   });
 
   it("removes a member successfully", async () => {
-    const removeSpy = vi.fn().mockResolvedValue({ ok: true });
+    const removeSpy = vi.fn().mockImplementation((_body, options?: { onSuccess?: () => void }) => {
+      options?.onSuccess?.();
+      return Promise.resolve({ ok: true });
+    });
     useExperimentMemberRemoveMock.mockReturnValue({ mutateAsync: removeSpy, isPending: false });
 
     renderWithClient();
@@ -231,9 +282,12 @@ describe("<ExperimentMemberManagement />", () => {
     fireEvent.click(removeButtons[0]);
 
     await waitFor(() => {
-      expect(removeSpy).toHaveBeenCalledWith({
-        params: { id: experimentId, memberId: "u-admin" },
-      });
+      expect(removeSpy).toHaveBeenCalledWith(
+        {
+          params: { id: experimentId, memberId: "u-admin" },
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
+      );
       expect(toastMock).toHaveBeenCalled();
     });
   });
@@ -254,5 +308,115 @@ describe("<ExperimentMemberManagement />", () => {
     renderWithClient();
     const addBtns = screen.getAllByRole("button", { name: "common.add" });
     expect(addBtns[addBtns.length - 1]).toBeDisabled();
+  });
+
+  it("renders pending invitations when they exist", () => {
+    useUserInvitationsMock.mockReturnValue({
+      data: {
+        body: [
+          {
+            id: "inv-1",
+            email: "pending@example.com",
+            role: "member",
+            status: "pending",
+            resourceType: "experiment",
+            resourceId: experimentId,
+            invitedBy: "u-admin",
+            createdAt: "2024-01-01T00:00:00.000Z",
+            updatedAt: "2024-01-01T00:00:00.000Z",
+          },
+          {
+            id: "inv-2",
+            email: "another@example.com",
+            role: "admin",
+            status: "pending",
+            resourceType: "experiment",
+            resourceId: experimentId,
+            invitedBy: "u-admin",
+            createdAt: "2024-01-01T00:00:00.000Z",
+            updatedAt: "2024-01-01T00:00:00.000Z",
+          },
+        ],
+      },
+      isLoading: false,
+    });
+
+    renderWithClient();
+
+    expect(screen.getByText("experimentSettings.pendingInvitations")).toBeInTheDocument();
+    expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    expect(screen.getByText("another@example.com")).toBeInTheDocument();
+  });
+
+  it("does not render pending invitations section when there are none", () => {
+    useUserInvitationsMock.mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+    });
+
+    renderWithClient();
+
+    expect(screen.queryByText("experimentSettings.pendingInvitations")).not.toBeInTheDocument();
+  });
+
+  it("invites a user by email when no matching user is found", async () => {
+    const inviteSpy = vi.fn().mockImplementation((_body, options?: { onSuccess?: () => void }) => {
+      options?.onSuccess?.();
+      return Promise.resolve({ status: 201, body: [] });
+    });
+    useUserInvitationCreateMock.mockReturnValue({ mutateAsync: inviteSpy, isPending: false });
+
+    // No matching users for the email search
+    useUserSearchMock.mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+    });
+
+    renderWithClient();
+
+    const input = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
+    fireEvent.change(input, { target: { value: "newhire@example.com" } });
+
+    // Wait for the "invite by email" button to appear in the popover
+    const inviteButton = await screen.findByRole("button", {
+      name: /experiments\.sendInviteByEmail/i,
+    });
+    fireEvent.click(inviteButton);
+
+    const addBtn = screen.getByRole("button", { name: "common.add" });
+    fireEvent.click(addBtn);
+
+    await waitFor(() => {
+      expect(inviteSpy).toHaveBeenCalledWith(
+        {
+          body: {
+            resourceType: "experiment",
+            resourceId: experimentId,
+            email: "newhire@example.com",
+            role: "member",
+          },
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
+      );
+      expect(toastMock).toHaveBeenCalled();
+    });
+  });
+
+  it("disables add button while invitation is being created", () => {
+    useUserInvitationCreateMock.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: true,
+    });
+
+    renderWithClient();
+
+    const addBtn = screen.getByRole("button", { name: "common.add" });
+    expect(addBtn).toBeDisabled();
+  });
+
+  it("passes experimentId to useUserInvitations", () => {
+    renderWithClient();
+
+    expect(useUserInvitationsMock).toHaveBeenCalledWith("experiment", experimentId);
   });
 });

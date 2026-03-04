@@ -5,8 +5,8 @@
   "description": "Databricks notebooks and Python packages for OpenJII",
   "scripts": {
     "check-python": "command -v python3 >/dev/null 2>&1 || (echo 'Python3 not found, skipping Python operations' && exit 1)",
-    "check-poetry": "python3 -m poetry --version >/dev/null 2>&1 || (echo 'Poetry not found, installing...' && pip3 install poetry)",
-    "install": "pnpm run check-python && pnpm run check-poetry && python3 -m poetry install",
+    "check-poetry": "(python3 -m poetry --version >/dev/null 2>&1) || (command -v pip3 >/dev/null 2>&1 && (pip3 install poetry || true)); exit 0",
+    "install": "pnpm run check-python && pnpm run check-poetry && ((python3 -m poetry --version >/dev/null 2>&1 && python3 -m poetry install) || (echo 'Skipping poetry install (Poetry not available)' && exit 0))",
     "build": "pnpm run check-python && pnpm run build:multispeq && pnpm run build:ambyte && pnpm run build:enrich && pnpm run build:openjii",
     "build:multispeq": "cd src/lib/multispeq && python3 -m build",
     "build:ambyte": "cd src/lib/ambyte && python3 -m build",

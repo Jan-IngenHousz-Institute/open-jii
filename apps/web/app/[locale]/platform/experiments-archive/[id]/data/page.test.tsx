@@ -12,6 +12,22 @@ import ExperimentDataPage from "./page";
 
 globalThis.React = React;
 
+// Mock env
+vi.mock("~/env", () => ({
+  env: {
+    NEXT_PUBLIC_DOCS_URL: "http://localhost:3010",
+  },
+}));
+
+// Mock next/link
+vi.mock("next/link", () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 // Mock react.use to return a params-like object { id, locale }
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
@@ -116,12 +132,18 @@ vi.mock("next/navigation", () => ({
 
 const mockTablesData = [
   {
-    name: "measurements",
+    identifier: "measurements",
+    tableType: "static",
     displayName: "Measurements",
     totalRows: 100,
     defaultSortColumn: "timestamp",
   },
-  { name: ExperimentTableName.DEVICE, displayName: "Device", totalRows: 1 },
+  {
+    identifier: ExperimentTableName.DEVICE,
+    tableType: "static",
+    displayName: "Device",
+    totalRows: 1,
+  },
 ];
 
 beforeEach(() => {
@@ -314,6 +336,7 @@ describe("<ExperimentDataPage />", () => {
     const dataTable1 = tabContent1.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable1).toHaveAttribute("data-experiment-id", "test-experiment-id");
     expect(dataTable1).toHaveAttribute("data-table-name", "measurements");
+    expect(dataTable1).toHaveAttribute("data-display-name", "Measurements");
     expect(dataTable1).toHaveAttribute("data-default-sort-column", "timestamp");
 
     const tabContent2 = screen.getByTestId("nav-tab-content-device");
@@ -321,6 +344,7 @@ describe("<ExperimentDataPage />", () => {
     const dataTable2 = tabContent2.querySelector('[data-testid="experiment-data-table"]');
     expect(dataTable2).toHaveAttribute("data-experiment-id", "test-experiment-id");
     expect(dataTable2).toHaveAttribute("data-table-name", ExperimentTableName.DEVICE);
+    expect(dataTable2).toHaveAttribute("data-display-name", "Device");
   });
 
   it("shows no data message when tables array is empty", () => {
@@ -343,6 +367,7 @@ describe("<ExperimentDataPage />", () => {
     );
 
     expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.readMore")).toBeInTheDocument();
   });
 
   it("opens and closes the upload modal when button is clicked", () => {

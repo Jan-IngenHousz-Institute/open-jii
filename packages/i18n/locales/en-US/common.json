@@ -56,7 +56,9 @@
     "comingSoon": "Coming Soon",
     "ok": "OK",
     "greeting": "Hi, {{name}}",
-    "preferred": "Preferred"
+    "preferred": "Preferred",
+    "recommended": "Recommended",
+    "compatibleWithProtocol": "Compatible with {{protocolName}} protocol"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -109,6 +111,9 @@
     "searchUsers": "Search users",
     "searchUsersPlaceholder": "Enter name or email...",
     "noUsersFound": "No users found for \"{{search}}\"",
+    "inviteByEmail": "Invite {{email}} by email",
+    "sendInviteByEmail": "Send invite by email",
+    "emailAlreadyInvited": "This email has already been invited or is already a member",
     "searchExperiments": "Search experiments...",
     "startTypingToSearch": "Start typing to search",
     "searchProtocols": "Search protocols...",
@@ -163,14 +168,13 @@
     "searchMacros": "Search analysis options...",
     "addMacro": "Add macro",
     "seeMacroDetails": "See macro details",
+    "macroIncompatibilityWarning": "This macro has not been marked as compatible with the selected protocol.",
     "searchingMacros": "Searching macros...",
     "noMacrosFound": "No macros found",
     "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
     "noMacrosAvailable": "No macros available",
     "createFirstMacro": "Create your first macro to get started",
-    "requestTransfer": "Request Project Transfer",
-    "infrastructureSetupTitle": "Infrastructure Setup",
-    "infrastructureSetupDescription": "After finishing this process the experiment infrastructure will be set up which can take 10 to 40 minutes. Viewing data will be possible once the experiment is active. In the meantime, data can already be added through the openJII mobile app."
+    "requestTransfer": "Request Project Transfer"
   },
   "transferRequest": {
     "title": "Request Project Transfer",
@@ -259,6 +263,7 @@
     "memberDescription": "Manage experiment members and permissions",
     "currentMembers": "Current Members",
     "memberAdded": "Member added successfully",
+    "invitationSent": "Invitation sent successfully",
     "memberRemoved": "Member removed successfully",
     "memberManagementError": "Error loading members. Please try again.",
     "noMembersYet": "No members yet",
@@ -312,6 +317,10 @@
     "confirmDemote": "Change to Member",
     "leave": "Leave",
     "remove": "Remove",
+    "pendingInvitations": "Open requests",
+    "pendingInvite": "Invite pending",
+    "invitationRevoked": "Invitation revoked successfully",
+    "revoke": "Revoke",
     "collaborators": "Collaborators",
     "collaboratorsDescription": "Manage who has access to this experiment",
     "dangerZoneNote": "Once you archive an experiment, it will be read-only and no longer editable.",
@@ -687,7 +696,9 @@
     "codeTitle": "Protocol Code",
     "codeDescription": "Define the code structure for your protocol",
     "codePlaceholder": "Enter protocol code as JSON",
-    "finalizeSetup": "Create Protocol"
+    "finalizeSetup": "Create Protocol",
+    "compatibleMacros": "Compatible Macros",
+    "compatibleMacrosDescription": "Optionally select macros compatible with this protocol"
   },
   "protocolSettings": {
     "loading": "Loading protocol settings...",
@@ -711,7 +722,11 @@
     "code": "Protocol Code",
     "codePlaceholder": "Enter protocol code as JSON",
     "codeDescription": "Define the JSON structure and logic for your protocol",
-    "family": "Sensor Family"
+    "family": "Sensor Family",
+    "compatibleMacros": "Compatible Macros",
+    "compatibleMacrosDescription": "Macros that are known to work with this protocol. These will be recommended in the flow builder.",
+    "noCompatibleMacros": "No compatible macros linked yet.",
+    "addCompatibleMacro": "Search and add a compatible macro..."
   },
   "macroSettings": {
     "macroInfo": "Macro Information",

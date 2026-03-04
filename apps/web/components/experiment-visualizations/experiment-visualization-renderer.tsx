@@ -54,7 +54,7 @@ export default function ExperimentVisualizationRenderer({
         return <ScatterChartRenderer {...commonProps} />;
       default:
         return (
-          <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
+          <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed">
             <div className="text-center">
               <div className="mb-2 text-lg font-medium">{t("errors.unsupportedChartType")}</div>
               <div className="text-sm">

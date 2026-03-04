@@ -14,6 +14,8 @@ interface MeasurementItemProps {
   onPress?: () => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
+  /** When true, action buttons (sync/delete) are hidden - e.g. when used inside a swipeable row */
+  hideActions?: boolean;
 }
 
 export function MeasurementItem({
@@ -24,6 +26,7 @@ export function MeasurementItem({
   onPress,
   onSync,
   onDelete,
+  hideActions = false,
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
   const isSynced = status === "synced";
@@ -47,34 +50,36 @@ export function MeasurementItem({
         <Text className={clsx("mt-0 text-xs", classes.textMuted)}>{formatTimeAgo(timestamp)}</Text>
       </View>
 
-      <View className="ml-1.5 flex-row gap-1">
-        {!isSynced && (
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              onSync?.(id);
-            }}
-            className="h-10 w-10 items-center justify-center rounded-lg"
-            style={{ backgroundColor: colors.semantic.info }}
-            activeOpacity={0.8}
-          >
-            <UploadCloud size={20} color="#fff" />
-          </TouchableOpacity>
-        )}
-        {onDelete && (
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              onDelete(id);
-            }}
-            className="h-10 w-10 items-center justify-center rounded-lg"
-            style={{ backgroundColor: colors.semantic.error }}
-            activeOpacity={0.8}
-          >
-            <Trash2 size={20} color="#fff" />
-          </TouchableOpacity>
-        )}
-      </View>
+      {!hideActions && (
+        <View className="ml-1.5 flex-row gap-1">
+          {!isSynced && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                onSync?.(id);
+              }}
+              className="h-10 w-10 items-center justify-center rounded-lg"
+              style={{ backgroundColor: colors.semantic.info }}
+              activeOpacity={0.8}
+            >
+              <UploadCloud size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                onDelete(id);
+              }}
+              className="h-10 w-10 items-center justify-center rounded-lg"
+              style={{ backgroundColor: colors.semantic.error }}
+              activeOpacity={0.8}
+            >
+              <Trash2 size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }

@@ -1,11 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
+import { Alert } from "react-native";
 import { toast } from "sonner-native";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { exportSingleMeasurementToFile } from "~/services/export-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
+import { compressSample } from "~/utils/compress-sample";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
+import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
 
 interface MacroInfo {
   id: string;
@@ -19,6 +23,7 @@ interface PrepareMeasurementArgs {
   macro: MacroInfo | null;
   timestamp: string;
   questions: AnswerData[];
+  commentText?: string;
 }
 
 function prepareMeasurementForUpload({
@@ -27,6 +32,7 @@ function prepareMeasurementForUpload({
   macro,
   timestamp,
   questions,
+  commentText,
 }: PrepareMeasurementArgs) {
   if ("sample" in rawMeasurement && rawMeasurement.sample) {
     const samples = Array.isArray(rawMeasurement.sample)
@@ -39,14 +45,48 @@ function prepareMeasurementForUpload({
   }
 
   const macros: MacroInfo[] = macro ? [macro] : [];
+  const annotations = commentText ? buildAnnotationsWithComment(commentText) : [];
 
-  return {
+  const payload = {
     questions,
     macros,
     timestamp,
     user_id: userId,
     ...rawMeasurement,
+    annotations,
   };
+
+  // Compress the (large) sample field to reduce MQTT payload size.
+  // The outer JSON envelope stays valid for AWS IoT Core SQL parsing.
+  if (payload.sample != null) {
+    payload.sample = compressSample(payload.sample);
+    payload._sample_encoding = "gzip+base64";
+  }
+
+  return payload;
+}
+
+function promptMeasurementFileSave(measurement: {
+  topic: string;
+  measurementResult: object;
+  metadata: { experimentName: string; protocolName: string; timestamp: string };
+}) {
+  Alert.alert(
+    "Something went wrong",
+    "Could not save the measurement. Would you like to save it as a file instead?",
+    [
+      { text: "Dismiss", style: "cancel" },
+      {
+        text: "Save to File",
+        onPress: () => {
+          exportSingleMeasurementToFile(measurement).catch((exportError) => {
+            console.error("Failed to export measurement to file:", exportError);
+            toast.error("Could not save measurement. Please try again.");
+          });
+        },
+      },
+    ],
+  );
 }
 
 export function useMeasurementUpload() {
@@ -63,6 +103,7 @@ export function useMeasurementUpload() {
       userId,
       macro,
       questions,
+      commentText,
     }: {
       rawMeasurement: any;
       timestamp: string;
@@ -72,6 +113,7 @@ export function useMeasurementUpload() {
       userId: string;
       macro: { id: string; name: string; filename: string } | null;
       questions: AnswerData[];
+      commentText?: string;
     }) => {
       if (typeof rawMeasurement !== "object") {
         return;
@@ -83,37 +125,38 @@ export function useMeasurementUpload() {
         macro,
         timestamp,
         questions,
+        commentText,
       });
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });
 
+      const failedUploadData = {
+        topic,
+        measurementResult: measurementData,
+        metadata: {
+          experimentName,
+          protocolName: protocolId,
+          timestamp: measurementData.timestamp,
+        },
+      };
+
       try {
         await sendMqttEvent(topic, measurementData);
         toast.success("Measurement uploaded!");
-        // Save successful upload for history
-        await saveSuccessfulUpload({
-          topic,
-          measurementResult: measurementData,
-          metadata: {
-            experimentName,
-            protocolName: protocolId,
-            timestamp: measurementData.timestamp,
-          },
-        });
+        await saveSuccessfulUpload(failedUploadData);
         await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
-      } catch (e: any) {
-        console.log("Upload failed", e);
+        return;
+      } catch (uploadError) {
+        console.error("Upload failed:", uploadError);
         toast.error("Upload not available, upload it later from Recent");
-        await saveFailedUpload({
-          topic,
-          measurementResult: measurementData,
-          metadata: {
-            experimentName,
-            protocolName: protocolId,
-            timestamp: measurementData.timestamp,
-          },
-        });
+      }
+
+      try {
+        await saveFailedUpload(failedUploadData);
         await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+      } catch (storageError) {
+        console.error("Failed to save measurement to local storage:", storageError);
+        promptMeasurementFileSave(failedUploadData);
       }
     },
   );

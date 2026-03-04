@@ -72,7 +72,9 @@
   "experimentData": {
     "title": "Experimentgegevens",
     "description": "Bekijk en beheer gegevens die bij dit experiment horen.",
-    "uploadData": "Gegevens uploaden"
+    "uploadData": "Gegevens uploaden",
+    "noData": "Nog geen metingen vastgelegd. Gebruik de openJII mobiele app om metingen toe te voegen.",
+    "readMore": "Lees meer"
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",

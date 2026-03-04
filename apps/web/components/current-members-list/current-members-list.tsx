@@ -212,7 +212,7 @@ export function MemberList({
 
   return (
     <>
-      <div className="max-h-[200px] space-y-3 overflow-y-auto pr-2">
+      <div className="max-h-[200px] space-y-3 overflow-y-auto">
         {membersWithUserInfo.map((member) => {
           const isLastAdmin = member.role === "admin" && adminCount === 1;
           const isCurrentUser = member.user.userId === currentUserId;

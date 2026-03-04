@@ -11,13 +11,9 @@ export interface FailedUpload {
 
 // Save a single failed upload
 export async function saveFailedUpload(upload: FailedUpload): Promise<void> {
-  try {
-    const id = uuidv4();
-    const key = `${UPLOAD_KEY_PREFIX}${id}`;
-    await AsyncStorage.setItem(key, JSON.stringify(upload));
-  } catch (error) {
-    console.error("Failed to save upload:", error);
-  }
+  const id = uuidv4();
+  const key = `${UPLOAD_KEY_PREFIX}${id}`;
+  await AsyncStorage.setItem(key, JSON.stringify(upload));
 }
 
 // Get all failed uploads with their keys
@@ -40,6 +36,16 @@ export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload]
   } catch (error) {
     console.error("Failed to fetch uploads:", error);
     return [];
+  }
+}
+
+// Update a single failed upload by key (e.g. to add/update annotations)
+export async function updateFailedUpload(key: string, data: FailedUpload): Promise<void> {
+  try {
+    if (!key.startsWith(UPLOAD_KEY_PREFIX)) return;
+    await AsyncStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error("Failed to update upload:", error);
   }
 }
 

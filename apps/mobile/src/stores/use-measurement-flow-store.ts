@@ -10,11 +10,16 @@ interface MeasurementFlowStore {
   iterationCount: number; // Number of completed iterations
   isFlowFinished: boolean; // True when user explicitly finishes the flow
   scanResult?: any; // Store the scan result from measurement step
+  showingOverview: boolean; // True when showing questions overview before measurement
+  returnToOverviewAfterEdit: boolean; // True when editing from overview; Next returns to overview
 
   // Navigation
   setExperimentId: (experimentId: string) => void;
   setProtocolId: (protocolId: string) => void;
   setCurrentStep: (step: number) => void;
+  setCurrentFlowStep: (step: number) => void;
+  setShowingOverview: (value: boolean) => void;
+  setReturnToOverviewAfterEdit: (value: boolean) => void;
   nextStep: () => void;
   previousStep: () => void;
   reset: () => void;
@@ -37,12 +42,17 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   iterationCount: 0,
   isFlowFinished: false,
   scanResult: undefined,
+  showingOverview: false,
+  returnToOverviewAfterEdit: false,
 
   // Experiment selection
   setExperimentId: (experimentId) => set({ experimentId }),
   setProtocolId: (protocolId) => set({ protocolId }),
 
   setCurrentStep: (step) => set({ currentStep: step }),
+  setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
+  setShowingOverview: (value) => set({ showingOverview: value }),
+  setReturnToOverviewAfterEdit: (value) => set({ returnToOverviewAfterEdit: value }),
 
   nextStep: () =>
     set((state) => {
@@ -53,9 +63,15 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
           return {
             currentFlowStep: 0,
             iterationCount: state.iterationCount + 1,
+            showingOverview: false,
           };
         }
-        return { currentFlowStep: nextFlowStep };
+        const nextNode = state.flowNodes[nextFlowStep];
+        const showOverviewBeforeMeasurement = nextNode?.type === "measurement";
+        return {
+          currentFlowStep: nextFlowStep,
+          showingOverview: showOverviewBeforeMeasurement,
+        };
       }
       return { currentStep: state.currentStep + 1 };
     }),
@@ -82,14 +98,20 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       isFlowFinished: false,
       scanResult: undefined,
       protocolId: undefined,
+      showingOverview: false,
+      returnToOverviewAfterEdit: false,
     }),
 
   startNewIteration: () =>
     set((state) => {
+      const nextIterationCount = state.iterationCount + 1;
       const newState = {
         currentFlowStep: 0,
-        iterationCount: state.iterationCount + 1,
+        iterationCount: nextIterationCount,
         scanResult: undefined, // Clear scan result for new iteration
+        // Show overview at the start of each new iteration (non-first iteration)
+        showingOverview: true,
+        returnToOverviewAfterEdit: false,
       };
 
       // Check if first step is instruction and skip it

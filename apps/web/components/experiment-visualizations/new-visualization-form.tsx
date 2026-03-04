@@ -22,6 +22,7 @@ import { DataSourceStep, dataSourceSchema } from "./wizard-steps/data-source-ste
 interface NewVisualizationFormProps {
   experimentId: string;
   tables: ExperimentTableMetadata[];
+  tablesError?: unknown;
   onSuccess: (visualizationId: string) => void;
   isLoading?: boolean;
   isPreviewOpen: boolean;
@@ -31,6 +32,7 @@ interface NewVisualizationFormProps {
 export default function NewVisualizationForm({
   experimentId,
   tables,
+  tablesError,
   onSuccess,
   isLoading: isLoadingTables = false,
   isPreviewOpen,
@@ -54,7 +56,7 @@ export default function NewVisualizationForm({
     chartFamily: "basic",
     chartType: "line",
     config: getDefaultChartConfig("line"),
-    dataConfig: getDefaultDataConfig(tables.length > 0 ? tables[0].name : undefined),
+    dataConfig: getDefaultDataConfig(tables.length > 0 ? tables[0].identifier : undefined),
   };
 
   // Wizard steps configuration
@@ -93,6 +95,7 @@ export default function NewVisualizationForm({
         <DataSourceStep
           {...props}
           tables={tables}
+          tablesError={tablesError}
           experimentId={experimentId}
           isPreviewOpen={isPreviewOpen}
           onPreviewClose={onPreviewClose}

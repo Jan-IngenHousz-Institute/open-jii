@@ -6,7 +6,7 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_cognito_identity_pool" "this" {
   identity_pool_name               = var.identity_pool_name
-  allow_unauthenticated_identities = true
+  allow_unauthenticated_identities = var.allow_unauthenticated_identities
 
   developer_provider_name = local.developer_provider_name_full
 }
@@ -81,7 +81,7 @@ resource "aws_iam_role" "auth" {
 
 resource "aws_cognito_identity_pool_roles_attachment" "this" {
   identity_pool_id = aws_cognito_identity_pool.this.id
-
+  
   roles = {
     authenticated   = aws_iam_role.auth.arn
     unauthenticated = aws_iam_role.unauth.arn

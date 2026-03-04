@@ -10,6 +10,22 @@ import ExperimentDataPage from "./page";
 
 globalThis.React = React;
 
+// Mock env
+vi.mock("~/env", () => ({
+  env: {
+    NEXT_PUBLIC_DOCS_URL: "http://localhost:3010",
+  },
+}));
+
+// Mock next/link
+vi.mock("next/link", () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 // Mock React.use
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
@@ -143,13 +159,19 @@ describe("ExperimentDataPage", () => {
   const mockTablesData = {
     tables: [
       {
-        name: "measurements",
+        identifier: "measurements",
+        tableType: "static",
         displayName: "Measurements",
         totalRows: 100,
         defaultSortColumn: "timestamp",
         errorColumn: "error_code",
       },
-      { name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 },
+      {
+        identifier: ExperimentTableName.DEVICE,
+        tableType: "static",
+        displayName: "Device Metadata",
+        totalRows: 50,
+      },
     ],
     isLoading: false,
     error: null,
@@ -280,12 +302,20 @@ describe("ExperimentDataPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
+      expect(screen.getByText("experimentData.readMore")).toBeInTheDocument();
     });
   });
 
   it("displays device table when it's the only table", async () => {
     mockUseExperimentTables.mockReturnValue({
-      tables: [{ name: ExperimentTableName.DEVICE, displayName: "Device Metadata", totalRows: 50 }],
+      tables: [
+        {
+          identifier: ExperimentTableName.DEVICE,
+          tableType: "static",
+          displayName: "Device Metadata",
+          totalRows: 50,
+        },
+      ],
       isLoading: false,
       error: null,
     });
@@ -414,7 +444,8 @@ describe("ExperimentDataPage", () => {
     mockUseExperimentTables.mockReturnValue({
       tables: [
         {
-          name: longTableName,
+          identifier: longTableName,
+          tableType: "static",
           displayName: "Very Long Table Name That Should Be Truncated",
           totalRows: 100,
         },

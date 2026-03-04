@@ -14,19 +14,18 @@ interface ExperimentDataTableVariantCellProps {
   onToggleExpansion?: (rowId: string, columnName: string) => void;
 }
 
-function formatJsonValue(data: string): { formatted: string; isValid: boolean } {
+/**
+ * Check if a string is structured JSON (object or array).
+ * Returns true only for JSON objects and arrays — not for scalar values
+ * like numbers, strings, booleans, or null which are valid JSON but should
+ * be displayed as plain text.
+ */
+function isStructuredJson(data: string): boolean {
   try {
     const parsed: unknown = JSON.parse(data);
-    return {
-      formatted: JSON.stringify(parsed, null, 2),
-      isValid: true,
-    };
+    return typeof parsed === "object" && parsed !== null;
   } catch {
-    // If not valid JSON, just return the original string
-    return {
-      formatted: data,
-      isValid: false,
-    };
+    return false;
   }
 }
 
@@ -37,10 +36,9 @@ export function ExperimentDataTableVariantCell({
   isExpanded,
   onToggleExpansion,
 }: ExperimentDataTableVariantCellProps) {
-  const { isValid } = formatJsonValue(data);
-
-  // If it's not valid JSON or empty, just display as text
-  if (!isValid || !data || data.trim() === "") {
+  // Only show collapsible JSON for structured data (objects/arrays).
+  // Everything else (numbers, strings, booleans, invalid JSON) renders as plain text.
+  if (!data || !isStructuredJson(data)) {
     return <span className="text-sm">{data}</span>;
   }
 

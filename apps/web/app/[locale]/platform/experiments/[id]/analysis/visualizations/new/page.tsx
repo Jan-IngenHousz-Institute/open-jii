@@ -27,7 +27,11 @@ export default function NewVisualizationPage() {
   }
 
   // Fetch tables metadata
-  const { tables, isLoading: isLoadingTables } = useExperimentTables(experimentId);
+  const {
+    tables,
+    isLoading: isLoadingTables,
+    error: tablesError,
+  } = useExperimentTables(experimentId);
 
   // Use the sample tables directly from the API
   // This simplifies our code and avoids unnecessary transformations
@@ -56,6 +60,7 @@ export default function NewVisualizationPage() {
       <NewVisualizationForm
         experimentId={experimentId}
         tables={tables ?? []}
+        tablesError={tablesError}
         onSuccess={handleSuccess}
         isLoading={isLoadingTables}
         isPreviewOpen={isPreviewOpen}

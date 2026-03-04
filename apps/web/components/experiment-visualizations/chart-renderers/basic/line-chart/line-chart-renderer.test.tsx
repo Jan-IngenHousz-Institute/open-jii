@@ -13,6 +13,11 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+// Mock react-i18next (Trans component used for error messages with links)
+vi.mock("react-i18next", () => ({
+  Trans: ({ i18nKey }: { i18nKey: string }) => <span>{i18nKey}</span>,
+}));
+
 // Mock the LineChart component from UI package
 vi.mock("@repo/ui/components", () => ({
   LineChart: ({ data }: { data: unknown }) => (

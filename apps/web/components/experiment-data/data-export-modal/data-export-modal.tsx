@@ -20,6 +20,7 @@ import { ExportListStep } from "./steps/export-list-step";
 interface DataExportModalProps {
   experimentId: string;
   tableName: string;
+  displayName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -29,6 +30,7 @@ export type CreationStatus = "idle" | "creating" | "success";
 export function DataExportModal({
   experimentId,
   tableName,
+  displayName,
   open,
   onOpenChange,
 }: DataExportModalProps) {
@@ -93,7 +95,7 @@ export function DataExportModal({
             {t("experimentData.exportModal.title")}
           </DialogTitle>
           <DialogDescription>
-            {t("experimentData.exportModal.description", { tableName })}
+            {t("experimentData.exportModal.description", { tableName: displayName ?? tableName })}
           </DialogDescription>
         </DialogHeader>
 

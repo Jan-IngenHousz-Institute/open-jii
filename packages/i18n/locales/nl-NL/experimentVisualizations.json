@@ -40,7 +40,10 @@
       "selectTable": "Selecteer tabel",
       "tableInfo": "{{name}}",
       "noTablesAvailable": "Geen tabellen beschikbaar",
-      "loadingColumns": "Kolommen laden..."
+      "failedToLoadTables": "Kan tabellen voor dit experiment niet laden. Probeer het later opnieuw.",
+      "loadingColumns": "Kolommen laden...",
+      "failedToLoadColumns": "Kan kolommen voor deze tabel niet laden. De tabel bestaat mogelijk niet meer.",
+      "noValidColumns": "Geen geldige kolommen gevonden in deze tabel voor grafiekassen."
     }
   },
 
@@ -196,7 +199,7 @@
     "yAxisNotConfigured": "Y-as kolom niet geconfigureerd",
     "loadingData": "Grafiekgegevens laden...",
     "failedToLoadData": "Gegevens laden mislukt",
-    "failedToLoadDataDescription": "Kan experimentgegevens voor deze visualisatie niet ophalen",
+    "failedToLoadDataDescription": "Kan experimentgegevens voor deze visualisatie niet ophalen. Controleer uw grafiek<configLink>configuratie</configLink>.",
     "noDataFound": "Geen gegevens gevonden voor deze visualisatie",
     "unsupportedChartType": "Niet ondersteund grafiektype",
     "chartTypeNotSupported": "wordt niet ondersteund"

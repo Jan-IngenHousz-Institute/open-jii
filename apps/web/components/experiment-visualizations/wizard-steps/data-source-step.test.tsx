@@ -93,12 +93,14 @@ vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
 // Sample tables for testing - tables don't contain columns
 const mockTables: ExperimentTableMetadata[] = [
   {
-    name: "measurements",
+    identifier: "measurements",
+    tableType: "static",
     displayName: "Measurements",
     totalRows: 100,
   },
   {
-    name: "sensors",
+    identifier: "sensors",
+    tableType: "static",
     displayName: "Sensors",
     totalRows: 50,
   },
@@ -135,6 +137,7 @@ describe("DataSourceStep", () => {
     totalSteps: 4,
     isSubmitting: false,
     tables: mockTables,
+    tablesError: undefined as unknown,
     experimentId: "test-experiment-id",
     isPreviewOpen: false,
     onPreviewClose: mockOnPreviewClose,
@@ -200,18 +203,20 @@ describe("DataSourceStep", () => {
         return {
           tableMetadata: undefined,
           isLoading: false,
+          error: null,
           columns: [],
           data: [],
         } as never;
       }
 
       // Find the matching table and add its columns
-      const tableInfo = mockTables.find((t) => t.name === tableName);
+      const tableInfo = mockTables.find((t) => t.identifier === tableName);
       const columnsData = mockTableMetadataWithColumns[tableName];
 
       return {
         tableMetadata: tableInfo && { ...tableInfo, ...columnsData },
         isLoading: false,
+        error: null,
         columns: [],
         data: [],
       } as never;
@@ -783,6 +788,129 @@ describe("DataSourceStep", () => {
 
       // Should render the configurator when table is pre-selected
       expect(screen.getByTestId("line-chart-configurator")).toBeInTheDocument();
+    });
+  });
+
+  describe("Error States", () => {
+    it("should show tables error banner when tablesError is set", () => {
+      render(<TestWrapper {...defaultProps} tablesError={new Error("Failed to load tables")} />);
+
+      expect(screen.getAllByText("form.dataSource.failedToLoadTables").length).toBeGreaterThan(0);
+    });
+
+    it("should show fallback message in select dropdown when tablesError is set", () => {
+      render(<TestWrapper {...defaultProps} tablesError={new Error("Failed to load tables")} />);
+
+      // The select content should show the error message
+      const selectContent = screen.getByTestId("select-content");
+      expect(
+        within(selectContent).getByText("form.dataSource.failedToLoadTables"),
+      ).toBeInTheDocument();
+    });
+
+    it("should show columns error banner when columns fail to load", () => {
+      vi.mocked(useExperimentData).mockReturnValue({
+        tableMetadata: undefined,
+        isLoading: false,
+        error: new Error("Failed to load columns"),
+        columns: [],
+        data: [],
+      } as never);
+
+      render(
+        <TestWrapper
+          {...defaultProps}
+          defaultValues={{
+            chartType: "line",
+            dataConfig: {
+              tableName: "measurements",
+              dataSources: [],
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getByText("form.dataSource.failedToLoadColumns")).toBeInTheDocument();
+    });
+
+    it("should not show chart configurator when columns error exists", () => {
+      vi.mocked(useExperimentData).mockReturnValue({
+        tableMetadata: undefined,
+        isLoading: false,
+        error: new Error("Failed to load columns"),
+        columns: [],
+        data: [],
+      } as never);
+
+      render(
+        <TestWrapper
+          {...defaultProps}
+          defaultValues={{
+            chartType: "line",
+            dataConfig: {
+              tableName: "measurements",
+              dataSources: [],
+            },
+          }}
+        />,
+      );
+
+      expect(screen.queryByTestId("line-chart-configurator")).not.toBeInTheDocument();
+    });
+
+    it("should not show chart preview modal when columns error exists", () => {
+      vi.mocked(useExperimentData).mockReturnValue({
+        tableMetadata: undefined,
+        isLoading: false,
+        error: new Error("Failed to load columns"),
+        columns: [],
+        data: [],
+      } as never);
+
+      render(
+        <TestWrapper
+          {...defaultProps}
+          defaultValues={{
+            chartType: "line",
+            dataConfig: {
+              tableName: "measurements",
+              dataSources: [],
+            },
+          }}
+        />,
+      );
+
+      expect(screen.queryByTestId("chart-preview-modal")).not.toBeInTheDocument();
+    });
+
+    it("should show no valid columns message when table has no valid axis columns", () => {
+      vi.mocked(useExperimentData).mockReturnValue({
+        tableMetadata: {
+          name: "measurements",
+          displayName: "Measurements",
+          totalRows: 100,
+          rawColumns: [{ name: "id", type_name: "STRUCT", type_text: "STRUCT<field:STRING>" }],
+        },
+        isLoading: false,
+        error: null,
+        columns: [],
+        data: [],
+      } as never);
+
+      render(
+        <TestWrapper
+          {...defaultProps}
+          defaultValues={{
+            chartType: "line",
+            dataConfig: {
+              tableName: "measurements",
+              dataSources: [],
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getByText("form.dataSource.noValidColumns")).toBeInTheDocument();
     });
   });
 });
