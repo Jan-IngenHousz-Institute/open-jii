@@ -7,7 +7,14 @@ import React from "react";
 import { useRef, useState } from "react";
 import type { FC } from "react";
 
-import { Button, Label } from "@repo/ui/components";
+import {
+  Button,
+  Label,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components";
 
 type CodeLanguage = "python" | "r" | "javascript";
 
@@ -19,16 +26,9 @@ interface MacroCodeEditorProps {
   error?: string;
   height?: string;
   username?: string;
-  macroName?: string;
+  title?: React.ReactNode;
+  headerActions?: React.ReactNode;
 }
-
-const toSnakeCase = (str: string): string => {
-  return str
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^\w_]/g, "")
-    .replace(/_+/g, "_");
-};
 
 const getMonacoLanguage = (language: CodeLanguage): string => {
   switch (language) {
@@ -40,19 +40,6 @@ const getMonacoLanguage = (language: CodeLanguage): string => {
       return "typescript"; // Monaco uses typescript for JavaScript with better features
     default:
       return "plaintext";
-  }
-};
-
-const getLanguageExtension = (language: CodeLanguage): string => {
-  switch (language) {
-    case "python":
-      return ".py";
-    case "r":
-      return ".R";
-    case "javascript":
-      return ".js";
-    default:
-      return ".txt";
   }
 };
 
@@ -121,7 +108,8 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   error,
   username,
   height = "400px",
-  macroName = "untitled",
+  title,
+  headerActions,
 }) => {
   const [copied, setCopied] = useState(false);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -194,22 +182,31 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600">
-              {toSnakeCase(macroName) + getLanguageExtension(language)}
-            </span>
+            {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
+            {title && <span className="text-slate-300">|</span>}
             <div className="text-xs text-slate-500">
               {stats.lines} lines • {stats.size}
             </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleCopy}
-            className="h-8 px-2 text-slate-600 hover:text-slate-800"
-          >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopy}
+                    className="h-8 px-2 text-slate-600 hover:text-slate-800"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{copied ? "Copied!" : "Copy code"}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         {/* Editor */}

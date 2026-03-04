@@ -20,6 +20,7 @@ export const zProtocolList = z.array(zProtocol);
 // Query parameters
 export const zProtocolFilterQuery = z.object({
   search: z.string().optional(),
+  filter: z.enum(["my"]).optional(),
 });
 
 // Path parameters

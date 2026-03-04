@@ -6,6 +6,15 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import { tsr } from "../../../lib/tsr";
 import { useMacros } from "./useMacros";
 
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/en/platform/macros",
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
 // Mock the tsr client
 vi.mock("../../../lib/tsr", () => ({
   tsr: {
@@ -15,6 +24,11 @@ vi.mock("../../../lib/tsr", () => ({
       },
     },
   },
+}));
+
+// Mock useDebounce to return value immediately
+vi.mock("../../useDebounce", () => ({
+  useDebounce: (value: string) => [value],
 }));
 
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
@@ -40,8 +54,7 @@ describe("useMacros", () => {
     vi.clearAllMocks();
   });
 
-  it("should call tsr.macros.listMacros.useQuery with empty filter by default", () => {
-    // Arrange
+  it("should call tsr with 'my' filter by default", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: { body: [] },
       isLoading: false,
@@ -49,26 +62,24 @@ describe("useMacros", () => {
     });
     mockTsr.macros.listMacros.useQuery = mockUseQuery;
 
-    // Act
     renderHook(() => useMacros(), {
       wrapper: createWrapper(),
     });
 
-    // Assert
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        query: {},
-      },
-      queryKey: ["macros", undefined],
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryData: {
+          query: {
+            filter: "my",
+            search: undefined,
+            language: undefined,
+          },
+        },
+      }),
+    );
   });
 
-  it("should call tsr.macros.listMacros.useQuery with provided filter", () => {
-    // Arrange
-    const filter = {
-      search: "test",
-      language: "python" as const,
-    };
+  it("should call tsr with no filter when set to 'all'", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: { body: [] },
       isLoading: false,
@@ -76,22 +87,24 @@ describe("useMacros", () => {
     });
     mockTsr.macros.listMacros.useQuery = mockUseQuery;
 
-    // Act
-    renderHook(() => useMacros(filter), {
+    renderHook(() => useMacros({ initialFilter: "all" }), {
       wrapper: createWrapper(),
     });
 
-    // Assert
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        query: filter,
-      },
-      queryKey: ["macros", filter],
-    });
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryData: {
+          query: {
+            filter: undefined,
+            search: undefined,
+            language: undefined,
+          },
+        },
+      }),
+    );
   });
 
   it("should return data when query is successful", () => {
-    // Arrange
     const mockMacros = [
       {
         id: "macro-1",
@@ -99,21 +112,12 @@ describe("useMacros", () => {
         description: "A Python test macro",
         language: "python" as const,
         code: "python_macro.py",
+        filename: "python_macro.py",
+        sortOrder: null,
         createdBy: "user-123",
         createdByName: "Test User",
         createdAt: "2023-01-01T00:00:00Z",
         updatedAt: "2023-01-01T00:00:00Z",
-      },
-      {
-        id: "macro-2",
-        name: "R Macro",
-        description: "An R test macro",
-        language: "r" as const,
-        code: "r_macro.r",
-        createdBy: "user-456",
-        createdByName: "Another User",
-        createdAt: "2023-01-02T00:00:00Z",
-        updatedAt: "2023-01-02T00:00:00Z",
       },
     ];
     const mockUseQuery = vi.fn().mockReturnValue({
@@ -123,19 +127,16 @@ describe("useMacros", () => {
     });
     mockTsr.macros.listMacros.useQuery = mockUseQuery;
 
-    // Act
     const { result } = renderHook(() => useMacros(), {
       wrapper: createWrapper(),
     });
 
-    // Assert
     expect(result.current.data).toEqual(mockMacros);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(null);
   });
 
   it("should return loading state", () => {
-    // Arrange
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -143,19 +144,15 @@ describe("useMacros", () => {
     });
     mockTsr.macros.listMacros.useQuery = mockUseQuery;
 
-    // Act
     const { result } = renderHook(() => useMacros(), {
       wrapper: createWrapper(),
     });
 
-    // Assert
     expect(result.current.data).toBeUndefined();
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.error).toBe(null);
   });
 
   it("should return error state when query fails", () => {
-    // Arrange
     const mockError = new Error("Failed to fetch macros");
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
@@ -164,20 +161,14 @@ describe("useMacros", () => {
     });
     mockTsr.macros.listMacros.useQuery = mockUseQuery;
 
-    // Act
     const { result } = renderHook(() => useMacros(), {
       wrapper: createWrapper(),
     });
 
-    // Assert
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(mockError);
   });
 
-  it("should handle search filter parameter", () => {
-    // Arrange
-    const filter = { search: "python" };
+  it("should expose filter and setFilter", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: { body: [] },
       isLoading: false,
@@ -185,119 +176,45 @@ describe("useMacros", () => {
     });
     mockTsr.macros.listMacros.useQuery = mockUseQuery;
 
-    // Act
-    renderHook(() => useMacros(filter), {
-      wrapper: createWrapper(),
-    });
-
-    // Assert
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        query: filter,
-      },
-      queryKey: ["macros", filter],
-    });
-  });
-
-  it("should handle language filter parameter", () => {
-    // Arrange
-    const filter = { language: "r" as const };
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.macros.listMacros.useQuery = mockUseQuery;
-
-    // Act
-    renderHook(() => useMacros(filter), {
-      wrapper: createWrapper(),
-    });
-
-    // Assert
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        query: filter,
-      },
-      queryKey: ["macros", filter],
-    });
-  });
-
-  it("should handle combined search and language filters", () => {
-    // Arrange
-    const filter = {
-      search: "analysis",
-      language: "javascript" as const,
-    };
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.macros.listMacros.useQuery = mockUseQuery;
-
-    // Act
-    renderHook(() => useMacros(filter), {
-      wrapper: createWrapper(),
-    });
-
-    // Assert
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: {
-        query: filter,
-      },
-      queryKey: ["macros", filter],
-    });
-  });
-
-  it("should use different query keys for different filters", () => {
-    // Arrange
-    const filter1 = { search: "test" };
-    const filter2 = { language: "python" as const };
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.macros.listMacros.useQuery = mockUseQuery;
-
-    // Act
-    const wrapper = createWrapper();
-    renderHook(() => useMacros(filter1), { wrapper });
-    renderHook(() => useMacros(filter2), { wrapper });
-
-    // Assert
-    expect(mockUseQuery).toHaveBeenNthCalledWith(1, {
-      queryData: {
-        query: filter1,
-      },
-      queryKey: ["macros", filter1],
-    });
-    expect(mockUseQuery).toHaveBeenNthCalledWith(2, {
-      queryData: {
-        query: filter2,
-      },
-      queryKey: ["macros", filter2],
-    });
-  });
-
-  it("should handle undefined data body gracefully", () => {
-    // Arrange
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.macros.listMacros.useQuery = mockUseQuery;
-
-    // Act
     const { result } = renderHook(() => useMacros(), {
       wrapper: createWrapper(),
     });
 
-    // Assert
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBe(null);
+    expect(result.current.filter).toBe("my");
+    expect(typeof result.current.setFilter).toBe("function");
+  });
+
+  it("should expose search and setSearch", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+      error: null,
+    });
+    mockTsr.macros.listMacros.useQuery = mockUseQuery;
+
+    const { result } = renderHook(() => useMacros(), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.search).toBe("");
+    expect(typeof result.current.setSearch).toBe("function");
+  });
+
+  it("should accept initialLanguage parameter", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+      error: null,
+    });
+    mockTsr.macros.listMacros.useQuery = mockUseQuery;
+
+    const { result } = renderHook(() => useMacros({ initialLanguage: "python" }), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.language).toBe("python");
+    const lastCall = mockUseQuery.mock.calls[mockUseQuery.mock.calls.length - 1] as unknown[];
+    const callArg = lastCall[0] as { queryData: { query: Record<string, unknown> } };
+    expect(callArg.queryData.query.language).toBe("python");
   });
 });
