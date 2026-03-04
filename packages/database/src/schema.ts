@@ -90,7 +90,7 @@ export const organizationTypeEnum = pgEnum("organization_type", [
 ]);
 
 // Sensor Family Enum
-export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit"]);
+export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit", "generic"]);
 
 // Profiles Table
 export const profiles = pgTable("profiles", {

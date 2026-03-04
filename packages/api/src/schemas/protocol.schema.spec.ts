@@ -23,6 +23,7 @@ describe("Protocol Schema", () => {
     it("accepts valid enum values", () => {
       expect(zSensorFamily.parse("multispeq")).toBe("multispeq");
       expect(zSensorFamily.parse("ambit")).toBe("ambit");
+      expect(zSensorFamily.parse("generic")).toBe("generic");
     });
 
     it("rejects invalid enum values", () => {
@@ -56,7 +57,7 @@ describe("Protocol Schema", () => {
         name: "Ambient Light",
         description: null,
         code: validCodeArray,
-        family: "ambit",
+        family: "multispeq",
         sortOrder: 2,
         createdBy: uuidB,
         createdAt: iso,
@@ -85,7 +86,7 @@ describe("Protocol Schema", () => {
         name: "Not Array",
         description: null,
         code: { step: 1 }, // should be array of records
-        family: "ambit",
+        family: "multispeq",
         createdBy: uuidB,
         createdAt: iso,
         updatedAt: iso2,
@@ -99,7 +100,7 @@ describe("Protocol Schema", () => {
         name: "Mixed Bad",
         description: null,
         code: [{ ok: true }, "nope"],
-        family: "ambit",
+        family: "multispeq",
         createdBy: uuidB,
         createdAt: iso,
         updatedAt: iso2,
@@ -113,7 +114,7 @@ describe("Protocol Schema", () => {
         name: "P1",
         description: null,
         code: validCodeArray,
-        family: "ambit",
+        family: "multispeq",
         sortOrder: 1,
         createdBy: uuidB,
         createdAt: iso,
@@ -179,24 +180,24 @@ describe("Protocol Schema", () => {
         name: "  Ambient Protocol  ",
         description: "Trimmed name allowed; not auto-trimmed in output",
         code: [{ a: 1 }, { b: 2 }],
-        family: "ambit",
+        family: "multispeq",
       };
       const parsed = zCreateProtocolRequestBody.parse(b);
       // `trim()` in zod is applied for validation; output preserves the trimmed version
       expect(parsed.name).toBe("Ambient Protocol");
       expect(parsed.description).toBe("Trimmed name allowed; not auto-trimmed in output");
-      expect(parsed.family).toBe("ambit");
+      expect(parsed.family).toBe("multispeq");
       expect(parsed.code.length).toBe(2);
     });
 
     it("rejects empty/whitespace name", () => {
       expect(() =>
-        zCreateProtocolRequestBody.parse({ name: "   ", code: [], family: "ambit" }),
+        zCreateProtocolRequestBody.parse({ name: "   ", code: [], family: "multispeq" }),
       ).toThrow();
     });
 
     it("rejects code not array", () => {
-      const bad = { name: "X", code: { step: 1 }, family: "ambit" };
+      const bad = { name: "X", code: { step: 1 }, family: "multispeq" };
       expect(() => zCreateProtocolRequestBody.parse(bad)).toThrow();
     });
 
