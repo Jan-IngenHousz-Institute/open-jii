@@ -36,11 +36,31 @@ pnpm start
 
 To run the app on an Android device or emulator:
 
+Make sure you have an Android device connected or an emulator running.
+
 ```bash
 pnpm run android
 ```
 
-Make sure you have an Android device connected or an emulator running.
+#### Known issues
+
+```
+› Opening on Android...
+CommandError: No development build (com.openjii.app) for this project is installed. Install a development build on the target device and try again.
+```
+
+To install the first development built on the phone you can run `pnpm run android`, once a development build is present you can run `pnpm start` as well and press `a` to run the dev-app on your connected android device.
+
+---
+
+
+#### ⁉️ Debug on android
+
+To debug an interal test version of the application you can attach the phone  and run:
+
+```bash
+npx react-native log-android
+```
 
 ### 🍏 Run on iOS
 
