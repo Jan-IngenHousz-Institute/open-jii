@@ -9,6 +9,7 @@ import "react-native-get-random-values";
 import { getEnvVar } from "~/stores/environment-store";
 import { Emitter } from "~/utils/emitter";
 import { generateRandomString } from "~/utils/generate-random-string";
+import { getSyncedTime } from "~/utils/time-sync";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -25,15 +26,15 @@ function getSignatureKey(key: string, dateStamp: string, region: string, service
   return HmacSHA256("aws4_request", kService);
 }
 
-function getAmzDates() {
-  const now = new Date();
+async function getAmzDates() {
+  const now = await getSyncedTime();
   const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "");
   const timePart = now.toISOString().slice(11, 19).replace(/:/g, "");
   const amzDate = `${dateStamp}T${timePart}Z`;
   return { amzDate, dateStamp };
 }
 
-export function createSignedUrl(params: {
+export async function createSignedUrl(params: {
   clientId: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -45,7 +46,7 @@ export function createSignedUrl(params: {
   const service = "iotdevicegateway";
   const canonicalUri = "/mqtt";
 
-  const { amzDate, dateStamp } = getAmzDates();
+  const { amzDate, dateStamp } = await getAmzDates();
   const credentialScope = `${dateStamp}/${params.region}/${service}/aws4_request`;
 
   let query = `X-Amz-Algorithm=AWS4-HMAC-SHA256`;
@@ -151,7 +152,7 @@ export async function createMqttConnection() {
 
   const clientId = getEnvVar("CLIENT_ID") + " - " + generateRandomString();
 
-  const signedUrl = createSignedUrl({
+  const signedUrl = await createSignedUrl({
     clientId,
     accessKeyId,
     secretAccessKey,
