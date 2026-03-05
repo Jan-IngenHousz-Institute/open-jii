@@ -1,42 +1,31 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { useSendOtpRegistration } from "~/hooks/auth/useSendOtpRegistration/useSendOtpRegistration";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
+import { useVerifyOtpRegistration } from "~/hooks/auth/useVerifyOtpRegistration/useVerifyOtpRegistration";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
-import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Checkbox,
-  Input,
-  ScrollArea,
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormDescription,
-  FormMessage,
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@repo/ui/components";
+import { Button, Form } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-const OTP_LENGTH = 6;
-const REGEXP_ONLY_DIGITS_PATTERN = "^[0-9]+$";
-const RESEND_COOLDOWN_SECONDS = 30;
+import { RegistrationFields } from "./registration-fields";
+import { RegistrationOtpVerification } from "./registration-otp-verification";
+
+export interface Registration {
+  firstName: string;
+  lastName: string;
+  organization?: string;
+  email?: string;
+  acceptedTerms: boolean;
+  otp?: string;
+}
 
 export function RegistrationForm({
   callbackUrl,
@@ -54,13 +43,15 @@ export function RegistrationForm({
   const [isPending, setIsPending] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-  const [countdown, setCountdown] = useState(0);
   const [currentServerEmail, setCurrentServerEmail] = useState(userEmail);
   const updateUser = useUpdateUser();
+  const sendOtpRegistration = useSendOtpRegistration();
+  const verifyOtpRegistration = useVerifyOtpRegistration();
 
   const isValidEmailCheck = z.string().email().safeParse(userEmail).success;
   const needsEmail = !isValidEmailCheck;
   const needsEmailVerification = needsEmail || !userEmailVerified;
+  const OTP_LENGTH = 6;
 
   const registrationSchema = z
     .object({
@@ -82,8 +73,6 @@ export function RegistrationForm({
         });
       }
     });
-
-  type Registration = z.infer<typeof registrationSchema>;
 
   const form = useForm<Registration>({
     resolver: zodResolver(registrationSchema),
@@ -111,43 +100,9 @@ export function RegistrationForm({
   });
 
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  useEffect(() => {
     if (!showOTPInput) return;
     form.setValue("otp", "");
   }, [form, showOTPInput]);
-
-  async function handleResendCode() {
-    if (isPending || countdown > 0) return;
-
-    setIsPending(true);
-    try {
-      const res = await authClient.emailOtp.sendVerificationOtp({
-        email: pendingEmail,
-        type: "email-verification",
-      });
-
-      if (res.error) {
-        toast({
-          description:
-            res.error.message ?? t("auth.resendFailed", "Failed to resend verification code"),
-        });
-        return;
-      }
-
-      form.setValue("otp", "");
-      setCountdown(RESEND_COOLDOWN_SECONDS);
-    } catch (error) {
-      console.error("Resend error:", error);
-    } finally {
-      setIsPending(false);
-    }
-  }
 
   function handleEditEmail() {
     setShowOTPInput(false);
@@ -175,22 +130,19 @@ export function RegistrationForm({
           if (updateRes.error) {
             form.setError("email", {
               type: "manual",
-              message: updateRes.error.message ?? "Email already in use",
+              message: updateRes.error.message,
             });
             setIsPending(false);
             return;
           }
           setCurrentServerEmail(data.email);
         } else {
-          const otpRes = await authClient.emailOtp.sendVerificationOtp({
-            email: data.email,
-            type: "email-verification",
-          });
+          const otpRes = await sendOtpRegistration.mutateAsync(data.email);
 
           if (otpRes.error) {
             form.setError("email", {
               type: "manual",
-              message: otpRes.error.message ?? "Failed to send verification code",
+              message: otpRes.error.message,
             });
             setIsPending(false);
             return;
@@ -199,21 +151,20 @@ export function RegistrationForm({
 
         setPendingEmail(data.email);
         setShowOTPInput(true);
-        setCountdown(RESEND_COOLDOWN_SECONDS);
         setIsPending(false);
         return;
       }
 
       // Step 2: user has entered OTP, verify it
       if (needsEmailVerification && showOTPInput && data.otp) {
-        const result = await authClient.emailOtp.verifyEmail({
+        const result = await verifyOtpRegistration.mutateAsync({
           email: pendingEmail,
           otp: data.otp,
         });
         if (result.error) {
           form.setError("otp", {
             type: "manual",
-            message: result.error.message ?? "Invalid verification code",
+            message: result.error.message,
           });
           setIsPending(false);
           return;
@@ -246,197 +197,23 @@ export function RegistrationForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Email – shown when the user needs to supply or verify an email address */}
-          {needsEmailVerification && !showOTPInput && (
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registration.email")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder={t("registration.emailPlaceholder")}
-                      className="h-12 rounded-xl"
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <FormDescription>{t("registration.emailDescription")}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-
           {needsEmailVerification && showOTPInput && (
-            <>
-              <h2 className="text-xl font-bold">
-                {t("auth.checkEmail", "Check your email for a sign-in code")}
-              </h2>
-              <div className="muted-foreground mb-4 text-sm">
-                {t("auth.otpInstructions", "Please enter the 6-digit code we sent to")}{" "}
-                <button
-                  type="button"
-                  className="inline-flex items-center font-medium text-[#005e5e] hover:underline"
-                  onClick={handleEditEmail}
-                  aria-label="Edit email address"
-                >
-                  {pendingEmail} <Pencil className="ml-1 h-3 w-3" aria-hidden="true" />
-                </button>
-              </div>
-              <FormField
-                control={form.control}
-                name="otp"
-                render={({ field, fieldState }) => (
-                  <FormItem>
-                    <FormControl>
-                      <InputOTP
-                        maxLength={OTP_LENGTH}
-                        pattern={REGEXP_ONLY_DIGITS_PATTERN}
-                        containerClassName="gap-2 justify-center"
-                        onComplete={() => form.handleSubmit(onSubmit)()}
-                        {...field}
-                      >
-                        <InputOTPGroup className="gap-2">
-                          {Array.from({ length: OTP_LENGTH }, (_, index) => (
-                            <InputOTPSlot
-                              key={index}
-                              index={index}
-                              className={`h-12 w-12 rounded-md border text-lg ${
-                                fieldState.invalid ? "border-destructive" : ""
-                              }`}
-                            />
-                          ))}
-                        </InputOTPGroup>
-                      </InputOTP>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="pt-2">
-                <button
-                  type="button"
-                  className="text-sm font-medium text-[#005e5e] hover:underline disabled:opacity-50"
-                  onClick={handleResendCode}
-                  disabled={countdown > 0 || isPending}
-                  aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
-                >
-                  {countdown > 0
-                    ? `${t("auth.resendCode", "Re-send code")} (${countdown}s)`
-                    : t("auth.resendCode", "Re-send code")}
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* First name */}
-          {!showOTPInput && (
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registration.firstName")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("registration.firstNamePlaceholder")}
-                      className="h-12 rounded-xl"
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <RegistrationOtpVerification
+              form={form}
+              pendingEmail={pendingEmail}
+              isPending={isPending}
+              setIsPending={setIsPending}
+              onEditEmail={handleEditEmail}
+              onComplete={() => form.handleSubmit(onSubmit)()}
             />
           )}
 
-          {/* Last name */}
           {!showOTPInput && (
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registration.lastName")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("registration.lastNamePlaceholder")}
-                      className="h-12 rounded-xl"
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-
-          {/* Organization */}
-          {!showOTPInput && (
-            <FormField
-              control={form.control}
-              name="organization"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registration.organization")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("registration.organizationPlaceholder")}
-                      className="h-12 rounded-xl"
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-
-          {/* Terms */}
-          {!showOTPInput && (
-            <FormField
-              control={form.control}
-              name="acceptedTerms"
-              render={({ field }) => (
-                <FormItem className="flex items-end space-x-2">
-                  <FormControl>
-                    <Checkbox
-                      id={field.name}
-                      name={field.name}
-                      checked={!!field.value}
-                      onCheckedChange={field.onChange}
-                      ref={field.ref}
-                      disabled={isPending}
-                      onBlur={field.onBlur}
-                    />
-                  </FormControl>
-                  <FormLabel className="left text-sm font-medium leading-none">
-                    {t("auth.termsPrefix")}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button type="button" className="cursor-pointer underline">
-                          {t("auth.terms")}
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>{termsData.title}</DialogTitle>
-                        </DialogHeader>
-                        <ScrollArea className="h-64 w-full rounded-md border p-4">
-                          {termsData.content}
-                        </ScrollArea>
-                      </DialogContent>
-                    </Dialog>
-                  </FormLabel>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <RegistrationFields
+              form={form}
+              isPending={isPending}
+              needsEmailVerification={needsEmailVerification}
+              termsData={termsData}
             />
           )}
 
