@@ -1,70 +1,51 @@
-import { getEnvVar } from "~/stores/environment-store";
+import * as Location from "expo-location";
+import tzlookup from "@photostructure/tz-lookup";
 
 const CACHE_DURATION_MS = 30 * 1000; // 30 seconds
 
-interface TimeSyncCache {
-  serverTime: number;
+interface TimeSyncResult {
+  utcTimestamp: number;
+  timezone: string;
+}
+
+interface TimeSyncCache extends TimeSyncResult {
   localTime: number;
 }
 
-let timeSyncCache: TimeSyncCache | null = null;
+let cache: TimeSyncCache | null = null;
 
-/**
- * Fetches the current time from the backend server
- */
-async function fetchServerTime(): Promise<number> {
-  const backendUri = getEnvVar("BACKEND_URI");
-  const response = await fetch(`${backendUri}/health/time`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
+async function fetchFromGps(): Promise<TimeSyncCache> {
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== Location.PermissionStatus.GRANTED) {
+    throw new Error("Location permission denied");
+  }
+
+  const location = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.Lowest,
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch server time: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.unixTimestamp;
+  return {
+    utcTimestamp: location.timestamp,
+    timezone: tzlookup(location.coords.latitude, location.coords.longitude),
+    localTime: Date.now(),
+  };
 }
 
-/**
- * Gets the synchronized time based on server time.
- * Caches the server time for some time and calculates drift to minimize network requests.
- */
-export async function getSyncedTime(): Promise<Date> {
-  try {
-    const now = Date.now();
+export async function getSyncedUtcTimestampWithTimezone(): Promise<TimeSyncResult> {
+  const now = Date.now();
 
-    // Check if we have a valid cached server time
-    if (timeSyncCache) {
-      const cacheAge = now - timeSyncCache.localTime;
-      if (cacheAge < CACHE_DURATION_MS) {
-        // Calculate current server time based on cached offset
-        const estimatedServerTime = timeSyncCache.serverTime + cacheAge;
-        return new Date(estimatedServerTime);
-      }
+  if (cache) {
+    const cacheAge = now - cache.localTime;
+    if (cacheAge < CACHE_DURATION_MS) {
+      return { utcTimestamp: cache.utcTimestamp + cacheAge, timezone: cache.timezone };
     }
-
-    // Fetch fresh server time
-    const serverTime = await fetchServerTime();
-
-    // Cache the server time and local time when we fetched it
-    timeSyncCache = {
-      serverTime,
-      localTime: now,
-    };
-
-    return new Date(serverTime);
-  } catch (error) {
-    console.error("Failed to fetch server time, falling back to local time:", error);
-    // Fallback to local time if server is unreachable
-    return new Date();
   }
-}
 
-/**
- * Clears the time sync cache, forcing a fresh sync on next call
- */
-export function clearTimeSyncCache(): void {
-  timeSyncCache = null;
+  try {
+    cache = await fetchFromGps();
+    return { utcTimestamp: cache.utcTimestamp, timezone: cache.timezone };
+  } catch (error) {
+    console.error("Failed to get GPS time and timezone, falling back to local time:", error);
+    return { utcTimestamp: now, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+  }
 }

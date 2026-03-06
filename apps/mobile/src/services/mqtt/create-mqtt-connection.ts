@@ -4,12 +4,13 @@ import {
   GetCredentialsForIdentityCommand,
 } from "@aws-sdk/client-cognito-identity";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
+import { DateTime } from "luxon";
 import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
 import { getEnvVar } from "~/stores/environment-store";
 import { Emitter } from "~/utils/emitter";
 import { generateRandomString } from "~/utils/generate-random-string";
-import { getSyncedTime } from "~/utils/time-sync";
+import { getSyncedUtcTimestampWithTimezone } from "~/utils/time-sync";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -26,12 +27,12 @@ function getSignatureKey(key: string, dateStamp: string, region: string, service
   return HmacSHA256("aws4_request", kService);
 }
 
-async function getAmzDates() {
-  const now = await getSyncedTime();
-  const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "");
-  const timePart = now.toISOString().slice(11, 19).replace(/:/g, "");
-  const amzDate = `${dateStamp}T${timePart}Z`;
-  return { amzDate, dateStamp };
+async function getAmazonDates() {
+  const { utcTimestamp, timezone } = await getSyncedUtcTimestampWithTimezone();
+  const syncedDate = DateTime.fromMillis(utcTimestamp, { zone: "utc" });
+  const dateStamp = syncedDate.toFormat("yyyyMMdd");
+  const amzDate = syncedDate.toFormat("yyyyMMdd'T'HHmmss'Z'");
+  return { amzDate, dateStamp, timezone };
 }
 
 export async function createSignedUrl(params: {
@@ -46,7 +47,7 @@ export async function createSignedUrl(params: {
   const service = "iotdevicegateway";
   const canonicalUri = "/mqtt";
 
-  const { amzDate, dateStamp } = await getAmzDates();
+  const { amzDate, dateStamp } = await getAmazonDates();
   const credentialScope = `${dateStamp}/${params.region}/${service}/aws4_request`;
 
   let query = `X-Amz-Algorithm=AWS4-HMAC-SHA256`;

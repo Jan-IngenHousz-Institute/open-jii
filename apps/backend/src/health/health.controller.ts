@@ -17,15 +17,4 @@ export class HealthController {
       timestamp: new Date().toISOString(),
     };
   }
-  @Get("time")
-  getTime() {
-    this.logger.log({
-      msg: "Time endpoint called",
-      operation: "getTime",
-    });
-    return {
-      timestamp: new Date().toISOString(),
-      unixTimestamp: Date.now(),
-    };
-  }
 }
