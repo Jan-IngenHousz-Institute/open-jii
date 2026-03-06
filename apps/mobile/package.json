@@ -13,11 +13,14 @@
     "submit-to-google-play": "eas build -p android --profile production --clear-cache  --non-interactive --no-wait --auto-submit",
     "lint": "eslint 'src/**/*' --fix",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postinstall": "cd ../../packages/api && pnpm run build && cd - &&  cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd -"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
     "@expo/vector-icons": "^15.0.3",
+    "@photostructure/tz-lookup": "^10.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/native": "^7.1.6",
@@ -47,6 +50,7 @@
     "expo-keep-awake": "~15.0.7",
     "expo-linking": "~8.0.9",
     "expo-localization": "~17.0.8",
+    "expo-location": "~18.0.0",
     "expo-network": "~8.0.8",
     "expo-router": "~6.0.15",
     "expo-secure-store": "~15.0.8",
@@ -94,16 +98,19 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "@types/crypto-js": "^4.2.2",
     "@types/lodash": "^4.17.16",
     "@types/paho-mqtt": "^1.0.10",
     "@types/pako": "^2.0.4",
     "@types/react": "catalog:react19",
     "@types/webpack-env": "^1.18.8",
+    "@vitest/ui": "catalog:",
     "dotenv-cli": "^8.0.0",
     "eslint": "catalog:",
     "expo-dev-client": "~6.0.18",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "private": true
 }
