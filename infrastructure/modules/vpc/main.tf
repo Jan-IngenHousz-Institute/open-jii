@@ -224,6 +224,68 @@ resource "aws_security_group_rule" "server_lambda_to_aurora" {
   description              = "Allow access from OpenNext server Lambda to Aurora database"
 }
 
+# -------------------------
+# Macro Sandbox Lambda Security Group
+# -------------------------
+# No inbound (Lambda doesn't receive connections).
+# Outbound: HTTPS to VPC CIDR only (for ECR API, ECR DKR, and CloudWatch Logs VPC endpoints).
+resource "aws_security_group" "macro_sandbox_lambda" {
+  count = var.create_macro_sandbox_resources ? 1 : 0
+
+  name        = "${var.environment}-macro-sandbox-lambda-sg"
+  description = "Lambda macro execution — no inbound, HTTPS to VPC endpoints only"
+  vpc_id      = aws_vpc.this.id
+
+  tags = merge(var.tags, {
+    Name     = "${var.environment}-macro-sandbox-lambda-sg"
+    Security = "isolated"
+  })
+}
+
+# Egress: HTTPS to VPC CIDR (ECR API, ECR DKR, CloudWatch Logs VPC endpoints)
+resource "aws_security_group_rule" "macro_sandbox_lambda_egress" {
+  count = var.create_macro_sandbox_resources ? 1 : 0
+
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = [aws_vpc.this.cidr_block]
+  security_group_id = aws_security_group.macro_sandbox_lambda[0].id
+  description       = "HTTPS to VPC endpoints (ECR API, ECR DKR, CloudWatch Logs)"
+}
+
+# -------------------------
+# Macro Sandbox VPC Endpoint Security Group
+# -------------------------
+# Dedicated SG for VPC endpoints used by macro-sandbox Lambda (ECR API, ECR DKR, Logs).
+# Kept separate from the default SG to prevent macro-sandbox from reaching Databricks ENIs.
+resource "aws_security_group" "macro_sandbox_vpc_endpoints" {
+  count = var.create_macro_sandbox_resources ? 1 : 0
+
+  name        = "${var.environment}-macro-sandbox-vpc-endpoints-sg"
+  description = "SG for VPC endpoints in isolated subnets — only accepts traffic from macro-sandbox Lambda"
+  vpc_id      = aws_vpc.this.id
+
+  tags = merge(var.tags, {
+    Name     = "${var.environment}-macro-sandbox-vpc-endpoints-sg"
+    Security = "isolated"
+  })
+}
+
+# Allow macro-sandbox Lambda to reach the dedicated VPC endpoint SG
+resource "aws_security_group_rule" "vpc_endpoint_ingress_from_macro_sandbox" {
+  count = var.create_macro_sandbox_resources ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.macro_sandbox_lambda[0].id
+  security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
+  description              = "Allow Lambda macro-sandbox to reach VPC endpoints"
+}
+
 # ---------------
 # Public Subnets
 # ---------------
