@@ -31,6 +31,10 @@ async function fetchFromGps(): Promise<TimeSyncCache> {
   };
 }
 
+export function clearTimeSyncCache(): void {
+  cache = null;
+}
+
 export async function getSyncedUtcTimestampWithTimezone(): Promise<TimeSyncResult> {
   const now = Date.now();
 
