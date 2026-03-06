@@ -447,7 +447,9 @@
     "signOutTitle": "Sign Out",
     "signOutDescription": "To complete your registration, you now need to sign out and sign back in again.",
     "signOutConfirm": "Sign out",
-    "continueWithEmailVerification": "Continue with email verification"
+    "continueWithEmailVerification": "Continue with email verification",
+    "emailOnlyTitle": "Missing email address",
+    "emailOnlyDescription": "To continue using the platform, please add an email address to your account."
   },
   "signout": {
     "title": "Sign Out",

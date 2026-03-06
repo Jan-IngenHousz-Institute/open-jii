@@ -3,6 +3,7 @@ import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import z from "zod";
 import { auth } from "~/app/actions/auth";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { RegistrationForm } from "~/components/auth/registration-form";
@@ -22,9 +23,14 @@ export default async function UserRegistrationPage(props: {
     redirect(`/${locale}/login?callbackUrl=/${locale}/register`);
   }
 
-  if (session.user.registered) {
+  const hasValidEmail = z.string().email().safeParse(session.user.email).success;
+
+  if (session.user.registered && hasValidEmail) {
     redirect(`/${locale}/platform`);
   }
+
+  // Users with invalid emails for their orcid account, also have emailVerified true
+  const emailOnly = session.user.emailVerified === true && !hasValidEmail;
 
   // Fetch terms and conditions data
   const termsData = await TermsAndConditionsDialog({ locale });
@@ -57,6 +63,7 @@ export default async function UserRegistrationPage(props: {
                   callbackUrl={getFirstSearchParam(callbackUrl)}
                   termsData={termsData}
                   userEmail={session.user.email}
+                  emailOnly={emailOnly}
                 />
               </div>
             </div>

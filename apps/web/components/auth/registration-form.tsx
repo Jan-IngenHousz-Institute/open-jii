@@ -18,11 +18,11 @@ import { RegistrationFields } from "./registration-fields";
 import { RegistrationOtpVerification } from "./registration-otp-verification";
 
 export interface Registration {
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   organization?: string;
   email?: string;
-  acceptedTerms: boolean;
+  acceptedTerms?: boolean;
   otp?: string;
 }
 
@@ -30,10 +30,12 @@ export function RegistrationForm({
   callbackUrl,
   termsData,
   userEmail,
+  emailOnly = false,
 }: {
   callbackUrl?: string;
   termsData: { title: React.ReactNode; content: React.ReactNode };
   userEmail?: string;
+  emailOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -50,23 +52,35 @@ export function RegistrationForm({
 
   const registrationSchema = z
     .object({
-      firstName: z.string().min(2, t("registration.firstNameError")),
-      lastName: z.string().min(2, t("registration.lastNameError")),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
       organization: z.string().optional(),
-      email: needsEmailVerification
-        ? z.string().min(1, t("auth.emailRequired")).email(t("registration.emailInvalid"))
-        : z.string().optional(),
-      acceptedTerms: z.boolean(),
-      otp: showOTPInput ? z.string().length(OTP_LENGTH, t("auth.otpError")) : z.string().optional(),
+      email: z.string().optional(),
+      acceptedTerms: z.boolean().optional(),
+      otp: z.string().optional(),
     })
-    .superRefine(({ acceptedTerms }, ctx) => {
-      if (!acceptedTerms) {
-        ctx.addIssue({
-          code: "custom",
-          message: t("registration.acceptTermsError"),
-          path: ["acceptedTerms"],
-        });
+    .superRefine((data, ctx) => {
+      const addIssue = (path: string, message: string) =>
+        ctx.addIssue({ code: "custom", message, path: [path] });
+
+      if (emailOnly) {
+        if (!data.email) addIssue("email", t("auth.emailRequired"));
+        else if (!z.string().email().safeParse(data.email).success)
+          addIssue("email", t("registration.emailInvalid"));
+      } else {
+        if (!data.firstName || data.firstName.length < 2)
+          addIssue("firstName", t("registration.firstNameError"));
+        if (!data.lastName || data.lastName.length < 2)
+          addIssue("lastName", t("registration.lastNameError"));
+        if (!isValidEmailCheck) {
+          if (!data.email) addIssue("email", t("auth.emailRequired"));
+          else if (!z.string().email().safeParse(data.email).success)
+            addIssue("email", t("registration.emailInvalid"));
+        }
+        if (!data.acceptedTerms) addIssue("acceptedTerms", t("registration.acceptTermsError"));
       }
+
+      if (showOTPInput && data.otp?.length !== OTP_LENGTH) addIssue("otp", t("auth.otpError"));
     });
 
   const form = useForm<Registration>({
@@ -81,17 +95,21 @@ export function RegistrationForm({
     },
   });
 
+  const completeRegistration = async () => {
+    const res = await updateUser.mutateAsync({ registered: true });
+
+    if (res.error) {
+      toast({ description: t("registration.errorMessage") || "Registration failed" });
+      setIsPending(false);
+      return;
+    }
+
+    toast({ description: t("registration.successMessage") });
+    router.push(callbackUrl ?? "/platform");
+  };
+
   const { mutateAsync: createUserProfile } = useCreateUserProfile({
-    onSuccess: async () => {
-      const res = await updateUser.mutateAsync({ registered: true });
-      if (res.error) {
-        toast({ description: t("registration.errorMessage") || "Registration failed" });
-        setIsPending(false);
-        return;
-      }
-      toast({ description: t("registration.successMessage") });
-      router.push(callbackUrl ?? "/platform");
-    },
+    onSuccess: completeRegistration,
   });
 
   useEffect(() => {
@@ -142,12 +160,18 @@ export function RegistrationForm({
           setIsPending(false);
           return;
         }
+
+        // Profile already exists, just re-mark as registered.
+        if (emailOnly) {
+          await completeRegistration();
+          return;
+        }
       }
 
       await createUserProfile({
         body: {
-          firstName: data.firstName,
-          lastName: data.lastName,
+          firstName: data.firstName ?? "",
+          lastName: data.lastName ?? "",
           organization: data.organization,
         },
       });
@@ -162,8 +186,12 @@ export function RegistrationForm({
       {/* Title */}
       {!showOTPInput && (
         <div className="mb-4 text-left">
-          <h1 className="text-2xl font-bold">{t("registration.title")}</h1>
-          <p className="text-muted-foreground mt-2">{t("registration.description")}</p>
+          <h1 className="text-2xl font-bold">
+            {emailOnly ? t("registration.emailOnlyTitle") : t("registration.title")}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {emailOnly ? t("registration.emailOnlyDescription") : t("registration.description")}
+          </p>
         </div>
       )}
 
@@ -187,6 +215,7 @@ export function RegistrationForm({
               isPending={isPending}
               needsEmailVerification={needsEmailVerification}
               termsData={termsData}
+              emailOnly={emailOnly}
             />
           )}
 

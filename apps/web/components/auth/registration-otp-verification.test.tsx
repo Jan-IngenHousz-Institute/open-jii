@@ -87,6 +87,7 @@ function Wrapper({
           setIsPending={vi.fn()}
           onEditEmail={onEditEmail}
           onComplete={onComplete}
+          OTP_LENGTH={6}
         />
       </form>
     </Form>
