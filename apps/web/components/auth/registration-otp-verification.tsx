@@ -3,7 +3,7 @@
 import { Pencil } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { useSendOtpRegistration } from "~/hooks/auth/useSendOtpRegistration/useSendOtpRegistration";
+import { useSignInEmail } from "~/hooks/auth";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -40,7 +40,7 @@ export function RegistrationOtpVerification({
 }) {
   const { t } = useTranslation();
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN_SECONDS);
-  const sendOtpVerification = useSendOtpRegistration();
+  const sendOtpVerification = useSignInEmail();
 
   useEffect(() => {
     if (countdown > 0) {
@@ -58,8 +58,7 @@ export function RegistrationOtpVerification({
 
       if (res.error) {
         toast({
-          description:
-            res.error.message ?? t("auth.resendFailed", "Failed to resend verification code"),
+          description: res.error.message,
         });
         return;
       }
@@ -75,11 +74,9 @@ export function RegistrationOtpVerification({
 
   return (
     <>
-      <h2 className="text-xl font-bold">
-        {t("auth.checkEmail", "Check your email for a verification code")}
-      </h2>
+      <h2 className="text-xl font-bold">{t("auth.checkEmail")}</h2>
       <div className="muted-foreground mb-4 text-sm">
-        {t("auth.otpInstructions", "Please enter the 6-digit code we sent to")}{" "}
+        {t("auth.otpInstructions")}{" "}
         <button
           type="button"
           className="inline-flex items-center font-medium text-[#005e5e] hover:underline"
@@ -127,9 +124,7 @@ export function RegistrationOtpVerification({
           disabled={countdown > 0 || isPending}
           aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
         >
-          {countdown > 0
-            ? `${t("auth.resendCode", "Re-send code")} (${countdown}s)`
-            : t("auth.resendCode", "Re-send code")}
+          {countdown > 0 ? `${t("auth.resendCode")} (${countdown}s)` : t("auth.resendCode")}
         </button>
       </div>
     </>

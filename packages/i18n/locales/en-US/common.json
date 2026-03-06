@@ -417,7 +417,8 @@
     "errorDescription": "We encountered an error while trying to authenticate you.",
     "errorTryAgain": "Try Again",
     "errorGoHome": "Go to Homepage",
-    "errorSupport": "If this problem persists, please contact support."
+    "errorSupport": "If this problem persists, please contact support.",
+    "checkEmail": "Check your email for a verification code"
   },
   "registration": {
     "title": "Registration",
@@ -440,6 +441,7 @@
     "acceptTermsError": "You must accept the terms and conditions",
     "registering": "Registering...",
     "register": "Register",
+    "verifyAndRegister": "Verify & Register",
     "successMessage": "Registration successful",
     "errorMessage": "Registration failed",
     "signOutTitle": "Sign Out",

@@ -1,10 +1,10 @@
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { emailOTP, genericOAuth } from "better-auth/plugins";
 
-import { db, and, eq, profiles } from "@repo/database";
+import { db, and, eq, profiles, users } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { sendOtpEmail } from "./email/otpEmail";
@@ -96,7 +96,6 @@ export const auth = betterAuth({
   user: {
     changeEmail: {
       enabled: true,
-      updateEmailWithoutVerification: true,
     },
     additionalFields: {
       registered: {
@@ -126,7 +125,6 @@ export const auth = betterAuth({
   plugins: [
     expo(), // Add Expo plugin for mobile app support
     emailOTP({
-      overrideDefaultEmailVerification: true, // Override the default email verification to use email otp instead
       async sendVerificationOTP({ email, otp }) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;
         const emailFrom = process.env.AUTH_EMAIL_FROM;
@@ -165,6 +163,31 @@ export const auth = betterAuth({
   },
   // Lifecycle hooks
   hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/sign-in/email-otp") {
+        const session = await getSessionFromCtx(ctx);
+        if (!session) return;
+
+        const currentUser = session.user;
+        if (currentUser.registered) return;
+
+        const body = ctx.body as { email: string };
+        const { email } = body;
+        if (!email) return;
+
+        // Set the email so signIn.emailOtp finds this user and doesn't create a new one
+        try {
+          await db.update(users).set({ email }).where(eq(users.id, currentUser.id));
+        } catch (error) {
+          // Postgres unique constraint violation
+          if ((error as { code: string }).code === "23505") {
+            throw new APIError("BAD_REQUEST", {
+              message: "This email is already associated with another account",
+            });
+          }
+        }
+      }
+    }),
     after: createAuthMiddleware(async (ctx) => {
       // Trigger on any sign-in method (social, email OTP, etc.)
       const isSignIn = ["/sign-in/social", "/sign-in/email-otp", "/sign-in/email"].includes(

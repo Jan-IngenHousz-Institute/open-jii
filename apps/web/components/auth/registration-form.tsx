@@ -6,9 +6,8 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { useSendOtpRegistration } from "~/hooks/auth/useSendOtpRegistration/useSendOtpRegistration";
+import { useSignInEmail, useVerifyEmail } from "~/hooks/auth";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
-import { useVerifyOtpRegistration } from "~/hooks/auth/useVerifyOtpRegistration/useVerifyOtpRegistration";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
 import { useTranslation } from "@repo/i18n";
@@ -43,10 +42,9 @@ export function RegistrationForm({
   const [isPending, setIsPending] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-  const [currentServerEmail, setCurrentServerEmail] = useState(userEmail);
   const updateUser = useUpdateUser();
-  const sendOtpRegistration = useSendOtpRegistration();
-  const verifyOtpRegistration = useVerifyOtpRegistration();
+  const sendOtpRegistration = useSignInEmail();
+  const verifyOtpRegistration = useVerifyEmail();
 
   const isValidEmailCheck = z.string().email().safeParse(userEmail).success;
   const needsEmail = !isValidEmailCheck;
@@ -106,14 +104,7 @@ export function RegistrationForm({
 
   function handleEditEmail() {
     setShowOTPInput(false);
-    form.reset({
-      ...form.getValues(),
-      email:
-        currentServerEmail && z.string().email().safeParse(currentServerEmail).success
-          ? currentServerEmail
-          : "",
-      otp: "",
-    });
+    form.setValue("otp", "");
   }
 
   async function onSubmit(data: Registration) {
@@ -121,32 +112,18 @@ export function RegistrationForm({
     setIsPending(true);
 
     try {
-      // Step 1: user needs to verify an email address and hasn't entered the OTP yet
+      // User needs to verify an email address and hasn't entered the OTP yet
       if (needsEmailVerification && data.email && !showOTPInput) {
-        // Only update the email on the user record if it differs from what is
-        // currently stored on the server
-        if (data.email !== currentServerEmail) {
-          const updateRes = await updateUser.mutateAsync({ email: data.email });
-          if (updateRes.error) {
-            form.setError("email", {
-              type: "manual",
-              message: updateRes.error.message,
-            });
-            setIsPending(false);
-            return;
-          }
-          setCurrentServerEmail(data.email);
-        } else {
-          const otpRes = await sendOtpRegistration.mutateAsync(data.email);
+        const otpRes = await sendOtpRegistration.mutateAsync(data.email);
 
-          if (otpRes.error) {
-            form.setError("email", {
-              type: "manual",
-              message: otpRes.error.message,
-            });
-            setIsPending(false);
-            return;
-          }
+        if (otpRes.error) {
+          form.setError("email", {
+            type: "manual",
+            message:
+              otpRes.error.message ?? t("auth.sendOtpFailed", "Failed to send verification code"),
+          });
+          setIsPending(false);
+          return;
         }
 
         setPendingEmail(data.email);
@@ -155,11 +132,11 @@ export function RegistrationForm({
         return;
       }
 
-      // Step 2: user has entered OTP, verify it
+      // User has entered OTP, verify it.
       if (needsEmailVerification && showOTPInput && data.otp) {
         const result = await verifyOtpRegistration.mutateAsync({
           email: pendingEmail,
-          otp: data.otp,
+          code: data.otp,
         });
         if (result.error) {
           form.setError("otp", {
@@ -171,7 +148,6 @@ export function RegistrationForm({
         }
       }
 
-      // Step 3: create the user profile.
       await createUserProfile({
         body: {
           firstName: data.firstName,
@@ -231,7 +207,7 @@ export function RegistrationForm({
             ) : needsEmailVerification && !showOTPInput ? (
               "Continue with email verification"
             ) : needsEmailVerification && showOTPInput ? (
-              t("auth.verifyAndRegister", "Verify & Register")
+              t("registration.verifyAndRegister")
             ) : (
               t("registration.register")
             )}
