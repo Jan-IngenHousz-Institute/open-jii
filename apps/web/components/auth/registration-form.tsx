@@ -30,12 +30,10 @@ export function RegistrationForm({
   callbackUrl,
   termsData,
   userEmail,
-  userEmailVerified = false,
 }: {
   callbackUrl?: string;
   termsData: { title: React.ReactNode; content: React.ReactNode };
   userEmail?: string;
-  userEmailVerified?: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -47,8 +45,7 @@ export function RegistrationForm({
   const verifyOtpRegistration = useVerifyEmail();
 
   const isValidEmailCheck = z.string().email().safeParse(userEmail).success;
-  const needsEmail = !isValidEmailCheck;
-  const needsEmailVerification = needsEmail || !userEmailVerified;
+  const needsEmailVerification = !isValidEmailCheck;
   const OTP_LENGTH = 6;
 
   const registrationSchema = z
@@ -78,7 +75,7 @@ export function RegistrationForm({
       firstName: "",
       lastName: "",
       organization: "",
-      email: !needsEmail && userEmailVerified === false && userEmail ? userEmail : "", // Prefill email if available but not verified yet
+      email: "",
       acceptedTerms: false,
       otp: "",
     },
@@ -180,6 +177,7 @@ export function RegistrationForm({
               setIsPending={setIsPending}
               onEditEmail={handleEditEmail}
               onComplete={() => form.handleSubmit(onSubmit)()}
+              OTP_LENGTH={OTP_LENGTH}
             />
           )}
 

@@ -57,7 +57,6 @@ export default async function UserRegistrationPage(props: {
                   callbackUrl={getFirstSearchParam(callbackUrl)}
                   termsData={termsData}
                   userEmail={session.user.email}
-                  userEmailVerified={session.user.emailVerified}
                 />
               </div>
             </div>

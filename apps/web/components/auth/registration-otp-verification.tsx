@@ -19,7 +19,6 @@ import { toast } from "@repo/ui/hooks";
 
 import type { Registration } from "./registration-form";
 
-const OTP_LENGTH = 6;
 const REGEXP_ONLY_DIGITS_PATTERN = "^[0-9]+$";
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -30,6 +29,7 @@ export function RegistrationOtpVerification({
   setIsPending,
   onEditEmail,
   onComplete,
+  OTP_LENGTH,
 }: {
   form: UseFormReturn<Registration>;
   pendingEmail: string;
@@ -37,6 +37,7 @@ export function RegistrationOtpVerification({
   setIsPending: React.Dispatch<React.SetStateAction<boolean>>;
   onEditEmail: () => void;
   onComplete: () => void;
+  OTP_LENGTH: number;
 }) {
   const { t } = useTranslation();
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN_SECONDS);
