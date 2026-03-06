@@ -179,12 +179,12 @@ export const auth = betterAuth({
         try {
           await db.update(users).set({ email }).where(eq(users.id, currentUser.id));
         } catch (error) {
-          // Postgres unique constraint violation
           if ((error as { code: string }).code === "23505") {
             throw new APIError("BAD_REQUEST", {
               message: "This email is already associated with another account",
             });
           }
+          throw error;
         }
       }
     }),

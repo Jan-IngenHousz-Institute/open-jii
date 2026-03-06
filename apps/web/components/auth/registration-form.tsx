@@ -119,8 +119,7 @@ export function RegistrationForm({
         if (otpRes.error) {
           form.setError("email", {
             type: "manual",
-            message:
-              otpRes.error.message ?? t("auth.sendOtpFailed", "Failed to send verification code"),
+            message: otpRes.error.message,
           });
           setIsPending(false);
           return;
@@ -205,7 +204,7 @@ export function RegistrationForm({
                 {t("registration.registering")}
               </>
             ) : needsEmailVerification && !showOTPInput ? (
-              "Continue with email verification"
+              t("registration.continueWithEmailVerification")
             ) : needsEmailVerification && showOTPInput ? (
               t("registration.verifyAndRegister")
             ) : (

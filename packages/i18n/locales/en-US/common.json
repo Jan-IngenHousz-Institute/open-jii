@@ -446,7 +446,8 @@
     "errorMessage": "Registration failed",
     "signOutTitle": "Sign Out",
     "signOutDescription": "To complete your registration, you now need to sign out and sign back in again.",
-    "signOutConfirm": "Sign out"
+    "signOutConfirm": "Sign out",
+    "continueWithEmailVerification": "Continue with email verification"
   },
   "signout": {
     "title": "Sign Out",
