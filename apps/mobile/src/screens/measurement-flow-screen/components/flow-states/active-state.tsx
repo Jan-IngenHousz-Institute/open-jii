@@ -6,7 +6,6 @@ import { AnalysisNode } from "../flow-nodes/analysis-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
 import { QuestionNode } from "../flow-nodes/question-node";
-import { FlowProgressIndicator } from "../flow-progress-indicator";
 
 interface ActiveStateProps {
   currentNode: FlowNode;
@@ -14,23 +13,23 @@ interface ActiveStateProps {
 
 export function ActiveState({ currentNode }: ActiveStateProps) {
   const isQuestionNode = currentNode.type === "question";
+  const isAnalysisNode = currentNode.type === "analysis";
 
   return (
-    <View style={{ flex: 1 }}>
-      <FlowProgressIndicator />
-
+    <View className="flex-1">
       {isQuestionNode ? (
         <QuestionNode node={currentNode} />
+      ) : isAnalysisNode ? (
+        <AnalysisNode content={currentNode.content} />
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="handled"
         >
           {currentNode.type === "instruction" && <InstructionNode content={currentNode.content} />}
           {currentNode.type === "measurement" && <MeasurementNode content={currentNode.content} />}
-          {currentNode.type === "analysis" && <AnalysisNode content={currentNode.content} />}
         </ScrollView>
       )}
 

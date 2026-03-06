@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { User, FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
+import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -45,12 +45,7 @@ export default function TabLayout() {
             fontWeight: "bold",
           },
           headerShadowVisible: false,
-          headerRight: () => (
-            <View style={{ alignItems: "flex-start", gap: 6, marginRight: 16 }}>
-              <DevIndicator />
-              <DeviceConnectionWidget />
-            </View>
-          ),
+          headerRight: () => <DeviceConnectionWidget />,
         }}
       >
         <Tabs.Screen
@@ -63,7 +58,14 @@ export default function TabLayout() {
         <Tabs.Screen
           name="measurement-flow"
           options={{
-            title: "Measure",
+            title: "Flow",
+            tabBarLabel: "Measure",
+            headerTransparent: true,
+            headerTintColor: "white",
+            headerStyle: {
+              backgroundColor: "transparent",
+            },
+            headerShadowVisible: false,
             tabBarIcon: ({ color, size }) => <Workflow size={size} color={color} />,
           }}
         />
@@ -94,7 +96,9 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: "Profile",
-            tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+            tabBarIcon: ({ color, size, focused }) => (
+              <DevIndicator size={size} color={color} focused={focused} />
+            ),
           }}
         />
       </Tabs>

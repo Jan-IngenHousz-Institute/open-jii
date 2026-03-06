@@ -1,24 +1,29 @@
-import { clsx } from "clsx";
-import { MessageCircle, Trash2, UploadCloud } from "lucide-react-native";
-import React from "react";
+import { Trash2, UploadCloud } from "lucide-react-native";
+import React, { useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import { Button } from "~/components/Button";
 import { MeasurementItem } from "~/components/measurement-item";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
+import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 
-/** Width for swipe actions: Comment + Upload (if unsynced) + Delete */
-const ACTION_WIDTH = 144;
 const SPRING_CONFIG = { damping: 20, stiffness: 300 };
 /** Horizontal movement (px) before pan activates - avoids revealing on light touch */
 const ACTIVATE_OFFSET_X = 28;
+/** Dimensions for action buttons */
+const ICON_BUTTON_SIZE = 38;
+const COMMENT_BUTTON_WIDTH = 100;
+const BUTTON_GAP = 12; // gap-3
+const CONTAINER_PADDING = 16; // p-4
 
 interface SwipeableMeasurementRowProps {
   id: string;
   timestamp: string;
   experimentName: string;
   status: MeasurementStatus;
+  questions?: AnswerData[];
   onPress?: () => void;
   onComment?: (id: string) => void;
   onSync?: (id: string) => void;
@@ -30,14 +35,34 @@ export function SwipeableMeasurementRow({
   timestamp,
   experimentName,
   status,
+  questions,
   onPress,
   onComment,
   onSync,
   onDelete,
 }: SwipeableMeasurementRowProps) {
-  const { colors, classes } = useTheme();
+  const { colors } = useTheme();
   const translateX = useSharedValue(0);
   const startX = useSharedValue(0);
+
+  // Compute action width based on which buttons are actually visible
+  const showComment = status === "unsynced" && !!onComment;
+  const showSync = status === "unsynced" && !!onSync;
+  const showDelete = !!onDelete;
+
+  const visibleCount = [showComment, showSync, showDelete].filter(Boolean).length;
+  const buttonWidthSum =
+    (showComment ? COMMENT_BUTTON_WIDTH : 0) +
+    (showSync ? ICON_BUTTON_SIZE : 0) +
+    (showDelete ? ICON_BUTTON_SIZE : 0);
+  const actionWidth =
+    CONTAINER_PADDING * 2 + buttonWidthSum + Math.max(0, visibleCount - 1) * BUTTON_GAP;
+
+  const actionWidthSV = useSharedValue(actionWidth);
+
+  useEffect(() => {
+    actionWidthSV.value = actionWidth;
+  }, [actionWidth, actionWidthSV]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])
@@ -47,11 +72,11 @@ export function SwipeableMeasurementRow({
     })
     .onUpdate((e) => {
       const next = startX.value + e.translationX;
-      translateX.value = Math.min(0, Math.max(-ACTION_WIDTH, next));
+      translateX.value = Math.min(0, Math.max(-actionWidthSV.value, next));
     })
     .onEnd((e) => {
-      const snapOpen = translateX.value < -ACTION_WIDTH / 2 || e.velocityX < -200;
-      translateX.value = withSpring(snapOpen ? -ACTION_WIDTH : 0, SPRING_CONFIG);
+      const snapOpen = translateX.value < -actionWidthSV.value / 2 || e.velocityX < -200;
+      translateX.value = withSpring(snapOpen ? -actionWidthSV.value : 0, SPRING_CONFIG);
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -63,73 +88,58 @@ export function SwipeableMeasurementRow({
   const handleDelete = () => onDelete?.(id);
 
   return (
-    <View className={clsx("overflow-hidden rounded-lg", classes.card)} style={{ minHeight: 60 }}>
-      {/* Hidden actions (revealed when swiping left) - full height, no padding/margin except gap between */}
+    <View className="overflow-hidden">
+      {/* Hidden actions (revealed when swiping left) */}
       <View
-        style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: ACTION_WIDTH,
-          flexDirection: "row",
-          alignItems: "stretch",
-          gap: 4,
-        }}
+        className="absolute bottom-0 right-0 top-0 flex-row justify-center gap-3 overflow-hidden rounded-bl-lg rounded-tl-xl bg-[#CDD5DB] p-4"
+        style={{ width: actionWidth }}
       >
-        {status === "unsynced" && onComment && (
-          <TouchableOpacity
+        {showComment && (
+          <Button
+            title="Comment"
             onPress={handleComment}
-            style={{
-              flex: 1,
-              backgroundColor: colors.surface,
-              justifyContent: "center",
-              alignItems: "center",
-              borderRightWidth: 1,
-              borderRightColor: colors.border,
-            }}
-            activeOpacity={0.8}
-          >
-            <MessageCircle size={20} color={colors.onSurface} />
-          </TouchableOpacity>
+            variant="tertiary"
+            style={{ borderColor: "transparent", width: COMMENT_BUTTON_WIDTH }}
+          />
         )}
-        {status === "unsynced" && onSync && (
-          <TouchableOpacity
-            onPress={handleSync}
-            style={{
-              flex: 1,
-              backgroundColor: colors.semantic.info,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-            activeOpacity={0.8}
+        {showSync && (
+          <View
+            style={{ width: ICON_BUTTON_SIZE }}
+            className="overflow-hidden rounded-lg bg-[#EDF2F6]"
           >
-            <UploadCloud size={20} color="#fff" />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSync}
+              className="flex-1 items-center justify-center"
+              activeOpacity={0.7}
+            >
+              <UploadCloud size={16} color={colors.semantic.info} />
+            </TouchableOpacity>
+          </View>
         )}
+
         {onDelete && (
-          <TouchableOpacity
-            onPress={handleDelete}
-            style={{
-              flex: 1,
-              backgroundColor: colors.semantic.error,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-            activeOpacity={0.8}
+          <View
+            style={{ width: ICON_BUTTON_SIZE }}
+            className="overflow-hidden rounded-lg bg-[#EDF2F6]"
           >
-            <Trash2 size={20} color="#fff" />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              className="flex-1 items-center justify-center"
+              activeOpacity={0.7}
+            >
+              <Trash2 size={16} color={colors.semantic.error} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
-
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+        <Animated.View style={animatedStyle}>
           <MeasurementItem
             id={id}
             timestamp={timestamp}
             experimentName={experimentName}
             status={status}
+            questions={questions}
             onPress={onPress}
             hideActions
           />

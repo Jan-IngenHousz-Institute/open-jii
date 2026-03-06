@@ -73,7 +73,6 @@ export function Dropdown({
         style={[
           styles.dropdownButton,
           {
-            backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
             borderColor: theme.isDark ? colors.dark.border : colors.light.border,
           },
         ]}
@@ -96,7 +95,7 @@ export function Dropdown({
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
         <ChevronDown
-          size={20}
+          size={24}
           color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
         />
       </TouchableOpacity>
@@ -211,7 +210,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   dropdownButton: {
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
