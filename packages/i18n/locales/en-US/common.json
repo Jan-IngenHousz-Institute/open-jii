@@ -427,7 +427,7 @@
     "emailPlaceholder": "Enter your email address",
     "emailInvalid": "Please enter a valid email address",
     "emailAlreadyTaken": "This email address is already associated with another account",
-    "emailDescription": "We could not retrieve your email from your sign-in provider. Please provide one so we can contact you.",
+    "emailDescription": "Your sign-in provider did not share your email address. Please add one to use features like project transfers.",
     "firstName": "First Name",
     "firstNamePlaceholder": "Enter your first name",
     "firstNameError": "Your first name must be at least 2 characters long",
