@@ -33,7 +33,8 @@
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "better-auth": "^1.4.12",
-    "nodemailer": "catalog:"
+    "nodemailer": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

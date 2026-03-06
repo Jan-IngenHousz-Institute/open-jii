@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { emailOTP, genericOAuth } from "better-auth/plugins";
+import z from "zod";
 
 import { db, and, eq, profiles, users } from "@repo/database";
 import * as schema from "@repo/database/schema";
@@ -166,10 +167,12 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path === "/sign-in/email-otp") {
         const session = await getSessionFromCtx(ctx);
-        if (!session) return;
+        if (!session?.user) return;
 
         const currentUser = session.user;
-        if (currentUser.registered) return;
+
+        const hasValidEmail = z.string().email().safeParse(currentUser.email).success;
+        if (currentUser.registered && hasValidEmail) return;
 
         const body = ctx.body as { email: string };
         const { email } = body;
