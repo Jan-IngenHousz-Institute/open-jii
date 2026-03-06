@@ -3,61 +3,85 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { useSignInEmail, useVerifyEmail } from "~/hooks/auth";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Checkbox,
-  Input,
-  ScrollArea,
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components";
+import { Button, Form } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
+
+import { RegistrationFields } from "./registration-fields";
+import { RegistrationOtpVerification } from "./registration-otp-verification";
+
+export interface Registration {
+  firstName?: string;
+  lastName?: string;
+  organization?: string;
+  email?: string;
+  acceptedTerms?: boolean;
+  otp?: string;
+}
 
 export function RegistrationForm({
   callbackUrl,
   termsData,
+  userEmail,
+  emailOnly = false,
 }: {
   callbackUrl?: string;
   termsData: { title: React.ReactNode; content: React.ReactNode };
+  userEmail?: string;
+  emailOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const updateUser = useUpdateUser();
+  const sendOtpRegistration = useSignInEmail();
+  const verifyOtpRegistration = useVerifyEmail();
+
+  const isValidEmailCheck = z.string().email().safeParse(userEmail).success;
+  const needsEmailVerification = !isValidEmailCheck;
+  const OTP_LENGTH = 6;
+
   const registrationSchema = z
     .object({
-      firstName: z.string().min(2, t("registration.firstNameError")),
-      lastName: z.string().min(2, t("registration.lastNameError")),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
       organization: z.string().optional(),
-      acceptedTerms: z.boolean(),
+      email: z.string().optional(),
+      acceptedTerms: z.boolean().optional(),
+      otp: z.string().optional(),
     })
-    .superRefine(({ acceptedTerms }, ctx) => {
-      if (!acceptedTerms) {
-        ctx.addIssue({
-          code: "custom",
-          message: t("registration.acceptTermsError"),
-          path: ["acceptedTerms"],
-        });
-      }
-    });
+    .superRefine((data, ctx) => {
+      const addIssue = (path: string, message: string) =>
+        ctx.addIssue({ code: "custom", message, path: [path] });
 
-  type Registration = z.infer<typeof registrationSchema>;
+      if (emailOnly) {
+        if (!data.email) addIssue("email", t("auth.emailRequired"));
+        else if (!z.string().email().safeParse(data.email).success)
+          addIssue("email", t("registration.emailInvalid"));
+      } else {
+        if (!data.firstName || data.firstName.length < 2)
+          addIssue("firstName", t("registration.firstNameError"));
+        if (!data.lastName || data.lastName.length < 2)
+          addIssue("lastName", t("registration.lastNameError"));
+        if (!isValidEmailCheck) {
+          if (!data.email) addIssue("email", t("auth.emailRequired"));
+          else if (!z.string().email().safeParse(data.email).success)
+            addIssue("email", t("registration.emailInvalid"));
+        }
+        if (!data.acceptedTerms) addIssue("acceptedTerms", t("registration.acceptTermsError"));
+      }
+
+      if (showOTPInput && data.otp?.length !== OTP_LENGTH) addIssue("otp", t("auth.otpError"));
+    });
 
   const form = useForm<Registration>({
     resolver: zodResolver(registrationSchema),
@@ -65,37 +89,94 @@ export function RegistrationForm({
       firstName: "",
       lastName: "",
       organization: "",
+      email: "",
       acceptedTerms: false,
+      otp: "",
     },
   });
 
+  const completeRegistration = async () => {
+    const res = await updateUser.mutateAsync({ registered: true });
+
+    if (res.error) {
+      toast({ description: t("registration.errorMessage") || "Registration failed" });
+      setIsPending(false);
+      return;
+    }
+
+    toast({ description: t("registration.successMessage") });
+    router.push(callbackUrl ?? "/platform");
+  };
+
   const { mutateAsync: createUserProfile } = useCreateUserProfile({
-    onSuccess: async () => {
-      const res = await updateUser.mutateAsync({ registered: true });
-      if (res.error) {
-        toast({ description: t("registration.errorMessage") || "Registration failed" }); // Fallback
-        return;
-      }
-      toast({ description: t("registration.successMessage") });
-      router.push(callbackUrl ?? "/platform");
-    },
+    onSuccess: completeRegistration,
   });
+
+  useEffect(() => {
+    if (!showOTPInput) return;
+    form.setValue("otp", "");
+  }, [form, showOTPInput]);
+
+  function handleEditEmail() {
+    setShowOTPInput(false);
+    form.setValue("otp", "");
+  }
 
   async function onSubmit(data: Registration) {
     if (isPending) return;
     setIsPending(true);
 
     try {
+      // User needs to verify an email address and hasn't entered the OTP yet
+      if (needsEmailVerification && data.email && !showOTPInput) {
+        const otpRes = await sendOtpRegistration.mutateAsync(data.email);
+
+        if (otpRes.error) {
+          form.setError("email", {
+            type: "manual",
+            message: otpRes.error.message,
+          });
+          setIsPending(false);
+          return;
+        }
+
+        setPendingEmail(data.email);
+        setShowOTPInput(true);
+        setIsPending(false);
+        return;
+      }
+
+      // User has entered OTP, verify it.
+      if (needsEmailVerification && showOTPInput && data.otp) {
+        const result = await verifyOtpRegistration.mutateAsync({
+          email: pendingEmail,
+          code: data.otp,
+        });
+        if (result.error) {
+          form.setError("otp", {
+            type: "manual",
+            message: result.error.message,
+          });
+          setIsPending(false);
+          return;
+        }
+
+        // Profile already exists, just re-mark as registered.
+        if (emailOnly) {
+          await completeRegistration();
+          return;
+        }
+      }
+
       await createUserProfile({
         body: {
-          firstName: data.firstName,
-          lastName: data.lastName,
+          firstName: data.firstName ?? "",
+          lastName: data.lastName ?? "",
           organization: data.organization,
         },
       });
     } catch (error) {
       console.error("Registration error:", error);
-    } finally {
       setIsPending(false);
     }
   }
@@ -103,112 +184,40 @@ export function RegistrationForm({
   return (
     <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 md:p-14">
       {/* Title */}
-      <div className="mb-4 text-left">
-        <h1 className="text-2xl font-bold">{t("registration.title")}</h1>
-        <p className="text-muted-foreground mt-2">{t("registration.description")}</p>
-      </div>
+      {!showOTPInput && (
+        <div className="mb-4 text-left">
+          <h1 className="text-2xl font-bold">
+            {emailOnly ? t("registration.emailOnlyTitle") : t("registration.title")}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {emailOnly ? t("registration.emailOnlyDescription") : t("registration.description")}
+          </p>
+        </div>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* First name */}
-          <FormField
-            control={form.control}
-            name="firstName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("registration.firstName")}</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    placeholder={t("registration.firstNamePlaceholder")}
-                    className="h-12 rounded-xl"
-                    disabled={isPending}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {needsEmailVerification && showOTPInput && (
+            <RegistrationOtpVerification
+              form={form}
+              pendingEmail={pendingEmail}
+              isPending={isPending}
+              setIsPending={setIsPending}
+              onEditEmail={handleEditEmail}
+              onComplete={() => form.handleSubmit(onSubmit)()}
+              OTP_LENGTH={OTP_LENGTH}
+            />
+          )}
 
-          {/* Last name */}
-          <FormField
-            control={form.control}
-            name="lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("registration.lastName")}</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    placeholder={t("registration.lastNamePlaceholder")}
-                    className="h-12 rounded-xl"
-                    disabled={isPending}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Organization */}
-          <FormField
-            control={form.control}
-            name="organization"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("registration.organization")}</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    placeholder={t("registration.organizationPlaceholder")}
-                    className="h-12 rounded-xl"
-                    disabled={isPending}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Terms */}
-          <FormField
-            control={form.control}
-            name="acceptedTerms"
-            render={({ field }) => (
-              <FormItem className="flex items-end space-x-2">
-                <FormControl>
-                  <Checkbox
-                    id={field.name}
-                    name={field.name}
-                    checked={!!field.value}
-                    onCheckedChange={field.onChange}
-                    ref={field.ref}
-                    disabled={isPending}
-                    onBlur={field.onBlur}
-                  />
-                </FormControl>
-                <FormLabel className="left text-sm font-medium leading-none">
-                  {t("auth.termsPrefix")}
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button type="button" className="cursor-pointer underline">
-                        {t("auth.terms")}
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>{termsData.title}</DialogTitle>
-                      </DialogHeader>
-                      <ScrollArea className="h-64 w-full rounded-md border p-4">
-                        {termsData.content}
-                      </ScrollArea>
-                    </DialogContent>
-                  </Dialog>
-                </FormLabel>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!showOTPInput && (
+            <RegistrationFields
+              form={form}
+              isPending={isPending}
+              needsEmailVerification={needsEmailVerification}
+              termsData={termsData}
+              emailOnly={emailOnly}
+            />
+          )}
 
           {/* Submit */}
           <Button
@@ -221,6 +230,10 @@ export function RegistrationForm({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {t("registration.registering")}
               </>
+            ) : needsEmailVerification && !showOTPInput ? (
+              t("registration.continueWithEmailVerification")
+            ) : needsEmailVerification && showOTPInput ? (
+              t("registration.verifyAndRegister")
             ) : (
               t("registration.register")
             )}

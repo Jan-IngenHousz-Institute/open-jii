@@ -70,6 +70,8 @@ describe("RegistrationForm", () => {
   const defaultProps = {
     callbackUrl: "/dashboard",
     termsData,
+    userEmail: "test@example.com",
+    userEmailVerified: true,
   };
 
   beforeAll(() => {
@@ -197,7 +199,14 @@ describe("RegistrationForm", () => {
 
     // Let's stick to what the code says.
 
-    render(<RegistrationForm termsData={termsData} />, { wrapper: createWrapper() });
+    render(
+      <RegistrationForm
+        termsData={termsData}
+        userEmail="test@example.com"
+        userEmailVerified={true}
+      />,
+      { wrapper: createWrapper() },
+    );
 
     await userEvent.type(screen.getByLabelText("registration.firstName"), "No");
     await userEvent.type(screen.getByLabelText("registration.lastName"), "Callback");
