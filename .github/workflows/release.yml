@@ -73,6 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.semantic_release.outputs.releases_created }}
+      mobile_version: ${{ steps.extract_mobile.outputs.mobile_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -120,7 +121,7 @@ jobs:
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          RELEASES='${{ steps.semantic_release.outputs.releases_created }}'
+          RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
           if [ "$RELEASES" = "{}" ]; then
             echo "No new releases created." >> $GITHUB_STEP_SUMMARY
           else
@@ -129,13 +130,21 @@ jobs:
             echo "$RELEASES" | jq -r 'to_entries | .[] | "- **\(.key)**: v\(.value) (tag: `\(.key)-v\(.value)`)"' >> $GITHUB_STEP_SUMMARY
           fi
 
-  submit-to-google-play:
+      - name: Extract mobile version
+        id: extract_mobile
+        run: |
+          RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
+          MOBILE_VERSION=$(echo "$RELEASES" | jq -r '.mobile // empty')
+          echo "mobile_version=$MOBILE_VERSION" >> $GITHUB_OUTPUT
+          if [ -n "$MOBILE_VERSION" ]; then
+            echo "📱 Mobile release detected: v$MOBILE_VERSION"
+          fi
+
+  submit-to-google-play:  
     name: Submit Mobile to Google Play
     needs: release
-    if: >
-      needs.release.outputs.releases_created != '{}' &&
-      contains(needs.release.outputs.releases_created, 'mobile')
+    if: needs.release.outputs.mobile_version != ''
     uses: ./.github/workflows/submit-to-google-play.yml
     with:
-      version: ${{ fromJSON(needs.release.outputs.releases_created).mobile }}
+      version: ${{ needs.release.outputs.mobile_version }}
     secrets: inherit
