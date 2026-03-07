@@ -95,6 +95,19 @@ describe("CreateMacroUseCase", () => {
       expect(listResult.value).toHaveLength(0);
     });
 
+    it("should return failure when repository create returns empty array", async () => {
+      // Arrange
+      vi.spyOn(macroRepository, "create").mockResolvedValue(success([]));
+
+      // Act
+      const result = await useCase.execute(mockRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Failed to create macro");
+    });
+
     it("should handle duplicate macro names", async () => {
       // Arrange - Create a macro with the same name first
       vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));

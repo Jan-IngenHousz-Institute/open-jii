@@ -5,6 +5,11 @@ export interface AwsConfig {
   placeIndexName: string;
   cognitoIdentityPoolId: string;
   cognitoDeveloperProviderName: string;
+  lambda: {
+    macroSandboxPythonFunctionName: string;
+    macroSandboxJavascriptFunctionName: string;
+    macroSandboxRFunctionName: string;
+  };
 }
 
 export const awsConfigSchema = z.object({
@@ -12,4 +17,9 @@ export const awsConfigSchema = z.object({
   placeIndexName: z.string().min(1),
   cognitoIdentityPoolId: z.string().min(1),
   cognitoDeveloperProviderName: z.string().min(1),
+  lambda: z.object({
+    macroSandboxPythonFunctionName: z.string().min(1),
+    macroSandboxJavascriptFunctionName: z.string().min(1),
+    macroSandboxRFunctionName: z.string().min(1),
+  }),
 });
