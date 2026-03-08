@@ -105,12 +105,12 @@
     "@types/pako": "^2.0.4",
     "@types/react": "catalog:react19",
     "@types/webpack-env": "^1.18.8",
-    "@vitest/ui": "catalog:",
+    "@vitest/ui": "catalog:testing",
     "dotenv-cli": "^8.0.0",
     "eslint": "catalog:",
     "expo-dev-client": "~6.0.18",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:testing"
   },
   "private": true
 }

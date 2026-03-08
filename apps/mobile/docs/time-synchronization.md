@@ -10,88 +10,33 @@ AWS IoT Core requires accurate timestamps for SigV4 authentication. If a device'
 
 ## Solution
 
-We've implemented a server-based time synchronization mechanism that always uses backend server time for AWS authentication instead of relying on the device's local time.
-
-The implementation:
-
-1. Fetches the current time from the backend server
-2. Caches the server time for 30 seconds to minimize network requests
-3. Estimates current server time based on cached value and elapsed local time
-4. Falls back to local time only if the server is unreachable
+We fetch the current UTC time from the [World Time API](https://worldtimeapi.org/api/ip), which returns accurate time based on the client's IP address. This is independent of the device's clock settings.
 
 ## Implementation
 
-### Backend Endpoint
-
-A new `/health/time` endpoint provides the current server timestamp:
-
-```
-GET /health/time
-
-Response:
-{
-  "timestamp": "2026-03-04T10:30:00.000Z",
-  "unixTimestamp": 1709548200000
-}
-```
-
 ### Mobile App
 
-The `getSyncedTime()` utility function in `src/utils/time-sync.ts`:
-- Fetches server time on first call or after cache expires (30s)
-- Caches both server time and local time at fetch moment
-- Estimates current server time by adding elapsed local time to cached server time
-- Falls back to local time if server is unreachable
+The `getSyncedUtcTimestampWithTimezone()` utility in `src/utils/time-sync.ts`:
+- Fetches current time from `https://worldtimeapi.org/api/ip`
+- Returns `unixtime` (converted to milliseconds) and `timezone`
+- Throws on network errors or non-ok responses
 
 ### Usage
 
 The MQTT connection automatically uses synchronized time:
 
 ```typescript
-import { getSyncedTime } from "~/utils/time-sync";
+import { getSyncedUtcTimestampWithTimezone } from "~/utils/time-sync";
 
-// Instead of: new Date()
-const now = await getSyncedTime();
+const { utcTimestamp, timezone } = await getSyncedUtcTimestampWithTimezone();
 ```
-
-## Benefits
-
-- **Prevents authentication failures**: Eliminates AWS IoT Core signature mismatches due to clock skew
-- **Always accurate**: Uses server time instead of potentially incorrect device time
-- **Minimal performance impact**: Only 1 server call per 30 seconds maximum
-- **Graceful degradation**: Falls back to local time if server is unreachable
-- **Transparent integration**: Automatically used by MQTT connection, no code changes needed elsewhere
 
 ## Technical Details
 
-### Cache Strategy
-
-- **Cache Duration**: 30 seconds
-- **Time Estimation**: Between fetches, server time is estimated by adding elapsed local time to the cached server time
-- **Cache Invalidation**: Can be manually cleared using `clearTimeSyncCache()` if needed
+- No caching — each signing request gets a fresh server timestamp
+- AWS SigV4 allows up to 5 minutes of clock skew
+- The API resolves timezone from the client's public IP
 
 ### Error Handling
 
-If the server is unreachable:
-- Logs an error to the console
-- Falls back to local device time
-- Allows the application to continue functioning (though AWS auth may fail if device time is significantly off)
-
-## Testing
-
-Run the tests with:
-
-```bash
-# Run tests once
-pnpm test
-
-# Run tests in watch mode
-pnpm test:watch
-```
-
-The test suite covers:
-- Server time fetching and usage
-- Cache behavior (30-second duration)
-- Time estimation from cached values
-- Fallback to local time on network errors
-- Cache expiration and refetching
+If the API is unreachable or returns an error, the function throws. Callers should handle this appropriately since falling back to device time would defeat the purpose.

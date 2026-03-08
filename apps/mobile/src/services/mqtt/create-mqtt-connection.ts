@@ -31,8 +31,9 @@ async function getAmazonDates() {
   const { utcTimestamp, timezone } = await getSyncedUtcTimestampWithTimezone();
   const syncedDate = DateTime.fromMillis(utcTimestamp, { zone: "utc" });
   const dateStamp = syncedDate.toFormat("yyyyMMdd");
-  const amzDate = syncedDate.toFormat("yyyyMMdd'T'HHmmss'Z'");
-  return { amzDate, dateStamp, timezone };
+  const amazonDate = syncedDate.toFormat("yyyyMMdd'T'HHmmss'Z'");
+  console.log({utcTimestamp, syncedDate, dateStamp, amazonDate})
+  return { amazonDate, dateStamp, timezone };
 }
 
 export async function createSignedUrl(params: {
@@ -47,12 +48,12 @@ export async function createSignedUrl(params: {
   const service = "iotdevicegateway";
   const canonicalUri = "/mqtt";
 
-  const { amzDate, dateStamp } = await getAmazonDates();
+  const { amazonDate, dateStamp } = await getAmazonDates();
   const credentialScope = `${dateStamp}/${params.region}/${service}/aws4_request`;
 
   let query = `X-Amz-Algorithm=AWS4-HMAC-SHA256`;
   query += `&X-Amz-Credential=${encodeURIComponent(`${params.accessKeyId}/${credentialScope}`)}`;
-  query += `&X-Amz-Date=${amzDate}`;
+  query += `&X-Amz-Date=${amazonDate}`;
   query += `&X-Amz-Expires=86400`;
   query += `&X-Amz-SignedHeaders=host`;
 
@@ -70,7 +71,7 @@ export async function createSignedUrl(params: {
 
   const stringToSign = [
     "AWS4-HMAC-SHA256",
-    amzDate,
+    amazonDate,
     credentialScope,
     sha256(canonicalRequest),
   ].join("\n");

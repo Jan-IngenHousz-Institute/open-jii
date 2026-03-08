@@ -1,115 +1,90 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { getSyncedUtcTimestampWithTimezone, type WorldTimeApiResponse } from "~/utils/time-sync";
 
-vi.mock("expo-location", () => ({
-  PermissionStatus: { GRANTED: "granted" },
-  Accuracy: { Lowest: 1 },
-  requestForegroundPermissionsAsync: vi.fn(),
-  getCurrentPositionAsync: vi.fn(),
-}));
+const MOCK_RESPONSE: WorldTimeApiResponse = {
+  abbreviation: "CDT",
+  client_ip: "8.8.8.8",
+  datetime: "2026-03-08T15:00:41.455609-05:00",
+  day_of_week: 0,
+  day_of_year: 67,
+  dst: true,
+  dst_from: null,
+  dst_offset: 3600,
+  dst_until: null,
+  raw_offset: -21600,
+  timezone: "America/Chicago",
+  unixtime: 1773000041,
+  utc_datetime: "2026-03-08T20:00:41.455672Z",
+  utc_offset: "-05:00",
+  week_number: 10,
+};
 
-vi.mock("@photostructure/tz-lookup", () => ({
-  default: vi.fn(() => "Europe/Amsterdam"),
-}));
-
-import * as Location from "expo-location";
-import { getSyncedUtcTimestampWithTimezone, clearTimeSyncCache } from "~/utils/time-sync";
-
-const GPS_TIME = 1709548200000;
-const TIMEZONE = "Europe/Amsterdam";
-
-function mockLocation(timestamp = GPS_TIME, lat = 52.37, lon = 4.9) {
-  vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValueOnce({
-    status: Location.PermissionStatus.GRANTED,
-    granted: true,
-    expires: "never",
-    canAskAgain: true,
-  });
-  vi.mocked(Location.getCurrentPositionAsync).mockResolvedValueOnce({
-    timestamp,
-    coords: { latitude: lat, longitude: lon, altitude: null, accuracy: null, altitudeAccuracy: null, heading: null, speed: null },
-  } as any);
+function mockFetchSuccess(data: WorldTimeApiResponse = MOCK_RESPONSE) {
+  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+    ok: true,
+    json: () => Promise.resolve(data),
+  } as Response);
 }
 
-describe("time-sync", () => {
-  beforeEach(() => {
-    clearTimeSyncCache();
-  });
+function mockFetchFailure(status: number) {
+  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+    ok: false,
+    status,
+  } as Response);
+}
 
+describe("getSyncedUtcTimestampWithTimezone", () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
-  it("should return GPS timestamp and timezone", async () => {
-    mockLocation();
+  it("should return unixtime converted to milliseconds", async () => {
+    mockFetchSuccess();
 
     const result = await getSyncedUtcTimestampWithTimezone();
 
-    expect(result.utcTimestamp).toBe(GPS_TIME);
-    expect(result.timezone).toBe(TIMEZONE);
+    expect(result.utcTimestamp).toBe(MOCK_RESPONSE.unixtime * 1000);
   });
 
-  it("should cache result and not call GPS again within 30 seconds", async () => {
-    mockLocation();
+  it("should return the timezone from the API response", async () => {
+    mockFetchSuccess();
 
-    await getSyncedUtcTimestampWithTimezone();
-    await getSyncedUtcTimestampWithTimezone();
+    const result = await getSyncedUtcTimestampWithTimezone();
 
-    expect(Location.getCurrentPositionAsync).toHaveBeenCalledTimes(1);
+    expect(result.timezone).toBe("America/Chicago");
   });
 
-  it("should estimate time from cache using elapsed local time", async () => {
-    mockLocation();
+  it("should call the worldtimeapi.org IP endpoint", async () => {
+    mockFetchSuccess();
+
+    await getSyncedUtcTimestampWithTimezone();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith("https://worldtimeapi.org/api/ip");
+  });
+
+  it("should fetch fresh time on every call", async () => {
+    mockFetchSuccess();
+    mockFetchSuccess({ ...MOCK_RESPONSE, unixtime: 1773000100 });
 
     const first = await getSyncedUtcTimestampWithTimezone();
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     const second = await getSyncedUtcTimestampWithTimezone();
 
-    expect(second.utcTimestamp).toBeGreaterThan(first.utcTimestamp);
-    expect(Location.getCurrentPositionAsync).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(first.utcTimestamp).toBe(1773000041 * 1000);
+    expect(second.utcTimestamp).toBe(1773000100 * 1000);
   });
 
-  it("should refetch after cache is cleared", async () => {
-    mockLocation();
-    await getSyncedUtcTimestampWithTimezone();
+  it("should throw when the API returns a non-ok response", async () => {
+    mockFetchFailure(503);
 
-    clearTimeSyncCache();
-
-    mockLocation(GPS_TIME + 30_000);
-    const result = await getSyncedUtcTimestampWithTimezone();
-
-    expect(Location.getCurrentPositionAsync).toHaveBeenCalledTimes(2);
-    expect(result.utcTimestamp).toBe(GPS_TIME + 30_000);
-  });
-
-  it("should fallback to local time and device timezone when location permission is denied", async () => {
-    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValueOnce({
-      status: "denied" as any,
-      granted: false,
-      expires: "never",
-      canAskAgain: false,
-    });
-
-    const before = Date.now();
-    const result = await getSyncedUtcTimestampWithTimezone();
-    const after = Date.now();
-
-    expect(result.utcTimestamp).toBeGreaterThanOrEqual(before);
-    expect(result.utcTimestamp).toBeLessThanOrEqual(after);
-    expect(typeof result.timezone).toBe("string");
-    expect(result.timezone.length).toBeGreaterThan(0);
-  });
-
-  it("should fallback when GPS throws", async () => {
-    vi.mocked(Location.requestForegroundPermissionsAsync).mockRejectedValueOnce(
-      new Error("GPS unavailable"),
+    await expect(getSyncedUtcTimestampWithTimezone()).rejects.toThrow(
+      "Time API request failed with status 503",
     );
+  });
 
-    const before = Date.now();
-    const result = await getSyncedUtcTimestampWithTimezone();
+  it("should propagate network errors", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network request failed"));
 
-    expect(result.utcTimestamp).toBeGreaterThanOrEqual(before);
-    expect(typeof result.timezone).toBe("string");
+    await expect(getSyncedUtcTimestampWithTimezone()).rejects.toThrow("Network request failed");
   });
 });
