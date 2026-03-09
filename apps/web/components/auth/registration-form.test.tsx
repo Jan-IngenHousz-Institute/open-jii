@@ -26,6 +26,13 @@ vi.mock("~/app/actions/auth", () => ({
   handleRegister: (): unknown => handleRegisterMock(),
 }));
 
+const mockSendOtpMutate = vi.fn();
+const mockVerifyOtpMutate = vi.fn();
+vi.mock("~/hooks/auth", () => ({
+  useSignInEmail: () => ({ mutateAsync: mockSendOtpMutate }),
+  useVerifyEmail: () => ({ mutateAsync: mockVerifyOtpMutate }),
+}));
+
 const createUserProfileMock = vi.fn();
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
@@ -92,6 +99,8 @@ describe("RegistrationForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUpdateUserMutate.mockResolvedValue({});
+    mockSendOtpMutate.mockResolvedValue({});
+    mockVerifyOtpMutate.mockResolvedValue({});
   });
 
   it("renders the registration form with title and description", () => {
@@ -199,14 +208,9 @@ describe("RegistrationForm", () => {
 
     // Let's stick to what the code says.
 
-    render(
-      <RegistrationForm
-        termsData={termsData}
-        userEmail="test@example.com"
-        userEmailVerified={true}
-      />,
-      { wrapper: createWrapper() },
-    );
+    render(<RegistrationForm termsData={termsData} userEmail="test@example.com" />, {
+      wrapper: createWrapper(),
+    });
 
     await userEvent.type(screen.getByLabelText("registration.firstName"), "No");
     await userEvent.type(screen.getByLabelText("registration.lastName"), "Callback");
@@ -339,5 +343,144 @@ describe("RegistrationForm", () => {
 
     // Should only call once
     expect(createUserProfileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows validation error if firstName is too short", async () => {
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+
+    await userEvent.type(screen.getByLabelText("registration.firstName"), "A");
+    await userEvent.type(screen.getByLabelText("registration.lastName"), "Smith");
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("registration.firstNameError")).toBeInTheDocument();
+    });
+    expect(createUserProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("shows validation error if lastName is too short", async () => {
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+
+    await userEvent.type(screen.getByLabelText("registration.firstName"), "Alice");
+    await userEvent.type(screen.getByLabelText("registration.lastName"), "S");
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("registration.lastNameError")).toBeInTheDocument();
+    });
+    expect(createUserProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("shows email field when userEmail is not a valid email", () => {
+    render(<RegistrationForm termsData={termsData} userEmail="not-an-email" />, {
+      wrapper: createWrapper(),
+    });
+
+    expect(screen.getByLabelText("registration.email")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+    ).toBeInTheDocument();
+  });
+
+  describe("emailOnly mode", () => {
+    it("renders emailOnly title and description", () => {
+      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+
+      expect(screen.getByText("registration.emailOnlyTitle")).toBeInTheDocument();
+      expect(screen.getByText("registration.emailOnlyDescription")).toBeInTheDocument();
+    });
+
+    it("does not render name, organization, or terms fields", () => {
+      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+
+      expect(screen.queryByLabelText("registration.firstName")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("registration.lastName")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("registration.organization")).not.toBeInTheDocument();
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    });
+
+    it("shows validation error for empty email", async () => {
+      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("auth.emailRequired")).toBeInTheDocument();
+      });
+    });
+
+    it("shows validation error for invalid email format", async () => {
+      render(<RegistrationForm termsData={termsData} emailOnly />, {
+        wrapper: createWrapper(),
+      });
+
+      await userEvent.type(screen.getByLabelText("registration.email"), "notanemail");
+
+      const form = screen
+        .getByRole("button", { name: "registration.continueWithEmailVerification" })
+        .closest("form");
+
+      if (form) {
+        fireEvent.submit(form);
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText("registration.emailInvalid")).toBeInTheDocument();
+      });
+    });
+
+    it("transitions to OTP step after submitting a valid email", async () => {
+      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+
+      await userEvent.type(screen.getByLabelText("registration.email"), "user@example.com");
+      fireEvent.click(
+        screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("auth.checkEmail")).toBeInTheDocument();
+      });
+      expect(mockSendOtpMutate).toHaveBeenCalledWith("user@example.com");
+    });
+
+    it("sets email field error when sendOtp fails", async () => {
+      mockSendOtpMutate.mockResolvedValue({ error: { message: "Too many requests" } });
+
+      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+
+      await userEvent.type(screen.getByLabelText("registration.email"), "user@example.com");
+      fireEvent.click(
+        screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Too many requests")).toBeInTheDocument();
+      });
+      expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();
+    });
+
+    it("returns to email form when edit email button is clicked", async () => {
+      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+
+      await userEvent.type(screen.getByLabelText("registration.email"), "user@example.com");
+      fireEvent.click(
+        screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("auth.checkEmail")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Edit email address" }));
+
+      await waitFor(() => {
+        expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();
+        expect(screen.getByLabelText("registration.email")).toBeInTheDocument();
+      });
+    });
   });
 });
