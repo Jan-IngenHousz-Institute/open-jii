@@ -36,7 +36,7 @@ vi.mock("~/api/client", () => ({
     health: {
       getTime: () => {
         getTimeCallCount++;
-        return Promise.resolve({ status: 200, body: { utcTimestamp: mockServerUtcMs } });
+        return Promise.resolve({ status: 200, body: { utcTimestampMs: mockServerUtcMs, utcTimestampSec: Math.floor(mockServerUtcMs / 1000) } });
       },
     },
   }),

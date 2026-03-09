@@ -11,7 +11,7 @@ GPS-based timezone resolution + server time sync with offset tracking.
 ### Flow
 
 1. **GPS → Timezone**: `expo-location` gets lat/lon, `@photostructure/tz-lookup` resolves the IANA timezone
-2. **Server time**: Fetch UTC time from `GET /health/time?timezone=<tz>` on our backend
+2. **Server time**: Fetch UTC time from `GET /health/time` on our backend
 3. **Offset**: Calculate `offsetMs = serverTime - deviceTime` (adjusted for round-trip latency)
 4. **Store in memory**: The offset and timezone are kept in a module-level singleton
 5. **Interval**: Re-syncs every 30 minutes; tolerates failures gracefully
@@ -41,7 +41,7 @@ If 3 consecutive syncs fail, a toast notification warns the user that time may b
 ```typescript
 import { getSyncedUtcTimestampWithTimezone } from "~/utils/time-sync";
 
-const { utcTimestamp, timezone } = await getSyncedUtcTimestampWithTimezone();
+const { utcTimestampMs, timezone } = await getSyncedUtcTimestampWithTimezone();
 ```
 
 ### Measurement Timestamps
@@ -70,7 +70,8 @@ const luxonDt = getSyncedUtcDateTime();
 
 ```json
 {
-  "utcTimestamp": 1773000041000,
+  "utcTimestampMs": 1773000041000,
+  "utcTimestampSec": 1773000041,
   "iso": "2026-03-09T15:00:41.000Z"
 }
 ```

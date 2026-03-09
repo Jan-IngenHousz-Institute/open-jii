@@ -24,11 +24,12 @@ export class HealthController {
     this.logger.log({
       msg: "Time endpoint called",
       operation: "getTime",
-      utcTimestamp: now.getTime(),
+      utcTimestampMs: now.getTime(),
       iso: now.toISOString(),
     });
     return {
-      utcTimestamp: now.getTime(),
+      utcTimestampMs: now.getTime(),
+      utcTimestampSec: Math.floor(now.getTime() / 1000),
       iso: now.toISOString(),
     };
   }

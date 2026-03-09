@@ -4,8 +4,9 @@ import { z } from "zod";
 const c = initContract();
 
 export const zHealthTimeResponse = z.object({
-  utcTimestamp: z.number(),
-  iso: z.string(),
+  utcTimestampMs: z.number().describe("Milliseconds since Unix epoch"),
+  utcTimestampSec: z.number().describe("Seconds since Unix epoch (floored)"),
+  iso: z.string().describe("ISO 8601 UTC string"),
 });
 
 export type HealthTimeResponse = z.infer<typeof zHealthTimeResponse>;

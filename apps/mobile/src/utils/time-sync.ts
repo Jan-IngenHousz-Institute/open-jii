@@ -104,7 +104,7 @@ async function fetchServerTime(): Promise<number> {
     throw new Error(`Server time request failed: ${result.status}`);
   }
 
-  return result.body.utcTimestamp;
+  return result.body.utcTimestampMs;
 }
 
 async function performSync(isInitial = false): Promise<void> {
