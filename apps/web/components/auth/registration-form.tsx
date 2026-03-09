@@ -136,13 +136,11 @@ export function RegistrationForm({
             type: "manual",
             message: otpRes.error.message,
           });
-          setIsPending(false);
           return;
         }
 
         setPendingEmail(data.email);
         setShowOTPInput(true);
-        setIsPending(false);
         return;
       }
 
@@ -152,12 +150,12 @@ export function RegistrationForm({
           email: pendingEmail,
           code: data.otp,
         });
+
         if (result.error) {
           form.setError("otp", {
             type: "manual",
             message: result.error.message,
           });
-          setIsPending(false);
           return;
         }
 
@@ -177,10 +175,10 @@ export function RegistrationForm({
       });
     } catch (error) {
       console.error("Registration error:", error);
+    } finally {
       setIsPending(false);
     }
   }
-
   return (
     <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 md:p-14">
       {/* Title */}

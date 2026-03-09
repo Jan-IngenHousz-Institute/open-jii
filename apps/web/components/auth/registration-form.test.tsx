@@ -78,7 +78,6 @@ describe("RegistrationForm", () => {
     callbackUrl: "/dashboard",
     termsData,
     userEmail: "test@example.com",
-    userEmailVerified: true,
   };
 
   beforeAll(() => {
