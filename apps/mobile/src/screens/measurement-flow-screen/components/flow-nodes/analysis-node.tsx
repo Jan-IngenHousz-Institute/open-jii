@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
@@ -39,9 +39,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";
 
-  // Local time with offset (plant timezone) from synced server time
-  const analysisTimestampRef = useRef<string>(getSyncedLocalISO());
-  const analysisTimezoneRef = useRef<string>(getTimeSyncState().timezone);
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
   const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -89,7 +86,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       <MeasurementResult
         rawMeasurement={scanResult}
         macro={macro}
-        timestamp={analysisTimestampRef.current}
+        timestamp={getSyncedLocalISO()}
         experimentName={experimentName}
         onCommentPress={() => setCommentModalVisible(true)}
       />
@@ -117,13 +114,18 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       throw new Error("Missing macro information");
     }
 
+    // Capture timestamp/timezone at upload time so the sync service
+    // has had a chance to complete its first sync.
+    const timestamp = getSyncedLocalISO();
+    const timezone = getTimeSyncState().timezone;
+
     const cycleAnswers = getCycleAnswers(iterationCount);
     const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
 
     await uploadMeasurement({
       rawMeasurement: scanResult,
-      timestamp: analysisTimestampRef.current,
-      timezone: analysisTimezoneRef.current,
+      timestamp,
+      timezone,
       experimentName,
       experimentId,
       protocolId,
