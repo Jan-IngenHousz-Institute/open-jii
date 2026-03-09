@@ -29,7 +29,7 @@ export default async function UserRegistrationPage(props: {
     redirect(`/${locale}/platform`);
   }
 
-  // Users with invalid emails for their orcid account, also have emailVerified true
+  // Users with invalid emails that are already registered also have emailVerified = true
   const emailOnly = session.user.emailVerified === true && !hasValidEmail;
 
   // Fetch terms and conditions data
