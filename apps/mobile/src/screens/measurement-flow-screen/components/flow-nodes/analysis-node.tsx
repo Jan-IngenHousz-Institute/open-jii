@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
@@ -45,6 +45,10 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
 
+  // Capture the display timestamp once so it stays stable across re-renders.
+  // The upload handler captures its own fresh timestamp independently.
+  const displayTimestamp = useMemo(() => getSyncedLocalISO(), [scanResult]);
+
   const renderContent = () => {
     if (!scanResult) {
       return (
@@ -86,7 +90,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       <MeasurementResult
         rawMeasurement={scanResult}
         macro={macro}
-        timestamp={getSyncedLocalISO()}
+        timestamp={displayTimestamp}
         experimentName={experimentName}
         onCommentPress={() => setCommentModalVisible(true)}
       />

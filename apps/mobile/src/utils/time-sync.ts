@@ -21,7 +21,7 @@ export interface TimeSyncState {
   lastSyncedAt: number;
 }
 
-const SYNC_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+const SYNC_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 const MISSED_PING_WARN_THRESHOLD = 3;
 const STORAGE_KEY = "TIME_SYNC_STATE";
 
@@ -216,9 +216,6 @@ const ENSURE_SYNCED_TIMEOUT_MS = 10_000;
 export async function ensureSynced(): Promise<void> {
   if (state.isSynced) return;
 
-  // Kick off a sync in case startTimeSync hasn't been called yet.
-  performSync(true);
-
   return new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       syncWaiters = syncWaiters.filter((r) => r !== resolve);
@@ -230,5 +227,9 @@ export async function ensureSynced(): Promise<void> {
       clearTimeout(timer);
       resolve();
     });
+
+    // Kick off a sync in case startTimeSync hasn't been called yet.
+    // Must come *after* the waiter is registered so a fast resolve isn't missed.
+    performSync(true);
   });
 }

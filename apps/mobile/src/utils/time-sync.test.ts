@@ -246,4 +246,274 @@ describe("time-sync", () => {
     expect(getTimeCallCount - callsBeforeSecondBurst).toBe(1);
     expect(getTimeSyncState().lastSyncedAt).toBeGreaterThan(timestampAfterFirstBurst);
   });
+
+  describe("missed pings and threshold warnings", () => {
+    it("should increment missedPings on each failed sync", async () => {
+      const { startTimeSync, getTimeSyncState, stopTimeSync } = await import("./time-sync");
+
+      // Start with a successful sync so isSynced = true
+      mockServerUtcMs = Date.now();
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(getTimeSyncState().missedPings).toBe(0);
+
+      // Now make the server fail
+      const clientModule = await import("~/api/client");
+      const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
+        health: {
+          getTime: () => Promise.resolve({ status: 500, body: {} }),
+        },
+      } as any);
+
+      // Advance past debounce, then trigger interval sync
+      await advancePastDebounce();
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(getTimeSyncState().missedPings).toBe(1);
+      expect(getTimeSyncState().isSynced).toBe(true); // stays true from initial sync
+
+      spy.mockRestore();
+    });
+
+    it("should show toast.warning when missedPings reaches threshold (3)", async () => {
+      const { startTimeSync, getTimeSyncState, stopTimeSync } = await import("./time-sync");
+      const { toast } = await import("sonner-native");
+
+      // Successful initial sync
+      mockServerUtcMs = Date.now();
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      // Make server fail
+      const clientModule = await import("~/api/client");
+      const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
+        health: {
+          getTime: () => Promise.resolve({ status: 500, body: {} }),
+        },
+      } as any);
+
+      (toast.warning as ReturnType<typeof vi.fn>).mockClear();
+
+      // Trigger 3 failed syncs via interval (each needs debounce window to pass)
+      for (let i = 0; i < 3; i++) {
+        await advancePastDebounce();
+        await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+        await vi.advanceTimersByTimeAsync(50);
+      }
+
+      expect(getTimeSyncState().missedPings).toBe(3);
+      expect(toast.warning).toHaveBeenCalledWith(
+        "Time sync lost. Please check your phone's date and time settings.",
+      );
+
+      spy.mockRestore();
+    });
+
+    it("should show toast.warning on initial sync failure", async () => {
+      // Make server fail from the start
+      const clientModule = await import("~/api/client");
+      const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
+        health: {
+          getTime: () => Promise.resolve({ status: 500, body: {} }),
+        },
+      } as any);
+
+      const { startTimeSync } = await import("./time-sync");
+      const { toast } = await import("sonner-native");
+      (toast.warning as ReturnType<typeof vi.fn>).mockClear();
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(toast.warning).toHaveBeenCalledWith("Unable to synchronize time.");
+
+      spy.mockRestore();
+    });
+
+    it("should reset missedPings to 0 after a successful sync", async () => {
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+      mockServerUtcMs = Date.now();
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      // Fail once
+      const clientModule = await import("~/api/client");
+      const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
+        health: {
+          getTime: () => Promise.resolve({ status: 500, body: {} }),
+        },
+      } as any);
+
+      await advancePastDebounce();
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(50);
+      expect(getTimeSyncState().missedPings).toBe(1);
+
+      // Restore working server
+      spy.mockRestore();
+
+      await advancePastDebounce();
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(50);
+      expect(getTimeSyncState().missedPings).toBe(0);
+    });
+  });
+
+  describe("restoreState from AsyncStorage", () => {
+    it("should restore persisted state on startTimeSync", async () => {
+      const persisted: import("./time-sync").TimeSyncState = {
+        offsetMs: 4200,
+        timezone: "Europe/Amsterdam",
+        isSynced: true,
+        missedPings: 5,
+        lastSyncedAt: Date.now() - 60_000,
+      };
+      mockAsyncStorage["TIME_SYNC_STATE"] = JSON.stringify(persisted);
+
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+      startTimeSync();
+      // Let restoreState + performSync settle
+      await vi.advanceTimersByTimeAsync(50);
+
+      const s = getTimeSyncState();
+      // After restore + successful sync, isSynced should be true and missedPings reset
+      expect(s.isSynced).toBe(true);
+      expect(s.missedPings).toBe(0);
+      // timezone comes from the fresh GPS resolve, not the persisted value
+      expect(s.timezone).toBe("America/Chicago");
+    });
+
+    it("should reset missedPings to 0 when restoring", async () => {
+      // Persisted state has missedPings = 7
+      const persisted: import("./time-sync").TimeSyncState = {
+        offsetMs: 100,
+        timezone: "Asia/Tokyo",
+        isSynced: true,
+        missedPings: 7,
+        lastSyncedAt: Date.now() - 120_000,
+      };
+      mockAsyncStorage["TIME_SYNC_STATE"] = JSON.stringify(persisted);
+
+      // Make the initial sync fail so we can observe the restored state before sync overwrites it
+      const clientModule = await import("~/api/client");
+      const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
+        health: {
+          getTime: () => Promise.resolve({ status: 500, body: {} }),
+        },
+      } as any);
+
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      const s = getTimeSyncState();
+      // restoreState resets missedPings to 0, then the failed sync bumps it to 1
+      expect(s.missedPings).toBe(1);
+      // isSynced should still be true from the restored state
+      expect(s.isSynced).toBe(true);
+
+      spy.mockRestore();
+    });
+
+    it("should handle missing AsyncStorage data gracefully", async () => {
+      // No persisted state — mockAsyncStorage is empty
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      // Should still sync successfully from scratch
+      expect(getTimeSyncState().isSynced).toBe(true);
+    });
+  });
+
+  describe("ensureSynced", () => {
+    it("should resolve immediately if already synced", async () => {
+      const { startTimeSync, ensureSynced } = await import("./time-sync");
+
+      mockServerUtcMs = Date.now();
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      // Already synced — should resolve without waiting
+      await ensureSynced();
+    });
+
+    it("should wait for sync to complete when not yet synced", async () => {
+      const { ensureSynced, getTimeSyncState } = await import("./time-sync");
+
+      mockServerUtcMs = Date.now() + 3000;
+
+      let resolved = false;
+      const promise = ensureSynced().then(() => {
+        resolved = true;
+      });
+
+      // The sync is in-flight but hasn't settled yet
+      expect(resolved).toBe(false);
+
+      // Let the async sync (performSync) settle
+      await vi.advanceTimersByTimeAsync(50);
+
+      await promise;
+      expect(resolved).toBe(true);
+      expect(getTimeSyncState().isSynced).toBe(true);
+    });
+
+    it("should reject after timeout if sync never succeeds", async () => {
+      // Make fetchServerTime always fail
+      const clientModule = await import("~/api/client");
+      const getApiClientSpy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
+        health: {
+          getTime: () => Promise.resolve({ status: 500, body: {} }),
+        },
+      } as any);
+
+      const { ensureSynced } = await import("./time-sync");
+      const { toast } = await import("sonner-native");
+
+      // Attach the rejection handler before advancing timers so the
+      // rejection is never seen as "unhandled" by the runtime.
+      const promise = ensureSynced();
+      const resultPromise = promise.then(
+        () => {
+          throw new Error("Expected ensureSynced to reject");
+        },
+        (err: Error) => err,
+      );
+
+      // Advance past the 10s timeout
+      await vi.advanceTimersByTimeAsync(10_000 + 50);
+
+      const error = await resultPromise;
+      expect(error.message).toMatch("Timed out waiting for initial sync");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Time sync unavailable. Please check your connection and try again.",
+      );
+
+      getApiClientSpy.mockRestore();
+    });
+
+    it("should resolve multiple waiters when sync completes", async () => {
+      const { ensureSynced, getTimeSyncState } = await import("./time-sync");
+
+      mockServerUtcMs = Date.now() + 1000;
+
+      let resolvedCount = 0;
+      const p1 = ensureSynced().then(() => resolvedCount++);
+      const p2 = ensureSynced().then(() => resolvedCount++);
+      const p3 = ensureSynced().then(() => resolvedCount++);
+
+      // Let the sync settle
+      await vi.advanceTimersByTimeAsync(50);
+
+      await Promise.all([p1, p2, p3]);
+      expect(resolvedCount).toBe(3);
+      expect(getTimeSyncState().isSynced).toBe(true);
+    });
+  });
 });

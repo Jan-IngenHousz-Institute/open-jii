@@ -14,7 +14,7 @@ GPS-based timezone resolution + server time sync with offset tracking.
 2. **Server time**: Fetch UTC time from `GET /health/time` on our backend
 3. **Offset**: Calculate `offsetMs = serverTime - deviceTime` (adjusted for round-trip latency)
 4. **Store in memory**: The offset and timezone are kept in a module-level singleton
-5. **Interval**: Re-syncs every 30 minutes; tolerates failures gracefully
+5. **Interval**: Re-syncs every 60 minutes; tolerates failures gracefully
 
 ### Foreground Re-sync
 

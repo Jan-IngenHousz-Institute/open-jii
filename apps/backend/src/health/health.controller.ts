@@ -1,4 +1,5 @@
-import { Controller, Get, Logger } from "@nestjs/common";
+import { Controller, Get, Logger, UseGuards } from "@nestjs/common";
+import { ThrottlerGuard, Throttle } from "@nestjs/throttler";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
 @Controller("health")
@@ -19,6 +20,8 @@ export class HealthController {
   }
 
   @Get("time")
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ "health-time": { ttl: 60_000, limit: 30 } })
   getTime() {
     const now = new Date();
     this.logger.log({
