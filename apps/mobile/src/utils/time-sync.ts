@@ -21,7 +21,7 @@ export interface WorldTimeApiResponse {
   week_number: number;
 }
 
-const TIME_API_URL = "https://worldtimeapi.org/api/ip";
+const TIME_API_URL = "https://time.now/developer/api/ip/8.8.8.8";
 
 export async function getSyncedUtcTimestampWithTimezone(): Promise<TimeSyncResult> {
   const response = await fetch(TIME_API_URL);
