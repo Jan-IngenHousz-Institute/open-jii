@@ -5,6 +5,5 @@
     }
   ],
   "chat.agent.enabled": true,
-  "jest.runMode": "on-demand",
-  "kiroAgent.configureMCP": "Disabled"
+  "jest.runMode": "on-demand"
 }

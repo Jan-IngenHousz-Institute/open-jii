@@ -39,9 +39,10 @@ If 3 consecutive syncs fail, a toast notification warns the user that time may b
 ### MQTT Signing (AWS SigV4)
 
 ```typescript
-import { getSyncedUtcTimestampWithTimezone } from "~/utils/time-sync";
+import { getSyncedUtcNow, getTimeSyncState } from "~/utils/time-sync";
 
-const { utcTimestampMs, timezone } = await getSyncedUtcTimestampWithTimezone();
+const utcTimestampMs = getSyncedUtcNow();
+const { timezone } = getTimeSyncState();
 ```
 
 ### Measurement Timestamps

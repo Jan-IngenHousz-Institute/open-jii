@@ -9,7 +9,7 @@ import "react-native-get-random-values";
 import { getEnvVar } from "~/stores/environment-store";
 import { Emitter } from "~/utils/emitter";
 import { generateRandomString } from "~/utils/generate-random-string";
-import { getSyncedUtcDateTime, getTimeSyncState } from "~/utils/time-sync";
+import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/utils/time-sync";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -34,7 +34,7 @@ function getAmazonDates() {
   return { amazonDate, dateStamp, timezone };
 }
 
-export function createSignedUrl(params: {
+export async function createSignedUrl(params: {
   clientId: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -42,6 +42,9 @@ export function createSignedUrl(params: {
   region: string;
   endpoint: string;
 }) {
+  // Block until the first time sync has completed so we never sign with an unsynced device clock.
+  await ensureSynced();
+
   const method = "GET";
   const service = "iotdevicegateway";
   const canonicalUri = "/mqtt";

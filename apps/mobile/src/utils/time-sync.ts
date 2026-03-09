@@ -36,6 +36,9 @@ let state: TimeSyncState = {
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
+/** Resolvers waiting for the first successful sync. */
+let syncWaiters: Array<() => void> = [];
+
 const SYNC_DEBOUNCE_MS = 5_000;
 
 /** Single debouncer for all sync triggers (interval, foreground).
@@ -136,6 +139,10 @@ async function performSync(isInitial = false): Promise<void> {
     });
 
     await persistState();
+
+    // Resolve any callers waiting for the first sync.
+    for (const resolve of syncWaiters) resolve();
+    syncWaiters = [];
   } catch (err) {
     console.warn("[time-sync] Sync failed:", err);
     state = { ...state, missedPings: state.missedPings + 1 };
@@ -197,4 +204,31 @@ export function getSyncedUtcDateTime(): DateTime {
 export function getSyncedLocalISO(): string {
   const iso = DateTime.fromMillis(getSyncedUtcNow(), { zone: state.timezone }).toISO();
   return iso ?? new Date().toISOString();
+}
+
+const ENSURE_SYNCED_TIMEOUT_MS = 10_000;
+
+/**
+ * Returns immediately if a sync has already completed.
+ * Otherwise triggers an on-demand sync and waits for it (with a timeout).
+ * Use this to gate SigV4 signing so we never sign with an unsynced clock.
+ */
+export async function ensureSynced(): Promise<void> {
+  if (state.isSynced) return;
+
+  // Kick off a sync in case startTimeSync hasn't been called yet.
+  performSync(true);
+
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      syncWaiters = syncWaiters.filter((r) => r !== resolve);
+      toast.error("Time sync unavailable. Please check your connection and try again.");
+      reject(new Error("[time-sync] Timed out waiting for initial sync"));
+    }, ENSURE_SYNCED_TIMEOUT_MS);
+
+    syncWaiters.push(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
 }
