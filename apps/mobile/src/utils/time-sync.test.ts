@@ -1,90 +1,192 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { getSyncedUtcTimestampWithTimezone, type WorldTimeApiResponse } from "~/utils/time-sync";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
-const MOCK_RESPONSE: WorldTimeApiResponse = {
-  abbreviation: "CDT",
-  client_ip: "8.8.8.8",
-  datetime: "2026-03-08T15:00:41.455609-05:00",
-  day_of_week: 0,
-  day_of_year: 67,
-  dst: true,
-  dst_from: null,
-  dst_offset: 3600,
-  dst_until: null,
-  raw_offset: -21600,
-  timezone: "America/Chicago",
-  unixtime: 1773000041,
-  utc_datetime: "2026-03-08T20:00:41.455672Z",
-  utc_offset: "-05:00",
-  week_number: 10,
-};
+// --- Mocks ---
 
-function mockFetchSuccess(data: WorldTimeApiResponse = MOCK_RESPONSE) {
-  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-    ok: true,
-    json: () => Promise.resolve(data),
-  } as Response);
-}
+const mockAsyncStorage: Record<string, string> = {};
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: {
+    getItem: vi.fn((key: string) => Promise.resolve(mockAsyncStorage[key] ?? null)),
+    setItem: vi.fn((key: string, value: string) => {
+      mockAsyncStorage[key] = value;
+      return Promise.resolve();
+    }),
+  },
+}));
 
-function mockFetchFailure(status: number) {
-  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-    ok: false,
-    status,
-  } as Response);
-}
+vi.mock("expo-location", () => ({
+  requestForegroundPermissionsAsync: vi.fn(() =>
+    Promise.resolve({ status: "granted" }),
+  ),
+  getCurrentPositionAsync: vi.fn(() =>
+    Promise.resolve({ coords: { latitude: 41.8781, longitude: -87.6298 } }),
+  ),
+  Accuracy: { Low: 1 },
+}));
 
-describe("getSyncedUtcTimestampWithTimezone", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+vi.mock("@photostructure/tz-lookup", () => ({
+  default: vi.fn(() => "America/Chicago"),
+}));
+
+vi.mock("sonner-native", () => ({
+  toast: { warning: vi.fn(), error: vi.fn(), success: vi.fn() },
+}));
+
+let mockServerUtcMs = Date.now();
+vi.mock("~/api/client", () => ({
+  getApiClient: () => ({
+    health: {
+      getTime: () =>
+        Promise.resolve({ status: 200, body: { utcTimestamp: mockServerUtcMs } }),
+    },
+  }),
+}));
+
+// Mock AppState from react-native
+let capturedAppStateHandler: ((state: string) => void) | null = null;
+const mockRemove = vi.fn();
+
+vi.mock("react-native", () => ({
+  AppState: {
+    addEventListener: vi.fn((_event: string, handler: (state: string) => void) => {
+      capturedAppStateHandler = handler;
+      return { remove: mockRemove };
+    }),
+  },
+}));
+
+// --- Tests ---
+
+describe("time-sync", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    capturedAppStateHandler = null;
+    mockRemove.mockClear();
+    mockServerUtcMs = Date.now();
+
+    // Clean up any leftover state from previous tests
+    for (const key of Object.keys(mockAsyncStorage)) {
+      delete mockAsyncStorage[key];
+    }
   });
 
-  it("should return unixtime converted to milliseconds", async () => {
-    mockFetchSuccess();
-
-    const result = await getSyncedUtcTimestampWithTimezone();
-
-    expect(result.utcTimestamp).toBe(MOCK_RESPONSE.unixtime * 1000);
+  afterEach(async () => {
+    // Dynamic import so mocks are in place
+    const { stopTimeSync } = await import("./time-sync");
+    stopTimeSync();
+    vi.useRealTimers();
+    vi.resetModules();
   });
 
-  it("should return the timezone from the API response", async () => {
-    mockFetchSuccess();
+  it("should register an AppState listener on start", async () => {
+    const { startTimeSync } = await import("./time-sync");
+    const { AppState } = await import("react-native");
 
-    const result = await getSyncedUtcTimestampWithTimezone();
+    startTimeSync();
 
-    expect(result.timezone).toBe("America/Chicago");
-  });
-
-  it("should call the worldtimeapi.org IP endpoint", async () => {
-    mockFetchSuccess();
-
-    await getSyncedUtcTimestampWithTimezone();
-
-    expect(globalThis.fetch).toHaveBeenCalledWith("https://worldtimeapi.org/api/ip");
-  });
-
-  it("should fetch fresh time on every call", async () => {
-    mockFetchSuccess();
-    mockFetchSuccess({ ...MOCK_RESPONSE, unixtime: 1773000100 });
-
-    const first = await getSyncedUtcTimestampWithTimezone();
-    const second = await getSyncedUtcTimestampWithTimezone();
-
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
-    expect(first.utcTimestamp).toBe(1773000041 * 1000);
-    expect(second.utcTimestamp).toBe(1773000100 * 1000);
-  });
-
-  it("should throw when the API returns a non-ok response", async () => {
-    mockFetchFailure(503);
-
-    await expect(getSyncedUtcTimestampWithTimezone()).rejects.toThrow(
-      "Time API request failed with status 503",
+    expect(AppState.addEventListener).toHaveBeenCalledWith(
+      "change",
+      expect.any(Function),
     );
   });
 
-  it("should propagate network errors", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network request failed"));
+  it("should trigger a sync when app comes to foreground", async () => {
+    const { startTimeSync, getTimeSyncState } = await import("./time-sync");
 
-    await expect(getSyncedUtcTimestampWithTimezone()).rejects.toThrow("Network request failed");
+    // Server is 5 seconds ahead of device
+    mockServerUtcMs = Date.now() + 5000;
+
+    startTimeSync();
+    // Let the initial sync settle
+    await vi.advanceTimersByTimeAsync(50);
+
+    const stateAfterInit = getTimeSyncState();
+    expect(stateAfterInit.isSynced).toBe(true);
+    const initialOffset = stateAfterInit.offsetMs;
+
+    // Now simulate the server drifting further (or device clock changing)
+    mockServerUtcMs = Date.now() + 12000;
+
+    // Simulate app returning to foreground
+    expect(capturedAppStateHandler).not.toBeNull();
+    capturedAppStateHandler!("active");
+    await vi.advanceTimersByTimeAsync(50);
+
+    const stateAfterForeground = getTimeSyncState();
+    // Offset should have been updated (not the same as initial)
+    expect(stateAfterForeground.isSynced).toBe(true);
+    expect(stateAfterForeground.offsetMs).not.toBe(initialOffset);
+  });
+
+  it("should NOT trigger a sync for non-active states (background, inactive)", async () => {
+    const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+    mockServerUtcMs = Date.now() + 5000;
+    startTimeSync();
+    await vi.advanceTimersByTimeAsync(50);
+
+    const offsetAfterInit = getTimeSyncState().offsetMs;
+
+    // Change server time so we can detect if a sync happened
+    mockServerUtcMs = Date.now() + 99000;
+
+    capturedAppStateHandler!("background");
+    await vi.advanceTimersByTimeAsync(50);
+    expect(getTimeSyncState().offsetMs).toBe(offsetAfterInit);
+
+    capturedAppStateHandler!("inactive");
+    await vi.advanceTimersByTimeAsync(50);
+    expect(getTimeSyncState().offsetMs).toBe(offsetAfterInit);
+  });
+
+  it("should remove the AppState listener on stop", async () => {
+    const { startTimeSync, stopTimeSync } = await import("./time-sync");
+
+    startTimeSync();
+    await vi.advanceTimersByTimeAsync(50);
+
+    stopTimeSync();
+
+    expect(mockRemove).toHaveBeenCalled();
+  });
+
+  it("should include timezone from GPS in synced state", async () => {
+    const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+    startTimeSync();
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(getTimeSyncState().timezone).toBe("America/Chicago");
+  });
+
+  it("should correct for device clock drift on foreground sync", async () => {
+    const { startTimeSync, getSyncedUtcNow } = await import("./time-sync");
+
+    // Server and device are in sync
+    const realNow = Date.now();
+    mockServerUtcMs = realNow;
+
+    startTimeSync();
+    await vi.advanceTimersByTimeAsync(50);
+
+    // Synced UTC should be close to real time
+    const syncedBefore = getSyncedUtcNow();
+    expect(Math.abs(syncedBefore - realNow)).toBeLessThan(1000);
+
+    // Simulate user changing device clock forward by 1 hour
+    const oneHour = 3600 * 1000;
+    vi.setSystemTime(new Date(realNow + oneHour));
+
+    // Server time hasn't actually changed much
+    mockServerUtcMs = realNow + 100;
+
+    // App comes back to foreground → re-sync
+    capturedAppStateHandler!("active");
+    await vi.advanceTimersByTimeAsync(50);
+
+    // After re-sync, getSyncedUtcNow should reflect the server's reality,
+    // not the user's tampered device clock
+    const syncedAfter = getSyncedUtcNow();
+    // Should be close to the server's actual time (~realNow + 100), not realNow + 1hr
+    expect(Math.abs(syncedAfter - (realNow + 100))).toBeLessThan(1000);
   });
 });

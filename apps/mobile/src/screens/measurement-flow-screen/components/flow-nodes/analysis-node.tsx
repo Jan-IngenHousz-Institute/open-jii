@@ -1,5 +1,4 @@
 import { clsx } from "clsx";
-import { DateTime } from "luxon";
 import React, { useRef, useState } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
@@ -13,6 +12,7 @@ import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
+import { getSyncedLocalISO, getTimeSyncState } from "~/utils/time-sync";
 
 interface AnalysisNodeProps {
   content: {
@@ -39,8 +39,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";
 
-  // Local time with offset (plant timezone) for display and backend
-  const analysisTimestampRef = useRef<string>(DateTime.now().toISO() ?? "");
+  // Local time with offset (plant timezone) from synced server time
+  const analysisTimestampRef = useRef<string>(getSyncedLocalISO());
+  const analysisTimezoneRef = useRef<string>(getTimeSyncState().timezone);
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
   const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -122,6 +123,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     await uploadMeasurement({
       rawMeasurement: scanResult,
       timestamp: analysisTimestampRef.current,
+      timezone: analysisTimezoneRef.current,
       experimentName,
       experimentId,
       protocolId,

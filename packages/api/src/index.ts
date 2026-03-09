@@ -3,6 +3,7 @@ export * from "./contract";
 
 // Individual contract exports
 export * from "./contracts/experiment.contract";
+export * from "./contracts/health.contract";
 export * from "./contracts/iot.contract";
 export * from "./contracts/macro.contract";
 export * from "./contracts/user.contract";
