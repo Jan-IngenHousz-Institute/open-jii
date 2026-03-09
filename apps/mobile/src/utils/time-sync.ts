@@ -1,8 +1,10 @@
+import { Debouncer } from "@tanstack/pacer";
+import tzLookup from "@photostructure/tz-lookup";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
-import tzLookup from "@photostructure/tz-lookup";
 import { DateTime } from "luxon";
-import { AppState, type AppStateStatus } from "react-native";
+import { AppState } from "react-native";
+import type { AppStateStatus } from "react-native";
 import { toast } from "sonner-native";
 import { getApiClient } from "~/api/client";
 
@@ -33,18 +35,16 @@ let state: TimeSyncState = {
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
-let listeners: Array<(s: TimeSyncState) => void> = [];
 
-function notify() {
-  for (const fn of listeners) fn(state);
-}
+const SYNC_DEBOUNCE_MS = 5_000;
 
-export function subscribeTimeSync(fn: (s: TimeSyncState) => void) {
-  listeners.push(fn);
-  return () => {
-    listeners = listeners.filter((l) => l !== fn);
-  };
-}
+/** Single debouncer for all sync triggers (interval, foreground).
+ *  Fires on the leading edge, then ignores further calls within the wait
+ *  window so overlapping triggers never pile up. */
+const debouncedSync = new Debouncer(
+  () => void performSync(),
+  { wait: SYNC_DEBOUNCE_MS, leading: true, trailing: false },
+);
 
 export function getTimeSyncState(): TimeSyncState {
   return state;
@@ -72,8 +72,6 @@ async function restoreState(): Promise<void> {
       isSynced: state.isSynced,
       lastSyncedAt: new Date(state.lastSyncedAt).toISOString(),
     });
-
-    notify();
   } catch (err) {
     console.warn("[time-sync] Failed to restore state:", err);
   }
@@ -128,19 +126,15 @@ async function performSync(isInitial = false): Promise<void> {
       lastSyncedAt: Date.now(),
     };
 
-    const localDeviceTime = new Date().toISOString();
-    const syncedUtc = new Date(Date.now() + offsetMs).toISOString();
-
     console.log("[time-sync] Sync successful", {
-      localDeviceTime,
-      syncedUtc,
+      localDeviceTime: new Date().toISOString(),
+      syncedUtc: new Date(Date.now() + offsetMs).toISOString(),
       offsetMs,
       roundTripMs,
       timezone,
       lastSyncedAt: new Date(state.lastSyncedAt).toISOString(),
     });
 
-    notify();
     await persistState();
   } catch (err) {
     console.warn("[time-sync] Sync failed:", err);
@@ -153,8 +147,6 @@ async function performSync(isInitial = false): Promise<void> {
       lastSyncedAt: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
     });
 
-    notify();
-
     if (isInitial) {
       toast.warning("Unable to synchronize time.");
     } else if (state.missedPings >= MISSED_PING_WARN_THRESHOLD) {
@@ -165,8 +157,8 @@ async function performSync(isInitial = false): Promise<void> {
 
 function handleAppStateChange(nextState: AppStateStatus) {
   if (nextState === "active") {
-    console.log("[time-sync] App foregrounded, triggering sync");
-    void performSync();
+    console.log("[time-sync] App foregrounded, requesting sync");
+    debouncedSync.maybeExecute();
   }
 }
 
@@ -174,7 +166,7 @@ function handleAppStateChange(nextState: AppStateStatus) {
 export function startTimeSync() {
   if (intervalId) return;
   restoreState().then(() => performSync(true));
-  intervalId = setInterval(() => void performSync(), SYNC_INTERVAL_MS);
+  intervalId = setInterval(() => debouncedSync.maybeExecute(), SYNC_INTERVAL_MS);
   appStateSubscription = AppState.addEventListener("change", handleAppStateChange);
 }
 
@@ -188,6 +180,7 @@ export function stopTimeSync() {
     appStateSubscription.remove();
     appStateSubscription = null;
   }
+  debouncedSync.cancel();
 }
 
 /** Get the current synced UTC timestamp in milliseconds. */

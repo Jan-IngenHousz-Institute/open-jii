@@ -18,18 +18,18 @@ export class HealthController {
     };
   }
 
-    @Get("time")
-      getTime() {
-        const now = new Date();
-        this.logger.log({
-          msg: "Time endpoint called",
-          operation: "getTime",
-          utcTimestamp: now.getTime(),
-          iso: now.toISOString(),
-        });
-        return {
-          utcTimestamp: now.getTime(),
-          iso: now.toISOString(),
-        };
-      }
+  @Get("time")
+  getTime() {
+    const now = new Date();
+    this.logger.log({
+      msg: "Time endpoint called",
+      operation: "getTime",
+      utcTimestamp: now.getTime(),
+      iso: now.toISOString(),
+    });
+    return {
+      utcTimestamp: now.getTime(),
+      iso: now.toISOString(),
+    };
+  }
 }

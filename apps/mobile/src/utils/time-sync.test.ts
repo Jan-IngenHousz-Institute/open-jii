@@ -14,9 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 vi.mock("expo-location", () => ({
-  requestForegroundPermissionsAsync: vi.fn(() =>
-    Promise.resolve({ status: "granted" }),
-  ),
+  requestForegroundPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
   getCurrentPositionAsync: vi.fn(() =>
     Promise.resolve({ coords: { latitude: 41.8781, longitude: -87.6298 } }),
   ),
@@ -32,11 +30,14 @@ vi.mock("sonner-native", () => ({
 }));
 
 let mockServerUtcMs = Date.now();
+let getTimeCallCount = 0;
 vi.mock("~/api/client", () => ({
   getApiClient: () => ({
     health: {
-      getTime: () =>
-        Promise.resolve({ status: 200, body: { utcTimestamp: mockServerUtcMs } }),
+      getTime: () => {
+        getTimeCallCount++;
+        return Promise.resolve({ status: 200, body: { utcTimestamp: mockServerUtcMs } });
+      },
     },
   }),
 }));
@@ -54,6 +55,15 @@ vi.mock("react-native", () => ({
   },
 }));
 
+// --- Helpers ---
+
+const SYNC_DEBOUNCE_MS = 5_000;
+
+/** Advance past the debounce window so the next maybeExecute fires on the leading edge again. */
+async function advancePastDebounce() {
+  await vi.advanceTimersByTimeAsync(SYNC_DEBOUNCE_MS + 50);
+}
+
 // --- Tests ---
 
 describe("time-sync", () => {
@@ -62,6 +72,7 @@ describe("time-sync", () => {
     capturedAppStateHandler = null;
     mockRemove.mockClear();
     mockServerUtcMs = Date.now();
+    getTimeCallCount = 0;
 
     // Clean up any leftover state from previous tests
     for (const key of Object.keys(mockAsyncStorage)) {
@@ -70,7 +81,6 @@ describe("time-sync", () => {
   });
 
   afterEach(async () => {
-    // Dynamic import so mocks are in place
     const { stopTimeSync } = await import("./time-sync");
     stopTimeSync();
     vi.useRealTimers();
@@ -83,10 +93,7 @@ describe("time-sync", () => {
 
     startTimeSync();
 
-    expect(AppState.addEventListener).toHaveBeenCalledWith(
-      "change",
-      expect.any(Function),
-    );
+    expect(AppState.addEventListener).toHaveBeenCalledWith("change", expect.any(Function));
   });
 
   it("should trigger a sync when app comes to foreground", async () => {
@@ -103,7 +110,10 @@ describe("time-sync", () => {
     expect(stateAfterInit.isSynced).toBe(true);
     const initialOffset = stateAfterInit.offsetMs;
 
-    // Now simulate the server drifting further (or device clock changing)
+    // Advance past debounce window so the foreground event can fire
+    await advancePastDebounce();
+
+    // Now simulate the server drifting further
     mockServerUtcMs = Date.now() + 12000;
 
     // Simulate app returning to foreground
@@ -112,7 +122,6 @@ describe("time-sync", () => {
     await vi.advanceTimersByTimeAsync(50);
 
     const stateAfterForeground = getTimeSyncState();
-    // Offset should have been updated (not the same as initial)
     expect(stateAfterForeground.isSynced).toBe(true);
     expect(stateAfterForeground.offsetMs).not.toBe(initialOffset);
   });
@@ -172,6 +181,9 @@ describe("time-sync", () => {
     const syncedBefore = getSyncedUtcNow();
     expect(Math.abs(syncedBefore - realNow)).toBeLessThan(1000);
 
+    // Advance past debounce window so the foreground event can fire
+    await advancePastDebounce();
+
     // Simulate user changing device clock forward by 1 hour
     const oneHour = 3600 * 1000;
     vi.setSystemTime(new Date(realNow + oneHour));
@@ -186,7 +198,52 @@ describe("time-sync", () => {
     // After re-sync, getSyncedUtcNow should reflect the server's reality,
     // not the user's tampered device clock
     const syncedAfter = getSyncedUtcNow();
-    // Should be close to the server's actual time (~realNow + 100), not realNow + 1hr
     expect(Math.abs(syncedAfter - (realNow + 100))).toBeLessThan(1000);
+  });
+
+  it("should debounce rapid foreground events within the 5s window", async () => {
+    const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+    mockServerUtcMs = Date.now() + 5000;
+    startTimeSync();
+    await vi.advanceTimersByTimeAsync(50);
+
+    // Advance past debounce window so the first foreground burst can fire
+    await advancePastDebounce();
+
+    const callsBefore = getTimeCallCount;
+
+    // Fire 10 rapid foreground events
+    for (let i = 0; i < 10; i++) {
+      capturedAppStateHandler!("active");
+    }
+    await vi.advanceTimersByTimeAsync(50);
+
+    // Only 1 sync should have gone through (leading edge), the rest debounced
+    expect(getTimeCallCount - callsBefore).toBe(1);
+
+    const timestampAfterFirstBurst = getTimeSyncState().lastSyncedAt;
+
+    // Fire more events immediately — still within the 5s window
+    for (let i = 0; i < 5; i++) {
+      capturedAppStateHandler!("active");
+    }
+    await vi.advanceTimersByTimeAsync(50);
+
+    // No new sync should have fired
+    expect(getTimeSyncState().lastSyncedAt).toBe(timestampAfterFirstBurst);
+
+    // Advance past the debounce window
+    await advancePastDebounce();
+
+    const callsBeforeSecondBurst = getTimeCallCount;
+
+    // Now another foreground event should trigger a new sync
+    mockServerUtcMs = Date.now() + 9000;
+    capturedAppStateHandler!("active");
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(getTimeCallCount - callsBeforeSecondBurst).toBe(1);
+    expect(getTimeSyncState().lastSyncedAt).toBeGreaterThan(timestampAfterFirstBurst);
   });
 });

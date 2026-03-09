@@ -28,6 +28,7 @@
     "@repo/api": "workspace:*",
     "@repo/auth": "workspace:*",
     "@shopify/react-native-skia": "2.2.12",
+    "@tanstack/pacer": "^0.19.0",
     "@tanstack/query-async-storage-persister": "catalog:react-query",
     "@tanstack/react-query": "catalog:react-query",
     "@tanstack/react-query-persist-client": "catalog:react-query",

@@ -18,7 +18,13 @@ GPS-based timezone resolution + server time sync with offset tracking.
 
 ### Foreground Re-sync
 
-When the app returns to the foreground (e.g. user switches back from another app or settings), a sync is triggered immediately via React Native's `AppState` listener. This catches device clock changes that may have happened while the app was backgrounded, ensuring the offset is corrected before the user can take a measurement.
+When the app returns to the foreground (e.g. user switches back from another app or settings), a sync is requested via React Native's `AppState` listener. All sync triggers (foreground, interval, etc.) are funneled through a single [`@tanstack/pacer` Debouncer](https://tanstack.com/pacer/latest/docs/guides/debouncing) configured with `leading: true, trailing: false` and a 5-second wait window. This means:
+
+- The first trigger fires immediately (leading edge).
+- Any additional triggers within the 5-second window are silently dropped.
+- After the window expires, the next trigger fires immediately again.
+
+This prevents the endless-loop scenario where rapid `AppState` "active" events (common on some Android devices or during quick app-switch gestures) would each kick off a full sync cycle.
 
 ### Missed Pings
 

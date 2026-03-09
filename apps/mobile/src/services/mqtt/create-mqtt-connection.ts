@@ -34,7 +34,7 @@ function getAmazonDates() {
   return { amazonDate, dateStamp, timezone };
 }
 
-export async function createSignedUrl(params: {
+export function createSignedUrl(params: {
   clientId: string;
   accessKeyId: string;
   secretAccessKey: string;
