@@ -271,9 +271,9 @@ describe("time-sync", () => {
         },
       } as any);
 
-      // Advance past debounce, then trigger interval sync
+      // Advance past debounce, then trigger foreground sync
       await advancePastDebounce();
-      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+      capturedAppStateHandler?.("active");
       await vi.advanceTimersByTimeAsync(50);
 
       expect(getTimeSyncState().missedPings).toBe(1);
@@ -301,10 +301,10 @@ describe("time-sync", () => {
 
       (toast.warning as ReturnType<typeof vi.fn>).mockClear();
 
-      // Trigger 3 failed syncs via interval (each needs debounce window to pass)
+      // Trigger 3 failed syncs via foreground events (each needs debounce window to pass)
       for (let i = 0; i < 3; i++) {
         await advancePastDebounce();
-        await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+        capturedAppStateHandler?.("active");
         await vi.advanceTimersByTimeAsync(50);
       }
 
@@ -353,7 +353,7 @@ describe("time-sync", () => {
       } as any);
 
       await advancePastDebounce();
-      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+      capturedAppStateHandler?.("active");
       await vi.advanceTimersByTimeAsync(50);
       expect(getTimeSyncState().missedPings).toBe(1);
 
@@ -361,7 +361,7 @@ describe("time-sync", () => {
       spy.mockRestore();
 
       await advancePastDebounce();
-      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+      capturedAppStateHandler?.("active");
       await vi.advanceTimersByTimeAsync(50);
       expect(getTimeSyncState().missedPings).toBe(0);
     });

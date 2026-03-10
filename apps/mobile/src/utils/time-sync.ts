@@ -21,7 +21,6 @@ export interface TimeSyncState {
   lastSyncedAt: number;
 }
 
-const SYNC_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 const MISSED_PING_WARN_THRESHOLD = 3;
 const STORAGE_KEY = "TIME_SYNC_STATE";
 
@@ -33,7 +32,6 @@ let state: TimeSyncState = {
   lastSyncedAt: 0,
 };
 
-let intervalId: ReturnType<typeof setInterval> | null = null;
 let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
 /** Resolvers waiting for the first successful sync. */
@@ -172,18 +170,13 @@ function handleAppStateChange(nextState: AppStateStatus) {
 
 /** Start the time sync service. Call once at app startup. */
 export function startTimeSync() {
-  if (intervalId) return;
+  if (appStateSubscription) return;
   restoreState().then(() => performSync(true));
-  intervalId = setInterval(() => debouncedSync.maybeExecute(), SYNC_INTERVAL_MS);
   appStateSubscription = AppState.addEventListener("change", handleAppStateChange);
 }
 
 /** Stop the time sync service. */
 export function stopTimeSync() {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
   if (appStateSubscription) {
     appStateSubscription.remove();
     appStateSubscription = null;

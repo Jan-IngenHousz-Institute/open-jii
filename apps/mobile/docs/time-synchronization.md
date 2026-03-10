@@ -14,11 +14,10 @@ GPS-based timezone resolution + server time sync with offset tracking.
 2. **Server time**: Fetch UTC time from `GET /health/time` on our backend
 3. **Offset**: Calculate `offsetMs = serverTime - deviceTime` (adjusted for round-trip latency)
 4. **Store in memory**: The offset and timezone are kept in a module-level singleton
-5. **Interval**: Re-syncs every 60 minutes; tolerates failures gracefully
 
 ### Foreground Re-sync
 
-When the app returns to the foreground (e.g. user switches back from another app or settings), a sync is requested via React Native's `AppState` listener. All sync triggers (foreground, interval, etc.) are funneled through a single [`@tanstack/pacer` Debouncer](https://tanstack.com/pacer/latest/docs/guides/debouncing) configured with `leading: true, trailing: false` and a 5-second wait window. This means:
+When the app returns to the foreground (e.g. user switches back from another app or settings), a sync is requested via React Native's `AppState` listener. All sync triggers (foreground, statup, etc.) are funneled through a single [`@tanstack/pacer` Debouncer](https://tanstack.com/pacer/latest/docs/guides/debouncing) configured with `leading: true, trailing: false` and a 5-second wait window. This means:
 
 - The first trigger fires immediately (leading edge).
 - Any additional triggers within the 5-second window are silently dropped.
