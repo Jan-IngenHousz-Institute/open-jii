@@ -92,14 +92,27 @@ jobs:
         working-directory: apps/mobile
         env:
           RELEASE_BODY: ${{ github.event.release.body || '' }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p fastlane/metadata/android/en-US/changelogs
+
+          # Try release event body first, then fetch from GitHub API
           if [ -n "$RELEASE_BODY" ]; then
-            echo "$RELEASE_BODY" > fastlane/metadata/android/en-US/changelogs/default.txt
+            NOTES="$RELEASE_BODY"
+          else
+            echo "No release body in event, fetching from GitHub API..."
+            NOTES=$(gh release view "mobile-v${VERSION}" --json body -q '.body' 2>/dev/null || echo "")
+          fi
+
+          if [ -n "$NOTES" ]; then
+            echo "$NOTES" > fastlane/metadata/android/en-US/changelogs/default.txt
             echo "has_notes=true" >> $GITHUB_OUTPUT
+            echo "✅ Release notes found"
           else
             echo "No release notes available" > fastlane/metadata/android/en-US/changelogs/default.txt
             echo "has_notes=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No release notes available"
           fi
 
       - name: Job Summary
