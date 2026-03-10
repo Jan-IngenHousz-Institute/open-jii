@@ -135,6 +135,6 @@ jobs:
             echo "$RELEASE_BODY" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Submit to Google Play
+      - name: Build and Submit to Google Play
         working-directory: apps/mobile
         run: pnpm run submit-to-google-play
