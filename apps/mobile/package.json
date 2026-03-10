@@ -124,6 +124,7 @@
     "jsdom": "catalog:testing",
     "babel-plugin-inline-import": "^3.0.0",
     "better-sqlite3": "^12.8.0",
+    "babel-preset-expo": "~54.0.10",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "catalog:",
