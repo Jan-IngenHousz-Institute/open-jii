@@ -1,38 +1,51 @@
-import { Beaker } from "lucide-react-native";
+import { HardHat, User } from "lucide-react-native";
 import { View, Text } from "react-native";
 import { useIsDevelopment } from "~/hooks/use-is-development";
 import { useTheme } from "~/hooks/use-theme";
 
-/**
- * Small header indicator shown only in non-production so users can tell they're in DEV mode.
- * Renders nothing in production.
- */
-export function DevIndicator() {
-  const isDevelopment = useIsDevelopment();
+interface Props {
+  size: number;
+  color: string;
+}
 
-  const theme = useTheme();
-  const { colors } = theme;
+export function DevIndicator({ size, color, focused }: Props & { focused?: boolean }) {
+  const isDevelopment = useIsDevelopment();
+  const { colors, isDark } = useTheme();
 
   if (!isDevelopment) {
-    return null;
+    return <User size={size} color={color} />;
   }
 
-  const bgColor = theme.isDark ? colors.dark.surface : colors.light.surface;
-  const borderColor = theme.isDark ? colors.dark.border : colors.light.border;
-  const textColor = colors.semantic.warning;
+  // Dev mode styling
+  const devColor = focused ? colors.semantic.warning : "#FCD34B";
+  const surface = isDark ? colors.dark.surface : colors.light.surface;
 
   return (
-    <View
-      className="flex-row items-center gap-1 rounded-md border px-1.5 py-0.5"
-      style={{
-        backgroundColor: bgColor,
-        borderColor,
-        borderWidth: 1,
-        minHeight: 20,
-      }}
-    >
-      <Beaker size={12} color={textColor} />
-      <Text style={{ fontSize: 10, fontWeight: "600", color: textColor }}>DEV Mode</Text>
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <HardHat size={size} color={devColor} strokeWidth={2.5} />
+
+      <View
+        style={{
+          position: "absolute",
+          bottom: -size * 0.1,
+          right: -size * 0.1,
+          backgroundColor: devColor,
+          paddingHorizontal: 3,
+          borderRadius: 3,
+          borderWidth: 1.5,
+          borderColor: surface,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: size * 0.25,
+            fontWeight: "900",
+            color: surface,
+          }}
+        >
+          DEV
+        </Text>
+      </View>
     </View>
   );
 }

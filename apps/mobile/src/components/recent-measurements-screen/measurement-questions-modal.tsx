@@ -7,7 +7,7 @@ import { CommentModal } from "~/components/recent-measurements-screen/comment-mo
 import type { MeasurementItem } from "~/hooks/use-all-measurements";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
-import type { AnswerData } from "~/utils/convert-cycle-answers-to-array";
+import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 interface MeasurementQuestionsModalProps {
@@ -28,7 +28,7 @@ export function MeasurementQuestionsModal({
 
   // Extract questions from measurementResult
   const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
-  const questions: AnswerData[] = (measurementResult?.questions as AnswerData[]) ?? [];
+  const questions = parseQuestions(measurement.data.measurementResult);
   const experimentName = measurement.experimentName;
   const timestamp = new Date(measurement.timestamp).toLocaleString();
   const isUnsynced = measurement.status === "unsynced";
