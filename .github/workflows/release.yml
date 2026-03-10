@@ -143,7 +143,7 @@ jobs:
   submit-to-google-play:  
     name: Submit Mobile to Google Play
     needs: release
-    if: needs.release.outputs.mobile_version != ''
+    if: ${{ needs.release.result == 'success' && needs.release.outputs.mobile_version != '' }}
     uses: ./.github/workflows/submit-to-google-play.yml
     with:
       version: ${{ needs.release.outputs.mobile_version }}
