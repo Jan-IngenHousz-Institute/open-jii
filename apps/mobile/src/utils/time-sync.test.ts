@@ -36,7 +36,13 @@ vi.mock("~/api/client", () => ({
     health: {
       getTime: () => {
         getTimeCallCount++;
-        return Promise.resolve({ status: 200, body: { utcTimestampMs: mockServerUtcMs, utcTimestampSec: Math.floor(mockServerUtcMs / 1000) } });
+        return Promise.resolve({
+          status: 200,
+          body: {
+            utcTimestampMs: mockServerUtcMs,
+            utcTimestampSec: Math.floor(mockServerUtcMs / 1000),
+          },
+        });
       },
     },
   }),
@@ -118,7 +124,7 @@ describe("time-sync", () => {
 
     // Simulate app returning to foreground
     expect(capturedAppStateHandler).not.toBeNull();
-    capturedAppStateHandler!("active");
+    capturedAppStateHandler?.("active");
     await vi.advanceTimersByTimeAsync(50);
 
     const stateAfterForeground = getTimeSyncState();
@@ -138,11 +144,11 @@ describe("time-sync", () => {
     // Change server time so we can detect if a sync happened
     mockServerUtcMs = Date.now() + 99000;
 
-    capturedAppStateHandler!("background");
+    capturedAppStateHandler?.("background");
     await vi.advanceTimersByTimeAsync(50);
     expect(getTimeSyncState().offsetMs).toBe(offsetAfterInit);
 
-    capturedAppStateHandler!("inactive");
+    capturedAppStateHandler?.("inactive");
     await vi.advanceTimersByTimeAsync(50);
     expect(getTimeSyncState().offsetMs).toBe(offsetAfterInit);
   });
@@ -192,7 +198,7 @@ describe("time-sync", () => {
     mockServerUtcMs = realNow + 100;
 
     // App comes back to foreground → re-sync
-    capturedAppStateHandler!("active");
+    capturedAppStateHandler?.("active");
     await vi.advanceTimersByTimeAsync(50);
 
     // After re-sync, getSyncedUtcNow should reflect the server's reality,
@@ -215,7 +221,7 @@ describe("time-sync", () => {
 
     // Fire 10 rapid foreground events
     for (let i = 0; i < 10; i++) {
-      capturedAppStateHandler!("active");
+      capturedAppStateHandler?.("active");
     }
     await vi.advanceTimersByTimeAsync(50);
 
@@ -226,7 +232,7 @@ describe("time-sync", () => {
 
     // Fire more events immediately — still within the 5s window
     for (let i = 0; i < 5; i++) {
-      capturedAppStateHandler!("active");
+      capturedAppStateHandler?.("active");
     }
     await vi.advanceTimersByTimeAsync(50);
 
@@ -240,7 +246,7 @@ describe("time-sync", () => {
 
     // Now another foreground event should trigger a new sync
     mockServerUtcMs = Date.now() + 9000;
-    capturedAppStateHandler!("active");
+    capturedAppStateHandler?.("active");
     await vi.advanceTimersByTimeAsync(50);
 
     expect(getTimeCallCount - callsBeforeSecondBurst).toBe(1);
@@ -249,7 +255,7 @@ describe("time-sync", () => {
 
   describe("missed pings and threshold warnings", () => {
     it("should increment missedPings on each failed sync", async () => {
-      const { startTimeSync, getTimeSyncState, stopTimeSync } = await import("./time-sync");
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
 
       // Start with a successful sync so isSynced = true
       mockServerUtcMs = Date.now();
@@ -277,7 +283,7 @@ describe("time-sync", () => {
     });
 
     it("should show toast.warning when missedPings reaches threshold (3)", async () => {
-      const { startTimeSync, getTimeSyncState, stopTimeSync } = await import("./time-sync");
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
       const { toast } = await import("sonner-native");
 
       // Successful initial sync
@@ -370,7 +376,7 @@ describe("time-sync", () => {
         missedPings: 5,
         lastSyncedAt: Date.now() - 60_000,
       };
-      mockAsyncStorage["TIME_SYNC_STATE"] = JSON.stringify(persisted);
+      mockAsyncStorage.TIME_SYNC_STATE = JSON.stringify(persisted);
 
       const { startTimeSync, getTimeSyncState } = await import("./time-sync");
 
@@ -395,7 +401,7 @@ describe("time-sync", () => {
         missedPings: 7,
         lastSyncedAt: Date.now() - 120_000,
       };
-      mockAsyncStorage["TIME_SYNC_STATE"] = JSON.stringify(persisted);
+      mockAsyncStorage.TIME_SYNC_STATE = JSON.stringify(persisted);
 
       // Make the initial sync fail so we can observe the restored state before sync overwrites it
       const clientModule = await import("~/api/client");

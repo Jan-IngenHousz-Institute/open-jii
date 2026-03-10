@@ -1,6 +1,6 @@
-import { Debouncer } from "@tanstack/pacer";
 import tzLookup from "@photostructure/tz-lookup";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Debouncer } from "@tanstack/pacer";
 import * as Location from "expo-location";
 import { DateTime } from "luxon";
 import { AppState } from "react-native";
@@ -37,17 +37,18 @@ let intervalId: ReturnType<typeof setInterval> | null = null;
 let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
 /** Resolvers waiting for the first successful sync. */
-let syncWaiters: Array<() => void> = [];
+let syncWaiters: (() => void)[] = [];
 
 const SYNC_DEBOUNCE_MS = 5_000;
 
 /** Single debouncer for all sync triggers (interval, foreground).
  *  Fires on the leading edge, then ignores further calls within the wait
  *  window so overlapping triggers never pile up. */
-const debouncedSync = new Debouncer(
-  () => void performSync(),
-  { wait: SYNC_DEBOUNCE_MS, leading: true, trailing: false },
-);
+const debouncedSync = new Debouncer(() => void performSync(), {
+  wait: SYNC_DEBOUNCE_MS,
+  leading: true,
+  trailing: false,
+});
 
 export function getTimeSyncState(): TimeSyncState {
   return state;
@@ -148,9 +149,9 @@ async function performSync(isInitial = false): Promise<void> {
     state = { ...state, missedPings: state.missedPings + 1 };
 
     console.log("[time-sync] State after failure", {
+      ...state,
       localDeviceTime: new Date().toISOString(),
       missedPings: state.missedPings,
-      isSynced: state.isSynced,
       lastSyncedAt: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
     });
 
