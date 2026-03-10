@@ -586,6 +586,9 @@ importers:
       with-rn-bluetooth-classic:
         specifier: ^1.0.5
         version: 1.0.5
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
       zustand:
         specifier: ^5.0.5
         version: 5.0.10(@types/react@19.2.9)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))

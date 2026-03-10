@@ -17,16 +17,24 @@ import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
-import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
+import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
+
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "synced", label: "Synced" },
+  { key: "unsynced", label: "Unsynced" },
+];
+
+type TabKey = (typeof TABS)[number]["key"];
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
-  const [filter, setFilter] = useState<MeasurementFilter>("all");
+  const [filter, setFilter] = useState<TabKey>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const { measurements, invalidate } = useAllMeasurements(filter);
+  const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
   const { uploadAll, isUploading, uploadOne, removeFailedUpload, updateMeasurementComment } =
     useFailedUploads();
 
@@ -143,15 +151,7 @@ export function RecentMeasurementsScreen() {
         </View>
 
         <View className="mb-4">
-          <TabBar
-            tabs={[
-              { key: "all", label: "All" },
-              { key: "synced", label: "Synced" },
-              { key: "unsynced", label: "Unsynced" },
-            ]}
-            activeTab={filter}
-            onTabChange={(key) => setFilter(key as MeasurementFilter)}
-          />
+          <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
         </View>
       </View>
 
@@ -185,10 +185,7 @@ export function RecentMeasurementsScreen() {
               timestamp={measurement.timestamp}
               experimentName={measurement.experimentName}
               status={measurement.status}
-              questions={
-                ((measurement.data.measurementResult as Record<string, unknown>)
-                  ?.questions as AnswerData[]) ?? []
-              }
+              questions={parseQuestions(measurement.data.measurementResult)}
               onPress={() => handleItemPress(measurement)}
               onComment={
                 measurement.status === "unsynced"

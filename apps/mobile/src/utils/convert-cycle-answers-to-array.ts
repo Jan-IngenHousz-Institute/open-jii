@@ -1,9 +1,21 @@
+import { z } from "zod";
 import { FlowNode } from "~/screens/measurement-flow-screen/types";
 
-export interface AnswerData {
-  question_label: string;
-  question_text: string;
-  question_answer: string;
+export const answerDataSchema = z.object({
+  question_label: z.string(),
+  question_text: z.string(),
+  question_answer: z.string(),
+});
+
+export const measurementResultSchema = z.object({
+  questions: z.array(answerDataSchema).optional(),
+});
+
+export type AnswerData = z.infer<typeof answerDataSchema>;
+
+export function parseQuestions(measurementResult: unknown): AnswerData[] {
+  const parsed = measurementResultSchema.safeParse(measurementResult);
+  return parsed.success ? (parsed.data.questions ?? []) : [];
 }
 
 export function convertCycleAnswersToArray(

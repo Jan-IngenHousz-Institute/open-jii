@@ -16,6 +16,8 @@ const TABS = [
   { key: "raw", label: "Raw Data" },
 ];
 
+type TabKey = (typeof TABS)[number]["key"];
+
 interface MeasurementResultProps {
   rawMeasurement: any;
   macro: any;
@@ -29,7 +31,7 @@ export function MeasurementResult({
   onCommentPress,
 }: MeasurementResultProps) {
   const { classes, colors } = useTheme();
-  const [activeTab, setActiveTab] = useState("result");
+  const [activeTab, setActiveTab] = useState<TabKey>("result");
 
   const { result: processedMeasurement, error: processingError } = useAsync(async () => {
     return await applyMacro(rawMeasurement, macro);
@@ -57,7 +59,7 @@ export function MeasurementResult({
       );
     }
 
-    if (!processedMeasurement || processedMeasurement.length === 0) {
+    if (!processedMeasurement?.length) {
       return (
         <View className="items-center justify-center p-6">
           <Text className={clsx("text-center text-lg", classes.textSecondary)}>

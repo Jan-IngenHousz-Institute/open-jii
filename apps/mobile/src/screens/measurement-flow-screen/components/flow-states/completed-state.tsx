@@ -16,16 +16,24 @@ import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
-import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
+import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
+
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "synced", label: "Synced" },
+  { key: "unsynced", label: "Unsynced" },
+];
+
+type TabKey = (typeof TABS)[number]["key"];
 
 export function CompletedState() {
   const { classes, colors } = useTheme();
-  const [filter, setFilter] = useState<MeasurementFilter>("all");
+  const [filter, setFilter] = useState<TabKey>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const { startNewIteration } = useMeasurementFlowStore();
-  const { measurements, invalidate } = useAllMeasurements(filter);
+  const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
   const { uploadOne, removeFailedUpload, updateMeasurementComment } = useFailedUploads();
 
   const handleSync = (id: string, experimentName: string) => {
@@ -67,15 +75,7 @@ export function CompletedState() {
   return (
     <View className="flex-1">
       <View className="py-4">
-        <TabBar
-          tabs={[
-            { key: "all", label: "All" },
-            { key: "synced", label: "Synced" },
-            { key: "unsynced", label: "Unsynced" },
-          ]}
-          activeTab={filter}
-          onTabChange={(key) => setFilter(key as MeasurementFilter)}
-        />
+        <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
       </View>
 
       {measurements && measurements.length > 0 && (
@@ -108,10 +108,7 @@ export function CompletedState() {
               timestamp={measurement.timestamp}
               experimentName={measurement.experimentName}
               status={measurement.status}
-              questions={
-                ((measurement.data.measurementResult as Record<string, unknown>)
-                  ?.questions as AnswerData[]) ?? []
-              }
+              questions={parseQuestions(measurement.data.measurementResult)}
               onPress={() => setSelectedMeasurement(measurement)}
               onComment={
                 measurement.status === "unsynced"
