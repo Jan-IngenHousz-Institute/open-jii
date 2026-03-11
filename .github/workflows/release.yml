@@ -155,7 +155,7 @@ jobs:
         if: steps.extract_mobile.outputs.mobile_version != ''
         run: |
           gh workflow run submit-to-google-play.yml \
-            --ref main \
+            --ref ${{ github.ref_name }} \
             --field version=${{ steps.extract_mobile.outputs.mobile_version }}
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
