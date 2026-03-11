@@ -38,104 +38,107 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
-            VERSION="${TAG#mobile-v}"
-          elif [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
-          else
-            VERSION=$(git tag -l 'mobile-v*' --sort=-version:refname | head -1 | sed 's/mobile-v//')
-          fi
+      - name: Test - Echo version
+        run: echo "✅ Would submit version ${{ inputs.version }} to Google Play"
 
-          if [ -z "$VERSION" ]; then
-            echo "::error::Could not determine version"
-            exit 1
-          fi
+      # - name: Determine version
+      #   id: version
+      #   run: |
+      #     if [ "${{ github.event_name }}" = "release" ]; then
+      #       TAG="${{ github.event.release.tag_name }}"
+      #       VERSION="${TAG#mobile-v}"
+      #     elif [ -n "${{ inputs.version }}" ]; then
+      #       VERSION="${{ inputs.version }}"
+      #     else
+      #       VERSION=$(git tag -l 'mobile-v*' --sort=-version:refname | head -1 | sed 's/mobile-v//')
+      #     fi
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Submitting version: $VERSION"
+      #     if [ -z "$VERSION" ]; then
+      #       echo "::error::Could not determine version"
+      #       exit 1
+      #     fi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+      #     echo "version=$VERSION" >> $GITHUB_OUTPUT
+      #     echo "Submitting version: $VERSION"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '22'
 
-      - name: Setup Expo CLI
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      # - name: Setup pnpm
+      #   uses: pnpm/action-setup@v4
 
-      - name: Install dependencies
-        run: pnpm install
+      # - name: Setup Expo CLI
+      #   uses: expo/expo-github-action@v8
+      #   with:
+      #     expo-version: latest
+      #     eas-version: latest
+      #     token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Set app version from release
-        working-directory: apps/mobile
-        run: |
-          node -e "
-            const fs = require('fs');
-            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            app.expo.version = '${{ steps.version.outputs.version }}';
-            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
-          "
-          echo "Set app version to ${{ steps.version.outputs.version }}"
+      # - name: Install dependencies
+      #   run: pnpm install
 
-      - name: Generate release notes
-        id: release-notes
-        working-directory: apps/mobile
-        env:
-          RELEASE_BODY: ${{ github.event.release.body || '' }}
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          mkdir -p fastlane/metadata/android/en-US/changelogs
+      # - name: Set app version from release
+      #   working-directory: apps/mobile
+      #   run: |
+      #     node -e "
+      #       const fs = require('fs');
+      #       const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+      #       app.expo.version = '${{ steps.version.outputs.version }}';
+      #       fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+      #     "
+      #     echo "Set app version to ${{ steps.version.outputs.version }}"
 
-          # Try release event body first, then fetch from GitHub API
-          if [ -n "$RELEASE_BODY" ]; then
-            NOTES="$RELEASE_BODY"
-          else
-            echo "No release body in event, fetching from GitHub API..."
-            NOTES=$(gh release view "mobile-v${VERSION}" --json body -q '.body' 2>/dev/null || echo "")
-          fi
+      # - name: Generate release notes
+      #   id: release-notes
+      #   working-directory: apps/mobile
+      #   env:
+      #     RELEASE_BODY: ${{ github.event.release.body || '' }}
+      #     GH_TOKEN: ${{ github.token }}
+      #     VERSION: ${{ steps.version.outputs.version }}
+      #   run: |
+      #     mkdir -p fastlane/metadata/android/en-US/changelogs
 
-          if [ -n "$NOTES" ]; then
-            echo "$NOTES" > fastlane/metadata/android/en-US/changelogs/default.txt
-            echo "has_notes=true" >> $GITHUB_OUTPUT
-            echo "✅ Release notes found"
-          else
-            echo "No release notes available" > fastlane/metadata/android/en-US/changelogs/default.txt
-            echo "has_notes=false" >> $GITHUB_OUTPUT
-            echo "⚠️ No release notes available"
-          fi
+      #     # Try release event body first, then fetch from GitHub API
+      #     if [ -n "$RELEASE_BODY" ]; then
+      #       NOTES="$RELEASE_BODY"
+      #     else
+      #       echo "No release body in event, fetching from GitHub API..."
+      #       NOTES=$(gh release view "mobile-v${VERSION}" --json body -q '.body' 2>/dev/null || echo "")
+      #     fi
 
-      - name: Job Summary
-        env:
-          RELEASE_BODY: ${{ github.event.release.body || 'N/A (manual dispatch)' }}
-        run: |
-          echo "## 📱 Google Play Submission Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Track** | Internal Testing |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Trigger** | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Release Notes** | ${{ steps.release-notes.outputs.has_notes == 'true' && '✅ Included' || '⚠️ Not available' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.release-notes.outputs.has_notes }}" = "true" ]; then
-            echo "### 📝 Changes" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "$RELEASE_BODY" >> $GITHUB_STEP_SUMMARY
-          fi
+      #     if [ -n "$NOTES" ]; then
+      #       echo "$NOTES" > fastlane/metadata/android/en-US/changelogs/default.txt
+      #       echo "has_notes=true" >> $GITHUB_OUTPUT
+      #       echo "✅ Release notes found"
+      #     else
+      #       echo "No release notes available" > fastlane/metadata/android/en-US/changelogs/default.txt
+      #       echo "has_notes=false" >> $GITHUB_OUTPUT
+      #       echo "⚠️ No release notes available"
+      #     fi
 
-      # Builds AAB on EAS servers (auto-increments versionCode) and submits to Google Play. Will wait for build to complete.
-      - name: Build and Submit to Google Play
-        working-directory: apps/mobile
-        run: pnpm run submit-to-google-play
+      # - name: Job Summary
+      #   env:
+      #     RELEASE_BODY: ${{ github.event.release.body || 'N/A (manual dispatch)' }}
+      #   run: |
+      #     echo "## 📱 Google Play Submission Summary" >> $GITHUB_STEP_SUMMARY
+      #     echo "" >> $GITHUB_STEP_SUMMARY
+      #     echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+      #     echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+      #     echo "| **Version** | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+      #     echo "| **Track** | Internal Testing |" >> $GITHUB_STEP_SUMMARY
+      #     echo "| **Trigger** | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+      #     echo "| **Release Notes** | ${{ steps.release-notes.outputs.has_notes == 'true' && '✅ Included' || '⚠️ Not available' }} |" >> $GITHUB_STEP_SUMMARY
+      #     echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+      #     echo "" >> $GITHUB_STEP_SUMMARY
+      #     if [ "${{ steps.release-notes.outputs.has_notes }}" = "true" ]; then
+      #       echo "### 📝 Changes" >> $GITHUB_STEP_SUMMARY
+      #       echo "" >> $GITHUB_STEP_SUMMARY
+      #       echo "$RELEASE_BODY" >> $GITHUB_STEP_SUMMARY
+      #     fi
+
+      # # Builds AAB on EAS servers (auto-increments versionCode) and submits to Google Play. Will wait for build to complete.
+      # - name: Build and Submit to Google Play
+      #   working-directory: apps/mobile
+      #   run: pnpm run submit-to-google-play

@@ -11,6 +11,11 @@ on:
         required: false
         type: boolean
         default: false
+      test_mobile_trigger:
+        description: "Test mobile submission trigger (skips real release, uses mock version)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -133,18 +138,24 @@ jobs:
       - name: Extract mobile version
         id: extract_mobile
         run: |
-          RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
-          MOBILE_VERSION=$(echo "$RELEASES" | jq -r '.mobile // empty')
+          # Allow manual test override
+          if [ "${{ inputs.test_mobile_trigger }}" = "true" ]; then
+            MOBILE_VERSION="0.0.0-test"
+            echo "🧪 Test mode: using mock version $MOBILE_VERSION"
+          else
+            RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
+            MOBILE_VERSION=$(echo "$RELEASES" | jq -r '.mobile // empty')
+          fi
           echo "mobile_version=$MOBILE_VERSION" >> $GITHUB_OUTPUT
           if [ -n "$MOBILE_VERSION" ]; then
             echo "📱 Mobile release detected: v$MOBILE_VERSION"
           fi
 
-  submit-to-google-play:  
-    name: Submit Mobile to Google Play
-    needs: release
-    if: always() && needs.release.result == 'success' && needs.release.outputs.mobile_version != ''
-    uses: ./.github/workflows/submit-to-google-play.yml
-    with:
-      version: ${{ needs.release.outputs.mobile_version }}
-    secrets: inherit
+      - name: Trigger Google Play Submission
+        if: steps.extract_mobile.outputs.mobile_version != ''
+        run: |
+          gh workflow run submit-to-google-play.yml \
+            --ref main \
+            --field version=${{ steps.extract_mobile.outputs.mobile_version }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
