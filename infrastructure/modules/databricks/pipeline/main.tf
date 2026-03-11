@@ -11,6 +11,7 @@ terraform {
 data "databricks_node_type" "smallest" {
   count      = var.serverless ? 0 : 1
   local_disk = true
+  provider   = databricks.workspace
 }
 
 resource "databricks_pipeline" "this" {
