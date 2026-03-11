@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -95,9 +96,11 @@ function RootLayoutContent() {
       <ConfiguredQueryClientProvider>
         <SafeAreaProvider>
           <PythonMacroProvider>
-            <StatusBar style={theme.isDark ? "light" : "dark"} />
-            <RootLayoutNav />
-            <Toaster />
+            <BottomSheetModalProvider>
+              <StatusBar style={theme.isDark ? "light" : "dark"} />
+              <RootLayoutNav />
+              <Toaster />
+            </BottomSheetModalProvider>
           </PythonMacroProvider>
         </SafeAreaProvider>
       </ConfiguredQueryClientProvider>

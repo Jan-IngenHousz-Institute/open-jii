@@ -1,6 +1,12 @@
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetTextInput,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
-import React, { useEffect, useState } from "react";
-import { Modal, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Text, View } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 
@@ -14,51 +20,64 @@ interface CommentModalProps {
 export function CommentModal({ visible, initialText, onSave, onCancel }: CommentModalProps) {
   const { colors, classes } = useTheme();
   const [text, setText] = useState(initialText);
+  const sheetRef = useRef<BottomSheetModal>(null);
 
   useEffect(() => {
-    if (visible) setText(initialText);
+    if (visible) {
+      setText(initialText);
+      sheetRef.current?.present();
+    } else {
+      sheetRef.current?.dismiss();
+    }
   }, [visible, initialText]);
 
   const handleSave = () => {
     onSave(text);
   };
 
+  const renderBackdrop = useCallback(
+    (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
+    ),
+    [],
+  );
+
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1 justify-center px-4"
-        style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-      >
-        <View
-          className={clsx("rounded-xl border p-4", classes.card, classes.border)}
-          style={{ backgroundColor: colors.surface }}
-        >
-          <Text className={clsx("mb-3 text-lg font-semibold", classes.text)}>Comment</Text>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Add a comment..."
-            placeholderTextColor={colors.muted}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            className={clsx(
-              "min-h-[100px] rounded-lg border px-3 py-2 text-base",
-              classes.border,
-              classes.text,
-            )}
-            style={{
-              backgroundColor: colors.background,
-              color: colors.onSurface,
-            }}
-          />
-          <View className="mt-4 flex-row gap-3">
-            <Button title="Cancel" variant="outline" onPress={onCancel} style={{ flex: 1 }} />
-            <Button title="Save comment" onPress={handleSave} style={{ flex: 1 }} />
-          </View>
+    <BottomSheetModal
+      ref={sheetRef}
+      enableDynamicSizing
+      backdropComponent={renderBackdrop}
+      onDismiss={onCancel}
+      backgroundStyle={{ backgroundColor: colors.surface }}
+      handleIndicatorStyle={{ backgroundColor: colors.inactive }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+    >
+      <BottomSheetView className="px-4 pb-8 pt-2">
+        <Text className={clsx("mb-3 text-lg font-semibold", classes.text)}>Comment</Text>
+        <BottomSheetTextInput
+          value={text}
+          onChangeText={setText}
+          placeholder="Add a comment..."
+          placeholderTextColor={colors.inactive}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+          className={clsx(
+            "min-h-[100px] rounded-lg border px-3 py-2 text-base",
+            classes.border,
+            classes.text,
+          )}
+          style={{
+            backgroundColor: colors.background,
+            color: colors.onSurface,
+          }}
+        />
+        <View className="mt-4 flex-row gap-3">
+          <Button title="Cancel" variant="outline" onPress={onCancel} style={{ flex: 1 }} />
+          <Button title="Save comment" onPress={handleSave} style={{ flex: 1 }} />
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 }
