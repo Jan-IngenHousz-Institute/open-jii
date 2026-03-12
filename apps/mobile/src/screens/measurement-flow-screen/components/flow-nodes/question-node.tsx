@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Repeat2, Search, X } from "lucide-react-native";
+import { Repeat2, Search, X, Bookmark } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity } from "react-native";
 import { Checkbox } from "~/components/Checkbox";
@@ -111,6 +111,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
               value={isRememberAnswerEnabled(node.id)}
               text="Remember answer"
               textSize="sm"
+              icon={<Bookmark size={16} color={colors.neutral.black} />}
               onChange={(enabled) => {
                 setRememberAnswer(node.id, enabled);
                 // Disable autoincrement when remember answer is enabled
