@@ -844,6 +844,21 @@ locals {
         "grafana:DeleteWorkspaceServiceAccountToken",
         "grafana:ListWorkspaceServiceAccountTokens",
         "grafana:DescribeWorkspaceConfiguration",
+        "grafana:TagResource",
+        "grafana:ListTagsForResource",
+        "grafana:UntagResource"
+      ]
+      resource = "*"
+    }
+
+    sso = {
+      actions = [
+        "sso:DescribeRegisteredRegions",
+        "sso:CreateManagedApplicationInstance",
+        "sso:DeleteManagedApplicationInstance",
+        "sso:GetManagedApplicationInstance",
+        "sso:GetSharedSsoConfiguration",
+        "sso:ListDirectoryAssociations"
       ]
       resource = "*"
     }

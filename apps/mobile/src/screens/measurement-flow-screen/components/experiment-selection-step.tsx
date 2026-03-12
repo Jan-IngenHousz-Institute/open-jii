@@ -1,9 +1,10 @@
 import { clsx } from "clsx";
-import React from "react";
-import { View, Text, ScrollView } from "react-native";
-import { ActivityIndicator } from "react-native";
+import { FileText } from "lucide-react-native";
+import React, { useEffect } from "react";
+import { View, Text, ActivityIndicator } from "react-native";
 import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
+import { HtmlViewer } from "~/components/HtmlViewer";
 import { useExperimentFlowQuery } from "~/hooks/use-experiment-flow-query";
 import { useExperiments } from "~/hooks/use-experiments";
 import { usePrecachedExperimentData } from "~/hooks/use-precached-experiment-data";
@@ -16,101 +17,110 @@ import { orderFlowNodes } from "~/utils/order-flow-nodes";
 import { OfflineModeIndicator } from "./offline-mode-indicator";
 
 export function ExperimentSelectionStep() {
-  const { classes } = useTheme();
+  const { classes, colors } = useTheme();
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
-  const { setExperimentId, setFlowNodes, nextStep, setShowingOverview } = useMeasurementFlowStore();
+  const { setExperimentId, setFlowNodes } = useMeasurementFlowStore();
   const { data: experimentFlow } = useExperimentFlowQuery(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
 
   const selectedExperiment = experiments.find((exp) => exp.value === selectedExperimentId);
+
   const { data: precachedData } = usePrecachedExperimentData(selectedExperimentId);
 
+  // Load flow nodes when experiment flow data is available
+  useEffect(() => {
+    if (experimentFlow?.body?.graph) {
+      const { nodes = [], edges = [] } = experimentFlow.body.graph;
+      const orderedNodes = orderFlowNodes(nodes, edges);
+      setFlowNodes(orderedNodes);
+    }
+  }, [experimentFlow, setFlowNodes]);
+
+  const handleStartFlow = () => {
+    if (!selectedExperimentId || !experimentFlow) {
+      return;
+    }
+
+    clearHistory();
+    setExperimentId(selectedExperimentId);
+  };
+
   return (
-    <View className="flex-1">
-      {/* Header */}
-      <View className="mb-8">
-        <Text className={clsx("mb-2 text-center text-3xl font-bold", classes.text)}>
-          Experiment Selection
-        </Text>
-        <Text className={clsx("text-center text-lg leading-6", classes.textSecondary)}>
-          Choose an experiment to begin your measurement workflow
-        </Text>
+    <View className={clsx("flex-1")}>
+      <View className="flex-1 px-4 pt-4">
+        <View className="mb-2 flex-row items-center justify-between">
+          <Text className={clsx("text-lg font-bold", classes.text)}>Select experiment</Text>
+          <OfflineModeIndicator isVisible={!!precachedData} />
+        </View>
+
+        {isLoading && (
+          <View className="items-center py-8">
+            <ActivityIndicator size="large" color="#005e5e" />
+            <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
+              Loading experiments...
+            </Text>
+          </View>
+        )}
+
+        {!isLoading && error && (
+          <View className="items-center py-8">
+            <Text className={clsx("text-center text-red-500", classes.text)}>
+              Failed to load experiments. Please try again.
+            </Text>
+          </View>
+        )}
+
+        {!isLoading && !error && (
+          <>
+            <Dropdown
+              options={experiments}
+              selectedValue={selectedExperimentId}
+              onSelect={(value) => setSelectedExperimentId(value)}
+              placeholder="Choose an experiment"
+            />
+
+            {selectedExperimentId && (
+              <View className="flex-1 gap-2">
+                <Text className={clsx("font-bold", classes.text)}>Description</Text>
+
+                {selectedExperiment?.fullDescription ? (
+                  <View className="flex-1">
+                    <HtmlViewer htmlContent={selectedExperiment.fullDescription} />
+                  </View>
+                ) : (
+                  <View className="flex-1 items-center justify-center">
+                    <>
+                      <View
+                        className={clsx(
+                          "mb-4 h-14 w-14 items-center justify-center rounded-full",
+                          classes.surface,
+                        )}
+                      >
+                        <FileText size={26} color={colors.onSurface} />
+                      </View>
+
+                      <Text
+                        className={clsx("text-center text-base font-medium", classes.textSecondary)}
+                      >
+                        No description available
+                      </Text>
+                    </>
+                  </View>
+                )}
+              </View>
+            )}
+          </>
+        )}
       </View>
 
-      {/* Experiment Selection Card */}
-      <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
-        <View className="flex-1 p-6">
-          <Text className={clsx("mb-4 text-xl font-semibold", classes.text)}>
-            Step 1: Select Experiment
-          </Text>
-
-          {isLoading && (
-            <View className="items-center py-8">
-              <ActivityIndicator size="large" color="#005e5e" />
-              <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
-                Loading experiments...
-              </Text>
-            </View>
-          )}
-
-          {!isLoading && error && (
-            <View className="items-center py-8">
-              <Text className={clsx("text-center text-red-500", classes.text)}>
-                Failed to load experiments. Please try again.
-              </Text>
-            </View>
-          )}
-
-          {!isLoading && !error && (
-            <>
-              <View className="mb-1.5 flex-row items-center justify-between">
-                <Text className={clsx("text-sm", classes.text)}>Available Experiments</Text>
-                <OfflineModeIndicator isVisible={!!precachedData} />
-              </View>
-
-              <Dropdown
-                options={experiments}
-                selectedValue={selectedExperimentId}
-                onSelect={(value) => setSelectedExperimentId(value)}
-                placeholder="Choose an experiment"
-              />
-
-              {selectedExperiment?.fullDescription && (
-                <View className="mt-4 flex-1 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-                  <ScrollView className="flex-1">
-                    <Text className={clsx("text-sm", classes.textSecondary)}>
-                      {selectedExperiment.fullDescription}
-                    </Text>
-                  </ScrollView>
-                </View>
-              )}
-            </>
-          )}
-        </View>
-
-        <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-          <Button
-            title="Start measurement flow"
-            onPress={() => {
-              if (!selectedExperimentId || !experimentFlow) {
-                return;
-              }
-
-              clearHistory();
-              setExperimentId(selectedExperimentId);
-
-              const { nodes = [], edges = [] } = experimentFlow?.body?.graph ?? {};
-
-              const orderedNodes = orderFlowNodes(nodes, edges);
-              setFlowNodes(orderedNodes);
-              nextStep();
-              setShowingOverview(true);
-            }}
-            isDisabled={!selectedExperimentId || !experimentFlow}
-            style={{ width: "100%" }}
-          />
-        </View>
+      <View className="px-4 py-3">
+        <Button
+          title="Start flow"
+          onPress={handleStartFlow}
+          isDisabled={!selectedExperimentId || !experimentFlow}
+          style={{ height: 44 }}
+        />
       </View>
     </View>
   );

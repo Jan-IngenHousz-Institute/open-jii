@@ -10,6 +10,26 @@ interface HtmlViewerProps {
   showsHorizontalScrollIndicator?: boolean;
 }
 
+function normalizeQuillLists(html: string) {
+  if (!html) return html;
+
+  // Convert bullet lists
+  let updated = html.replace(/<ol>([\s\S]*?)<\/ol>/g, (match) => {
+    if (match.includes('data-list="bullet"')) {
+      return match
+        .replace(/<ol>/g, "<ul>")
+        .replace(/<\/ol>/g, "</ul>")
+        .replace(/ data-list="bullet"/g, "");
+    }
+    return match;
+  });
+
+  // Remove remaining data-list attributes
+  updated = updated.replace(/ data-list="ordered"/g, "");
+
+  return updated;
+}
+
 export function HtmlViewer({
   htmlContent,
   scrollEnabled = true,
@@ -17,6 +37,8 @@ export function HtmlViewer({
   showsHorizontalScrollIndicator = false,
 }: HtmlViewerProps) {
   const { isDark } = useTheme();
+
+  const normalizedContent = normalizeQuillLists(htmlContent);
 
   const fullHtmlContent = `
     <!DOCTYPE html>
@@ -27,16 +49,18 @@ export function HtmlViewer({
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 13px;
           margin: 0;
-          padding: 16px;
           background-color: ${isDark ? "#1f2937" : "#ffffff"};
           color: ${isDark ? "#f9fafb" : "#111827"};
           line-height: 1.6;
         }
-        h1, h2, h3, h4, h5, h6 {
-          margin: 16px 0 8px 0;
-          font-weight: 600;
-        }
+        h1 { font-size: 1.85em; margin: 16px 0 8px 0; font-weight: 600; }
+        h2 { font-size: 1.54em; margin: 16px 0 8px 0; font-weight: 600; }
+        h3 { font-size: 1.31em; margin: 16px 0 8px 0; font-weight: 600; }
+        h4 { font-size: 1.15em; margin: 16px 0 8px 0; font-weight: 600; }
+        h5 { font-size: 1em;    margin: 16px 0 8px 0; font-weight: 600; }
+        h6 { font-size: 0.85em; margin: 16px 0 8px 0; font-weight: 600; }
         p {
           margin: 8px 0;
         }
@@ -52,7 +76,7 @@ export function HtmlViewer({
           padding: 2px 6px;
           border-radius: 4px;
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-          font-size: 14px;
+          font-size: 0.92em;
         }
         blockquote {
           border-left: 4px solid ${isDark ? "#6b7280" : "#d1d5db"};
@@ -79,7 +103,7 @@ export function HtmlViewer({
       </style>
     </head>
     <body>
-      ${htmlContent}
+      ${normalizedContent}
     </body>
     </html>
   `;

@@ -16,6 +16,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  actions: write
 
 jobs:
   detect:
@@ -73,6 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.semantic_release.outputs.releases_created }}
+      mobile_version: ${{ steps.extract_mobile.outputs.mobile_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -120,7 +122,7 @@ jobs:
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          RELEASES='${{ steps.semantic_release.outputs.releases_created }}'
+          RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
           if [ "$RELEASES" = "{}" ]; then
             echo "No new releases created." >> $GITHUB_STEP_SUMMARY
           else
@@ -128,3 +130,22 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "$RELEASES" | jq -r 'to_entries | .[] | "- **\(.key)**: v\(.value) (tag: `\(.key)-v\(.value)`)"' >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Extract mobile version
+        id: extract_mobile
+        run: |
+          RELEASES='${{ steps.semantic_release.outputs.releases_created || '{}' }}'
+          MOBILE_VERSION=$(echo "$RELEASES" | jq -r '.mobile // empty')
+          echo "mobile_version=$MOBILE_VERSION" >> $GITHUB_OUTPUT
+          if [ -n "$MOBILE_VERSION" ]; then
+            echo "📱 Mobile release detected: v$MOBILE_VERSION"
+          fi
+
+      - name: Trigger Google Play Submission
+        if: steps.extract_mobile.outputs.mobile_version != ''
+        run: |
+          gh workflow run submit-to-google-play.yml \
+            --ref ${{ github.ref_name }} \
+            --field version=${{ steps.extract_mobile.outputs.mobile_version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

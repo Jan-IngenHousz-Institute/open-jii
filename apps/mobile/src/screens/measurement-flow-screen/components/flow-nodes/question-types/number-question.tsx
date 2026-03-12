@@ -12,7 +12,8 @@ interface NumberQuestionProps {
 }
 
 export function NumberQuestion({ content, value, onChange }: NumberQuestionProps) {
-  const { classes } = useTheme();
+  const theme = useTheme();
+  const { classes, colors } = theme;
 
   const handleTextChange = (text: string) => {
     const numericValue = text.replace(/[^0-9.-]/g, "");
@@ -24,6 +25,7 @@ export function NumberQuestion({ content, value, onChange }: NumberQuestionProps
       <TextInput
         className={clsx("rounded-lg border p-3 text-base", classes.input, classes.border)}
         placeholder={content.placeholder ?? "Enter a number..."}
+        placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
         value={value}
         onChangeText={handleTextChange}
         keyboardType="numeric"

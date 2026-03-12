@@ -20,7 +20,7 @@ export function useExperiments() {
       description: item.description
         ? ellipsize(extractTextFromHTML(item.description), 100)
         : undefined,
-      fullDescription: item.description ? extractTextFromHTML(item.description) : undefined,
+      fullDescription: item.description,
     })) ?? [];
 
   return { experiments: options, isLoading, error };
