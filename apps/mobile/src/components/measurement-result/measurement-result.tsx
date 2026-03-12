@@ -13,7 +13,7 @@ import { MacroMessages, MacroMessageGroup } from "./components/macro-messages";
 
 const TABS = [
   { key: "result", label: "Results" },
-  { key: "raw", label: "Raw Data" },
+  { key: "raw", label: "Raw data" },
 ];
 
 type TabKey = (typeof TABS)[number]["key"];

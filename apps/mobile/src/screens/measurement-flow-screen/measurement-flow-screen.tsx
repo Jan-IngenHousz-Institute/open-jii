@@ -78,7 +78,7 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
     resetFlow();
     clearHistory();
     onEndFlowComplete?.();
-    router.navigate("/");
+    router.navigate("/(tabs)/");
   };
 
   // Get the dynamic step label

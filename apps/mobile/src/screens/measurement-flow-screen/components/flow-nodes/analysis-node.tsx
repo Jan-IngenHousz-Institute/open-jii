@@ -215,7 +215,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       ) : (
         <View className="flex-row gap-4 py-3">
           <Button
-            title="Discard & Retry"
+            title="Discard & retry"
             onPress={handleRetry}
             variant="tertiary"
             style={{ flex: 1, height: 44, borderColor: "transparent" }}

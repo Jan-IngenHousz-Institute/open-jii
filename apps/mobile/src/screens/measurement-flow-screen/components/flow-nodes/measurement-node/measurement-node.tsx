@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { useRouter } from "expo-router";
 import { Info } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { View, Text } from "react-native";
@@ -35,7 +36,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   } = useScanner();
   const { data: device } = useConnectedDevice();
   const { nextStep, setScanResult, setProtocolId, setCurrentFlowStep } = useMeasurementFlowStore();
-
+  const router = useRouter();
   useEffect(() => {
     setProtocolId(content.protocolId);
   }, [setProtocolId, content.protocolId]);
@@ -82,12 +83,17 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <View className="flex-1 p-4">
             <ErrorState error={scanError} />
           </View>
-          <View className="px-4 py-3">
+          <View className="flex-row gap-4 px-4 py-3">
             <Button
-              title="Retry"
+              title="Retry measurement"
               onPress={handleStartScan}
-              variant="danger"
-              style={{ height: 44 }}
+              variant="tertiary"
+              style={{ flex: 1, height: 44, borderColor: "transparent" }}
+            />
+            <Button
+              title="Connect to device"
+              onPress={() => router.push("/(tabs)/")}
+              style={{ height: 44, flex: 1 }}
             />
           </View>
         </View>
@@ -103,7 +109,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <View className="gap-4 px-4 py-3">
             <View className="flex-row items-center gap-2 rounded-lg bg-[#EDF2F6] p-2">
               <Info size={16} color={colors.primary.dark} />
-              <Text className={clsx("flex-1 text-sm", classes.textMuted)}>
+              <Text className={clsx("flex-1 text-sm leading-relaxed", classes.textMuted)}>
                 Your (gps)location and full name will be stored amongst other measurements data.
                 Note that these are publicly available.
               </Text>

@@ -48,6 +48,7 @@ export default function TabLayout() {
           headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
           headerTitleStyle: {
             fontWeight: "bold",
+            fontSize: 24,
           },
           headerShadowVisible: false,
           headerRight: () => <DeviceConnectionWidget />,
