@@ -31,7 +31,7 @@ jobs:
       environment: "dev"
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -82,7 +82,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Full history needed for semantic versioning
 
@@ -214,7 +214,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup OpenTofu and AWS Credentials
         uses: ./.github/actions/tofu/tofu-setup

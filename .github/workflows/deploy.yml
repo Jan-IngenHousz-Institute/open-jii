@@ -55,7 +55,7 @@ jobs:
       has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
