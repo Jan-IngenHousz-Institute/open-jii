@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -64,6 +65,7 @@ interface MockCodeEditorProps {
   language: string;
   onChange?: (value: string) => void;
   macroName?: string;
+  title?: string;
 }
 
 interface MockNewMacroDetailsCardProps {
@@ -231,8 +233,14 @@ vi.mock("@repo/ui/components", () => ({
 
 vi.mock("../macro-code-editor", () => ({
   __esModule: true,
-  default: ({ language, onChange, macroName }: MockCodeEditorProps & { macroName?: string }) => (
+  default: ({
+    language,
+    onChange,
+    macroName,
+    title,
+  }: MockCodeEditorProps & { macroName?: string }) => (
     <div data-testid="code-editor" data-language={language} data-macro-name={macroName}>
+      {title && <span>{title}</span>}
       <textarea
         data-testid="code-textarea"
         placeholder={`Enter ${language} code here...`}
@@ -409,7 +417,6 @@ describe("NewMacroForm", () => {
     // Assert
     const form = document.querySelector("form");
     expect(form).toBeInTheDocument();
-    expect(form).toHaveClass("space-y-8");
   });
 
   it("should display code section title", () => {

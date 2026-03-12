@@ -22,6 +22,7 @@ export const zMacroList = z.array(zMacro);
 export const zMacroFilterQuery = z.object({
   search: z.string().optional(),
   language: zMacroLanguage.optional(),
+  filter: z.enum(["my"]).optional(),
 });
 
 // Path parameters

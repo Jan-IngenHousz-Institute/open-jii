@@ -153,7 +153,6 @@ export function MacroDetailsCard({
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         language={form.watch("language")}
-                        macroName={form.watch("name")}
                         label=""
                         error={form.formState.errors.code?.message?.toString()}
                       />

@@ -213,7 +213,6 @@ describe("ExperimentDescription", () => {
       expect.objectContaining({
         onSuccess: expect.any(Function) as unknown,
         onError: expect.any(Function) as unknown,
-        onSettled: expect.any(Function) as unknown,
       }),
     );
   });

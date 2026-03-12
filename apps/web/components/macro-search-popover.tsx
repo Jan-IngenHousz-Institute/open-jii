@@ -206,7 +206,7 @@ export function MacroSearchPopover({
   const hasSearchQuery = searchValue.trim().length > 0;
 
   return (
-    <PopoverContent className={`${popoverClassName} p-0`} align="start">
+    <PopoverContent className={`${popoverClassName} p-0`} align="start" side="bottom">
       <Command shouldFilter={false}>
         <CommandInput
           placeholder={t("experiments.searchMacros")}

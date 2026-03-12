@@ -22,13 +22,15 @@ export default async function ProtocolPage({ params }: ProtocolPageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold text-gray-900">{t("protocols.title")}</h1>
-        <p>{t("protocols.listDescription")}</p>
+      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900">{t("protocols.title")}</h1>
+          <p>{t("protocols.listDescription")}</p>
+        </div>
+        <Link href={`/platform/protocols/new`} locale={locale}>
+          <Button>{t("protocols.create")}</Button>
+        </Link>
       </div>
-      <Link href={`/platform/protocols/new`} locale={locale}>
-        <Button variant="outline">{t("protocols.create")}</Button>
-      </Link>
       <ListProtocols />
     </div>
   );

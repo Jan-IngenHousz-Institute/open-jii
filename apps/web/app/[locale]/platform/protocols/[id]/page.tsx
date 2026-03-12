@@ -2,15 +2,25 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { JsonCodeViewer } from "@/components/json-code-viewer";
+import ProtocolCodeEditor from "@/components/protocol-code-editor";
+import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-details-sidebar";
+import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
-import { formatDate } from "@/util/date";
-import { CalendarIcon, CodeIcon, ExternalLink } from "lucide-react";
-import Link from "next/link";
-import { use } from "react";
+import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { Check, Circle, Loader2, X } from "lucide-react";
+import { use, useEffect, useRef, useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent, RichTextRenderer } from "@repo/ui/components";
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
 interface ProtocolOverviewPageProps {
   params: Promise<{ id: string }>;
@@ -19,9 +29,29 @@ interface ProtocolOverviewPageProps {
 export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useProtocol(id);
-  const { data: compatibleMacrosData } = useProtocolCompatibleMacros(id);
-  const compatibleMacros = compatibleMacrosData?.body ?? [];
   const { t } = useTranslation();
+  const { data: session } = useSession();
+  const {
+    mutateAsync: updateProtocol,
+    mutate: saveProtocol,
+    isPending: isUpdating,
+  } = useProtocolUpdate(id);
+
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [editedCode, setEditedCode] = useState<Record<string, unknown>[] | string | undefined>([]);
+  const [syncStatus, setSyncStatus] = useState<"synced" | "unsynced" | "syncing">("synced");
+  const savedCodeRef = useRef<string>("");
+  const saveFnRef = useRef(saveProtocol);
+  saveFnRef.current = saveProtocol;
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    const ref = saveTimeoutRef;
+    return () => {
+      if (ref.current) clearTimeout(ref.current);
+    };
+  }, []);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -36,100 +66,147 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   }
 
   const protocol = data.body;
+  const isCreator = session?.user.id === protocol.createdBy;
+
+  const handleDescriptionSave = async (newDescription: string) => {
+    await updateProtocol(
+      {
+        params: { id },
+        body: { description: newDescription },
+      },
+      {
+        onSuccess: () => {
+          toast({ description: t("protocols.protocolUpdated") });
+        },
+        onError: (err) => {
+          toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        },
+      },
+    );
+  };
+
+  const handleCodeEditStart = () => {
+    setEditedCode(protocol.code);
+    savedCodeRef.current = JSON.stringify(protocol.code);
+    setSyncStatus("synced");
+    setIsEditingCode(true);
+  };
+
+  const handleCodeEditClose = () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    if (Array.isArray(editedCode)) {
+      const key = JSON.stringify(editedCode);
+      if (key !== savedCodeRef.current) {
+        saveFnRef.current({ params: { id }, body: { code: editedCode } });
+      }
+    }
+    setIsEditingCode(false);
+  };
+
+  const handleCodeChange = (value: Record<string, unknown>[] | string | undefined) => {
+    setEditedCode(value);
+    if (!Array.isArray(value)) return;
+
+    const key = JSON.stringify(value);
+    if (key === savedCodeRef.current) {
+      setSyncStatus("synced");
+      return;
+    }
+
+    setSyncStatus("unsynced");
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      setSyncStatus("syncing");
+      saveFnRef.current(
+        { params: { id }, body: { code: value } },
+        {
+          onSuccess: () => {
+            savedCodeRef.current = key;
+            setSyncStatus("synced");
+          },
+          onError: (err) => {
+            toast({ description: parseApiError(err)?.message, variant: "destructive" });
+            setSyncStatus("unsynced");
+          },
+        },
+      );
+    }, 1000);
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Protocol info card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <CardTitle className="text-2xl">{protocol.name}</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">{t("common.created")}</h4>
-              <p className="flex items-center gap-1">
-                <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
-                {formatDate(protocol.createdAt)}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">{t("common.updated")}</h4>
-              <p className="flex items-center gap-1">
-                <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
-                {formatDate(protocol.updatedAt)}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">{t("protocols.family")}</h4>
-              <p className="capitalize">
-                {protocol.family === "multispeq" ? "MultispeQ" : "Ambit"}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">
-                {t("experiments.createdBy")}
-              </h4>
-              <p className="truncate">{protocol.createdByName ?? "-"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col gap-6 md:flex-row">
+      {/* RIGHT SIDE — Details Sidebar (First on mobile) */}
+      <ProtocolDetailsSidebar protocolId={id} protocol={protocol} />
 
-      {/* Description */}
-      <Card>
-        <CardHeader>{t("protocols.descriptionTitle")}</CardHeader>
-        <CardContent>
-          <RichTextRenderer content={protocol.description ?? ""} />
-        </CardContent>
-      </Card>
+      {/* LEFT SIDE — Main Content (Second on mobile) */}
+      <div className="flex-1 space-y-10 md:order-1">
+        <InlineEditableDescription
+          description={protocol.description ?? ""}
+          hasAccess={isCreator}
+          onSave={handleDescriptionSave}
+          isPending={isUpdating}
+          title={t("protocols.descriptionTitle")}
+          saveLabel={t("common.save")}
+          cancelLabel={t("common.cancel")}
+          placeholder={t("protocols.descriptionPlaceholder")}
+        />
 
-      {/* Compatible Macros (read-only) */}
-      {compatibleMacros.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("protocolSettings.compatibleMacros")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {compatibleMacros.map((entry) => (
-                <div key={entry.macro.id} className="flex items-center gap-2">
-                  <Link
-                    href={`/platform/macros/${entry.macro.id}`}
-                    className="text-sm font-medium hover:underline"
-                  >
-                    {entry.macro.name}
-                  </Link>
-                  <Link
-                    href={`/platform/macros/${entry.macro.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
-                  </Link>
-                  <span className="text-muted-foreground text-xs">{entry.macro.language}</span>
+        {/* Code Section */}
+        {isEditingCode ? (
+          <ProtocolCodeEditor
+            value={editedCode ?? []}
+            onChange={handleCodeChange}
+            label=""
+            placeholder={t("protocols.codePlaceholder")}
+            title={t("protocols.codeTitle")}
+            headerActions={
+              <TooltipProvider delayDuration={200}>
+                <div className="flex items-center gap-3">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex items-center">
+                        {syncStatus === "unsynced" && (
+                          <Circle className="h-4 w-4 fill-amber-500 text-amber-500" />
+                        )}
+                        {syncStatus === "syncing" && (
+                          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                        )}
+                        {syncStatus === "synced" && <Check className="h-4 w-4 text-green-600" />}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {syncStatus === "unsynced" && "Unsaved changes"}
+                      {syncStatus === "syncing" && "Saving..."}
+                      {syncStatus === "synced" && "All changes saved"}
+                    </TooltipContent>
+                  </Tooltip>
+                  <span className="h-4 w-px bg-slate-300" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCodeEditClose}
+                        className="h-7 w-7 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Close editor</TooltipContent>
+                  </Tooltip>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Code */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CodeIcon className="h-5 w-5" />
-            <span>{t("protocols.codeTitle")}</span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <JsonCodeViewer value={protocol.code} height="700px" />
-        </CardContent>
-      </Card>
+              </TooltipProvider>
+            }
+          />
+        ) : (
+          <JsonCodeViewer
+            value={protocol.code}
+            height="700px"
+            title={t("protocols.codeTitle")}
+            onEditStart={isCreator ? handleCodeEditStart : undefined}
+          />
+        )}
+      </div>
     </div>
   );
 }

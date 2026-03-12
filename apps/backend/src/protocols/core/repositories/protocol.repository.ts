@@ -1,9 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { eq, ilike, protocols, experimentProtocols, users, asc } from "@repo/database";
+import { and, eq, ilike, protocols, experimentProtocols, users, asc } from "@repo/database";
 import { profiles } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -35,9 +35,13 @@ export class ProtocolRepository {
     });
   }
 
-  async findAll(search?: ProtocolFilter): Promise<Result<ProtocolDto[]>> {
+  async findAll(
+    search?: ProtocolFilter,
+    filter?: "my",
+    userId?: string,
+  ): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const query = this.database
+      let query = this.database
         .select({
           protocols,
           firstName: getAnonymizedFirstName(),
@@ -47,8 +51,18 @@ export class ProtocolRepository {
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
         .orderBy(asc(protocols.sortOrder), asc(protocols.name));
 
+      const conditions: (SQL | undefined)[] = [];
+
       if (search) {
-        query.where(ilike(protocols.name, `%${search}%`));
+        conditions.push(ilike(protocols.name, `%${search}%`));
+      }
+
+      if (filter === "my" && userId) {
+        conditions.push(eq(protocols.createdBy, userId));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as typeof query;
       }
 
       const results = await query;
