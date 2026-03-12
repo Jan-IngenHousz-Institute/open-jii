@@ -8,19 +8,33 @@ import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
+import { onlineManager } from "@tanstack/react-query";
 
 export default function TabLayout() {
   const theme = useTheme();
   const { colors } = theme;
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { session, isLoaded } = useSession();
+  const { session, isLoaded, error } = useSession();
 
   useEffect(() => {
-    if (isLoaded && !session) {
-      router.replace("/callback");
-    }
-  }, [isLoaded, session, router]);
+    // Prevent user from being kicked out when network drops
+    if(!onlineManager.isOnline()) return 
+
+    // Check if the session error is a network error
+    // Even though we are back online, the session fetch might not have been (re)fetched yet
+    const isNetworkError = !!error && error.status === undefined // Network errors do not have a status
+    if(isNetworkError) return
+
+    // Give better auth time to load
+    if(!isLoaded) return
+
+    // Hooray, we have a session
+    if(session) return
+
+    // No session is present > kick out user
+    router.replace("/callback");
+  }, [isLoaded, session, router, error?.status]);
 
   return (
     <View style={{ flex: 1 }}>
