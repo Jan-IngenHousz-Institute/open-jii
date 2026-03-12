@@ -33,6 +33,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.507.0",
     "next": "catalog:",
+    "papaparse": "^5.5.2",
     "posthog-js": "catalog:",
     "posthog-node": "catalog:",
     "react": "catalog:react19",
@@ -41,6 +42,7 @@
     "react-i18next": "15.5.2",
     "tailwind-merge": "^3.2.0",
     "uuid": "^11.1.0",
+    "xlsx": "^0.18.5",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -53,6 +55,7 @@
     "@testing-library/react": "catalog:testing",
     "@testing-library/user-event": "catalog:testing",
     "@types/node": "catalog:",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
     "@vitejs/plugin-react": "^4.3.4",

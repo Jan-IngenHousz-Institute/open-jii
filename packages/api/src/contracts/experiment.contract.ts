@@ -1,4 +1,5 @@
 import { initContract } from "@ts-rest/core";
+import { z } from "zod";
 
 import {
   zExperiment,
@@ -45,6 +46,10 @@ import {
   zTransferRequestList,
   zProjectTransferWebhookPayload,
   zProjectTransferWebhookResponse,
+  zExperimentMetadata,
+  zCreateExperimentMetadataBody,
+  zUpdateExperimentMetadataBody,
+  zMetadataPathParam,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -625,5 +630,67 @@ export const experimentContract = c.router({
     summary: "Execute project transfer from Databricks",
     description:
       "Creates experiment, protocol, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
+  },
+  // --- Experiment Metadata Endpoints ---
+  listExperimentMetadata: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/metadata",
+    pathParams: zIdPathParam,
+    responses: {
+      200: z.array(zExperimentMetadata),
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List experiment metadata",
+    description: "Retrieves all metadata records for an experiment",
+  },
+
+  createExperimentMetadata: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/metadata",
+    pathParams: zIdPathParam,
+    body: zCreateExperimentMetadataBody,
+    responses: {
+      201: zExperimentMetadata,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Create experiment metadata",
+    description:
+      "Creates a new metadata record for an experiment. Multiple metadata records can be attached to a single experiment.",
+  },
+
+  updateExperimentMetadata: {
+    method: "PUT",
+    path: "/api/v1/experiments/:id/metadata/:metadataId",
+    pathParams: zMetadataPathParam,
+    body: zUpdateExperimentMetadataBody,
+    responses: {
+      200: zExperimentMetadata,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update experiment metadata",
+    description:
+      "Replaces the metadata blob on an existing metadata record. The entire metadata object is replaced.",
+  },
+
+  deleteExperimentMetadata: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/metadata/:metadataId",
+    pathParams: zMetadataPathParam,
+    responses: {
+      204: null,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Delete experiment metadata",
+    description: "Removes a specific metadata record from an experiment",
   },
 });
