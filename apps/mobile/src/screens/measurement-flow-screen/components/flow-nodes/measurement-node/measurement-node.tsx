@@ -100,11 +100,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       );
     }
 
-    if (isScanning) {
+    if (isScanning || scanResult) {
       return (
         <View className="flex-1">
           <View className="flex-1 p-4">
-            <ScanningState scanResult={scanResult} protocolName={protocol?.name} />
+            <ScanningState protocolName={protocol?.name} />
           </View>
           <View className="gap-4 px-4 py-3">
             <View className="flex-row items-center gap-2 rounded-lg bg-[#EDF2F6] p-2">
