@@ -1,4 +1,4 @@
-import pako from "pako";
+import { base64ToGunzip, gzipToBase64 } from "~/utils/gzip-base64";
 
 const COMPRESSED_PREFIX = "gz:";
 
@@ -9,9 +9,7 @@ const COMPRESSED_PREFIX = "gz:";
  */
 export function compressForStorage(value: unknown): string {
   const json = JSON.stringify(value);
-  const compressed = pako.gzip(json);
-  const binary = Array.from(compressed, (b) => String.fromCharCode(b)).join("");
-  return COMPRESSED_PREFIX + btoa(binary);
+  return COMPRESSED_PREFIX + gzipToBase64(json);
 }
 
 /**
@@ -21,9 +19,7 @@ export function compressForStorage(value: unknown): string {
 export function decompressFromStorage<T>(stored: string): T {
   if (stored.startsWith(COMPRESSED_PREFIX)) {
     const base64 = stored.slice(COMPRESSED_PREFIX.length);
-    const binary = atob(base64);
-    const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
-    const json = pako.ungzip(bytes, { to: "string" });
+    const json = base64ToGunzip(base64);
     return JSON.parse(json) as T;
   }
 
