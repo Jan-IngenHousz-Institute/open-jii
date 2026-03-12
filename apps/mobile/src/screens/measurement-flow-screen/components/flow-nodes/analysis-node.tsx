@@ -202,14 +202,14 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       </ScrollView>
 
       {hasScrolled ? (
-        <View className="w-full items-start bg-white">
+        <View className="w-full items-start py-3">
           <TouchableOpacity
             onPress={scrollToTop}
-            className="flex-row gap-1 py-4"
+            className={clsx("-ml-4 h-[44px] flex-row items-center justify-end gap-1 px-4")}
             activeOpacity={0.7}
           >
-            <ChevronUp size={18} color={colors.onSurface} />
-            <Text className={clsx("text-md font-medium", classes.text)}>Scroll to top</Text>
+            <ChevronUp size={20} color={colors.onSurface} />
+            <Text className={clsx("text-lg font-medium", classes.text)}>Scroll to top</Text>
           </TouchableOpacity>
         </View>
       ) : (
