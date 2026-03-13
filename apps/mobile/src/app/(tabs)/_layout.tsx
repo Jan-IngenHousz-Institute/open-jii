@@ -35,8 +35,8 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
             borderTopColor: theme.isDark ? colors.dark.border : colors.light.border,
-            height: inMeasureTab ? 0 : 60 + insets.bottom,
-            paddingBottom: inMeasureTab ? 0 : insets.bottom,
+            height: 60 + insets.bottom,
+            paddingBottom: insets.bottom,
             display: inMeasureTab ? "none" : "flex",
           },
           tabBarLabelStyle: {
