@@ -127,6 +127,9 @@ export function MeasurementQuestionsModal({
           <CommentModal
             visible={commentModalVisible}
             initialText={currentComment}
+            experimentName={experimentName}
+            questions={questions}
+            timestamp={measurement.timestamp}
             onSave={handleSaveComment}
             onCancel={() => setCommentModalVisible(false)}
           />

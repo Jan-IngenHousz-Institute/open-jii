@@ -5,22 +5,38 @@ import {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
+import { X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
+import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
+import { formatTimeAgo } from "~/utils/format-time-ago";
 
 interface CommentModalProps {
   visible: boolean;
   initialText: string;
   onSave: (text: string) => void;
   onCancel: () => void;
+  experimentName: string;
+  questions: AnswerData[];
+  timestamp: string;
 }
 
-export function CommentModal({ visible, initialText, onSave, onCancel }: CommentModalProps) {
+export function CommentModal({
+  visible,
+  initialText,
+  onSave,
+  onCancel,
+  experimentName,
+  questions,
+  timestamp,
+}: CommentModalProps) {
   const { colors, classes } = useTheme();
   const [text, setText] = useState(initialText);
   const sheetRef = useRef<BottomSheetModal>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
@@ -48,17 +64,61 @@ export function CommentModal({ visible, initialText, onSave, onCancel }: Comment
       enableDynamicSizing
       backdropComponent={renderBackdrop}
       onDismiss={onCancel}
-      backgroundStyle={{ backgroundColor: colors.surface }}
       handleIndicatorStyle={{ backgroundColor: colors.inactive }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
     >
-      <BottomSheetView className="px-4 pb-8 pt-2">
-        <Text className={clsx("mb-3 text-lg font-semibold", classes.text)}>Comment</Text>
+      <BottomSheetView className="gap-4 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
+        <View className="flex-row items-center justify-between">
+          <Text className={clsx("text-lg font-bold", classes.text)}>Add comment</Text>
+
+          <TouchableOpacity onPress={onCancel} className="p-1">
+            <X size={24} color={colors.neutral.black} />
+          </TouchableOpacity>
+        </View>
+        <View className="gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
+
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {questions.length === 0
+                ? "None"
+                : questions.map((q) => q.question_answer).join(" | ")}
+            </Text>
+          </View>
+          {experimentName && (
+            <View className="flex-row items-center">
+              <Text className={clsx("font-semibold", classes.text)}>Experiment: </Text>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                className={clsx("flex-1", classes.textMuted)}
+              >
+                {experimentName}
+              </Text>
+            </View>
+          )}
+          {timestamp && (
+            <View className="flex-row items-center">
+              <Text className={clsx("font-semibold", classes.text)}>Measurement done: </Text>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                className={clsx("flex-1", classes.textMuted)}
+              >
+                {formatTimeAgo(timestamp)}
+              </Text>
+            </View>
+          )}
+        </View>
         <BottomSheetTextInput
           value={text}
           onChangeText={setText}
-          placeholder="Add a comment..."
+          placeholder="Enter your comment here..."
           placeholderTextColor={colors.inactive}
           multiline
           numberOfLines={4}
@@ -73,10 +133,7 @@ export function CommentModal({ visible, initialText, onSave, onCancel }: Comment
             color: colors.onSurface,
           }}
         />
-        <View className="mt-4 flex-row gap-3">
-          <Button title="Cancel" variant="outline" onPress={onCancel} style={{ flex: 1 }} />
-          <Button title="Save comment" onPress={handleSave} style={{ flex: 1 }} />
-        </View>
+        <Button title="Save comment" onPress={handleSave} />
       </BottomSheetView>
     </BottomSheetModal>
   );

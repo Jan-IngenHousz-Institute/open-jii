@@ -176,26 +176,48 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         </View>
 
         <View className="my-4 gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Experiment: </Text>
-            <Text className={clsx(classes.textMuted)}>{experimentName}</Text>
-          </Text>
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Protocol: </Text>
-            <Text className={clsx(classes.textMuted)}>{protocol?.name ?? "—"}</Text>
-          </Text>
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Answers: </Text>
-            <Text className={clsx(classes.textMuted)}>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Experiment: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {experimentName}
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Protocol: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {protocol?.name ?? "Protocol"}
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
               {questions.length === 0
                 ? "None"
                 : questions.map((q) => q.question_answer).join(" | ")}
             </Text>
-          </Text>
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Date: </Text>
-            <Text className={clsx(classes.textMuted)}>{localDate}</Text>
-          </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Date: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {localDate}
+            </Text>
+          </View>
         </View>
 
         <View>{renderContent()}</View>
@@ -232,6 +254,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       <CommentModal
         visible={commentModalVisible}
         initialText={measurementComment}
+        experimentName={experimentName}
+        questions={questions}
+        timestamp={analysisTimestampRef.current}
         onSave={(text) => {
           setMeasurementComment(text);
           setCommentModalVisible(false);
