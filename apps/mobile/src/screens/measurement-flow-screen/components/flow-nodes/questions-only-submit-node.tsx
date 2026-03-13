@@ -23,8 +23,7 @@ export function QuestionsOnlySubmitNode() {
 
   const timestampRef = useRef<string>(DateTime.now().toISO() ?? "");
 
-  const experimentName =
-    experiments.find((e) => e.value === experimentId)?.label ?? "Experiment";
+  const experimentName = experiments.find((e) => e.value === experimentId)?.label ?? "Experiment";
   const localDate = DateTime.fromISO(timestampRef.current).toFormat("d MMMM yyyy, HH:mm");
 
   const cycleAnswers = getCycleAnswers(iterationCount);
@@ -67,9 +66,7 @@ export function QuestionsOnlySubmitNode() {
         <Text className={clsx(classes.text)}>
           <Text className="font-semibold">Answers: </Text>
           <Text className={clsx(classes.textMuted)}>
-            {questions.length === 0
-              ? "None"
-              : questions.map((q) => q.question_answer).join(" | ")}
+            {questions.length === 0 ? "None" : questions.map((q) => q.question_answer).join(" | ")}
           </Text>
         </Text>
         <Text className={clsx(classes.text)}>
