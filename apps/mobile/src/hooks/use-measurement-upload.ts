@@ -22,6 +22,7 @@ interface PrepareMeasurementArgs {
   userId: string;
   macro: MacroInfo | null;
   timestamp: string;
+  timezone: string;
   questions: AnswerData[];
   commentText?: string;
 }
@@ -31,6 +32,7 @@ function prepareMeasurementForUpload({
   userId,
   macro,
   timestamp,
+  timezone,
   questions,
   commentText,
 }: PrepareMeasurementArgs) {
@@ -51,6 +53,7 @@ function prepareMeasurementForUpload({
     questions,
     macros,
     timestamp,
+    timezone,
     user_id: userId,
     ...rawMeasurement,
     annotations,
@@ -97,6 +100,7 @@ export function useMeasurementUpload() {
     async ({
       rawMeasurement,
       timestamp,
+      timezone,
       experimentName,
       experimentId,
       protocolId,
@@ -107,6 +111,7 @@ export function useMeasurementUpload() {
     }: {
       rawMeasurement: any;
       timestamp: string;
+      timezone: string;
       experimentName: string;
       experimentId: string;
       protocolId: string;
@@ -124,6 +129,7 @@ export function useMeasurementUpload() {
         userId,
         macro,
         timestamp,
+        timezone,
         questions,
         commentText,
       });

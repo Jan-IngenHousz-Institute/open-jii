@@ -22,6 +22,9 @@ coverage.json
 # Vercel
 .vercel
 
+# VScode
+.vscode
+
 # Build Outputs
 .next/
 .open-next/
