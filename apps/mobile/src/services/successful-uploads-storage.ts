@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { v4 as uuidv4 } from "uuid";
+import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
 
 const SUCCESSFUL_UPLOAD_KEY_PREFIX = "SUCCESSFUL_UPLOAD_";
 
@@ -14,7 +15,7 @@ export async function saveSuccessfulUpload(upload: SuccessfulUpload): Promise<vo
   try {
     const id = uuidv4();
     const key = `${SUCCESSFUL_UPLOAD_KEY_PREFIX}${id}`;
-    await AsyncStorage.setItem(key, JSON.stringify(upload));
+    await AsyncStorage.setItem(key, compressForStorage(upload));
   } catch (error) {
     console.error("Failed to save successful upload:", error);
   }
@@ -30,7 +31,7 @@ export async function getSuccessfulUploadsWithKeys(): Promise<[string, Successfu
     return entries
       .map(([key, value]) => {
         try {
-          const parsed = value ? JSON.parse(value) : null;
+          const parsed = value ? decompressFromStorage<SuccessfulUpload>(value) : null;
           return parsed && isValidSuccessfulUpload(parsed) ? [key, parsed] : null;
         } catch {
           return null;

@@ -34,12 +34,12 @@ export default function TransferRequestLayout({ children }: TransferRequestLayou
 
       <NavTabs value={activeTab} className="w-full">
         <NavTabsList>
-          <NavTabsTrigger value="request">
+          <NavTabsTrigger value="request" asChild>
             <Link href={`/${locale}/platform/transfer-request`}>
               {t("transferRequest.formTab")}
             </Link>
           </NavTabsTrigger>
-          <NavTabsTrigger value="history">
+          <NavTabsTrigger value="history" asChild>
             <Link href={`/${locale}/platform/transfer-request/history`}>
               {t("transferRequest.historyTab")}
             </Link>
