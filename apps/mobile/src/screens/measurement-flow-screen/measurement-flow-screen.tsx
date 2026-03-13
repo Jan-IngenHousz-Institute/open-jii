@@ -85,7 +85,7 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
   const stepLabel = getStepLabel(experimentId, currentFlowStep, flowNodes, isFlowFinished);
 
   return (
-    <View className={clsx("flex-1", classes.background)}>
+    <View className={clsx("flex-1", classes.background)} style={{ paddingBottom: insets.bottom }}>
       {isFocused && <StatusBar style="light" />}
 
       {/* Background */}
@@ -125,14 +125,6 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
         <MeasurementFlowContainer />
 
         <NavigationButtons />
-
-        {/* Bottom safe area with white surface */}
-        <View
-          className={clsx(classes.card)}
-          style={{
-            height: insets.bottom,
-          }}
-        />
       </View>
     </View>
   );
