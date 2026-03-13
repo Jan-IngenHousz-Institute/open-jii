@@ -234,6 +234,7 @@ const sidebars: SidebarsConfig = {
       link: { type: "generated-index" },
       items: [
         "for-developers/developers-guide/system-architecture-data-pipeline",
+        "for-developers/developers-guide/time-synchronization",
         {
           type: "category",
           label: "Design Decisions",
