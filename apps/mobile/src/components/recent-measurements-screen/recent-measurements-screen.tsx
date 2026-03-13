@@ -156,7 +156,7 @@ export function RecentMeasurementsScreen() {
       </View>
 
       {measurements && measurements.length > 0 && (
-        <View className="flex-row items-center justify-end gap-1 px-8 pb-2">
+        <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />
           <Text className={clsx("text-sm font-normal", classes.textMuted)}>Swipe</Text>
         </View>
@@ -178,7 +178,7 @@ export function RecentMeasurementsScreen() {
         <FlatList
           data={measurements}
           keyExtractor={(item) => item.key}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 0, paddingBottom: 16 }}
+          contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
           renderItem={({ item: measurement }) => (
             <SwipeableMeasurementRow
               id={measurement.key}
@@ -219,6 +219,9 @@ export function RecentMeasurementsScreen() {
           initialText={getCommentFromMeasurementResult(
             selectedForComment.data.measurementResult as Record<string, unknown>,
           )}
+          experimentName={selectedForComment.experimentName}
+          questions={parseQuestions(selectedForComment.data.measurementResult)}
+          timestamp={selectedForComment.timestamp}
           onSave={async (text) => {
             await updateMeasurementComment(selectedForComment.key, selectedForComment.data, text);
             invalidate();

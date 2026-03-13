@@ -4,26 +4,11 @@ import { View, Text, ActivityIndicator } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
 interface ScanningStateProps {
-  scanResult?: any;
   protocolName?: string;
 }
 
-export function ScanningState({ scanResult, protocolName }: ScanningStateProps) {
+export function ScanningState({ protocolName }: ScanningStateProps) {
   const { classes, colors } = useTheme();
-
-  // Show completion message if scan just finished
-  if (scanResult) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <Text className={clsx("text-center text-lg font-semibold", classes.text)}>
-          ✓ Measurement Complete
-        </Text>
-        <Text className={clsx("mt-2 text-center", classes.textSecondary)}>
-          Proceeding to next step...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View className="flex-1 items-center justify-center gap-3">

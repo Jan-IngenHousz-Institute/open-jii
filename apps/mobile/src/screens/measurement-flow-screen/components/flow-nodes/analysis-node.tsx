@@ -176,46 +176,68 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         </View>
 
         <View className="my-4 gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Experiment: </Text>
-            <Text className={clsx(classes.textMuted)}>{experimentName}</Text>
-          </Text>
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Protocol: </Text>
-            <Text className={clsx(classes.textMuted)}>{protocol?.name ?? "—"}</Text>
-          </Text>
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Answers: </Text>
-            <Text className={clsx(classes.textMuted)}>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Experiment: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {experimentName}
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Protocol: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {protocol?.name ?? "Protocol"}
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
               {questions.length === 0
                 ? "None"
                 : questions.map((q) => q.question_answer).join(" | ")}
             </Text>
-          </Text>
-          <Text className={clsx(classes.text)}>
-            <Text className="font-semibold">Date: </Text>
-            <Text className={clsx(classes.textMuted)}>{localDate}</Text>
-          </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Date: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {localDate}
+            </Text>
+          </View>
         </View>
 
         <View>{renderContent()}</View>
       </ScrollView>
 
       {hasScrolled ? (
-        <View className="w-full items-start bg-white">
+        <View className="w-full items-start py-3">
           <TouchableOpacity
             onPress={scrollToTop}
-            className="flex-row gap-1 py-4"
+            className={clsx("-ml-4 h-[44px] flex-row items-center justify-end gap-1 px-4")}
             activeOpacity={0.7}
           >
-            <ChevronUp size={18} color={colors.onSurface} />
-            <Text className={clsx("text-md font-medium", classes.text)}>Scroll to top</Text>
+            <ChevronUp size={20} color={colors.onSurface} />
+            <Text className={clsx("text-lg font-medium", classes.text)}>Scroll to top</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View className="flex-row gap-4 py-3">
           <Button
-            title="Discard & Retry"
+            title="Discard & retry"
             onPress={handleRetry}
             variant="tertiary"
             style={{ flex: 1, height: 44, borderColor: "transparent" }}
@@ -232,6 +254,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       <CommentModal
         visible={commentModalVisible}
         initialText={measurementComment}
+        experimentName={experimentName}
+        questions={questions}
+        timestamp={analysisTimestampRef.current}
         onSave={(text) => {
           setMeasurementComment(text);
           setCommentModalVisible(false);
