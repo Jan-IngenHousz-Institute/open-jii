@@ -1,6 +1,5 @@
 import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
-import { ThrottlerModule } from "@nestjs/throttler";
 
 import { HealthController } from "./health.controller";
 
@@ -9,7 +8,6 @@ describe("HealthController", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ThrottlerModule.forRoot()],
       controllers: [HealthController],
     }).compile();
 
@@ -45,7 +43,6 @@ describe("HealthController - getTime", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ThrottlerModule.forRoot()],
       controllers: [HealthController],
     }).compile();
 
@@ -70,9 +67,7 @@ describe("HealthController - getTime", () => {
     expect(result.utcTimestampMs).toBeLessThanOrEqual(after);
 
     // utcTimestampSec should be the floored seconds of utcTimestampMs
-    expect(result.utcTimestampSec).toBe(
-      Math.floor(result.utcTimestampMs / 1000),
-    );
+    expect(result.utcTimestampSec).toBe(Math.floor(result.utcTimestampMs / 1000));
 
     // iso should parse back to the same millisecond timestamp
     expect(new Date(result.iso).getTime()).toBe(result.utcTimestampMs);
@@ -82,9 +77,6 @@ describe("HealthController - getTime", () => {
     const result = controller.getTime();
 
     expect(typeof result.iso).toBe("string");
-    expect(result.iso).toMatch(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
-    );
+    expect(result.iso).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
   });
 });
-
