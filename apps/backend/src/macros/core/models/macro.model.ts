@@ -36,3 +36,6 @@ export const selectMacroSchema = createSelectSchema(macros).extend({
 export type CreateMacroDto = z.infer<typeof createMacroSchema>;
 export type UpdateMacroDto = z.infer<typeof updateMacroSchema>;
 export type MacroDto = z.infer<typeof selectMacroSchema>;
+
+/** Lean projection for Lambda execution — only the columns needed to run a script. */
+export type MacroScript = Pick<MacroDto, "id" | "name" | "language" | "code">;

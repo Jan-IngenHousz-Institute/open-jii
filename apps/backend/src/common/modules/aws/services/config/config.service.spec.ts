@@ -44,8 +44,9 @@ describe("AwsConfigService", () => {
     });
   });
 
-  describe("validateConfig", () => {
-    it("should throw an error if the config is invalid", () => {
+  describe("config validation", () => {
+    it("should throw error for invalid config during construction", () => {
+      // Create a mock ConfigService that returns invalid data
       const configService = testApp.module.get(ConfigService);
       const getOrThrowSpy = vi
         .spyOn(configService, "getOrThrow")
@@ -53,8 +54,6 @@ describe("AwsConfigService", () => {
           if (key === "aws.region") {
             return "";
           }
-
-          return "valid_string";
         });
 
       expect(() => new AwsConfigService(configService)).toThrow(
