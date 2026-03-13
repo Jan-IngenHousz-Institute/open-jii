@@ -1,18 +1,16 @@
 import { router } from "expo-router";
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View } from "react-native";
+import { Button } from "~/components/Button";
 
 export function NoDeviceState() {
   return (
-    <View className="items-center py-8">
-      <TouchableOpacity
+    <View className="flex-1 items-center justify-center">
+      <Button
+        title="Please connect to a device first"
         onPress={() => router.push("/(tabs)/")}
-        className="rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 dark:bg-blue-900/20"
-      >
-        <Text className="font-medium text-blue-600 dark:text-blue-400">
-          Please connect to a device first
-        </Text>
-      </TouchableOpacity>
+        style={{ height: 44 }}
+      />
     </View>
   );
 }

@@ -13,13 +13,22 @@ import { useTheme } from "~/hooks/use-theme";
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "surface";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "outline"
+    | "ghost"
+    | "surface"
+    | "light"
+    | "tertiary"
+    | "danger";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
   isDisabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
   icon?: React.ReactNode;
+  iconPosition?: "left" | "right";
 }
 
 const buttonVariants = cva("rounded-lg items-center justify-center", {
@@ -30,6 +39,9 @@ const buttonVariants = cva("rounded-lg items-center justify-center", {
       outline: "bg-transparent border border-[#005e5e]",
       ghost: "bg-transparent",
       surface: "bg-gray-200",
+      light: "bg-[#EDF2F6]",
+      tertiary: "bg-[#E2FCFC] border border-[#005E5E]",
+      danger: "bg-[#FFE5E5] border border-[#DC2626]",
     },
     size: {
       sm: "py-1.5 px-3",
@@ -68,6 +80,9 @@ const textVariants = cva("font-semibold text-center", {
       outline: "text-[#005e5e]",
       ghost: "text-[#005e5e]",
       surface: "text-black",
+      light: "text-black",
+      tertiary: "text-[#005E5E]",
+      danger: "text-[#DC2626]",
     },
     size: {
       sm: "text-sm",
@@ -90,6 +105,7 @@ export function Button({
   style,
   textStyle,
   icon,
+  iconPosition = "left",
   ...props
 }: ButtonProps) {
   const { colors } = useTheme();
@@ -118,10 +134,11 @@ export function Button({
         <ActivityIndicator size="small" color={getLoadingColor()} />
       ) : (
         <View className="flex-row items-center justify-center">
-          {icon && <View className="mr-2">{icon}</View>}
+          {icon && iconPosition === "left" && <View className="mr-1">{icon}</View>}
           <Text className={textVariants({ variant, size, disabled: isDisabled })} style={textStyle}>
             {title}
           </Text>
+          {icon && iconPosition === "right" && <View className="ml-1">{icon}</View>}
         </View>
       )}
     </TouchableOpacity>

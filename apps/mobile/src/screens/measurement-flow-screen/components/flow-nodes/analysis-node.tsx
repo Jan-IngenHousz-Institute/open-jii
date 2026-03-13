@@ -1,12 +1,21 @@
 import { clsx } from "clsx";
-import React, { useMemo, useState } from "react";
-import { View, Text } from "react-native";
+import { CircleCheckBig, ChevronUp } from "lucide-react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  TouchableOpacity,
+} from "react-native";
 import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useMacro } from "~/hooks/use-macro";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
+import { useProtocol } from "~/hooks/use-protocol";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
@@ -22,7 +31,7 @@ interface AnalysisNodeProps {
 }
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
-  const { classes } = useTheme();
+  const { classes, colors } = useTheme();
   const { macro, isLoading } = useMacro(content.macroId);
   const {
     scanResult,
@@ -44,6 +53,10 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
+  const { protocol } = useProtocol(protocolId);
+
+  const cycleAnswers = getCycleAnswers(iterationCount);
+  const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
 
   // Capture the display timestamp once so it stays stable across re-renders.
   // The upload handler captures its own fresh timestamp independently.
@@ -91,8 +104,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       <MeasurementResult
         rawMeasurement={scanResult}
         macro={macro}
-        timestamp={displayTimestamp}
-        experimentName={experimentName}
         onCommentPress={() => setCommentModalVisible(true)}
       />
     );
@@ -108,7 +119,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     }
 
     if (!protocolId) {
-      throw new Error("Missing protocol name");
+      throw new Error("Missing protocol id");
     }
 
     if (!session?.data?.user?.id) {
@@ -150,29 +161,84 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     previousStep();
   };
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [hasScrolled, setHasScrolled] = useState(false);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setHasScrolled(offsetY > 50);
+  }, []);
+
+  const scrollToTop = () => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
   return (
-    <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
-      <View className="border-b border-gray-200 p-4 dark:border-gray-700">
-        <Text className={clsx("text-lg font-semibold", classes.text)}>Analysis</Text>
-      </View>
-      <View className="flex-1 p-4">{renderContent()}</View>
-      <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-        <View className="flex-row gap-3">
+    <View className="flex-1 px-4 pt-4">
+      <ScrollView
+        ref={scrollViewRef}
+        className="flex-1"
+        onScroll={handleScroll}
+        showsVerticalScrollIndicator={true}
+      >
+        <View className="flex-row items-center gap-2">
+          <Text className={clsx("text-lg font-bold", classes.text)}>Measurement complete</Text>
+          <CircleCheckBig size={16} />
+        </View>
+
+        <View className="my-4 gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
+          <Text className={clsx(classes.text)}>
+            <Text className="font-semibold">Experiment: </Text>
+            <Text className={clsx(classes.textMuted)}>{experimentName}</Text>
+          </Text>
+          <Text className={clsx(classes.text)}>
+            <Text className="font-semibold">Protocol: </Text>
+            <Text className={clsx(classes.textMuted)}>{protocol?.name ?? "—"}</Text>
+          </Text>
+          <Text className={clsx(classes.text)}>
+            <Text className="font-semibold">Answers: </Text>
+            <Text className={clsx(classes.textMuted)}>
+              {questions.length === 0
+                ? "None"
+                : questions.map((q) => q.question_answer).join(" | ")}
+            </Text>
+          </Text>
+          <Text className={clsx(classes.text)}>
+            <Text className="font-semibold">Date: </Text>
+            <Text className={clsx(classes.textMuted)}>{displayTimestamp}</Text>
+          </Text>
+        </View>
+
+        <View>{renderContent()}</View>
+      </ScrollView>
+
+      {hasScrolled ? (
+        <View className="w-full items-start bg-white">
+          <TouchableOpacity
+            onPress={scrollToTop}
+            className="flex-row gap-1 py-4"
+            activeOpacity={0.7}
+          >
+            <ChevronUp size={18} color={colors.onSurface} />
+            <Text className={clsx("text-md font-medium", classes.text)}>Scroll to top</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View className="flex-row gap-4 py-3">
           <Button
-            title="Retry"
+            title="Discard & Retry"
             onPress={handleRetry}
-            variant="outline"
-            style={{ flex: 1 }}
-            textStyle={{ color: "#ef4444" }}
+            variant="tertiary"
+            style={{ flex: 1, height: 44, borderColor: "transparent" }}
           />
           <Button
-            title={isUploading ? "Uploading..." : "Upload"}
+            title={isUploading ? "Uploading..." : "Accept data"}
             onPress={() => handleUploadMeasurement().catch(console.log)}
             disabled={isUploading}
-            style={{ flex: 1 }}
+            style={{ flex: 1, height: 44 }}
           />
         </View>
-      </View>
+      )}
 
       <CommentModal
         visible={commentModalVisible}

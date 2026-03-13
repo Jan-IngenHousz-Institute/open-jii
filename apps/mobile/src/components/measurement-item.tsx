@@ -1,9 +1,10 @@
 import { clsx } from "clsx";
-import { CloudOff, UploadCloud, Trash2, CheckCircle2 } from "lucide-react-native";
+import { UploadCloud, Trash2, CloudCheck, CloudAlert } from "lucide-react-native";
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Pressable } from "react-native";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
+import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/utils/format-time-ago";
 
 interface MeasurementItemProps {
@@ -11,6 +12,7 @@ interface MeasurementItemProps {
   timestamp: string;
   experimentName: string;
   status: MeasurementStatus;
+  questions?: AnswerData[];
   onPress?: () => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -23,6 +25,7 @@ export function MeasurementItem({
   timestamp,
   experimentName,
   status,
+  questions,
   onPress,
   onSync,
   onDelete,
@@ -31,55 +34,71 @@ export function MeasurementItem({
   const { colors, classes } = useTheme();
   const isSynced = status === "synced";
 
+  const answersText =
+    questions && questions.length > 0
+      ? questions.map((q) => q.question_answer).join(" | ")
+      : "None";
+
   return (
-    <TouchableOpacity
-      className={clsx("min-h-[60px] flex-row items-center rounded-lg p-2", classes.card)}
+    <Pressable
+      className={clsx("border-t px-4 py-3", classes.card, classes.border)}
       onPress={onPress}
-      activeOpacity={0.7}
     >
-      <View className="mr-2 justify-center">
-        {isSynced ? (
-          <CheckCircle2 size={24} color={colors.semantic.success} />
-        ) : (
-          <CloudOff size={24} color={colors.semantic.warning} />
-        )}
-      </View>
+      {/* Top: answers */}
+      <Text className={clsx("mb-1.5 text-base font-medium", classes.text)} numberOfLines={1}>
+        {answersText}
+      </Text>
 
-      <View className="flex-1">
-        <Text className={clsx("text-base font-bold", classes.text)}>{experimentName}</Text>
-        <Text className={clsx("mt-0 text-xs", classes.textMuted)}>{formatTimeAgo(timestamp)}</Text>
-      </View>
+      {/* Bottom row: experiment name on left, timestamp + icon on right */}
+      <View className="flex-row items-center justify-between">
+        <Text
+          className={clsx("mr-2 flex-1 text-sm font-normal", classes.textMuted)}
+          numberOfLines={1}
+        >
+          {experimentName}
+        </Text>
 
-      {!hideActions && (
-        <View className="ml-1.5 flex-row gap-1">
-          {!isSynced && (
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                onSync?.(id);
-              }}
-              className="h-10 w-10 items-center justify-center rounded-lg"
-              style={{ backgroundColor: colors.semantic.info }}
-              activeOpacity={0.8}
-            >
-              <UploadCloud size={20} color="#fff" />
-            </TouchableOpacity>
+        <View className="flex-row items-center gap-1.5">
+          {!hideActions && (
+            <View className="flex-row gap-1">
+              {!isSynced && (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onSync?.(id);
+                  }}
+                  className="h-8 w-8 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: colors.semantic.info }}
+                  activeOpacity={0.8}
+                >
+                  <UploadCloud size={16} color="#fff" />
+                </TouchableOpacity>
+              )}
+              {onDelete && (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onDelete(id);
+                  }}
+                  className="h-8 w-8 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: colors.semantic.error }}
+                  activeOpacity={0.8}
+                >
+                  <Trash2 size={16} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
-          {onDelete && (
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                onDelete(id);
-              }}
-              className="h-10 w-10 items-center justify-center rounded-lg"
-              style={{ backgroundColor: colors.semantic.error }}
-              activeOpacity={0.8}
-            >
-              <Trash2 size={20} color="#fff" />
-            </TouchableOpacity>
+          <Text className={clsx("shrink-0 text-sm", classes.textMuted)} numberOfLines={1}>
+            {formatTimeAgo(timestamp)}
+          </Text>
+          {isSynced ? (
+            <CloudCheck size={16} color={colors.semantic.success} />
+          ) : (
+            <CloudAlert size={16} color={colors.semantic.error} />
           )}
         </View>
-      )}
-    </TouchableOpacity>
+      </View>
+    </Pressable>
   );
 }

@@ -107,18 +107,18 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
       <NavTabs value={activeTab} className="w-full">
         <NavTabsList>
-          <NavTabsTrigger value="overview">
+          <NavTabsTrigger value="overview" asChild>
             <Link href={`/${locale}/platform/experiments/${id}`}>{t("overview")}</Link>
           </NavTabsTrigger>
-          <NavTabsTrigger value="data">
+          <NavTabsTrigger value="data" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/data`}>{t("data")}</Link>
           </NavTabsTrigger>
-          <NavTabsTrigger value="analysis">
+          <NavTabsTrigger value="analysis" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/analysis`}>
               {t("analysis.title")}
             </Link>
           </NavTabsTrigger>
-          <NavTabsTrigger value="flow">
+          <NavTabsTrigger value="flow" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
           </NavTabsTrigger>
         </NavTabsList>

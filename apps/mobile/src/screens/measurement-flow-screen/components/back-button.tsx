@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { ArrowLeft } from "lucide-react-native";
+import { ChevronLeft } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
@@ -19,15 +19,10 @@ export function BackButton({ onPress }: BackButtonProps) {
     <TouchableOpacity
       key={renderId}
       onPress={onPress}
-      className={clsx(
-        "flex-row items-center justify-center rounded-lg border px-4 py-2",
-        classes.border,
-        "bg-transparent",
-      )}
-      activeOpacity={0.7}
+      className={clsx("flex-row items-end justify-end gap-1 rounded-lg p-4")}
     >
-      <ArrowLeft size={16} color={colors.onSurface} />
-      <Text className={clsx("ml-2 text-sm font-medium", classes.text)}>Back</Text>
+      <ChevronLeft size={18} color={colors.onSurface} />
+      <Text className={clsx("text-md font-medium", classes.text)}>Back</Text>
     </TouchableOpacity>
   );
 }

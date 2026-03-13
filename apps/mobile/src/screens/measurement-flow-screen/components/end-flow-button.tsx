@@ -1,5 +1,6 @@
 import React from "react";
-import { Alert, Text, TouchableOpacity } from "react-native";
+import { Alert } from "react-native";
+import { Button } from "~/components/Button";
 
 interface EndFlowButtonProps {
   onPress: () => void;
@@ -21,14 +22,11 @@ export function EndFlowButton({ onPress }: EndFlowButtonProps) {
   };
 
   return (
-    <TouchableOpacity
+    <Button
+      title="Finish flow"
       onPress={handlePress}
-      className="self-end rounded-lg border border-red-500 bg-transparent px-4 py-2"
-      activeOpacity={0.7}
-    >
-      <Text className="text-sm font-medium" style={{ color: "#ef4444" }}>
-        Finish Data Collection
-      </Text>
-    </TouchableOpacity>
+      variant="light"
+      style={{ height: 32, paddingTop: 0, paddingBottom: 0 }}
+    />
   );
 }
