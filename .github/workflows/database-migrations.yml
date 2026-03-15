@@ -61,7 +61,7 @@ jobs:
           echo "Setting migration timeout to $((${{ inputs.timeout_minutes }} * 60)) seconds"
           
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref || github.sha }}
@@ -91,7 +91,7 @@ jobs:
           echo "  Migration Start: $(date -d @$MIGRATION_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $MIGRATION_START -u '+%Y-%m-%d %H:%M:%S UTC')"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
