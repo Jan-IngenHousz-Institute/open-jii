@@ -1,0 +1,72 @@
+name: 'Publish DORA Metrics'
+description: 'Calculates and publishes all DORA metrics to CloudWatch in a single API call'
+
+inputs:
+  deployment-outcome:
+    description: 'The outcome of the deployment step (success or failure)'
+    required: true
+  service:
+    description: 'Service name (backend, web, database, databricks, docs)'
+    required: true
+  environment:
+    description: 'Deployment environment (dev, staging, prod)'
+    required: true
+  aws-region:
+    description: 'AWS region for CloudWatch'
+    required: false
+    default: 'eu-central-1'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish DORA Metrics to CloudWatch
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        OUTCOME="${{ inputs.deployment-outcome }}"
+        SERVICE="${{ inputs.service }}"
+        ENVIRONMENT="${{ inputs.environment }}"
+        AWS_REGION="${{ inputs.aws-region }}"
+        NAMESPACE="DORA/Metrics"
+        TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        DEPLOY_END=$(date +%s)
+
+        # Build dimensions JSON (shared across all metrics)
+        DIMENSIONS='[{"Name":"Service","Value":"'"$SERVICE"'"},{"Name":"Environment","Value":"'"$ENVIRONMENT"'"}]'
+
+        # DeploymentFrequency is always published (counts every deployment attempt)
+        METRIC_DATA='[{"MetricName":"DeploymentFrequency","Value":1,"Unit":"Count","Timestamp":"'"$TIMESTAMP"'","Dimensions":'"$DIMENSIONS"'}'
+
+        if [[ "$OUTCOME" == "success" ]]; then
+          # Calculate lead time (commit → deploy end) in milliseconds
+          LEAD_TIME_MS=$(( (DEPLOY_END - COMMIT_TIME) * 1000 ))
+
+          METRIC_DATA="${METRIC_DATA}"',{"MetricName":"LeadTime","Value":'"$LEAD_TIME_MS"',"Unit":"Milliseconds","Timestamp":"'"$TIMESTAMP"'","Dimensions":'"$DIMENSIONS"'}'
+          METRIC_DATA="${METRIC_DATA}"',{"MetricName":"DeploymentSuccess","Value":1,"Unit":"Count","Timestamp":"'"$TIMESTAMP"'","Dimensions":'"$DIMENSIONS"'}'
+
+          echo "📊 Publishing DORA metrics (success):"
+          echo "  Lead Time: $((DEPLOY_END - COMMIT_TIME))s (${LEAD_TIME_MS}ms)"
+        else
+          METRIC_DATA="${METRIC_DATA}"',{"MetricName":"DeploymentFailed","Value":1,"Unit":"Count","Timestamp":"'"$TIMESTAMP"'","Dimensions":'"$DIMENSIONS"'}'
+
+          echo "📊 Publishing DORA metrics (failure):"
+        fi
+
+        # Close the JSON array
+        METRIC_DATA="${METRIC_DATA}]"
+
+        echo "  Service: $SERVICE"
+        echo "  Environment: $ENVIRONMENT"
+
+        # Single CloudWatch API call for all metrics
+        aws cloudwatch put-metric-data \
+          --region "$AWS_REGION" \
+          --namespace "$NAMESPACE" \
+          --metric-data "$METRIC_DATA" \
+          2>&1 || {
+            echo "::warning::Failed to publish DORA metrics to CloudWatch. This is non-blocking."
+            exit 0
+          }
+
+        echo "✅ DORA metrics published successfully (single API call)"

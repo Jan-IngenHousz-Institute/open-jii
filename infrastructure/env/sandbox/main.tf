@@ -20,7 +20,6 @@ module "vpc" {
   create_alb_resources       = false
   create_ecs_resources       = false
   create_migration_resources = false
-  create_lambda_resources    = false
 }
 
 module "vpc_endpoints" {
