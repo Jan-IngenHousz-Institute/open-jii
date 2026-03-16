@@ -36,9 +36,12 @@ export function QuestionsOnlySubmitNode() {
       return false;
     }
 
+    const timestamp = getSyncedLocalISO();
+    const timezone = getTimeSyncState().timezone;
+
     await uploadQuestions({
-      timestamp: timestampRef.current,
-      timezone: timezoneRef.current,
+      timestamp,
+      timezone,
       experimentName,
       experimentId,
       userId: session!.data!.user!.id,
