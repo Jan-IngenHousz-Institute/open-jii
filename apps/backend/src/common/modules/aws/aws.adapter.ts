@@ -7,22 +7,27 @@ import { ErrorCodes } from "../../../common/utils/error-codes";
 import type { Result } from "../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type {
-  AwsPort,
   SearchPlacesRequest,
   GeocodeLocationRequest,
   GeocodeResult,
 } from "../../../experiments/core/ports/aws.port";
 import type { AwsPort as IotAwsPort } from "../../../iot/core/ports/aws.port";
+import type { LambdaPort } from "../../../macros/core/ports/lambda.port";
 import { CognitoService } from "./services/cognito/cognito.service";
 import type { IotCredentials } from "./services/cognito/cognito.types";
+import { AwsConfigService } from "./services/config/config.service";
+import { AwsLambdaService } from "./services/lambda/lambda.service";
+import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
 
 @Injectable()
-export class AwsAdapter implements AwsPort, IotAwsPort {
+export class AwsAdapter implements IotAwsPort, LambdaPort {
   private readonly logger = new Logger(AwsAdapter.name);
 
   constructor(
     private readonly awsLocationService: AwsLocationService,
     private readonly cognitoService: CognitoService,
+    private readonly awsLambdaService: AwsLambdaService,
+    private readonly awsConfigService: AwsConfigService,
   ) {}
 
   /**
@@ -124,5 +129,35 @@ export class AwsAdapter implements AwsPort, IotAwsPort {
     }
 
     return credentialsResult;
+  }
+
+  /**
+   * Invoke a Lambda function and return the result
+   */
+  async invokeLambda(
+    functionName: string,
+    payload: Record<string, unknown>,
+  ): Promise<Result<InvokeLambdaResponse>> {
+    return this.awsLambdaService.invoke({ functionName, payload });
+  }
+
+  /**
+   * Resolve the Lambda function name for a given macro language
+   */
+  getFunctionNameForLanguage(language: "python" | "r" | "javascript"): string {
+    const config = this.awsConfigService.lambdaConfig;
+
+    const functionNameMap: Record<string, string> = {
+      python: config.macroSandboxPythonFunctionName,
+      javascript: config.macroSandboxJavascriptFunctionName,
+      r: config.macroSandboxRFunctionName,
+    };
+
+    const functionName = functionNameMap[language];
+    if (!functionName) {
+      throw new Error(`No Lambda function configured for language: ${language}`);
+    }
+
+    return functionName;
   }
 }
