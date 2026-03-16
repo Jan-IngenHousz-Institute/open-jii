@@ -812,6 +812,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.15
+      '@types/papaparse':
+        specifier: ^5.5.2
+        version: 5.5.2
       '@types/react':
         specifier: catalog:react19
         version: 19.2.14
@@ -26801,7 +26804,7 @@ snapshots:
 
   '@types/papaparse@5.5.2':
     dependencies:
-      '@types/node': 25.0.9
+      '@types/node': 25.5.0
 
   '@types/parse-json@4.0.2': {}
 
