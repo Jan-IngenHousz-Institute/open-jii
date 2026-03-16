@@ -17,7 +17,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.0.1",
+    "@hookform/resolvers": "^5.2.2",
     "@monaco-editor/react": "4.8.0-rc.3",
     "@repo/analytics": "workspace:*",
     "@repo/api": "workspace:*",
@@ -29,7 +29,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/react-query": "^3.52.1",
-    "@xyflow/react": "^12.8.2",
+    "@xyflow/react": "^12.10.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.507.0",
     "next": "catalog:",
@@ -39,7 +39,7 @@
     "react-dom": "catalog:react19",
     "react-hook-form": "catalog:",
     "react-i18next": "15.5.2",
-    "tailwind-merge": "^3.2.0",
+    "tailwind-merge": "^3.5.0",
     "uuid": "^11.1.0",
     "zod": "catalog:"
   },
@@ -55,7 +55,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^4.7.0",
     "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
     "jsdom": "catalog:testing",
