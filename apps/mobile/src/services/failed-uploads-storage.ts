@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { v4 as uuidv4 } from "uuid";
+import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
 
 const UPLOAD_KEY_PREFIX = "FAILED_UPLOAD_";
 
@@ -13,7 +14,7 @@ export interface FailedUpload {
 export async function saveFailedUpload(upload: FailedUpload): Promise<void> {
   const id = uuidv4();
   const key = `${UPLOAD_KEY_PREFIX}${id}`;
-  await AsyncStorage.setItem(key, JSON.stringify(upload));
+  await AsyncStorage.setItem(key, compressForStorage(upload));
 }
 
 // Get all failed uploads with their keys
@@ -26,7 +27,7 @@ export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload]
     return entries
       .map(([key, value]) => {
         try {
-          const parsed = value ? JSON.parse(value) : null;
+          const parsed = value ? decompressFromStorage<FailedUpload>(value) : null;
           return parsed && isValidFailedUpload(parsed) ? [key, parsed] : null;
         } catch {
           return null;
@@ -43,7 +44,7 @@ export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload]
 export async function updateFailedUpload(key: string, data: FailedUpload): Promise<void> {
   try {
     if (!key.startsWith(UPLOAD_KEY_PREFIX)) return;
-    await AsyncStorage.setItem(key, JSON.stringify(data));
+    await AsyncStorage.setItem(key, compressForStorage(data));
   } catch (error) {
     console.error("Failed to update upload:", error);
   }

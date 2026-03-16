@@ -1,4 +1,6 @@
 import { clsx } from "clsx";
+import { useRouter } from "expo-router";
+import { Info } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { View, Text } from "react-native";
 import { toast } from "sonner-native";
@@ -23,7 +25,7 @@ interface MeasurementNodeProps {
 }
 
 export function MeasurementNode({ content }: MeasurementNodeProps) {
-  const { classes } = useTheme();
+  const { classes, colors } = useTheme();
   const { protocol } = useProtocol(content.protocolId);
   const {
     executeScan,
@@ -33,11 +35,15 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     error: scanError,
   } = useScanner();
   const { data: device } = useConnectedDevice();
-  const { nextStep, setScanResult, setProtocolId } = useMeasurementFlowStore();
-
+  const { nextStep, setScanResult, setProtocolId, setCurrentFlowStep } = useMeasurementFlowStore();
+  const router = useRouter();
   useEffect(() => {
     setProtocolId(content.protocolId);
   }, [setProtocolId, content.protocolId]);
+
+  const handleCardPress = (flowStepIndex: number) => {
+    setCurrentFlowStep(flowStepIndex);
+  };
 
   const handleStartScan = async () => {
     if (!device) {
@@ -77,33 +83,39 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <View className="flex-1 p-4">
             <ErrorState error={scanError} />
           </View>
-          <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+          <View className="flex-row gap-4 px-4 py-3">
             <Button
-              title="Retry"
+              title="Retry measurement"
               onPress={handleStartScan}
-              variant="outline"
-              style={{ width: "100%" }}
-              textStyle={{ color: "#ef4444" }}
+              variant="tertiary"
+              style={{ flex: 1, height: 44, borderColor: "transparent" }}
+            />
+            <Button
+              title="Connect to device"
+              onPress={() => router.push("/(tabs)/")}
+              style={{ height: 44, flex: 1 }}
             />
           </View>
         </View>
       );
     }
 
-    if (isScanning) {
+    if (isScanning || scanResult) {
       return (
         <View className="flex-1">
           <View className="flex-1 p-4">
-            <ScanningState scanResult={scanResult} />
+            <ScanningState protocolName={protocol?.name} />
           </View>
-          <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-            <Button
-              title="Cancel Measurement"
-              onPress={resetScan}
-              variant="outline"
-              style={{ width: "100%" }}
-              textStyle={{ color: "#ef4444" }}
-            />
+          <View className="gap-4 px-4 py-3">
+            <View className="flex-row items-center gap-2 rounded-lg bg-[#EDF2F6] p-2">
+              <Info size={16} color={colors.primary.dark} />
+              <Text className={clsx("flex-1 text-sm leading-relaxed", classes.textMuted)}>
+                Your (gps)location and full name will be stored amongst other measurements data.
+                Note that these are publicly available.
+              </Text>
+            </View>
+
+            <Button title="Cancel Measurement" onPress={resetScan} style={{ height: 44 }} />
           </View>
         </View>
       );
@@ -111,26 +123,13 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
     return (
       <View className="flex-1">
-        <View className="flex-1 items-center justify-center p-4">
-          <ReadyState protocol={protocol} />
-        </View>
-        <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-          <Button title="Measure" onPress={handleStartScan} style={{ width: "100%" }} />
+        <ReadyState onCardPress={handleCardPress} />
+        <View className="px-4 py-3">
+          <Button title="Start measurement" onPress={handleStartScan} style={{ height: 44 }} />
         </View>
       </View>
     );
   };
 
-  return (
-    <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
-      <View className="border-b border-gray-200 p-4 dark:border-gray-700">
-        <Text className={clsx("text-lg font-semibold", classes.text)}>Measurement</Text>
-        {protocol && (
-          <Text className={clsx("text-sm", classes.textSecondary)}>Protocol: {protocol.name}</Text>
-        )}
-      </View>
-
-      <View className="flex-1">{renderState()}</View>
-    </View>
-  );
+  return <View className="flex-1 rounded-xl">{renderState()}</View>;
 }

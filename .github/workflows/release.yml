@@ -16,6 +16,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  actions: write
 
 jobs:
   detect:
@@ -140,11 +141,11 @@ jobs:
             echo "📱 Mobile release detected: v$MOBILE_VERSION"
           fi
 
-  submit-to-google-play:  
-    name: Submit Mobile to Google Play
-    needs: release
-    if: needs.release.outputs.mobile_version != ''
-    uses: ./.github/workflows/submit-to-google-play.yml
-    with:
-      version: ${{ needs.release.outputs.mobile_version }}
-    secrets: inherit
+      - name: Trigger Google Play Submission
+        if: steps.extract_mobile.outputs.mobile_version != ''
+        run: |
+          gh workflow run submit-to-google-play.yml \
+            --ref ${{ github.ref_name }} \
+            --field version=${{ steps.extract_mobile.outputs.mobile_version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

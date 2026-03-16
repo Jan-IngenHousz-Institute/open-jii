@@ -7,7 +7,7 @@ export function LoadingState() {
   const { classes } = useTheme();
 
   return (
-    <View className={clsx("rounded-xl border p-6", classes.card, classes.border)}>
+    <View className={clsx("flex-1 justify-center rounded-t-3xl", classes.card, classes.border)}>
       <View className="items-center py-8">
         <ActivityIndicator size="large" color="#005e5e" />
         <Text className={clsx("mt-4 text-center", classes.textSecondary)}>

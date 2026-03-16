@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { Check } from "lucide-react-native";
 import React from "react";
 import { TouchableOpacity, Text, View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
@@ -8,16 +9,10 @@ interface CheckboxProps {
   text: string;
   onChange: (value: boolean) => void;
   textSize?: "sm" | "base";
-  checkboxPosition?: "left" | "right";
+  icon?: React.ReactNode;
 }
 
-export function Checkbox({
-  value,
-  text,
-  onChange,
-  textSize = "base",
-  checkboxPosition = "left",
-}: CheckboxProps) {
+export function Checkbox({ value, text, onChange, textSize = "base", icon }: CheckboxProps) {
   const { classes } = useTheme();
 
   // WORKAROUND: Key with timestamp to force remount on every render
@@ -27,44 +22,29 @@ export function Checkbox({
 
   const checkbox = (
     <View
-      className={clsx(
-        checkboxPosition === "left" ? "mr-3" : "ml-3",
-        "h-8 w-8 items-center justify-center rounded border-2",
-      )}
+      className={clsx("h-6 w-6 items-center justify-center rounded-lg border-2")}
       style={{
-        borderColor: value ? "#10b981" : "#d1d5db",
-        backgroundColor: value ? "#10b981" : "transparent",
+        borderColor: value ? "#09B732" : "#011111",
+        backgroundColor: value ? "#09B732" : "transparent",
       }}
     >
-      {value && <Text className="text-base font-bold text-white">✓</Text>}
+      {value && <Check size={14} color="#ffffff" strokeWidth={3} />}
     </View>
   );
 
   return (
     <TouchableOpacity
       key={renderId}
-      className="flex-row items-center"
+      className="flex-row items-center gap-2"
       onPress={() => onChange(!value)}
     >
-      {checkboxPosition === "left" ? (
-        <>
-          {checkbox}
-          <Text
-            className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}
-          >
-            {text}
-          </Text>
-        </>
-      ) : (
-        <>
-          <Text
-            className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.textSecondary)}
-          >
-            {text}
-          </Text>
-          {checkbox}
-        </>
-      )}
+      {checkbox}
+      <View className="flex-row items-center gap-1">
+        <Text className={clsx(textSize === "sm" ? "text-sm" : "text-base", classes.text)}>
+          {text}
+        </Text>
+        {icon}
+      </View>
     </TouchableOpacity>
   );
 }

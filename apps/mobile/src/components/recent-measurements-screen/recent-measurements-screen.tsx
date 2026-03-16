@@ -1,9 +1,10 @@
 import { clsx } from "clsx";
-import { Download, UploadCloud } from "lucide-react-native";
+import { Download, ChevronsLeft, UploadCloud } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
+import { View, Text, FlatList, Alert } from "react-native";
 import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
+import { TabBar } from "~/components/TabBar";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
@@ -16,15 +17,24 @@ import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
+import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
+
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "synced", label: "Synced" },
+  { key: "unsynced", label: "Unsynced" },
+];
+
+type TabKey = (typeof TABS)[number]["key"];
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
-  const [filter, setFilter] = useState<MeasurementFilter>("all");
+  const [filter, setFilter] = useState<TabKey>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const { measurements, invalidate } = useAllMeasurements(filter);
+  const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
   const { uploadAll, isUploading, uploadOne, removeFailedUpload, updateMeasurementComment } =
     useFailedUploads();
 
@@ -140,66 +150,17 @@ export function RecentMeasurementsScreen() {
           </View>
         </View>
 
-        <View
-          className={clsx("mb-3 flex-row rounded-lg border p-1", classes.border)}
-          style={{
-            backgroundColor: colors.surface,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => setFilter("all")}
-            className={clsx("flex-1 rounded-md py-2", filter === "all" ? "" : "")}
-            style={{
-              backgroundColor: filter === "all" ? colors.primary.dark : "transparent",
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              className="text-center text-sm font-medium"
-              style={{
-                color: filter === "all" ? colors.onPrimary : colors.onSurface,
-              }}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setFilter("synced")}
-            className={clsx("flex-1 rounded-md py-2", filter === "synced" ? "" : "")}
-            style={{
-              backgroundColor: filter === "synced" ? colors.primary.dark : "transparent",
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              className="text-center text-sm font-medium"
-              style={{
-                color: filter === "synced" ? colors.onPrimary : colors.onSurface,
-              }}
-            >
-              Synced
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setFilter("unsynced")}
-            className={clsx("flex-1 rounded-md py-2", filter === "unsynced" ? "" : "")}
-            style={{
-              backgroundColor: filter === "unsynced" ? colors.primary.dark : "transparent",
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              className="text-center text-sm font-medium"
-              style={{
-                color: filter === "unsynced" ? colors.onPrimary : colors.onSurface,
-              }}
-            >
-              Unsynced
-            </Text>
-          </TouchableOpacity>
+        <View className="mb-4">
+          <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
         </View>
       </View>
 
+      {measurements && measurements.length > 0 && (
+        <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
+          <ChevronsLeft size={13} color={colors.neutral.gray500} />
+          <Text className={clsx("text-sm font-normal", classes.textMuted)}>Swipe</Text>
+        </View>
+      )}
       {!measurements || measurements.length === 0 ? (
         <View className="flex-1 items-center justify-center p-4">
           <Text className={clsx("text-center text-lg", classes.textSecondary)}>
@@ -217,14 +178,14 @@ export function RecentMeasurementsScreen() {
         <FlatList
           data={measurements}
           keyExtractor={(item) => item.key}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 0, paddingBottom: 16 }}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
           renderItem={({ item: measurement }) => (
             <SwipeableMeasurementRow
               id={measurement.key}
               timestamp={measurement.timestamp}
               experimentName={measurement.experimentName}
               status={measurement.status}
+              questions={parseQuestions(measurement.data.measurementResult)}
               onPress={() => handleItemPress(measurement)}
               onComment={
                 measurement.status === "unsynced"
@@ -258,6 +219,9 @@ export function RecentMeasurementsScreen() {
           initialText={getCommentFromMeasurementResult(
             selectedForComment.data.measurementResult as Record<string, unknown>,
           )}
+          experimentName={selectedForComment.experimentName}
+          questions={parseQuestions(selectedForComment.data.measurementResult)}
+          timestamp={selectedForComment.timestamp}
           onSave={async (text) => {
             await updateMeasurementComment(selectedForComment.key, selectedForComment.data, text);
             invalidate();

@@ -1,7 +1,7 @@
-import { clsx } from "clsx";
+import { Check, X } from "lucide-react-native";
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { View, Text } from "react-native";
+import { Button } from "~/components/Button";
 
 import { QuestionContent } from "../../../types";
 
@@ -12,60 +12,50 @@ export interface YesNoQuestionProps {
 }
 
 export function YesNoQuestion({ content, selectedValue, onSelect }: YesNoQuestionProps) {
-  const { classes } = useTheme();
+  // If required, can't deselect by tapping again
+  // if not required, tapping again deselects (sets value to empty string)
+  // Both cases it auto advances on select to the next step
+  const handleSelect = (value: "Yes" | "No" | "") => {
+    let newValue = value;
 
-  const handleSelect = (value: "Yes" | "No") => {
-    onSelect(value);
+    if (!content.required && selectedValue === value) {
+      newValue = "";
+    }
+
+    onSelect(newValue);
   };
-
   return (
-    <View className="flex-1 items-center justify-center">
+    <View className="flex-1 items-start justify-start">
       <View className="flex-row gap-4">
-        <TouchableOpacity
-          className={clsx(
-            "flex-1 items-center justify-center rounded-lg border-2 p-6",
-            selectedValue === "Yes"
-              ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-              : clsx("border-gray-300 dark:border-gray-600", classes.card),
-          )}
+        <Button
+          title="Yes"
+          variant={selectedValue === "Yes" ? "tertiary" : "light"}
+          style={{ flex: 1, minHeight: 70 }}
+          textStyle={{ fontSize: 20 }}
           onPress={() => handleSelect("Yes")}
-          activeOpacity={0.7}
-        >
-          <Text
-            className={clsx(
-              "text-xl font-semibold",
-              selectedValue === "Yes" ? "text-green-600 dark:text-green-400" : classes.text,
-            )}
-          >
-            Yes
-          </Text>
-        </TouchableOpacity>
+          icon={
+            selectedValue === "Yes" ? (
+              <Check size={20} color="#005E5E" strokeWidth={3} />
+            ) : undefined
+          }
+          iconPosition="right"
+        />
 
-        <TouchableOpacity
-          className={clsx(
-            "flex-1 items-center justify-center rounded-lg border-2 p-6",
-            selectedValue === "No"
-              ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-              : clsx("border-gray-300 dark:border-gray-600", classes.card),
-          )}
+        <Button
+          title="No"
+          variant={selectedValue === "No" ? "danger" : "light"}
+          style={{ flex: 1, minHeight: 70 }}
+          textStyle={{ fontSize: 20 }}
           onPress={() => handleSelect("No")}
-          activeOpacity={0.7}
-        >
-          <Text
-            className={clsx(
-              "text-xl font-semibold",
-              selectedValue === "No" ? "text-red-600 dark:text-red-400" : classes.text,
-            )}
-          >
-            No
-          </Text>
-        </TouchableOpacity>
+          icon={
+            selectedValue === "No" ? <X size={20} color="#DC2626" strokeWidth={3} /> : undefined
+          }
+          iconPosition="right"
+        />
       </View>
 
       {content.required && !selectedValue && (
-        <Text className={clsx("mt-4 text-sm text-red-500", classes.text)}>
-          Please select an option
-        </Text>
+        <Text className="mt-2 text-center text-sm text-red-500">Please select an option</Text>
       )}
     </View>
   );

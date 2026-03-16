@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { Battery, Unplug, RefreshCw, WifiOff } from "lucide-react-native";
+import { Unplug, RefreshCw, WifiOff } from "lucide-react-native";
 import { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
@@ -22,14 +22,10 @@ export function DeviceConnectionWidget() {
   const { data: isOnlineStatus = true } = useIsOnline();
 
   useAsync(async () => {
-    if (!connectedDevice) {
-      return;
-    }
+    if (!connectedDevice) return;
 
     const batteryResponse = await executeCommand("battery");
-    if (typeof batteryResponse !== "string") {
-      return;
-    }
+    if (typeof batteryResponse !== "string") return;
 
     const batteryPercentage = parseInt(batteryResponse.replace("battery:", ""));
     if (isNaN(batteryPercentage)) {
@@ -41,24 +37,10 @@ export function DeviceConnectionWidget() {
   const isConnected = !!connectedDevice;
 
   const getBatteryColor = () => {
-    if (batteryLevel === undefined) {
-      return colors.semantic.warning;
-    }
-
-    if (batteryLevel > 50) {
-      return colors.semantic.success;
-    }
-
-    if (batteryLevel > 20) {
-      return colors.semantic.warning;
-    }
-
+    if (batteryLevel === undefined) return colors.semantic.warning;
+    if (batteryLevel > 50) return colors.semantic.success;
+    if (batteryLevel > 20) return colors.semantic.warning;
     return colors.semantic.error;
-  };
-
-  const getBatteryText = () => {
-    if (batteryLevel === undefined) return "?%";
-    return `${batteryLevel}%`;
   };
 
   const handleRefresh = async () => {
@@ -80,40 +62,32 @@ export function DeviceConnectionWidget() {
   };
 
   return (
-    <View className="flex-row items-center gap-2">
+    <View className="mr-4 flex-row items-center gap-2">
+      {/* STATUS BADGE */}
       <View
-        className="flex-row items-center gap-0.5 rounded-lg border px-1.5 py-0.5"
+        className={clsx("h-6 flex-row items-center justify-center gap-2 rounded-lg px-2 py-1")}
         style={{
-          backgroundColor: isConnected
-            ? colors.semantic.success + "20"
-            : colors.semantic.error + "20",
-          borderColor: isConnected ? colors.semantic.success : colors.semantic.error,
-          minHeight: 24,
+          backgroundColor: isConnected ? "rgba(9,183,50,0.2)" : colors.semantic.error + "20",
         }}
       >
         {isConnected ? (
-          <Battery size={16} color={getBatteryColor()} />
+          <View className="h-1.5 w-1.5 rounded-full bg-[#009022]" />
         ) : (
-          <Unplug size={16} color={colors.semantic.error} />
+          <Unplug size={14} color={colors.semantic.error} />
         )}
 
         <Text
-          className="text-[11px] font-semibold"
+          className="text-xs font-medium"
           style={{
-            color: isConnected ? colors.semantic.success : colors.semantic.error,
+            color: isConnected ? "#009022" : colors.semantic.error,
           }}
         >
-          {isConnected ? "Connected" : "Not connected"}
+          {isConnected ? "Connected device" : "Not connected"}
         </Text>
 
-        {isConnected && (
-          <Text
-            className="ml-0.5 text-[10px] font-medium"
-            style={{
-              color: getBatteryColor(),
-            }}
-          >
-            {getBatteryText()}
+        {isConnected && batteryLevel !== undefined && (
+          <Text className="text-xs font-medium" style={{ color: getBatteryColor() }}>
+            {`${batteryLevel}%`}
           </Text>
         )}
       </View>
