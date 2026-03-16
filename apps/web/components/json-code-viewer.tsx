@@ -53,6 +53,7 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
 
   return (
     <div
+      data-testid="json-viewer-wrapper"
       className={`group/viewer relative overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md ${onEditStart ? "cursor-pointer" : ""} ${className}`}
       onClick={onEditStart}
     >
