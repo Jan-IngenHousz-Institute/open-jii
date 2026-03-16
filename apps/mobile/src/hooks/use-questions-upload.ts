@@ -63,6 +63,9 @@ export function useQuestionsUpload() {
         await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
       } catch (storageError) {
         console.error("Failed to save answers to local storage:", storageError);
+        toast.error(
+          "Answers could not be saved on this device. Please export your data now to avoid losing it.",
+        );
       }
     },
   );
