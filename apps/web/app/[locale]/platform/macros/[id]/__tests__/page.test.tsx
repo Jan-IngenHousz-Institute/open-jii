@@ -222,10 +222,10 @@ vi.mock("@repo/ui/components", () => {
   const TooltipProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
   const TooltipTrigger = ({
     children,
-    asChild,
+    _asChild,
   }: {
     children: React.ReactNode;
-    asChild?: boolean;
+    _asChild?: boolean;
   }) => <>{children}</>;
   return {
     Card,

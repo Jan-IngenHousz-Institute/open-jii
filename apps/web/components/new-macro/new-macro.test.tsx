@@ -246,11 +246,7 @@ vi.mock("@repo/ui/components", () => ({
 
 vi.mock("../macro-code-editor", () => ({
   __esModule: true,
-  default: ({
-    language,
-    onChange,
-    title,
-  }: MockCodeEditorProps) => (
+  default: ({ language, onChange, title }: MockCodeEditorProps) => (
     <div data-testid="code-editor" data-language={language}>
       {title && <span>{title}</span>}
       <textarea

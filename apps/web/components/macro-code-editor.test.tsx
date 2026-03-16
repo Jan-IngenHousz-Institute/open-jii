@@ -84,7 +84,10 @@ vi.mock("@repo/ui/components", () => ({
   ),
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children, ...props }: React.HTMLAttributes<HTMLElement> & { asChild?: boolean }) => (
+  TooltipTrigger: ({
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLElement> & { asChild?: boolean }) => (
     <span {...props}>{children}</span>
   ),
   TooltipContent: ({ children }: { children: React.ReactNode }) => (
@@ -140,7 +143,9 @@ describe("MacroCodeEditor", () => {
   });
 
   it("should display code stats in header for JavaScript", () => {
-    render(<MacroCodeEditor {...defaultProps} language="javascript" value="console.log('hello')" />);
+    render(
+      <MacroCodeEditor {...defaultProps} language="javascript" value="console.log('hello')" />,
+    );
 
     expect(screen.getByText(/lines/)).toBeInTheDocument();
   });
