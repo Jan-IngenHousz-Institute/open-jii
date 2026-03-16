@@ -29,26 +29,38 @@ export function QuestionsOnlySubmitNode() {
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
 
-  const handleUpload = async () => {
-    if (!experimentId || !session?.data?.user?.id) return;
+  const canUpload = Boolean(experimentId && session?.data?.user?.id);
+
+  const handleUpload = async (): Promise<boolean> => {
+    if (!canUpload) {
+      return false;
+    }
 
     await uploadQuestions({
       timestamp: timestampRef.current,
       timezone: timezoneRef.current,
       experimentName,
       experimentId,
-      userId: session.data.user.id,
+      userId: session!.data!.user!.id,
       questions,
     });
+
+    return true;
   };
 
   const handleSubmitAndContinue = async () => {
-    await handleUpload();
+    const success = await handleUpload();
+    if (!success) {
+      return;
+    }
     dismissQuestionsSubmit();
   };
 
   const handleFinish = async () => {
-    await handleUpload();
+    const success = await handleUpload();
+    if (!success) {
+      return;
+    }
     finishFlow();
   };
 
@@ -80,14 +92,14 @@ export function QuestionsOnlySubmitNode() {
         <Button
           title="Finish"
           onPress={() => handleFinish().catch(console.log)}
-          disabled={isUploading}
+          disabled={isUploading || !canUpload}
           variant="tertiary"
           style={{ flex: 1, height: 44, borderColor: "transparent" }}
         />
         <Button
           title={isUploading ? "Uploading..." : "Submit & Continue"}
           onPress={() => handleSubmitAndContinue().catch(console.log)}
-          disabled={isUploading}
+          disabled={isUploading || !canUpload}
           style={{ flex: 1, height: 44 }}
         />
       </View>
