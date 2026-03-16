@@ -1,0 +1,303 @@
+[
+  {
+    "name": "js_string_ops",
+    "language": "javascript",
+    "script": "e6d2491b3521135c8ac888c77172485b:daee79eb5b3b9fcd3aff28895a2a61654d9ba1c6a88f5b4f1ec45a18cae8d44bd5e22be9f1f727a0537d82f57b9c8a0bacc154cbd1564318d0e826dabc44cd29d7fa260023b980067d919cacdc3cf7370fbd89beaabe562235529fca60542853f03ac3de45d9986dda2fec11db56f888febbc015cdf33c194b4603802c755baa68f74914099a02da9724978a30d83fcac69ea847528b281a5dea4888f882a40d554487a01887da54a15c176b55ed31d35bde9b39840102fa9b16b620ccd7f7c2adc722073f3700531fccea2c9369faccd9e4bb2fb99af6e3c883d4b55266d486ca8b63cb9c39198f19b52168b3b3e23ff11ffc4c99b565be020496b6583f8dd0c6b4e076a27344ef95d3c4953e6985d53b02560d5ce415c336a337327b333d80f7ca62c4b1c54c9d1ab44a5973d59e8caf133358ab8ed9736846f66ae3b3e2c823265a99c9c191c3098cc7004aa66f062d3fab0ec903545e43adaefa470ec2ddac445ac1d2940c9ceef4ab5f7ae37ae197d69e8c7579d3d8775d6298e3e24f1e7052942c07a26a3cc5a203055090c62e8699b72951d972a94088071599d7bfc2b9b9af8381ac4541b89648a8ca467ae1ed4e0f3c9069a58b18cd0b7a18e7aa682927847203f65c44fc351a1fa6c0fb82398d945314405ce73ba543bba129dc37c43c77edfb0f4eab9f4a13933b24da3033914f11afdd119e42e4ff428fd6714797c5847a6e5da31a933c08115b60eceb29cc13d1720085c4474ee36e8a728f12",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "text": "PhotosynQ measurement"
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "text": "aBcDeFgHiJkLmNoPqRsTuVwXyZ"
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-basic-js_string_ops",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "processed": {
+            "reversed": "tnemerusaem QnysotohP",
+            "unique_count": 14,
+            "contains_z": false
+          }
+        },
+        {
+          "processed": {
+            "reversed": "ZyXwVuTsRqPoNmLkJiHgFeDcBa",
+            "unique_count": 26,
+            "contains_z": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "python_stats",
+    "language": "python",
+    "script": "dcdb3b9397fc5c45fb2bdb0bc7ef1c0c:183ea9534ecf0b80394f19d87ee973eb97657779fd3059a420bfbeedc578136bbfe26f10bcbe0a03e61c25b5a827a6a8758de702c9a2023e0dddf4067211e180fc78b7631b57d7faab3b3404206bf6ed6605660aeb11c27802f5b685000b9d608179a1d90530a10a16110f4805ccfbd83e04d1232c59a3f2ab3b98b42b8e168f3852e7975b1da1d882f32c68cb85b91b1faecd8ab04db1d75c079ea6253b9c8a7211149fe2ddb5356fe42ad72663a8dc58a502cfb964c8bfb10b5e63ad0aa2f17f4d5f5a888bf9a644e583374995928440c47946566dbd007ed63b4c336cdcb99f277496f6a76889df1f3e50b9122b4c7b4e4092a1b812e7e3a42094bea35196245ad6a842741791ff0e99e2f6967f5127ed9216ed493a07c8cc3862c193826b1a07a5eb6fe4136b701394911cbba5ed5a95fd13438b23f4927623b9311358d0f8ec1323482214285647386ae964abbba166b6377e0202092455edc7f2670ebeadd2792063300af8e82b82082257a348d0e011139936929fe7cede3ef4c962e8ec7ee8279b54c46bb83fc9073392eb08052d3691a77bea6f68cad7c281fc9bdd78a8fa97559f7605380f15d1c55320f086239c55850a5086b50a4ba72a64f35e8e7238c8be604b322b0025f1e135d833091e2d6dac54c5290dc34510226bd6a06eae4e5bc4f41244fbbce9c6453cec63819fce6e5fea94e6bcd2ea67d84142884ba45e54a9c8dd719d4acf8333b77f08a7b5132b7524449d52fa60f0b1271fa8",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "readings": [
+            45.2,
+            46.8,
+            44.1,
+            47.3,
+            45.9,
+            50.1,
+            43.2
+          ]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "readings": [
+            38.1,
+            39.5,
+            37.8,
+            40.2,
+            38.7
+          ]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-python_stats",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "stats": {
+            "mean": 46.08571428571428,
+            "std": 2.110807950544442,
+            "high_values": [
+              46.8,
+              47.3,
+              50.1
+            ]
+          }
+        },
+        {
+          "stats": {
+            "mean": 38.86,
+            "std": 0.8867919710958158,
+            "high_values": [
+              39.5,
+              40.2
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "r_regression",
+    "language": "r",
+    "script": "62973ae7cbd104514380fbadfdda879e:3ef1d920ebac9fec737346818229e074f308f957c0917ae32eeeb1ca7cad546e5a0f30300a28eb01608c54aa04f7bf2ccf0197101f8dc3d097002ca44bd319da510fd3d7291197a5080b459b693b438ee7c6a828d618a5f54ad9ca31fa46e8c9b1895db71c08ede25b080da6aa747ddee63d421a2f30ef8702714a42ea294a3acc5b1c753aebc6292ccb5ab9bd819c16d35ebc887b70777ef02bb0fe2ea3103902519130d7059b217734f52a55cc974d75f086da718c4fe6357b88ee8a296061dd7791e5975ee82490318310c34157793ae6ad9ddc5369994ae5e9c62dbf5832900c0cbccfe0581950183b8c1bcaf858d616e93aadd7b7010b05e5fd61a608100712ea32e78e7506c2dc1e3f1e4c75ab5fe98e9e07aff5e74e1460544aee9ee1ce47b7dc856e104998fcfc3a15f1ce32aad12089ac27b8e3c113afd27784e88a5baf8ec7a5f5b0416ba966b040addf17324a5dfbcfa0a5bc4c20a464f7477b29819b9df677ef702080dad9101fcb5fa25885ded8717b983a58ab014f921a160466f09dac8cd86376f73cf213b1c22a456a0f45192572fb90e0e9c6e6ce1d21dcef773fa1b475619b8e8695e0949e3d45ba59a47e5af7f1a3e5aafe32df0e50f22b76748228fc45dc5539f59666c039c6478366fc7802997512fa4e13e8004ec71316512c1e9c68b0921aa330e09cb26d94d92f0986748347cdd9c9e3758b31482a27c4a3c1ea476bd2a28275ac0e1760791abec4eb64fcdb7167a9c10f4343a1daaa6fba0a9fe31d64054ca4b96050c1",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "x": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "y": [
+            2.1,
+            4,
+            5.8,
+            8.1,
+            9.9
+          ]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "x": [
+            10,
+            20,
+            30
+          ],
+          "y": [
+            22,
+            39,
+            61
+          ]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-r_regression",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "slope": 1.97,
+          "r_squared": 0.9985
+        },
+        {
+          "slope": 1.95,
+          "r_squared": 0.9946
+        }
+      ]
+    }
+  },
+  {
+    "name": "valid_numpy",
+    "language": "python",
+    "script": "f23d45d2c9431b4e08da393d8a0d9edf:b54995892fedd0c2f6ccc19c0e2311602a4a7e9a46fe18c1bb28996226948b290796a14613d4444a2534ba37e798bb17f4926c24d72b75381805501ebf4ac1bdc8ff748dc0e8dfbefb4a28701d3089a89673508863bf7012f04bdf09ead8ae65caa809967e57d4e8042de2918a5cf5b0d2cf9760d7fff2473cec99273eb9baafc16cb098e82de41dc62fc80926ef8a63d0429754b30620d3b256c13ecbfe1e07378108838789bf4e2e003d163f08b7e4af5a6b534b06c37c1f8741474cae82ca58caa5503b208697b52ec00332ff708d30a726d83b89cffaafb646e78ca5a924637e9be118ff7ee3a9ded785b3fba29a16c6c72ad7febb87fc0bd698ca062a49b975f8839ea1d8b93e2751a6c13e14093efe401e3ee9dec52b0811f667029da2fa4e6579c4ab5b05e8df5d4ab0135de073c38d81f307717f9ab683f9e6312a3506291bd550e88cd98660e2a69b78b270ec94fea2b6c664efb6f0c52d23718e95c154bf78f97173a6d7782df6f4d338af2ae38e153cd8ab457519f797cd8cd39d3dc160f59c822c4668dae5ae229c0071",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "values": [
+            10,
+            20,
+            30
+          ]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-valid_numpy",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "mean": 3,
+          "sum": 15,
+          "max": 5
+        },
+        {
+          "mean": 20,
+          "sum": 60,
+          "max": 30
+        }
+      ]
+    }
+  },
+  {
+    "name": "valid_reduce",
+    "language": "javascript",
+    "script": "a8541b874b09319f7c3dfcf4ab04f0a6:984d19f9f4a9b5b62669df7c22075e8f32e943159af122dd430b9325f43a0970697dcc79df4859991a29752235e160442bdbb362e2b081d48d64991a20712a0953b4a77d10cdfdd6f6ce8958bab2714e6945cfbafdbb771bbab6bc1648a2418ef8c0a922d0f737a13d5b69873581fb7c0f9056b0915e1ed5d016c973d1f7111e7684513bdfd7f23f732230cfd87a6376e0e4b35029e1385b966c48469a811e66eb7e3c239e5ff94db9eb68d06f9721a0edc435fdf9f0f6fd19ca98a409cec4cad393c981adc19d3a671ac402e2c56b60478a5a5829664df26e39f8da268f4c856192aa52c66c28309bb90e553c812c1ec3a408a50c46c58cda4ec24d21c83bceea6a9c2f3a93b29544068227512225418a9d922615a310479cca8209c59faa62849e670cee7150ca091ac55fab7f77d20fd009fb3133dcdd27a2dff3d759b383ed1a1ab076c4a6781bc05d03ef7e4669d1e37b05b572f584059ffec49f6076a0cb280725e666e122512c73978c65f37463e43b729868cb4b6ca4d65292a0ab7a76613d185e6c2f5f097b14d04194cde2",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "values": [
+            100,
+            200,
+            300
+          ]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-valid_reduce",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "sum": 15,
+          "count": 5,
+          "avg": 3
+        },
+        {
+          "sum": 600,
+          "count": 3,
+          "avg": 200
+        }
+      ]
+    }
+  },
+  {
+    "name": "valid_stats",
+    "language": "r",
+    "script": "f12c63cf55de5e42db42b82c06f0b701:e1920c569d151d18e87e9d76efceca92f73ae723aaef60806b1eb611c1aba75eb0b45043da945b9a39712e8d9d0567fbe1d5bf580d70e9042ab3dd22c3f91c06711b7a3570c4921050ff7bb578341e39f1cf5e10e518590514c3894864aac0611a4b4c46a0f0f26f4463a101b2b919ade3c8136dd915dea6f3d531d23d218f7efc73230b1a7344a78883a28ae975ca4b0e9d64f22f1cced0e793e812fc27e93d14d1f39af9747c0953762cce6f3367a6fbc1b2b8b89df2b52a14fde419b4b4b6339e4f16dd4e20a4353b5aa97feb1d1af499e2c90ee3f9d74cacb99e7b7f9589f46864744ac472c8a9ca5195f759e8f580c6e31ef3309ffa8e6b1e231c016824a8ed29381fb18d1d1804ec752b64eaeffb57740223c2995f37eb0dea04bb3ef2daea7b394047159392f0f5e66e4cbe0ba72d66c6ebdff07951e879abaa873f9d",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "values": [
+            10,
+            20,
+            30,
+            40,
+            50
+          ]
+        }
+      },
+      {
+        "id": "sample-2",
+        "data": {
+          "values": [
+            1.5,
+            2.5,
+            3.5
+          ]
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-samples-valid_stats",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "mean": 30,
+          "median": 30,
+          "sd": 15.8114
+        },
+        {
+          "mean": 2.5,
+          "median": 2.5,
+          "sd": 1
+        }
+      ]
+    }
+  }
+]

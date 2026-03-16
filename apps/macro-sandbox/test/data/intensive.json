@@ -1,0 +1,431 @@
+[
+  {
+    "name": "js_aggregation_pipeline",
+    "language": "javascript",
+    "script": "b04efac25d9d6c69300adc126222fccd:739bbd3f558ff4ce219c990d10d5f8fcafb96287311747c379e345b54fb0d36e0c7b5682a64f0d457b443c26d95a8f8bf07a9266c686f1e279c8c233394305da0de7d0e230462b774ce34263f3d267fa6e3e7bdea0a00df0e7027894201b2c372acb3a4cf7cb745110f6ffd821dec727e19bb49e1b9f7bb25372b5bac003a67fffb018ccd3c16f16477382869e002d76bb93cd7f77610be7f6ccda6c54c3916ae469112450a1a0b0fb2e981d88b1b81219c62e3896bf2ac0c96b5b06bd2fdd0d275cdf12b9c10ab9d0b5a68bc49fab0205038661e8c43d0c9ce2d6dca9d2d9fecbe5b4f353467dc65e8b06f15892c1e3312b100d54d5102de34a8c438181f2be819b05626b8e1aa9406c7a1a8b8be36cd7148d0faf43344e01d8945877d2f6ae9c2ff3439e1d434a566aa87b9d88734a3ea1cb362cd4fddbba3fa13322089c1ad7bbe59d790adb2c8ce035b9fd2420b1ab33032298b9289c9ba058a8866e4f37a423b6bf3426734cef3017fb5a91982380b39902dd49d3dc102b23167e0bf5eb550ceb86cbe927d51f824bbf8049cd7487650285b429b7721c268472f4e341860bb16bf019b509c2dac9eb6f65db904ce5e2162310692c9e5f3223518bba5f5ce123b46cc534fb57436e13aace741383c11b494cb0b83e0cd9b559d103d59161bc250493e476514e6309cddf94443f41975604ea925dbc35f46726d36fa38406df7e5f7cd0bb47df33290bf5c230dd57def72f885147be7983835034483f0e10b7dd5b9425d347dbb31f62fd4bc946a05e59dd3dabf70fc033f0572b12d6d4e35d9365f20eee4fb0526fa0c214c0d99d0ad4aaa4d01affe5f5a627361be6593cab2a78512e995366a3d141809f3d2b4b29a613aac2df457dc9a30d35fe49d401e4299a5c1e01317ff8cfa8a05888e421e1bd728d943c0e3c2660969ea6a3ae517de84232c0c8748ce30657507c94b76857fdb7cb299238ed43f2052ae965a00b1751f34978453012b5beef2369bb6aa2e82d584110181204b760011830efff2ef11293c9a96395c39e3527bea41318e6c58849abb3d1fa08df5eacc9c6e1aaeebb625e3f4bfbe9204d451b77113f21c694f3b536189df7fe01cbd9bfb86fcce8b88a94319e916c1d1478f4d300b40459208fedd26509882a3fbb442c36f8808c60f66002793f721f0fb34e1c02c53398a1ee0d2fa323f91c8ef5be3f37f60045512529e50ef18049d0d1727e9b5dbc140f6755f01e4d5213279da48ed4757bdcda04fac4f6ddaf3285a2dd7d5d6fceedd658c52d0356f3cdd1320c9bd3bd044ebf9fa822d9f62491ef276de50423006eebae18154d8f79260c862a8d3d7797f4c29602fd61d4d2c047d711398adab6da90379e746086be9cff3f5c25d40804d239027762786066e9274035a061badbc36379d6752f85a8dfda32fc141e0f2986fed1c3cf1ab05891341d9de4d2e55ae3632992d3a7fc6becf451f7a2ea72120521e1842e99b4b73a6a41c293d48775151e2cbca70f33af4354a9f7f6bf8e8c81af23f7ce0cdf3f576e8ecdfe33222d92edd4ec40d4fa00ac428b1031fbd2ef2e",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "values": [
+            45.2,
+            46.8,
+            44.1,
+            47.3,
+            45.9,
+            50.1,
+            43.2,
+            48,
+            42.5,
+            49.7
+          ]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-js_aggregation_pipeline",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "sum": 462.79999999999995,
+          "mean": 46.279999999999994,
+          "variance": 6.039599999999999,
+          "stddev": 2.4575597652956476,
+          "min": 42.5,
+          "max": 50.1,
+          "range": 7.600000000000001,
+          "median": 46.349999999999994,
+          "count": 10,
+          "sorted": [
+            42.5,
+            43.2,
+            44.1,
+            45.2,
+            45.9,
+            46.8,
+            47.3,
+            48,
+            49.7,
+            50.1
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "js_string_processing",
+    "language": "javascript",
+    "script": "9a0c996179fbcf8f6e02976864726a4f:2b6284228ca036dc85ed1dbde8b9007e954f0ae2e97e98705d3a84280d553bda2a57628d91dec9f5b7fd29bb08503a96a8ab6ef52c52b6b47d7037a50cfd19499b561e4f74554d78f89c90aca6a9ad79f7945a9ec7499d5c57bfc895b68088657efd72bd811687628d78ca8d8fb3b55040b33a08165af070c71f782cbd9e1cfa38fb49f25054cb615b5036b60873a33d840a30f31bc3a097af9af44a1ecf9fd3382601fb9ae34b9936442eac6957cd1bb4e623a722713a37f0c2742cbdcde9de023dc04b760b2e0fbeb80aee660bbb695b331a16aed4eeba4324453eb0655375c0e61eaef37666b77e9a71f26fde3247f7adca23da3423003315cbb97bc8882ed753585739a66100f771edbcbbf18ea6fc37abc83c5f595a1a6973dfcd8764cb900ea319b19b705359dfb34d760069747bcbcd32a212f7436cf5c3e133e4945727394be4ddab3be235a07225446e6805b84559e74c20bf6d55b5e68fa552e8b9bb4ebf75708a24afa030cac15d5de14c9c810a5eb3542cdee96f9cbb61db9d6f31aee7d46907f8a1acb3460ada6e93734619d86f2edb6c673c40e79dde8e591cb48d8a680c1f29af39f640b7fe502177f432d09a3c6c34d076d9988fae3d05a17f4f652940cdfae65406dee58e5fe220cde6053ee1137f12406b2ae9dc54b499caf47fc8b068667c526f0fe2fe9cbfd477bb6d504397a2037fce4575eb80aeca325abd9531bd597053117e304a7c4bbdd67ef3b373969770cc297d099924d414093570d60f02ccbb28d72b335f8f2923f7bf27fc06e3aa897b9f1f842ed960a67da01eaea5f149a12a0531709bb70146f9ec59a34eba120dde696318222c9893199e2c1d971e914bde8037b26391824b46d380bdf92eb9d8b65312b47e9c6af7a7ed011e43d4473fc72c6cc834562cb7a9612644e2ea567a50ceee768065bfb20b06bd8e48b2559a73930d87b4597d2cefa9e3940544d85ec74653d33ff473a4093a953bb14ffbf8d5ede6fa92eae5a9c8cd768a1559ef1e452db5efd30f17187fac187f7ffad045ab721259c2806cc02f23aabbfc3f06481a24b98eb846432421b89a6ba6cf10f5aabe549d9973e3a6e7542f62dbc61a5c5eaf59fd1a598599fd96110129b462ca77679e965bfb2d073c9da8c1f0a17ef4a347c80834b3ef1fd12612fc865a41bf157adeea303a0cb379bfff7a1e81c3e72602b6f989df88e759ac7ca5d24184c313066755fbedb87770351567fd8d98d2ace726800fb588eb2e06ed16ece2f6dbb5f860fd4208e508",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "text": "The quick brown fox jumps over the lazy dog near the river bank"
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-js_string_processing",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "word_count": 13,
+          "char_count": 63,
+          "vowels": 17,
+          "consonants": 34,
+          "unique_words": 11,
+          "frequencies": {
+            "the": 3,
+            "quick": 1,
+            "brown": 1,
+            "fox": 1,
+            "jumps": 1,
+            "over": 1,
+            "lazy": 1,
+            "dog": 1,
+            "near": 1,
+            "river": 1,
+            "bank": 1
+          },
+          "reversed": "knab revir eht raen god yzal eht revo spmuj xof nworb kciuq ehT",
+          "uppercase": "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG NEAR THE RIVER BANK"
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_increment",
+    "language": "python",
+    "script": "eb6938a57059fa5ab7ec06eb16b04a37:5846db659e2b9c5c8bb62aee0233e0333f574d272cddc85ab71c5af2f26c500fb026396b35dc575886c91deb75980ae54f4436b31594845ccda4886f5032fb4e2068c1a70411ee216c79babe44c9fd9277c1416e65d4ca5e658c59d613499df3692175824d1b9b5db8a7ec792638d859f1b1b35008cd73dbb372ec1e7d963d5b3629d43093fe157bea251452f85d63251b760120b835cc58b38be08eff60f4b5",
+    "items": [
+      {
+        "id": "sample-1",
+        "data": {
+          "val": 0
+        }
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-intensive-py_increment",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "res": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_pandas_transform",
+    "language": "python",
+    "script": "fc3ba62bcb1b930ce625d7327f245b2d:a20e7a35dac275fa0c5b9d8a09119e53c1158474f49762607702633f80761e44a4c7f456b2201610751fc7c0cf885142ce554ee02280c8bdc7e8351835066c39263c1a3b668eb274aa70f5c1744eaf745b2e75659f966b1aadc42baf86ecc83acdbdcaae9e4ce49e1c328cc8bc57c9fe0530ac0813fdd1d7158572c0a5ea4d8efea3671792ac1d293234a2ea399cbe192eb06b01f6e6d09f88c5605dbe17b94720f5007f53fe09e597be019bc19e8f2f4c765bee74db11d6a1afd05c10632b0bc453ab570a2554c7ae74bd0017ba9587f22788c93a75bb3f761af2bad94687aed915e9d58b1c43e43fb5a40dc0ebab8eef14f38c51355fe4e414c47442c09b9431914feb75a548c5189f681d2eb9b6db8b45e9db2132fef21456159801972f06a6e2627ba1827f894db50fc3827db6ab70157d34659113f5b651c88e2d6a6a158aab7c26e6d7dc191695495e26c708f8ae626147cf7e30b2e402468a57f4ba5337e99cb9567333f6ececf59387aeb4bd0858eeff5126a89a334c97aa384b5bd6cc670acbe210ccd7a8dd33c582f0f83b0cf0fdee249c4edb6c9a1953bea7e0530fa2425914ba08bf77566653d05484f3bb4a079d278e5123e16bad6f68162dba08c3daa4f86faeac7bf695dee73f6ed3f8980ba1a4fa4411f8fd1e7ef410b52e2ad28d5733b2d34e0a2e35f33744a3839863815280a29dbd2281d0be15f60d51711a281fd00fafff961366f292b5416f8b9f2f992439c04c373919456d51faf6a0230a452274683ca154f1b08c15561726a9ad6817d38cfef2a603a38eb2ed758fcacdeadae4b46dceee06fedc46c6847f93d7728540f14b04191c03a9d1162f23b0deb7d1a156a835523e3240b60263a2cfbb53c2ef8547aab7c9df0891f926333b84852e4e8a8f44229e4575fb2b2234fc1b258bf650df7811f6f58c1b38023ec7413167c5e7f248b682d08a4ed5f1",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "x": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "y": [
+            2.1,
+            4,
+            5.8,
+            8.1,
+            9.9,
+            12,
+            14.2,
+            16.1
+          ]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-py_pandas_transform",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "correlation": 0.9996976597823294,
+          "x_mean": 4.5,
+          "y_mean": 9.025,
+          "row_count": 8,
+          "product_sum": 409.59999999999997
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_scipy_regression",
+    "language": "python",
+    "script": "dc09a5f57cd3750198b215f9f899161a:c2cf2fea08142f26dfdcebbb4e60d73f774b7c1b30efc81ffecaadb16fb51c0e16467b2df1c3c75fafd4819cf2e9d94f19d7e610575bf419921e5ef1e81f19fe0cf192ef7c6dad202da9ba85f789f92b8141d605fc9d41767bb92d9a9986d3612b1a68d1976bfeade2d7ff9a728a888bd2838271cf7be16e5cb6546b018de0279b44129ace9998bc929363b736675126596a55367552f9539222550864e4913ff7dca6f38138bb6da41af7fa5e00b2050513c6203045e1db22d3cee9195e0eab8c38386eb31ef621aab06d0d2eb2faac28c13f5a7694813a707925c143ac39a4f8d16306e6939f0130c64988904cf1ffd57daa5b4a578d796e5a2c3447076977cf97b12e90f885559e72139a45c4d050aa9797ddedfc96adf1db90e752ff07f12add39a3ad06e2dd2ac654619969f8bf90fd331346d5ffb898031179f23bcfaaeea1ef4a1153e922ef1b6c1832d69d33221c47dd4d19e78fef420fce69811631ffe7ebf7454cadb631a1bff5c72599752668215908ff6ca7d4936dbc3721560874de185481950c409d3c1437900be79ca787ce012dce2a9c613582b1680ed33b4f815f0af6127ede122976d47c4491f82ba8cbaabaee9bfd06facc0e3a519a5e97a311e1fc8cc9628e25777a2021cd68d9c4fa24d1662874fabf16ab608d67c1cfe3ec518bfb281ddc6e5864a569454f3b61a33f8e451e825043bc83fa429f72971a0dea54d2fe3416e28c61a32863c6b94ca08f9d97f0371e152dea740f3eb3448ffb086c41ee29f01a9357727e1756f4002e56f2fd4a37e011ab9a66a077dafb71aae9e93586bffb67ea17ced39b51eb625403837cff3a3180c4654f8c83bad228ca2ad2f34ebeea6f5ff447b0b1f4b02262017cd2452cb9b12f02ace7c95b871036557793fc15e160a1471249bbbc66d3d77b0d391a5715516c3604f7c6b6bc2b05180436a4d516a844e8101194a1396abee59523575c7e25f4b2afc57a5b557a2b6df5d16ff4e8be91c2dfc802f8b8870d9820d4191c765fea60f0985d0c4030aa28ea987112783396d77b789d857ad7a245fad4589493bdd436a13e3ce23de093db6e3b507bf96dac6880c4b9d162ded4efcad2d9407776a3266a1fffb95d03e246c8dbdd2a762857382196d83cafcb9c1c2347f9265960696f7b89ff081ade37891353e4111b567163211cc24c3979dda9cf709a0d2291bd916b5131d4c52616aa2e95bb7b008e1fde175d6087dfed5b46ed96fc6a30feac3b6c2bed16f3fe681167a015af65f9e7fde9dd71fc9620ded5762f4ae797d82fcf654bf9de45d763ee1c17d681834626bb1b77dbf286e5f47ac0e87d7a26945d54393833b5f3ff09c1bdb952e43741325463fac543d095eceaad974bc8b408c2ea0bb9bc27",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "x": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "y": [
+            2.3,
+            4.1,
+            5.8,
+            8.2,
+            9.7,
+            12.1,
+            13.9,
+            16,
+            18.2,
+            20.1
+          ]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-py_scipy_regression",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "slope": 1.996363636,
+          "intercept": 0.06,
+          "r_squared": 0.9990188832,
+          "p_value": 2.534611849e-13,
+          "std_error": 0.02211913647,
+          "predicted": [
+            2.056363636,
+            4.052727273,
+            6.049090909,
+            8.045454545,
+            10.04181818,
+            12.03818182,
+            14.03454545,
+            16.03090909,
+            18.02727273,
+            20.02363636
+          ],
+          "residuals": [
+            0.2436363636,
+            0.04727272727,
+            -0.2490909091,
+            0.1545454545,
+            -0.3418181818,
+            0.06181818182,
+            -0.1345454545,
+            -0.03090909091,
+            0.1727272727,
+            0.07636363636
+          ],
+          "rmse": 0.1796967142
+        }
+      ]
+    }
+  },
+  {
+    "name": "py_stats_pipeline",
+    "language": "python",
+    "script": "862f19629970d91b0f76b367aaf7f11f:8245600304106dbac0069d1fa42cce19462aee46fe3471f1bce23764d9419db357d452e2a0c182a24aff1586d73e63c2dfc14f6bf460ea49cbcf4b9d431d1da734bb45b80a519448a0b045d871857e88e4abfef3384b78ebf57a65bf7e17c3535a3f645152b2ef884202e2024daacc702ba90587c0ff0f8a1f9e837d97d768b046e272d33ce86fa62bf29ca29f475cc3bf026babff1ff82ea7e9c2dc04cc82c957d102446592cc3153f84f7d1e53d8af428783e40a03bff6c463e6886bdaa3e0acfa20f00714998ee0ee1bbf1ae2c929698b0311fc23a2b917ef05ef0b5ec13f26bb0a3f0789d0420c425070e04e1169381550ac5d3954e808a086ba490e5ec4ed20c34e2c8cd1d72c59c12ed5b7bf450070f2718ddfd25e80126c0f40892f77a2df07679b17bf9e5cc22baedf5f9487c9a62f18c4f11f0b3ab3b407b58190d642feab8042ef6ab860180d4e61f368747e27b809cbc5e587123bfdcd3dd7304f6aa1af7682b8c39c9143477c91b43f12c5492aa3a660b845580fe9203bd5d5b4c13770076489b9d178e12d96e32ba3ddbda4c3cfc60a31ed346b7bca222b3c3894c55e0c427efd20ea18882acac9bd6d26f1cf2265c687bfb364a7e1417bdaab81b77c1383829e8733668def4d7921ff9315f34e0233cd044e8350b32f6d3786d0b9a180fa0a94f8f0a78853c600554d3022ddba7a6ff5500fe34685144b2b2f29f316b12c69fcdfe15a599e55f5e572712594895e4815fd665f7eb318292d85668f3c3669c0a4f6d80448a35cfc045ebb14e17d3471fc1886ee2f599af89cad8218ea677d33c8e229b3a3a818b5847e3f04425aa0746576bf148abc835a1aa25a932aef96df17e44b0c82bc71ff99e244216ec2cc545e86771ca6531a72adebb4205b61e3b774566f7920c89ad5fd6f20d566272ce1afe1862da4811122a93f9362516c92757dcc8744a1e6f969ef27e43c466d39b6729d552d6e084c03108274bfb65f4c40218132990364bede877482d8572c988fff9620c7933abdd63d51712c42849677e23d9d5ab54f426259f58d28d4b90f3948bb09aeccd69395c713cafff70e1757379bba5714c3d58f6942789a38d4197a7143ce6d27edf70957251cc3d219b396397a6ad5a35584081cc329cc6e0cde506f9fdc3f4b4d7e72846a28482a89e8686536bb9248edb46327f81c5f551a8817ccfe37759b785b9f82c3",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "readings": [
+            45.2,
+            46.8,
+            44.1,
+            47.3,
+            45.9,
+            50.1,
+            43.2,
+            48,
+            42.5,
+            49.7
+          ]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-py_stats_pipeline",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "mean": 46.28,
+          "std": 2.4575597652956476,
+          "median": 46.349999999999994,
+          "q25": 44.375,
+          "q75": 47.825,
+          "iqr": 3.450000000000003,
+          "variance": 6.039599999999999,
+          "sum": 462.8,
+          "min": 42.5,
+          "max": 50.1,
+          "range": 7.600000000000001,
+          "count": 10,
+          "sorted": [
+            42.5,
+            43.2,
+            44.1,
+            45.2,
+            45.9,
+            46.8,
+            47.3,
+            48,
+            49.7,
+            50.1
+          ],
+          "normalized": [
+            -0.4394603196435684,
+            0.21159200575430945,
+            -0.8870587933546117,
+            0.415045857441147,
+            -0.1546249272819976,
+            1.5543874268874391,
+            -1.2532757263909187,
+            0.6998812498027207,
+            -1.5381111187524925,
+            1.3916243455379695
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "r_data_summary",
+    "language": "r",
+    "script": "e161f3277e28085d7435bc86c33bacc1:38590c04ad3b45302379241fa0505292f7a107e257f9691920fdb05957b6e80abdb64d15954594c45f6fbca229d16b35b7844f704b0755b80d5bc7ce1d23bcedeaac7356deed9e5eca1ff9c2aa5330f0ace29ebde61f692d71b90207c4f616613c390336683e736aaaec84b52069255f53123b4bd895e3daa560f52f214b30c6bed04dae95cd386dc2c2e5701c78f06207f905acbc3d8dc2de99fb75da7b02017f0df8e79434e26a651acdc7ea30e4c49bba0f2b849859e6a69b95f2dac0beb782dbef9b7c9c89171b0c171f58fe8347a5ff327d26fb68263fddd23b9352f20c927e2d11089e7eda1497f4aba954aa9b91cc64867e0493a8b243785b47c45b5e18ccd290c362339be1557433eb47d73cd94da314ee3c99307637a0918813039ebd2b32758bef57d80076e0327be24f519753d5d6f2b0d84e794189c30ebe776d492c39014d7ff1fe93ad977f5145c9c21ce12aeb7ce01c5fd0152fe85ca36aea0dfe51b2b6c39d06160b2b5c177826e478d052c027b4e3757b8b3ec7c251ddfebe2aebc61ab1a242b8c23eeba1c357b452efafe2ce28b7b6a0b668f8e8cc44f6225d832f0fe4522c159f6e591cfb76aaed2882c44af636e84a58c28377883217f0d31f56c49e5b7cfec780e82542b2af933359aeb0db902cde7c0580abe034487b7aa3cb28b57870629adf73a2aecf15ae242e7fb78be84cff23ca1cab1c714f0ae6d222a4c09f5442f90992667f887b",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "values": [
+            45.2,
+            46.8,
+            44.1,
+            47.3,
+            45.9,
+            50.1,
+            43.2,
+            48,
+            42.5,
+            49.7
+          ]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-r_data_summary",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "range": 7.6,
+          "var": 6.7107,
+          "iqr": 3.45,
+          "mean": 46.28,
+          "sum": 462.8,
+          "sorted": [
+            42.5,
+            43.2,
+            44.1,
+            45.2,
+            45.9,
+            46.8,
+            47.3,
+            48,
+            49.7,
+            50.1
+          ],
+          "q75": 47.825,
+          "n": 10,
+          "max": 50.1,
+          "median": 46.35,
+          "sd": 2.5905,
+          "q25": 44.375,
+          "min": 42.5
+        }
+      ]
+    }
+  },
+  {
+    "name": "r_statistical_analysis",
+    "language": "r",
+    "script": "d3588f6ff52602e186b605d411578610:23bba0264db2eb1d4cf48d781c0c1d733cd7306cdcc0eee2aca1434ce449c6fd7c7085451f0085eec090a7f4eefec069ab854f5d2d14bbd22c502e249fbca114993cee15b4f00eae7d2d8c4360eb6f6ab0f78535d1895b45b0c0c9e499d189fa5a4d04955369eb8406300262b131edee1d094559e4fd411eba9241811f23833b9f0f4d37621df9ccd07de4746439c366df7c3059c1be418bd4b9543920c60d1ecae688250d5445e736bd7ee4bdc71fc7ad7328246c63c1af464f64a76f75dcb8334cefc81bb63f5681fd8a3f75288d2964daf9123123dc8a9551cf8b7dbe31ba8d5e6d950a395f94ad6e8597c9ba5ae2f12d74c14c7c231f1ec738342dd42c020206cdb8fea7fb1a1a2efc62e33ee5ee8c9d95135e11e80c26e23d07d61360a13b89faf7b4917b2ad0566294ea3e0b6d3e7385e9708706fafb7acd35c3538dbfc9a3f77e489561a2ae7afd4fae873bb9056b5e4e4f90fc1e02ce4ffe286f436d71bb6a8d09ee0562bc887b7c999ba99a5931a94d7987dbc0a2d1558491f3e9eef40d1c3f18f4aec788e45fda75ecd488e7e501ee0cd05b7b72ec2ff1efb56595825934da2a5b26086704214ad022401e1226eaf9a481e0c75df2fc6a2616fcd939b13a30d7678cb68f1021afb8ec81b0",
+    "items": [
+      {
+        "id": "item-1",
+        "data": {
+          "x": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "y": [
+            2.3,
+            4.1,
+            5.8,
+            8.2,
+            9.7,
+            12.1,
+            13.9,
+            16,
+            18.2,
+            20.1
+          ]
+        }
+      }
+    ],
+    "timeout": 15,
+    "protocol_id": "test-intensive-r_statistical_analysis",
+    "expect": {
+      "success": true,
+      "error": false,
+      "output": [
+        {
+          "y_mean": 11.04,
+          "residual_se": 0.2009,
+          "x_mean": 5.5,
+          "slope": 1.9964,
+          "x_sd": 3.0277,
+          "correlation": 0.9995,
+          "r_squared": 0.999,
+          "y_sd": 6.0473,
+          "n": 10,
+          "intercept": 0.06
+        }
+      ]
+    }
+  }
+]
