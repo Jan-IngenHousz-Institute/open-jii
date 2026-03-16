@@ -10,6 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
 import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
 import { PythonMacroProvider } from "~/components/python-macro-provider";
+import { TimeSyncProvider } from "~/components/time-sync-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useTheme } from "~/hooks/use-theme";
 import { PostHogProvider } from "~/providers/PostHogProvider";
@@ -93,17 +94,19 @@ function RootLayoutContent() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ConfiguredQueryClientProvider>
-        <SafeAreaProvider>
-          <PythonMacroProvider>
-            <BottomSheetModalProvider>
-              <StatusBar style={theme.isDark ? "light" : "dark"} />
-              <RootLayoutNav />
-              <Toaster />
-            </BottomSheetModalProvider>
-          </PythonMacroProvider>
-        </SafeAreaProvider>
-      </ConfiguredQueryClientProvider>
+      <TimeSyncProvider>
+        <ConfiguredQueryClientProvider>
+          <SafeAreaProvider>
+            <PythonMacroProvider>
+              <BottomSheetModalProvider>
+                <StatusBar style={theme.isDark ? "light" : "dark"} />
+                <RootLayoutNav />
+                <Toaster />
+              </BottomSheetModalProvider>
+            </PythonMacroProvider>
+          </SafeAreaProvider>
+        </ConfiguredQueryClientProvider>
+      </TimeSyncProvider>
     </GestureHandlerRootView>
   );
 }

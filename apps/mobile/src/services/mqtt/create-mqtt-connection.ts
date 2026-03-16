@@ -9,6 +9,7 @@ import "react-native-get-random-values";
 import { getEnvVar } from "~/stores/environment-store";
 import { Emitter } from "~/utils/emitter";
 import { generateRandomString } from "~/utils/generate-random-string";
+import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/utils/time-sync";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -25,15 +26,15 @@ function getSignatureKey(key: string, dateStamp: string, region: string, service
   return HmacSHA256("aws4_request", kService);
 }
 
-function getAmzDates() {
-  const now = new Date();
-  const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "");
-  const timePart = now.toISOString().slice(11, 19).replace(/:/g, "");
-  const amzDate = `${dateStamp}T${timePart}Z`;
-  return { amzDate, dateStamp };
+function getAmazonDates() {
+  const syncedDate = getSyncedUtcDateTime();
+  const dateStamp = syncedDate.toFormat("yyyyMMdd");
+  const amazonDate = syncedDate.toFormat("yyyyMMdd'T'HHmmss'Z'");
+  const { timezone } = getTimeSyncState();
+  return { amazonDate, dateStamp, timezone };
 }
 
-export function createSignedUrl(params: {
+export async function createSignedUrl(params: {
   clientId: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -41,16 +42,19 @@ export function createSignedUrl(params: {
   region: string;
   endpoint: string;
 }) {
+  // Block until the first time sync has completed so we never sign with an unsynced device clock.
+  await ensureSynced();
+
   const method = "GET";
   const service = "iotdevicegateway";
   const canonicalUri = "/mqtt";
 
-  const { amzDate, dateStamp } = getAmzDates();
+  const { amazonDate, dateStamp } = getAmazonDates();
   const credentialScope = `${dateStamp}/${params.region}/${service}/aws4_request`;
 
   let query = `X-Amz-Algorithm=AWS4-HMAC-SHA256`;
   query += `&X-Amz-Credential=${encodeURIComponent(`${params.accessKeyId}/${credentialScope}`)}`;
-  query += `&X-Amz-Date=${amzDate}`;
+  query += `&X-Amz-Date=${amazonDate}`;
   query += `&X-Amz-Expires=86400`;
   query += `&X-Amz-SignedHeaders=host`;
 
@@ -68,7 +72,7 @@ export function createSignedUrl(params: {
 
   const stringToSign = [
     "AWS4-HMAC-SHA256",
-    amzDate,
+    amazonDate,
     credentialScope,
     sha256(canonicalRequest),
   ].join("\n");
@@ -151,7 +155,7 @@ export async function createMqttConnection() {
 
   const clientId = getEnvVar("CLIENT_ID") + " - " + generateRandomString();
 
-  const signedUrl = createSignedUrl({
+  const signedUrl = await createSignedUrl({
     clientId,
     accessKeyId,
     secretAccessKey,

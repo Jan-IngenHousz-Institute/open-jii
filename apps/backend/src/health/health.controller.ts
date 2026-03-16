@@ -17,4 +17,20 @@ export class HealthController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get("time")
+  getTime() {
+    const now = new Date();
+    this.logger.log({
+      msg: "Time endpoint called",
+      operation: "getTime",
+      utcTimestampMs: now.getTime(),
+      iso: now.toISOString(),
+    });
+    return {
+      utcTimestampMs: now.getTime(),
+      utcTimestampSec: Math.floor(now.getTime() / 1000),
+      iso: now.toISOString(),
+    };
+  }
 }
