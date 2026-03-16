@@ -1,4 +1,4 @@
-import { Tabs, useRouter } from "expo-router";
+import { Tabs, useRouter, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -14,7 +14,11 @@ export default function TabLayout() {
   const { colors } = theme;
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const segments = useSegments();
+
   const { session, isLoaded } = useSession();
+
+  const inMeasureTab = segments.includes("measurement-flow");
 
   useEffect(() => {
     if (isLoaded && !session) {
@@ -33,6 +37,7 @@ export default function TabLayout() {
             borderTopColor: theme.isDark ? colors.dark.border : colors.light.border,
             height: 60 + insets.bottom,
             paddingBottom: insets.bottom,
+            display: inMeasureTab ? "none" : "flex",
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -43,6 +48,7 @@ export default function TabLayout() {
           headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
           headerTitleStyle: {
             fontWeight: "bold",
+            fontSize: 24,
           },
           headerShadowVisible: false,
           headerRight: () => <DeviceConnectionWidget />,

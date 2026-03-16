@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { authContract } from "./contracts/auth.contract";
 import { experimentContract } from "./contracts/experiment.contract";
+import { healthContract } from "./contracts/health.contract";
 import { iotContract } from "./contracts/iot.contract";
 import { macroContract } from "./contracts/macro.contract";
 import { protocolContract } from "./contracts/protocol.contract";
@@ -14,6 +15,7 @@ const c = initContract();
 export const contract = c.router({
   auth: authContract,
   experiments: experimentContract,
+  health: healthContract,
   iot: iotContract,
   macros: macroContract,
   protocols: protocolContract,
