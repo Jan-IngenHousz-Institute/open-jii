@@ -737,7 +737,7 @@ importers:
         specifier: 'catalog:'
         version: 7.71.2(react@19.1.0)
       react-i18next:
-        specifier: 15.5.2
+        specifier: ^15.5.2
         version: 15.5.2(i18next@25.8.14(typescript@5.9.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       tailwind-merge:
         specifier: ^3.5.0
@@ -1052,25 +1052,25 @@ importers:
         specifier: ^25.8.14
         version: 25.8.14(typescript@5.9.3)
       i18next-browser-languagedetector:
-        specifier: 8.1.0
+        specifier: ^8.1.0
         version: 8.1.0
       i18next-http-backend:
-        specifier: 3.0.2
+        specifier: ^3.0.2
         version: 3.0.2
       i18next-resources-to-backend:
-        specifier: 1.2.1
+        specifier: ^1.2.1
         version: 1.2.1
       next:
         specifier: 'catalog:'
         version: 15.5.12(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       next-i18n-router:
-        specifier: 5.5.2
+        specifier: ^5.5.2
         version: 5.5.2
       react:
         specifier: 19.1.0
         version: 19.1.0
       react-i18next:
-        specifier: 15.5.2
+        specifier: ^15.5.2
         version: 15.5.2(i18next@25.8.14(typescript@5.9.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
     devDependencies:
       '@repo/eslint-config':
