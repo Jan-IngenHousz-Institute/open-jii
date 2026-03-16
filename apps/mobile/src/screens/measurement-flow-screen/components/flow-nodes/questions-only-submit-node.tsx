@@ -1,6 +1,5 @@
 import { clsx } from "clsx";
 import { CircleCheckBig } from "lucide-react-native";
-import { DateTime } from "luxon";
 import React, { useRef } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
@@ -11,6 +10,7 @@ import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
+import { getSyncedLocalISO, getTimeSyncState } from "~/utils/time-sync";
 
 export function QuestionsOnlySubmitNode() {
   const { classes } = useTheme();
@@ -21,10 +21,10 @@ export function QuestionsOnlySubmitNode() {
   const { getCycleAnswers } = useFlowAnswersStore();
   const { isUploading, uploadQuestions } = useQuestionsUpload();
 
-  const timestampRef = useRef<string>(DateTime.now().toISO() ?? "");
+  const timestampRef = useRef<string>(getSyncedLocalISO());
+  const timezoneRef = useRef<string>(getTimeSyncState().timezone);
 
   const experimentName = experiments.find((e) => e.value === experimentId)?.label ?? "Experiment";
-  const localDate = DateTime.fromISO(timestampRef.current).toFormat("d MMMM yyyy, HH:mm");
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
@@ -34,6 +34,7 @@ export function QuestionsOnlySubmitNode() {
 
     await uploadQuestions({
       timestamp: timestampRef.current,
+      timezone: timezoneRef.current,
       experimentName,
       experimentId,
       userId: session.data.user.id,
@@ -71,7 +72,7 @@ export function QuestionsOnlySubmitNode() {
         </Text>
         <Text className={clsx(classes.text)}>
           <Text className="font-semibold">Date: </Text>
-          <Text className={clsx(classes.textMuted)}>{localDate}</Text>
+          <Text className={clsx(classes.textMuted)}>{timestampRef.current}</Text>
         </Text>
       </View>
 

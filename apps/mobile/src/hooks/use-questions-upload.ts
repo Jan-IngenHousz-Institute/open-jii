@@ -14,12 +14,14 @@ export function useQuestionsUpload() {
   const { loading: isUploading, execute: uploadQuestions } = useAsyncCallback(
     async ({
       timestamp,
+      timezone,
       experimentName,
       experimentId,
       userId,
       questions,
     }: {
       timestamp: string;
+      timezone: string;
       experimentName: string;
       experimentId: string;
       userId: string;
@@ -31,6 +33,7 @@ export function useQuestionsUpload() {
         questions,
         macros: [],
         timestamp,
+        timezone,
         user_id: userId,
       };
 
