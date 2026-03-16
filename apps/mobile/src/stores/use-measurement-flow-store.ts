@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { FlowNode } from "~/screens/measurement-flow-screen/types";
+import { FlowNode, isQuestionsOnlyFlow } from "~/screens/measurement-flow-screen/types";
 
 interface MeasurementFlowStore {
   experimentId?: string;
@@ -55,10 +55,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
         const nextFlowStep = state.currentFlowStep + 1;
         const isCompleted = nextFlowStep >= state.flowNodes.length;
         if (isCompleted) {
-          const isQuestionsOnlyFlow = state.flowNodes.every(
-            (n) => n.type === "question" || n.type === "instruction",
-          );
-          if (isQuestionsOnlyFlow) {
+          if (isQuestionsOnlyFlow(state.flowNodes)) {
             // Pause for the user to review and upload answers before starting the next iteration
             return {
               isQuestionsSubmitPending: true,

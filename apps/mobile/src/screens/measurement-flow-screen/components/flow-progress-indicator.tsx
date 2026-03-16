@@ -10,6 +10,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
+import { isQuestionsOnlyFlow } from "~/screens/measurement-flow-screen/types";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 export function FlowProgressIndicator() {
@@ -18,18 +19,16 @@ export function FlowProgressIndicator() {
     useMeasurementFlowStore();
   const { selectedExperimentId } = useExperimentSelectionStore();
 
-  const isQuestionsOnlyFlow =
-    flowNodes.length > 0 &&
-    flowNodes.every((n) => n.type === "question" || n.type === "instruction");
+  const questionsOnly = isQuestionsOnlyFlow(flowNodes);
 
   // +1 for experiment selection, +1 for completed state of the flow,
   // and +1 extra step for the questions-only submit screen (if applicable).
-  const totalSteps = flowNodes.length + (isQuestionsOnlyFlow ? 3 : 2);
+  const totalSteps = flowNodes.length + (questionsOnly ? 3 : 2);
 
   let currentStep: number;
   if (!experimentId) {
     currentStep = 1;
-  } else if (isQuestionsOnlyFlow) {
+  } else if (questionsOnly) {
     if (isQuestionsSubmitPending) {
       // Submit/review answers screen, just after the last question
       currentStep = flowNodes.length + 2;

@@ -31,7 +31,8 @@ export function useQuestionsUpload() {
 
       const payload = {
         questions,
-        macros: [],
+        macros: null,
+        device_id: null,
         timestamp,
         timezone,
         user_id: userId,
