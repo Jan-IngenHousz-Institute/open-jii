@@ -10,14 +10,17 @@ export interface ICommandExecutor {
 }
 
 export class CommandExecutor implements ICommandExecutor {
+  private readonly initPromise: Promise<void>;
+
   constructor(
     private readonly driver: IDeviceDriver,
     private readonly transport: ITransportAdapter,
   ) {
-    void this.driver.initialize(this.transport);
+    this.initPromise = Promise.resolve(this.driver.initialize(this.transport));
   }
 
   async execute<T = unknown>(command: string | object): Promise<T> {
+    await this.initPromise;
     const result = await this.driver.execute<T>(command);
 
     if (!result.success) {
@@ -28,6 +31,7 @@ export class CommandExecutor implements ICommandExecutor {
   }
 
   async destroy(): Promise<void> {
+    await this.initPromise;
     await this.driver.destroy();
   }
 }

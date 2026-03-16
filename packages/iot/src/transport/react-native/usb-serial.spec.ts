@@ -20,7 +20,7 @@ vi.mock("react-native-usb-serialport-for-android", () => ({
 }));
 
 // Mock delay so we don't actually wait 2s in tests
-vi.mock("../../utils/async", () => ({
+vi.mock("../../utils/async/async", () => ({
   delay: vi.fn().mockResolvedValue(undefined),
 }));
 

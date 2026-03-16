@@ -16,6 +16,10 @@ export function fromHex(hex: string): string {
     throw new Error("Invalid hex string: length must be even");
   }
 
+  if (!/^[0-9a-fA-F]*$/.test(hex)) {
+    throw new Error("Invalid hex string: contains non-hex characters");
+  }
+
   let result = "";
   for (let i = 0; i < hex.length; i += 2) {
     const byte = hex.slice(i, i + 2);

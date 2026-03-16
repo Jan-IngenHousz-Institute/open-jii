@@ -46,6 +46,11 @@ describe("hex utilities", () => {
     it("should throw on odd-length hex string", () => {
       expect(() => fromHex("ABC")).toThrow("Invalid hex string: length must be even");
     });
+
+    it("should throw on non-hex characters", () => {
+      expect(() => fromHex("ZZZZ")).toThrow("Invalid hex string: contains non-hex characters");
+      expect(() => fromHex("48GG")).toThrow("Invalid hex string: contains non-hex characters");
+    });
   });
 
   describe("roundtrip", () => {

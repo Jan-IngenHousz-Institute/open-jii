@@ -85,13 +85,14 @@ export class WebSerialAdapter implements ITransportAdapter {
     if (!this.port?.readable || this.reading) return;
 
     this.reading = true;
-    this.reader = this.port.readable.getReader();
+    const reader = this.port.readable.getReader();
+    this.reader = reader;
 
     try {
       const decoder = new TextDecoder();
 
       while (this.reading) {
-        const { value, done } = await this.reader.read();
+        const { value, done } = await reader.read();
 
         if (done) {
           break;
@@ -104,7 +105,11 @@ export class WebSerialAdapter implements ITransportAdapter {
       this.log.error("Error reading from serial port:", error);
       this.statusCallback?.(false, error as Error);
     } finally {
-      this.reader.releaseLock();
+      try {
+        reader.releaseLock();
+      } catch {
+        // reader may already be released by disconnect()
+      }
       this.reader = null;
       this.reading = false;
     }
