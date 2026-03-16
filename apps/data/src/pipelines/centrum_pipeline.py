@@ -55,7 +55,7 @@ sensor_schema = StructType([
     StructField("topic", StringType(), False),
     StructField("device_name", StringType(), True),
     StructField("device_version", StringType(), True),
-    StructField("device_id", StringType(), False),
+    StructField("device_id", StringType(), True),
     StructField("device_battery", DoubleType(), True),
     StructField("device_firmware", StringType(), True),
     StructField("sample", StringType(), True),
