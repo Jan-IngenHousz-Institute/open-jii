@@ -53,7 +53,6 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
   height = "400px",
   className = "",
   title,
-  headerActions,
   onEditStart,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -134,7 +133,7 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                handleCopy();
+                void handleCopy();
               }}
               className="h-8 px-2 text-slate-600 hover:text-slate-800"
             >
