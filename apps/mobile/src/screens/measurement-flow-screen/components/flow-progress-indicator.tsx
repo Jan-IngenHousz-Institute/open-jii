@@ -9,8 +9,8 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { useTheme } from "~/hooks/use-theme";
-import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { isQuestionsOnlyFlow } from "~/screens/measurement-flow-screen/types";
+import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 export function FlowProgressIndicator() {

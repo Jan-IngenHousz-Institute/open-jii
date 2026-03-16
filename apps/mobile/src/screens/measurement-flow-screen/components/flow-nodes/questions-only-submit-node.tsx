@@ -22,7 +22,6 @@ export function QuestionsOnlySubmitNode() {
   const { isUploading, uploadQuestions } = useQuestionsUpload();
 
   const timestampRef = useRef<string>(getSyncedLocalISO());
-  const timezoneRef = useRef<string>(getTimeSyncState().timezone);
 
   const experimentName = experiments.find((e) => e.value === experimentId)?.label ?? "Experiment";
 
@@ -32,7 +31,10 @@ export function QuestionsOnlySubmitNode() {
   const canUpload = Boolean(experimentId && session?.data?.user?.id);
 
   const handleUpload = async (): Promise<boolean> => {
-    if (!canUpload) {
+    if (!experimentId) {
+      return false;
+    }
+    if (!session?.data?.user?.id) {
       return false;
     }
 
@@ -44,7 +46,7 @@ export function QuestionsOnlySubmitNode() {
       timezone,
       experimentName,
       experimentId,
-      userId: session!.data!.user!.id,
+      userId: session.data.user.id,
       questions,
     });
 
