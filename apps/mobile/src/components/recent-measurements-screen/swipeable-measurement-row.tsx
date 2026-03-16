@@ -117,7 +117,7 @@ export function SwipeableMeasurementRow({
               className="flex-1 items-center justify-center"
               activeOpacity={0.7}
             >
-              <Trash2 size={16} color={colors.semantic.error} />
+              <Trash2 size={16} color={colors.neutral.black} />
             </TouchableOpacity>
           </View>
         )}

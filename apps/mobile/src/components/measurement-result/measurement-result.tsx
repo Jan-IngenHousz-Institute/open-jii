@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import { ChevronRight, MessageCircle } from "lucide-react-native";
 import React, { useState } from "react";
 import { useAsync } from "react-async-hook";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { TabBar } from "~/components/TabBar";
 import { useTheme } from "~/hooks/use-theme";
 import { applyMacro } from "~/utils/process-scan/process-scan";
@@ -13,7 +13,7 @@ import { MacroMessages, MacroMessageGroup } from "./components/macro-messages";
 
 const TABS = [
   { key: "result", label: "Results" },
-  { key: "raw", label: "Raw Data" },
+  { key: "raw", label: "Raw data" },
 ];
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -33,7 +33,11 @@ export function MeasurementResult({
   const { classes, colors } = useTheme();
   const [activeTab, setActiveTab] = useState<TabKey>("result");
 
-  const { result: processedMeasurement, error: processingError } = useAsync(async () => {
+  const {
+    result: processedMeasurement,
+    loading: isProcessing,
+    error: processingError,
+  } = useAsync(async () => {
     return await applyMacro(rawMeasurement, macro);
   }, [rawMeasurement, macro]);
 
@@ -57,6 +61,10 @@ export function MeasurementResult({
           </Text>
         </View>
       );
+    }
+
+    if (isProcessing) {
+      return <ActivityIndicator size="large" color={colors.primary.dark} />;
     }
 
     if (!processedMeasurement?.length) {

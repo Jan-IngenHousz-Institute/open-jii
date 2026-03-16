@@ -22,13 +22,12 @@ export function NextButton({ onPress, isDisabled = false }: NextButtonProps) {
       onPress={onPress}
       disabled={isDisabled}
       className={clsx(
-        "flex-row items-end justify-end gap-1 rounded-lg p-4",
-        classes.card,
+        "h-[44px] flex-row items-center justify-end gap-1 rounded-lg px-4",
         isDisabled && "opacity-50",
       )}
     >
-      <Text className={clsx("text-md font-medium", classes.text)}>Next</Text>
-      <ChevronRight size={18} color={colors.onSurface} />
+      <Text className={clsx("text-lg font-medium", classes.text)}>Next</Text>
+      <ChevronRight size={20} color={colors.onSurface} />
     </TouchableOpacity>
   );
 }

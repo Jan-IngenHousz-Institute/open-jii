@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { LinearGradient } from "expo-linear-gradient";
 import { Bookmark, HelpCircle, Repeat2 } from "lucide-react-native";
@@ -8,6 +9,15 @@ import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import type { FlowNode } from "../../../../types";
+
+const answerText = cva("flex-shrink text-base", {
+  variants: {
+    state: {
+      answered: "font-semibold",
+      unanswered: "italic",
+    },
+  },
+});
 
 interface ReadyStateProps {
   onCardPress: (index: number) => void;
@@ -87,20 +97,25 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
 
               <View className="flex-1 gap-1">
                 <Text className={clsx("text-xs font-medium", classes.textSecondary)}>{label}</Text>
-                <Text className="text-base font-semibold" numberOfLines={1}>
-                  {hasAnswer ? answer : "Not set"}
-                </Text>
-              </View>
+                <View className="flex-row items-center gap-1">
+                  <Text
+                    numberOfLines={1}
+                    className={clsx(
+                      answerText({ state: hasAnswer ? "answered" : "unanswered" }),
+                      !hasAnswer && classes.textSecondary,
+                    )}
+                  >
+                    {hasAnswer ? answer : "Not set"}
+                  </Text>
 
-              {(isAutoincrement || isRemember) && (
-                <View className="items-center justify-center">
-                  {isAutoincrement ? (
-                    <Repeat2 size={20} color={colors.neutral.black} />
-                  ) : (
-                    <Bookmark size={20} color={colors.neutral.black} />
-                  )}
+                  {(isAutoincrement || isRemember) &&
+                    (isAutoincrement ? (
+                      <Repeat2 size={16} color={colors.neutral.black} />
+                    ) : (
+                      <Bookmark size={16} color={colors.neutral.black} />
+                    ))}
                 </View>
-              )}
+              </View>
             </TouchableOpacity>
           );
         })}
