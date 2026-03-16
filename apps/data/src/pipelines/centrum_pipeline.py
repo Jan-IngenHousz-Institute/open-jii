@@ -55,7 +55,7 @@ sensor_schema = StructType([
     StructField("topic", StringType(), False),
     StructField("device_name", StringType(), True),
     StructField("device_version", StringType(), True),
-    StructField("device_id", StringType(), False),
+    StructField("device_id", StringType(), True),
     StructField("device_battery", DoubleType(), True),
     StructField("device_firmware", StringType(), True),
     StructField("sample", StringType(), True),
@@ -183,7 +183,7 @@ def raw_data():
     }
 )
 @dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
-@dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
+@dlt.expect("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
     """Silver layer: Clean and standardize sensor data, including imported data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
