@@ -29,16 +29,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/expo": "^1.4.12",
+    "@better-auth/expo": "^1.5.5",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
-    "better-auth": "^1.4.12",
+    "better-auth": "^1.5.5",
     "nodemailer": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "@types/nodemailer": "catalog:",
     "eslint": "catalog:",
