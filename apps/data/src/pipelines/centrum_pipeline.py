@@ -183,7 +183,7 @@ def raw_data():
     }
 )
 @dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
-@dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
+@dlt.expect("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
     """Silver layer: Clean and standardize sensor data, including imported data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
