@@ -37,6 +37,9 @@ vi.mock("lucide-react", () => ({
   ExternalLink: ({ className }: { className?: string }) => (
     <span data-testid="external-link-icon" className={className} />
   ),
+  FileCode2: ({ className }: { className?: string }) => (
+    <span data-testid="file-code2-icon" className={className} />
+  ),
 }));
 
 vi.mock("next/link", () => ({
@@ -82,7 +85,13 @@ vi.mock("@repo/ui/components", () => {
     </button>
   );
 
-  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button };
+  const Badge = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span data-testid="badge" className={className}>
+      {children}
+    </span>
+  );
+
+  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge };
 });
 
 // Mock hooks
@@ -205,9 +214,9 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     render(<ProtocolCompatibleMacrosCard protocolId="proto-1" />);
 
     expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
-    expect(screen.getByText("python")).toBeInTheDocument();
+    expect(screen.getByText("Python")).toBeInTheDocument();
     expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
-    expect(screen.getByText("r")).toBeInTheDocument();
+    expect(screen.getByText("R")).toBeInTheDocument();
   });
 
   it("should render macro links with correct hrefs", () => {

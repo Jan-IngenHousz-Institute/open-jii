@@ -36,6 +36,9 @@ vi.mock("lucide-react", () => ({
   ExternalLink: ({ className }: { className?: string }) => (
     <span data-testid="external-link-icon" className={className} />
   ),
+  FileJson2: ({ className }: { className?: string }) => (
+    <span data-testid="file-json2-icon" className={className} />
+  ),
 }));
 
 vi.mock("next/link", () => ({
@@ -81,7 +84,13 @@ vi.mock("@repo/ui/components", () => {
     </button>
   );
 
-  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button };
+  const Badge = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span data-testid="badge" className={className}>
+      {children}
+    </span>
+  );
+
+  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge };
 });
 
 // Mock hooks

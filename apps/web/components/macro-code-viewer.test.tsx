@@ -43,6 +43,14 @@ vi.mock("@monaco-editor/react", () => ({
 vi.mock("lucide-react", () => ({
   Copy: () => <span data-testid="copy-icon">📋</span>,
   Check: () => <span data-testid="check-icon">✅</span>,
+  Pencil: () => <span data-testid="pencil-icon" />,
+}));
+
+// Mock i18n
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
 }));
 
 // Mock UI components
@@ -93,22 +101,22 @@ describe("MacroCodeViewer", () => {
     expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
   });
 
-  it("should display macro name with python extension in header", () => {
-    render(<MacroCodeViewer {...defaultProps} language="python" macroName="Test Macro" />);
+  it("should display language label in header for python", () => {
+    render(<MacroCodeViewer {...defaultProps} language="python" />);
 
-    expect(screen.getByText("test_macro.py")).toBeInTheDocument();
+    expect(screen.getByText("Python")).toBeInTheDocument();
   });
 
-  it("should display macro name with R extension in header", () => {
-    render(<MacroCodeViewer {...defaultProps} language="r" macroName="Test Macro" />);
+  it("should display language label in header for R", () => {
+    render(<MacroCodeViewer {...defaultProps} language="r" />);
 
-    expect(screen.getByText("test_macro.R")).toBeInTheDocument();
+    expect(screen.getByText("R")).toBeInTheDocument();
   });
 
-  it("should display macro name with JavaScript extension in header", () => {
-    render(<MacroCodeViewer {...defaultProps} language="javascript" macroName="Test Macro" />);
+  it("should display language label in header for JavaScript", () => {
+    render(<MacroCodeViewer {...defaultProps} language="javascript" />);
 
-    expect(screen.getByText("test_macro.js")).toBeInTheDocument();
+    expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
   it("should render copy button", () => {

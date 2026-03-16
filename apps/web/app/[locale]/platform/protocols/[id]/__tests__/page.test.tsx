@@ -32,9 +32,11 @@ vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
 }));
 
 const mockMutateAsync = vi.fn();
+const mockMutate = vi.fn();
 
 interface MockProtocolUpdateReturn {
   mutateAsync: typeof mockMutateAsync;
+  mutate: typeof mockMutate;
   isPending: boolean;
 }
 
@@ -73,16 +75,24 @@ vi.mock("@/components/json-code-viewer", () => ({
   JsonCodeViewer: ({
     value,
     title,
-    headerActions,
+    onEditStart,
   }: {
     value: unknown;
     height?: string;
     title?: React.ReactNode;
     headerActions?: React.ReactNode;
+    onEditStart?: () => void;
   }) => (
     <pre data-testid="json-viewer">
       {title && <span data-testid="viewer-title">{title}</span>}
-      {headerActions && <span data-testid="viewer-actions">{headerActions}</span>}
+      {onEditStart && (
+        <span data-testid="viewer-actions">
+          <button onClick={onEditStart}>
+            common.edit
+            <span data-testid="pencil-icon" />
+          </button>
+        </span>
+      )}
       {JSON.stringify(value)}
     </pre>
   ),
@@ -152,6 +162,12 @@ vi.mock("lucide-react", () => ({
   Check: ({ className }: { className?: string }) => (
     <span data-testid="check-icon" className={className} />
   ),
+  Circle: ({ className }: { className?: string }) => (
+    <span data-testid="circle-icon" className={className} />
+  ),
+  Loader2: ({ className }: { className?: string }) => (
+    <span data-testid="loader2-icon" className={className} />
+  ),
   Pencil: ({ className }: { className?: string }) => (
     <span data-testid="pencil-icon" className={className} />
   ),
@@ -192,7 +208,28 @@ vi.mock("@repo/ui/components", () => {
       {children}
     </button>
   );
-  return { Card, CardHeader, CardContent, Button };
+  const Tooltip = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  const TooltipContent = ({ children }: { children: React.ReactNode }) => (
+    <span data-testid="tooltip-content">{children}</span>
+  );
+  const TooltipProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  const TooltipTrigger = ({
+    children,
+    asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <>{children}</>;
+  return {
+    Card,
+    CardHeader,
+    CardContent,
+    Button,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+  };
 });
 
 // --------------------
@@ -221,6 +258,7 @@ describe("ProtocolOverviewPage", () => {
 
     mockUseProtocolUpdate.mockReturnValue({
       mutateAsync: mockMutateAsync,
+      mutate: mockMutate,
       isPending: false,
     });
   });

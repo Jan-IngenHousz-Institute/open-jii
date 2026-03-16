@@ -66,8 +66,8 @@ interface MockCardProps {
 interface MockCodeEditorProps {
   language: string;
   onChange?: (value: string) => void;
-  macroName?: string;
   title?: string;
+  value?: string;
 }
 
 interface MockNewMacroDetailsCardProps {
@@ -80,7 +80,6 @@ interface MockCodeEditorAltProps {
   value: string;
   onChange: (value: string) => void;
   language: string;
-  macroName?: string;
 }
 
 interface MockControllerProps {
@@ -250,10 +249,9 @@ vi.mock("../macro-code-editor", () => ({
   default: ({
     language,
     onChange,
-    macroName,
     title,
-  }: MockCodeEditorProps & { macroName?: string }) => (
-    <div data-testid="code-editor" data-language={language} data-macro-name={macroName}>
+  }: MockCodeEditorProps) => (
+    <div data-testid="code-editor" data-language={language}>
       {title && <span>{title}</span>}
       <textarea
         data-testid="code-textarea"
@@ -277,13 +275,12 @@ vi.mock("./new-macro-details-card", () => ({
 
 vi.mock("../components/macro-code-editor", () => ({
   __esModule: true,
-  default: ({ value, onChange, language, macroName }: MockCodeEditorAltProps) => (
+  default: ({ value, onChange, language }: MockCodeEditorAltProps) => (
     <textarea
       data-testid="code-editor"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       data-language={language}
-      data-macro-name={macroName}
     />
   ),
 }));
@@ -411,14 +408,12 @@ describe("NewMacroForm", () => {
     expect(codeEditor).toHaveAttribute("data-language", "python");
   });
 
-  it("should pass macro name to code editor for filename display", () => {
+  it("should render the code editor with title", () => {
     // Act
     render(<NewMacroForm />);
-    const codeEditor = screen.getByTestId("code-editor");
 
     // Assert
-    // The mock form in useForm returns "Test Macro" as the name value
-    expect(codeEditor).toHaveAttribute("data-macro-name", "Test Macro");
+    expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
   });
 
   it("should have language selector in the code editor section", () => {

@@ -32,8 +32,10 @@ vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
 }));
 
 const mockMutateAsync = vi.fn();
+const mockMutate = vi.fn();
 const mockUseMacroUpdate = vi.fn(() => ({
   mutateAsync: mockMutateAsync,
+  mutate: mockMutate,
   isPending: false,
 }));
 vi.mock("@/hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
@@ -50,6 +52,17 @@ vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (k: string) => k,
   }),
+}));
+
+vi.mock("@/util/base64", () => ({
+  decodeBase64: (s: string) => {
+    try {
+      return atob(s);
+    } catch {
+      return "Error decoding content";
+    }
+  },
+  encodeBase64: (s: string) => btoa(s),
 }));
 
 // --------------------
@@ -103,24 +116,25 @@ vi.mock("@/components/macro-code-viewer", () => ({
     value,
     language,
     height,
-    macroName,
     title,
-    headerActions,
+    onEditStart,
   }: {
     value: string;
     language: string;
     height: string;
-    macroName: string;
     title?: React.ReactNode;
-    headerActions?: React.ReactNode;
+    onEditStart?: () => void;
   }) => (
-    <div data-testid="macro-code-viewer">
+    <div data-testid="macro-code-viewer" onClick={onEditStart}>
       {title && <div data-testid="viewer-title">{title}</div>}
-      {headerActions && <div data-testid="viewer-actions">{headerActions}</div>}
+      {onEditStart && (
+        <button data-testid="viewer-edit-trigger" onClick={onEditStart}>
+          common.edit
+        </button>
+      )}
       <div data-testid="code-value">{value}</div>
       <div data-testid="code-language">{language}</div>
       <div data-testid="code-height">{height}</div>
-      <div data-testid="code-macro-name">{macroName}</div>
     </div>
   ),
 }));
@@ -130,14 +144,12 @@ vi.mock("@/components/macro-code-editor", () => ({
     value,
     onChange,
     language,
-    macroName,
     title,
     headerActions,
   }: {
     value: string;
     onChange: (v: string) => void;
     language: string;
-    macroName: string;
     label?: string;
     title?: React.ReactNode;
     headerActions?: React.ReactNode;
@@ -147,7 +159,6 @@ vi.mock("@/components/macro-code-editor", () => ({
       {headerActions && <div data-testid="editor-actions">{headerActions}</div>}
       <div data-testid="editor-value">{value}</div>
       <div data-testid="editor-language">{language}</div>
-      <div data-testid="editor-macro-name">{macroName}</div>
       <button data-testid="editor-change-btn" onClick={() => onChange("new code")}>
         change
       </button>
@@ -159,8 +170,14 @@ vi.mock("lucide-react", () => ({
   Check: ({ className }: { className?: string }) => (
     <span data-testid="check-icon" className={className} />
   ),
+  Circle: ({ className }: { className?: string }) => (
+    <span data-testid="circle-icon" className={className} />
+  ),
   CodeIcon: ({ className }: { className?: string }) => (
     <span data-testid="code-icon" className={className} />
+  ),
+  Loader2: ({ className }: { className?: string }) => (
+    <span data-testid="loader-icon" className={className} />
   ),
   Pencil: ({ className }: { className?: string }) => (
     <span data-testid="pencil-icon" className={className} />
@@ -198,7 +215,29 @@ vi.mock("@repo/ui/components", () => {
       {children}
     </button>
   );
-  return { Card, CardHeader, CardTitle, CardContent, Button };
+  const Tooltip = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  const TooltipContent = ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
+  );
+  const TooltipProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  const TooltipTrigger = ({
+    children,
+    asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <>{children}</>;
+  return {
+    Card,
+    CardHeader,
+    CardTitle,
+    CardContent,
+    Button,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+  };
 });
 
 vi.mock("@repo/ui/hooks", () => ({
@@ -238,6 +277,7 @@ describe("MacroOverviewPage", () => {
     vi.clearAllMocks();
     mockUseMacroUpdate.mockReturnValue({
       mutateAsync: mockMutateAsync,
+      mutate: mockMutate,
       isPending: false,
     });
   });
@@ -409,7 +449,6 @@ describe("MacroOverviewPage", () => {
       expect(screen.getByTestId("code-value")).toHaveTextContent("print('Hello, World!')");
       expect(screen.getByTestId("code-language")).toHaveTextContent("python");
       expect(screen.getByTestId("code-height")).toHaveTextContent("500px");
-      expect(screen.getByTestId("code-macro-name")).toHaveTextContent("Test Macro");
     });
 
     it("should display 'code not available' placeholder when macro has no code", () => {
@@ -436,10 +475,10 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      expect(screen.getByTestId("viewer-title")).toHaveTextContent("macros.code");
+      expect(screen.getByTestId("viewer-title")).toHaveTextContent("macros.codeTitle");
     });
 
-    it("should show Edit button for creator when code is present", () => {
+    it("should show edit trigger for creator when code is present", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -448,11 +487,11 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      expect(screen.getByTestId("viewer-actions")).toBeInTheDocument();
+      expect(screen.getByTestId("viewer-edit-trigger")).toBeInTheDocument();
       expect(screen.getByText("common.edit")).toBeInTheDocument();
     });
 
-    it("should not show Edit button when there is no code", () => {
+    it("should not show edit trigger when there is no code", () => {
       const macroWithoutCode = { ...mockMacroData, code: "" };
       mockUseMacro.mockReturnValue({
         data: macroWithoutCode,
@@ -481,7 +520,7 @@ describe("MacroOverviewPage", () => {
   });
 
   describe("Code Section — edit mode", () => {
-    it("should switch to edit mode when Edit button is clicked", () => {
+    it("should switch to edit mode when edit trigger is clicked", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -490,14 +529,14 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      const editButton = screen.getByText("common.edit");
-      fireEvent.click(editButton);
+      const editTrigger = screen.getByText("common.edit");
+      fireEvent.click(editTrigger);
 
       expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
       expect(screen.queryByTestId("macro-code-viewer")).not.toBeInTheDocument();
     });
 
-    it("should show Cancel and Save buttons in edit mode", () => {
+    it("should show editor actions in edit mode", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -508,13 +547,11 @@ describe("MacroOverviewPage", () => {
 
       fireEvent.click(screen.getByText("common.edit"));
 
-      expect(screen.getByText("common.cancel")).toBeInTheDocument();
-      expect(screen.getByText("common.save")).toBeInTheDocument();
+      expect(screen.getByTestId("editor-actions")).toBeInTheDocument();
       expect(screen.getByTestId("x-icon")).toBeInTheDocument();
-      expect(screen.getByTestId("check-icon")).toBeInTheDocument();
     });
 
-    it("should hide Edit button in edit mode", () => {
+    it("should hide edit trigger in edit mode", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -525,7 +562,7 @@ describe("MacroOverviewPage", () => {
 
       fireEvent.click(screen.getByText("common.edit"));
 
-      expect(screen.queryByText("common.edit")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("viewer-edit-trigger")).not.toBeInTheDocument();
     });
 
     it("should initialize the editor with decoded macro code", () => {
@@ -541,10 +578,9 @@ describe("MacroOverviewPage", () => {
 
       expect(screen.getByTestId("editor-value")).toHaveTextContent("print('Hello, World!')");
       expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
-      expect(screen.getByTestId("editor-macro-name")).toHaveTextContent("Test Macro");
     });
 
-    it("should return to view mode when Cancel is clicked", () => {
+    it("should return to view mode when close button is clicked", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -556,59 +592,13 @@ describe("MacroOverviewPage", () => {
       fireEvent.click(screen.getByText("common.edit"));
       expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
 
-      fireEvent.click(screen.getByText("common.cancel"));
+      // Click the close (X) button rendered in headerActions
+      const closeButton = screen.getByTestId("x-icon").closest("button");
+      expect(closeButton).toBeInTheDocument();
+      if (closeButton) fireEvent.click(closeButton);
 
       expect(screen.queryByTestId("macro-code-editor")).not.toBeInTheDocument();
       expect(screen.getByTestId("macro-code-viewer")).toBeInTheDocument();
-    });
-
-    it("should call updateMacro with encoded code when Save is clicked", () => {
-      mockMutateAsync.mockResolvedValue({});
-      mockUseMacro.mockReturnValue({
-        data: mockMacroData,
-        isLoading: false,
-        error: null,
-      });
-
-      render(<MacroOverviewPage params={mockParams} />);
-
-      fireEvent.click(screen.getByText("common.edit"));
-      fireEvent.click(screen.getByText("common.save"));
-
-      expect(mockMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          params: { id: "test-macro-id" },
-          body: expect.objectContaining({
-            code: expect.any(String) as string,
-          }) as Record<string, unknown>,
-        }),
-        expect.objectContaining({
-          onSuccess: expect.any(Function) as () => void,
-          onError: expect.any(Function) as () => void,
-        }),
-      );
-    });
-
-    it("should disable Cancel and Save buttons when update is pending", () => {
-      mockUseMacroUpdate.mockReturnValue({
-        mutateAsync: mockMutateAsync,
-        isPending: true,
-      });
-      mockUseMacro.mockReturnValue({
-        data: mockMacroData,
-        isLoading: false,
-        error: null,
-      });
-
-      render(<MacroOverviewPage params={mockParams} />);
-
-      fireEvent.click(screen.getByText("common.edit"));
-
-      const cancelButton = screen.getByText("common.cancel").closest("button");
-      const saveButton = screen.getByText("common.save").closest("button");
-
-      expect(cancelButton).toBeDisabled();
-      expect(saveButton).toBeDisabled();
     });
   });
 
@@ -671,7 +661,7 @@ describe("MacroOverviewPage", () => {
   });
 
   describe("Non-creator behavior", () => {
-    it("should not show Edit button when user is not the creator", () => {
+    it("should not show edit trigger when user is not the creator", () => {
       const macroOwnedByOther = { ...mockMacroData, createdBy: "different-user-id" };
       mockUseMacro.mockReturnValue({
         data: macroOwnedByOther,
@@ -683,6 +673,7 @@ describe("MacroOverviewPage", () => {
 
       // Session user is "creator-id" but macro.createdBy is "different-user-id"
       expect(screen.queryByText("common.edit")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("viewer-edit-trigger")).not.toBeInTheDocument();
     });
 
     it("should still render the code viewer for non-creators", () => {

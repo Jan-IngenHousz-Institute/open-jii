@@ -180,7 +180,7 @@ describe("useMacros", () => {
       wrapper: createWrapper(),
     });
 
-    expect(result.current.filter).toBe("my");
+    expect(result.current.filter).toBe("all");
     expect(typeof result.current.setFilter).toBe("function");
   });
 

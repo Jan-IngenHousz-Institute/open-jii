@@ -69,6 +69,14 @@ vi.mock("@repo/ui/lib/utils", () => ({
       featured ? `${base} featured` : base,
 }));
 
+// Mock useProtocolCompatibleMacros hook (uses tsr.*.useQuery which requires QueryClient)
+vi.mock("@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros", () => ({
+  useProtocolCompatibleMacros: () => ({
+    data: { body: [] },
+    isLoading: false,
+  }),
+}));
+
 const mockProtocols = [
   {
     id: "protocol1",
