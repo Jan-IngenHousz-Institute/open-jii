@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { toast } from "@repo/ui/hooks";
+
 import ProtocolLayout from "../layout";
 
 // Global React for JSX in mocks
@@ -98,7 +100,9 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
       <span data-testid="title-has-access">{String(hasAccess)}</span>
       <span data-testid="title-is-pending">{String(isPending)}</span>
       {badges && <div data-testid="title-badges">{badges}</div>}
-      <button data-testid="save-title-btn" onClick={() => onSave("New Title")}>Save</button>
+      <button data-testid="save-title-btn" onClick={() => onSave("New Title")}>
+        Save
+      </button>
     </div>
   ),
 }));
@@ -368,8 +372,9 @@ describe("ProtocolLayout", () => {
     });
 
     it("should call toast on successful title save", async () => {
-      mockMutateAsync.mockImplementation(async (_data: unknown, options?: { onSuccess?: () => void }) => {
+      mockMutateAsync.mockImplementation((_data: unknown, options?: { onSuccess?: () => void }) => {
         options?.onSuccess?.();
+        return Promise.resolve();
       });
       mockUseProtocol.mockReturnValue({
         data: { body: { ...defaultProtocol, createdBy: "user-123" } },
@@ -381,14 +386,16 @@ describe("ProtocolLayout", () => {
       const saveBtn = screen.getByTestId("save-title-btn");
       await userEvent.click(saveBtn);
 
-      const { toast } = await import("@repo/ui/hooks");
       expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
     });
 
     it("should call toast with destructive variant on title save error", async () => {
-      mockMutateAsync.mockImplementation(async (_data: unknown, options?: { onError?: (err: unknown) => void }) => {
-        options?.onError?.(new Error("Update failed"));
-      });
+      mockMutateAsync.mockImplementation(
+        (_data: unknown, options?: { onError?: (err: unknown) => void }) => {
+          options?.onError?.(new Error("Update failed"));
+          return Promise.resolve();
+        },
+      );
       mockUseProtocol.mockReturnValue({
         data: { body: { ...defaultProtocol, createdBy: "user-123" } },
         isLoading: false,
@@ -399,9 +406,8 @@ describe("ProtocolLayout", () => {
       const saveBtn = screen.getByTestId("save-title-btn");
       await userEvent.click(saveBtn);
 
-      const { toast } = await import("@repo/ui/hooks");
       expect(toast).toHaveBeenCalledWith({
-        description: expect.any(String),
+        description: expect.any(String) as unknown,
         variant: "destructive",
       });
     });

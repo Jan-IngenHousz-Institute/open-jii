@@ -1,10 +1,11 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import MacroOverviewPage from "../page";
 import { toast } from "@repo/ui/hooks";
+
+import MacroOverviewPage from "../page";
 
 globalThis.React = React;
 
@@ -707,11 +708,13 @@ describe("MacroOverviewPage", () => {
   });
 
   describe("handleDescriptionSave", () => {
-    it("should show success toast when description save succeeds", async () => {
-      mockMutateAsync.mockImplementation((_payload: unknown, options: { onSuccess?: () => void }) => {
-        options.onSuccess?.();
-        return Promise.resolve({});
-      });
+    it("should show success toast when description save succeeds", () => {
+      mockMutateAsync.mockImplementation(
+        (_payload: unknown, options: { onSuccess?: () => void }) => {
+          options.onSuccess?.();
+          return Promise.resolve({});
+        },
+      );
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -720,25 +723,27 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("description-save-btn"));
       });
 
       expect(mockMutateAsync).toHaveBeenCalledWith(
         { params: { id: "test-macro-id" }, body: { description: "new description" } },
         expect.objectContaining({
-          onSuccess: expect.any(Function),
-          onError: expect.any(Function),
+          onSuccess: expect.any(Function) as unknown,
+          onError: expect.any(Function) as unknown,
         }),
       );
       expect(toast).toHaveBeenCalledWith({ description: "macros.macroUpdated" });
     });
 
-    it("should show destructive toast when description save fails", async () => {
-      mockMutateAsync.mockImplementation((_payload: unknown, options: { onError?: (err: unknown) => void }) => {
-        options.onError?.("save failed");
-        return Promise.resolve();
-      });
+    it("should show destructive toast when description save fails", () => {
+      mockMutateAsync.mockImplementation(
+        (_payload: unknown, options: { onError?: (err: unknown) => void }) => {
+          options.onError?.("save failed");
+          return Promise.resolve();
+        },
+      );
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -747,7 +752,7 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("description-save-btn"));
       });
 
@@ -767,7 +772,7 @@ describe("MacroOverviewPage", () => {
       vi.useRealTimers();
     });
 
-    it("should set syncStatus to unsynced when code changes, then call mockMutate after debounce", async () => {
+    it("should set syncStatus to unsynced when code changes, then call mockMutate after debounce", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -784,7 +789,7 @@ describe("MacroOverviewPage", () => {
       expect(screen.getByTestId("check-icon")).toBeInTheDocument();
 
       // Trigger code change
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("editor-change-btn"));
       });
 
@@ -796,7 +801,7 @@ describe("MacroOverviewPage", () => {
       expect(mockMutate).not.toHaveBeenCalled();
 
       // Advance timer by 1000ms to trigger the debounced save
-      await act(async () => {
+      act(() => {
         vi.advanceTimersByTime(1000);
       });
 
@@ -805,13 +810,13 @@ describe("MacroOverviewPage", () => {
       expect(mockMutate).toHaveBeenCalledWith(
         { params: { id: "test-macro-id" }, body: { code: btoa("new code") } },
         expect.objectContaining({
-          onSuccess: expect.any(Function),
-          onError: expect.any(Function),
+          onSuccess: expect.any(Function) as unknown,
+          onError: expect.any(Function) as unknown,
         }),
       );
     });
 
-    it("should set syncStatus to synced when auto-save onSuccess fires", async () => {
+    it("should set syncStatus to synced when auto-save onSuccess fires", () => {
       mockMutate.mockImplementation((_payload: unknown, options: { onSuccess?: () => void }) => {
         options.onSuccess?.();
       });
@@ -827,12 +832,12 @@ describe("MacroOverviewPage", () => {
       fireEvent.click(screen.getByText("common.edit"));
 
       // Trigger code change
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("editor-change-btn"));
       });
 
       // Advance timer to trigger debounced save (which calls onSuccess immediately)
-      await act(async () => {
+      act(() => {
         vi.advanceTimersByTime(1000);
       });
 
@@ -840,10 +845,12 @@ describe("MacroOverviewPage", () => {
       expect(screen.getByTestId("check-icon")).toBeInTheDocument();
     });
 
-    it("should show destructive toast and set unsynced when auto-save onError fires", async () => {
-      mockMutate.mockImplementation((_payload: unknown, options: { onError?: (err: unknown) => void }) => {
-        options.onError?.("auto-save error");
-      });
+    it("should show destructive toast and set unsynced when auto-save onError fires", () => {
+      mockMutate.mockImplementation(
+        (_payload: unknown, options: { onError?: (err: unknown) => void }) => {
+          options.onError?.("auto-save error");
+        },
+      );
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -856,12 +863,12 @@ describe("MacroOverviewPage", () => {
       fireEvent.click(screen.getByText("common.edit"));
 
       // Trigger code change
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("editor-change-btn"));
       });
 
       // Advance timer to trigger debounced save (which calls onError immediately)
-      await act(async () => {
+      act(() => {
         vi.advanceTimersByTime(1000);
       });
 
@@ -875,7 +882,7 @@ describe("MacroOverviewPage", () => {
       expect(screen.getByTestId("circle-icon")).toBeInTheDocument();
     });
 
-    it("should stay synced when onChange is called with the same code as savedCodeRef", async () => {
+    it("should stay synced when onChange is called with the same code as savedCodeRef", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -904,7 +911,7 @@ describe("MacroOverviewPage", () => {
       mockMutate.mockReset();
     });
 
-    it("should call mockMutate with encoded value when closing with pending changes", async () => {
+    it("should call mockMutate with encoded value when closing with pending changes", () => {
       vi.useFakeTimers();
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
@@ -918,14 +925,14 @@ describe("MacroOverviewPage", () => {
       fireEvent.click(screen.getByText("common.edit"));
 
       // Trigger code change (sets editedCode to "new code")
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("editor-change-btn"));
       });
 
       // Close editor before debounce fires
       const closeButton = screen.getByTestId("x-icon").closest("button");
       expect(closeButton).toBeInTheDocument();
-      await act(async () => {
+      act(() => {
         if (closeButton) fireEvent.click(closeButton);
       });
 
@@ -942,7 +949,7 @@ describe("MacroOverviewPage", () => {
       vi.useRealTimers();
     });
 
-    it("should NOT call mockMutate when closing without changes", async () => {
+    it("should NOT call mockMutate when closing without changes", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -958,7 +965,7 @@ describe("MacroOverviewPage", () => {
       // Close immediately without making changes
       const closeButton = screen.getByTestId("x-icon").closest("button");
       expect(closeButton).toBeInTheDocument();
-      await act(async () => {
+      act(() => {
         if (closeButton) fireEvent.click(closeButton);
       });
 
@@ -997,7 +1004,7 @@ describe("MacroOverviewPage", () => {
       expect(screen.queryByTestId("loader-icon")).not.toBeInTheDocument();
     });
 
-    it("should render circle icon for unsynced state", async () => {
+    it("should render circle icon for unsynced state", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -1008,7 +1015,7 @@ describe("MacroOverviewPage", () => {
 
       fireEvent.click(screen.getByText("common.edit"));
 
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("editor-change-btn"));
       });
 
@@ -1017,7 +1024,7 @@ describe("MacroOverviewPage", () => {
       expect(screen.queryByTestId("loader-icon")).not.toBeInTheDocument();
     });
 
-    it("should render loader icon for syncing state", async () => {
+    it("should render loader icon for syncing state", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -1028,12 +1035,12 @@ describe("MacroOverviewPage", () => {
 
       fireEvent.click(screen.getByText("common.edit"));
 
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("editor-change-btn"));
       });
 
       // Advance timer to trigger debounce — mockMutate is default (no callbacks)
-      await act(async () => {
+      act(() => {
         vi.advanceTimersByTime(1000);
       });
 
@@ -1042,7 +1049,7 @@ describe("MacroOverviewPage", () => {
       expect(screen.queryByTestId("circle-icon")).not.toBeInTheDocument();
     });
 
-    it("should show correct tooltip text for each sync state", async () => {
+    it("should show correct tooltip text for each sync state", () => {
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -1057,14 +1064,14 @@ describe("MacroOverviewPage", () => {
       expect(screen.getByText("All changes saved")).toBeInTheDocument();
 
       // Change code to unsynced
-      await act(async () => {
+      act(() => {
         fireEvent.click(screen.getByTestId("editor-change-btn"));
       });
 
       expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
 
       // Advance to syncing
-      await act(async () => {
+      act(() => {
         vi.advanceTimersByTime(1000);
       });
 

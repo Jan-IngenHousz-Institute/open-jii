@@ -18,7 +18,12 @@ vi.mock("next/link", () => ({
     onMouseEnter?: React.MouseEventHandler;
     onMouseLeave?: React.MouseEventHandler;
   }) => (
-    <a href={href} data-testid="protocol-link" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <a
+      href={href}
+      data-testid="protocol-link"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {children}
     </a>
   ),
@@ -80,12 +85,15 @@ vi.mock("@repo/ui/lib/utils", () => ({
 }));
 
 // Mock useProtocolCompatibleMacros hook (uses tsr.*.useQuery which requires QueryClient)
-const mockUseProtocolCompatibleMacros = vi.fn().mockReturnValue({
+const mockUseProtocolCompatibleMacros = vi.fn<
+  (protocolId: string, enabled?: boolean) => { data: { body: unknown[] }; isLoading: boolean }
+>(() => ({
   data: { body: [] },
   isLoading: false,
-});
+}));
 vi.mock("@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros", () => ({
-  useProtocolCompatibleMacros: (...args: unknown[]) => mockUseProtocolCompatibleMacros(...args),
+  useProtocolCompatibleMacros: (protocolId: string, enabled?: boolean) =>
+    mockUseProtocolCompatibleMacros(protocolId, enabled),
 }));
 
 const mockProtocols = [

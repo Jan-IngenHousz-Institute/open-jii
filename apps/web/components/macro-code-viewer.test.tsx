@@ -223,7 +223,7 @@ describe("MacroCodeViewer", () => {
   });
 
   it("should handle clipboard failure gracefully", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
     mockClipboard.writeText.mockRejectedValueOnce(new Error("permission denied"));
     render(<MacroCodeViewer {...defaultProps} />);
     const copyButton = screen.getByTestId("button");

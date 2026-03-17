@@ -3,9 +3,9 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import ProtocolOverviewPage from "../page";
-
 import { toast } from "@repo/ui/hooks";
+
+import ProtocolOverviewPage from "../page";
 
 globalThis.React = React;
 
@@ -118,30 +118,15 @@ vi.mock("@/components/protocol-code-editor", () => ({
     <div data-testid="protocol-code-editor">
       {title && <span data-testid="editor-title">{title}</span>}
       {headerActions && <span data-testid="editor-actions">{headerActions}</span>}
-      {onChange && (
-        <button
-          data-testid="editor-change-btn"
-          onClick={() => onChange([{ averages: 2 }])}
-        >
-          Change
-        </button>
-      )}
-      {onChange && (
-        <button
-          data-testid="editor-change-same-btn"
-          onClick={() => onChange([{ averages: 1 }])}
-        >
-          ChangeSame
-        </button>
-      )}
-      {onChange && (
-        <button
-          data-testid="editor-change-string-btn"
-          onClick={() => onChange("not-an-array")}
-        >
-          ChangeString
-        </button>
-      )}
+      <button data-testid="editor-change-btn" onClick={() => onChange([{ averages: 2 }])}>
+        Change
+      </button>
+      <button data-testid="editor-change-same-btn" onClick={() => onChange([{ averages: 1 }])}>
+        ChangeSame
+      </button>
+      <button data-testid="editor-change-string-btn" onClick={() => onChange("not-an-array")}>
+        ChangeString
+      </button>
       {JSON.stringify(value)}
     </div>
   ),
@@ -182,11 +167,9 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
       <span data-testid="description-title">{title}</span>
       <span data-testid="description-content">{description}</span>
       <span data-testid="description-has-access">{String(hasAccess ?? false)}</span>
-      {onSave && (
-        <button data-testid="description-save-btn" onClick={() => onSave("updated description")}>
-          Save
-        </button>
-      )}
+      <button data-testid="description-save-btn" onClick={() => onSave("updated description")}>
+        Save
+      </button>
     </div>
   ),
 }));
@@ -452,9 +435,9 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByTestId("description-content")).toHaveTextContent("");
   });
 
-  it("should call toast with success message when description save succeeds", async () => {
+  it("should call toast with success message when description save succeeds", () => {
     mockMutateAsync.mockImplementation((_data: unknown, opts: { onSuccess?: () => void }) => {
-      opts?.onSuccess?.();
+      opts.onSuccess?.();
       return Promise.resolve();
     });
 
@@ -466,22 +449,27 @@ describe("ProtocolOverviewPage", () => {
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
-    await act(async () => {
+    act(() => {
       fireEvent.click(screen.getByTestId("description-save-btn"));
     });
 
     expect(mockMutateAsync).toHaveBeenCalledWith(
       { params: { id: "proto-1" }, body: { description: "updated description" } },
-      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+      expect.objectContaining({
+        onSuccess: expect.any(Function) as unknown,
+        onError: expect.any(Function) as unknown,
+      }),
     );
     expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
   });
 
-  it("should call toast with destructive variant when description save fails", async () => {
-    mockMutateAsync.mockImplementation((_data: unknown, opts: { onError?: (err: unknown) => void }) => {
-      opts?.onError?.("save failed");
-      return Promise.resolve();
-    });
+  it("should call toast with destructive variant when description save fails", () => {
+    mockMutateAsync.mockImplementation(
+      (_data: unknown, opts: { onError?: (err: unknown) => void }) => {
+        opts.onError?.("save failed");
+        return Promise.resolve();
+      },
+    );
 
     mockUseProtocol.mockReturnValue({
       data: { body: { ...mockProtocol, createdBy: "user-123" } },
@@ -491,7 +479,7 @@ describe("ProtocolOverviewPage", () => {
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
-    await act(async () => {
+    act(() => {
       fireEvent.click(screen.getByTestId("description-save-btn"));
     });
 
@@ -533,7 +521,8 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
 
     // Click close button (the X icon button in editor header actions)
-    const closeButton = screen.getByTestId("x-icon").closest("button")!;
+    const closeButton = screen.getByTestId("x-icon").closest("button");
+    if (!closeButton) throw new Error("Expected close button to exist");
     fireEvent.click(closeButton);
 
     // Should return to viewer without calling mutate
@@ -558,13 +547,15 @@ describe("ProtocolOverviewPage", () => {
     fireEvent.click(screen.getByTestId("editor-change-btn"));
 
     // Click close button
-    const closeButton = screen.getByTestId("x-icon").closest("button")!;
+    const closeButton = screen.getByTestId("x-icon").closest("button");
+    if (!closeButton) throw new Error("Expected close button to exist");
     fireEvent.click(closeButton);
 
     // Should have called mutate to save the changes
-    expect(mockMutate).toHaveBeenCalledWith(
-      { params: { id: "proto-1" }, body: { code: [{ averages: 2 }] } },
-    );
+    expect(mockMutate).toHaveBeenCalledWith({
+      params: { id: "proto-1" },
+      body: { code: [{ averages: 2 }] },
+    });
     expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
   });
 
@@ -597,7 +588,10 @@ describe("ProtocolOverviewPage", () => {
     // mockMutate should have been called
     expect(mockMutate).toHaveBeenCalledWith(
       { params: { id: "proto-1" }, body: { code: [{ averages: 2 }] } },
-      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+      expect.objectContaining({
+        onSuccess: expect.any(Function) as unknown,
+        onError: expect.any(Function) as unknown,
+      }),
     );
   });
 
@@ -625,7 +619,10 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByTestId("loader2-icon")).toBeInTheDocument();
 
     // Simulate save success by calling the onSuccess callback
-    const mutateCall = mockMutate.mock.calls[0];
+    const mutateCall = mockMutate.mock.calls[0] as [
+      unknown,
+      { onSuccess: () => void; onError: (err: unknown) => void },
+    ];
     act(() => {
       mutateCall[1].onSuccess();
     });
@@ -655,7 +652,10 @@ describe("ProtocolOverviewPage", () => {
     });
 
     // Simulate save error
-    const mutateCall = mockMutate.mock.calls[0];
+    const mutateCall = mockMutate.mock.calls[0] as [
+      unknown,
+      { onSuccess: () => void; onError: (err: unknown) => void },
+    ];
     act(() => {
       mutateCall[1].onError("auto-save failed");
     });
