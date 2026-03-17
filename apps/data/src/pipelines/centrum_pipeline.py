@@ -911,7 +911,7 @@ def enriched_experiment_raw_data():
         raw_data
         .join(
             contributors,
-            (raw_data.experiment_id == contributors.experiment_id) & 
+            (raw_data.experiment_id == contributors.experiment_id) &
             (raw_data.user_id == contributors.user_id),
             "left"
         )
@@ -920,7 +920,7 @@ def enriched_experiment_raw_data():
             raw_data.id,
             raw_data.device_id,
             raw_data.device_name,
-            raw_data.timestamp,
+            raw_data.timestamp.alias("measurement_time_utc"),
             raw_data.timezone,
             raw_data.date,
             raw_data.macros,
@@ -929,6 +929,20 @@ def enriched_experiment_raw_data():
             contributors.user.alias("contributor"),
             raw_data.data,
             raw_data.processed_timestamp
+        )
+        .withColumn(
+            "measurement_time_local",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
+            )
+        )
+        .withColumn(
+            "local_time",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
+            )
         )
     )
     
@@ -992,7 +1006,7 @@ def enriched_experiment_macro_data():
         macro_data
         .join(
             contributors,
-            (macro_data.experiment_id == contributors.experiment_id) & 
+            (macro_data.experiment_id == contributors.experiment_id) &
             (macro_data.user_id == contributors.user_id),
             "left"
         )
@@ -1002,7 +1016,7 @@ def enriched_experiment_macro_data():
             macro_data.raw_id,
             macro_data.device_id,
             macro_data.device_name,
-            macro_data.timestamp,
+            macro_data.timestamp.alias("measurement_time_utc"),
             macro_data.timezone,
             macro_data.date,
             contributors.user.alias("contributor"),
@@ -1014,6 +1028,20 @@ def enriched_experiment_macro_data():
             macro_data.processed_timestamp,
             macro_data.questions_data,
             macro_data.annotations
+        )
+        .withColumn(
+            "measurement_time_local",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
+            )
+        )
+        .withColumn(
+            "local_time",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
+            )
         )
     )
     
