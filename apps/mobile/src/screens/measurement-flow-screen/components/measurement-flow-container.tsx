@@ -7,6 +7,7 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import type { QuestionContent } from "../types";
 import { ExperimentSelectionStep } from "./experiment-selection-step";
+import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
 import { findNextMandatoryStep } from "./flow-nodes/utils/advance-with-answer";
 import { FlowProgressIndicator } from "./flow-progress-indicator";
 import { ActiveState } from "./flow-states/active-state";
@@ -15,8 +16,14 @@ import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const { flowNodes, currentFlowStep, isFlowFinished, setCurrentFlowStep, experimentId } =
-    useMeasurementFlowStore();
+  const {
+    flowNodes,
+    currentFlowStep,
+    isFlowFinished,
+    isQuestionsSubmitPending,
+    setCurrentFlowStep,
+    experimentId,
+  } = useMeasurementFlowStore();
   const iterationCount = useMeasurementFlowStore((s) => s.iterationCount);
   const { classes } = useTheme();
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
@@ -70,6 +77,15 @@ export function MeasurementFlowContainer() {
 
   if (!isFlowInitialized) {
     return <LoadingState />;
+  }
+
+  if (isQuestionsSubmitPending) {
+    return (
+      <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
+        <FlowProgressIndicator />
+        <QuestionsOnlySubmitNode />
+      </View>
+    );
   }
 
   if (isFlowCompleted && isFlowFinished) {

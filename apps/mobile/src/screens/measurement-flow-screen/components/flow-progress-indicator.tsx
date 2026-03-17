@@ -9,16 +9,40 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { useTheme } from "~/hooks/use-theme";
+import { isQuestionsOnlyFlow } from "~/screens/measurement-flow-screen/types";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 export function FlowProgressIndicator() {
   const { classes } = useTheme();
-  const { currentFlowStep, flowNodes, experimentId } = useMeasurementFlowStore();
+  const { currentFlowStep, flowNodes, experimentId, isQuestionsSubmitPending, isFlowFinished } =
+    useMeasurementFlowStore();
   const { selectedExperimentId } = useExperimentSelectionStore();
 
-  const totalSteps = flowNodes.length + 2; // +1 for experiment selection, +1 for completed state of the flow
-  const currentStep = experimentId ? currentFlowStep + 2 : 1;
+  const questionsOnly = isQuestionsOnlyFlow(flowNodes);
+
+  // +1 for experiment selection, +1 for completed state of the flow,
+  // and +1 extra step for the questions-only submit screen (if applicable).
+  const totalSteps = flowNodes.length + (questionsOnly ? 3 : 2);
+
+  let currentStep: number;
+  if (!experimentId) {
+    currentStep = 1;
+  } else if (questionsOnly) {
+    if (isQuestionsSubmitPending) {
+      // Submit/review answers screen, just after the last question
+      currentStep = flowNodes.length + 2;
+    } else if (isFlowFinished && currentFlowStep >= flowNodes.length) {
+      // Completed state after the submit step
+      currentStep = flowNodes.length + 3;
+    } else {
+      // Within the question flow
+      currentStep = currentFlowStep + 2;
+    }
+  } else {
+    const isCompleted = isFlowFinished && currentFlowStep >= flowNodes.length;
+    currentStep = isCompleted ? flowNodes.length + 2 : currentFlowStep + 2;
+  }
 
   const progress = useSharedValue(0);
 

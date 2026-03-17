@@ -98,3 +98,6 @@ release-summary-*.json
 
 # Zip files
 *.zip
+
+# TypeScript incremental build cache
+*.tsbuildinfo

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."sensor_family" ADD VALUE 'generic';

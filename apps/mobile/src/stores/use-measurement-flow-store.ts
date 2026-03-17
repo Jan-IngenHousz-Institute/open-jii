@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { FlowNode } from "~/screens/measurement-flow-screen/types";
+import { FlowNode, isQuestionsOnlyFlow } from "~/screens/measurement-flow-screen/types";
 
 interface MeasurementFlowStore {
   experimentId?: string;
@@ -9,6 +9,7 @@ interface MeasurementFlowStore {
   currentFlowStep: number; // Current step within the flow (0-4 for 5 steps)
   iterationCount: number; // Number of completed iterations
   isFlowFinished: boolean; // True when user explicitly finishes the flow
+  isQuestionsSubmitPending: boolean; // True when a questions-only iteration is awaiting upload
   scanResult?: any; // Store the scan result from measurement step
 
   // Navigation
@@ -27,6 +28,7 @@ interface MeasurementFlowStore {
   retryCurrentIteration: () => void;
   finishFlow: () => void;
   setScanResult: (result: any) => void;
+  dismissQuestionsSubmit: () => void;
 }
 
 export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
@@ -37,6 +39,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   currentFlowStep: 0,
   iterationCount: 0,
   isFlowFinished: false,
+  isQuestionsSubmitPending: false,
   scanResult: undefined,
 
   // Experiment selection
@@ -52,6 +55,13 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
         const nextFlowStep = state.currentFlowStep + 1;
         const isCompleted = nextFlowStep >= state.flowNodes.length;
         if (isCompleted) {
+          if (isQuestionsOnlyFlow(state.flowNodes)) {
+            // Pause for the user to review and upload answers before starting the next iteration
+            return {
+              isQuestionsSubmitPending: true,
+              currentFlowStep: state.flowNodes.length,
+            };
+          }
           return {
             currentFlowStep: 0,
             iterationCount: state.iterationCount + 1,
@@ -67,6 +77,13 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   previousStep: () =>
     set((state) => {
       if (state.experimentId && state.flowNodes.length > 0) {
+        if (state.isQuestionsSubmitPending) {
+          // Go back to the last question from the submit screen
+          return {
+            isQuestionsSubmitPending: false,
+            currentFlowStep: state.flowNodes.length - 1,
+          };
+        }
         if (state.currentFlowStep > 0) {
           // Go back within the flow
           return { currentFlowStep: state.currentFlowStep - 1 };
@@ -79,6 +96,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
             currentFlowStep: 0,
             iterationCount: 0,
             isFlowFinished: false,
+            isQuestionsSubmitPending: false,
             scanResult: undefined,
             protocolId: undefined,
           };
@@ -100,6 +118,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       currentFlowStep: 0,
       iterationCount: 0,
       isFlowFinished: false,
+      isQuestionsSubmitPending: false,
       scanResult: undefined,
       protocolId: undefined,
     }),
@@ -108,20 +127,31 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
     set((state) => ({
       currentFlowStep: 0,
       iterationCount: state.iterationCount + 1,
+      isQuestionsSubmitPending: false,
       scanResult: undefined,
     })),
 
   retryCurrentIteration: () =>
     set(() => ({
       currentFlowStep: 0,
-      scanResult: undefined, // Clear scan result for retry
+      isQuestionsSubmitPending: false,
+      scanResult: undefined,
     })),
 
   finishFlow: () =>
     set((state) => ({
-      currentFlowStep: state.flowNodes.length, // Mark as completed
+      currentFlowStep: state.flowNodes.length,
       isFlowFinished: true,
+      isQuestionsSubmitPending: false,
     })),
 
   setScanResult: (result) => set({ scanResult: result }),
+
+  dismissQuestionsSubmit: () =>
+    set((state) => ({
+      isQuestionsSubmitPending: false,
+      currentFlowStep: 0,
+      iterationCount: state.iterationCount + 1,
+      scanResult: undefined,
+    })),
 }));

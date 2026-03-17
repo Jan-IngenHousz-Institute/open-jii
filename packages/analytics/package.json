@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "pino": "^10.1.1",
+    "pino": "^10.3.1",
     "zod": "catalog:"
   },
   "peerDependencies": {
