@@ -9,7 +9,8 @@ resource "aws_s3_bucket" "bucket" {
 resource "aws_s3_bucket_versioning" "versioning" {
   bucket = aws_s3_bucket.bucket.id
   versioning_configuration {
-    status = var.enable_versioning ? "Enabled" : "Disabled"
+    # CRR requires versioning on the source bucket regardless of enable_versioning.
+    status = (var.enable_versioning || var.enable_crr) ? "Enabled" : "Disabled"
   }
 }
 
@@ -163,17 +164,6 @@ resource "aws_iam_role_policy" "replication" {
   })
 }
 
-resource "aws_s3_bucket_versioning" "crr_source_versioning" {
-  count  = var.enable_crr && !var.enable_versioning ? 1 : 0
-  bucket = aws_s3_bucket.bucket.id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-
-  depends_on = [aws_s3_bucket_versioning.versioning]
-}
-
 resource "aws_s3_bucket_replication_configuration" "crr" {
   count  = var.enable_crr ? 1 : 0
   bucket = aws_s3_bucket.bucket.id
@@ -191,7 +181,6 @@ resource "aws_s3_bucket_replication_configuration" "crr" {
 
   depends_on = [
     aws_s3_bucket_versioning.versioning,
-    aws_s3_bucket_versioning.crr_source_versioning,
     aws_s3_bucket_versioning.dr_versioning,
   ]
 }

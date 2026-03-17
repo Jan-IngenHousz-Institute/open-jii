@@ -13,7 +13,6 @@ module "backup" {
 
   vault_name  = "open-jii-${var.environment}-backup-vault"
   environment = var.environment
-  dr_region   = "eu-west-1"
 
   aurora_cluster_arns = [module.aurora_db.cluster_arn]
 
@@ -157,11 +156,10 @@ module "databricks_workspace_s3_policy" {
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
   bucket_name        = "open-jii-databricks-root-bucket-${var.environment}"
-  enable_versioning  = false
+  enable_versioning  = true # required by CRR
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 
   enable_crr = true
-  dr_region  = "eu-west-1"
 
   providers = {
     aws    = aws

@@ -129,13 +129,12 @@ module "databricks_workspace_s3_policy" {
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
   bucket_name        = "open-jii-databricks-root-bucket-${var.environment}"
-  enable_versioning  = false
+  enable_versioning  = true # required by CRR
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 
   # CRR: Databricks workspace data (notebooks, libraries, pipeline artifacts)
   # must be available in the DR region for jobs to run after a failover
   enable_crr = true
-  dr_region  = var.dr_region
 
   providers = {
     aws    = aws
@@ -949,7 +948,6 @@ module "backup" {
 
   vault_name  = "open-jii-${var.environment}-backup-vault"
   environment = var.environment
-  dr_region   = var.dr_region
 
   aurora_cluster_arns = [module.aurora_db.cluster_arn]
 

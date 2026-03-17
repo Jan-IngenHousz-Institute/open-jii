@@ -142,10 +142,10 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
   engine             = "aurora-postgresql"
   engine_mode        = "provisioned"
   engine_version     = "16.8"
-  database_name      = var.database_name
+  database_name      = var.snapshot_identifier == null ? var.database_name : null
 
   # Authentication and security
-  master_username                     = var.master_username
+  master_username                     = var.snapshot_identifier == null ? var.master_username : null
   manage_master_user_password         = true
   iam_database_authentication_enabled = true
   storage_encrypted                   = true

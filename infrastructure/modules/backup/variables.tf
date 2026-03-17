@@ -9,11 +9,6 @@ variable "environment" {
   type        = string
 }
 
-variable "dr_region" {
-  description = "AWS region to copy backups to for disaster recovery"
-  type        = string
-}
-
 variable "backup_retention_days" {
   description = "Number of days to retain backups in the primary vault"
   type        = number

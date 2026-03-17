@@ -156,4 +156,11 @@ resource "aws_ecr_replication_configuration" "cross_region" {
       }
     }
   }
+
+  lifecycle {
+    precondition {
+      condition     = var.dr_region != null && var.dr_region != ""
+      error_message = "var.dr_region must be set to a valid AWS region when enable_cross_region_replication = true."
+    }
+  }
 }
