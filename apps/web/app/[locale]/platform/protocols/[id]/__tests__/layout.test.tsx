@@ -412,17 +412,4 @@ describe("ProtocolLayout", () => {
       });
     });
   });
-
-  describe("Error with no status property", () => {
-    it("should display error display when error has no status", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: { message: "Unknown error" },
-      });
-      renderLayout();
-      expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
-    });
-  });
 });

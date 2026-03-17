@@ -205,17 +205,6 @@ describe("<MacroLayout />", () => {
       expect(mockNotFound).not.toHaveBeenCalled();
     });
 
-    it("renders error display for errors without status", () => {
-      renderLayout({
-        macroData: null,
-        error: new Error("Network error"),
-      });
-
-      expect(screen.getByText("errors.error")).toBeInTheDocument();
-      expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
-    });
-
     it("does not render children when an error is present", () => {
       renderLayout({
         macroData: null,

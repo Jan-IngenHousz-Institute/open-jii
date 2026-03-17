@@ -5,6 +5,19 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
+import { cva } from "@repo/ui/lib/utils";
+
+const toggleButtonVariants = cva(
+  "absolute right-4 z-20 flex items-center justify-center md:hidden dark:bg-gray-900/80",
+  {
+    variants: {
+      collapsed: {
+        true: "top-1/2 -translate-y-1/2",
+        false: "top-4 translate-y-0",
+      },
+    },
+  },
+);
 
 interface DetailsSidebarCardProps {
   title: string;
@@ -21,7 +34,7 @@ export function DetailsSidebarCard({ title, collapsedSummary, children }: Detail
         <Button
           onClick={() => setIsCollapsed(!isCollapsed)}
           variant="ghost"
-          className={`absolute right-4 z-20 flex items-center justify-center md:hidden dark:bg-gray-900/80 ${isCollapsed ? "top-1/2 -translate-y-1/2" : "top-4 translate-y-0"} `}
+          className={toggleButtonVariants({ collapsed: isCollapsed })}
         >
           {isCollapsed ? (
             <ChevronDown className="!h-6 !w-6" />

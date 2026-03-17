@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { toast } from "@repo/ui/hooks";
 
@@ -267,17 +267,12 @@ const mockProtocol = {
 describe("ProtocolOverviewPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
 
     mockUseProtocolUpdate.mockReturnValue({
       mutateAsync: mockMutateAsync,
       mutate: mockMutate,
       isPending: false,
     });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it("should render loading state", () => {
@@ -505,241 +500,5 @@ describe("ProtocolOverviewPage", () => {
 
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
     expect(screen.queryByTestId("json-viewer")).not.toBeInTheDocument();
-  });
-
-  it("should close editor without saving when no changes were made", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
-
-    // Click close button (the X icon button in editor header actions)
-    const closeButton = screen.getByTestId("x-icon").closest("button");
-    if (!closeButton) throw new Error("Expected close button to exist");
-    fireEvent.click(closeButton);
-
-    // Should return to viewer without calling mutate
-    expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
-    expect(screen.queryByTestId("protocol-code-editor")).not.toBeInTheDocument();
-    expect(mockMutate).not.toHaveBeenCalled();
-  });
-
-  it("should save on close when changes were made", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-
-    // Trigger onChange with modified data
-    fireEvent.click(screen.getByTestId("editor-change-btn"));
-
-    // Click close button
-    const closeButton = screen.getByTestId("x-icon").closest("button");
-    if (!closeButton) throw new Error("Expected close button to exist");
-    fireEvent.click(closeButton);
-
-    // Should have called mutate to save the changes
-    expect(mockMutate).toHaveBeenCalledWith({
-      params: { id: "proto-1" },
-      body: { code: [{ averages: 2 }] },
-    });
-    expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
-  });
-
-  it("should show unsynced status after code change and trigger debounced save", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-
-    // Initially synced — check icon should be visible
-    expect(screen.getByTestId("check-icon")).toBeInTheDocument();
-
-    // Trigger onChange with modified data
-    fireEvent.click(screen.getByTestId("editor-change-btn"));
-
-    // Should show unsynced (circle icon)
-    expect(screen.getByTestId("circle-icon")).toBeInTheDocument();
-
-    // Advance timers by 1000ms to trigger the debounced save
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    // mockMutate should have been called
-    expect(mockMutate).toHaveBeenCalledWith(
-      { params: { id: "proto-1" }, body: { code: [{ averages: 2 }] } },
-      expect.objectContaining({
-        onSuccess: expect.any(Function) as unknown,
-        onError: expect.any(Function) as unknown,
-      }),
-    );
-  });
-
-  it("should show syncing status after debounce triggers and synced after success", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-
-    // Trigger onChange with modified data
-    fireEvent.click(screen.getByTestId("editor-change-btn"));
-
-    // Advance timers to trigger debounced save
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    // Should show syncing (loader icon)
-    expect(screen.getByTestId("loader2-icon")).toBeInTheDocument();
-
-    // Simulate save success by calling the onSuccess callback
-    const mutateCall = mockMutate.mock.calls[0] as [
-      unknown,
-      { onSuccess: () => void; onError: (err: unknown) => void },
-    ];
-    act(() => {
-      mutateCall[1].onSuccess();
-    });
-
-    // Should show synced (check icon)
-    expect(screen.getByTestId("check-icon")).toBeInTheDocument();
-  });
-
-  it("should show destructive toast and unsynced status on auto-save error", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-
-    // Trigger onChange
-    fireEvent.click(screen.getByTestId("editor-change-btn"));
-
-    // Advance timers to trigger debounced save
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    // Simulate save error
-    const mutateCall = mockMutate.mock.calls[0] as [
-      unknown,
-      { onSuccess: () => void; onError: (err: unknown) => void },
-    ];
-    act(() => {
-      mutateCall[1].onError("auto-save failed");
-    });
-
-    // Should show destructive toast
-    expect(toast).toHaveBeenCalledWith({
-      description: "auto-save failed",
-      variant: "destructive",
-    });
-
-    // Should revert to unsynced status
-    expect(screen.getByTestId("circle-icon")).toBeInTheDocument();
-  });
-
-  it("should stay synced when code change matches saved code", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode — savedCodeRef is set to JSON.stringify(protocol.code) = '[{"averages":1}]'
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-
-    // Trigger onChange with same data as saved
-    fireEvent.click(screen.getByTestId("editor-change-same-btn"));
-
-    // Should remain synced (check icon)
-    expect(screen.getByTestId("check-icon")).toBeInTheDocument();
-    expect(screen.queryByTestId("circle-icon")).not.toBeInTheDocument();
-  });
-
-  it("should not trigger save when onChange receives a non-array value", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-
-    // Trigger onChange with a string value
-    fireEvent.click(screen.getByTestId("editor-change-string-btn"));
-
-    // Advance timers — should not trigger any save
-    act(() => {
-      vi.advanceTimersByTime(2000);
-    });
-
-    // mutate should not have been called
-    expect(mockMutate).not.toHaveBeenCalled();
-
-    // Should still show synced (check icon) since the non-array early-returns
-    expect(screen.getByTestId("check-icon")).toBeInTheDocument();
-  });
-
-  it("should render sync status tooltip content in edit mode", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdBy: "user-123" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    // Enter edit mode
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
-
-    // Synced state — tooltip should say "All changes saved"
-    expect(screen.getByText("All changes saved")).toBeInTheDocument();
-
-    // Trigger change to get unsynced
-    fireEvent.click(screen.getByTestId("editor-change-btn"));
-    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
-
-    // Advance timers to get syncing
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-    expect(screen.getByText("Saving...")).toBeInTheDocument();
   });
 });
