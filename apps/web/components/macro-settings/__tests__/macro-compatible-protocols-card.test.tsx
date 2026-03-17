@@ -36,6 +36,9 @@ vi.mock("lucide-react", () => ({
   ExternalLink: ({ className }: { className?: string }) => (
     <span data-testid="external-link-icon" className={className} />
   ),
+  FileJson2: ({ className }: { className?: string }) => (
+    <span data-testid="file-json2-icon" className={className} />
+  ),
 }));
 
 vi.mock("next/link", () => ({
@@ -81,7 +84,13 @@ vi.mock("@repo/ui/components", () => {
     </button>
   );
 
-  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button };
+  const Badge = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span data-testid="badge" className={className}>
+      {children}
+    </span>
+  );
+
+  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge };
 });
 
 // Mock hooks
@@ -284,5 +293,35 @@ describe("<MacroCompatibleProtocolsCard />", () => {
     for (const btn of removeButtons) {
       expect(btn).toBeDisabled();
     }
+  });
+
+  describe("embedded mode", () => {
+    it("should render in embedded mode without Card wrapper", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.queryByTestId("card")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-header")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-content")).not.toBeInTheDocument();
+    });
+
+    it("should render title and description in embedded mode", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.getByText("macroSettings.compatibleProtocols")).toBeInTheDocument();
+      expect(screen.getByText("macroSettings.compatibleProtocolsDescription")).toBeInTheDocument();
+    });
+
+    it("should render compatible protocols list in embedded mode", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
+      expect(screen.getByText("Humidity Protocol")).toBeInTheDocument();
+    });
+
+    it("should render the protocol search dropdown in embedded mode", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.getByTestId("protocol-dropdown")).toBeInTheDocument();
+    });
   });
 });

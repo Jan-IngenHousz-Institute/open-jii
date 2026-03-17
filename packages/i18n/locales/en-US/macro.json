@@ -37,7 +37,15 @@
     "editDetailsComingSoon": "Editing macro details will be available soon",
     "deleteMacro": "Delete Macro",
     "deleteMacroDescription": "Once you delete a macro, there is no going back. Please be certain.",
-    "onlyCreatorCanEdit": "Only the macro creator can access settings"
+    "onlyCreatorCanEdit": "Only the macro creator can access settings",
+    "filterMy": "My Macros",
+    "filterAll": "All Macros",
+    "filterMacros": "Filter macros",
+    "clearSearch": "Clear search",
+    "descriptionPlaceholder": "Add a description...",
+    "codeNotAvailable": "No code available",
+    "detailsTitle": "Details",
+    "lastUpdate": "Last update"
   },
   "newMacro": {
     "description": "Description",

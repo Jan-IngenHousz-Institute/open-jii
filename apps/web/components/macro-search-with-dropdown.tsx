@@ -70,12 +70,12 @@ export function MacroSearchWithDropdown({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="hover:bg-surface-light w-full justify-start py-6 text-left font-normal"
+          className="hover:bg-surface-light w-full justify-between py-6 text-left font-normal"
           disabled={disabled}
         >
-          <div className="flex w-full items-start gap-1">
+          <div className="min-w-0 flex-1">
             {selectedMacro ? (
-              <div className="flex min-w-0 flex-1 flex-col">
+              <div className="flex min-w-0 flex-col">
                 <div className="flex min-w-0 items-center gap-1">
                   <span className="truncate text-sm font-medium">{selectedMacro.name}</span>
                   <Link
@@ -95,13 +95,12 @@ export function MacroSearchWithDropdown({
                 </span>
               </div>
             ) : (
-              <div className="text-muted-foreground flex-1 italic">
+              <div className="text-muted-foreground italic">
                 {placeholder ?? t("experiments.searchMacros")}
               </div>
             )}
-
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 self-center opacity-50" />
           </div>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <MacroSearchPopover

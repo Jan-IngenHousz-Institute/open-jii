@@ -15,17 +15,20 @@ import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Form,
+  FormControl,
   FormField,
+  FormItem,
+  FormMessage,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useMacros } from "../../hooks/macro/useMacros/useMacros";
+import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 import ProtocolCodeEditor from "../protocol-code-editor";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
@@ -42,9 +45,13 @@ export function NewProtocolForm() {
   // Macro search
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroList } = useMacros({
-    search: debouncedMacroSearch || undefined,
+  const { data: macroData } = tsr.macros.listMacros.useQuery({
+    queryData: {
+      query: { search: debouncedMacroSearch || undefined },
+    },
+    queryKey: ["macros", "search", debouncedMacroSearch],
   });
+  const macroList = macroData?.body;
 
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
@@ -127,77 +134,96 @@ export function NewProtocolForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <NewProtocolDetailsCard form={form} />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Details row: name/description + family + compatible macros */}
+        <div className="flex flex-col gap-6 md:flex-row md:items-start">
+          <div className="flex-1">
+            <NewProtocolDetailsCard form={form} />
+          </div>
 
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">{t("newProtocol.codeTitle")}</h3>
-          <p className="text-muted-foreground text-sm">{t("newProtocol.codeDescription")}</p>
-          <div className="rounded-md border p-4">
+          <div className="w-full space-y-4 md:w-72">
+            {/* Sensor Family */}
             <FormField
               control={form.control}
-              name="code"
+              name="family"
               render={({ field }) => (
-                <ProtocolCodeEditor
-                  value={field.value}
-                  onChange={field.onChange}
-                  onValidationChange={setIsCodeValid}
-                  label={t("newProtocol.code")}
-                  placeholder={t("newProtocol.codePlaceholder")}
-                  error={form.formState.errors.code?.message?.toString()}
-                />
+                <FormItem>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("newProtocol.selectFamily")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="multispeq">MultispeQ</SelectItem>
+                      <SelectItem value="ambit">Ambit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )}
             />
+
+            {/* Compatible Macros */}
+            <div className="space-y-2">
+              <MacroSearchWithDropdown
+                availableMacros={availableMacros}
+                value=""
+                placeholder={t("newProtocol.compatibleMacros")}
+                loading={!isDebounced}
+                searchValue={macroSearch}
+                onSearchChange={setMacroSearch}
+                onAddMacro={handleAddMacro}
+                isAddingMacro={false}
+              />
+
+              {selectedMacros.length > 0 && (
+                <div className="space-y-2">
+                  {selectedMacros.map((macro) => (
+                    <div
+                      key={macro.id}
+                      className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm font-medium">{macro.name}</span>
+                        <span className="text-muted-foreground text-xs">{macro.language}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => handleRemoveMacro(macro.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Compatible Macros Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("newProtocol.compatibleMacros")}</CardTitle>
-            <CardDescription>{t("newProtocol.compatibleMacrosDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedMacros.length > 0 && (
-              <div className="space-y-2">
-                {selectedMacros.map((macro) => (
-                  <div
-                    key={macro.id}
-                    className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-sm font-medium">{macro.name}</span>
-                      <span className="text-muted-foreground text-xs">{macro.language}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => handleRemoveMacro(macro.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <MacroSearchWithDropdown
-              availableMacros={availableMacros}
-              value=""
-              placeholder={t("protocolSettings.addCompatibleMacro")}
-              loading={!isDebounced}
-              searchValue={macroSearch}
-              onSearchChange={setMacroSearch}
-              onAddMacro={handleAddMacro}
-              isAddingMacro={false}
+        {/* Code Editor — full width */}
+        <FormField
+          control={form.control}
+          name="code"
+          render={({ field }) => (
+            <ProtocolCodeEditor
+              value={field.value}
+              onChange={field.onChange}
+              onValidationChange={setIsCodeValid}
+              label=""
+              placeholder={t("newProtocol.codePlaceholder")}
+              error={form.formState.errors.code?.message?.toString()}
+              title={t("newProtocol.codeTitle")}
             />
-          </CardContent>
-        </Card>
+          )}
+        />
 
         <div className="flex gap-2">
-          <Button type="button" onClick={cancel}>
+          <Button type="button" variant="outline" onClick={cancel}>
             {t("newProtocol.cancel")}
           </Button>
           <Button type="submit" disabled={isDisabled}>
