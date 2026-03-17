@@ -64,6 +64,7 @@ sensor_schema = StructType([
     StructField("output", StringType(), True),
     StructField("questions", ArrayType(question_schema), True),
     StructField("user_id", StringType(), True),
+    StructField("timezone", StringType(), True),
     StructField("macros", ArrayType(macro_schema), True),
     StructField("annotations", ArrayType(annotation_schema), True)
 ])
@@ -204,6 +205,7 @@ def clean_data():
         )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
+        .withColumn("timezone", F.col("parsed_data.timezone"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
@@ -319,6 +321,7 @@ def clean_data():
         "questions",
         "annotations",
         "user_id",
+        "timezone",
         "experiment_id",
         "timestamp",
         "date",
@@ -338,6 +341,7 @@ def clean_data():
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
         .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
+        .withColumn("timezone", F.lit(None).cast("string"))
         # Build macros array from macro columns (empty when no macro)
         # Apply legacy macro ID remapping inline
         .withColumn(
@@ -377,6 +381,7 @@ def clean_data():
             "questions",
             "annotations",
             "user_id",
+            "timezone",
             "experiment_id",
             "timestamp",
             "date",
@@ -547,6 +552,7 @@ def experiment_raw_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "macros",
             "questions_data",
             "annotations",
@@ -641,6 +647,7 @@ def experiment_macro_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "user_id",
             "data",
             "output_data",
@@ -657,6 +664,7 @@ def experiment_macro_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "user_id",
             "data",
             "output_data",
@@ -751,6 +759,7 @@ def experiment_macro_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "user_id",
             "macro_id",
             "macro_name",
@@ -912,6 +921,7 @@ def enriched_experiment_raw_data():
             raw_data.device_id,
             raw_data.device_name,
             raw_data.timestamp,
+            raw_data.timezone,
             raw_data.date,
             raw_data.macros,
             raw_data.questions_data,
@@ -993,6 +1003,7 @@ def enriched_experiment_macro_data():
             macro_data.device_id,
             macro_data.device_name,
             macro_data.timestamp,
+            macro_data.timezone,
             macro_data.date,
             contributors.user.alias("contributor"),
             macro_data.macro_id,
