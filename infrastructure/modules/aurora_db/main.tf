@@ -164,6 +164,10 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
   copy_tags_to_snapshot     = true
   deletion_protection       = true
 
+  # DR restore: when snapshot_identifier is set the cluster is restored from that
+  # snapshot instead of being created fresh. Used during Backup & Restore failover.
+  snapshot_identifier = var.snapshot_identifier
+
   # Maintenance and monitoring
   preferred_maintenance_window    = "sun:03:00-sun:07:00"
   enabled_cloudwatch_logs_exports = ["postgresql"]

@@ -144,3 +144,16 @@ resource "aws_ecr_lifecycle_policy" "this" {
     ]
   })
 }
+
+resource "aws_ecr_replication_configuration" "cross_region" {
+  count = var.enable_cross_region_replication ? 1 : 0
+
+  replication_configuration {
+    rule {
+      destination {
+        region      = var.dr_region
+        registry_id = data.aws_caller_identity.current.account_id
+      }
+    }
+  }
+}

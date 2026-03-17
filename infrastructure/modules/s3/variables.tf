@@ -27,3 +27,21 @@ variable "custom_policy_json" {
   default     = null
 }
 
+variable "enable_crr" {
+  description = "Enable Cross-Region Replication to a DR region bucket"
+  type        = bool
+  default     = false
+}
+
+variable "dr_region" {
+  description = "AWS region to replicate bucket contents to (required when enable_crr = true)"
+  type        = string
+  default     = null
+}
+
+variable "dr_bucket_name" {
+  description = "Name of the destination bucket in the DR region (defaults to <bucket_name>-dr)"
+  type        = string
+  default     = null
+}
+
