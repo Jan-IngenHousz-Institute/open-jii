@@ -797,14 +797,22 @@ def experiment_table_metadata():
 
     # Pre-compute custom_metadata_schema per experiment from the metadata source.
     # Each experiment's metadata blob has $.rows — an array of VARIANT objects.
-    # We explode the rows and use schema_of_variant_agg to infer the merged schema.
+    # We drop internal keys (_id, identifier column) from each row before schema
+    # inference so the backend doesn't expand them into duplicate query columns.
     metadata_source = dlt.read(METADATA_SOURCE_TABLE)
     custom_metadata_schemas = (
         metadata_source
         .select(
             F.col("experiment_id"),
-            F.expr("explode(variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row")
+            F.expr("variant_get(metadata, '$.identifierColumnId', 'STRING')").alias("_id_col"),
+            F.expr("explode(variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row"),
         )
+        .withColumn("_row", F.expr("""
+            parse_json(to_json(map_filter(
+                cast(_row AS MAP<STRING, VARIANT>),
+                (k, v) -> k != '_id' AND k != _id_col
+            )))
+        """))
         .groupBy("experiment_id")
         .agg(
             F.expr("nullif(schema_of_variant_agg(_row), 'VOID')").alias("custom_metadata_schema")
