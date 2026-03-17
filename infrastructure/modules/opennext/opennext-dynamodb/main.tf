@@ -46,5 +46,8 @@ resource "aws_dynamodb_table" "revalidation" {
 
   lifecycle {
     prevent_destroy = true
+    # Ignore GSI changes to prevent provider schema drift (e.g. warm_throughput)
+    # from triggering unnecessary GSI rebuilds on provider upgrades.
+    ignore_changes = [global_secondary_index]
   }
 }

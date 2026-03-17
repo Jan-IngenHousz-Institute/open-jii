@@ -161,6 +161,8 @@ locals {
         "lambda:PutFunctionConcurrency",
         "lambda:DeleteFunctionConcurrency",
         "lambda:GetFunctionConcurrency",
+        # Code signing (Terraform provider reads)
+        "lambda:GetFunctionCodeSigningConfig",
       ]
       resource = "*"
     }
@@ -203,6 +205,8 @@ locals {
         # Invalidation (deploy workflows)
         "cloudfront:CreateInvalidation",
         "cloudfront:GetInvalidation",
+        # Distribution config read (Terraform provider)
+        "cloudfront:GetDistributionConfig",
       ]
       resource = "*"
     }
@@ -303,7 +307,11 @@ locals {
         "iam:GetUser",
         "iam:TagUser",
         "iam:ListAccessKeys",
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
         "iam:ListAttachedUserPolicies",
+        "iam:AttachUserPolicy",
+        "iam:DetachUserPolicy",
       ]
       resource = "*"
     }
@@ -435,6 +443,8 @@ locals {
         "ec2:DescribePrefixLists",
         "ec2:DescribeManagedPrefixLists",
         "ec2:GetManagedPrefixListEntries",
+        # EIP domain name attribute (Terraform provider reads)
+        "ec2:DescribeAddressesAttribute",
       ]
       resource = "*"
     }
@@ -526,6 +536,8 @@ locals {
         "ses:SetActiveReceiptRuleSet",
         # Quota (Terraform reads)
         "ses:GetSendQuota",
+        # Active receipt rule set (Terraform provider reads)
+        "ses:DescribeActiveReceiptRuleSet",
       ]
       resource = "*"
     }
@@ -552,6 +564,9 @@ locals {
         "wafv2:TagResource",
         "wafv2:UntagResource",
         "wafv2:ListTagsForResource",
+        # Managed rule group metadata (Terraform provider reads during plan)
+        "wafv2:DescribeManagedRuleGroup",
+        "wafv2:ListAvailableManagedRuleGroupVersions",
       ]
       resource = "*"
     }
@@ -652,6 +667,8 @@ locals {
         "iot:ListTagsForResource",
         # Endpoint (data source)
         "iot:DescribeEndpoint",
+        # Topic rule listing (Terraform provider reads)
+        "iot:ListTopicRules",
       ]
       resource = "*"
     }
@@ -740,6 +757,13 @@ locals {
         "elasticloadbalancing:DescribeTags",
         # Health (deploy verification)
         "elasticloadbalancing:DescribeTargetHealth",
+        # Listener certificates (HTTPS cert attachments)
+        "elasticloadbalancing:AddListenerCertificates",
+        "elasticloadbalancing:DescribeListenerCertificates",
+        "elasticloadbalancing:RemoveListenerCertificates",
+        # Listener attributes (Terraform provider reads)
+        "elasticloadbalancing:DescribeListenerAttributes",
+        "elasticloadbalancing:ModifyListenerAttributes",
       ]
       resource = "*"
     }

@@ -123,7 +123,7 @@ resource "aws_wafv2_web_acl" "main" {
       priority = 3 # After known bad inputs, before geo-blocking
 
       override_action {
-        none {}
+        count {} # Monitor bot traffic without blocking to start - adjust based on observed traffic and false positives
       }
 
       statement {
