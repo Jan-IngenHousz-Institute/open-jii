@@ -310,4 +310,34 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
       expect(btn).toBeDisabled();
     }
   });
+
+  describe("embedded mode", () => {
+    it("should render in embedded mode without Card wrapper", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.queryByTestId("card")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-header")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-content")).not.toBeInTheDocument();
+    });
+
+    it("should render title and description in embedded mode", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("protocolSettings.compatibleMacrosDescription")).toBeInTheDocument();
+    });
+
+    it("should render compatible macros list in embedded mode", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
+      expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
+    });
+
+    it("should render the macro search dropdown in embedded mode", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.getByTestId("macro-dropdown")).toBeInTheDocument();
+    });
+  });
 });

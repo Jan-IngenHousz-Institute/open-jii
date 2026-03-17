@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -7,8 +7,18 @@ import { ProtocolOverviewCards } from "./protocol-overview-cards";
 
 // Mock Next.js Link component
 vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href} data-testid="protocol-link">
+  default: ({
+    href,
+    children,
+    onMouseEnter,
+    onMouseLeave,
+  }: {
+    href: string;
+    children: React.ReactNode;
+    onMouseEnter?: React.MouseEventHandler;
+    onMouseLeave?: React.MouseEventHandler;
+  }) => (
+    <a href={href} data-testid="protocol-link" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {children}
     </a>
   ),
@@ -70,11 +80,12 @@ vi.mock("@repo/ui/lib/utils", () => ({
 }));
 
 // Mock useProtocolCompatibleMacros hook (uses tsr.*.useQuery which requires QueryClient)
+const mockUseProtocolCompatibleMacros = vi.fn().mockReturnValue({
+  data: { body: [] },
+  isLoading: false,
+});
 vi.mock("@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros", () => ({
-  useProtocolCompatibleMacros: () => ({
-    data: { body: [] },
-    isLoading: false,
-  }),
+  useProtocolCompatibleMacros: (...args: unknown[]) => mockUseProtocolCompatibleMacros(...args),
 }));
 
 const mockProtocols = [
@@ -174,5 +185,43 @@ describe("<ProtocolOverviewCards />", () => {
     expect(links[0]).toHaveAttribute("href", "/en/platform/protocols/protocol1");
     expect(links[1]).toHaveAttribute("href", "/en/platform/protocols/protocol2");
     expect(links[2]).toHaveAttribute("href", "/en/platform/protocols/protocol3");
+  });
+
+  it("passes enabled=true to useProtocolCompatibleMacros on hover", () => {
+    mockUseProtocolCompatibleMacros.mockClear();
+    render(<ProtocolOverviewCards protocols={mockProtocols} />);
+    const links = screen.getAllByTestId("protocol-link");
+    fireEvent.mouseEnter(links[0]);
+    expect(mockUseProtocolCompatibleMacros).toHaveBeenCalledWith("protocol1", true);
+  });
+
+  it("renders compatible macro names when hook returns data", () => {
+    mockUseProtocolCompatibleMacros.mockReturnValue({
+      data: {
+        body: [
+          { macro: { id: "m1", name: "Python Macro" } },
+          { macro: { id: "m2", name: "R Macro" } },
+        ],
+      },
+      isLoading: false,
+    });
+    render(<ProtocolOverviewCards protocols={mockProtocols} />);
+    const links = screen.getAllByTestId("protocol-link");
+    fireEvent.mouseEnter(links[0]);
+    expect(screen.getAllByText("Python Macro").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("R Macro").length).toBeGreaterThan(0);
+    mockUseProtocolCompatibleMacros.mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+    });
+  });
+
+  it("does not render compatible macros section when hook returns empty array", () => {
+    mockUseProtocolCompatibleMacros.mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+    });
+    render(<ProtocolOverviewCards protocols={mockProtocols} />);
+    expect(screen.queryByText("Python Macro")).not.toBeInTheDocument();
   });
 });

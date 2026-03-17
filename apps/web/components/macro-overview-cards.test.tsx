@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 // Required: auto JSX transform not active in vitest
 import { describe, it, expect, vi } from "vitest";
@@ -8,8 +8,18 @@ import { MacroOverviewCards } from "./macro-overview-cards";
 
 // Mock Next.js Link component
 vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href} data-testid="macro-link">
+  default: ({
+    href,
+    children,
+    onMouseEnter,
+    onMouseLeave,
+  }: {
+    href: string;
+    children: React.ReactNode;
+    onMouseEnter?: React.MouseEventHandler;
+    onMouseLeave?: React.MouseEventHandler;
+  }) => (
+    <a href={href} data-testid="macro-link" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {children}
     </a>
   ),
@@ -63,11 +73,12 @@ vi.mock("@repo/ui/lib/utils", () => ({
 }));
 
 // Mock useMacroCompatibleProtocols hook (uses tsr.*.useQuery which requires QueryClient)
+const mockUseMacroCompatibleProtocols = vi.fn().mockReturnValue({
+  data: { body: [] },
+  isLoading: false,
+});
 vi.mock("@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols", () => ({
-  useMacroCompatibleProtocols: () => ({
-    data: { body: [] },
-    isLoading: false,
-  }),
+  useMacroCompatibleProtocols: (...args: unknown[]) => mockUseMacroCompatibleProtocols(...args),
 }));
 
 const mockMacros = [
@@ -176,5 +187,44 @@ describe("<MacroOverviewCards />", () => {
     expect(links[0]).toHaveAttribute("href", "/en/platform/macros/macro1");
     expect(links[1]).toHaveAttribute("href", "/en/platform/macros/macro2");
     expect(links[2]).toHaveAttribute("href", "/en/platform/macros/macro3");
+  });
+
+  it("passes enabled=true to useMacroCompatibleProtocols on hover", () => {
+    mockUseMacroCompatibleProtocols.mockClear();
+    render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
+    const links = screen.getAllByTestId("macro-link");
+    fireEvent.mouseEnter(links[0]);
+    expect(mockUseMacroCompatibleProtocols).toHaveBeenCalledWith("macro1", true);
+  });
+
+  it("renders compatible protocol names as badges when hook returns data", () => {
+    mockUseMacroCompatibleProtocols.mockReturnValue({
+      data: {
+        body: [
+          { protocol: { id: "p1", name: "Fv/FM Baseline" } },
+          { protocol: { id: "p2", name: "Ambient Light" } },
+        ],
+      },
+      isLoading: false,
+    });
+    render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
+    const links = screen.getAllByTestId("macro-link");
+    fireEvent.mouseEnter(links[0]);
+    expect(screen.getAllByText("Fv/FM Baseline").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Ambient Light").length).toBeGreaterThan(0);
+    mockUseMacroCompatibleProtocols.mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+    });
+  });
+
+  it("does not render compatible protocols section when hook returns empty array", () => {
+    mockUseMacroCompatibleProtocols.mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+    });
+    render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
+    // No protocol badge spans from CompatibleProtocolsList should be present
+    expect(screen.queryByText("Fv/FM Baseline")).not.toBeInTheDocument();
   });
 });

@@ -221,4 +221,41 @@ describe("MacroCodeViewer", () => {
     const heightContainer = screen.getByTestId("monaco-editor").parentElement;
     expect(heightContainer).toHaveStyle(`height: ${customHeight}`);
   });
+
+  it("should handle clipboard failure gracefully", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockClipboard.writeText.mockRejectedValueOnce(new Error("permission denied"));
+    render(<MacroCodeViewer {...defaultProps} />);
+    const copyButton = screen.getByTestId("button");
+    fireEvent.click(copyButton);
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to copy:", expect.any(Error));
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it("should render edit overlay when onEditStart is provided", () => {
+    const onEditStart = vi.fn();
+    render(<MacroCodeViewer {...defaultProps} onEditStart={onEditStart} />);
+    expect(screen.getAllByTestId("pencil-icon").length).toBeGreaterThan(0);
+  });
+
+  it("should not render edit overlay when onEditStart is not provided", () => {
+    render(<MacroCodeViewer {...defaultProps} />);
+    const wrapper = screen.getByTestId("monaco-editor").closest(".group\\/viewer");
+    expect(wrapper).not.toHaveClass("cursor-pointer");
+  });
+
+  it("should render title when provided", () => {
+    render(<MacroCodeViewer {...defaultProps} title="My Code" />);
+    expect(screen.getByText("My Code")).toBeInTheDocument();
+  });
+
+  it("should call onEditStart when wrapper is clicked", () => {
+    const onEditStart = vi.fn();
+    render(<MacroCodeViewer {...defaultProps} onEditStart={onEditStart} />);
+    const wrapper = screen.getByTestId("monaco-editor").parentElement?.parentElement;
+    if (wrapper) fireEvent.click(wrapper);
+    expect(onEditStart).toHaveBeenCalled();
+  });
 });

@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -84,6 +85,7 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
     hasAccess,
     isPending,
     badges,
+    onSave,
   }: {
     name: string;
     hasAccess: boolean;
@@ -96,6 +98,7 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
       <span data-testid="title-has-access">{String(hasAccess)}</span>
       <span data-testid="title-is-pending">{String(isPending)}</span>
       {badges && <div data-testid="title-badges">{badges}</div>}
+      <button data-testid="save-title-btn" onClick={() => onSave("New Title")}>Save</button>
     </div>
   ),
 }));
@@ -362,6 +365,58 @@ describe("ProtocolLayout", () => {
       const { container } = renderLayout();
 
       expect(container.firstChild).toHaveClass("space-y-6");
+    });
+
+    it("should call toast on successful title save", async () => {
+      mockMutateAsync.mockImplementation(async (_data: unknown, options?: { onSuccess?: () => void }) => {
+        options?.onSuccess?.();
+      });
+      mockUseProtocol.mockReturnValue({
+        data: { body: { ...defaultProtocol, createdBy: "user-123" } },
+        isLoading: false,
+        error: null,
+      });
+      renderLayout();
+
+      const saveBtn = screen.getByTestId("save-title-btn");
+      await userEvent.click(saveBtn);
+
+      const { toast } = await import("@repo/ui/hooks");
+      expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
+    });
+
+    it("should call toast with destructive variant on title save error", async () => {
+      mockMutateAsync.mockImplementation(async (_data: unknown, options?: { onError?: (err: unknown) => void }) => {
+        options?.onError?.(new Error("Update failed"));
+      });
+      mockUseProtocol.mockReturnValue({
+        data: { body: { ...defaultProtocol, createdBy: "user-123" } },
+        isLoading: false,
+        error: null,
+      });
+      renderLayout();
+
+      const saveBtn = screen.getByTestId("save-title-btn");
+      await userEvent.click(saveBtn);
+
+      const { toast } = await import("@repo/ui/hooks");
+      expect(toast).toHaveBeenCalledWith({
+        description: expect.any(String),
+        variant: "destructive",
+      });
+    });
+  });
+
+  describe("Error with no status property", () => {
+    it("should display error display when error has no status", () => {
+      mockUseProtocol.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: { message: "Unknown error" },
+      });
+      renderLayout();
+      expect(screen.getByTestId("error-display")).toBeInTheDocument();
+      expect(mockNotFound).not.toHaveBeenCalled();
     });
   });
 });

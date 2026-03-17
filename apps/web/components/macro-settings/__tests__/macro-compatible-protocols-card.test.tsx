@@ -294,4 +294,34 @@ describe("<MacroCompatibleProtocolsCard />", () => {
       expect(btn).toBeDisabled();
     }
   });
+
+  describe("embedded mode", () => {
+    it("should render in embedded mode without Card wrapper", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.queryByTestId("card")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-header")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-content")).not.toBeInTheDocument();
+    });
+
+    it("should render title and description in embedded mode", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.getByText("macroSettings.compatibleProtocols")).toBeInTheDocument();
+      expect(screen.getByText("macroSettings.compatibleProtocolsDescription")).toBeInTheDocument();
+    });
+
+    it("should render compatible protocols list in embedded mode", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
+      expect(screen.getByText("Humidity Protocol")).toBeInTheDocument();
+    });
+
+    it("should render the protocol search dropdown in embedded mode", () => {
+      render(<MacroCompatibleProtocolsCard macroId="macro-1" embedded />);
+
+      expect(screen.getByTestId("protocol-dropdown")).toBeInTheDocument();
+    });
+  });
 });
