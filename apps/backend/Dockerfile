@@ -68,7 +68,7 @@ COPY --from=dependencies --chown=nodejs:nodejs /dependencies/node_modules ./node
 
 ARG PORT=3020
 ENV PORT=${PORT}
-ENV NODE_ENV=dev
+ENV NODE_ENV=production
 EXPOSE ${PORT}
 
 # Add health check

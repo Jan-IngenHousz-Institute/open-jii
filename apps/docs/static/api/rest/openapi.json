@@ -7995,6 +7995,42 @@
         }
       }
     },
+    "/health/time": {
+      "get": {
+        "description": "Returns the current server UTC timestamp for time synchronization.",
+        "summary": "Get server time",
+        "tags": ["health"],
+        "parameters": [],
+        "operationId": "health.getTime",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "utcTimestampMs": {
+                      "type": "number",
+                      "description": "Milliseconds since Unix epoch"
+                    },
+                    "utcTimestampSec": {
+                      "type": "number",
+                      "description": "Seconds since Unix epoch (floored)"
+                    },
+                    "iso": {
+                      "type": "string",
+                      "description": "ISO 8601 UTC string"
+                    }
+                  },
+                  "required": ["utcTimestampMs", "utcTimestampSec", "iso"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/iot/credentials": {
       "get": {
         "description": "Returns temporary AWS credentials for authenticated users to connect to AWS IoT Core. Credentials are valid for 15 minutes. Requires active Better Auth session.",
@@ -10403,6 +10439,22 @@
           },
           "403": {
             "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "409",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,7 +1,6 @@
 import { clsx } from "clsx";
 import { CircleCheckBig, ChevronUp } from "lucide-react-native";
-import { DateTime } from "luxon";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -22,6 +21,7 @@ import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
+import { getSyncedLocalISO, getTimeSyncState } from "~/utils/time-sync";
 
 interface AnalysisNodeProps {
   content: {
@@ -48,8 +48,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";
 
-  // Local time with offset (plant timezone) for display and backend
-  const analysisTimestampRef = useRef<string>(DateTime.now().toISO() ?? "");
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
   const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -59,7 +57,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
-  const localDate = DateTime.fromISO(analysisTimestampRef.current).toFormat("d MMMM yyyy, HH:mm");
+
+  // Capture the display timestamp once so it stays stable across re-renders.
+  // The upload handler captures its own fresh timestamp independently.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
+  const displayTimestamp = useMemo(() => getSyncedLocalISO(), [scanResult]);
 
   const renderContent = () => {
     if (!scanResult) {
@@ -128,9 +130,18 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       throw new Error("Missing macro information");
     }
 
+    // Capture timestamp/timezone at upload time so the sync service
+    // has had a chance to complete its first sync.
+    const timestamp = getSyncedLocalISO();
+    const timezone = getTimeSyncState().timezone;
+
+    const cycleAnswers = getCycleAnswers(iterationCount);
+    const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
+
     await uploadMeasurement({
       rawMeasurement: scanResult,
-      timestamp: analysisTimestampRef.current,
+      timestamp,
+      timezone,
       experimentName,
       experimentId,
       protocolId,
@@ -215,7 +226,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
               ellipsizeMode="tail"
               className={clsx("flex-1", classes.textMuted)}
             >
-              {localDate}
+              {displayTimestamp}
             </Text>
           </View>
         </View>
@@ -256,7 +267,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         initialText={measurementComment}
         experimentName={experimentName}
         questions={questions}
-        timestamp={analysisTimestampRef.current}
+        timestamp={displayTimestamp}
         onSave={(text) => {
           setMeasurementComment(text);
           setCommentModalVisible(false);
