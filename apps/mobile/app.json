@@ -10,11 +10,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#E2FCFC"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.openjii.app",
@@ -45,6 +40,15 @@
     },
     "plugins": [
       "react-native-ble-plx",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#E2FCFC",
+          "image": "./assets/splash-icon-rounded.png",
+          "resizeMode": "cover",
+          "imageWidth": 140
+        }
+      ],
       [
         "react-native-permissions",
         {
