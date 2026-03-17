@@ -12,7 +12,6 @@ interface JsonCodeViewerProps {
   height?: string;
   className?: string;
   title?: React.ReactNode;
-  headerActions?: React.ReactNode;
   onEditStart?: () => void;
 }
 
@@ -59,10 +58,7 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
     >
       {/* Hover edit overlay */}
       {onEditStart && (
-        <div
-          className="pointer-events-none absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:pointer-events-auto group-hover/viewer:bg-black/5"
-          onClick={onEditStart}
-        >
+        <div className="pointer-events-none absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-black/0 transition-colors duration-200 group-hover/viewer:pointer-events-auto group-hover/viewer:bg-black/5">
           <div className="rounded-full bg-white p-3 opacity-0 shadow-lg transition-opacity duration-200 group-hover/viewer:opacity-100">
             <Pencil className="h-5 w-5 text-slate-600" />
           </div>

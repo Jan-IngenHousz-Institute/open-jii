@@ -453,8 +453,8 @@ describe("<MacroDetailsSidebar />", () => {
           body: { language: "r" },
         },
         expect.objectContaining({
-          onSuccess: expect.any(Function),
-          onError: expect.any(Function),
+          onSuccess: expect.any(Function) as unknown,
+          onError: expect.any(Function) as unknown,
         }),
       );
     });
@@ -489,7 +489,7 @@ describe("<MacroDetailsSidebar />", () => {
 
       const { toast } = await import("@repo/ui/hooks");
       expect(toast).toHaveBeenCalledWith({
-        description: expect.any(String),
+        description: expect.any(String) as unknown,
         variant: "destructive",
       });
     });

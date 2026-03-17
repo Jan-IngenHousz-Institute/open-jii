@@ -2,7 +2,7 @@ import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatiblePro
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 import type { Macro, MacroProtocolEntry } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -55,8 +55,8 @@ const getLanguageColor = (language: string) => {
   }
 };
 
-function CompatibleProtocolsList({ macroId }: { macroId: string }) {
-  const { data } = useMacroCompatibleProtocols(macroId);
+function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enabled: boolean }) {
+  const { data } = useMacroCompatibleProtocols(macroId, enabled);
   const protocols: MacroProtocolEntry[] = useMemo(
     () => (data?.body as MacroProtocolEntry[] | undefined) ?? [],
     [data],
@@ -75,6 +75,51 @@ function CompatibleProtocolsList({ macroId }: { macroId: string }) {
         </span>
       ))}
     </div>
+  );
+}
+
+function MacroCard({
+  macro,
+  locale,
+  t,
+}: {
+  macro: Macro;
+  locale: string;
+  t: (key: string) => string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isPreferred = macro.sortOrder !== null;
+
+  return (
+    <Link
+      href={`/${locale}/platform/macros/${macro.id}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div className={cardVariants({ featured: isPreferred })}>
+        <div className="inline-flex gap-1">
+          <Badge className={getLanguageColor(macro.language)}>
+            {getLanguageDisplay(macro.language)}
+          </Badge>
+          {isPreferred && (
+            <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+          )}
+        </div>
+        <div className="mb-auto">
+          <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+            {macro.name}
+          </h3>
+          <div className="overflow-hidden text-sm text-gray-500">
+            <RichTextRenderer content={macro.description ?? " "} truncate maxLines={2} />
+          </div>
+        </div>
+        <CompatibleProtocolsList macroId={macro.id} enabled={hovered} />
+        <p className="text-xs text-gray-400">
+          {t("macros.lastUpdate")}: {new Date(macro.updatedAt).toLocaleDateString()}
+        </p>
+        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+      </div>
+    </Link>
   );
 }
 
@@ -102,36 +147,9 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {macros.map((macro) => {
-        const isPreferred = macro.sortOrder !== null;
-        return (
-          <Link key={macro.id} href={`/${locale}/platform/macros/${macro.id}`}>
-            <div className={cardVariants({ featured: isPreferred })}>
-              <div className="inline-flex gap-1">
-                <Badge className={getLanguageColor(macro.language)}>
-                  {getLanguageDisplay(macro.language)}
-                </Badge>
-                {isPreferred && (
-                  <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
-                )}
-              </div>
-              <div className="mb-auto">
-                <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-                  {macro.name}
-                </h3>
-                <div className="overflow-hidden text-sm text-gray-500">
-                  <RichTextRenderer content={macro.description ?? " "} truncate maxLines={2} />
-                </div>
-              </div>
-              <CompatibleProtocolsList macroId={macro.id} />
-              <p className="text-xs text-gray-400">
-                {t("macros.lastUpdate")}: {new Date(macro.updatedAt).toLocaleDateString()}
-              </p>
-              <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
-            </div>
-          </Link>
-        );
-      })}
+      {macros.map((macro) => (
+        <MacroCard key={macro.id} macro={macro} locale={locale} t={t} />
+      ))}
     </div>
   );
 }

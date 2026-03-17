@@ -2,7 +2,7 @@ import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompati
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 import type { Protocol, ProtocolMacroEntry } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -35,8 +35,8 @@ const cardVariants = cva(
   },
 );
 
-function CompatibleMacrosList({ protocolId }: { protocolId: string }) {
-  const { data } = useProtocolCompatibleMacros(protocolId);
+function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; enabled: boolean }) {
+  const { data } = useProtocolCompatibleMacros(protocolId, enabled);
   const macros: ProtocolMacroEntry[] = useMemo(
     () => (data?.body as ProtocolMacroEntry[] | undefined) ?? [],
     [data],
@@ -55,6 +55,51 @@ function CompatibleMacrosList({ protocolId }: { protocolId: string }) {
         </span>
       ))}
     </div>
+  );
+}
+
+function ProtocolCard({
+  protocol,
+  locale,
+  t,
+}: {
+  protocol: Protocol;
+  locale: string;
+  t: (key: string) => string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isPreferred = protocol.sortOrder !== null;
+
+  return (
+    <Link
+      href={`/${locale}/platform/protocols/${protocol.id}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div className={cardVariants({ featured: isPreferred })}>
+        <div className="inline-flex gap-1">
+          <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
+            {protocol.family}
+          </Badge>
+          {isPreferred && (
+            <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+          )}
+        </div>
+        <div className="mb-auto">
+          <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+            {protocol.name}
+          </h3>
+          <div className="overflow-hidden text-sm text-gray-500">
+            <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
+          </div>
+        </div>
+        <CompatibleMacrosList protocolId={protocol.id} enabled={hovered} />
+        <p className="text-xs text-gray-400">
+          {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
+        </p>
+        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+      </div>
+    </Link>
   );
 }
 
@@ -82,36 +127,9 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {protocols.map((protocol) => {
-        const isPreferred = protocol.sortOrder !== null;
-        return (
-          <Link key={protocol.id} href={`/${locale}/platform/protocols/${protocol.id}`}>
-            <div className={cardVariants({ featured: isPreferred })}>
-              <div className="inline-flex gap-1">
-                <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
-                  {protocol.family}
-                </Badge>
-                {isPreferred && (
-                  <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
-                )}
-              </div>
-              <div className="mb-auto">
-                <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-                  {protocol.name}
-                </h3>
-                <div className="overflow-hidden text-sm text-gray-500">
-                  <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
-                </div>
-              </div>
-              <CompatibleMacrosList protocolId={protocol.id} />
-              <p className="text-xs text-gray-400">
-                {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
-              </p>
-              <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
-            </div>
-          </Link>
-        );
-      })}
+      {protocols.map((protocol) => (
+        <ProtocolCard key={protocol.id} protocol={protocol} locale={locale} t={t} />
+      ))}
     </div>
   );
 }
