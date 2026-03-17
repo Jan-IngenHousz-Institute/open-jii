@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { useMacros } from "../../../hooks/macro/useMacros/useMacros";
 import { useAddCompatibleMacro } from "../../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 // Import mocked hooks for test configuration
 import { useProtocolCompatibleMacros } from "../../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
+import { tsr } from "../../../lib/tsr";
 import { ProtocolCompatibleMacrosCard } from "../protocol-compatible-macros-card";
 
 // Keep React on global for JSX in mocks
@@ -36,6 +36,9 @@ vi.mock("lucide-react", () => ({
   X: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className} />,
   ExternalLink: ({ className }: { className?: string }) => (
     <span data-testid="external-link-icon" className={className} />
+  ),
+  FileCode2: ({ className }: { className?: string }) => (
+    <span data-testid="file-code2-icon" className={className} />
   ),
 }));
 
@@ -82,7 +85,13 @@ vi.mock("@repo/ui/components", () => {
     </button>
   );
 
-  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button };
+  const Badge = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span data-testid="badge" className={className}>
+      {children}
+    </span>
+  );
+
+  return { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge };
 });
 
 // Mock hooks
@@ -98,8 +107,18 @@ vi.mock("../../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMac
   useRemoveCompatibleMacro: vi.fn(),
 }));
 
-vi.mock("../../../hooks/macro/useMacros/useMacros", () => ({
-  useMacros: vi.fn(() => ({ data: [] })),
+vi.mock("../../../lib/tsr", () => ({
+  tsr: {
+    macros: {
+      listMacros: {
+        useQuery: vi.fn(() => ({
+          data: { body: [] },
+          isLoading: false,
+          error: null,
+        })),
+      },
+    },
+  },
 }));
 
 // Capture props passed to MacroSearchWithDropdown
@@ -162,8 +181,10 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
       isPending: false,
     } as never);
 
-    vi.mocked(useMacros).mockReturnValue({
-      data: mockAllMacros,
+    vi.spyOn(tsr.macros.listMacros, "useQuery").mockReturnValue({
+      data: { body: mockAllMacros },
+      isLoading: false,
+      error: null,
     } as never);
   });
 
@@ -193,9 +214,9 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     render(<ProtocolCompatibleMacrosCard protocolId="proto-1" />);
 
     expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
-    expect(screen.getByText("python")).toBeInTheDocument();
+    expect(screen.getByText("Python")).toBeInTheDocument();
     expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
-    expect(screen.getByText("r")).toBeInTheDocument();
+    expect(screen.getByText("R")).toBeInTheDocument();
   });
 
   it("should render macro links with correct hrefs", () => {
@@ -288,5 +309,35 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     for (const btn of removeButtons) {
       expect(btn).toBeDisabled();
     }
+  });
+
+  describe("embedded mode", () => {
+    it("should render in embedded mode without Card wrapper", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.queryByTestId("card")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-header")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("card-content")).not.toBeInTheDocument();
+    });
+
+    it("should render title and description in embedded mode", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("protocolSettings.compatibleMacrosDescription")).toBeInTheDocument();
+    });
+
+    it("should render compatible macros list in embedded mode", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
+      expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
+    });
+
+    it("should render the macro search dropdown in embedded mode", () => {
+      render(<ProtocolCompatibleMacrosCard protocolId="proto-1" embedded />);
+
+      expect(screen.getByTestId("macro-dropdown")).toBeInTheDocument();
+    });
   });
 });
