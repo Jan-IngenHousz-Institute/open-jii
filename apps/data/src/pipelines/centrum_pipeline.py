@@ -150,6 +150,12 @@ def raw_data():
         .withColumn("partitionKey", F.col("partitionKey"))
         # Parse data for basic extraction
         .withColumn("parsed_data", F.from_json(F.col("data").cast("string"), sensor_schema))
+        # Extract UTC offset from raw timestamp string before it's lost in TimestampType parsing
+        # e.g. "2026-03-16T14:00:18.022+01:00" -> "+01:00", used as fallback when IANA timezone is absent
+        .withColumn("utc_offset", F.when(
+            F.regexp_extract(F.get_json_object(F.col("data").cast("string"), "$.timestamp"), r"([+-]\d{2}:\d{2})$", 1) != "",
+            F.regexp_extract(F.get_json_object(F.col("data").cast("string"), "$.timestamp"), r"([+-]\d{2}:\d{2})$", 1)
+        ))
         .withColumn("ingest_date", F.to_date(F.col("ingestion_timestamp")))
         # Basic experiment_id extraction for partitioning
         .withColumn("experiment_id", F.coalesce(
@@ -158,8 +164,9 @@ def raw_data():
             F.lit(None).cast(StringType())
         ))
         .select(
-            "experiment_id", 
+            "experiment_id",
             "parsed_data",
+            "utc_offset",
             "ingestion_timestamp",
             "ingest_date",
             "kinesis_sequence_number",
@@ -205,7 +212,8 @@ def clean_data():
         )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
-        .withColumn("timezone", F.col("parsed_data.timezone"))
+        # Prefer IANA timezone name from payload; fall back to UTC offset extracted from timestamp string
+        .withColumn("timezone", F.coalesce(F.col("parsed_data.timezone"), F.col("utc_offset")))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
@@ -920,7 +928,7 @@ def enriched_experiment_raw_data():
             raw_data.id,
             raw_data.device_id,
             raw_data.device_name,
-            raw_data.timestamp.alias("measurement_time_utc"),
+            raw_data.timestamp.alias("timestamp_utc"),
             raw_data.timezone,
             raw_data.date,
             raw_data.macros,
@@ -931,21 +939,21 @@ def enriched_experiment_raw_data():
             raw_data.processed_timestamp
         )
         .withColumn(
-            "measurement_time_local",
+            "timestamp_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
             )
         )
         .withColumn(
-            "local_time",
+            "time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
             )
         )
     )
-    
+
     return add_annotation_column(
         enriched,
         table_name="experiment_raw_data",
@@ -1016,7 +1024,7 @@ def enriched_experiment_macro_data():
             macro_data.raw_id,
             macro_data.device_id,
             macro_data.device_name,
-            macro_data.timestamp.alias("measurement_time_utc"),
+            macro_data.timestamp.alias("timestamp_utc"),
             macro_data.timezone,
             macro_data.date,
             contributors.user.alias("contributor"),
@@ -1030,21 +1038,21 @@ def enriched_experiment_macro_data():
             macro_data.annotations
         )
         .withColumn(
-            "measurement_time_local",
+            "timestamp_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
             )
         )
         .withColumn(
-            "local_time",
+            "time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
             )
         )
     )
-    
+
     return add_annotation_column(
         enriched,
         table_name="experiment_macro_data",  # Generic macro data table name
