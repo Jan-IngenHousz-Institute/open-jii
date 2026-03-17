@@ -17,7 +17,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.openjii.app"
+      "bundleIdentifier": "com.openjii.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "openJII uses your location to determine your timezone for accurate measurement timestamps."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +30,9 @@
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
-        "android.permission.BLUETOOTH_CONNECT"
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
@@ -63,7 +68,13 @@
       "expo-font",
       "expo-web-browser",
       "expo-asset",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "openJII uses your location to determine your timezone for accurate measurement timestamps."
+        }
+      ]
     ],
     "extra": {
       "expo-router": {

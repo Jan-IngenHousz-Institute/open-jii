@@ -22,6 +22,9 @@ coverage.json
 # Vercel
 .vercel
 
+# VScode
+.vscode
+
 # Build Outputs
 .next/
 .open-next/
@@ -95,3 +98,6 @@ release-summary-*.json
 
 # Zip files
 *.zip
+
+# TypeScript incremental build cache
+*.tsbuildinfo

@@ -85,6 +85,17 @@ components:
                   When present, indicates that the `sample` field has been
                   compressed (gzip) and base64-encoded to reduce payload size.
                   Absent on legacy (uncompressed) payloads.
+              timestamp:
+                type: string
+                description: >
+                  ISO 8601 timestamp with UTC offset captured at measurement
+                  time using the synced clock (e.g. "2026-03-09T10:30:00.000-05:00").
+              timezone:
+                type: string
+                description: >
+                  IANA timezone identifier resolved from GPS at measurement
+                  time (e.g. "America/Chicago"). Preserved across retries so
+                  the original measurement-time timezone is never lost.
         required:
           - data
       examples:

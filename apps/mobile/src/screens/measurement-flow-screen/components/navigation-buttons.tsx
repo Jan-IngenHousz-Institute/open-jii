@@ -1,5 +1,7 @@
+import clsx from "clsx";
 import React from "react";
 import { View } from "react-native";
+import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
@@ -9,7 +11,7 @@ import { NextButton } from "./next-button";
 
 export function NavigationButtons() {
   const { flowNodes, currentFlowStep, experimentId, previousStep } = useMeasurementFlowStore();
-
+  const { classes } = useTheme();
   // Get current node to check type
   const currentNode = flowNodes[currentFlowStep];
   const isInstructionOrQuestion =
@@ -54,7 +56,7 @@ export function NavigationButtons() {
       .getAnswer(useMeasurementFlowStore.getState().iterationCount, currentNode.id);
 
   return (
-    <View className="w-full flex-row items-center justify-between bg-white">
+    <View className={clsx("w-full flex-row items-center justify-between py-3", classes.card)}>
       <BackButton onPress={handleBackPress} />
       {(!isAutoAdvanceQuestion || (isAutoAdvanceQuestion && !currentNode.content.required)) && (
         <NextButton onPress={handleNextPress} isDisabled={isNextDisabled} />

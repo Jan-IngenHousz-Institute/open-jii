@@ -19,10 +19,10 @@ export function BackButton({ onPress }: BackButtonProps) {
     <TouchableOpacity
       key={renderId}
       onPress={onPress}
-      className={clsx("flex-row items-end justify-end gap-1 rounded-lg p-4")}
+      className={clsx("h-[44px] flex-row items-center justify-end gap-1 rounded-lg px-4")}
     >
-      <ChevronLeft size={18} color={colors.onSurface} />
-      <Text className={clsx("text-md font-medium", classes.text)}>Back</Text>
+      <ChevronLeft size={20} color={colors.onSurface} />
+      <Text className={clsx("text-lg font-medium", classes.text)}>Back</Text>
     </TouchableOpacity>
   );
 }

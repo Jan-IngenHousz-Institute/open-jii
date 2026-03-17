@@ -4,10 +4,13 @@ import { useIsFocused } from "@react-navigation/native";
 import clsx from "clsx";
 import { useKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { Image, View, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
+import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
@@ -20,10 +23,16 @@ function getStepLabel(
   currentFlowStep: number,
   flowNodes: any[],
   isFlowFinished: boolean,
+  isQuestionsSubmitPending: boolean,
 ): string {
   // No experiment selected yet
   if (!experimentId) {
     return "Choose an experiment to begin your experiment workflow.";
+  }
+
+  // Questions-only submit screen
+  if (isQuestionsSubmitPending) {
+    return "Review your answers and upload them before continuing.";
   }
 
   // Flow completed
@@ -61,24 +70,40 @@ interface MeasurementFlowScreenProps {
 export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
   const { classes } = useTheme();
-  const { resetFlow, flowNodes, currentFlowStep, isFlowFinished, experimentId } =
-    useMeasurementFlowStore();
+  const {
+    resetFlow,
+    flowNodes,
+    currentFlowStep,
+    isFlowFinished,
+    experimentId,
+    isQuestionsSubmitPending,
+  } = useMeasurementFlowStore();
   const { clearHistory } = useFlowAnswersStore();
+  const { setSelectedExperimentId } = useExperimentSelectionStore();
+  const router = useRouter();
   const isFocused = useIsFocused();
   const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
 
   const handleEndFlow = () => {
+    setSelectedExperimentId(undefined);
     resetFlow();
     clearHistory();
     onEndFlowComplete?.();
+    router.navigate("/(tabs)/");
   };
 
   // Get the dynamic step label
-  const stepLabel = getStepLabel(experimentId, currentFlowStep, flowNodes, isFlowFinished);
-  const shouldShowEndFlowButton = !!experimentId;
+  const stepLabel = getStepLabel(
+    experimentId,
+    currentFlowStep,
+    flowNodes,
+    isFlowFinished,
+    isQuestionsSubmitPending,
+  );
 
   return (
-    <View className={clsx("flex-1", classes.background)}>
+    <View className={clsx("flex-1", classes.background)} style={{ paddingBottom: insets.bottom }}>
       {isFocused && <StatusBar style="light" />}
 
       {/* Background */}
@@ -103,26 +128,17 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
         }}
       />
 
-      {/* Foreground content */}
+      {/* Foreground */}
       <View
         className="flex-1"
         style={{
           paddingTop: headerHeight,
         }}
       >
-        {shouldShowEndFlowButton && (
-          <View className="mb-4 flex-row items-end px-4">
-            <Text className="mr-2 flex-1 text-lg text-white">{stepLabel}</Text>
-            <EndFlowButton onPress={handleEndFlow} />
-          </View>
-        )}
-
-        {!shouldShowEndFlowButton && (
-          <View className="mb-4 flex-row items-center justify-between px-4">
-            <Text className="text-lg text-white">{stepLabel}</Text>
-            <View />
-          </View>
-        )}
+        <View className="mb-4 flex-row items-end px-4">
+          <Text className="mr-2 flex-1 text-lg text-white">{stepLabel}</Text>
+          <EndFlowButton onPress={handleEndFlow} />
+        </View>
 
         <MeasurementFlowContainer />
 
