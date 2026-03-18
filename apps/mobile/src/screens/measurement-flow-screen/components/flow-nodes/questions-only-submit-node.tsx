@@ -38,8 +38,6 @@ export function QuestionsOnlySubmitNode() {
       return false;
     }
 
-    // NOTE: timestamp === normalized UTC timestamp (never a local time with offset suffix).
-    // The timezone field is what enables local-time derivation downstream.
     const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
 

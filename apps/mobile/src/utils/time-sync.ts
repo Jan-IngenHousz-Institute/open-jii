@@ -195,7 +195,11 @@ export function getSyncedUtcDateTime(): DateTime {
 }
 
 /** Get the current synced time as an ISO string in the user's resolved timezone.
- *  Use this for display purposes only — never send this value as a timestamp. */
+ *
+ * ⚠️ Use this for display purposes only — never send this value as a timestamp.
+ *
+ * For values that need to be sent to the server use `getSyncedUtcISO`
+ **/
 export function getSyncedLocalISO(): string {
   const iso = DateTime.fromMillis(getSyncedUtcNow(), { zone: state.timezone }).toISO();
   return iso ?? new Date().toISOString();

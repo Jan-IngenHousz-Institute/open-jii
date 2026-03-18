@@ -49,8 +49,6 @@ function prepareMeasurementForUpload({
   const macros: MacroInfo[] = macro ? [macro] : [];
   const annotations = commentText ? buildAnnotationsWithComment(commentText) : [];
 
-  // NOTE: timestamp === normalized UTC timestamp. timezone is the IANA name (e.g. "Europe/Amsterdam").
-  // Together they are the source of truth — all local-time representations are derived from these two.
   const payload = {
     questions,
     macros,
