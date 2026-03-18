@@ -71,21 +71,8 @@ jobs:
           echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
           echo "Checked out SHA: $ACTUAL_SHA"
 
-      - name: Capture Deployment Start Time
-        id: deployment-start
-        run: |
-          DEPLOY_START=$(date +%s)
-          echo "DEPLOY_START_TIME=$DEPLOY_START" >> $GITHUB_ENV
-          echo "deploy_start_time=$DEPLOY_START" >> $GITHUB_OUTPUT
-
-          COMMIT_TIME=$(git show -s --format=%ct)
-          echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
-          echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
-
-          echo "📊 DORA Metrics Collection Started"
-          echo "  Language: ${{ matrix.language }}"
-          echo "  Commit SHA: $ACTUAL_SHA"
-
+    - name: Capture Deployment Start Time
+        uses: ./.github/actions/capture-dora-start
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
