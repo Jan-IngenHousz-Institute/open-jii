@@ -21,7 +21,7 @@ runs:
         tofu_version: ${{ inputs.tofu_version }}
 
     - name: Cache OpenTofu Plugins
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.terraform.d/plugin-cache
         key: ${{ runner.os }}-tofu-${{ hashFiles('**/*.tf') }}
@@ -29,7 +29,7 @@ runs:
           ${{ runner.os }}-tofu-
 
     - name: Configure AWS Credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v6
       with:
         role-to-assume: ${{ inputs.aws_role_arn }}
         aws-region: ${{ inputs.aws_region }}

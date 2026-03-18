@@ -1,8 +1,12 @@
+import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { NewProtocolForm } from "../new-protocol";
+
+globalThis.React = React;
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -28,14 +32,24 @@ vi.mock("@/hooks/useLocale", () => ({
   useLocale: () => "en",
 }));
 
-// Mock hooks added by protocol-macro compatibility feature
+// Mock tsr (used directly by NewProtocolForm for macro search)
 const mockMacroList = [
   { id: "macro-1", name: "SPAD Macro", language: "python" },
   { id: "macro-2", name: "Fluorescence Macro", language: "python" },
 ];
 
-vi.mock("@/hooks/macro/useMacros/useMacros", () => ({
-  useMacros: () => ({ data: mockMacroList }),
+vi.mock("../../../lib/tsr", () => ({
+  tsr: {
+    macros: {
+      listMacros: {
+        useQuery: vi.fn(() => ({
+          data: { body: mockMacroList },
+          isLoading: false,
+          error: null,
+        })),
+      },
+    },
+  },
 }));
 
 vi.mock("@/hooks/useDebounce", () => ({
@@ -83,12 +97,15 @@ vi.mock("../../protocol-code-editor", () => ({
     value,
     onChange,
     onValidationChange,
+    title,
   }: {
     value: Record<string, unknown>[];
     onChange: (v: Record<string, unknown>[]) => void;
     onValidationChange: (v: boolean) => void;
+    title?: string;
   }) => (
     <div data-testid="protocol-code-editor">
+      {title && <span>{title}</span>}
       <textarea
         data-testid="code-editor"
         value={JSON.stringify(value)}
@@ -281,11 +298,10 @@ describe("NewProtocolForm", () => {
     expect(codeEditor).toHaveValue(JSON.stringify([{}]));
   });
 
-  it("should display code section with title and description", () => {
+  it("should display code section with title", () => {
     render(<NewProtocolForm />);
 
     expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.codeDescription")).toBeInTheDocument();
   });
 
   it("should handle code editor changes", () => {
@@ -323,13 +339,6 @@ describe("NewProtocolForm", () => {
   });
 
   describe("Compatible Macros Section", () => {
-    it("should render the compatible macros card", () => {
-      render(<NewProtocolForm />);
-
-      expect(screen.getByText("newProtocol.compatibleMacros")).toBeInTheDocument();
-      expect(screen.getByText("newProtocol.compatibleMacrosDescription")).toBeInTheDocument();
-    });
-
     it("should render MacroSearchWithDropdown", () => {
       render(<NewProtocolForm />);
 

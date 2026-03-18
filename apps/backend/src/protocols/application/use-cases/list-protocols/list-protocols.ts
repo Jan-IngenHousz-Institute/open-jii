@@ -10,7 +10,11 @@ import { ProtocolRepository } from "../../../core/repositories/protocol.reposito
 export class ListProtocolsUseCase {
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
-  async execute(search?: ProtocolFilter): Promise<Result<ProtocolDto[]>> {
-    return this.protocolRepository.findAll(search);
+  async execute(
+    search?: ProtocolFilter,
+    filter?: "my",
+    userId?: string,
+  ): Promise<Result<ProtocolDto[]>> {
+    return this.protocolRepository.findAll(search, filter, userId);
   }
 }

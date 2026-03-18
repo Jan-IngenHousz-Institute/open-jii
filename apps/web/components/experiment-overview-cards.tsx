@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import React from "react";
 import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
 import type { Experiment } from "@repo/api";
@@ -34,41 +35,34 @@ export function ExperimentOverviewCards({
   }
 
   return (
-    <>
-      {/* Experiments Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {experiments.map((experiment) => {
-          const experimentPath = archived
-            ? `/platform/experiments-archive/${experiment.id}`
-            : `/platform/experiments/${experiment.id}`;
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {experiments.map((experiment) => {
+        const experimentPath = archived
+          ? `/platform/experiments-archive/${experiment.id}`
+          : `/platform/experiments/${experiment.id}`;
 
-          return (
-            <Link key={experiment.id} href={experimentPath}>
-              <div className="relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
-                <div className="inline-flex">
-                  <ExperimentStatusBadge status={experiment.status} />
-                </div>
-                <div className="mb-auto">
-                  <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-                    {experiment.name}
-                  </h3>
-                  <div className="overflow-hidden text-sm text-gray-500">
-                    <RichTextRenderer
-                      content={experiment.description ?? " "}
-                      truncate
-                      maxLines={2}
-                    />
-                  </div>
-                </div>
-                <p className="mt-4 text-xs text-gray-400">
-                  {t("lastUpdate")}: {new Date(experiment.updatedAt).toLocaleDateString()}
-                </p>
-                <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+        return (
+          <Link key={experiment.id} href={experimentPath}>
+            <div className="relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
+              <div className="inline-flex">
+                <ExperimentStatusBadge status={experiment.status} />
               </div>
-            </Link>
-          );
-        })}
-      </div>
-    </>
+              <div className="mb-auto">
+                <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+                  {experiment.name}
+                </h3>
+                <div className="overflow-hidden text-sm text-gray-500">
+                  <RichTextRenderer content={experiment.description ?? " "} truncate maxLines={2} />
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-gray-400">
+                {t("lastUpdate")}: {new Date(experiment.updatedAt).toLocaleDateString()}
+              </p>
+              <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+            </div>
+          </Link>
+        );
+      })}
+    </div>
   );
 }

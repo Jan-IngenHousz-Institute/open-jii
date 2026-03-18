@@ -1,0 +1,18 @@
+name: 'Capture DORA Start'
+description: 'Captures deployment start time and commit timestamp for DORA metrics calculation'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Capture timestamps
+      shell: bash
+      run: |
+        DEPLOY_START=$(date +%s)
+        echo "DEPLOY_START_TIME=$DEPLOY_START" >> $GITHUB_ENV
+
+        COMMIT_TIME=$(git show -s --format=%ct)
+        echo "COMMIT_TIME=$COMMIT_TIME" >> $GITHUB_ENV
+
+        echo "📊 DORA Metrics Collection Started"
+        echo "  Deploy Start: $(date -d @$DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $DEPLOY_START -u '+%Y-%m-%d %H:%M:%S UTC')"
+        echo "  Commit Time: $(date -d @$COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -r $COMMIT_TIME -u '+%Y-%m-%d %H:%M:%S UTC')"

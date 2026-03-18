@@ -283,6 +283,8 @@ describe("MacroController", () => {
       expect(listMacrosUseCase.execute).toHaveBeenCalledWith({
         search: "test",
         language: "python",
+        filter: undefined,
+        userId: testUserId,
       });
     });
 

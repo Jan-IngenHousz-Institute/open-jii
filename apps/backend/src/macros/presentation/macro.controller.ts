@@ -70,11 +70,13 @@ export class MacroController {
   }
 
   @TsRestHandler(macroContract.listMacros)
-  listMacros() {
+  listMacros(@Session() session: UserSession) {
     return tsRestHandler(macroContract.listMacros, async ({ query }) => {
       const result = await this.listMacrosUseCase.execute({
         search: query.search,
         language: query.language,
+        filter: query.filter,
+        userId: session.user.id,
       });
 
       if (result.isSuccess()) {

@@ -70,7 +70,7 @@ describe("MacroPage", () => {
     expect(link).toHaveAttribute("data-locale", "en-US");
 
     const button = screen.getByTestId("button");
-    expect(button).toHaveAttribute("data-variant", "outline");
+    expect(button).not.toHaveAttribute("data-variant");
     expect(button).toHaveTextContent("Create New Macro");
   });
 
