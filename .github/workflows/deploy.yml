@@ -28,6 +28,11 @@ on:
         required: false
         type: boolean
         default: false
+      deploy_app:
+        description: "Comma-separated apps to force deploy (e.g. web,backend). Leave empty for change detection."
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: deploy-${{ inputs.environment }}
@@ -76,7 +81,7 @@ jobs:
       always() &&
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), '@repo/database'))
+      (inputs.deploy_all || contains(inputs.deploy_app, 'migration') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect-changes.outputs.affected_apps), '@repo/database')))
     permissions:
       id-token: write
       contents: read
@@ -95,7 +100,7 @@ jobs:
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.database-migrations.result) &&
-      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend'))
+      (inputs.deploy_all || contains(inputs.deploy_app, 'backend') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend')))
     permissions:
       id-token: write
       contents: read
@@ -113,7 +118,7 @@ jobs:
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.deploy-backend.result) &&
-      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web'))
+      (inputs.deploy_all || contains(inputs.deploy_app, 'web') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')))
     permissions:
       id-token: write
       contents: read
@@ -130,7 +135,7 @@ jobs:
       always() &&
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs'))
+      (inputs.deploy_all || contains(inputs.deploy_app, 'docs') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'docs')))
     permissions:
       id-token: write
       contents: read
@@ -147,7 +152,7 @@ jobs:
       always() &&
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'data'))
+      (inputs.deploy_all || contains(inputs.deploy_app, 'databricks') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'data')))
     permissions:
       id-token: write
       contents: read
