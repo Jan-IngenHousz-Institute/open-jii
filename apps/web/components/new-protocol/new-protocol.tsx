@@ -119,7 +119,7 @@ export function NewProtocolForm() {
   const handleAddMacro = (macroId: string) => {
     const macro = macroList?.find((m) => m.id === macroId);
     if (macro) {
-      setSelectedMacros((prev) => [...prev, macro]);
+      setSelectedMacros((prev) => [...prev, macro].sort((a, b) => a.name.localeCompare(b.name)));
       setMacroSearch("");
     }
   };

@@ -376,6 +376,21 @@ describe("NewProtocolForm", () => {
       expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-2");
     });
 
+    it("should display selected macros in alphabetical order", () => {
+      render(<NewProtocolForm />);
+
+      // Add macros in non-alphabetical order: "SPAD Macro" then "Fluorescence Macro"
+      act(() => {
+        lastDropdownProps?.onAddMacro("macro-1"); // SPAD Macro
+      });
+      act(() => {
+        lastDropdownProps?.onAddMacro("macro-2"); // Fluorescence Macro
+      });
+
+      const items = screen.getAllByText(/Macro/).map((el) => el.textContent);
+      expect(items).toEqual(["Fluorescence Macro", "SPAD Macro"]);
+    });
+
     it("should remove a macro when its remove button is clicked", async () => {
       render(<NewProtocolForm />);
 
