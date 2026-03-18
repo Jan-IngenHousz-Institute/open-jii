@@ -150,12 +150,6 @@ def raw_data():
         .withColumn("partitionKey", F.col("partitionKey"))
         # Parse data for basic extraction
         .withColumn("parsed_data", F.from_json(F.col("data").cast("string"), sensor_schema))
-        # Extract UTC offset from raw timestamp string before it's lost in TimestampType parsing
-        # e.g. "2026-03-16T14:00:18.022+01:00" -> "+01:00", used as fallback when IANA timezone is absent
-        .withColumn("utc_offset", F.when(
-            F.regexp_extract(F.get_json_object(F.col("data").cast("string"), "$.timestamp"), r"([+-]\d{2}:\d{2})$", 1) != "",
-            F.regexp_extract(F.get_json_object(F.col("data").cast("string"), "$.timestamp"), r"([+-]\d{2}:\d{2})$", 1)
-        ))
         .withColumn("ingest_date", F.to_date(F.col("ingestion_timestamp")))
         # Basic experiment_id extraction for partitioning
         .withColumn("experiment_id", F.coalesce(
@@ -166,7 +160,6 @@ def raw_data():
         .select(
             "experiment_id",
             "parsed_data",
-            "utc_offset",
             "ingestion_timestamp",
             "ingest_date",
             "kinesis_sequence_number",
@@ -212,8 +205,9 @@ def clean_data():
         )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
-        # Prefer IANA timezone name from payload; fall back to UTC offset extracted from timestamp string
-        .withColumn("timezone", F.coalesce(F.col("parsed_data.timezone"), F.col("utc_offset")))
+        # NOTE: timestamp === normalized UTC timestamp. timezone is the IANA name (e.g. "Europe/Amsterdam").
+        # Together they are the source of truth — all local-time representations are derived from these two.
+        .withColumn("timezone", F.col("parsed_data.timezone"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
