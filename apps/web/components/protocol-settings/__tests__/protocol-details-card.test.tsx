@@ -80,7 +80,7 @@ describe("ProtocolDetailsCard", () => {
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/family/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /code/i })).toBeInTheDocument();
+    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 
   it("should disable submit button when form is pristine", () => {

@@ -123,14 +123,14 @@ vi.mock("../../protocol-code-editor", () => ({
   ),
 }));
 
-// Mock NewProtocolDetailsCard
-vi.mock("../new-protocol-details-card", () => ({
-  NewProtocolDetailsCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="protocol-details-card">
-      <input data-testid="name-input" placeholder="Protocol name" />
-      <textarea data-testid="description-input" placeholder="Description" />
-    </div>
-  ),
+// Mock IotProtocolRunner
+vi.mock("../../iot/iot-protocol-runner", () => ({
+  IotProtocolRunner: () => <div data-testid="iot-protocol-runner">Protocol Runner</div>,
+}));
+
+// Mock useIotBrowserSupport
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => ({ bluetooth: true, serial: true, any: true }),
 }));
 
 describe("NewProtocolForm", () => {
@@ -142,9 +142,9 @@ describe("NewProtocolForm", () => {
   it("should render the form with all sections", () => {
     render(<NewProtocolForm />);
 
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
+    expect(screen.getByTestId("iot-protocol-runner")).toBeInTheDocument();
   });
 
   it("should render submit and cancel buttons", () => {
@@ -174,10 +174,6 @@ describe("NewProtocolForm", () => {
     render(<NewProtocolForm />);
 
     const codeEditor = screen.getByTestId("code-editor");
-
-    // Make the form dirty
-    const nameInput = screen.getByTestId("name-input");
-    await userEvent.type(nameInput, "Test Protocol");
 
     // Set invalid code
     // Use fireEvent for JSON strings with curly braces
@@ -298,10 +294,11 @@ describe("NewProtocolForm", () => {
     expect(codeEditor).toHaveValue(JSON.stringify([{}]));
   });
 
-  it("should display code section with title", () => {
+  it("should display details section", () => {
     render(<NewProtocolForm />);
 
-    expect(screen.getByText("newProtocol.codeTitle")).toBeInTheDocument();
+    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
+    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 
   it("should handle code editor changes", () => {
@@ -330,12 +327,12 @@ describe("NewProtocolForm", () => {
     expect(submitButton).toBeDisabled();
   });
 
-  it("should use multispeq as default family", () => {
+  it("should use generic as default family", () => {
     render(<NewProtocolForm />);
 
-    // The form should initialize with family: "multispeq"
+    // The form should initialize with family: "generic"
     // This is implicit in the defaultValues
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
   });
 
   describe("Compatible Macros Section", () => {

@@ -15,6 +15,7 @@ vi.mock("../../hooks/protocol/useProtocol/useProtocol", () => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    i18n: { language: "en-US" },
   }),
 }));
 
@@ -31,6 +32,14 @@ vi.mock("./protocol-info-card", () => ({
   ProtocolInfoCard: (props: Record<string, unknown>) => (
     <div data-testid="protocol-info-card" data-protocol-id={props.protocolId}>
       ProtocolInfoCard
+    </div>
+  ),
+}));
+
+vi.mock("./protocol-compatible-macros-card", () => ({
+  ProtocolCompatibleMacrosCard: (props: Record<string, unknown>) => (
+    <div data-testid="protocol-compatible-macros-card" data-protocol-id={props.protocolId}>
+      ProtocolCompatibleMacrosCard
     </div>
   ),
 }));

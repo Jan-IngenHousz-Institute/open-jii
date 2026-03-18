@@ -90,15 +90,16 @@ export function useIotCommunication(
       adapter = await createAdapter(sensorFamily, connectionType);
 
       const newDriver = createDriver(sensorFamily);
-      newDriver.initialize(adapter);
+      await newDriver.initialize(adapter);
 
       const info = await newDriver.getDeviceInfo?.();
 
       setDriver(newDriver);
-      setDeviceInfo((info as DeviceInfo) ?? null);
+      setDeviceInfo(info ? (info as DeviceInfo) : null);
       setIsConnected(true);
     } catch (err) {
       // Release the port/adapter so the user can retry
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       await adapter?.disconnect().catch(() => {});
       setDriver(null);
       setDeviceInfo(null);
