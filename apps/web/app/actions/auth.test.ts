@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { authClient } from "@repo/auth/client";
 import type { Session } from "@repo/auth/types";
 
-import { auth, resetRegistrationStatus } from "./auth";
+import { auth } from "./auth";
 
 // Mock next/headers
 vi.mock("next/headers", () => ({
@@ -15,13 +15,11 @@ vi.mock("next/headers", () => ({
 vi.mock("@repo/auth/client", () => ({
   authClient: {
     getSession: vi.fn(),
-    updateUser: vi.fn(),
   },
 }));
 
 const mockHeaders = vi.mocked(headers);
 const mockGetSession = vi.mocked(authClient.getSession);
-const mockUpdateUser = vi.mocked(authClient.updateUser);
 
 describe("auth", () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
@@ -127,50 +125,5 @@ describe("auth", () => {
 
     expect(result).toBeNull();
     expect(consoleErrorSpy).toHaveBeenCalledWith("Session fetch error:", mockError);
-  });
-});
-
-describe("resetRegistrationStatus", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("calls updateUser with registered: false and forwards headers", async () => {
-    const mockHeadersList = new Headers({ cookie: "session=abc123" });
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockUpdateUser.mockResolvedValue({ data: {}, error: null });
-
-    await resetRegistrationStatus();
-
-    expect(mockHeaders).toHaveBeenCalled();
-    expect(mockUpdateUser).toHaveBeenCalledWith(
-      { registered: false },
-      { headers: mockHeadersList },
-    );
-  });
-
-  it("returns the result from updateUser", async () => {
-    const mockHeadersList = new Headers();
-    const mockResult = { data: { id: "user-123" }, error: null };
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockUpdateUser.mockResolvedValue(mockResult);
-
-    const result = await resetRegistrationStatus();
-
-    expect(result).toEqual(mockResult);
-  });
-
-  it("propagates errors from headers()", async () => {
-    mockHeaders.mockRejectedValue(new Error("Headers unavailable"));
-
-    await expect(resetRegistrationStatus()).rejects.toThrow("Headers unavailable");
-  });
-
-  it("propagates errors from updateUser", async () => {
-    const mockHeadersList = new Headers();
-    mockHeaders.mockResolvedValue(mockHeadersList);
-    mockUpdateUser.mockRejectedValue(new Error("Update failed"));
-
-    await expect(resetRegistrationStatus()).rejects.toThrow("Update failed");
   });
 });

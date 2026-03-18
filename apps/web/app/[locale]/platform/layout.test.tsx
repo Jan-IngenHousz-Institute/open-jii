@@ -10,10 +10,8 @@ globalThis.React = React;
 
 // --- Mocks ---
 const mockAuth = vi.fn();
-const mockResetRegistrationStatus = vi.fn();
 vi.mock("~/app/actions/auth", () => ({
   auth: (): unknown => mockAuth(),
-  resetRegistrationStatus: (): unknown => mockResetRegistrationStatus(),
 }));
 
 vi.mock("next/headers", () => ({
@@ -94,9 +92,7 @@ describe("AppLayout", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue({
-      user: { id: "123", name: "Test User", registered: true, email: "test@example.com" },
-    });
+    mockAuth.mockResolvedValue({ user: { id: "123", name: "Test User", registered: true } });
   });
 
   it("renders all layout components when authenticated", async () => {
@@ -174,36 +170,6 @@ describe("AppLayout", () => {
 
     await expect(AppLayout(germanProps)).rejects.toThrow("NEXT_REDIRECT");
     expect(mockRedirect).toHaveBeenCalledWith("/de/register?callbackUrl=%2Fplatform%2Fexperiments");
-  });
-
-  it("resets registration status and redirects to register when user has no valid email", async () => {
-    mockAuth.mockResolvedValueOnce({
-      user: { id: "123", name: "Test User", registered: true, email: null },
-    });
-    mockRedirect.mockImplementation(() => {
-      throw new Error("NEXT_REDIRECT");
-    });
-
-    await expect(AppLayout(defaultProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(mockResetRegistrationStatus).toHaveBeenCalledOnce();
-    expect(mockRedirect).toHaveBeenCalledWith(
-      "/en-US/register?callbackUrl=%2Fplatform%2Fexperiments",
-    );
-  });
-
-  it("resets registration status and redirects to register when user has an invalid email", async () => {
-    mockAuth.mockResolvedValueOnce({
-      user: { id: "123", name: "Test User", registered: true, email: "not-an-email" },
-    });
-    mockRedirect.mockImplementation(() => {
-      throw new Error("NEXT_REDIRECT");
-    });
-
-    await expect(AppLayout(defaultProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(mockResetRegistrationStatus).toHaveBeenCalledOnce();
-    expect(mockRedirect).toHaveBeenCalledWith(
-      "/en-US/register?callbackUrl=%2Fplatform%2Fexperiments",
-    );
   });
 
   it("renders platform top bar", async () => {

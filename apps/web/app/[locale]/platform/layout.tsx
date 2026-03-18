@@ -3,8 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 import { Suspense } from "react";
-import z from "zod";
-import { auth, resetRegistrationStatus } from "~/app/actions/auth";
+import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider, Toaster } from "@repo/ui/components";
 
@@ -40,14 +39,6 @@ export default async function AppLayout({
     const callbackUrl = await getCallbackUrl();
 
     // If the user is not registered, redirect them to the registration page.
-    redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
-  }
-
-  // Registered users with a missing or invalid email need to re-complete registration.
-  const hasValidEmail = z.string().email().safeParse(session.user.email).success;
-  if (!hasValidEmail) {
-    await resetRegistrationStatus();
-    const callbackUrl = await getCallbackUrl();
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 

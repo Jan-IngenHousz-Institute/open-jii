@@ -24,12 +24,3 @@ export async function auth(): Promise<Session | null> {
     return null;
   }
 }
-
-/**
- * Resets the `registered` flag to false so the user is redirected
- * back to the registration flow to provide a valid email address.
- */
-export async function resetRegistrationStatus() {
-  const headersList = await headers();
-  return await authClient.updateUser({ registered: false }, { headers: headersList });
-}
