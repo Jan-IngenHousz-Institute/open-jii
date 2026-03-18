@@ -1,3 +1,5 @@
+"use client";
+
 import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useDebounce } from "@/hooks/useDebounce";
