@@ -732,7 +732,7 @@
     "compatibleMacros": "Compatible Macros",
     "compatibleMacrosDescription": "Macros that are known to work with this protocol. These will be recommended in the flow builder.",
     "noCompatibleMacros": "No compatible macros linked yet.",
-    "addCompatibleMacro": "Search and add a compatible macro..."
+    "addCompatibleMacro": "Search and add a compatible macro...",
     "detailsTitle": "Protocol Details",
     "testerTitle": "Connect & Test"
   },

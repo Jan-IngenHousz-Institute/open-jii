@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import "@testing-library/jest-dom/vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
