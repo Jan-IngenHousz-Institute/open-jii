@@ -141,64 +141,13 @@ jobs:
           echo "   Code SHA: ${CURRENT_IMAGE}"
           echo "   Image: ${{ steps.build-image.outputs.image }}"
 
-      - name: Calculate DORA Metrics
-        id: dora-metrics
+      - name: Publish DORA Metrics
         if: always()
-        run: |
-          DEPLOY_END=$(date +%s)
-          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START_TIME))
-          LEAD_TIME=$((DEPLOY_END - COMMIT_TIME))
-          LEAD_TIME_MS=$((LEAD_TIME * 1000))
-
-          echo "lead_time_ms=$LEAD_TIME_MS" >> $GITHUB_OUTPUT
-          echo "deployment_duration=$DEPLOY_DURATION" >> $GITHUB_OUTPUT
-
-          echo "📊 DORA Metrics (${{ matrix.language }}):"
-          echo "  Lead Time: ${LEAD_TIME}s"
-          echo "  Deployment Duration: ${DEPLOY_DURATION}s"
-
-      - name: Publish DORA - Deployment Frequency
-        if: always()
-        uses: ./.github/actions/publish-dora-metric
+        uses: ./.github/actions/publish-dora-metrics
         with:
-          metric-name: "DeploymentFrequency"
-          value: "1"
-          unit: "Count"
+          deployment-outcome: ${{ steps.update-lambda.outcome || 'failure' }}
           service: "macro-sandbox-${{ matrix.language }}"
-          environment: ${{ env.ENV }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Publish DORA - Lead Time
-        if: always()
-        uses: ./.github/actions/publish-dora-metric
-        with:
-          metric-name: "LeadTime"
-          value: ${{ steps.dora-metrics.outputs.lead_time_ms }}
-          unit: "Milliseconds"
-          service: "macro-sandbox-${{ matrix.language }}"
-          environment: ${{ env.ENV }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Publish DORA - Deployment Success
-        if: always()
-        uses: ./.github/actions/publish-dora-metric
-        with:
-          metric-name: "DeploymentSuccess"
-          value: "1"
-          unit: "Count"
-          service: "macro-sandbox-${{ matrix.language }}"
-          environment: ${{ env.ENV }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Publish DORA - Deployment Failed
-        if: always()
-        uses: ./.github/actions/publish-dora-metric
-        with:
-          metric-name: "DeploymentFailed"
-          value: "1"
-          unit: "Count"
-          service: "macro-sandbox-${{ matrix.language }}"
-          environment: ${{ env.ENV }}
+          environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Deployment Summary
