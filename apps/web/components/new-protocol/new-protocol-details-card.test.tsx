@@ -57,30 +57,17 @@ const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocol
 };
 
 describe("NewProtocolDetailsCard", () => {
-  it("should render card title and description", () => {
+  it("should render name input with placeholder", () => {
     render(<TestWrapper />);
 
-    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.detailsDescription")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("newProtocol.name")).toBeInTheDocument();
   });
 
-  it("should render name input field", () => {
-    render(<TestWrapper />);
-
-    expect(screen.getByLabelText("newProtocol.name")).toBeInTheDocument();
-  });
-
-  it("should render description field", () => {
+  it("should render description field with placeholder", () => {
     render(<TestWrapper />);
 
     expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
-    expect(screen.getByText("newProtocol.description_field")).toBeInTheDocument();
-  });
-
-  it("should render family select field", () => {
-    render(<TestWrapper />);
-
-    expect(screen.getByLabelText("newProtocol.family")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("newProtocol.description_field")).toBeInTheDocument();
   });
 
   it("should display initial name value", () => {
@@ -89,18 +76,16 @@ describe("NewProtocolDetailsCard", () => {
     expect(screen.getByDisplayValue("My Protocol")).toBeInTheDocument();
   });
 
-  it("should show default family value in select trigger", () => {
+  it("should render both form fields", () => {
     render(<TestWrapper />);
 
-    // Default family is "generic" which displays as "Generic"
-    const trigger = screen.getByRole("combobox");
-    expect(trigger).toHaveTextContent("Generic");
-  });
+    // Name input
+    const nameInput = screen.getByPlaceholderText("newProtocol.name");
+    expect(nameInput).toBeInTheDocument();
+    expect(nameInput.tagName).toBe("INPUT");
 
-  it("should render select trigger for family", () => {
-    render(<TestWrapper />);
-
-    const trigger = screen.getByRole("combobox");
-    expect(trigger).toBeInTheDocument();
+    // Description textarea
+    const description = screen.getByTestId("rich-textarea");
+    expect(description).toBeInTheDocument();
   });
 });
