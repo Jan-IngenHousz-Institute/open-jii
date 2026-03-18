@@ -194,9 +194,22 @@ export function getSyncedUtcDateTime(): DateTime {
   return DateTime.fromMillis(getSyncedUtcNow(), { zone: "utc" });
 }
 
-/** Get the current synced time as an ISO string in the user's resolved timezone. */
+/** Get the current synced time as an ISO string in the user's resolved timezone.
+ *  Use this for display purposes only — never send this value as a timestamp. */
 export function getSyncedLocalISO(): string {
   const iso = DateTime.fromMillis(getSyncedUtcNow(), { zone: state.timezone }).toISO();
+  return iso ?? new Date().toISOString();
+}
+
+/**
+ * Get the current synced time as a normalized UTC ISO string (e.g. "2026-03-16T13:00:18.022Z").
+ *
+ * NOTE: `timestamp` in all uploaded payloads === normalized UTC timestamp.
+ * It is always UTC — never a local time with an offset suffix.
+ * The companion `timezone` field (IANA name) is what enables local-time derivation downstream.
+ */
+export function getSyncedUtcISO(): string {
+  const iso = getSyncedUtcDateTime().toISO();
   return iso ?? new Date().toISOString();
 }
 

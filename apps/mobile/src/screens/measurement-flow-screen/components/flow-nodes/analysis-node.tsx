@@ -21,7 +21,7 @@ import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
-import { getSyncedLocalISO, getTimeSyncState } from "~/utils/time-sync";
+import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
 
 interface AnalysisNodeProps {
   content: {
@@ -132,7 +132,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
     // Capture timestamp/timezone at upload time so the sync service
     // has had a chance to complete its first sync.
-    const timestamp = getSyncedLocalISO();
+    // NOTE: timestamp === normalized UTC timestamp (never a local time with offset suffix).
+    // The timezone field is what enables local-time derivation downstream.
+    const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
 
     const cycleAnswers = getCycleAnswers(iterationCount);
