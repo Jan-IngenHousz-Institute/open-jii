@@ -8,6 +8,13 @@ export type QuestionKind =
   | "yes_no"
   | "open_ended";
 
+export function isQuestionsOnlyFlow(flowNodes: FlowNode[]): boolean {
+  return (
+    flowNodes.length > 0 &&
+    flowNodes.every((n) => n.type === "question" || n.type === "instruction")
+  );
+}
+
 export interface FlowNode {
   id: string;
   name: string;

@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import type { Experiment } from "@repo/api";
@@ -11,7 +12,6 @@ vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
-        "experiments.loadingExperiments": "Loading experiments...",
         "experiments.noExperiments": "No experiments found",
         lastUpdate: "Last update",
       };
@@ -27,16 +27,15 @@ vi.mock("~/components/ExperimentStatusBadge", () => ({
   ),
 }));
 
-// Mock RichTextRenderer
-vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    RichTextRenderer: ({ content }: { content: string }) => (
-      <div data-testid="rich-text">{content}</div>
-    ),
-  };
-});
+// Mock @repo/ui/components
+vi.mock("@repo/ui/components", () => ({
+  RichTextRenderer: ({ content }: { content: string }) => (
+    <div data-testid="rich-text">{content}</div>
+  ),
+  Skeleton: ({ className }: { className?: string }) => (
+    <div data-testid="skeleton" className={`animate-pulse ${className}`} />
+  ),
+}));
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -80,8 +79,8 @@ describe("ExperimentOverviewCards", () => {
     });
   });
 
-  describe("vertical layout (default)", () => {
-    it("renders experiments in vertical layout by default", () => {
+  describe("card rendering", () => {
+    it("renders experiments with name, description, and status badge", () => {
       render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
       expect(screen.getByText("Test Experiment")).toBeInTheDocument();
       expect(screen.getByText("Test description")).toBeInTheDocument();
@@ -102,7 +101,7 @@ describe("ExperimentOverviewCards", () => {
       expect(link).toBeInTheDocument();
     });
 
-    it("renders multiple experiments in vertical layout", () => {
+    it("renders multiple experiments", () => {
       const experiments: Experiment[] = [
         mockExperiment,
         { ...mockExperiment, id: "2", name: "Second Experiment" },
@@ -112,17 +111,17 @@ describe("ExperimentOverviewCards", () => {
       expect(screen.getByText("Second Experiment")).toBeInTheDocument();
     });
 
-    it("displays formatted last update date in vertical layout", () => {
+    it("displays last update date", () => {
       render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
       expect(screen.getByText(/Last update:/)).toBeInTheDocument();
     });
 
-    it("renders ChevronRight icon in vertical layout", () => {
+    it("renders ChevronRight icon", () => {
       render(<ExperimentOverviewCards experiments={[mockExperiment]} />);
       expect(screen.getByTestId("chevron-right")).toBeInTheDocument();
     });
 
-    it("handles experiment with null description in vertical layout", () => {
+    it("handles experiment with null description", () => {
       const experimentWithoutDesc = { ...mockExperiment, description: null };
       render(<ExperimentOverviewCards experiments={[experimentWithoutDesc]} />);
       expect(screen.getByText("Test Experiment")).toBeInTheDocument();

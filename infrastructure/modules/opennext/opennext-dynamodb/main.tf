@@ -21,9 +21,17 @@ resource "aws_dynamodb_table" "revalidation" {
 
   global_secondary_index {
     name            = "revalidate"
-    hash_key        = "path"
-    range_key       = "revalidatedAt"
     projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "path"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "revalidatedAt"
+      key_type       = "RANGE"
+    }
   }
 
   point_in_time_recovery {
@@ -38,5 +46,8 @@ resource "aws_dynamodb_table" "revalidation" {
 
   lifecycle {
     prevent_destroy = true
+    # Ignore GSI changes to prevent provider schema drift (e.g. warm_throughput)
+    # from triggering unnecessary GSI rebuilds on provider upgrades.
+    ignore_changes = [global_secondary_index]
   }
 }

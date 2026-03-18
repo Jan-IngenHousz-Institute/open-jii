@@ -127,9 +127,7 @@ export function ProtocolDetailsCard({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="multispeq">MultispeQ</SelectItem>
-                      <SelectItem value="ambit" disabled>
-                        Ambit (Coming Soon)
-                      </SelectItem>
+                      <SelectItem value="ambit">Ambit</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

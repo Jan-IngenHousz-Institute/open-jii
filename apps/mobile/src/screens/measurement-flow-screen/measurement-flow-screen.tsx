@@ -23,10 +23,16 @@ function getStepLabel(
   currentFlowStep: number,
   flowNodes: any[],
   isFlowFinished: boolean,
+  isQuestionsSubmitPending: boolean,
 ): string {
   // No experiment selected yet
   if (!experimentId) {
     return "Choose an experiment to begin your experiment workflow.";
+  }
+
+  // Questions-only submit screen
+  if (isQuestionsSubmitPending) {
+    return "Review your answers and upload them before continuing.";
   }
 
   // Flow completed
@@ -64,8 +70,14 @@ interface MeasurementFlowScreenProps {
 export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
   const { classes } = useTheme();
-  const { resetFlow, flowNodes, currentFlowStep, isFlowFinished, experimentId } =
-    useMeasurementFlowStore();
+  const {
+    resetFlow,
+    flowNodes,
+    currentFlowStep,
+    isFlowFinished,
+    experimentId,
+    isQuestionsSubmitPending,
+  } = useMeasurementFlowStore();
   const { clearHistory } = useFlowAnswersStore();
   const { setSelectedExperimentId } = useExperimentSelectionStore();
   const router = useRouter();
@@ -82,7 +94,13 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
   };
 
   // Get the dynamic step label
-  const stepLabel = getStepLabel(experimentId, currentFlowStep, flowNodes, isFlowFinished);
+  const stepLabel = getStepLabel(
+    experimentId,
+    currentFlowStep,
+    flowNodes,
+    isFlowFinished,
+    isQuestionsSubmitPending,
+  );
 
   return (
     <View className={clsx("flex-1", classes.background)} style={{ paddingBottom: insets.bottom }}>

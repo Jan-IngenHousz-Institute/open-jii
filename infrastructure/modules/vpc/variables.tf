@@ -64,9 +64,3 @@ variable "create_migration_resources" {
   type        = bool
   default     = true
 }
-
-variable "create_lambda_resources" {
-  description = "Whether to create Lambda (OpenNext server) security group"
-  type        = bool
-  default     = true
-}
