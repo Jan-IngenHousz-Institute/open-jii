@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -7,7 +8,8 @@ import { MacroDetailsCard } from "./macro-details-card";
 interface MockMacroCodeEditorProps {
   value: string;
   language: string;
-  macroName: string;
+  label?: string;
+  error?: string;
   onChange: (value: string) => void;
 }
 
@@ -43,11 +45,10 @@ interface MockRichTextareaProps {
 
 // Mock MacroCodeEditor
 vi.mock("../macro-code-editor", () => ({
-  default: ({ value, language, macroName, onChange }: MockMacroCodeEditorProps) => (
+  default: ({ value, language, onChange }: MockMacroCodeEditorProps) => (
     <div data-testid="macro-code-editor">
       <div data-testid="editor-value">{value}</div>
       <div data-testid="editor-language">{language}</div>
-      <div data-testid="editor-macro-name">{macroName}</div>
       <textarea
         data-testid="editor-textarea"
         value={value}
@@ -83,6 +84,18 @@ vi.mock("@/util/schema", () => ({
       safeParse: vi.fn(),
     }),
   },
+}));
+
+// Mock base64 utilities
+vi.mock("@/util/base64", () => ({
+  decodeBase64: (s: string) => {
+    try {
+      return atob(s);
+    } catch {
+      return "";
+    }
+  },
+  encodeBase64: (s: string) => btoa(s),
 }));
 
 // Mock macro update hook
@@ -274,7 +287,6 @@ describe("MacroDetailsCard", () => {
     expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
     expect(screen.getByTestId("editor-value")).toHaveTextContent("print('Hello World')"); // Should show decoded value
     expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
-    expect(screen.getByTestId("editor-macro-name")).toHaveTextContent(mockMacro.name);
   });
 
   it("should handle different initial values", () => {

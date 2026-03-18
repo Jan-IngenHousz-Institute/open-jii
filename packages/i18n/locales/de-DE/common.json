@@ -56,7 +56,9 @@
     "greeting": "Hallo, {{name}}",
     "preferred": "Bevorzugt",
     "recommended": "Empfohlen",
-    "compatibleWithProtocol": "Kompatibel mit {{protocolName}} Protokoll"
+    "compatibleWithProtocol": "Kompatibel mit {{protocolName}} Protokoll",
+    "showAll": "Alle anzeigen",
+    "showLess": "Weniger anzeigen"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -570,7 +572,16 @@
     "notFound": "Protokoll nicht gefunden",
     "notFoundDescription": "Das angeforderte Protokoll konnte nicht gefunden werden",
     "family": "Sensorfamilie",
-    "onlyCreatorCanEdit": "Nur der Protokollersteller kann auf die Einstellungen zugreifen"
+    "onlyCreatorCanEdit": "Nur der Protokollersteller kann auf die Einstellungen zugreifen",
+    "filterMy": "Meine Protokolle",
+    "filterAll": "Alle Protokolle",
+    "filterProtocols": "Protokolle filtern",
+    "clearSearch": "Suche löschen",
+    "searchProtocols": "Protokolle suchen...",
+    "descriptionPlaceholder": "Beschreibung hinzufügen...",
+    "detailsTitle": "Details",
+    "codePlaceholder": "Protokollcode als JSON eingeben",
+    "lastUpdate": "Letzte Aktualisierung"
   },
   "newProtocol": {
     "description": "Richten Sie ein neues Protokoll ein.",

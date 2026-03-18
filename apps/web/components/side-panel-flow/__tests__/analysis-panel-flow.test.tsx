@@ -71,17 +71,21 @@ const mockMacros = [
   },
 ];
 
-// Mock the useMacros hook
-vi.mock("~/hooks/macro/useMacros/useMacros", () => ({
-  useMacros: vi.fn(({ search }: { search?: string }) => {
-    const filteredMacros = search
-      ? mockMacros.filter((macro) => macro.name.toLowerCase().includes(search.toLowerCase()))
-      : mockMacros;
-
-    return {
-      data: filteredMacros,
-    };
-  }),
+// Mock tsr to replace the direct tsr.macros.listMacros.useQuery call
+vi.mock("../../../lib/tsr", () => ({
+  tsr: {
+    macros: {
+      listMacros: {
+        useQuery: vi.fn(({ queryData }: { queryData?: { query?: { search?: string } } }) => {
+          const search = queryData?.query?.search;
+          const filteredMacros = search
+            ? mockMacros.filter((macro) => macro.name.toLowerCase().includes(search.toLowerCase()))
+            : mockMacros;
+          return { data: { body: filteredMacros }, isLoading: false, error: null };
+        }),
+      },
+    },
+  },
 }));
 
 describe("<AnalysisPanel />", () => {

@@ -63,6 +63,7 @@ vi.mock("lucide-react", () => ({
   X: () => <span data-testid="icon-x">X</span>,
   ChevronDown: () => <span data-testid="icon-chevron-down">ChevronDown</span>,
   ChevronUp: () => <span data-testid="icon-chevron-up">ChevronUp</span>,
+  Pencil: () => <span data-testid="icon-pencil">Pencil</span>,
 }));
 
 // ---------- Helpers ----------
@@ -213,7 +214,6 @@ describe("ExperimentDescription", () => {
       expect.objectContaining({
         onSuccess: expect.any(Function) as unknown,
         onError: expect.any(Function) as unknown,
-        onSettled: expect.any(Function) as unknown,
       }),
     );
   });

@@ -1,7 +1,9 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { toast } from "@repo/ui/hooks";
 
 import ProtocolOverviewPage from "../page";
 
@@ -31,13 +33,24 @@ vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
   useProtocol: () => mockUseProtocol(),
 }));
 
-interface MockCompatibleReturn {
-  data: { body: { macro: { id: string; name: string; language: string } }[] } | undefined;
+const mockMutateAsync = vi.fn();
+const mockMutate = vi.fn();
+
+interface MockProtocolUpdateReturn {
+  mutateAsync: typeof mockMutateAsync;
+  mutate: typeof mockMutate;
+  isPending: boolean;
 }
 
-const mockUseCompatibleMacros = vi.fn<() => MockCompatibleReturn>();
-vi.mock("@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros", () => ({
-  useProtocolCompatibleMacros: () => mockUseCompatibleMacros(),
+const mockUseProtocolUpdate = vi.fn<() => MockProtocolUpdateReturn>();
+vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
+  useProtocolUpdate: () => mockUseProtocolUpdate(),
+}));
+
+vi.mock("@repo/auth/client", () => ({
+  useSession: () => ({
+    data: { user: { id: "user-123" } },
+  }),
 }));
 
 vi.mock("@repo/i18n", () => ({
@@ -46,8 +59,12 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-vi.mock("@/util/date", () => ({
-  formatDate: (d: string) => d,
+vi.mock("@repo/ui/hooks", () => ({
+  toast: vi.fn(),
+}));
+
+vi.mock("~/util/apiError", () => ({
+  parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
 vi.mock("@/components/error-display", () => ({
@@ -57,33 +74,120 @@ vi.mock("@/components/error-display", () => ({
 }));
 
 vi.mock("@/components/json-code-viewer", () => ({
-  JsonCodeViewer: ({ value }: { value: string; height?: string }) => (
-    <pre data-testid="json-viewer">{value}</pre>
+  JsonCodeViewer: ({
+    value,
+    title,
+    onEditStart,
+  }: {
+    value: unknown;
+    height?: string;
+    title?: React.ReactNode;
+    headerActions?: React.ReactNode;
+    onEditStart?: () => void;
+  }) => (
+    <pre data-testid="json-viewer">
+      {title && <span data-testid="viewer-title">{title}</span>}
+      {onEditStart && (
+        <span data-testid="viewer-actions">
+          <button onClick={onEditStart}>
+            common.edit
+            <span data-testid="pencil-icon" />
+          </button>
+        </span>
+      )}
+      {JSON.stringify(value)}
+    </pre>
   ),
 }));
 
-vi.mock("next/link", () => ({
+vi.mock("@/components/protocol-code-editor", () => ({
   default: ({
-    children,
-    href,
-    ...rest
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
+    value,
+    title,
+    headerActions,
+    onChange,
+  }: {
+    value: unknown;
+    onChange: (v: unknown) => void;
+    onValidationChange: (v: boolean) => void;
+    label: string;
+    placeholder?: string;
+    title?: React.ReactNode;
+    headerActions?: React.ReactNode;
+  }) => (
+    <div data-testid="protocol-code-editor">
+      {title && <span data-testid="editor-title">{title}</span>}
+      {headerActions && <span data-testid="editor-actions">{headerActions}</span>}
+      <button data-testid="editor-change-btn" onClick={() => onChange([{ averages: 2 }])}>
+        Change
+      </button>
+      <button data-testid="editor-change-same-btn" onClick={() => onChange([{ averages: 1 }])}>
+        ChangeSame
+      </button>
+      <button data-testid="editor-change-string-btn" onClick={() => onChange("not-an-array")}>
+        ChangeString
+      </button>
+      {JSON.stringify(value)}
+    </div>
+  ),
+}));
+
+vi.mock("@/components/protocol-overview/protocol-details-sidebar", () => ({
+  ProtocolDetailsSidebar: ({
+    protocolId,
+    protocol,
+  }: {
+    protocolId: string;
+    protocol: Record<string, unknown>;
+  }) => (
+    <div data-testid="protocol-details-sidebar">
+      <span data-testid="sidebar-protocol-id">{protocolId}</span>
+      <span data-testid="sidebar-protocol-name">{String(protocol.name)}</span>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/shared/inline-editable-description", () => ({
+  InlineEditableDescription: ({
+    description,
+    title,
+    hasAccess,
+    onSave,
+  }: {
+    description: string;
+    hasAccess?: boolean;
+    onSave: (v: string) => Promise<void>;
+    isPending?: boolean;
+    title?: string;
+    saveLabel?: string;
+    cancelLabel?: string;
+    placeholder?: string;
+  }) => (
+    <div data-testid="inline-editable-description">
+      <span data-testid="description-title">{title}</span>
+      <span data-testid="description-content">{description}</span>
+      <span data-testid="description-has-access">{String(hasAccess ?? false)}</span>
+      <button data-testid="description-save-btn" onClick={() => onSave("updated description")}>
+        Save
+      </button>
+    </div>
   ),
 }));
 
 vi.mock("lucide-react", () => ({
-  CalendarIcon: ({ className }: { className?: string }) => (
-    <span data-testid="calendar-icon" className={className} />
+  Check: ({ className }: { className?: string }) => (
+    <span data-testid="check-icon" className={className} />
   ),
-  CodeIcon: ({ className }: { className?: string }) => (
-    <span data-testid="code-icon" className={className} />
+  Circle: ({ className }: { className?: string }) => (
+    <span data-testid="circle-icon" className={className} />
   ),
-  ExternalLink: ({ className }: { className?: string }) => (
-    <span data-testid="external-link-icon" className={className} />
+  Loader2: ({ className }: { className?: string }) => (
+    <span data-testid="loader2-icon" className={className} />
   ),
+  Pencil: ({ className }: { className?: string }) => (
+    <span data-testid="pencil-icon" className={className} />
+  ),
+  X: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className} />,
 }));
 
 vi.mock("@repo/ui/components", () => {
@@ -95,40 +199,80 @@ vi.mock("@repo/ui/components", () => {
   const CardHeader = ({ children }: React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="card-header">{children}</div>
   );
-  const CardTitle = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <h3 data-testid="card-title" className={className}>
-      {children}
-    </h3>
-  );
   const CardContent = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="card-content" className={className}>
       {children}
     </div>
   );
-  const RichTextRenderer = ({ content }: { content: string }) => (
-    <div data-testid="rich-text">{content}</div>
+  const Button = ({
+    children,
+    onClick,
+    disabled,
+    variant,
+    size,
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: string;
+    size?: string;
+  }) => (
+    <button
+      data-testid="button"
+      data-variant={variant}
+      data-size={size}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </button>
   );
-  return { Card, CardHeader, CardTitle, CardContent, RichTextRenderer };
+  const Tooltip = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  const TooltipContent = ({ children }: { children: React.ReactNode }) => (
+    <span data-testid="tooltip-content">{children}</span>
+  );
+  const TooltipProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  const TooltipTrigger = ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
+    <>{children}</>
+  );
+  return {
+    Card,
+    CardHeader,
+    CardContent,
+    Button,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+  };
 });
+
+// --------------------
+// Test data
+// --------------------
+
+const mockProtocol = {
+  id: "proto-1",
+  name: "Water Quality Protocol",
+  description: "Measures water quality parameters",
+  family: "multispeq",
+  code: [{ averages: 1 }],
+  createdAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-06-15T00:00:00Z",
+  createdByName: "Dr. Smith",
+  createdBy: "other-user",
+};
 
 // --------------------
 // Tests
 // --------------------
-const mockProtocol = {
-  name: "Water Quality Protocol",
-  description: "Measures water quality parameters",
-  family: "multispeq",
-  code: '{"key":"value"}',
-  createdAt: "2025-01-01T00:00:00Z",
-  updatedAt: "2025-06-15T00:00:00Z",
-  createdByName: "Dr. Smith",
-};
 
 describe("ProtocolOverviewPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockUseCompatibleMacros.mockReturnValue({ data: undefined });
+    mockUseProtocolUpdate.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      mutate: mockMutate,
+      isPending: false,
+    });
   });
 
   it("should render loading state", () => {
@@ -168,7 +312,7 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByText("protocols.notFound")).toBeInTheDocument();
   });
 
-  it("should render protocol details on success", () => {
+  it("should render the sidebar and main content area on success", () => {
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -177,75 +321,184 @@ describe("ProtocolOverviewPage", () => {
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
-    expect(screen.getByText("Water Quality Protocol")).toBeInTheDocument();
-    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
-    expect(screen.getByText("Dr. Smith")).toBeInTheDocument();
-    expect(screen.getByTestId("rich-text")).toHaveTextContent("Measures water quality parameters");
-    expect(screen.getByTestId("json-viewer")).toHaveTextContent('{"key":"value"}');
+    expect(screen.getByTestId("protocol-details-sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-protocol-id")).toHaveTextContent("proto-1");
+    expect(screen.getByTestId("sidebar-protocol-name")).toHaveTextContent("Water Quality Protocol");
   });
 
-  it("should render Ambit family correctly", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, family: "ambit" } },
-      isLoading: false,
-      error: null,
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    expect(screen.getByText("Ambit")).toBeInTheDocument();
-  });
-
-  it("should show compatible macros section when macros exist", () => {
+  it("should render the inline editable description with correct props", () => {
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
       error: null,
     });
 
-    mockUseCompatibleMacros.mockReturnValue({
-      data: {
-        body: [
-          { macro: { id: "m1", name: "Temperature Plot", language: "python" } },
-          { macro: { id: "m2", name: "Humidity Analysis", language: "r" } },
-        ],
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.getByTestId("inline-editable-description")).toBeInTheDocument();
+    expect(screen.getByTestId("description-title")).toHaveTextContent("protocols.descriptionTitle");
+    expect(screen.getByTestId("description-content")).toHaveTextContent(
+      "Measures water quality parameters",
+    );
+  });
+
+  it("should pass hasAccess=false to description when user is not the creator", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: { ...mockProtocol, createdBy: "other-user" } },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.getByTestId("description-has-access")).toHaveTextContent("false");
+  });
+
+  it("should pass hasAccess=true to description when user is the creator", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: { ...mockProtocol, createdBy: "user-123" } },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.getByTestId("description-has-access")).toHaveTextContent("true");
+  });
+
+  it("should render the code viewer with title", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: mockProtocol },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.getByTestId("viewer-title")).toHaveTextContent("protocols.codeTitle");
+  });
+
+  it("should render JsonCodeViewer with protocol code when not editing", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: mockProtocol },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
+    expect(screen.queryByTestId("protocol-code-editor")).not.toBeInTheDocument();
+  });
+
+  it("should show the edit button for the creator when not editing", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: { ...mockProtocol, createdBy: "user-123" } },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    const editButton = screen.getByRole("button", { name: /common\.edit/i });
+    expect(editButton).toBeInTheDocument();
+    expect(screen.getByTestId("pencil-icon")).toBeInTheDocument();
+  });
+
+  it("should not show the edit button for non-creators", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: { ...mockProtocol, createdBy: "other-user" } },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.queryByRole("button", { name: /common\.edit/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pencil-icon")).not.toBeInTheDocument();
+  });
+
+  it("should handle null description gracefully", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: { ...mockProtocol, description: null } },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.getByTestId("description-content")).toHaveTextContent("");
+  });
+
+  it("should call toast with success message when description save succeeds", () => {
+    mockMutateAsync.mockImplementation((_data: unknown, opts: { onSuccess?: () => void }) => {
+      opts.onSuccess?.();
+      return Promise.resolve();
+    });
+
+    mockUseProtocol.mockReturnValue({
+      data: { body: { ...mockProtocol, createdBy: "user-123" } },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId("description-save-btn"));
+    });
+
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      { params: { id: "proto-1" }, body: { description: "updated description" } },
+      expect.objectContaining({
+        onSuccess: expect.any(Function) as unknown,
+        onError: expect.any(Function) as unknown,
+      }),
+    );
+    expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
+  });
+
+  it("should call toast with destructive variant when description save fails", () => {
+    mockMutateAsync.mockImplementation(
+      (_data: unknown, opts: { onError?: (err: unknown) => void }) => {
+        opts.onError?.("save failed");
+        return Promise.resolve();
       },
-    });
+    );
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
-    expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
-    expect(screen.getByText("python")).toBeInTheDocument();
-    expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
-    expect(screen.getByText("r")).toBeInTheDocument();
-  });
-
-  it("should not show compatible macros section when empty", () => {
     mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-      error: null,
-    });
-
-    mockUseCompatibleMacros.mockReturnValue({
-      data: { body: [] },
-    });
-
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
-
-    expect(screen.queryByText("protocolSettings.compatibleMacros")).not.toBeInTheDocument();
-  });
-
-  it("should show dash for missing createdByName", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: { ...mockProtocol, createdByName: null } },
+      data: { body: { ...mockProtocol, createdBy: "user-123" } },
       isLoading: false,
       error: null,
     });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
-    expect(screen.getByText("-")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(screen.getByTestId("description-save-btn"));
+    });
+
+    expect(toast).toHaveBeenCalledWith({
+      description: "save failed",
+      variant: "destructive",
+    });
+  });
+
+  it("should switch to ProtocolCodeEditor when creator clicks edit button", () => {
+    mockUseProtocol.mockReturnValue({
+      data: { body: { ...mockProtocol, createdBy: "user-123" } },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+
+    expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
+    expect(screen.queryByTestId("protocol-code-editor")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
+
+    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+    expect(screen.queryByTestId("json-viewer")).not.toBeInTheDocument();
   });
 });

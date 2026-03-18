@@ -82,6 +82,17 @@ vi.mock("@repo/ui/components", () => ({
   Label: ({ children }: { children: React.ReactNode }) => (
     <label data-testid="label">{children}</label>
   ),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLElement> & { asChild?: boolean }) => (
+    <span {...props}>{children}</span>
+  ),
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
 }));
 
 // Mock clipboard API
@@ -99,7 +110,6 @@ describe("MacroCodeEditor", () => {
     value: "",
     onChange: vi.fn(),
     language: "python" as const,
-    macroName: "test_macro",
     username: "test_user",
   };
 
@@ -120,22 +130,24 @@ describe("MacroCodeEditor", () => {
     expect(screen.getByText("Code Editor")).toBeInTheDocument();
   });
 
-  it("should display macro name with python extension in header", () => {
-    render(<MacroCodeEditor {...defaultProps} language="python" macroName="Test Macro" />);
+  it("should display code stats in header for python", () => {
+    render(<MacroCodeEditor {...defaultProps} language="python" value="print('hello')" />);
 
-    expect(screen.getByText("test_macro.py")).toBeInTheDocument();
+    expect(screen.getByText(/lines/)).toBeInTheDocument();
   });
 
-  it("should display macro name with R extension in header", () => {
-    render(<MacroCodeEditor {...defaultProps} language="r" macroName="Test Macro" />);
+  it("should display code stats in header for R", () => {
+    render(<MacroCodeEditor {...defaultProps} language="r" value="cat('hello')" />);
 
-    expect(screen.getByText("test_macro.R")).toBeInTheDocument();
+    expect(screen.getByText(/lines/)).toBeInTheDocument();
   });
 
-  it("should display macro name with JavaScript extension in header", () => {
-    render(<MacroCodeEditor {...defaultProps} language="javascript" macroName="Test Macro" />);
+  it("should display code stats in header for JavaScript", () => {
+    render(
+      <MacroCodeEditor {...defaultProps} language="javascript" value="console.log('hello')" />,
+    );
 
-    expect(screen.getByText("test_macro.js")).toBeInTheDocument();
+    expect(screen.getByText(/lines/)).toBeInTheDocument();
   });
 
   it("should render copy button", () => {

@@ -115,7 +115,7 @@ resource "aws_s3_bucket_public_access_block" "cache" {
 
 # DynamoDB Table for ISR
 module "dynamodb" {
-  source = "../opennext-dynamodb"
+  source = "./opennext-dynamodb"
 
   table_name                    = local.dynamodb_table_name
   billing_mode                  = var.dynamodb_billing_mode
@@ -154,7 +154,7 @@ resource "aws_cloudwatch_log_group" "warmer" {
 
 # Lambda Functions
 module "server_function" {
-  source = "../opennext-lambda"
+  source = "./opennext-lambda"
 
   function_name                   = local.server_function_name
   runtime                         = var.lambda_runtime
@@ -201,7 +201,7 @@ module "server_function" {
 }
 
 module "image_function" {
-  source = "../opennext-lambda"
+  source = "./opennext-lambda"
 
   function_name                   = local.image_function_name
   runtime                         = var.lambda_runtime
@@ -227,7 +227,7 @@ module "image_function" {
 }
 
 module "revalidate_function" {
-  source = "../opennext-lambda"
+  source = "./opennext-lambda"
 
   function_name       = local.revalidate_function_name
   runtime             = var.lambda_runtime
@@ -249,7 +249,7 @@ module "revalidate_function" {
 
 # SQS Queue for revalidation
 module "sqs" {
-  source = "../opennext-sqs"
+  source = "./opennext-sqs"
 
   queue_name                 = local.queue_name
   revalidation_function_arn  = module.revalidate_function.function_arn
@@ -284,7 +284,7 @@ resource "aws_iam_role_policy" "revalidation_sqs_permissions" {
 # Warmer function (optional)
 module "warmer_function" {
   count  = var.enable_lambda_warming ? 1 : 0
-  source = "../opennext-lambda"
+  source = "./opennext-lambda"
 
   function_name       = local.warmer_function_name
   runtime             = var.lambda_runtime
@@ -345,7 +345,7 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 
 # CloudFront Distribution
 module "cloudfront" {
-  source = "../opennext-cloudfront"
+  source = "./opennext-cloudfront"
 
   project_name               = var.project_name
   assets_bucket_name         = aws_s3_bucket.assets.bucket

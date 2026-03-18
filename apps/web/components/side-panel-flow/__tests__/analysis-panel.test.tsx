@@ -58,15 +58,25 @@ vi.mock("@repo/ui/components", () => {
   return { Card, CardHeader, CardTitle, CardContent };
 });
 
-// Mock useMacros
+// Mock tsr (used directly by AnalysisPanel for macro search)
 const mockMacros = [
   { id: "macro-1", name: "Temperature Plot", language: "python", createdByName: "Alice" },
   { id: "macro-2", name: "Humidity Analysis", language: "r", createdByName: "Bob" },
   { id: "macro-3", name: "Statistical Summary", language: "javascript", createdByName: "Charlie" },
 ];
 
-vi.mock("~/hooks/macro/useMacros/useMacros", () => ({
-  useMacros: vi.fn(() => ({ data: mockMacros })),
+vi.mock("../../../lib/tsr", () => ({
+  tsr: {
+    macros: {
+      listMacros: {
+        useQuery: vi.fn(() => ({
+          data: { body: mockMacros },
+          isLoading: false,
+          error: null,
+        })),
+      },
+    },
+  },
 }));
 
 // Mock useProtocol (used by AnalysisPanel to fetch upstream protocol name)

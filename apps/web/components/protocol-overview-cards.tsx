@@ -1,11 +1,24 @@
-import { Calendar, ChevronRight, User, Webcam } from "lucide-react";
+import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
+import { useLocale } from "@/hooks/useLocale";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { formatDate } from "~/util/date";
+import React, { useMemo, useState } from "react";
 
-import type { Protocol } from "@repo/api";
+import type { Protocol, ProtocolMacroEntry } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Badge, Skeleton } from "@repo/ui/components";
+import { Badge, RichTextRenderer, Skeleton } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
+
+const getFamilyColor = (family: string) => {
+  switch (family) {
+    case "multispeq":
+      return "bg-badge-published";
+    case "ambit":
+      return "bg-badge-active";
+    default:
+      return "bg-badge-archived";
+  }
+};
 
 const cardVariants = cva(
   "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
@@ -22,8 +35,77 @@ const cardVariants = cva(
   },
 );
 
+function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; enabled: boolean }) {
+  const { data } = useProtocolCompatibleMacros(protocolId, enabled);
+  const macros: ProtocolMacroEntry[] = useMemo(
+    () => (data?.body as ProtocolMacroEntry[] | undefined) ?? [],
+    [data],
+  );
+
+  if (macros.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {macros.map((entry) => (
+        <span
+          key={entry.macro.id}
+          className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+        >
+          {entry.macro.name}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ProtocolCard({
+  protocol,
+  locale,
+  t,
+}: {
+  protocol: Protocol;
+  locale: string;
+  t: (key: string) => string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isPreferred = protocol.sortOrder !== null;
+
+  return (
+    <Link
+      href={`/${locale}/platform/protocols/${protocol.id}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div className={cardVariants({ featured: isPreferred })}>
+        <div className="inline-flex gap-1">
+          <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
+            {protocol.family}
+          </Badge>
+          {isPreferred && (
+            <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+          )}
+        </div>
+        <div className="mb-auto">
+          <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+            {protocol.name}
+          </h3>
+          <div className="overflow-hidden text-sm text-gray-500">
+            <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
+          </div>
+        </div>
+        <CompatibleMacrosList protocolId={protocol.id} enabled={hovered} />
+        <p className="text-xs text-gray-400">
+          {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
+        </p>
+        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+      </div>
+    </Link>
+  );
+}
+
 export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | undefined }) {
   const { t } = useTranslation("common");
+  const locale = useLocale();
 
   if (!protocols) {
     return (
@@ -36,52 +118,18 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
   }
 
   if (protocols.length === 0) {
-    return <span>{t("protocols.noProtocols")}</span>;
+    return (
+      <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
+        {t("protocols.noProtocols")}
+      </div>
+    );
   }
 
   return (
-    <>
-      {/* Protocols Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {protocols.map((protocol) => {
-          const isPreferred = protocol.sortOrder !== null;
-          return (
-            <Link key={protocol.id} href={`/platform/protocols/${protocol.id}`}>
-              <div className={cardVariants({ featured: isPreferred })}>
-                <div className="mb-auto">
-                  <div className="mb-2 flex items-start gap-2">
-                    <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
-                      {protocol.name}
-                    </h3>
-                    {isPreferred && (
-                      <div className="shrink-0">
-                        <Badge className={"bg-secondary/30 text-primary"}>
-                          {t("common.preferred")}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <Webcam className="h-4 w-4" />
-                      <span>{protocol.family}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      <span>{protocol.createdByName ?? "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>Updated {formatDate(protocol.updatedAt)}</span>
-                    </div>
-                  </div>
-                </div>
-                <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {protocols.map((protocol) => (
+        <ProtocolCard key={protocol.id} protocol={protocol} locale={locale} t={t} />
+      ))}
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { useForm } from "react-hook-form";
@@ -11,19 +12,6 @@ import { NewMacroDetailsCard } from "./new-macro-details-card";
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
-  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
-  CardContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-content">{children}</div>
-  ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-header">{children}</div>
-  ),
-  CardTitle: ({ children }: { children: React.ReactNode }) => (
-    <h2 data-testid="card-title">{children}</h2>
-  ),
-  CardDescription: ({ children }: { children: React.ReactNode }) => (
-    <p data-testid="card-description">{children}</p>
-  ),
   FormControl: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="form-control">{children}</div>
   ),
@@ -84,20 +72,6 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("NewMacroDetailsCard", () => {
-  it("should render card structure with correct titles", () => {
-    render(
-      <TestWrapper>
-        <NewMacroDetailsCard form={undefined as any} />
-      </TestWrapper>,
-    );
-
-    expect(screen.getByTestId("card")).toBeInTheDocument();
-    expect(screen.getByTestId("card-header")).toBeInTheDocument();
-    expect(screen.getByTestId("card-content")).toBeInTheDocument();
-    expect(screen.getByText("newMacro.detailsTitle")).toBeInTheDocument();
-    expect(screen.getByText("newMacro.detailsDescription")).toBeInTheDocument();
-  });
-
   it("should render all form fields", () => {
     render(
       <TestWrapper>
@@ -105,26 +79,25 @@ describe("NewMacroDetailsCard", () => {
       </TestWrapper>,
     );
 
-    // Should have 2 form fields (name, description)
     const formFields = screen.getAllByTestId("form-field");
     expect(formFields).toHaveLength(2);
 
     const formItems = screen.getAllByTestId("form-item");
     expect(formItems).toHaveLength(2);
-
-    const formLabels = screen.getAllByTestId("form-label");
-    expect(formLabels).toHaveLength(2);
   });
 
-  it("should render form labels with correct text", () => {
+  it("should render inputs with placeholder text", () => {
     render(
       <TestWrapper>
         <NewMacroDetailsCard form={undefined as any} />
       </TestWrapper>,
     );
 
-    expect(screen.getByText("newMacro.name")).toBeInTheDocument();
-    expect(screen.getByText("newMacro.description")).toBeInTheDocument();
+    expect(screen.getByTestId("input")).toHaveAttribute("placeholder", "newMacro.name");
+    expect(screen.getByTestId("rich-textarea")).toHaveAttribute(
+      "placeholder",
+      "newMacro.description",
+    );
   });
 
   it("should render input components", () => {

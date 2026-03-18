@@ -43,6 +43,14 @@ vi.mock("@monaco-editor/react", () => ({
 vi.mock("lucide-react", () => ({
   Copy: () => <span data-testid="copy-icon">📋</span>,
   Check: () => <span data-testid="check-icon">✅</span>,
+  Pencil: () => <span data-testid="pencil-icon" />,
+}));
+
+// Mock i18n
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
 }));
 
 // Mock UI components
@@ -93,22 +101,22 @@ describe("MacroCodeViewer", () => {
     expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
   });
 
-  it("should display macro name with python extension in header", () => {
-    render(<MacroCodeViewer {...defaultProps} language="python" macroName="Test Macro" />);
+  it("should display language label in header for python", () => {
+    render(<MacroCodeViewer {...defaultProps} language="python" />);
 
-    expect(screen.getByText("test_macro.py")).toBeInTheDocument();
+    expect(screen.getByText("Python")).toBeInTheDocument();
   });
 
-  it("should display macro name with R extension in header", () => {
-    render(<MacroCodeViewer {...defaultProps} language="r" macroName="Test Macro" />);
+  it("should display language label in header for R", () => {
+    render(<MacroCodeViewer {...defaultProps} language="r" />);
 
-    expect(screen.getByText("test_macro.R")).toBeInTheDocument();
+    expect(screen.getByText("R")).toBeInTheDocument();
   });
 
-  it("should display macro name with JavaScript extension in header", () => {
-    render(<MacroCodeViewer {...defaultProps} language="javascript" macroName="Test Macro" />);
+  it("should display language label in header for JavaScript", () => {
+    render(<MacroCodeViewer {...defaultProps} language="javascript" />);
 
-    expect(screen.getByText("test_macro.js")).toBeInTheDocument();
+    expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
   it("should render copy button", () => {
@@ -212,5 +220,42 @@ describe("MacroCodeViewer", () => {
     // Find div with the custom height style
     const heightContainer = screen.getByTestId("monaco-editor").parentElement;
     expect(heightContainer).toHaveStyle(`height: ${customHeight}`);
+  });
+
+  it("should handle clipboard failure gracefully", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+    mockClipboard.writeText.mockRejectedValueOnce(new Error("permission denied"));
+    render(<MacroCodeViewer {...defaultProps} />);
+    const copyButton = screen.getByTestId("button");
+    fireEvent.click(copyButton);
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to copy:", expect.any(Error));
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it("should render edit overlay when onEditStart is provided", () => {
+    const onEditStart = vi.fn();
+    render(<MacroCodeViewer {...defaultProps} onEditStart={onEditStart} />);
+    expect(screen.getAllByTestId("pencil-icon").length).toBeGreaterThan(0);
+  });
+
+  it("should not render edit overlay when onEditStart is not provided", () => {
+    render(<MacroCodeViewer {...defaultProps} />);
+    const wrapper = screen.getByTestId("monaco-editor").closest(".group\\/viewer");
+    expect(wrapper).not.toHaveClass("cursor-pointer");
+  });
+
+  it("should render title when provided", () => {
+    render(<MacroCodeViewer {...defaultProps} title="My Code" />);
+    expect(screen.getByText("My Code")).toBeInTheDocument();
+  });
+
+  it("should call onEditStart when wrapper is clicked", () => {
+    const onEditStart = vi.fn();
+    render(<MacroCodeViewer {...defaultProps} onEditStart={onEditStart} />);
+    const wrapper = screen.getByTestId("monaco-editor").parentElement?.parentElement;
+    if (wrapper) fireEvent.click(wrapper);
+    expect(onEditStart).toHaveBeenCalled();
   });
 });

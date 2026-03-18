@@ -68,7 +68,7 @@ describe("ProtocolPage", () => {
 
     const button = screen.getByTestId("button");
     expect(button).toHaveTextContent("protocols.create");
-    expect(button).toHaveAttribute("data-variant", "outline");
+    expect(button).not.toHaveAttribute("data-variant");
   });
 
   it("renders create protocol link with correct href and locale", async () => {

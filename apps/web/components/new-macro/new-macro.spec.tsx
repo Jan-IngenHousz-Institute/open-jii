@@ -1,3 +1,5 @@
+import * as base64Utils from "@/util/base64";
+import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -63,7 +65,8 @@ interface MockCardProps {
 interface MockCodeEditorProps {
   language: string;
   onChange?: (value: string) => void;
-  macroName?: string;
+  title?: string;
+  value?: string;
 }
 
 interface MockNewMacroDetailsCardProps {
@@ -76,7 +79,6 @@ interface MockCodeEditorAltProps {
   value: string;
   onChange: (value: string) => void;
   language: string;
-  macroName?: string;
 }
 
 interface MockControllerProps {
@@ -231,8 +233,9 @@ vi.mock("@repo/ui/components", () => ({
 
 vi.mock("../macro-code-editor", () => ({
   __esModule: true,
-  default: ({ language, onChange, macroName }: MockCodeEditorProps & { macroName?: string }) => (
-    <div data-testid="code-editor" data-language={language} data-macro-name={macroName}>
+  default: ({ language, onChange, title }: MockCodeEditorProps) => (
+    <div data-testid="code-editor" data-language={language}>
+      {title && <span>{title}</span>}
       <textarea
         data-testid="code-textarea"
         placeholder={`Enter ${language} code here...`}
@@ -255,13 +258,12 @@ vi.mock("./new-macro-details-card", () => ({
 
 vi.mock("../components/macro-code-editor", () => ({
   __esModule: true,
-  default: ({ value, onChange, language, macroName }: MockCodeEditorAltProps) => (
+  default: ({ value, onChange, language }: MockCodeEditorAltProps) => (
     <textarea
       data-testid="code-editor"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       data-language={language}
-      data-macro-name={macroName}
     />
   ),
 }));
@@ -295,11 +297,14 @@ vi.mock("@hookform/resolvers/zod", () => ({
   zodResolver: () => vi.fn(),
 }));
 
+// Mock base64 utilities
+vi.mock("@/util/base64", () => ({
+  encodeBase64: vi.fn((str: string) => Buffer.from(str).toString("base64")),
+}));
+
 describe("NewMacroForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock btoa globally
-    global.btoa = vi.fn((str) => Buffer.from(str).toString("base64"));
   });
 
   it("should render form elements", () => {
@@ -378,14 +383,12 @@ describe("NewMacroForm", () => {
     expect(codeEditor).toHaveAttribute("data-language", "python");
   });
 
-  it("should pass macro name to code editor for filename display", () => {
+  it("should render the code editor with title", () => {
     // Act
     render(<NewMacroForm />);
-    const codeEditor = screen.getByTestId("code-editor");
 
     // Assert
-    // The mock form in useForm returns "Test Macro" as the name value
-    expect(codeEditor).toHaveAttribute("data-macro-name", "Test Macro");
+    expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
   });
 
   it("should have language selector in the code editor section", () => {
@@ -409,7 +412,6 @@ describe("NewMacroForm", () => {
     // Assert
     const form = document.querySelector("form");
     expect(form).toBeInTheDocument();
-    expect(form).toHaveClass("space-y-8");
   });
 
   it("should display code section title", () => {
@@ -429,7 +431,7 @@ describe("NewMacroForm", () => {
     expect(buttonsContainer).toHaveClass("flex", "gap-2");
   });
 
-  it("should encode code with btoa", async () => {
+  it("should encode code with encodeBase64", async () => {
     // Arrange
     const user = userEvent.setup();
     render(<NewMacroForm />);
@@ -439,7 +441,7 @@ describe("NewMacroForm", () => {
     await user.click(submitButton);
 
     // Assert
-    expect(global.btoa).toHaveBeenCalledWith("print('hello world')");
+    expect(vi.mocked(base64Utils.encodeBase64)).toHaveBeenCalledWith("print('hello world')");
   });
 
   it("should handle form submission correctly", () => {

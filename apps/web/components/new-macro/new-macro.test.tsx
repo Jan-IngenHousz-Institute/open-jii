@@ -1,4 +1,5 @@
 import * as base64Utils from "@/util/base64";
+import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -65,7 +66,8 @@ interface MockCardProps {
 interface MockCodeEditorProps {
   language: string;
   onChange?: (value: string) => void;
-  macroName?: string;
+  title?: string;
+  value?: string;
 }
 
 interface MockNewMacroDetailsCardProps {
@@ -78,7 +80,6 @@ interface MockCodeEditorAltProps {
   value: string;
   onChange: (value: string) => void;
   language: string;
-  macroName?: string;
 }
 
 interface MockControllerProps {
@@ -245,8 +246,9 @@ vi.mock("@repo/ui/components", () => ({
 
 vi.mock("../macro-code-editor", () => ({
   __esModule: true,
-  default: ({ language, onChange, macroName }: MockCodeEditorProps & { macroName?: string }) => (
-    <div data-testid="code-editor" data-language={language} data-macro-name={macroName}>
+  default: ({ language, onChange, title }: MockCodeEditorProps) => (
+    <div data-testid="code-editor" data-language={language}>
+      {title && <span>{title}</span>}
       <textarea
         data-testid="code-textarea"
         placeholder={`Enter ${language} code here...`}
@@ -269,13 +271,12 @@ vi.mock("./new-macro-details-card", () => ({
 
 vi.mock("../components/macro-code-editor", () => ({
   __esModule: true,
-  default: ({ value, onChange, language, macroName }: MockCodeEditorAltProps) => (
+  default: ({ value, onChange, language }: MockCodeEditorAltProps) => (
     <textarea
       data-testid="code-editor"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       data-language={language}
-      data-macro-name={macroName}
     />
   ),
 }));
@@ -403,14 +404,12 @@ describe("NewMacroForm", () => {
     expect(codeEditor).toHaveAttribute("data-language", "python");
   });
 
-  it("should pass macro name to code editor for filename display", () => {
+  it("should render the code editor with title", () => {
     // Act
     render(<NewMacroForm />);
-    const codeEditor = screen.getByTestId("code-editor");
 
     // Assert
-    // The mock form in useForm returns "Test Macro" as the name value
-    expect(codeEditor).toHaveAttribute("data-macro-name", "Test Macro");
+    expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
   });
 
   it("should have language selector in the code editor section", () => {
@@ -436,7 +435,7 @@ describe("NewMacroForm", () => {
     // Assert
     const form = document.querySelector("form");
     expect(form).toBeInTheDocument();
-    expect(form).toHaveClass("space-y-8");
+    expect(form).toBeInTheDocument();
   });
 
   it("should display code section title", () => {
@@ -499,13 +498,6 @@ describe("NewMacroForm", () => {
   });
 
   describe("Compatible Protocols Section", () => {
-    it("should render the compatible protocols card", () => {
-      render(<NewMacroForm />);
-
-      expect(screen.getByText("newMacro.compatibleProtocols")).toBeInTheDocument();
-      expect(screen.getByText("newMacro.compatibleProtocolsDescription")).toBeInTheDocument();
-    });
-
     it("should render ProtocolSearchWithDropdown", () => {
       render(<NewMacroForm />);
 
