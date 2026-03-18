@@ -17,6 +17,18 @@ on:
                 required: false
                 type: boolean
                 default: false
+            deploy_app:
+                description: "Deploy a specific application only (overrides change detection)"
+                required: false
+                type: choice
+                default: "none"
+                options:
+                    - none
+                    - web
+                    - backend
+                    - migration
+                    - databricks
+                    - docs
 
 concurrency:
     group: main-deploy-${{ github.ref }}
@@ -36,4 +48,5 @@ jobs:
             environment: dev
             deploy_infrastructure: true
             deploy_all: ${{ inputs.deploy_all || false }}
+            deploy_app: ${{ inputs.deploy_app || 'none' }}
         secrets: inherit
