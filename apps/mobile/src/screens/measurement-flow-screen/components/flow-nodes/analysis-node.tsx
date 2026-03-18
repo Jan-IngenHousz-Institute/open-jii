@@ -133,8 +133,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
     // Capture timestamp/timezone at upload time so the sync service
     // has had a chance to complete its first sync.
-    // NOTE: timestamp === normalized UTC timestamp (never a local time with offset suffix).
-    // The timezone field is what enables local-time derivation downstream.
     const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
 
