@@ -142,10 +142,11 @@ export function orcidProvider(config: OrcidProviderConfig) {
         emailVerified = publicEmail.verified;
       }
 
-      // Final fallback: If no email is available, use the ORCID ID
+      // Final fallback: If no email is available, use the ORCID ID.
+      // Mark emailVerified = false so the user is prompted to supply a real email.
       if (!email) {
         email = orcidId;
-        emailVerified = true;
+        emailVerified = false;
       }
 
       return {

@@ -1,15 +1,46 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { AfterHook, Hook } from "@thallesp/nestjs-better-auth";
+import { AfterHook, BeforeHook, Hook } from "@thallesp/nestjs-better-auth";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
+import { APIError, getSessionFromCtx } from "better-auth/api";
+import z from "zod";
 
 import { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
+import { UserRepository } from "../../core/repositories/user.repository";
 
 @Hook()
 @Injectable()
 export class UserAuthHook {
   private readonly logger = new Logger(UserAuthHook.name);
 
-  constructor(private readonly acceptInvitationUseCase: AcceptPendingInvitationsUseCase) {}
+  constructor(
+    private readonly acceptInvitationUseCase: AcceptPendingInvitationsUseCase,
+    private readonly userRepository: UserRepository,
+  ) {}
+
+  @BeforeHook("/sign-in/email-otp")
+  async handleEmailOtpSignInBefore(ctx: AuthHookContext) {
+    const session = await getSessionFromCtx(ctx);
+    if (!session?.user) return;
+
+    const currentUser = session.user as { id: string; email?: string; registered?: boolean };
+
+    const hasValidEmail = z.string().email().safeParse(currentUser.email).success;
+    if (currentUser.registered && hasValidEmail) return;
+
+    const body = ctx.body as { email?: string };
+    const { email } = body;
+    if (!email) return;
+
+    const result = await this.userRepository.update(currentUser.id, { email });
+    if (result.isFailure()) {
+      if (result.error.code === "REPOSITORY_DUPLICATE") {
+        throw new APIError("BAD_REQUEST", {
+          message: "This email is already associated with another account",
+        });
+      }
+      throw new APIError("INTERNAL_SERVER_ERROR", { message: result.error.message });
+    }
+  }
 
   @AfterHook("/sign-in/email")
   async handleEmailSignIn(ctx: AuthHookContext) {

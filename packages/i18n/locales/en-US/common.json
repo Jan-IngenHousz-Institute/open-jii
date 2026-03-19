@@ -419,11 +419,17 @@
     "errorDescription": "We encountered an error while trying to authenticate you.",
     "errorTryAgain": "Try Again",
     "errorGoHome": "Go to Homepage",
-    "errorSupport": "If this problem persists, please contact support."
+    "errorSupport": "If this problem persists, please contact support.",
+    "checkEmail": "Check your email for a verification code"
   },
   "registration": {
     "title": "Registration",
     "description": "Please fill out the form below to create your account.",
+    "email": "Email Address",
+    "emailPlaceholder": "Enter your email address",
+    "emailInvalid": "Please enter a valid email address",
+    "emailAlreadyTaken": "This email address is already associated with another account",
+    "emailDescription": "Your sign-in provider did not share your email address. Please add one to use features like project transfers.",
     "firstName": "First Name",
     "firstNamePlaceholder": "Enter your first name",
     "firstNameError": "Your first name must be at least 2 characters long",
@@ -437,10 +443,15 @@
     "acceptTermsError": "You must accept the terms and conditions",
     "registering": "Registering...",
     "register": "Register",
+    "verifyAndRegister": "Verify & Register",
     "successMessage": "Registration successful",
+    "errorMessage": "Registration failed",
     "signOutTitle": "Sign Out",
     "signOutDescription": "To complete your registration, you now need to sign out and sign back in again.",
-    "signOutConfirm": "Sign out"
+    "signOutConfirm": "Sign out",
+    "continueWithEmailVerification": "Continue with email verification",
+    "emailOnlyTitle": "Missing email address",
+    "emailOnlyDescription": "To continue using the platform, please add an email address to your account."
   },
   "signout": {
     "title": "Sign Out",
