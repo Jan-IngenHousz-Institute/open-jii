@@ -1,8 +1,20 @@
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
+import { getSessionFromCtx } from "better-auth/api";
 
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
+import type { UserRepository } from "../../core/repositories/user.repository";
 import { UserAuthHook } from "./user-auth.hook";
+
+vi.mock("better-auth/api", async (importOriginal: () => Promise<Record<string, unknown>>) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    getSessionFromCtx: vi.fn(),
+  };
+});
+
+const mockGetSessionFromCtx = vi.mocked(getSessionFromCtx);
 
 function createMockContext(
   overrides: {
@@ -27,13 +39,90 @@ function createMockContext(
 describe("UserAuthHook", () => {
   let hook: UserAuthHook;
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
+  let mockUserRepository: { update: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockUseCase = {
       execute: vi.fn().mockResolvedValue(success(0)),
     };
+    mockUserRepository = {
+      update: vi.fn().mockResolvedValue(success([])),
+    };
 
-    hook = new UserAuthHook(mockUseCase as unknown as AcceptPendingInvitationsUseCase);
+    hook = new UserAuthHook(
+      mockUseCase as unknown as AcceptPendingInvitationsUseCase,
+      mockUserRepository as unknown as UserRepository,
+    );
+  });
+
+  describe("handleEmailOtpSignInBefore", () => {
+    function createBeforeHookContext(email?: string): AuthHookContext {
+      return { body: email !== undefined ? { email } : {} } as unknown as AuthHookContext;
+    }
+
+    beforeEach(() => {
+      mockGetSessionFromCtx.mockResolvedValue({
+        user: { id: "user-123", email: null, registered: false },
+      } as unknown as Awaited<ReturnType<typeof getSessionFromCtx>>);
+    });
+
+    it("should return early if no session", async () => {
+      mockGetSessionFromCtx.mockResolvedValue(null);
+      const ctx = createBeforeHookContext("new@example.com");
+
+      await hook.handleEmailOtpSignInBefore(ctx);
+
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("should return early if user is registered and has a valid email", async () => {
+      mockGetSessionFromCtx.mockResolvedValue({
+        user: { id: "user-123", email: "existing@example.com", registered: true },
+      } as unknown as Awaited<ReturnType<typeof getSessionFromCtx>>);
+      const ctx = createBeforeHookContext("new@example.com");
+
+      await hook.handleEmailOtpSignInBefore(ctx);
+
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("should return early if no email in body", async () => {
+      const ctx = createBeforeHookContext();
+
+      await hook.handleEmailOtpSignInBefore(ctx);
+
+      expect(mockUserRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("should update user email when user lacks a valid email", async () => {
+      const ctx = createBeforeHookContext("new@example.com");
+
+      await hook.handleEmailOtpSignInBefore(ctx);
+
+      expect(mockUserRepository.update).toHaveBeenCalledWith("user-123", {
+        email: "new@example.com",
+      });
+    });
+
+    it("should throw BAD_REQUEST when email is already taken", async () => {
+      mockUserRepository.update.mockResolvedValue(
+        failure(AppError.badRequest("Duplicate", "REPOSITORY_DUPLICATE")),
+      );
+      const ctx = createBeforeHookContext("taken@example.com");
+
+      await expect(hook.handleEmailOtpSignInBefore(ctx)).rejects.toThrow(
+        "This email is already associated with another account",
+      );
+    });
+
+    it("should throw for other repository errors", async () => {
+      mockUserRepository.update.mockResolvedValue(
+        failure(AppError.internal("DB connection failed")),
+      );
+      const ctx = createBeforeHookContext("new@example.com");
+
+      await expect(hook.handleEmailOtpSignInBefore(ctx)).rejects.toThrow();
+    });
   });
 
   describe("handleEmailSignIn", () => {
