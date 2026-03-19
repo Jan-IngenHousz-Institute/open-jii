@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import React from "react";
 import { View } from "react-native";
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
@@ -12,6 +14,12 @@ import { NextButton } from "./next-button";
 export function NavigationButtons() {
   const { flowNodes, currentFlowStep, experimentId, previousStep } = useMeasurementFlowStore();
   const { classes } = useTheme();
+  const keyboard = useAnimatedKeyboard();
+  const insets = useSafeAreaInsets();
+  const navStyle = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(0, keyboard.height.value - insets.bottom),
+  }));
+
   // Get current node to check type
   const currentNode = flowNodes[currentFlowStep];
   const isInstructionOrQuestion =
@@ -56,11 +64,13 @@ export function NavigationButtons() {
       .getAnswer(useMeasurementFlowStore.getState().iterationCount, currentNode.id);
 
   return (
-    <View className={clsx("w-full flex-row items-center justify-between py-3", classes.card)}>
-      <BackButton onPress={handleBackPress} />
-      {(!isAutoAdvanceQuestion || (isAutoAdvanceQuestion && !currentNode.content.required)) && (
-        <NextButton onPress={handleNextPress} isDisabled={isNextDisabled} />
-      )}
-    </View>
+    <Animated.View className={clsx("w-full", classes.card)} style={navStyle}>
+      <View className="flex-row items-center justify-between py-3">
+        <BackButton onPress={handleBackPress} />
+        {(!isAutoAdvanceQuestion || (isAutoAdvanceQuestion && !currentNode.content.required)) && (
+          <NextButton onPress={handleNextPress} isDisabled={isNextDisabled} />
+        )}
+      </View>
+    </Animated.View>
   );
 }

@@ -103,7 +103,7 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
   );
 
   return (
-    <View className={clsx("flex-1", classes.background)} style={{ paddingBottom: insets.bottom }}>
+    <View className={clsx("flex-1", classes.card)} style={{ paddingBottom: insets.bottom }}>
       {isFocused && <StatusBar style="light" />}
 
       {/* Background */}
@@ -124,7 +124,7 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
         style={{
           position: "absolute",
           width: "100%",
-          height: "100%",
+          height: "30%",
         }}
       />
 

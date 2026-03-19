@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert } from "react-native";
+import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 
 interface EndFlowButtonProps {
@@ -8,15 +8,15 @@ interface EndFlowButtonProps {
 
 export function EndFlowButton({ onPress }: EndFlowButtonProps) {
   const handlePress = () => {
-    Alert.alert("End Flow", "Are you sure you want to end the current flow?", [
+    showAlert("Finish Flow", "If you finish now, this measurement flow will not be saved?", [
       {
-        text: "Cancel",
-        style: "cancel",
+        text: "Finish Flow",
+        variant: "primary",
+        onPress: onPress,
       },
       {
-        text: "End Flow",
-        style: "destructive",
-        onPress: onPress,
+        text: "Continue flow",
+        variant: "ghost",
       },
     ]);
   };
