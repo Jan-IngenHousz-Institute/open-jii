@@ -47,7 +47,7 @@ resource "aws_s3_bucket_public_access_block" "block" {
 
 # Optional: Add CloudFront-specific bucket policy when a distribution ARN is provided
 resource "aws_s3_bucket_policy" "cloudfront_access" {
-  count  = var.cloudfront_distribution_arn != null ? 1 : 0
+  count  = var.create_cloudfront_policy ? 1 : 0
   bucket = aws_s3_bucket.bucket.id
 
   policy = jsonencode({

@@ -90,7 +90,7 @@ variable "slack_channel" {
 variable "domain_name" {
   description = "Base domain name"
   type        = string
-  default     = "openjii.org"
+  default     = "dev.openjii.org"
 }
 
 variable "backend_container_port" {

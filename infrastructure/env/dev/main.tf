@@ -85,6 +85,7 @@ module "docusaurus_s3" {
   enable_versioning           = false
   bucket_name                 = "open-jii-docs-public-${var.environment}"
   cloudfront_distribution_arn = module.docs_cloudfront.cloudfront_distribution_arn
+  create_cloudfront_policy    = true
 
   providers = {
     aws    = aws

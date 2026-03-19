@@ -21,6 +21,12 @@ variable "cloudfront_distribution_arn" {
   default     = null
 }
 
+variable "create_cloudfront_policy" {
+  description = "Set to true when cloudfront_distribution_arn is provided. Kept as a separate bool so the count meta-argument has a value known at plan time, avoiding the 'count depends on computed values' error."
+  type        = bool
+  default     = false
+}
+
 variable "custom_policy_json" {
   description = "Optional: A custom bucket policy JSON document to apply to the bucket"
   type        = string
