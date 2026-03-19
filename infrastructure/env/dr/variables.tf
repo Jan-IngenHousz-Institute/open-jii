@@ -1,47 +1,82 @@
 variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "eu-central-1"
-}
-
-variable "dr_region" {
-  description = "AWS region used for disaster recovery backups and data replication"
+  description = "AWS DR region (eu-west-1)"
   type        = string
   default     = "eu-west-1"
 }
 
 variable "environment" {
-  description = "Environment of the deployment (e.g., 'dev')"
+  description = "Environment name used for resource naming"
   type        = string
-  default     = "prod"
+  default     = "dr"
+}
+
+variable "aurora_snapshot_identifier" {
+  description = "ARN or ID of the Aurora snapshot to restore from. Retrieve from the DR AWS Backup vault in eu-west-1 after a real disaster or before a DR drill."
+  type        = string
+}
+
+variable "prod_route53_zone_id" {
+  description = "Route53 hosted zone ID from the prod environment (openjii.org). DR reuses this zone instead of creating a new one."
+  type        = string
+}
+
+variable "enable_dns_cutover" {
+  description = "Set to true ONLY when performing the actual DR failover. When true, the CloudFront alias A-records and www CNAME are created/updated so that openjii.org resolves to DR resources. Default false lets you deploy and validate the entire stack without touching live traffic."
+  type        = bool
+  default     = false
 }
 
 variable "databricks_account_id" {
-  description = "Databricks Account ID (used as external_id in the assume role policy)"
-  type        = string
-  sensitive   = true
-}
-
-variable "databricks_client_id" {
-  description = "The service principal's client ID for Databricks authentication"
-  type        = string
-  sensitive   = true
-}
-
-variable "databricks_client_secret" {
-  description = "The service principal's client secret for Databricks authentication"
+  description = "Databricks Account ID"
   type        = string
   sensitive   = true
 }
 
 variable "databricks_host" {
-  description = "Databricks workspace URL"
+  description = "Databricks workspace URL (same prod workspace — global service)"
   type        = string
   sensitive   = true
 }
 
+variable "databricks_catalog_name" {
+  description = "Databricks Unity Catalog name created in prod. Passed directly because the Databricks workspace is not re-provisioned in DR."
+  type        = string
+  default     = "open_jii_prod"
+}
+
+variable "databricks_service_principal_client_id" {
+  description = "Client ID of the node service principal from the prod Databricks workspace."
+  type        = string
+  sensitive   = true
+}
+
+variable "databricks_service_principal_client_secret" {
+  description = "Client secret of the node service principal from the prod Databricks workspace."
+  type        = string
+  sensitive   = true
+}
+
+variable "databricks_ambyte_processing_job_id" {
+  description = "Databricks Ambyte Processing Job ID (from prod workspace). Used by the backend to trigger the job."
+  type        = string
+  sensitive   = true
+}
+
+variable "databricks_data_export_job_id" {
+  description = "Databricks Data Export Job ID (from prod workspace)."
+  type        = string
+  sensitive   = true
+}
+
+variable "kinesis_credential_id" {
+  description = "Databricks storage credential ID for Kinesis (same value as prod)"
+  type        = string
+}
+
+# ── Shared with prod ─────────────────────────────────────────────────────────
+
 variable "slack_webhook_url" {
-  description = "Slack webhook URL for Databricks job notifications"
+  description = "Slack webhook URL for notifications"
   type        = string
   sensitive   = true
 }
@@ -52,20 +87,10 @@ variable "slack_channel" {
   default     = "#jii-monitoring"
 }
 
-variable "kinesis_credential_id" {
-  description = "Databricks storage credential ID for Kinesis"
-  type        = string
-}
-
-variable "dev_nameservers" {
-  description = "Comma-separated list of nameservers for dev subdomain delegation"
-  type        = string
-}
-
 variable "domain_name" {
-  description = "Base domain name (e.g., my-company.com)"
+  description = "Base domain name"
   type        = string
-  default     = "openjii.org"
+  default     = "dev.openjii.org"
 }
 
 variable "backend_container_port" {
@@ -74,12 +99,10 @@ variable "backend_container_port" {
   default     = 3020
 }
 
-# Authentication secrets
 variable "auth_secret" {
   description = "Authentication secret token"
   type        = string
   sensitive   = true
-
 }
 
 variable "github_oauth_client_id" {
@@ -106,7 +129,6 @@ variable "orcid_oauth_client_secret" {
   sensitive   = true
 }
 
-# Backend x Databricks webhook secrets
 variable "backend_webhook_api_key_id" {
   description = "Databricks webhook API key ID"
   type        = string
@@ -143,7 +165,6 @@ variable "api_cloudfront_header_value" {
   sensitive   = true
 }
 
-# Contentful configuration variables
 variable "contentful_space_id" {
   description = "Contentful space ID"
   type        = string
@@ -168,12 +189,6 @@ variable "contentful_preview_secret" {
   sensitive   = true
 }
 
-variable "centralized_metastore_bucket_name" {
-  description = "Name of the centralized S3 bucket for Unity Catalog metastore storage in data governance account"
-  type        = string
-  default     = "open-jii-databricks-uc-eu-central-1-metastore"
-}
-
 variable "posthog_key" {
   description = "PostHog project API key"
   type        = string
@@ -184,10 +199,4 @@ variable "posthog_host" {
   description = "PostHog instance host URL"
   type        = string
   default     = "https://eu.i.posthog.com"
-}
-
-variable "grafana_auth_service_token" {
-  description = "Grafana AMG service account token for API access"
-  type        = string
-  sensitive   = true
 }

@@ -23,6 +23,12 @@ provider "aws" {
   region = var.aws_region
 }
 
+# DR provider alias — used by modules that create cross-region resources
+provider "aws" {
+  alias  = "dr"
+  region = var.dr_region
+}
+
 provider "databricks" {
   alias         = "mws"
   host          = "https://accounts.cloud.databricks.com"

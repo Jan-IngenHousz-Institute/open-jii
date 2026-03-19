@@ -1,12 +1,18 @@
 locals {
-  zone_id = aws_route53_zone.main.zone_id
+  # When existing_zone_id is provided (DR scenario), reuse the prod zone.
+  # Otherwise create a new zone (prod/dev scenario).
+  zone_id = var.existing_zone_id != null ? var.existing_zone_id : aws_route53_zone.main[0].zone_id
 
   # Construct the base domain for certificates and records
   base_domain = var.use_environment_prefix ? "${var.environment}.${var.domain_name}" : var.domain_name
 }
 
-# Route53 Hosted Zone - DNS management for the domain
+# Route53 Hosted Zone - DNS management for the domain.
+# When existing_zone_id is set (DR), count=0 — we reuse the prod zone instead
+# of creating a new one. The data plane (records, certs) still runs in DR.
 resource "aws_route53_zone" "main" {
+  count = var.existing_zone_id == null ? 1 : 0
+
   name = local.base_domain
 
   tags = merge(
@@ -81,7 +87,7 @@ resource "aws_acm_certificate_validation" "regional_services_cert" {
 
 # ACM Certificates for CloudFront (us-east-1)
 resource "aws_acm_certificate" "cloudfront_certs" {
-  for_each = var.cloudfront_domain_configs
+  for_each = var.existing_cloudfront_certificate_arns == null ? var.cloudfront_domain_configs : {}
 
   provider                  = aws.us_east_1_for_cloudfront
   domain_name               = each.value # each.value is the FQDN from the map
@@ -102,9 +108,9 @@ resource "aws_acm_certificate" "cloudfront_certs" {
   }
 }
 
-# DNS validation records for the CloudFront (us-east-1) certificates
+# DNS validation records for the CloudFront (us-east-1) certificates.
+# Empty when existing_cloudfront_certificate_arns is set (certs already validated).
 resource "aws_route53_record" "cloudfront_cert_validation" {
-  # Iterate over each certificate created for CloudFront
   for_each = aws_acm_certificate.cloudfront_certs
 
   allow_overwrite = true
@@ -134,7 +140,6 @@ resource "aws_route53_record" "cloudfront_cert_validation_san" {
 # Certificate validation for the CloudFront (us-east-1) certificates
 resource "aws_acm_certificate_validation" "cloudfront_certs_validation" {
   provider = aws.us_east_1_for_cloudfront
-  # Iterate over each certificate created for CloudFront
   for_each = aws_acm_certificate.cloudfront_certs
 
   certificate_arn = each.value.arn
@@ -152,9 +157,11 @@ resource "aws_acm_certificate_validation" "cloudfront_certs_validation" {
 }
 
 
-# Create records for CloudFront distributions (docs, root domain)
+# Create records for CloudFront distributions (docs, root domain).
+# Gated by create_dns_records so DR can deploy all infra first and only flip
+# DNS when var.enable_dns_cutover=true is passed at apply time.
 resource "aws_route53_record" "cloudfront_record" {
-  for_each = var.cloudfront_records
+  for_each = var.create_dns_records ? var.cloudfront_records : {}
 
   zone_id = local.zone_id
   # If the key is empty (""), we're setting up the root domain for the environment
@@ -170,6 +177,8 @@ resource "aws_route53_record" "cloudfront_record" {
 }
 
 resource "aws_route53_record" "www_cname" {
+  count = var.create_dns_records ? 1 : 0
+
   zone_id = local.zone_id
   name    = "www.${local.base_domain}"
   type    = "CNAME"
