@@ -123,7 +123,9 @@ export function NewMacroForm() {
   const handleAddProtocol = (protocolId: string) => {
     const protocol = protocolList?.find((p) => p.id === protocolId);
     if (protocol) {
-      setSelectedProtocols((prev) => [...prev, protocol]);
+      setSelectedProtocols((prev) =>
+        [...prev, protocol].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       setProtocolSearch("");
     }
   };

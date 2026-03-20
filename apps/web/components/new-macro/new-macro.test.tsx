@@ -539,6 +539,21 @@ describe("NewMacroForm", () => {
       expect(lastDropdownProps?.availableProtocols.map((p) => p.id)).toContain("proto-2");
     });
 
+    it("should display selected protocols in alphabetical order", () => {
+      render(<NewMacroForm />);
+
+      // Add protocols in non-alphabetical order: "Temperature Protocol" then "Humidity Protocol"
+      act(() => {
+        lastDropdownProps?.onAddProtocol("proto-1"); // Temperature Protocol
+      });
+      act(() => {
+        lastDropdownProps?.onAddProtocol("proto-2"); // Humidity Protocol
+      });
+
+      const items = screen.getAllByText(/Protocol/).map((el) => el.textContent);
+      expect(items).toEqual(["Humidity Protocol", "Temperature Protocol"]);
+    });
+
     it("should remove a protocol when its remove button is clicked", async () => {
       const user = userEvent.setup();
       render(<NewMacroForm />);
