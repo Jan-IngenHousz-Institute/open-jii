@@ -118,9 +118,6 @@ export function RecentMeasurementsScreen() {
     setIsExporting(true);
     try {
       await exportMeasurementsToFile();
-      // no way to distinguish between canceling or successful export
-      // users can see in their chosen export location whether export was successful
-      // toast.success("Measurements exported successfully");
     } catch {
       toast.error("Export failed. Please try again.");
     } finally {

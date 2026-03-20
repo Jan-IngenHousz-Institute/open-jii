@@ -8,7 +8,7 @@ interface EndFlowButtonProps {
 
 export function EndFlowButton({ onPress }: EndFlowButtonProps) {
   const handlePress = () => {
-    showAlert("Finish Flow", "If you finish now, this measurement flow will not be saved?", [
+    showAlert("Finish Flow", "If you finish now, this measurement flow will not be saved.", [
       {
         text: "Finish Flow",
         variant: "primary",
