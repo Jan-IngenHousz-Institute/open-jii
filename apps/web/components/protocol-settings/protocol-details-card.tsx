@@ -58,7 +58,7 @@ export function ProtocolDetailsCard({
   const { t } = useTranslation();
   const { t: tIot } = useTranslation("iot");
   const [isCodeValid, setIsCodeValid] = useState(true);
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const browserSupport = useIotBrowserSupport();
 
   const form = useForm<UpdateProtocolRequestBody & { name: string; family: SensorFamily }>({
@@ -87,7 +87,7 @@ export function ProtocolDetailsCard({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="flex h-[calc(100vh-14rem)] min-h-[400px] flex-col"
+        className="flex h-[calc(100vh-10rem)] min-h-[500px] flex-col"
       >
         {/* Header */}
         <div className="flex flex-col gap-2 pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -127,7 +127,7 @@ export function ProtocolDetailsCard({
                     <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="space-y-4 border-b px-3 py-3 sm:px-4 sm:py-4">
+                    <div className="space-y-3 border-b px-3 py-3 sm:px-4 sm:py-3">
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                         <FormField
                           control={form.control}

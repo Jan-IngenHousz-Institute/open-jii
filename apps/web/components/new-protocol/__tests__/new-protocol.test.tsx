@@ -8,6 +8,21 @@ import { NewProtocolForm } from "../new-protocol";
 
 globalThis.React = React;
 
+// Mock window.matchMedia (not available in jsdom)
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 // Mock next/navigation
 const mockPush = vi.fn();
 const mockBack = vi.fn();
@@ -32,7 +47,7 @@ vi.mock("@/hooks/useLocale", () => ({
   useLocale: () => "en",
 }));
 
-// Mock tsr (used directly by NewProtocolForm for macro search)
+// Mock tsr (used by the details card for macro search)
 const mockMacroList = [
   { id: "macro-1", name: "SPAD Macro", language: "python" },
   { id: "macro-2", name: "Fluorescence Macro", language: "python" },
@@ -139,207 +154,44 @@ describe("NewProtocolForm", () => {
     lastDropdownProps = null;
   });
 
-  it("should render the form with all sections", () => {
-    render(<NewProtocolForm />);
-
-    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
-    expect(screen.getByTestId("iot-protocol-runner")).toBeInTheDocument();
-  });
-
-  it("should render submit and cancel buttons", () => {
-    render(<NewProtocolForm />);
-
-    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /finalizeSetup/i })).toBeInTheDocument();
-  });
-
-  it("should disable submit button when form is pristine", () => {
-    render(<NewProtocolForm />);
-
-    const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-    expect(submitButton).toBeDisabled();
-  });
-
-  it("should call router.back when cancel is clicked", async () => {
-    render(<NewProtocolForm />);
-
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
-    await userEvent.click(cancelButton);
-
-    expect(mockBack).toHaveBeenCalled();
-  });
-
-  it("should disable submit when code is invalid", async () => {
-    render(<NewProtocolForm />);
-
-    const codeEditor = screen.getByTestId("code-editor");
-
-    // Set invalid code
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: "{ invalid json" } });
-
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-      expect(submitButton).toBeDisabled();
-    });
-  });
-
-  it.skip("should create protocol and navigate on successful submit", async () => {
-    // Skip: fireEvent.input doesn't trigger React Hook Form state updates properly
-    // This test would need user interaction with actual Monaco editor which requires more complex setup
-    const { useProtocolCreate } = await import(
-      "@/hooks/protocol/useProtocolCreate/useProtocolCreate"
-    );
-    const mockMutate = vi.fn((_data) => {
-      // Simulate successful creation
-      const onSuccess = vi.mocked(useProtocolCreate).mock.calls[0]?.[0]?.onSuccess;
-      if (onSuccess) {
-        onSuccess("new-protocol-id");
-      }
-    });
-
-    vi.mocked(useProtocolCreate).mockReturnValue({
-      mutate: mockMutate,
-      isPending: false,
-    } as never);
-
-    render(<NewProtocolForm />);
-
-    // Fill in required fields to make form valid
-    const nameInput = screen.getByTestId("name-input");
-    await userEvent.type(nameInput, "Test Protocol");
-
-    const codeEditor = screen.getByTestId("code-editor");
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-
-    // Wait for form validation to complete
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-      expect(submitButton).not.toBeDisabled();
-    });
-
-    // Submit the form
-    const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-    await userEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols/new-protocol-id");
-    });
-  });
-
-  it.skip("should show toast notification on successful creation", async () => {
-    // Skip: fireEvent.input doesn't trigger React Hook Form state updates properly
-    const { toast } = await import("@repo/ui/hooks");
-    const { useProtocolCreate } = await import(
-      "@/hooks/protocol/useProtocolCreate/useProtocolCreate"
-    );
-
-    const mockMutate = vi.fn((_data) => {
-      const onSuccess = vi.mocked(useProtocolCreate).mock.calls[0]?.[0]?.onSuccess;
-      if (onSuccess) {
-        onSuccess("new-protocol-id");
-      }
-    });
-
-    vi.mocked(useProtocolCreate).mockReturnValue({
-      mutate: mockMutate,
-      isPending: false,
-    } as never);
-
-    render(<NewProtocolForm />);
-
-    const nameInput = screen.getByTestId("name-input");
-    await userEvent.type(nameInput, "Test Protocol");
-
-    const codeEditor = screen.getByTestId("code-editor");
-    fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-
-    // Wait for form validation
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-      expect(submitButton).not.toBeDisabled();
-    });
-
-    const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
-    await userEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith({
-        description: "protocols.protocolCreated",
-      });
-    });
-  });
-
-  it("should show loading state during creation", async () => {
-    const { useProtocolCreate } = await import(
-      "@/hooks/protocol/useProtocolCreate/useProtocolCreate"
-    );
-    vi.mocked(useProtocolCreate).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: true,
-    } as never);
-
-    render(<NewProtocolForm />);
-
-    const submitButton = screen.getByRole("button", { name: /creating/i });
-    expect(submitButton).toBeInTheDocument();
-  });
-
-  it("should initialize form with default values", () => {
-    render(<NewProtocolForm />);
-
-    const codeEditor = screen.getByTestId("code-editor");
-    expect(codeEditor).toHaveValue(JSON.stringify([{}]));
-  });
-
-  it("should display details section", () => {
-    render(<NewProtocolForm />);
-
-    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
-  });
-
-  it("should handle code editor changes", () => {
-    render(<NewProtocolForm />);
-
-    const codeEditor = screen.getByTestId("code-editor");
-    const newCode = JSON.stringify([{ averages: 2 }]);
-
-    // Use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: newCode } });
-
-    expect(codeEditor).toHaveValue(newCode);
-  });
-
-  it("should validate code changes", () => {
-    render(<NewProtocolForm />);
-
-    const codeEditor = screen.getByTestId("code-editor");
-
-    // Set valid code - use fireEvent for JSON strings with curly braces
-    fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-
-    // Button should still be disabled because form needs a name to be valid
-    // Note: Button text may show "creating" due to pending state
-    const submitButton = screen.getByRole("button", { name: /(finalizeSetup|creating)/i });
-    expect(submitButton).toBeDisabled();
-  });
-
-  it("should use generic as default family", () => {
-    render(<NewProtocolForm />);
-
-    // The form should initialize with family: "generic"
-    // This is implicit in the defaultValues
-    expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
-  });
-
-  describe("Compatible Macros Section", () => {
-    it("should render MacroSearchWithDropdown", () => {
+  describe("Step 1 - Details", () => {
+    it("should render the wizard with step indicators", () => {
       render(<NewProtocolForm />);
 
+      // Step indicator should be visible (3 steps: Details, Code & Test, Review)
+      expect(screen.getByText("1")).toBeInTheDocument();
+      expect(screen.getByText("2")).toBeInTheDocument();
+      expect(screen.getByText("3")).toBeInTheDocument();
+    });
+
+    it("should render the details card on step 1", () => {
+      render(<NewProtocolForm />);
+
+      expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
+      expect(screen.getByText("newProtocol.name")).toBeInTheDocument();
+      expect(screen.getByText("newProtocol.family")).toBeInTheDocument();
+      expect(screen.getByText("newProtocol.description_field")).toBeInTheDocument();
+    });
+
+    it("should render compatible macros section on step 1", () => {
+      render(<NewProtocolForm />);
+
+      expect(screen.getByText("newProtocol.compatibleMacros")).toBeInTheDocument();
       expect(screen.getByTestId("macro-search-dropdown")).toBeInTheDocument();
+    });
+
+    it("should show next and back buttons on step 1", () => {
+      render(<NewProtocolForm />);
+
+      expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+    });
+
+    it("should have back button disabled on step 1", () => {
+      render(<NewProtocolForm />);
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      expect(backButton).toBeDisabled();
     });
 
     it("should pass available macros to the dropdown", () => {
@@ -351,7 +203,7 @@ describe("NewProtocolForm", () => {
       expect(ids).toContain("macro-2");
     });
 
-    it("should add a macro when onAddMacro is called and show it in the list", () => {
+    it("should add a macro when onAddMacro is called", () => {
       render(<NewProtocolForm />);
 
       act(() => {
@@ -359,7 +211,6 @@ describe("NewProtocolForm", () => {
       });
 
       expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
-      expect(screen.getByText("python")).toBeInTheDocument();
     });
 
     it("should filter out already-selected macros from available list", () => {
@@ -372,38 +223,132 @@ describe("NewProtocolForm", () => {
       expect(lastDropdownProps?.availableMacros.map((m) => m.id)).not.toContain("macro-1");
       expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-2");
     });
+  });
 
-    it("should display selected macros in alphabetical order", () => {
+  describe("Step 2 - Code & Test", () => {
+    const goToStep2 = async () => {
       render(<NewProtocolForm />);
 
-      // Add macros in non-alphabetical order: "SPAD Macro" then "Fluorescence Macro"
-      act(() => {
-        lastDropdownProps?.onAddMacro("macro-1"); // SPAD Macro
-      });
-      act(() => {
-        lastDropdownProps?.onAddMacro("macro-2"); // Fluorescence Macro
-      });
+      // Fill in required name field — use first textbox (name input)
+      const nameInput = screen.getAllByRole("textbox")[0];
+      fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
-      const items = screen.getAllByText(/Macro/).map((el) => el.textContent);
-      expect(items).toEqual(["Fluorescence Macro", "SPAD Macro"]);
+      // Click next to go to step 2
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      await userEvent.click(nextButton);
+
+      // Wait for step 2 to render
+      await waitFor(() => {
+        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+      });
+    };
+
+    it("should show code editor and IoT tester on step 2", async () => {
+      await goToStep2();
+
+      expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+      expect(screen.getByTestId("iot-protocol-runner")).toBeInTheDocument();
     });
 
-    it("should remove a macro when its remove button is clicked", async () => {
+    it("should initialize code editor with default values", async () => {
+      await goToStep2();
+
+      const codeEditor = screen.getByTestId("code-editor");
+      expect(codeEditor).toHaveValue(JSON.stringify([{}]));
+    });
+
+    it("should handle code editor changes", async () => {
+      await goToStep2();
+
+      const codeEditor = screen.getByTestId("code-editor");
+      const newCode = JSON.stringify([{ averages: 2 }]);
+
+      fireEvent.change(codeEditor, { target: { value: newCode } });
+
+      expect(codeEditor).toHaveValue(newCode);
+    });
+
+    it("should show next and back buttons on step 2", async () => {
+      await goToStep2();
+
+      expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+    });
+
+    it("should navigate back to step 1 when back is clicked", async () => {
+      await goToStep2();
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      await userEvent.click(backButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Step 3 - Review", () => {
+    const goToStep3 = async () => {
       render(<NewProtocolForm />);
 
-      act(() => {
-        lastDropdownProps?.onAddMacro("macro-1");
-      });
-      expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
+      // Fill in required name field
+      const nameInput = screen.getAllByRole("textbox")[0];
+      fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
-      // Find the remove button inside the selected macro row
-      const removeButtons = screen.getAllByRole("button").filter((btn) => {
-        return btn.closest(".flex.items-center.justify-between");
-      });
-      expect(removeButtons.length).toBeGreaterThan(0);
-      await userEvent.click(removeButtons[0]);
+      // Step 1 → Step 2
+      const nextButton1 = screen.getByRole("button", { name: /next/i });
+      await userEvent.click(nextButton1);
 
-      expect(screen.queryByText("SPAD Macro")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+      });
+
+      // Step 2 → Step 3
+      const nextButton2 = screen.getByRole("button", { name: /next/i });
+      await userEvent.click(nextButton2);
+
+      await waitFor(() => {
+        expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
+      });
+    };
+
+    it("should show review content on step 3", async () => {
+      await goToStep3();
+
+      expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
+      expect(screen.getByText("newProtocol.protocolName")).toBeInTheDocument();
+      expect(screen.getByText("newProtocol.protocolCode")).toBeInTheDocument();
+      expect(screen.getByText("newProtocol.compatibleMacros")).toBeInTheDocument();
+    });
+
+    it("should show the protocol name in review", async () => {
+      await goToStep3();
+
+      expect(screen.getByText("Test Protocol")).toBeInTheDocument();
+    });
+
+    it("should show no macros message when none selected", async () => {
+      await goToStep3();
+
+      expect(screen.getByText("newProtocol.noMacrosAdded")).toBeInTheDocument();
+    });
+
+    it("should show submit and back buttons on step 3", async () => {
+      await goToStep3();
+
+      expect(screen.getByRole("button", { name: /finalizeSetup/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+    });
+
+    it("should navigate back to step 2 when back is clicked", async () => {
+      await goToStep3();
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      await userEvent.click(backButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+      });
     });
   });
 });

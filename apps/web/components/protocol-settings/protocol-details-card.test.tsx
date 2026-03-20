@@ -45,6 +45,11 @@ vi.mock("@repo/ui/components", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
   return {
     ...actual,
+    Collapsible: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    CollapsibleContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    CollapsibleTrigger: ({ children }: { children: React.ReactNode }) => (
+      <button type="button">{children}</button>
+    ),
     ResizablePanelGroup: ({
       children,
       ...props
