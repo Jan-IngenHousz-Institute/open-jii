@@ -413,7 +413,7 @@ module "centrum_schema" {
 
   grants = {
     node_service_principal = {
-      principal  = module.node_service_principal.service_principal_application_id
+      principal = module.node_service_principal.service_principal_application_id
       privileges = [
         "USE_SCHEMA",
         "CREATE_TABLE",
