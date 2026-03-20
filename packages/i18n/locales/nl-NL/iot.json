@@ -1,0 +1,36 @@
+{
+  "iot": {
+    "protocolRunner": {
+      "connectionType": "Verbindingstype",
+      "bluetooth": "Bluetooth",
+      "serial": "Serieel",
+      "device": "Apparaat",
+      "connected": "Verbonden",
+      "connecting": "Verbinden",
+      "notConnected": "Niet verbonden",
+      "pairingWithDevice": "Koppelen met apparaat",
+      "wireless": "Draadloos",
+      "usb": "USB",
+      "connect": "Verbinden",
+      "disconnect": "Verbreken",
+      "unknownDevice": "Onbekend apparaat",
+      "version": "Versie",
+      "runProtocol": "Protocol uitvoeren",
+      "running": "Wordt uitgevoerd...",
+      "results": "Resultaten",
+      "success": "Succes",
+      "failed": "Mislukt",
+      "passed": "Geslaagd",
+      "error": "Fout",
+      "responseData": "Responsgegevens",
+      "noResultsYet": "Nog geen resultaten",
+      "runProtocolToSeeResults": "Voer een protocol uit om resultaten te zien",
+      "webBluetoothNotSupported": "Web Bluetooth wordt niet ondersteund in deze browser",
+      "webSerialNotSupported": "Web Serial wordt niet ondersteund in deze browser",
+      "testProtocol": "Protocol testen",
+      "connectToDeviceDescription": "Verbind met een apparaat en test uw protocol voordat u het opslaat",
+      "browserNotSupported": "Uw browser ondersteunt geen Web Bluetooth of Web Serial APIs.",
+      "tryDifferentBrowser": "Probeer Chrome, Edge of Opera op desktop."
+    }
+  }
+}

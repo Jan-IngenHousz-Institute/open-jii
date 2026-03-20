@@ -351,7 +351,8 @@
     "codePlaceholder": "Voer protocol code in als JSON",
     "finalizeSetup": "Protocol maken",
     "compatibleMacros": "Compatibele macro's",
-    "compatibleMacrosDescription": "Selecteer optioneel compatibele macro's voor dit protocol"
+    "compatibleMacrosDescription": "Selecteer optioneel compatibele macro's voor dit protocol",
+    "testerTitle": "Verbinden & Testen"
   },
   "protocolSettings": {
     "loading": "Protocol instellingen laden...",
@@ -380,7 +381,9 @@
     "compatibleMacros": "Compatibele macro's",
     "compatibleMacrosDescription": "Macro's waarvan bekend is dat ze werken met dit protocol. Deze worden aanbevolen in de flow builder.",
     "noCompatibleMacros": "Nog geen compatibele macro's gekoppeld.",
-    "addCompatibleMacro": "Zoek en voeg een compatibele macro toe..."
+    "addCompatibleMacro": "Zoek en voeg een compatibele macro toe...",
+    "detailsTitle": "Protocol Details",
+    "testerTitle": "Verbinden & Testen"
   },
   "experimentDataTable": {
     "noData": "Geen gegevens ontvangen",

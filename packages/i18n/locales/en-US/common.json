@@ -714,7 +714,8 @@
     "codePlaceholder": "Enter protocol code as JSON",
     "finalizeSetup": "Create Protocol",
     "compatibleMacros": "Compatible Macros",
-    "compatibleMacrosDescription": "Optionally select macros compatible with this protocol"
+    "compatibleMacrosDescription": "Optionally select macros compatible with this protocol",
+    "testerTitle": "Connect & Test"
   },
   "protocolSettings": {
     "loading": "Loading protocol settings...",
@@ -742,7 +743,9 @@
     "compatibleMacros": "Compatible Macros",
     "compatibleMacrosDescription": "Macros that are known to work with this protocol. These will be recommended in the flow builder.",
     "noCompatibleMacros": "No compatible macros linked yet.",
-    "addCompatibleMacro": "Search and add a compatible macro..."
+    "addCompatibleMacro": "Search and add a compatible macro...",
+    "detailsTitle": "Protocol Details",
+    "testerTitle": "Connect & Test"
   },
   "macroSettings": {
     "macroInfo": "Macro Information",

@@ -2,14 +2,16 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { ProtocolDetailsCard } from "../protocol-details-card";
+import { ProtocolDetailsCard } from "./protocol-details-card";
+
+// Hoisted mocks
+const useProtocolUpdateMock = vi.hoisted(() => vi.fn());
+const toastMock = vi.hoisted(() => vi.fn());
+const useIotBrowserSupportMock = vi.hoisted(() => vi.fn());
 
 // Mock the hooks
-vi.mock("../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
-  useProtocolUpdate: vi.fn(() => ({
-    mutateAsync: vi.fn().mockResolvedValue({}),
-    isPending: false,
-  })),
+vi.mock("../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
+  useProtocolUpdate: useProtocolUpdateMock,
 }));
 
 // Mock i18n
@@ -21,11 +23,47 @@ vi.mock("@repo/i18n", () => ({
 
 // Mock toast
 vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
+  toast: toastMock,
 }));
 
+// Mock useIotBrowserSupport
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: useIotBrowserSupportMock,
+}));
+
+// Mock IotProtocolRunner
+vi.mock("../iot/iot-protocol-runner", () => ({
+  IotProtocolRunner: (props: Record<string, unknown>) => (
+    <div data-testid="iot-protocol-runner" data-layout={props.layout}>
+      IotProtocolRunner
+    </div>
+  ),
+}));
+
+// Mock ResizablePanelGroup (renders children in a simple div)
+vi.mock("@repo/ui/components", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
+  return {
+    ...actual,
+    ResizablePanelGroup: ({
+      children,
+      ...props
+    }: {
+      children: React.ReactNode;
+      direction: string;
+      className?: string;
+    }) => (
+      <div data-testid="resizable-panel-group" data-direction={props.direction}>
+        {children}
+      </div>
+    ),
+    ResizablePanel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    ResizableHandle: () => <div data-testid="resizable-handle" />,
+  };
+});
+
 // Mock ProtocolCodeEditor
-vi.mock("../../protocol-code-editor", () => ({
+vi.mock("../protocol-code-editor", () => ({
   default: ({
     value,
     onChange,
@@ -64,13 +102,21 @@ describe("ProtocolDetailsCard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useProtocolUpdateMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({}),
+      isPending: false,
+    });
+    useIotBrowserSupportMock.mockReturnValue({
+      bluetooth: false,
+      serial: false,
+      any: false,
+    });
   });
 
   it("should render the form with initial values", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
     expect(screen.getByDisplayValue("Test Protocol")).toBeInTheDocument();
-    // Description is wrapped in <p> tags by Quill, so can't use getByDisplayValue
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 
@@ -104,14 +150,11 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should call updateProtocol mutation on submit", async () => {
-    const { useProtocolUpdate } = await import(
-      "../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate"
-    );
     const mockMutateAsync = vi.fn().mockResolvedValue({});
-    vi.mocked(useProtocolUpdate).mockReturnValue({
+    useProtocolUpdateMock.mockReturnValue({
       mutateAsync: mockMutateAsync,
       isPending: false,
-    } as never);
+    });
 
     render(<ProtocolDetailsCard {...defaultProps} />);
 
@@ -136,8 +179,6 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should show toast notification on successful update", async () => {
-    const { toast } = await import("@repo/ui/hooks");
-
     render(<ProtocolDetailsCard {...defaultProps} />);
 
     const nameInput = screen.getByLabelText(/name/i);
@@ -148,7 +189,7 @@ describe("ProtocolDetailsCard", () => {
     await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(toast).toHaveBeenCalledWith({
+      expect(toastMock).toHaveBeenCalledWith({
         description: "protocols.protocolUpdated",
       });
     });
@@ -171,14 +212,11 @@ describe("ProtocolDetailsCard", () => {
     });
   });
 
-  it("should show loading state during update", async () => {
-    const { useProtocolUpdate } = await import(
-      "../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate"
-    );
-    vi.mocked(useProtocolUpdate).mockReturnValue({
+  it("should show loading state during update", () => {
+    useProtocolUpdateMock.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: true,
-    } as never);
+    });
 
     render(<ProtocolDetailsCard {...defaultProps} />);
 
@@ -217,7 +255,7 @@ describe("ProtocolDetailsCard", () => {
     expect(familySelect).toBeInTheDocument();
   });
 
-  it("should display card title and description", () => {
+  it("should display header title and description", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
     expect(screen.getByText("protocolSettings.generalSettings")).toBeInTheDocument();
@@ -243,5 +281,50 @@ describe("ProtocolDetailsCard", () => {
       const submitButton = screen.getByRole("button", { name: /save/i });
       expect(submitButton).toBeDisabled();
     });
+  });
+
+  it("should render resizable panel group with horizontal direction", () => {
+    render(<ProtocolDetailsCard {...defaultProps} />);
+
+    const panelGroup = screen.getByTestId("resizable-panel-group");
+    expect(panelGroup).toHaveAttribute("data-direction", "horizontal");
+  });
+
+  it("should render the connect & test panel title", () => {
+    render(<ProtocolDetailsCard {...defaultProps} />);
+
+    expect(screen.getByText("protocolSettings.testerTitle")).toBeInTheDocument();
+  });
+
+  it("should render collapsible details section", () => {
+    render(<ProtocolDetailsCard {...defaultProps} />);
+
+    expect(screen.getByText("protocolSettings.detailsTitle")).toBeInTheDocument();
+  });
+
+  it("should show browser unsupported message when no browser support", () => {
+    useIotBrowserSupportMock.mockReturnValue({
+      bluetooth: false,
+      serial: false,
+      any: false,
+    });
+
+    render(<ProtocolDetailsCard {...defaultProps} />);
+
+    expect(screen.queryByTestId("iot-protocol-runner")).not.toBeInTheDocument();
+  });
+
+  it("should render IoT protocol runner when browser supports APIs", () => {
+    useIotBrowserSupportMock.mockReturnValue({
+      bluetooth: true,
+      serial: false,
+      any: true,
+    });
+
+    render(<ProtocolDetailsCard {...defaultProps} />);
+
+    const runner = screen.getByTestId("iot-protocol-runner");
+    expect(runner).toBeInTheDocument();
+    expect(runner).toHaveAttribute("data-layout", "vertical");
   });
 });
