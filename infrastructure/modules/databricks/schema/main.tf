@@ -1,6 +1,11 @@
 # Adopts a schema that was originally created by a DLT pipeline so it can be
-# managed entirely through IaC.  The import block brings the pre-existing schema
-# into Terraform state on first apply; subsequent runs manage it normally.
+# managed entirely through IaC.
+#
+# NOTE: If this module is used for a pre-existing schema, you MUST import it
+# into state manually before the first apply:
+#
+#   tofu import 'module.<MODULE_NAME>.databricks_schema.this' '<catalog_name>.<schema_name>'
+#
 
 terraform {
   required_providers {
@@ -10,11 +15,6 @@ terraform {
       configuration_aliases = [databricks.workspace]
     }
   }
-}
-
-import {
-  to = databricks_schema.this
-  id = "${var.catalog_name}.${var.schema_name}"
 }
 
 resource "databricks_schema" "this" {
