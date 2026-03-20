@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import React from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { create } from "zustand";
@@ -43,7 +44,8 @@ export function showAlert(title: string, message: string, buttons?: AlertButton[
 
 export function AlertDialog() {
   const { visible, title, message, buttons, hide } = useAlertStore();
-  const { colors } = useTheme();
+  const theme = useTheme();
+  const { classes, colors } = theme;
 
   const handlePress = (button: AlertButton) => {
     hide();
@@ -54,7 +56,7 @@ export function AlertDialog() {
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <Pressable className="flex-1 items-center justify-center bg-black/50" onPress={hide}>
         <Pressable
-          className="w-[85%] max-w-sm rounded-2xl bg-white p-4"
+          className={clsx("w-[85%] max-w-sm rounded-2xl p-4", classes.card)}
           onPress={(e) => e.stopPropagation()}
         >
           <Text className="mb-2 text-left text-lg font-semibold">{title}</Text>

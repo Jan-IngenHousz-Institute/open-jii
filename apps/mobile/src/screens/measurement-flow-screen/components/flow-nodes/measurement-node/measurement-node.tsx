@@ -35,14 +35,15 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     error: scanError,
   } = useScanner();
   const { data: device } = useConnectedDevice();
-  const { nextStep, setScanResult, setProtocolId, setCurrentFlowStep } = useMeasurementFlowStore();
+  const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
+    useMeasurementFlowStore();
   const router = useRouter();
   useEffect(() => {
     setProtocolId(content.protocolId);
   }, [setProtocolId, content.protocolId]);
 
   const handleCardPress = (flowStepIndex: number) => {
-    setCurrentFlowStep(flowStepIndex);
+    navigateToQuestionFromOverview(flowStepIndex);
   };
 
   const handleStartScan = async () => {

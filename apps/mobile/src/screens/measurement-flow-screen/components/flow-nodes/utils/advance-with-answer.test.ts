@@ -6,11 +6,13 @@ import { advanceWithAnswer, findNextMandatoryStep } from "./advance-with-answer"
 const mockSetAnswer = vi.fn();
 const mockNextStep = vi.fn();
 const mockSetCurrentFlowStep = vi.fn();
+const mockReturnToOverview = vi.fn();
 
 const mockFlowAnswersState = {
   setAnswer: mockSetAnswer,
   isAutoincrementEnabled: vi.fn((_id: string) => false),
   isRememberAnswerEnabled: vi.fn((_id: string) => false),
+  getAnswer: vi.fn((_iteration: number, _id: string): string | undefined => undefined),
 };
 
 const mockFlowStore = {
@@ -19,6 +21,8 @@ const mockFlowStore = {
   nextStep: mockNextStep,
   flowNodes: [] as FlowNode[],
   setCurrentFlowStep: mockSetCurrentFlowStep,
+  isFromOverview: false,
+  returnToOverview: mockReturnToOverview,
 };
 
 vi.mock("~/stores/use-flow-answers-store", () => ({
@@ -40,6 +44,7 @@ describe("findNextMandatoryStep", () => {
     vi.clearAllMocks();
     mockFlowAnswersState.isAutoincrementEnabled.mockReturnValue(false);
     mockFlowAnswersState.isRememberAnswerEnabled.mockReturnValue(false);
+    mockFlowAnswersState.getAnswer.mockReturnValue(undefined);
   });
 
   it("returns the next question index", () => {
@@ -73,6 +78,44 @@ describe("findNextMandatoryStep", () => {
     mockFlowAnswersState.isRememberAnswerEnabled.mockImplementation((id) => id === "q2");
     expect(findNextMandatoryStep(0, nodes, 0)).toBe(2);
   });
+
+  it("does not skip a required question with remember enabled when value is empty", () => {
+    const nodes = [
+      makeQuestion("q1"),
+      { ...makeQuestion("q2"), content: { kind: "text", required: true } } as FlowNode,
+      makeQuestion("q3"),
+    ];
+    mockFlowAnswersState.isRememberAnswerEnabled.mockImplementation((id) => id === "q2");
+    mockFlowAnswersState.getAnswer.mockReturnValue(undefined);
+    expect(findNextMandatoryStep(0, nodes, 0)).toBe(1);
+  });
+
+  it("skips a required question with remember enabled when it already has a value", () => {
+    const nodes = [
+      makeQuestion("q1"),
+      { ...makeQuestion("q2"), content: { kind: "text", required: true } } as FlowNode,
+      makeQuestion("q3"),
+    ];
+    mockFlowAnswersState.isRememberAnswerEnabled.mockImplementation((id) => id === "q2");
+    mockFlowAnswersState.getAnswer.mockImplementation((_, id) =>
+      id === "q2" ? "some value" : undefined,
+    );
+    expect(findNextMandatoryStep(0, nodes, 0)).toBe(2);
+  });
+
+  it("does not skip a required question with auto-increment enabled when value is empty", () => {
+    const nodes = [
+      makeQuestion("q1"),
+      {
+        ...makeQuestion("q2"),
+        content: { kind: "multi_choice", required: true, options: ["a", "b"] },
+      } as FlowNode,
+      makeQuestion("q3"),
+    ];
+    mockFlowAnswersState.isAutoincrementEnabled.mockImplementation((id) => id === "q2");
+    mockFlowAnswersState.getAnswer.mockReturnValue(undefined);
+    expect(findNextMandatoryStep(0, nodes, 0)).toBe(1);
+  });
 });
 
 describe("advanceWithAnswer", () => {
@@ -80,6 +123,8 @@ describe("advanceWithAnswer", () => {
     vi.clearAllMocks();
     mockFlowAnswersState.isAutoincrementEnabled.mockReturnValue(false);
     mockFlowAnswersState.isRememberAnswerEnabled.mockReturnValue(false);
+    mockFlowAnswersState.getAnswer.mockReturnValue(undefined);
+    mockFlowStore.isFromOverview = false;
     mockFlowStore.flowNodes = [makeQuestion("q1"), makeQuestion("q2")];
     mockFlowStore.currentFlowStep = 0;
     mockFlowStore.iterationCount = 0;
@@ -121,5 +166,21 @@ describe("advanceWithAnswer", () => {
     mockFlowAnswersState.isAutoincrementEnabled.mockReturnValue(true);
     advanceWithAnswer(node, "c");
     expect(mockSetAnswer).toHaveBeenCalledWith(1, "q1", "a");
+  });
+
+  it("calls returnToOverview and skips normal advance when isFromOverview is true", () => {
+    mockFlowStore.isFromOverview = true;
+    advanceWithAnswer(makeQuestion("q1"), "yes");
+    expect(mockReturnToOverview).toHaveBeenCalled();
+    expect(mockSetCurrentFlowStep).not.toHaveBeenCalled();
+    expect(mockNextStep).not.toHaveBeenCalled();
+  });
+
+  it("still seeds the answer before returning to overview", () => {
+    mockFlowStore.isFromOverview = true;
+    mockFlowAnswersState.isRememberAnswerEnabled.mockReturnValue(true);
+    advanceWithAnswer(makeQuestion("q1"), "remembered");
+    expect(mockSetAnswer).toHaveBeenCalledWith(1, "q1", "remembered");
+    expect(mockReturnToOverview).toHaveBeenCalled();
   });
 });
