@@ -2,83 +2,54 @@
 
 import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
-import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { X } from "lucide-react";
-import { ChevronsUpDown, MonitorX } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { UseFormReturn } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { CreateProtocolRequestBody, Macro } from "@repo/api";
-import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-  RichTextarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  WizardForm,
 } from "@repo/ui/components";
+import type { WizardStep, WizardStepProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
-import { cn } from "@repo/ui/lib/utils";
 
-import { tsr } from "../../lib/tsr";
 import { IotProtocolRunner } from "../iot/iot-protocol-runner";
-import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 import ProtocolCodeEditor from "../protocol-code-editor";
+import { NewProtocolDetailsCard } from "./new-protocol-details-card";
+import { CodeTestStep, codeSchema } from "./steps/code-test-step";
+import { DetailsStep, detailsSchema } from "./steps/details-step";
+import { ReviewStep, reviewSchema } from "./steps/review-step";
 
 export function NewProtocolForm() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { t: tIot } = useTranslation("iot");
   const locale = useLocale();
-  const [isCodeValid, setIsCodeValid] = useState(true);
-  const [detailsOpen, setDetailsOpen] = useState(true);
   const browserSupport = useIotBrowserSupport();
+
+  const isCodeValidRef = useRef(true);
+  const [hasFormData, setHasFormData] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   // Selected macros (local state before protocol creation)
   const [selectedMacros, setSelectedMacros] = useState<Macro[]>([]);
-
-  // Macro search
-  const [macroSearch, setMacroSearch] = useState("");
-  const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: { search: debouncedMacroSearch || undefined },
-    },
-    queryKey: ["macros", "search", debouncedMacroSearch],
-  });
-  const macroList = macroData?.body;
 
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
     onSuccess: (id: string) => {
-      // Link selected macros after protocol creation, then redirect
+      setIsSubmitting(true);
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
@@ -86,7 +57,7 @@ export function NewProtocolForm() {
             body: { macroIds: selectedMacros.map((m) => m.id) },
           })
           .catch(() => {
-            // Protocol was created successfully, macro linking failed - still redirect
+            // Protocol created successfully, macro linking failed - still redirect
           })
           .finally(() => {
             router.push(`/${locale}/platform/protocols/${id}`);
@@ -97,25 +68,91 @@ export function NewProtocolForm() {
     },
   });
 
-  // Placeholder protocolId for the hook - actual call uses the real ID via mutateAsync
   const addMacrosMutation = useAddCompatibleMacro("");
   addMacrosMutationRef.current = addMacrosMutation;
 
-  const form = useForm<CreateProtocolRequestBody>({
-    resolver: zodResolver(zCreateProtocolRequestBody),
-    defaultValues: {
-      name: "",
-      description: "",
-      code: [{}],
-      family: "generic",
-    },
-  });
+  const handleRemoveMacro = (macroId: string) => {
+    setSelectedMacros((prev) => prev.filter((m) => m.id !== macroId));
+  };
 
-  function cancel() {
-    router.back();
-  }
+  // Helper to create DetailsStep with the details card
+  const createDetailsStep = () => {
+    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => {
+      const DetailsCardWithMacros = ({
+        form,
+      }: {
+        form: UseFormReturn<CreateProtocolRequestBody>;
+      }) => (
+        <NewProtocolDetailsCard
+          form={form}
+          selectedMacros={selectedMacros}
+          onAddMacro={(macro: Macro) => {
+            setSelectedMacros((prev) => {
+              if (prev.some((m) => m.id === macro.id)) return prev;
+              return [...prev, macro];
+            });
+          }}
+          onRemoveMacro={handleRemoveMacro}
+        />
+      );
+
+      return <DetailsStep {...props} cards={[DetailsCardWithMacros]} />;
+    };
+    return Component;
+  };
+
+  // Helper to create CodeTestStep with IoT props
+  const createCodeTestStep = () => {
+    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+      <CodeTestStep
+        {...props}
+        browserSupport={browserSupport}
+        isCodeValid={isCodeValidRef.current}
+        setIsCodeValid={(v: boolean) => {
+          isCodeValidRef.current = v;
+        }}
+        ProtocolCodeEditor={ProtocolCodeEditor}
+        IotProtocolRunner={IotProtocolRunner}
+      />
+    );
+    return Component;
+  };
+
+  // Helper to create ReviewStep with macros
+  const createReviewStep = () => {
+    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+      <ReviewStep {...props} selectedMacros={selectedMacros} />
+    );
+    return Component;
+  };
+
+  const steps: WizardStep<CreateProtocolRequestBody>[] = useMemo(
+    () => [
+      {
+        title: t("newProtocol.detailsStepTitle"),
+        description: t("newProtocol.detailsStepDescription"),
+        validationSchema: detailsSchema,
+        component: createDetailsStep(),
+      },
+      {
+        title: t("newProtocol.codeStepTitle"),
+        description: t("newProtocol.codeStepDescription"),
+        validationSchema: codeSchema,
+        component: createCodeTestStep(),
+      },
+      {
+        title: t("newProtocol.reviewStepTitle"),
+        description: t("newProtocol.reviewStepDescription"),
+        validationSchema: reviewSchema,
+        component: createReviewStep(),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, browserSupport, selectedMacros],
+  );
 
   function onSubmit(data: CreateProtocolRequestBody) {
+    setIsSubmitting(true);
     createProtocol({
       body: {
         name: data.name,
@@ -127,244 +164,90 @@ export function NewProtocolForm() {
     toast({ description: t("protocols.protocolCreated") });
   }
 
-  const selectedMacroIds = useMemo(
-    () => new Set(selectedMacros.map((m) => m.id)),
-    [selectedMacros],
-  );
-
-  const availableMacros: Macro[] = useMemo(
-    () => (macroList ?? []).filter((m) => !selectedMacroIds.has(m.id)),
-    [macroList, selectedMacroIds],
-  );
-
-  const handleAddMacro = (macroId: string) => {
-    const macro = macroList?.find((m) => m.id === macroId);
-    if (macro) {
-      setSelectedMacros((prev) => [...prev, macro]);
-      setMacroSearch("");
+  const handleFormChange = () => {
+    if (!hasFormData) {
+      setHasFormData(true);
     }
   };
 
-  const handleRemoveMacro = (macroId: string) => {
-    setSelectedMacros((prev) => prev.filter((m) => m.id !== macroId));
+  useEffect(() => {
+    if (!hasFormData || isSubmitting) return;
+
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a");
+
+      if (link?.href && !link.target && link.origin === window.location.origin) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPendingNavigation(() => () => {
+          window.location.href = link.href;
+        });
+        setShowDialog(true);
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (showDialog) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleLinkClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [hasFormData, isSubmitting, showDialog]);
+
+  const handleCancelNavigation = () => {
+    setShowDialog(false);
+    setPendingNavigation(null);
   };
 
-  const isDisabled = useMemo(() => {
-    return isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid;
-  }, [isPending, form.formState.isDirty, form.formState.isValid, isCodeValid]);
+  const handleConfirmNavigation = () => {
+    setShowDialog(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+    }
+  };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex h-[calc(100vh-14rem)] min-h-[400px] flex-col"
-      >
-        {/* Header */}
-        <div className="flex flex-col gap-2 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h3 className="truncate text-lg font-medium">{t("protocols.newProtocol")}</h3>
-            <p className="text-muted-foreground truncate text-sm">{t("newProtocol.description")}</p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button type="button" onClick={cancel} variant="outline">
-              {t("newProtocol.cancel")}
+    <>
+      <div onChange={handleFormChange} onInput={handleFormChange}>
+        <WizardForm<CreateProtocolRequestBody>
+          steps={steps}
+          defaultValues={{
+            name: "",
+            description: "",
+            code: [{}],
+            family: "generic",
+          }}
+          onSubmit={onSubmit}
+          isSubmitting={isPending}
+          showStepIndicator={true}
+          showStepTitles={true}
+        />
+      </div>
+
+      <Dialog open={showDialog} onOpenChange={handleCancelNavigation}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("newProtocol.unsavedChangesTitle")}</DialogTitle>
+            <DialogDescription>{t("newProtocol.unsavedChangesMessage")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelNavigation}>
+              {t("newProtocol.unsavedStay")}
             </Button>
-            <Button type="submit" disabled={isDisabled}>
-              {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
+            <Button variant="destructive" onClick={handleConfirmNavigation}>
+              {t("newProtocol.unsavedLeave")}
             </Button>
-          </div>
-        </div>
-
-        {/* Compatible Macros Section */}
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>{t("newProtocol.compatibleMacros")}</CardTitle>
-            <CardDescription>{t("newProtocol.compatibleMacrosDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedMacros.length > 0 && (
-              <div className="space-y-2">
-                {selectedMacros.map((macro) => (
-                  <div
-                    key={macro.id}
-                    className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-sm font-medium">{macro.name}</span>
-                      <span className="text-muted-foreground text-xs">{macro.language}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => handleRemoveMacro(macro.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <MacroSearchWithDropdown
-              availableMacros={availableMacros}
-              value=""
-              placeholder={t("protocolSettings.addCompatibleMacro")}
-              loading={!isDebounced}
-              searchValue={macroSearch}
-              onSearchChange={setMacroSearch}
-              onAddMacro={handleAddMacro}
-              isAddingMacro={false}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Split Panel Layout */}
-        <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-lg border">
-          {/* Left Panel - Protocol Details + Code Editor */}
-          <ResizablePanel defaultSize={browserSupport.any ? 55 : 85} minSize={30}>
-            <div className="h-full overflow-y-auto">
-              <div className="flex h-full flex-col">
-                {/* Collapsible Details Section */}
-                <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-                  <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between border-b px-4 py-2.5 transition-colors">
-                    <span className="text-sm font-medium">{t("newProtocol.detailsTitle")}</span>
-                    <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="space-y-4 border-b px-3 py-3 sm:px-4 sm:py-4">
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("newProtocol.name")}</FormLabel>
-                              <FormControl>
-                                <Input {...field} trim />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="family"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("newProtocol.family")}</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={t("newProtocol.selectFamily")} />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {SENSOR_FAMILY_OPTIONS.map((opt) => (
-                                    <SelectItem
-                                      key={opt.value}
-                                      value={opt.value}
-                                      disabled={opt.disabled}
-                                    >
-                                      {opt.label}
-                                      {opt.disabled ? " (Coming Soon)" : ""}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("newProtocol.description_field")}</FormLabel>
-                            <FormControl>
-                              <RichTextarea
-                                value={field.value ?? ""}
-                                onChange={field.onChange}
-                                placeholder={t("newProtocol.description_field")}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Code Editor - fills remaining space */}
-                <div className="min-h-[200px] flex-1">
-                  <FormField
-                    control={form.control}
-                    name="code"
-                    render={({ field }) => (
-                      <ProtocolCodeEditor
-                        value={field.value}
-                        onChange={field.onChange}
-                        onValidationChange={setIsCodeValid}
-                        label=""
-                        placeholder={t("newProtocol.codePlaceholder")}
-                        error={form.formState.errors.code?.message?.toString()}
-                        height="100%"
-                        borderless
-                      />
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Right Panel - Connect & Test */}
-          <ResizablePanel
-            defaultSize={browserSupport.any ? 30 : 15}
-            minSize={browserSupport.any ? 20 : 10}
-          >
-            <div
-              className={cn(
-                "flex h-full min-w-0 flex-col overflow-hidden",
-                !browserSupport.any && "bg-muted/30",
-              )}
-            >
-              {/* Title bar matching Protocol Details header */}
-              <div className="flex w-full items-center border-b px-2.5 py-2.5 sm:px-4">
-                <span className="text-sm font-medium">{t("newProtocol.testerTitle")}</span>
-              </div>
-              <div className="flex flex-1 flex-col overflow-y-auto p-2.5 sm:p-4">
-                {browserSupport.any ? (
-                  <IotProtocolRunner
-                    protocolCode={form.watch("code")}
-                    sensorFamily={form.watch("family")}
-                    protocolName={form.watch("name") || "Untitled Protocol"}
-                    layout="vertical"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <div className="text-center">
-                      <MonitorX className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
-                      <div className="text-muted-foreground text-xs">
-                        {tIot("iot.protocolRunner.browserNotSupported")}
-                      </div>
-                      <div className="text-muted-foreground/60 text-xs">
-                        {tIot("iot.protocolRunner.tryDifferentBrowser")}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </form>
-    </Form>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

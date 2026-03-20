@@ -89,23 +89,23 @@ export function DeviceStatusCard({
               </div>
             )}
           </div>
+          <Button
+            type="button"
+            onClick={isConnected ? onDisconnect : onConnect}
+            disabled={isConnecting}
+            variant={isConnected ? "outline" : "default"}
+            size="sm"
+            className="shrink-0"
+          >
+            {isConnecting ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : isConnected ? (
+              t("iot.protocolRunner.disconnect")
+            ) : (
+              t("iot.protocolRunner.connect")
+            )}
+          </Button>
         </div>
-        <Button
-          type="button"
-          onClick={isConnected ? onDisconnect : onConnect}
-          disabled={isConnecting}
-          variant={isConnected ? "outline" : "default"}
-          size="sm"
-          className="w-full"
-        >
-          {isConnecting ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <span className="truncate">
-              {isConnected ? t("iot.protocolRunner.disconnect") : t("iot.protocolRunner.connect")}
-            </span>
-          )}
-        </Button>
 
         {error && (
           <Alert variant="destructive" className="mt-2">

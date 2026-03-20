@@ -58,6 +58,12 @@ export const GENERIC_FRAMING = {
 } as const;
 
 /**
+ * Generic device supported transport categories.
+ * Generic devices support both BLE and Serial.
+ */
+export { DEVICE_TRANSPORT_SUPPORT } from "../../core/types";
+
+/**
  * Driver-level configuration (independent of transport).
  * Pass to the `GenericDeviceDriver` constructor to override defaults.
  */

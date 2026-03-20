@@ -36,6 +36,16 @@ vi.mock("@repo/iot", () => ({
   MULTISPEQ_SERIAL_DEFAULTS: {
     baudRate: 115200,
   },
+  isTransportSupported: vi.fn((deviceType: string, transport: string) => {
+    if (deviceType === "multispeq" && transport === "bluetooth") return false;
+    return true;
+  }),
+}));
+
+// Mock device-type-mapping (web-layer mapping from SensorFamily to DeviceType)
+vi.mock("../device-type-mapping", () => ({
+  sensorFamilyToDeviceType: (family: string) =>
+    family === "multispeq" ? ("multispeq" as const) : ("generic" as const),
 }));
 
 // Mock transport adapters
@@ -113,7 +123,7 @@ describe("useIotCommunication", () => {
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(false);
-        expect(result.current.error).toMatch(/does not support Web Bluetooth/);
+        expect(result.current.error).toMatch(/does not support bluetooth transport/);
       });
     });
 

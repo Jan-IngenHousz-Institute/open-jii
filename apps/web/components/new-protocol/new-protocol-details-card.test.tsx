@@ -14,6 +14,27 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
+// Mock tsr (macro search API)
+vi.mock("../../lib/tsr", () => ({
+  tsr: {
+    macros: {
+      listMacros: {
+        useQuery: () => ({ data: { body: [] }, isLoading: false, error: null }),
+      },
+    },
+  },
+}));
+
+// Mock MacroSearchWithDropdown
+vi.mock("../macro-search-with-dropdown", () => ({
+  MacroSearchWithDropdown: () => <div data-testid="macro-search-dropdown" />,
+}));
+
+// Mock useDebounce
+vi.mock("@/hooks/useDebounce", () => ({
+  useDebounce: (value: string) => [value, true],
+}));
+
 // Mock RichTextarea (Quill editor)
 vi.mock("@repo/ui/components", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
@@ -51,16 +72,21 @@ const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocol
 
   return (
     <Form {...form}>
-      <NewProtocolDetailsCard form={form} />
+      <NewProtocolDetailsCard
+        form={form}
+        selectedMacros={[]}
+        onAddMacro={vi.fn()}
+        onRemoveMacro={vi.fn()}
+      />
     </Form>
   );
 };
 
 describe("NewProtocolDetailsCard", () => {
-  it("should render name input with placeholder", () => {
+  it("should render name input with label", () => {
     render(<TestWrapper />);
 
-    expect(screen.getByPlaceholderText("newProtocol.name")).toBeInTheDocument();
+    expect(screen.getByLabelText("newProtocol.name")).toBeInTheDocument();
   });
 
   it("should render description field with placeholder", () => {
@@ -80,7 +106,7 @@ describe("NewProtocolDetailsCard", () => {
     render(<TestWrapper />);
 
     // Name input
-    const nameInput = screen.getByPlaceholderText("newProtocol.name");
+    const nameInput = screen.getByLabelText("newProtocol.name");
     expect(nameInput).toBeInTheDocument();
     expect(nameInput.tagName).toBe("INPUT");
 

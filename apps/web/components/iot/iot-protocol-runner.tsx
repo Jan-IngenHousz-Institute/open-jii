@@ -40,7 +40,16 @@ export function IotProtocolRunner({
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
-  const browserSupport = useIotBrowserSupport();
+  const browserSupport = useIotBrowserSupport(sensorFamily);
+
+  // Auto-select the first supported connection type
+  useEffect(() => {
+    if (!browserSupport.bluetooth && browserSupport.serial) {
+      setConnectionType("serial");
+    } else if (browserSupport.bluetooth && !browserSupport.serial) {
+      setConnectionType("bluetooth");
+    }
+  }, [browserSupport.bluetooth, browserSupport.serial]);
 
   const { isConnected, isConnecting, error, deviceInfo, driver, connect, disconnect } =
     useIotCommunication(sensorFamily, connectionType);
@@ -127,16 +136,17 @@ export function IotProtocolRunner({
               type="button"
               onClick={handleRunProtocol}
               disabled={isRunning}
+              size="sm"
               className="w-full"
             >
               {isRunning ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" />
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
                   <span className="truncate">{t("iot.protocolRunner.running")}</span>
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-4 w-4 shrink-0" />
+                  <Play className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t("iot.protocolRunner.runProtocol")}</span>
                 </>
               )}

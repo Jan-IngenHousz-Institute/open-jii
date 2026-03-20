@@ -27,6 +27,8 @@
       "runProtocolToSeeResults": "Voer een protocol uit om resultaten te zien",
       "webBluetoothNotSupported": "Web Bluetooth wordt niet ondersteund in deze browser",
       "webSerialNotSupported": "Web Serial wordt niet ondersteund in deze browser",
+      "deviceNoBLE": "Dit apparaat ondersteunt geen Bluetooth Low Energy (BLE)",
+      "deviceNoSerial": "Dit apparaat ondersteunt geen seriële verbindingen",
       "testProtocol": "Protocol testen",
       "connectToDeviceDescription": "Verbind met een apparaat en test uw protocol voordat u het opslaat",
       "browserNotSupported": "Uw browser ondersteunt geen Web Bluetooth of Web Serial APIs.",

@@ -10,8 +10,11 @@ import {
   GENERIC_SERIAL_DEFAULTS,
   MultispeqDriver,
   MULTISPEQ_SERIAL_DEFAULTS,
+  isTransportSupported,
 } from "@repo/iot";
 import { WebBluetoothAdapter, WebSerialAdapter } from "@repo/iot/transport/web";
+
+import { sensorFamilyToDeviceType } from "../device-type-mapping";
 
 type ConnectionType = "bluetooth" | "serial";
 
@@ -26,18 +29,18 @@ async function createAdapter(
   sensorFamily: SensorFamily,
   connectionType: ConnectionType,
 ): Promise<ITransportAdapter> {
-  if (sensorFamily === "multispeq") {
-    // MultispeQ uses Bluetooth Classic + USB Serial — not BLE.
-    // Web Bluetooth is BLE-only, so only serial works on the web.
-    if (connectionType === "bluetooth") {
-      throw new Error(
-        "MultispeQ does not support Web Bluetooth (BLE). Use a serial connection instead.",
-      );
-    }
-    return WebSerialAdapter.requestAndConnect(MULTISPEQ_SERIAL_DEFAULTS);
+  const deviceType = sensorFamilyToDeviceType(sensorFamily);
+
+  // Check transport support at the driver level
+  if (!isTransportSupported(deviceType, connectionType)) {
+    throw new Error(
+      `${sensorFamily} does not support ${connectionType} transport. ` +
+        (connectionType === "bluetooth"
+          ? "This device uses Bluetooth Classic which is not available via Web Bluetooth (BLE-only). Use a serial connection instead."
+          : "Use a Bluetooth connection instead."),
+    );
   }
 
-  // Generic / Ambit — supports both BLE and serial
   if (connectionType === "bluetooth") {
     return WebBluetoothAdapter.requestAndConnect({
       serviceUUID: GENERIC_BLE_UUIDS.SERVICE,
@@ -46,7 +49,10 @@ async function createAdapter(
     });
   }
 
-  return WebSerialAdapter.requestAndConnect(GENERIC_SERIAL_DEFAULTS);
+  // Serial — use device-specific defaults
+  const serialDefaults =
+    sensorFamily === "multispeq" ? MULTISPEQ_SERIAL_DEFAULTS : GENERIC_SERIAL_DEFAULTS;
+  return WebSerialAdapter.requestAndConnect(serialDefaults);
 }
 
 function createDriver(sensorFamily: SensorFamily): IDeviceDriver {
