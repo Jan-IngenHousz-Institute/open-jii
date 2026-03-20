@@ -481,6 +481,9 @@ locals {
         "rds:DescribeDBEngineVersions",
         "rds:DescribeGlobalClusters",
         "rds:DescribeOrderableDBInstanceOptions",
+        "rds:DisableHttpEndpoint",
+        "rds:EnableHttpEndpoint",
+
       ]
       resource = "*"
     }
