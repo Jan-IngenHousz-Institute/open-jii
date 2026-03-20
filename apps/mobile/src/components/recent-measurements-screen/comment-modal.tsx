@@ -8,6 +8,7 @@ import { clsx } from "clsx";
 import { X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
@@ -58,6 +59,20 @@ export function CommentModal({
     [],
   );
 
+  useEffect(() => {
+    const onBackPress = () => {
+      if (visible) {
+        sheetRef.current?.dismiss();
+        return true; // prevent default navigation
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+    return () => subscription.remove();
+  }, [visible]);
+
   return (
     <BottomSheetModal
       ref={sheetRef}
@@ -67,6 +82,7 @@ export function CommentModal({
       handleIndicatorStyle={{ backgroundColor: colors.inactive }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
+      stackBehavior="push"
     >
       <BottomSheetView className="gap-4 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <View className="flex-row items-center justify-between">

@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import { CircleCheckBig, ChevronUp } from "lucide-react-native";
+import { DateTime } from "luxon";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -226,7 +227,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
               ellipsizeMode="tail"
               className={clsx("flex-1", classes.textMuted)}
             >
-              {displayTimestamp}
+              {DateTime.fromISO(displayTimestamp).toFormat("d MMMM yyyy, HH:mm")}
             </Text>
           </View>
         </View>

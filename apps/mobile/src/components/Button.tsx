@@ -12,7 +12,7 @@ import {
 import { useTheme } from "~/hooks/use-theme";
 
 interface ButtonProps extends TouchableOpacityProps {
-  title: string;
+  title?: string;
   variant?:
     | "primary"
     | "secondary"
@@ -120,11 +120,16 @@ export function Button({
   // WORKAROUND: Key with timestamp to force remount on every render
   // This bypasses React Native's native style caching bug in Expo SDK 54
   // The timestamp ensures remount even when props stay the same (which was causing the issue)
+  const iconOnly = !!icon && !title;
   const renderId = Date.now();
   return (
     <TouchableOpacity
       key={renderId}
-      className={buttonVariants({ variant, size, disabled: isDisabled })}
+      className={buttonVariants({
+        variant,
+        size: iconOnly ? undefined : size,
+        disabled: isDisabled,
+      })}
       style={style}
       disabled={isDisabled || isLoading}
       activeOpacity={0.7}
@@ -132,6 +137,8 @@ export function Button({
     >
       {isLoading ? (
         <ActivityIndicator size="small" color={getLoadingColor()} />
+      ) : iconOnly ? (
+        icon
       ) : (
         <View className="flex-row items-center justify-center">
           {icon && iconPosition === "left" && <View className="mr-1">{icon}</View>}

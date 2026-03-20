@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
-import { Alert } from "react-native";
 import { toast } from "sonner-native";
+import { showAlert } from "~/components/AlertDialog";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { exportSingleMeasurementToFile } from "~/services/export-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
@@ -74,13 +74,13 @@ function promptMeasurementFileSave(measurement: {
   measurementResult: object;
   metadata: { experimentName: string; protocolName: string; timestamp: string };
 }) {
-  Alert.alert(
+  showAlert(
     "Something went wrong",
     "Could not save the measurement. Would you like to save it as a file instead?",
     [
-      { text: "Dismiss", style: "cancel" },
       {
         text: "Save to File",
+        variant: "primary",
         onPress: () => {
           exportSingleMeasurementToFile(measurement).catch((exportError) => {
             console.error("Failed to export measurement to file:", exportError);
@@ -88,6 +88,7 @@ function promptMeasurementFileSave(measurement: {
           });
         },
       },
+      { text: "Dismiss", variant: "ghost" },
     ],
   );
 }
