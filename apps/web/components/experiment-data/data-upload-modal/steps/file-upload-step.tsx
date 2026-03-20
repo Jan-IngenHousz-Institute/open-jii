@@ -6,7 +6,7 @@ import * as React from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n/client";
-import { Button, Label, FileUpload } from "@repo/ui/components";
+import { Button, FileUpload } from "@repo/ui/components";
 
 import { validateAmbyteStructure, isExcludedFile } from "../data-upload-validation";
 
@@ -92,13 +92,6 @@ export const FileUploadStep: React.FC<FileUploadStepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Label className="text-base font-medium">{t("uploadModal.fileUpload.title")}</Label>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {t("uploadModal.fileUpload.description")}
-        </p>
-      </div>
-
       <FileUpload
         files={selectedFiles}
         onFilesChange={handleFileSelect}

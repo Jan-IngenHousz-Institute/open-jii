@@ -38,6 +38,10 @@ import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
 import { UpdateExperimentMemberRoleUseCase } from "./application/use-cases/experiment-members/update-experiment-member-role";
+import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
+import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
+import { GetExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/get-experiment-metadata";
+import { UpdateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/update-experiment-metadata";
 import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
@@ -68,6 +72,7 @@ import { ExperimentDataExportsRepository } from "./core/repositories/experiment-
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
+import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
@@ -80,6 +85,7 @@ import { ExperimentDataController } from "./presentation/experiment-data.control
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
+import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
@@ -94,6 +100,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataExportsController,
     ExperimentFlowsController,
     ExperimentMembersController,
+    ExperimentMetadataController,
     ExperimentProtocolsController,
     ExperimentVisualizationsController,
     ExperimentLocationsController,
@@ -127,6 +134,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Repositories
     ExperimentRepository,
     ExperimentMemberRepository,
+    ExperimentMetadataRepository,
     ExperimentProtocolRepository,
     ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
@@ -203,6 +211,11 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
     // Project transfer webhook use case
     ExecuteProjectTransferUseCase,
+    // Experiment metadata use cases
+    GetExperimentMetadataUseCase,
+    CreateExperimentMetadataUseCase,
+    UpdateExperimentMetadataUseCase,
+    DeleteExperimentMetadataUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
 })
