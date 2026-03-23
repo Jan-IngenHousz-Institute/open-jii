@@ -648,7 +648,7 @@ module "data_imports_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [databricks_schema.centrum]
+  depends_on = [module.centrum_schema]
 }
 
 module "data_legacy_volume" {
