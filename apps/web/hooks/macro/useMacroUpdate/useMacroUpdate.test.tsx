@@ -26,13 +26,7 @@ vi.mock("@repo/ui/hooks", () => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
-    i18n: { language: "en-US" },
   }),
-}));
-
-const mockReplace = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: mockReplace }),
 }));
 
 const mockTsr = tsr;

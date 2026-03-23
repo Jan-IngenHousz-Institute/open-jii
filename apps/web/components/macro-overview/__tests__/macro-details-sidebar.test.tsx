@@ -93,6 +93,17 @@ vi.mock("../../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProt
   })),
 }));
 
+vi.mock("@/hooks/macro/useMacroVersions/useMacroVersions", () => ({
+  useMacroVersions: vi.fn(() => ({
+    data: [{ version: 1, updatedAt: "2026-01-01T00:00:00Z" }],
+    isLoading: false,
+  })),
+}));
+
+vi.mock("@/components/shared/version-picker", () => ({
+  VersionPicker: () => <div data-testid="version-picker" />,
+}));
+
 // Mock MacroCompatibleProtocolsCard
 vi.mock("../../macro-settings/macro-compatible-protocols-card", () => ({
   MacroCompatibleProtocolsCard: ({

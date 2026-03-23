@@ -57,8 +57,8 @@ describe("useMacro", () => {
 
     // Assert
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockId } },
-      queryKey: ["macro", mockId],
+      queryData: { params: { id: mockId }, query: { version: undefined } },
+      queryKey: ["macro", mockId, undefined],
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
   });
@@ -178,13 +178,13 @@ describe("useMacro", () => {
 
     // Assert
     expect(mockUseQuery).toHaveBeenNthCalledWith(1, {
-      queryData: { params: { id: mockId1 } },
-      queryKey: ["macro", mockId1],
+      queryData: { params: { id: mockId1 }, query: { version: undefined } },
+      queryKey: ["macro", mockId1, undefined],
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
     expect(mockUseQuery).toHaveBeenNthCalledWith(2, {
-      queryData: { params: { id: mockId2 } },
-      queryKey: ["macro", mockId2],
+      queryData: { params: { id: mockId2 }, query: { version: undefined } },
+      queryKey: ["macro", mockId2, undefined],
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
   });
