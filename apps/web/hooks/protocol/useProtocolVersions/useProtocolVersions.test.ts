@@ -65,8 +65,6 @@ describe("useProtocolVersions", () => {
 
     renderHook(() => useProtocolVersions("proto-1", false));
 
-    expect(mockUseQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: false }),
-    );
+    expect(mockUseQuery).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 });
