@@ -44,8 +44,7 @@ export function showAlert(title: string, message: string, buttons?: AlertButton[
 
 export function AlertDialog() {
   const { visible, title, message, buttons, hide } = useAlertStore();
-  const theme = useTheme();
-  const { classes, colors } = theme;
+  const { classes, colors } = useTheme();
 
   const handlePress = (button: AlertButton) => {
     hide();
@@ -64,17 +63,14 @@ export function AlertDialog() {
 
           <View className="gap-4">
             {buttons.map((button, index) => {
-              const variant =
-                button.variant ?? (index === 0 && buttons.length > 1 ? "ghost" : "primary");
-
               return (
                 <Button
                   key={index}
                   title={button.text}
-                  variant={
-                    variant === "danger" ? "danger" : variant === "ghost" ? "ghost" : "primary"
+                  variant={button.variant}
+                  textStyle={
+                    button.variant === "ghost" ? { color: colors.neutral.black } : undefined
                   }
-                  textStyle={variant === "ghost" ? { color: colors.neutral.black } : undefined}
                   onPress={() => handlePress(button)}
                 />
               );
