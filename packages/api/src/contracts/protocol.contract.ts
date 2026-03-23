@@ -85,12 +85,14 @@ export const protocolContract = c.router({
     method: "GET",
     path: "/api/v1/protocols/:id/macros",
     pathParams: zProtocolIdPathParam,
+    query: z.object({ version: z.coerce.number().int().optional() }),
     responses: {
       200: zProtocolMacroList,
       404: zProtocolErrorResponse,
     },
     summary: "List compatible macros for a protocol",
-    description: "Returns macros that are marked as compatible with this protocol",
+    description:
+      "Returns macros compatible with this protocol version. Without version, uses latest.",
   },
 
   addCompatibleMacros: {

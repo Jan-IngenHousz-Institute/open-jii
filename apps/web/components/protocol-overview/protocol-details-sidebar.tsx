@@ -53,7 +53,11 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
 
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
   const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
-  const { data: compatibleMacrosData } = useProtocolCompatibleMacros(protocolId);
+  const { data: compatibleMacrosData } = useProtocolCompatibleMacros(
+    protocolId,
+    true,
+    protocol.version,
+  );
   const compatibleMacrosCount = compatibleMacrosData?.body.length ?? 0;
   const { data: versions } = useProtocolVersions(protocolId);
 

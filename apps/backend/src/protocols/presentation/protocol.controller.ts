@@ -363,8 +363,8 @@ export class ProtocolController {
 
   @TsRestHandler(contract.protocols.listCompatibleMacros)
   listCompatibleMacros() {
-    return tsRestHandler(contract.protocols.listCompatibleMacros, async ({ params }) => {
-      const result = await this.listCompatibleMacrosUseCase.execute(params.id);
+    return tsRestHandler(contract.protocols.listCompatibleMacros, async ({ params, query }) => {
+      const result = await this.listCompatibleMacrosUseCase.execute(params.id, query?.version);
 
       if (result.isSuccess()) {
         return {

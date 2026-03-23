@@ -53,7 +53,11 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
   const { mutateAsync: deleteMacro, isPending: isDeleting } = useMacroDelete();
-  const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(macroId);
+  const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(
+    macroId,
+    true,
+    macro.version,
+  );
   const { data: versions } = useMacroVersions(macroId);
   const compatibleProtocolsCount =
     (compatibleProtocolsData?.body as unknown[] | undefined)?.length ?? 0;
