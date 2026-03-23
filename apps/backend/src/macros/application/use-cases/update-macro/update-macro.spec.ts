@@ -2,7 +2,6 @@ import { DatabricksAdapter } from "../../../../common/modules/databricks/databri
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateMacroDto, UpdateMacroDto } from "../../../core/models/macro.model";
-import { MacroProtocolRepository } from "../../../core/repositories/macro-protocol.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { UpdateMacroUseCase } from "./update-macro";
 
@@ -11,7 +10,6 @@ describe("UpdateMacroUseCase", () => {
   let testUserId: string;
   let useCase: UpdateMacroUseCase;
   let macroRepository: MacroRepository;
-  let macroProtocolRepository: MacroProtocolRepository;
   let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
@@ -23,7 +21,6 @@ describe("UpdateMacroUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(UpdateMacroUseCase);
     macroRepository = testApp.module.get(MacroRepository);
-    macroProtocolRepository = testApp.module.get(MacroProtocolRepository);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
   });
 
@@ -66,8 +63,8 @@ describe("UpdateMacroUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
-    // New version should have a NEW id and version 2
-    expect(result.value.id).not.toBe(createdMacro.id);
+    // Same UUID across versions, version incremented
+    expect(result.value.id).toBe(createdMacro.id);
     expect(result.value.version).toBe(2);
     expect(result.value.name).toBe(updateData.name);
     expect(result.value.description).toBe(updateData.description);
@@ -98,8 +95,8 @@ describe("UpdateMacroUseCase", () => {
     assertSuccess(result);
     const v2 = result.value;
 
-    // Assert - old version is unchanged
-    const oldResult = await macroRepository.findById(v1.id);
+    // Assert - old version is unchanged (fetch specific version 1)
+    const oldResult = await macroRepository.findById(v1.id, 1);
     assertSuccess(oldResult);
     expect(oldResult.value).not.toBeNull();
     expect(oldResult.value!.version).toBe(1);
@@ -184,7 +181,7 @@ describe("UpdateMacroUseCase", () => {
     expect(result.error.message).toBe("Databricks update failed");
 
     // The failed new version should be cleaned up (only v1 remains)
-    const versionsResult = await macroRepository.findVersionsByName(createdMacro.name);
+    const versionsResult = await macroRepository.findVersionsById(createdMacro.id);
     assertSuccess(versionsResult);
     expect(versionsResult.value).toHaveLength(1);
     expect(versionsResult.value[0].version).toBe(1);
@@ -250,30 +247,6 @@ describe("UpdateMacroUseCase", () => {
     expect(result.error.message).toBe("Only the macro creator can update this macro");
   });
 
-  it("should copy compatibility links from old version to new version", async () => {
-    // Arrange
-    const macro = await testApp.createMacro({ name: "Linked Macro", createdBy: testUserId });
-    const protocol = await testApp.createProtocol({
-      name: "Compatible Protocol",
-      createdBy: testUserId,
-    });
-
-    // Add compatibility link
-    await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
-
-    vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
-
-    // Act
-    const result = await useCase.execute(macro.id, { description: "New version" }, testUserId);
-    assertSuccess(result);
-
-    // Assert - new version should have the same compatibility link
-    const linksResult = await macroProtocolRepository.listProtocols(result.value.id);
-    assertSuccess(linksResult);
-    expect(linksResult.value).toHaveLength(1);
-    expect(linksResult.value[0].protocol.id).toBe(protocol.id);
-  });
-
   it("should increment version correctly with multiple updates", async () => {
     // Arrange
     const macroData: CreateMacroDto = {
@@ -294,19 +267,19 @@ describe("UpdateMacroUseCase", () => {
     assertSuccess(v2Result);
     expect(v2Result.value.version).toBe(2);
 
-    // Act - create v3 from v2
-    const v3Result = await useCase.execute(v2Result.value.id, { description: "v3" }, testUserId);
+    // Act - create v3 from v2 (same UUID, so use v1.id)
+    const v3Result = await useCase.execute(v1.id, { description: "v3" }, testUserId);
     assertSuccess(v3Result);
     expect(v3Result.value.version).toBe(3);
 
     // Assert - all 3 versions exist
-    const versionsResult = await macroRepository.findVersionsByName(macroData.name);
+    const versionsResult = await macroRepository.findVersionsById(v1.id);
     assertSuccess(versionsResult);
     expect(versionsResult.value).toHaveLength(3);
     expect(versionsResult.value.map((v) => v.version)).toEqual([3, 2, 1]); // DESC order
   });
 
-  it("should return failure when findMaxVersionByName fails", async () => {
+  it("should return failure when findMaxVersion fails", async () => {
     // Arrange
     const createResult = await macroRepository.create(
       { name: "DB Error Macro", language: "python", code: "cHl0aG9uIGNvZGU=" },
@@ -315,7 +288,7 @@ describe("UpdateMacroUseCase", () => {
     assertSuccess(createResult);
     const macro = createResult.value[0];
 
-    vi.spyOn(macroRepository, "findMaxVersionByName").mockResolvedValue(
+    vi.spyOn(macroRepository, "findMaxVersion").mockResolvedValue(
       failure({ message: "Database error", code: "INTERNAL", statusCode: 500, name: "" }),
     );
 

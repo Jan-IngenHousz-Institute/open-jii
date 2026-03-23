@@ -58,7 +58,7 @@ describe("MacroRepository", () => {
       expect(macro).toMatchObject({
         id: expect.any(String) as string,
         name: createMacroDto.name,
-        filename: generateHashedFilename(macro.id),
+        filename: generateHashedFilename(macro.id, macro.version),
         description: createMacroDto.description,
         language: createMacroDto.language,
         code: createMacroDto.code,
@@ -76,7 +76,7 @@ describe("MacroRepository", () => {
       expect(dbResult.length).toBe(1);
       expect(dbResult[0]).toMatchObject({
         name: createMacroDto.name,
-        filename: generateHashedFilename(macro.id),
+        filename: generateHashedFilename(macro.id, macro.version),
         description: createMacroDto.description,
         language: createMacroDto.language,
         code: createMacroDto.code,
@@ -103,7 +103,7 @@ describe("MacroRepository", () => {
 
       expect(macro.description).toBeNull();
       expect(macro.name).toBe(createMacroDto.name);
-      expect(macro.filename).toBe(generateHashedFilename(macro.id));
+      expect(macro.filename).toBe(generateHashedFilename(macro.id, macro.version));
       expect(macro.language).toBe(createMacroDto.language);
     });
 
@@ -221,8 +221,14 @@ describe("MacroRepository", () => {
       const macroFeatured1 = createResult4.value[0];
 
       // Set sortOrder values
-      await repository.update(macroFeatured1.id, { sortOrder: 1 });
-      await repository.update(macroFeatured2.id, { sortOrder: 2 });
+      await testApp.database
+        .update(macrosTable)
+        .set({ sortOrder: 1 })
+        .where(eq(macrosTable.id, macroFeatured1.id));
+      await testApp.database
+        .update(macrosTable)
+        .set({ sortOrder: 2 })
+        .where(eq(macrosTable.id, macroFeatured2.id));
 
       // Act
       const result = await repository.findAll();
@@ -284,9 +290,18 @@ describe("MacroRepository", () => {
       const macro2 = createResult3.value[0];
 
       // Set sortOrder values
-      await repository.update(macro1.id, { sortOrder: 10 });
-      await repository.update(macro2.id, { sortOrder: 20 });
-      await repository.update(macro3.id, { sortOrder: 30 });
+      await testApp.database
+        .update(macrosTable)
+        .set({ sortOrder: 10 })
+        .where(eq(macrosTable.id, macro1.id));
+      await testApp.database
+        .update(macrosTable)
+        .set({ sortOrder: 20 })
+        .where(eq(macrosTable.id, macro2.id));
+      await testApp.database
+        .update(macrosTable)
+        .set({ sortOrder: 30 })
+        .where(eq(macrosTable.id, macro3.id));
 
       // Act
       const result = await repository.findAll();
@@ -699,191 +714,6 @@ describe("MacroRepository", () => {
     });
   });
 
-  describe("update", () => {
-    it("should update macro with all fields", async () => {
-      // Arrange
-      const createMacroDto = {
-        name: "Original Macro",
-        description: "Original Description",
-        language: "python" as const,
-        code: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
-      };
-
-      const createResult = await repository.create(createMacroDto, testUserId);
-      assertSuccess(createResult);
-      const createdMacro = createResult.value[0];
-
-      const updateDto = {
-        name: "Updated Macro",
-        description: "Updated Description",
-        language: "javascript" as const,
-        code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
-      };
-
-      // Act
-      const result = await repository.update(createdMacro.id, updateDto);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      const updatedMacros = result.value;
-      const updatedMacro = updatedMacros[0];
-
-      expect(updatedMacro).toMatchObject({
-        id: createdMacro.id,
-        name: updateDto.name,
-        filename: createdMacro.filename, // Filename should remain the same
-        description: updateDto.description,
-        language: updateDto.language,
-        code: updateDto.code,
-        createdBy: testUserId,
-      });
-
-      // Verify in database
-      const dbResult = await testApp.database
-        .select()
-        .from(macrosTable)
-        .where(eq(macrosTable.id, createdMacro.id));
-
-      expect(dbResult[0]).toMatchObject({
-        ...updateDto,
-        filename: createdMacro.filename, // Filename should remain the same
-      });
-    });
-
-    it("should update macro with partial fields", async () => {
-      // Arrange
-      const createMacroDto = {
-        name: "Original Macro",
-        description: "Original Description",
-        language: "python" as const,
-        code: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
-      };
-
-      const createResult = await repository.create(createMacroDto, testUserId);
-      assertSuccess(createResult);
-      const createdMacro = createResult.value[0];
-
-      const partialUpdate = {
-        name: "Partially Updated Macro",
-      };
-
-      // Act
-      const result = await repository.update(createdMacro.id, partialUpdate);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      const updatedMacro = result.value[0];
-
-      expect(updatedMacro).toMatchObject({
-        id: createdMacro.id,
-        name: partialUpdate.name,
-        filename: createdMacro.filename, // Filename should remain the same
-        description: createMacroDto.description,
-        language: createMacroDto.language,
-        code: createMacroDto.code,
-        createdBy: testUserId,
-      });
-    });
-
-    it("should return empty array when updating non-existent macro", async () => {
-      // Arrange
-      const nonExistentId = faker.string.uuid();
-      const updateDto = {
-        name: "Updated Name",
-      };
-
-      // Act
-      const result = await repository.update(nonExistentId, updateDto);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(0);
-    });
-
-    it("should handle invalid UUID format", async () => {
-      // Arrange
-      const invalidId = "invalid-uuid";
-      const updateDto = {
-        name: "Updated Name",
-      };
-
-      // Act
-      const result = await repository.update(invalidId, updateDto);
-
-      // Assert
-      expect(result.isFailure()).toBe(true);
-    });
-
-    it("should fail to update with duplicate name", async () => {
-      // Arrange - create two macros
-      const firstMacro = await repository.create(
-        {
-          name: "First Macro",
-          description: "First",
-          language: "python",
-          code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
-        },
-        testUserId,
-      );
-      assertSuccess(firstMacro);
-
-      const secondMacro = await repository.create(
-        {
-          name: "Second Macro",
-          description: "Second",
-          language: "r",
-          code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
-        },
-        testUserId,
-      );
-      assertSuccess(secondMacro);
-
-      // Try to update second macro with first macro's name
-      const updateDto = {
-        name: "First Macro", // Duplicate name
-      };
-
-      // Act
-      const result = await repository.update(secondMacro.value[0].id, updateDto);
-
-      // Assert
-      expect(result.isFailure()).toBe(true);
-    });
-
-    it("should keep filename unchanged when updating macro name", async () => {
-      // Arrange
-      const createMacroDto = {
-        name: "Original Macro Name",
-        description: "Test filename consistency",
-        language: "python" as const,
-        code: "dGVzdCBjb2Rl", // base64 encoded "test code"
-      };
-
-      const createResult = await repository.create(createMacroDto, testUserId);
-      assertSuccess(createResult);
-      const createdMacro = createResult.value[0];
-      const originalFilename = createdMacro.filename;
-
-      // Test updating with a completely different name
-      const updateDto = {
-        name: "COMPLETELY DIFFERENT NEW NAME",
-      };
-
-      const updateResult = await repository.update(createdMacro.id, updateDto);
-      assertSuccess(updateResult);
-      const updatedMacro = updateResult.value[0];
-
-      // Assert the filename remained unchanged
-      expect(updatedMacro.filename).toBe(originalFilename);
-      expect(updatedMacro.name).toBe(updateDto.name);
-      // Verify filename is still based on the original ID
-      expect(updatedMacro.filename).toBe(generateHashedFilename(createdMacro.id));
-    });
-  });
-
   describe("delete", () => {
     it("should delete macro by id", async () => {
       // Arrange
@@ -985,12 +815,12 @@ describe("MacroRepository", () => {
       const entry1 = result.value.get(macro1.id);
       expect(entry1).toBeDefined();
       expect(entry1?.name).toBe("Macro Alpha");
-      expect(entry1?.filename).toBe(generateHashedFilename(macro1.id));
+      expect(entry1?.filename).toBe(generateHashedFilename(macro1.id, macro1.version));
 
       const entry2 = result.value.get(macro2.id);
       expect(entry2).toBeDefined();
       expect(entry2?.name).toBe("Macro Beta");
-      expect(entry2?.filename).toBe(generateHashedFilename(macro2.id));
+      expect(entry2?.filename).toBe(generateHashedFilename(macro2.id, macro2.version));
     });
 
     it("should return only found macros when some IDs don't exist", async () => {

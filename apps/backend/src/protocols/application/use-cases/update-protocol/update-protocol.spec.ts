@@ -4,7 +4,6 @@ import { experimentProtocols } from "@repo/database";
 
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { UpdateProtocolUseCase } from "./update-protocol";
 
@@ -13,7 +12,6 @@ describe("UpdateProtocolUseCase", () => {
   let testUserId: string;
   let useCase: UpdateProtocolUseCase;
   let protocolRepository: ProtocolRepository;
-  let protocolMacroRepository: ProtocolMacroRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -24,7 +22,6 @@ describe("UpdateProtocolUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(UpdateProtocolUseCase);
     protocolRepository = testApp.module.get(ProtocolRepository);
-    protocolMacroRepository = testApp.module.get(ProtocolMacroRepository);
   });
 
   afterEach(() => {
@@ -63,8 +60,8 @@ describe("UpdateProtocolUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
-    // New version has new ID and version 2
-    expect(result.value.id).not.toBe(v1.id);
+    // Same UUID across versions, version incremented
+    expect(result.value.id).toBe(v1.id);
     expect(result.value.version).toBe(2);
     expect(result.value.name).toBe(updateData.name);
     expect(result.value.description).toBe(updateData.description);
@@ -88,8 +85,8 @@ describe("UpdateProtocolUseCase", () => {
     const result = await useCase.execute(v1.id, { description: "New description" });
     assertSuccess(result);
 
-    // Assert - old version is unchanged
-    const oldResult = await protocolRepository.findOne(v1.id);
+    // Assert - old version is unchanged (fetch specific version 1)
+    const oldResult = await protocolRepository.findOne(v1.id, 1);
     assertSuccess(oldResult);
     expect(oldResult.value).not.toBeNull();
     expect(oldResult.value!.version).toBe(1);
@@ -130,10 +127,10 @@ describe("UpdateProtocolUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.version).toBe(2);
-    expect(result.value.id).not.toBe(v1.id);
+    expect(result.value.id).toBe(v1.id); // Same UUID across versions
 
     // Verify v1 still exists unchanged (experiment still points to it)
-    const v1Check = await protocolRepository.findOne(v1.id);
+    const v1Check = await protocolRepository.findOne(v1.id, 1);
     assertSuccess(v1Check);
     expect(v1Check.value).not.toBeNull();
     expect(v1Check.value!.version).toBe(1);
@@ -175,31 +172,6 @@ describe("UpdateProtocolUseCase", () => {
     });
   });
 
-  it("should copy compatibility links from old version to new version", async () => {
-    // Arrange
-    const protocol = await testApp.createProtocol({
-      name: "Linked Protocol",
-      createdBy: testUserId,
-    });
-    const macro = await testApp.createMacro({
-      name: "Compatible Macro",
-      createdBy: testUserId,
-    });
-
-    // Add compatibility link
-    await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
-
-    // Act
-    const result = await useCase.execute(protocol.id, { description: "New version" });
-    assertSuccess(result);
-
-    // Assert - new version should have the same compatibility link
-    const linksResult = await protocolMacroRepository.listMacros(result.value.id);
-    assertSuccess(linksResult);
-    expect(linksResult.value).toHaveLength(1);
-    expect(linksResult.value[0].macro.id).toBe(macro.id);
-  });
-
   it("should increment version correctly with multiple updates", async () => {
     // Arrange
     const protocolData = {
@@ -218,19 +190,19 @@ describe("UpdateProtocolUseCase", () => {
     assertSuccess(v2Result);
     expect(v2Result.value.version).toBe(2);
 
-    // Act - create v3 from v2
-    const v3Result = await useCase.execute(v2Result.value.id, { description: "v3" });
+    // Act - create v3 (same UUID, so use v1.id)
+    const v3Result = await useCase.execute(v1.id, { description: "v3" });
     assertSuccess(v3Result);
     expect(v3Result.value.version).toBe(3);
 
     // Assert - all 3 versions exist
-    const versionsResult = await protocolRepository.findVersionsByName(protocolData.name);
+    const versionsResult = await protocolRepository.findVersionsById(v1.id);
     assertSuccess(versionsResult);
     expect(versionsResult.value).toHaveLength(3);
     expect(versionsResult.value.map((v) => v.version)).toEqual([3, 2, 1]); // DESC order
   });
 
-  it("should return failure when findMaxVersionByName fails", async () => {
+  it("should return failure when findMaxVersion fails", async () => {
     // Arrange
     const createResult = await protocolRepository.create(
       { name: "DB Error Protocol", code: JSON.stringify([{}]), family: "multispeq" },
@@ -239,7 +211,7 @@ describe("UpdateProtocolUseCase", () => {
     assertSuccess(createResult);
     const protocol = createResult.value[0];
 
-    vi.spyOn(protocolRepository, "findMaxVersionByName").mockResolvedValue(
+    vi.spyOn(protocolRepository, "findMaxVersion").mockResolvedValue(
       failure({ message: "Database error", code: "INTERNAL", statusCode: 500, name: "" }),
     );
 

@@ -58,7 +58,10 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
       const macro1 = await createTestMacro(testUserId);
       const macro2 = await createTestMacro(testUserId);
-      await protocolMacroRepository.addMacros(protocol.id, [macro1.id, macro2.id]);
+      await protocolMacroRepository.addMacros(protocol.id, protocol.version, [
+        { id: macro1.id, version: macro1.version },
+        { id: macro2.id, version: macro2.version },
+      ]);
 
       const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
         id: protocol.id,
@@ -198,7 +201,9 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       });
 
       const macro = await createTestMacro(testUserId);
-      await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
+      await protocolMacroRepository.addMacros(protocol.id, protocol.version, [
+        { id: macro.id, version: macro.version },
+      ]);
 
       const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
         id: protocol.id,
@@ -222,7 +227,9 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       });
 
       const macro = await createTestMacro(testUserId);
-      await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
+      await protocolMacroRepository.addMacros(protocol.id, protocol.version, [
+        { id: macro.id, version: macro.version },
+      ]);
 
       const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
         id: protocol.id,
@@ -240,7 +247,9 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
       const otherUserId = await testApp.createTestUser({ email: "other-remove-ctrl@example.com" });
       const macro = await createTestMacro(testUserId);
-      await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
+      await protocolMacroRepository.addMacros(protocol.id, protocol.version, [
+        { id: macro.id, version: macro.version },
+      ]);
 
       const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
         id: protocol.id,

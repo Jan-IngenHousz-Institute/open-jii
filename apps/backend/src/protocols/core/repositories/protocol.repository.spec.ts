@@ -154,8 +154,14 @@ describe("ProtocolRepository", () => {
       const protocolFeatured1 = createResult4.value[0];
 
       // Set sortOrder values
-      await repository.update(protocolFeatured1.id, { sortOrder: 1 });
-      await repository.update(protocolFeatured2.id, { sortOrder: 2 });
+      await testApp.database
+        .update(protocolsTable)
+        .set({ sortOrder: 1 })
+        .where(eq(protocolsTable.id, protocolFeatured1.id));
+      await testApp.database
+        .update(protocolsTable)
+        .set({ sortOrder: 2 })
+        .where(eq(protocolsTable.id, protocolFeatured2.id));
 
       // Act
       const result = await repository.findAll();
@@ -217,9 +223,18 @@ describe("ProtocolRepository", () => {
       const protocol2 = createResult3.value[0];
 
       // Set sortOrder values
-      await repository.update(protocol1.id, { sortOrder: 10 });
-      await repository.update(protocol2.id, { sortOrder: 20 });
-      await repository.update(protocol3.id, { sortOrder: 30 });
+      await testApp.database
+        .update(protocolsTable)
+        .set({ sortOrder: 10 })
+        .where(eq(protocolsTable.id, protocol1.id));
+      await testApp.database
+        .update(protocolsTable)
+        .set({ sortOrder: 20 })
+        .where(eq(protocolsTable.id, protocol2.id));
+      await testApp.database
+        .update(protocolsTable)
+        .set({ sortOrder: 30 })
+        .where(eq(protocolsTable.id, protocol3.id));
 
       // Act
       const result = await repository.findAll();
@@ -500,95 +515,6 @@ describe("ProtocolRepository", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toBeNull();
-    });
-  });
-
-  describe("update", () => {
-    it("should update a protocol", async () => {
-      // Arrange
-      const createProtocolDto = {
-        name: "Update Protocol",
-        description: "Original Description",
-        code: [{ steps: [{ name: "Original Step", action: "test" }] }],
-        family: "multispeq" as const,
-      };
-
-      const createResult = await repository.create(createProtocolDto, testUserId);
-      assertSuccess(createResult);
-      const createdProtocol = createResult.value[0];
-
-      const updateProtocolDto = {
-        name: "Updated Protocol",
-        description: "Updated Description",
-        code: [{ steps: [{ name: "Updated Step", action: "test" }] }],
-      };
-
-      // Act
-      const result = await repository.update(createdProtocol.id, updateProtocolDto);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      const protocols = result.value;
-      const protocol = protocols[0];
-
-      expect(protocol).toMatchObject({
-        id: createdProtocol.id,
-        name: updateProtocolDto.name,
-        description: updateProtocolDto.description,
-        code: updateProtocolDto.code,
-        createdBy: testUserId,
-      });
-
-      // Verify directly in database
-      const dbResult = await testApp.database
-        .select()
-        .from(protocolsTable)
-        .where(eq(protocolsTable.id, createdProtocol.id));
-
-      expect(dbResult.length).toBe(1);
-      expect(dbResult[0]).toMatchObject({
-        name: updateProtocolDto.name,
-        description: updateProtocolDto.description,
-        code: updateProtocolDto.code,
-      });
-    });
-
-    it("should handle partial updates", async () => {
-      // Arrange
-      const createProtocolDto = {
-        name: "Partial Update Protocol",
-        description: "Original Description",
-        code: [{ steps: [{ name: "Original Step", action: "test" }] }],
-        family: "multispeq" as const,
-      };
-
-      const createResult = await repository.create(createProtocolDto, testUserId);
-      assertSuccess(createResult);
-      const createdProtocol = createResult.value[0];
-
-      // Only update the name
-      const updateProtocolDto = {
-        name: "Partially Updated Protocol",
-      };
-
-      // Act
-      const result = await repository.update(createdProtocol.id, updateProtocolDto);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      const protocols = result.value;
-      const protocol = protocols[0];
-
-      expect(protocol).toMatchObject({
-        id: createdProtocol.id,
-        name: updateProtocolDto.name,
-        // These should remain unchanged
-        description: createProtocolDto.description,
-        code: createProtocolDto.code,
-        createdBy: testUserId,
-      });
     });
   });
 

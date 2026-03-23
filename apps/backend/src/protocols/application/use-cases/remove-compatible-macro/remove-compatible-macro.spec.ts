@@ -52,7 +52,9 @@ describe("RemoveCompatibleMacroUseCase", () => {
       .returning();
 
     // Link the macro first
-    await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
+    await protocolMacroRepository.addMacros(protocol.id, protocol.version, [
+      { id: macro.id, version: macro.version },
+    ]);
 
     // Remove it
     const result = await useCase.execute(protocol.id, macro.id, testUserId);
@@ -79,7 +81,9 @@ describe("RemoveCompatibleMacroUseCase", () => {
       })
       .returning();
 
-    await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
+    await protocolMacroRepository.addMacros(protocol.id, protocol.version, [
+      { id: macro.id, version: macro.version },
+    ]);
 
     const result = await useCase.execute(protocol.id, macro.id, otherUserId);
     expect(result.isSuccess()).toBe(false);
@@ -125,7 +129,9 @@ describe("RemoveCompatibleMacroUseCase", () => {
       })
       .returning();
 
-    await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
+    await protocolMacroRepository.addMacros(protocol.id, protocol.version, [
+      { id: macro.id, version: macro.version },
+    ]);
 
     vi.spyOn(protocolMacroRepository, "removeMacro").mockResolvedValueOnce(
       failure(AppError.internal("db error")),

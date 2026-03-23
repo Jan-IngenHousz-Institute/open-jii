@@ -73,10 +73,12 @@ describe("MacroController", () => {
       const mockMacro: MacroDto = {
         id: macroId,
         name: macroData.name,
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 1),
         description: macroData.description ?? "",
         language: macroData.language,
         code: macroData.code,
+        version: 1,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -162,10 +164,12 @@ describe("MacroController", () => {
       const mockMacro: MacroDto = {
         id: macroId,
         name: "Test Macro",
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 1),
         description: "Test Description",
         language: "python",
         code: "cHl0aG9uIGNvZGU=",
+        version: 1,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -224,10 +228,12 @@ describe("MacroController", () => {
         {
           id: macroIds[0],
           name: "Test Macro 1",
-          filename: generateHashedFilename(macroIds[0]),
+          filename: generateHashedFilename(macroIds[0], 1),
           description: "Test Description 1",
           language: "python",
           code: "dGVzdCBjb2RlIDE=", // base64 encoded "test code 1"
+          version: 1,
+          sortOrder: null,
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -236,10 +242,12 @@ describe("MacroController", () => {
         {
           id: macroIds[1],
           name: "Test Macro 2",
-          filename: generateHashedFilename(macroIds[1]),
+          filename: generateHashedFilename(macroIds[1], 1),
           description: "Test Description 2",
           language: "javascript",
           code: "dGVzdCBjb2RlIDI=", // base64 encoded "test code 2"
+          version: 1,
+          sortOrder: null,
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -307,10 +315,12 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: "Updated Macro",
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 2),
         description: "Updated Description",
         language: "javascript",
         code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
+        version: 2,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -369,10 +379,12 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: updateData.name,
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 2),
         description: "Description",
         language: "python",
         code: "dXBkYXRlZCBjb2RlIHdpdGggZmlsZQ==", // base64 encoded "updated code with file"
+        version: 2,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -588,7 +600,10 @@ describe("MacroController – macro-protocol endpoints", () => {
 
       const protocol1 = await createTestProtocol(testUserId);
       const protocol2 = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol1.id, protocol2.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol1.id, version: protocol1.version },
+        { id: protocol2.id, version: protocol2.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
         id: macro.id,
@@ -728,7 +743,9 @@ describe("MacroController – macro-protocol endpoints", () => {
       });
 
       const protocol = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol.id, version: protocol.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
         id: macro.id,
@@ -752,7 +769,9 @@ describe("MacroController – macro-protocol endpoints", () => {
       });
 
       const protocol = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol.id, version: protocol.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
         id: macro.id,
@@ -770,7 +789,9 @@ describe("MacroController – macro-protocol endpoints", () => {
 
       const otherUserId = await testApp.createTestUser({ email: "other-remove-ctrl@example.com" });
       const protocol = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol.id, version: protocol.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
         id: macro.id,

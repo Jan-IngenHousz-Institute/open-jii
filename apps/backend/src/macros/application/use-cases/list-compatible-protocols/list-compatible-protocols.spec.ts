@@ -60,7 +60,10 @@ describe("ListCompatibleProtocolsUseCase", () => {
     });
 
     // Link protocols to macro
-    await macroProtocolRepository.addProtocols(macro.id, [protocol1.id, protocol2.id]);
+    await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+      { id: protocol1.id, version: protocol1.version },
+      { id: protocol2.id, version: protocol2.version },
+    ]);
 
     const result = await useCase.execute(macro.id);
     expect(result.isSuccess()).toBe(true);
