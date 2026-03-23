@@ -135,7 +135,7 @@ export class FlowMapper {
         const measurementContent = apiNode.content as MeasurementContent;
         if (measurementContent.protocolId) {
           nodeData.protocolId = measurementContent.protocolId;
-          nodeData.protocolVersion = (measurementContent as any).protocolVersion;
+          nodeData.protocolVersion = measurementContent.protocolVersion;
         }
       }
 
@@ -144,7 +144,7 @@ export class FlowMapper {
         const analysisContent = apiNode.content as AnalysisContent;
         if (analysisContent.macroId) {
           nodeData.macroId = analysisContent.macroId;
-          nodeData.macroVersion = (analysisContent as any).macroVersion;
+          nodeData.macroVersion = analysisContent.macroVersion;
         }
       }
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
 import { useRouter, usePathname } from "next/navigation";
 import React from "react";
 
