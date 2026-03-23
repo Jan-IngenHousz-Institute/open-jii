@@ -181,7 +181,12 @@ describe("ProtocolMacroRepository", () => {
 
     it("should be idempotent (removing non-existent link does not error)", async () => {
       const nonExistentMacroId = faker.string.uuid();
-      const result = await repository.removeMacro(protocolId, protocolVersion, nonExistentMacroId, 1);
+      const result = await repository.removeMacro(
+        protocolId,
+        protocolVersion,
+        nonExistentMacroId,
+        1,
+      );
       expect(result.isSuccess()).toBe(true);
     });
   });

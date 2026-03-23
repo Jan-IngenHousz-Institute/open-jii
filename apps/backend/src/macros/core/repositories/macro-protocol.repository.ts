@@ -124,7 +124,9 @@ export class MacroProtocolRepository {
    */
   async findProtocolById(
     protocolId: string,
-  ): Promise<Result<{ id: string; name: string; version: number; family: string; createdBy: string } | null>> {
+  ): Promise<
+    Result<{ id: string; name: string; version: number; family: string; createdBy: string } | null>
+  > {
     return tryCatch(async () => {
       const result = await this.database
         .select({

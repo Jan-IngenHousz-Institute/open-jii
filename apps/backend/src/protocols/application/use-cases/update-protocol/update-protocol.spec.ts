@@ -88,9 +88,10 @@ describe("UpdateProtocolUseCase", () => {
     // Assert - old version is unchanged (fetch specific version 1)
     const oldResult = await protocolRepository.findOne(v1.id, 1);
     assertSuccess(oldResult);
-    expect(oldResult.value).not.toBeNull();
-    expect(oldResult.value!.version).toBe(1);
-    expect(oldResult.value!.description).toBe("Should not change");
+    const oldProtocol = oldResult.value;
+    expect(oldProtocol).not.toBeNull();
+    expect(oldProtocol?.version).toBe(1);
+    expect(oldProtocol?.description).toBe("Should not change");
 
     // New version has updated data
     expect(result.value.version).toBe(2);
@@ -133,7 +134,7 @@ describe("UpdateProtocolUseCase", () => {
     const v1Check = await protocolRepository.findOne(v1.id, 1);
     assertSuccess(v1Check);
     expect(v1Check.value).not.toBeNull();
-    expect(v1Check.value!.version).toBe(1);
+    expect(v1Check.value?.version).toBe(1);
   });
 
   it("should carry forward unchanged fields in partial update", async () => {

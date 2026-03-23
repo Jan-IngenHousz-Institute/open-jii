@@ -64,7 +64,11 @@ export class AddCompatibleProtocolsUseCase {
 
     // Add the compatibility links using latest versions
     const macroVersion = macroResult.value.version;
-    const addResult = await this.macroProtocolRepository.addProtocols(macroId, macroVersion, protocolRefs);
+    const addResult = await this.macroProtocolRepository.addProtocols(
+      macroId,
+      macroVersion,
+      protocolRefs,
+    );
     if (addResult.isFailure()) {
       this.logger.error({
         msg: "Failed to add compatible protocols",

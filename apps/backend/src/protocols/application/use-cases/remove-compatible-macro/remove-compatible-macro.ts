@@ -49,8 +49,14 @@ export class RemoveCompatibleMacroUseCase {
     const protocolVersion = protocolResult.value.version;
     // Look up the macro's latest version
     const macroLookup = await this.macroRepository.findById(macroId);
-    const macroVersion = macroLookup.isSuccess() && macroLookup.value ? macroLookup.value.version : 1;
-    const removeResult = await this.protocolMacroRepository.removeMacro(protocolId, protocolVersion, macroId, macroVersion);
+    const macroVersion =
+      macroLookup.isSuccess() && macroLookup.value ? macroLookup.value.version : 1;
+    const removeResult = await this.protocolMacroRepository.removeMacro(
+      protocolId,
+      protocolVersion,
+      macroId,
+      macroVersion,
+    );
     if (removeResult.isFailure()) {
       this.logger.error({
         msg: "Failed to remove compatible macro",

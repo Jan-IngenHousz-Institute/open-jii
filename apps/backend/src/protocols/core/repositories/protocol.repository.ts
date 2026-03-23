@@ -21,7 +21,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
+import { CreateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 @Injectable()
 export class ProtocolRepository {

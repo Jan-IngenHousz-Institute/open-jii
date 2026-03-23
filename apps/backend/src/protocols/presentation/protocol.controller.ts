@@ -171,7 +171,7 @@ export class ProtocolController {
   @TsRestHandler(contract.protocols.getProtocol)
   getProtocol() {
     return tsRestHandler(contract.protocols.getProtocol, async ({ params, query }) => {
-      const result = await this.getProtocolUseCase.execute(params.id, query?.version);
+      const result = await this.getProtocolUseCase.execute(params.id, query.version);
 
       if (result.isSuccess()) {
         // Transform the code field to ensure it's a proper Record<string, unknown>
@@ -364,7 +364,7 @@ export class ProtocolController {
   @TsRestHandler(contract.protocols.listCompatibleMacros)
   listCompatibleMacros() {
     return tsRestHandler(contract.protocols.listCompatibleMacros, async ({ params, query }) => {
-      const result = await this.listCompatibleMacrosUseCase.execute(params.id, query?.version);
+      const result = await this.listCompatibleMacrosUseCase.execute(params.id, query.version);
 
       if (result.isSuccess()) {
         return {

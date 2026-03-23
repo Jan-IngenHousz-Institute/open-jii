@@ -98,9 +98,10 @@ describe("UpdateMacroUseCase", () => {
     // Assert - old version is unchanged (fetch specific version 1)
     const oldResult = await macroRepository.findById(v1.id, 1);
     assertSuccess(oldResult);
-    expect(oldResult.value).not.toBeNull();
-    expect(oldResult.value!.version).toBe(1);
-    expect(oldResult.value!.description).toBe("Should not change");
+    const oldMacro = oldResult.value;
+    expect(oldMacro).not.toBeNull();
+    expect(oldMacro?.version).toBe(1);
+    expect(oldMacro?.description).toBe("Should not change");
 
     // New version has updated data
     expect(v2.version).toBe(2);

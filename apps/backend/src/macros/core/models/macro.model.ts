@@ -8,7 +8,7 @@ import { macros } from "@repo/database";
  * Generate a hashed filename based on the macro ID and version.
  * Each version gets a unique filename for Databricks isolation.
  */
-export function generateHashedFilename(macroId: string, version: number = 1): string {
+export function generateHashedFilename(macroId: string, version = 1): string {
   const hash = createHash("sha256").update(macroId).digest("hex");
   return `macro_${hash.substring(0, 12)}_v${version}`;
 }

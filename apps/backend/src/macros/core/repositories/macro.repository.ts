@@ -9,12 +9,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import {
-  CreateMacroDto,
-  UpdateMacroDto,
-  MacroDto,
-  generateHashedFilename,
-} from "../models/macro.model";
+import { CreateMacroDto, MacroDto, generateHashedFilename } from "../models/macro.model";
 
 export interface MacroFilter {
   search?: string;
