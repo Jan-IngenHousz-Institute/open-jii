@@ -1,7 +1,9 @@
 "use client";
 
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useProtocolVersions } from "@/hooks/protocol/useProtocolVersions/useProtocolVersions";
 import { useLocale } from "@/hooks/useLocale";
+import { VersionPicker } from "@/components/shared/version-picker";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
@@ -53,6 +55,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
   const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
   const { data: compatibleMacrosData } = useProtocolCompatibleMacros(protocolId);
   const compatibleMacrosCount = compatibleMacrosData?.body.length ?? 0;
+  const { data: versions } = useProtocolVersions(protocolId);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -110,7 +113,14 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">Version</h4>
-        <p className="text-muted-foreground text-sm">v{protocol.version}</p>
+        {versions && versions.length > 1 ? (
+          <VersionPicker
+            currentVersion={protocol.version}
+            versions={versions.map((v) => ({ version: v.version, updatedAt: v.updatedAt }))}
+          />
+        ) : (
+          <p className="text-muted-foreground text-sm">v{protocol.version}</p>
+        )}
       </div>
 
       <div className="space-y-1">

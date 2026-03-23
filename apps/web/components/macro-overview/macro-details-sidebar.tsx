@@ -2,7 +2,9 @@
 
 import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useMacroVersions } from "@/hooks/macro/useMacroVersions/useMacroVersions";
 import { useLocale } from "@/hooks/useLocale";
+import { VersionPicker } from "@/components/shared/version-picker";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
@@ -52,6 +54,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
   const { mutateAsync: deleteMacro, isPending: isDeleting } = useMacroDelete();
   const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(macroId);
+  const { data: versions } = useMacroVersions(macroId);
   const compatibleProtocolsCount =
     (compatibleProtocolsData?.body as unknown[] | undefined)?.length ?? 0;
 
@@ -110,7 +113,14 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">Version</h4>
-        <p className="text-muted-foreground text-sm">v{macro.version}</p>
+        {versions && versions.length > 1 ? (
+          <VersionPicker
+            currentVersion={macro.version}
+            versions={versions.map((v) => ({ version: v.version, updatedAt: v.updatedAt }))}
+          />
+        ) : (
+          <p className="text-muted-foreground text-sm">v{macro.version}</p>
+        )}
       </div>
 
       <div className="space-y-1">
