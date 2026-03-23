@@ -7,6 +7,7 @@ export const zMacro = z.object({
   id: z.string().uuid(),
   name: z.string(),
   filename: z.string(),
+  version: z.number().int(),
   description: z.string().nullable(),
   language: zMacroLanguage,
   code: z.string(),
@@ -64,6 +65,7 @@ export const zMacroErrorResponse = z.object({
 export const zCompatibleProtocolSummary = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  version: z.number().int(),
   family: z.string(),
   createdBy: z.string().uuid(),
 });

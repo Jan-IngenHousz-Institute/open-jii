@@ -118,4 +118,16 @@ export const protocolContract = c.router({
     summary: "Remove a compatible macro from a protocol",
     description: "Unlinks a macro from this protocol's compatibility list (creator only)",
   },
+
+  listProtocolVersions: {
+    method: "GET",
+    path: "/api/v1/protocols/:id/versions",
+    pathParams: zProtocolIdPathParam,
+    responses: {
+      200: zProtocolList,
+      404: zProtocolErrorResponse,
+    },
+    summary: "List all versions of a protocol",
+    description: "Returns all versions of a protocol, ordered by version descending",
+  },
 });

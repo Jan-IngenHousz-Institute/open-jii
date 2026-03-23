@@ -169,6 +169,13 @@
       "when": 1772486279766,
       "tag": "0023_worried_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1774260841475,
+      "tag": "0024_aspiring_guardian",
+      "breakpoints": true
     }
   ]
 }

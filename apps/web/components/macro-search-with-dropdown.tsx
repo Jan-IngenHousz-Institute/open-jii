@@ -91,7 +91,8 @@ export function MacroSearchWithDropdown({
                   </Link>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
-                  {selectedMacro.language} • {t("common.by")} {selectedMacro.createdByName}
+                  {selectedMacro.language} • v{selectedMacro.version} • {t("common.by")}{" "}
+                  {selectedMacro.createdByName}
                 </span>
               </div>
             ) : (

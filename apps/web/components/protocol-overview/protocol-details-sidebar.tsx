@@ -109,6 +109,11 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       </div>
 
       <div className="space-y-1">
+        <h4 className="text-sm font-medium">Version</h4>
+        <p className="text-muted-foreground text-sm">v{protocol.version}</p>
+      </div>
+
+      <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.updated")}</h4>
         <p className="text-muted-foreground text-sm">{formatDate(protocol.updatedAt)}</p>
       </div>

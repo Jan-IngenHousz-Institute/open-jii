@@ -12,6 +12,7 @@ export const createProtocolSchema = createInsertSchema(protocols).omit({
 
 export const updateProtocolSchema = createInsertSchema(protocols).partial().omit({
   id: true,
+  version: true, // version is computed server-side
   createdAt: true,
   updatedAt: true,
   createdBy: true,

@@ -11,6 +11,7 @@ import { CreateMacroUseCase } from "./application/use-cases/create-macro/create-
 import { DeleteMacroUseCase } from "./application/use-cases/delete-macro/delete-macro";
 import { GetMacroUseCase } from "./application/use-cases/get-macro/get-macro";
 import { ListCompatibleProtocolsUseCase } from "./application/use-cases/list-compatible-protocols/list-compatible-protocols";
+import { ListMacroVersionsUseCase } from "./application/use-cases/list-macro-versions/list-macro-versions";
 import { ListMacrosUseCase } from "./application/use-cases/list-macros/list-macros";
 import { RemoveCompatibleProtocolUseCase } from "./application/use-cases/remove-compatible-protocol/remove-compatible-protocol";
 import { UpdateMacroUseCase } from "./application/use-cases/update-macro/update-macro";
@@ -45,6 +46,7 @@ import { MacroController } from "./presentation/macro.controller";
     CreateMacroUseCase,
     GetMacroUseCase,
     ListMacrosUseCase,
+    ListMacroVersionsUseCase,
     UpdateMacroUseCase,
     DeleteMacroUseCase,
 

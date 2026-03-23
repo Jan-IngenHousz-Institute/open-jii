@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { z } from "zod";
 
-import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
+import { and, asc, desc, eq, ilike, inArray, max, sql, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
@@ -76,11 +76,14 @@ export class MacroRepository {
         conditions.push(eq(macros.createdBy, filter.userId));
       }
 
-      // Apply all conditions with AND logic if there are any
-      if (conditions.length > 0) {
-        // Type assertion is needed for query builder compatibility
-        query = query.where(and(...conditions)) as typeof query;
-      }
+      // Only return the latest version of each macro
+      conditions.push(
+        sql`${macros.version} = (SELECT MAX(m2.version) FROM macros m2 WHERE m2.name = ${macros.name})`,
+      );
+
+      // Apply all conditions with AND logic
+      // Type assertion is needed for query builder compatibility
+      query = query.where(and(...conditions)) as typeof query;
 
       const results = await query;
       return results.map((result) => {
@@ -167,6 +170,48 @@ export class MacroRepository {
       const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
 
       return results as unknown as MacroDto[];
+    });
+  }
+
+  /**
+   * Find all versions of a macro by name, ordered by version descending.
+   */
+  async findVersionsByName(name: string): Promise<Result<MacroDto[]>> {
+    return tryCatch(async () => {
+      const results = await this.database
+        .select({
+          macros,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
+        .from(macros)
+        .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
+        .where(eq(macros.name, name))
+        .orderBy(desc(macros.version));
+
+      return results.map((result) => {
+        const augmentedResult = result.macros as MacroDto;
+        const firstName = result.firstName;
+        const lastName = result.lastName;
+        augmentedResult.createdByName =
+          firstName && lastName ? `${firstName} ${lastName}` : undefined;
+        return augmentedResult;
+      });
+    });
+  }
+
+  /**
+   * Get the highest version number for a given macro name.
+   * Returns 0 if no macro with that name exists.
+   */
+  async findMaxVersionByName(name: string): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({ maxVersion: max(macros.version) })
+        .from(macros)
+        .where(eq(macros.name, name));
+
+      return result[0]?.maxVersion ?? 0;
     });
   }
 

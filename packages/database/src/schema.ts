@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { primaryKey, check } from "drizzle-orm/pg-core";
+import { primaryKey, check, unique } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -246,36 +246,46 @@ export const auditLogs = pgTable("audit_logs", {
 });
 
 // Protocols Table
-export const protocols = pgTable("protocols", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  code: jsonb("code").notNull(),
-  family: sensorFamilyEnum("family").notNull(),
-  sortOrder: integer("sort_order"),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  ...timestamps,
-});
+export const protocols = pgTable(
+  "protocols",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    version: integer("version").notNull().default(1),
+    description: text("description"),
+    code: jsonb("code").notNull(),
+    family: sensorFamilyEnum("family").notNull(),
+    sortOrder: integer("sort_order"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [unique("protocols_name_version").on(table.name, table.version)],
+);
 
 // Macro Language Enum
 export const macroLanguageEnum = pgEnum("macro_language", ["python", "r", "javascript"]);
 
 // Macros Table - only stores metadata, actual code files are handled by Databricks
-export const macros = pgTable("macros", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  filename: varchar("filename", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  language: macroLanguageEnum("language").notNull(),
-  code: text("code").notNull(), // Base64 encoded content of the macro code
-  sortOrder: integer("sort_order"),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  ...timestamps,
-});
+export const macros = pgTable(
+  "macros",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    filename: varchar("filename", { length: 255 }).notNull().unique(),
+    version: integer("version").notNull().default(1),
+    description: text("description"),
+    language: macroLanguageEnum("language").notNull(),
+    code: text("code").notNull(), // Base64 encoded content of the macro code
+    sortOrder: integer("sort_order"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [unique("macros_name_version").on(table.name, table.version)],
+);
 
 // Protocol-Macro Compatibility (many-to-many)
 export const protocolMacros = pgTable(

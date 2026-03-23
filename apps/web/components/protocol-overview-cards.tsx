@@ -81,6 +81,7 @@ function ProtocolCard({
           <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
             {protocol.family}
           </Badge>
+          <Badge className="bg-slate-200 text-slate-700">v{protocol.version}</Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
           )}

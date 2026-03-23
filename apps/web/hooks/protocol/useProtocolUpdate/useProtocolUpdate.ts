@@ -43,6 +43,10 @@ export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps
       await queryClient.invalidateQueries({
         queryKey: ["protocols"],
       });
+      // Invalidate version history cache
+      await queryClient.invalidateQueries({
+        queryKey: ["protocol-versions"],
+      });
       // Invalidate breadcrumbs to update entity names
       await queryClient.invalidateQueries({
         queryKey: ["breadcrumbs"],

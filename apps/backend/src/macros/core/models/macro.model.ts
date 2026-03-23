@@ -24,6 +24,7 @@ export const createMacroSchema = createInsertSchema(macros).omit({
 export const updateMacroSchema = createInsertSchema(macros).partial().omit({
   id: true,
   filename: true, // filename is derived from name
+  version: true, // version is computed server-side
   createdAt: true,
   updatedAt: true,
   createdBy: true,

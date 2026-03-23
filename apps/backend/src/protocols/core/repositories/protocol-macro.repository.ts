@@ -22,6 +22,7 @@ export class ProtocolMacroRepository {
           macro: {
             id: macros.id,
             name: macros.name,
+            version: macros.version,
             filename: macros.filename,
             language: macros.language,
             createdBy: macros.createdBy,
@@ -48,6 +49,7 @@ export class ProtocolMacroRepository {
           macro: {
             id: macros.id,
             name: macros.name,
+            version: macros.version,
             filename: macros.filename,
             language: macros.language,
             createdBy: macros.createdBy,
@@ -59,6 +61,26 @@ export class ProtocolMacroRepository {
           and(eq(protocolMacros.protocolId, protocolId), inArray(protocolMacros.macroId, macroIds)),
         )
         .orderBy(macros.name);
+    });
+  }
+
+  /**
+   * Copy all macro compatibility links from one protocol to another (used during versioning).
+   */
+  async copyLinksToNewProtocol(fromProtocolId: string, toProtocolId: string): Promise<Result<void>> {
+    return tryCatch(async () => {
+      const existing = await this.database
+        .select({ macroId: protocolMacros.macroId })
+        .from(protocolMacros)
+        .where(eq(protocolMacros.protocolId, fromProtocolId));
+
+      if (existing.length > 0) {
+        await this.database
+          .insert(protocolMacros)
+          .values(existing.map((row) => ({ protocolId: toProtocolId, macroId: row.macroId })))
+          .onConflictDoNothing();
+      }
+      return undefined;
     });
   }
 

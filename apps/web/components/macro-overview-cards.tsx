@@ -101,6 +101,7 @@ function MacroCard({
           <Badge className={getLanguageColor(macro.language)}>
             {getLanguageDisplay(macro.language)}
           </Badge>
+          <Badge className="bg-slate-200 text-slate-700">v{macro.version}</Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
           )}

@@ -15,6 +15,7 @@ import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListCompatibleProtocolsUseCase } from "../application/use-cases/list-compatible-protocols/list-compatible-protocols";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
+import { ListMacroVersionsUseCase } from "../application/use-cases/list-macro-versions/list-macro-versions";
 import { RemoveCompatibleProtocolUseCase } from "../application/use-cases/remove-compatible-protocol/remove-compatible-protocol";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
@@ -35,6 +36,7 @@ export class MacroController {
     private readonly listCompatibleProtocolsUseCase: ListCompatibleProtocolsUseCase,
     private readonly addCompatibleProtocolsUseCase: AddCompatibleProtocolsUseCase,
     private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
+    private readonly listMacroVersionsUseCase: ListMacroVersionsUseCase,
   ) {}
 
   @TsRestHandler(macroContract.createMacro)
@@ -183,6 +185,22 @@ export class MacroController {
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.listMacroVersions)
+  listMacroVersions() {
+    return tsRestHandler(macroContract.listMacroVersions, async ({ params }) => {
+      const result = await this.listMacroVersionsUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK,
+          body: formatDatesList(result.value),
         };
       }
 

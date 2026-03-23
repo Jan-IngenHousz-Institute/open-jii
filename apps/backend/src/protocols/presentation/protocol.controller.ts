@@ -15,6 +15,7 @@ import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
 import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-protocol";
 import { ListCompatibleMacrosUseCase } from "../application/use-cases/list-compatible-macros/list-compatible-macros";
+import { ListProtocolVersionsUseCase } from "../application/use-cases/list-protocol-versions/list-protocol-versions";
 import { ListProtocolsUseCase } from "../application/use-cases/list-protocols/list-protocols";
 import { RemoveCompatibleMacroUseCase } from "../application/use-cases/remove-compatible-macro/remove-compatible-macro";
 import { UpdateProtocolUseCase } from "../application/use-cases/update-protocol/update-protocol";
@@ -138,6 +139,7 @@ export class ProtocolController {
     private readonly listCompatibleMacrosUseCase: ListCompatibleMacrosUseCase,
     private readonly addCompatibleMacrosUseCase: AddCompatibleMacrosUseCase,
     private readonly removeCompatibleMacroUseCase: RemoveCompatibleMacroUseCase,
+    private readonly listProtocolVersionsUseCase: ListProtocolVersionsUseCase,
   ) {}
 
   @TsRestHandler(contract.protocols.listProtocols)
@@ -408,6 +410,27 @@ export class ProtocolController {
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.protocols.listProtocolVersions)
+  listProtocolVersions() {
+    return tsRestHandler(contract.protocols.listProtocolVersions, async ({ params }) => {
+      const result = await this.listProtocolVersionsUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        const protocols = result.value.map((protocol) => ({
+          ...protocol,
+          code: parseProtocolCode(protocol.code, this.logger),
+        }));
+
+        return {
+          status: StatusCodes.OK,
+          body: formatDatesList(protocols),
         };
       }
 

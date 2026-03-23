@@ -1,8 +1,19 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { and, eq, ilike, protocols, experimentProtocols, users, asc } from "@repo/database";
-import { profiles } from "@repo/database";
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  max,
+  sql,
+  protocols,
+  experimentProtocols,
+  users,
+  asc,
+  profiles,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -61,9 +72,13 @@ export class ProtocolRepository {
         conditions.push(eq(protocols.createdBy, userId));
       }
 
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions)) as typeof query;
-      }
+      // Only return the latest version of each protocol
+      conditions.push(
+        sql`${protocols.version} = (SELECT MAX(p2.version) FROM protocols p2 WHERE p2.name = ${protocols.name})`,
+      );
+
+      // Apply all conditions with AND logic
+      query = query.where(and(...conditions)) as typeof query;
 
       const results = await query;
       return results.map((result) => {
@@ -134,6 +149,48 @@ export class ProtocolRepository {
         .returning();
 
       return results as unknown as ProtocolDto[];
+    });
+  }
+
+  /**
+   * Find all versions of a protocol by name, ordered by version descending.
+   */
+  async findVersionsByName(name: string): Promise<Result<ProtocolDto[]>> {
+    return tryCatch(async () => {
+      const results = await this.database
+        .select({
+          protocols,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
+        .from(protocols)
+        .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
+        .where(eq(protocols.name, name))
+        .orderBy(desc(protocols.version));
+
+      return results.map((result) => {
+        const augmentedResult = result.protocols as ProtocolDto;
+        const firstName = result.firstName;
+        const lastName = result.lastName;
+        augmentedResult.createdByName =
+          firstName && lastName ? `${firstName} ${lastName}` : undefined;
+        return augmentedResult;
+      });
+    });
+  }
+
+  /**
+   * Get the highest version number for a given protocol name.
+   * Returns 0 if no protocol with that name exists.
+   */
+  async findMaxVersionByName(name: string): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({ maxVersion: max(protocols.version) })
+        .from(protocols)
+        .where(eq(protocols.name, name));
+
+      return result[0]?.maxVersion ?? 0;
     });
   }
 

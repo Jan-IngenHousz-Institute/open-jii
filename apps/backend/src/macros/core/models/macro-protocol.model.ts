@@ -10,6 +10,7 @@ export const macroProtocolSchema = createSelectSchema(protocolMacros)
     protocol: z.object({
       id: z.string().uuid(),
       name: z.string(),
+      version: z.number().int(),
       family: z.string(),
       createdBy: z.string().uuid(),
     }),

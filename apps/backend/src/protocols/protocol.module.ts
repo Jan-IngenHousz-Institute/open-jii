@@ -10,6 +10,7 @@ import { CreateProtocolUseCase } from "./application/use-cases/create-protocol/c
 import { DeleteProtocolUseCase } from "./application/use-cases/delete-protocol/delete-protocol";
 import { GetProtocolUseCase } from "./application/use-cases/get-protocol/get-protocol";
 import { ListCompatibleMacrosUseCase } from "./application/use-cases/list-compatible-macros/list-compatible-macros";
+import { ListProtocolVersionsUseCase } from "./application/use-cases/list-protocol-versions/list-protocol-versions";
 import { ListProtocolsUseCase } from "./application/use-cases/list-protocols/list-protocols";
 import { RemoveCompatibleMacroUseCase } from "./application/use-cases/remove-compatible-macro/remove-compatible-macro";
 import { UpdateProtocolUseCase } from "./application/use-cases/update-protocol/update-protocol";
@@ -39,6 +40,7 @@ import { ProtocolController } from "./presentation/protocol.controller";
     CreateProtocolUseCase,
     GetProtocolUseCase,
     ListProtocolsUseCase,
+    ListProtocolVersionsUseCase,
     UpdateProtocolUseCase,
     DeleteProtocolUseCase,
 
