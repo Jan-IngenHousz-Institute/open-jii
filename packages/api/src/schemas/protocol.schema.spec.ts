@@ -39,6 +39,7 @@ describe("Protocol Schema", () => {
       const p = {
         id: uuidA,
         name: "Fv/FM Baseline",
+        version: 1,
         description: "Dark adaptation",
         code: validCodeArray,
         family: "multispeq",
@@ -55,6 +56,7 @@ describe("Protocol Schema", () => {
       const p = {
         id: uuidA,
         name: "Ambient Light",
+        version: 1,
         description: null,
         code: validCodeArray,
         family: "multispeq",
@@ -112,6 +114,7 @@ describe("Protocol Schema", () => {
       const p1 = {
         id: uuidA,
         name: "P1",
+        version: 1,
         description: null,
         code: validCodeArray,
         family: "multispeq",
