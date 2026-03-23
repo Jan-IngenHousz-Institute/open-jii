@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
 import type { ProtocolMacroList } from "@repo/api";
-import { macros } from "@repo/database";
+import { macros, protocols } from "@repo/database";
 
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -269,6 +269,161 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       });
 
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("getProtocol", () => {
+    it("should return 200 with the latest version by default", async () => {
+      const protocolId = faker.string.uuid();
+
+      // Insert two versions of the same protocol
+      await testApp.database.insert(protocols).values([
+        {
+          id: protocolId,
+          version: 1,
+          name: "Versioned Protocol",
+          description: "version 1",
+          code: [{}],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+        {
+          id: protocolId,
+          version: 2,
+          name: "Versioned Protocol",
+          description: "version 2",
+          code: [{}],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+      ]);
+
+      const path = testApp.resolvePath(contract.protocols.getProtocol.path, { id: protocolId });
+
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        id: protocolId,
+        version: 2,
+        description: "version 2",
+      });
+    });
+
+    it("should return a specific version when version query param is provided", async () => {
+      const protocolId = faker.string.uuid();
+
+      await testApp.database.insert(protocols).values([
+        {
+          id: protocolId,
+          version: 1,
+          name: "Versioned Protocol",
+          description: "version 1",
+          code: [{}],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+        {
+          id: protocolId,
+          version: 2,
+          name: "Versioned Protocol",
+          description: "version 2",
+          code: [{}],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+      ]);
+
+      const path = testApp.resolvePath(contract.protocols.getProtocol.path, { id: protocolId });
+
+      const response = await testApp
+        .get(`${path}?version=1`)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        id: protocolId,
+        version: 1,
+        description: "version 1",
+      });
+    });
+
+    it("should return 404 for non-existent protocol", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.protocols.getProtocol.path, { id: nonExistentId });
+
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("listProtocolVersions", () => {
+    it("should return 200 with all versions ordered by version descending", async () => {
+      const protocolId = faker.string.uuid();
+
+      await testApp.database.insert(protocols).values([
+        {
+          id: protocolId,
+          version: 1,
+          name: "Multi-Version Protocol",
+          description: "v1",
+          code: [{}],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+        {
+          id: protocolId,
+          version: 2,
+          name: "Multi-Version Protocol",
+          description: "v2",
+          code: [{}],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+        {
+          id: protocolId,
+          version: 3,
+          name: "Multi-Version Protocol",
+          description: "v3",
+          code: [{}],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+      ]);
+
+      const path = testApp.resolvePath(contract.protocols.listProtocolVersions.path, {
+        id: protocolId,
+      });
+
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(3);
+      expect((response.body as { version: number }[])[0].version).toBe(3);
+      expect((response.body as { version: number }[])[1].version).toBe(2);
+      expect((response.body as { version: number }[])[2].version).toBe(1);
+    });
+
+    it("should return 200 with single version for protocol with no updates", async () => {
+      const protocol = await testApp.createProtocol({
+        name: "Single Version Protocol",
+        createdBy: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.protocols.listProtocolVersions.path, {
+        id: protocol.id,
+      });
+
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(1);
+      expect((response.body as { version: number }[])[0].version).toBe(1);
+    });
+
+    it("should return 404 for non-existent protocol", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.protocols.listProtocolVersions.path, {
+        id: nonExistentId,
+      });
+
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
   });
 });
