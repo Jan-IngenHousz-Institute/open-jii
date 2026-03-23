@@ -148,9 +148,14 @@ export function ProtocolCompatibleMacrosCard({
                       <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
                     </Link>
                   </div>
-                  <Badge className={getLanguageColor(entry.macro.language)}>
-                    {getLanguageDisplay(entry.macro.language)}
-                  </Badge>
+                  <div className="flex gap-1">
+                    <Badge className={getLanguageColor(entry.macro.language)}>
+                      {getLanguageDisplay(entry.macro.language)}
+                    </Badge>
+                    <Badge className="bg-slate-200 text-slate-700">
+                      v{entry.macro.version}
+                    </Badge>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"

@@ -134,9 +134,14 @@ export function MacroCompatibleProtocolsCard({
                       <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
                     </Link>
                   </div>
-                  <Badge className={`${getFamilyColor(entry.protocol.family)} capitalize`}>
-                    {entry.protocol.family}
-                  </Badge>
+                  <div className="flex gap-1">
+                    <Badge className={`${getFamilyColor(entry.protocol.family)} capitalize`}>
+                      {entry.protocol.family}
+                    </Badge>
+                    <Badge className="bg-slate-200 text-slate-700">
+                      v{entry.protocol.version}
+                    </Badge>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"
