@@ -53,15 +53,14 @@ describe("ListMacroVersionsUseCase", () => {
 
     const v2Result = await updateUseCase.execute(v1.id, { description: "v2" }, testUserId);
     assertSuccess(v2Result);
+    expect(v2Result.value.version).toBe(2);
+    expect(v2Result.value.id).toBe(v1.id); // same UUID
 
-    const v3Result = await updateUseCase.execute(
-      v2Result.value.id,
-      { description: "v3" },
-      testUserId,
-    );
+    const v3Result = await updateUseCase.execute(v1.id, { description: "v3" }, testUserId);
     assertSuccess(v3Result);
+    expect(v3Result.value.version).toBe(3);
 
-    // Act — list versions using any of the version IDs
+    // Act — list versions
     const result = await useCase.execute(v1.id);
 
     // Assert
@@ -71,12 +70,9 @@ describe("ListMacroVersionsUseCase", () => {
     expect(result.value[1].version).toBe(2);
     expect(result.value[2].version).toBe(1);
 
-    // All share the same name
+    // All share the same UUID and name
+    expect(result.value.every((v) => v.id === v1.id)).toBe(true);
     expect(result.value.every((v) => v.name === "Versioned Macro")).toBe(true);
-
-    // All have unique IDs
-    const ids = result.value.map((v) => v.id);
-    expect(new Set(ids).size).toBe(3);
   });
 
   it("should return single version for a macro with no updates", async () => {
