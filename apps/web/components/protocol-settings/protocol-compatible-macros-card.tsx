@@ -52,17 +52,23 @@ const getLanguageColor = (language: string) => {
 
 interface ProtocolCompatibleMacrosCardProps {
   protocolId: string;
+  protocolVersion?: number;
   embedded?: boolean;
 }
 
 export function ProtocolCompatibleMacrosCard({
   protocolId,
+  protocolVersion,
   embedded,
 }: ProtocolCompatibleMacrosCardProps) {
   const { t } = useTranslation();
   const locale = useLocale();
 
-  const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(protocolId);
+  const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(
+    protocolId,
+    true,
+    protocolVersion,
+  );
   const compatibleMacros = useMemo(() => compatibleData?.body ?? [], [compatibleData]);
 
   const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacro(protocolId);

@@ -150,7 +150,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       />
 
       {isCreator ? (
-        <MacroCompatibleProtocolsCard macroId={macroId} embedded />
+        <MacroCompatibleProtocolsCard macroId={macroId} macroVersion={macro.version} embedded />
       ) : (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{t("macroSettings.compatibleProtocols")}</h4>

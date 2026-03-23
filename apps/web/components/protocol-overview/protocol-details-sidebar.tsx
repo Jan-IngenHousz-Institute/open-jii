@@ -150,7 +150,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       />
 
       {isCreator ? (
-        <ProtocolCompatibleMacrosCard protocolId={protocolId} embedded />
+        <ProtocolCompatibleMacrosCard protocolId={protocolId} protocolVersion={protocol.version} embedded />
       ) : (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{t("protocolSettings.compatibleMacros")}</h4>

@@ -37,18 +37,20 @@ const getFamilyColor = (family: string) => {
 
 interface MacroCompatibleProtocolsCardProps {
   macroId: string;
+  macroVersion?: number;
   embedded?: boolean;
 }
 
 export function MacroCompatibleProtocolsCard({
   macroId,
+  macroVersion,
   embedded,
 }: MacroCompatibleProtocolsCardProps) {
   const { t } = useTranslation("macro");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
 
-  const compatibleQuery = useMacroCompatibleProtocols(macroId);
+  const compatibleQuery = useMacroCompatibleProtocols(macroId, true, macroVersion);
   const isLoading = compatibleQuery.isLoading;
   const compatibleProtocols: MacroProtocolEntry[] = useMemo(
     () => (compatibleQuery.data?.body as MacroProtocolEntry[] | undefined) ?? [],
