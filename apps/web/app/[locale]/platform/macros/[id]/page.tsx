@@ -11,6 +11,7 @@ import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useCodeAutoSave } from "@/hooks/useCodeAutoSave";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { CodeIcon } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { use, useCallback } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -24,7 +25,9 @@ interface MacroOverviewPageProps {
 
 export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const { id } = use(params);
-  const { data, isLoading, error } = useMacro(id);
+  const searchParams = useSearchParams();
+  const version = searchParams.get("v") ? Number(searchParams.get("v")) : undefined;
+  const { data, isLoading, error } = useMacro(id, version);
   const { t } = useTranslation(["macro", "common"]);
   const { data: session } = useSession();
   const { mutateAsync: updateMacro, mutate: saveMacro, isPending: isUpdating } = useMacroUpdate(id);
