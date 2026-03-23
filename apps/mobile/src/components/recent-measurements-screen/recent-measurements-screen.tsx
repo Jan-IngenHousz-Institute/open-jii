@@ -1,8 +1,9 @@
 import { clsx } from "clsx";
 import { Download, ChevronsLeft, UploadCloud } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, FlatList, Alert } from "react-native";
+import { View, Text, FlatList } from "react-native";
 import { toast } from "sonner-native";
+import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
@@ -39,42 +40,48 @@ export function RecentMeasurementsScreen() {
     useFailedUploads();
 
   const handleSyncAll = () => {
-    Alert.alert(
+    showAlert(
       "Upload All Measurements",
       `Are you sure you want to sync ${unsyncedCount} unsynced measurement${unsyncedCount !== 1 ? "s" : ""}?`,
       [
         {
-          text: "Cancel",
-          style: "cancel",
+          text: "Upload All",
+          variant: "primary",
+          onPress: () => {
+            void (async () => {
+              try {
+                await uploadAll();
+                toast.success("All measurements synced successfully");
+                invalidate();
+              } catch {
+                toast.error("Sync failed. Please try again.");
+              }
+            })();
+          },
         },
         {
-          text: "Upload All",
-          onPress: (async () => {
-            try {
-              await uploadAll();
-              toast.success("All measurements synced successfully");
-              invalidate();
-            } catch {
-              toast.error("Sync failed. Please try again.");
-            }
-          }) as any,
+          text: "Cancel",
+          variant: "ghost",
         },
       ],
     );
   };
 
   const handleSync = (id: string, experimentName: string) => {
-    Alert.alert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+    showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
       {
         text: "Upload",
-        onPress: (async () => {
-          await uploadOne(id);
-          invalidate();
-        }) as any,
+        variant: "primary",
+        onPress: () => {
+          void (async () => {
+            await uploadOne(id);
+            invalidate();
+          })();
+        },
+      },
+      {
+        text: "Cancel",
+        variant: "ghost",
       },
     ]);
   };
@@ -85,22 +92,24 @@ export function RecentMeasurementsScreen() {
         ? `Are you sure you want to delete "${experimentName}" from local storage?`
         : `Are you sure you want to remove "${experimentName}"? This will delete it from local storage.`;
 
-    Alert.alert(status === "synced" ? "Delete Measurement" : "Remove Measurement", message, [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+    showAlert(status === "synced" ? "Delete Measurement" : "Remove Measurement", message, [
       {
         text: status === "synced" ? "Delete" : "Remove",
-        style: "destructive",
-        onPress: (async () => {
-          if (status === "synced") {
-            await removeSuccessfulUpload(id);
-          } else {
-            await removeFailedUpload(id);
-          }
-          invalidate();
-        }) as any,
+        variant: "danger",
+        onPress: () => {
+          void (async () => {
+            if (status === "synced") {
+              await removeSuccessfulUpload(id);
+            } else {
+              await removeFailedUpload(id);
+            }
+            invalidate();
+          })();
+        },
+      },
+      {
+        text: "Cancel",
+        variant: "ghost",
       },
     ]);
   };
@@ -109,7 +118,6 @@ export function RecentMeasurementsScreen() {
     setIsExporting(true);
     try {
       await exportMeasurementsToFile();
-      toast.success("Measurements exported successfully");
     } catch {
       toast.error("Export failed. Please try again.");
     } finally {
@@ -125,36 +133,28 @@ export function RecentMeasurementsScreen() {
 
   return (
     <View className={clsx("flex-1", classes.background)}>
-      <View className="p-4 pb-0">
-        <View className="mb-4 flex-row items-center justify-between">
-          <Text className={clsx("text-lg font-semibold", classes.text)}>Recent Measurements</Text>
-          <View className="flex-row items-center gap-2">
-            <Button
-              title="Export"
-              variant="outline"
-              size="sm"
-              onPress={handleExport}
-              isLoading={isExporting}
-              isDisabled={!measurements || measurements.length === 0}
-              icon={<Download size={16} color={colors.primary.dark} />}
-            />
-            <Button
-              title="Upload All"
-              variant="outline"
-              size="sm"
-              onPress={handleSyncAll}
-              isLoading={isUploading}
-              isDisabled={unsyncedCount === 0}
-              icon={<UploadCloud size={16} color={colors.primary.dark} />}
-            />
-          </View>
-        </View>
+      <View className="flex-row items-center justify-between p-4">
+        <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
 
-        <View className="mb-4">
-          <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
+        <View className="flex-row gap-3">
+          <Button
+            variant="tertiary"
+            onPress={handleExport}
+            isLoading={isExporting}
+            isDisabled={!measurements || measurements.length === 0}
+            icon={<Download size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+            style={{ borderColor: "transparent", padding: 9 }}
+          />
+          <Button
+            variant="tertiary"
+            onPress={handleSyncAll}
+            isLoading={isUploading}
+            isDisabled={unsyncedCount === 0}
+            icon={<UploadCloud size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+            style={{ borderColor: "transparent", padding: 9 }}
+          />
         </View>
       </View>
-
       {measurements && measurements.length > 0 && (
         <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />

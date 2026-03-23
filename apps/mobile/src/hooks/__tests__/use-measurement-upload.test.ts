@@ -11,7 +11,7 @@ const {
   mockExportSingle,
   mockToastSuccess,
   mockToastError,
-  mockAlertAlert,
+  mockShowAlert,
 } = vi.hoisted(() => ({
   mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
   mockSaveFailedUpload: vi.fn(),
@@ -20,7 +20,7 @@ const {
   mockExportSingle: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
-  mockAlertAlert: vi.fn(),
+  mockShowAlert: vi.fn(),
 }));
 
 let capturedCallback: (...args: any[]) => Promise<any>;
@@ -61,8 +61,8 @@ vi.mock("sonner-native", () => ({
   toast: { success: mockToastSuccess, error: mockToastError },
 }));
 
-vi.mock("react-native", () => ({
-  Alert: { alert: mockAlertAlert },
+vi.mock("~/components/AlertDialog", () => ({
+  showAlert: mockShowAlert,
 }));
 
 vi.mock("react-async-hook", () => ({
@@ -112,7 +112,7 @@ describe("useMeasurementUpload", () => {
       "Upload not available, upload it later from Recent",
     );
     expect(mockSaveFailedUpload).toHaveBeenCalled();
-    expect(mockAlertAlert).not.toHaveBeenCalled();
+    expect(mockShowAlert).not.toHaveBeenCalled();
   });
 
   it("prompts file save when both upload and local storage fail", async () => {
@@ -128,7 +128,7 @@ describe("useMeasurementUpload", () => {
       expect.any(Error),
     );
 
-    expect(mockAlertAlert).toHaveBeenCalledWith(
+    expect(mockShowAlert).toHaveBeenCalledWith(
       "Something went wrong",
       "Could not save the measurement. Would you like to save it as a file instead?",
       expect.arrayContaining([
@@ -149,7 +149,7 @@ describe("useMeasurementUpload", () => {
 
     await capturedCallback(baseArgs);
 
-    const alertButtons = mockAlertAlert.mock.calls[0][2] as any[];
+    const alertButtons = mockShowAlert.mock.calls[0][2] as any[];
     const saveButton = alertButtons.find((b: any) => b.text === "Save to File");
 
     await saveButton.onPress();
@@ -176,7 +176,7 @@ describe("useMeasurementUpload", () => {
 
     await capturedCallback(baseArgs);
 
-    const alertButtons = mockAlertAlert.mock.calls[0][2] as any[];
+    const alertButtons = mockShowAlert.mock.calls[0][2] as any[];
     const saveButton = alertButtons.find((b: any) => b.text === "Save to File");
 
     await saveButton.onPress();

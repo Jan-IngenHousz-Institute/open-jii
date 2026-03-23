@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
+import { AlertDialog } from "~/components/AlertDialog";
 import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
 import { PythonMacroProvider } from "~/components/python-macro-provider";
 import { TimeSyncProvider } from "~/components/time-sync-provider";
@@ -105,6 +106,7 @@ function RootLayoutContent() {
                 <StatusBar style={theme.isDark ? "light" : "dark"} />
                 <RootLayoutNav />
                 <Toaster />
+                <AlertDialog />
               </BottomSheetModalProvider>
             </PythonMacroProvider>
           </SafeAreaProvider>

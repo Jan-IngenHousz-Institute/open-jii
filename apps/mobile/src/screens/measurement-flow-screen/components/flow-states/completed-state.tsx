@@ -1,7 +1,8 @@
 import { clsx } from "clsx";
 import { ChevronsLeft } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, FlatList, Alert } from "react-native";
+import { View, Text, FlatList } from "react-native";
+import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
@@ -37,14 +38,20 @@ export function CompletedState() {
   const { uploadOne, removeFailedUpload, updateMeasurementComment } = useFailedUploads();
 
   const handleSync = (id: string, experimentName: string) => {
-    Alert.alert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
-      { text: "Cancel", style: "cancel" },
+    showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
       {
         text: "Upload",
-        onPress: (async () => {
-          await uploadOne(id);
-          invalidate();
-        }) as any,
+        variant: "primary",
+        onPress: () => {
+          void (async () => {
+            await uploadOne(id);
+            invalidate();
+          })();
+        },
+      },
+      {
+        text: "Cancel",
+        variant: "ghost",
       },
     ]);
   };
@@ -55,19 +62,24 @@ export function CompletedState() {
         ? `Are you sure you want to delete "${experimentName}" from local storage?`
         : `Are you sure you want to remove "${experimentName}"? This will delete it from local storage.`;
 
-    Alert.alert(status === "synced" ? "Delete Measurement" : "Remove Measurement", message, [
-      { text: "Cancel", style: "cancel" },
+    showAlert(status === "synced" ? "Delete Measurement" : "Remove Measurement", message, [
       {
         text: status === "synced" ? "Delete" : "Remove",
-        style: "destructive",
-        onPress: (async () => {
-          if (status === "synced") {
-            await removeSuccessfulUpload(id);
-          } else {
-            await removeFailedUpload(id);
-          }
-          invalidate();
-        }) as any,
+        variant: "danger",
+        onPress: () => {
+          void (async () => {
+            if (status === "synced") {
+              await removeSuccessfulUpload(id);
+            } else {
+              await removeFailedUpload(id);
+            }
+            invalidate();
+          })();
+        },
+      },
+      {
+        text: "Cancel",
+        variant: "ghost",
       },
     ]);
   };

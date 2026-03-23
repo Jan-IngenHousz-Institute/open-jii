@@ -4,7 +4,8 @@ import * as Application from "expo-application";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Alert, Linking, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Linking, Image } from "react-native";
+import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
@@ -33,7 +34,7 @@ export default function ProfileScreen() {
     if (canOpen) {
       await Linking.openURL(url);
     } else {
-      Alert.alert("Error", "Cannot open web profile. Please check your internet connection.");
+      showAlert("Error", "Cannot open web profile. Please check your internet connection.");
     }
   };
 
