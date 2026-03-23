@@ -12,7 +12,7 @@ import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
 interface MeasurementPanelProps {
   selectedProtocolId?: string;
-  onChange: (protocolId: string) => void;
+  onChange: (protocolId: string, protocolVersion?: number) => void;
   disabled?: boolean;
 }
 
@@ -33,7 +33,9 @@ export function MeasurementPanel({
 
   const handleAddProtocol = (protocolId: string) => {
     if (disabled) return;
-    onChange(protocolId);
+    // Find the selected protocol to get its version
+    const selectedProtocol = availableProtocols.find((p) => p.id === protocolId);
+    onChange(protocolId, selectedProtocol?.version);
     setProtocolSearch("");
   };
 

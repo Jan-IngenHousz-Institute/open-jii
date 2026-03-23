@@ -321,11 +321,12 @@ export function ExperimentSidePanel({
               selectedProtocolId={
                 typeof selectedNode.data.protocolId === "string" ? selectedNode.data.protocolId : ""
               }
-              onChange={(protocolId) => {
+              onChange={(protocolId, protocolVersion) => {
                 if (onNodeDataChange) {
                   onNodeDataChange(selectedNode.id, {
                     ...selectedNode.data,
                     protocolId,
+                    protocolVersion,
                   });
                 }
               }}
@@ -338,11 +339,12 @@ export function ExperimentSidePanel({
               selectedMacroId={
                 typeof selectedNode.data.macroId === "string" ? selectedNode.data.macroId : ""
               }
-              onChange={(macroId) => {
+              onChange={(macroId, macroVersion) => {
                 if (onNodeDataChange) {
                   onNodeDataChange(selectedNode.id, {
                     ...selectedNode.data,
                     macroId,
+                    macroVersion,
                   });
                 }
               }}

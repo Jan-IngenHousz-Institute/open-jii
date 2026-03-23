@@ -15,7 +15,7 @@ import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface AnalysisPanelProps {
   selectedMacroId?: string;
-  onChange: (macroId: string) => void;
+  onChange: (macroId: string, macroVersion?: number) => void;
   disabled?: boolean;
   upstreamProtocolId?: string;
 }
@@ -79,7 +79,8 @@ export function AnalysisPanel({
 
   const handleAddMacro = (macroId: string) => {
     if (disabled) return;
-    onChange(macroId);
+    const selectedMacro = availableMacros.find((m) => m.id === macroId);
+    onChange(macroId, selectedMacro?.version);
     setMacroSearch("");
   };
 
