@@ -131,7 +131,7 @@ export function ProtocolCompatibleMacrosCard({
         <div className="space-y-3">
           {compatibleMacros.map((entry) => (
             <div
-              key={entry.macro.id}
+              key={`${entry.macro.id}-v${entry.macro.version}`}
               className="group rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">

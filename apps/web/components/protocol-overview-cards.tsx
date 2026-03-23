@@ -48,7 +48,7 @@ function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; ena
     <div className="flex flex-wrap gap-1">
       {macros.map((entry) => (
         <span
-          key={entry.macro.id}
+          key={`${entry.macro.id}-v${entry.macro.version}`}
           className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
         >
           {entry.macro.name}
