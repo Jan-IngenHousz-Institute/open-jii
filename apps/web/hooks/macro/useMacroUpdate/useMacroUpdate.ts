@@ -1,19 +1,22 @@
+import { useRouter } from "next/navigation";
+
 import type { Macro } from "@repo/api";
 
 import { tsr } from "../../../lib/tsr";
+import { useLocale } from "../../useLocale";
 
 interface MacroUpdateProps {
   onSuccess?: (macro: Macro) => void;
 }
 
 /**
- * Hook to update an existing macro
- * @param macroId The ID of the macro to update
- * @param props Optional callbacks and configuration
- * @returns Mutation result for updating a macro
+ * Hook to update an existing macro.
+ * Updates create a new version (new UUID), so the hook redirects to the new version's page.
  */
 export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) => {
   const queryClient = tsr.useQueryClient();
+  const router = useRouter();
+  const locale = useLocale();
 
   return tsr.macros.updateMacro.useMutation({
     onMutate: async (variables) => {
@@ -86,9 +89,13 @@ export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) =>
       });
     },
     onSuccess: (data) => {
-      // Call the provided onSuccess callback if it exists
+      const newMacro = data.body;
+      // Redirect to the new version's page if the ID changed
+      if (newMacro.id !== macroId) {
+        router.replace(`/${locale}/platform/macros/${newMacro.id}`);
+      }
       if (props.onSuccess) {
-        props.onSuccess(data.body);
+        props.onSuccess(newMacro);
       }
     },
   });

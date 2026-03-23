@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 
 import { experimentProtocols } from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -228,5 +228,73 @@ describe("UpdateProtocolUseCase", () => {
     assertSuccess(versionsResult);
     expect(versionsResult.value).toHaveLength(3);
     expect(versionsResult.value.map((v) => v.version)).toEqual([3, 2, 1]); // DESC order
+  });
+
+  it("should return failure when findMaxVersionByName fails", async () => {
+    // Arrange
+    const createResult = await protocolRepository.create(
+      { name: "DB Error Protocol", code: JSON.stringify([{}]), family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const protocol = createResult.value[0];
+
+    vi.spyOn(protocolRepository, "findMaxVersionByName").mockResolvedValue(
+      failure({ message: "Database error", code: "INTERNAL", statusCode: 500, name: "" }),
+    );
+
+    // Act
+    const result = await useCase.execute(protocol.id, { description: "fail" });
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toBe("Database error");
+  });
+
+  it("should return failure when creating new version row fails", async () => {
+    // Arrange
+    const createResult = await protocolRepository.create(
+      { name: "Create Fail Protocol", code: JSON.stringify([{}]), family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const protocol = createResult.value[0];
+
+    vi.spyOn(protocolRepository, "create").mockResolvedValue(
+      failure({
+        message: "Unique constraint violation",
+        code: "INTERNAL",
+        statusCode: 500,
+        name: "",
+      }),
+    );
+
+    // Act
+    const result = await useCase.execute(protocol.id, { description: "fail" });
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+  });
+
+  it("should return failure when create returns empty array", async () => {
+    // Arrange
+    const createResult = await protocolRepository.create(
+      { name: "Empty Result Protocol", code: JSON.stringify([{}]), family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const protocol = createResult.value[0];
+
+    vi.spyOn(protocolRepository, "create").mockResolvedValue(success([]));
+
+    // Act
+    const result = await useCase.execute(protocol.id, { description: "fail" });
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toBe("Failed to create new protocol version");
   });
 });

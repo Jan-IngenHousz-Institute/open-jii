@@ -1,5 +1,5 @@
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { UpdateMacroUseCase } from "../update-macro/update-macro";
@@ -138,5 +138,27 @@ describe("ListMacroVersionsUseCase", () => {
     // Assert — should only see Macro A versions, not Macro B
     expect(versionsA.value).toHaveLength(2);
     expect(versionsA.value.every((v) => v.name === "Macro A")).toBe(true);
+  });
+
+  it("should return failure when findById has a database error", async () => {
+    // Arrange
+    const createResult = await macroRepository.create(
+      { name: "DB Error Macro", language: "python", code: "YQ==" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const macro = createResult.value[0];
+
+    vi.spyOn(macroRepository, "findById").mockResolvedValue(
+      failure({ message: "Connection lost", code: "INTERNAL", statusCode: 500, name: "" }),
+    );
+
+    // Act
+    const result = await useCase.execute(macro.id);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toBe("Connection lost");
   });
 });

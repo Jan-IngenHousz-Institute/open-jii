@@ -305,4 +305,72 @@ describe("UpdateMacroUseCase", () => {
     expect(versionsResult.value).toHaveLength(3);
     expect(versionsResult.value.map((v) => v.version)).toEqual([3, 2, 1]); // DESC order
   });
+
+  it("should return failure when findMaxVersionByName fails", async () => {
+    // Arrange
+    const createResult = await macroRepository.create(
+      { name: "DB Error Macro", language: "python", code: "cHl0aG9uIGNvZGU=" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const macro = createResult.value[0];
+
+    vi.spyOn(macroRepository, "findMaxVersionByName").mockResolvedValue(
+      failure({ message: "Database error", code: "INTERNAL", statusCode: 500, name: "" }),
+    );
+
+    // Act
+    const result = await useCase.execute(macro.id, { description: "fail" }, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toBe("Database error");
+  });
+
+  it("should return failure when creating new version row fails", async () => {
+    // Arrange
+    const createResult = await macroRepository.create(
+      { name: "Create Fail Macro", language: "python", code: "cHl0aG9uIGNvZGU=" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const macro = createResult.value[0];
+
+    vi.spyOn(macroRepository, "create").mockResolvedValue(
+      failure({
+        message: "Unique constraint violation",
+        code: "INTERNAL",
+        statusCode: 500,
+        name: "",
+      }),
+    );
+
+    // Act
+    const result = await useCase.execute(macro.id, { description: "fail" }, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+  });
+
+  it("should return failure when create returns empty array", async () => {
+    // Arrange
+    const createResult = await macroRepository.create(
+      { name: "Empty Result Macro", language: "python", code: "cHl0aG9uIGNvZGU=" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const macro = createResult.value[0];
+
+    vi.spyOn(macroRepository, "create").mockResolvedValue(success([]));
+
+    // Act
+    const result = await useCase.execute(macro.id, { description: "fail" }, testUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toBe("Failed to create new macro version");
+  });
 });

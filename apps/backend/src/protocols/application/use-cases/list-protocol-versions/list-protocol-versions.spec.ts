@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { UpdateProtocolUseCase } from "../update-protocol/update-protocol";
@@ -124,5 +124,27 @@ describe("ListProtocolVersionsUseCase", () => {
     // Assert
     expect(versionsA.value).toHaveLength(2);
     expect(versionsA.value.every((v) => v.name === "Protocol A")).toBe(true);
+  });
+
+  it("should return failure when findOne has a database error", async () => {
+    // Arrange
+    const createResult = await protocolRepository.create(
+      { name: "DB Error Protocol", code: JSON.stringify([{}]), family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(createResult);
+    const protocol = createResult.value[0];
+
+    vi.spyOn(protocolRepository, "findOne").mockResolvedValue(
+      failure({ message: "Connection lost", code: "INTERNAL", statusCode: 500, name: "" }),
+    );
+
+    // Act
+    const result = await useCase.execute(protocol.id);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toBe("Connection lost");
   });
 });

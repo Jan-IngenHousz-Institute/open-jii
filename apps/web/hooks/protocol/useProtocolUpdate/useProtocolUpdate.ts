@@ -1,19 +1,22 @@
+import { useRouter } from "next/navigation";
+
 import type { Protocol } from "@repo/api";
 
 import { tsr } from "../../../lib/tsr";
+import { useLocale } from "../../useLocale";
 
 interface ProtocolUpdateProps {
   onSuccess?: (protocol: Protocol) => void;
 }
 
 /**
- * Hook to update an existing protocol
- * @param protocolId The ID of the protocol to update
- * @param props Optional callbacks and configuration
- * @returns Mutation result for updating a protocol
+ * Hook to update an existing protocol.
+ * Updates create a new version (new UUID), so the hook redirects to the new version's page.
  */
 export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps = {}) => {
   const queryClient = tsr.useQueryClient();
+  const router = useRouter();
+  const locale = useLocale();
 
   return tsr.protocols.updateProtocol.useMutation({
     onMutate: async () => {
@@ -53,9 +56,13 @@ export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps
       });
     },
     onSuccess: (data) => {
-      // Call the provided onSuccess callback if it exists
+      const newProtocol = data.body;
+      // Redirect to the new version's page if the ID changed
+      if (newProtocol.id !== protocolId) {
+        router.replace(`/${locale}/platform/protocols/${newProtocol.id}`);
+      }
       if (props.onSuccess) {
-        props.onSuccess(data.body);
+        props.onSuccess(newProtocol);
       }
     },
   });
