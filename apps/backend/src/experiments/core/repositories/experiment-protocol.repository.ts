@@ -28,7 +28,13 @@ export class ExperimentProtocolRepository {
           },
         })
         .from(experimentProtocols)
-        .innerJoin(protocols, eq(experimentProtocols.protocolId, protocols.id))
+        .innerJoin(
+          protocols,
+          and(
+            eq(experimentProtocols.protocolId, protocols.id),
+            eq(experimentProtocols.protocolVersion, protocols.version),
+          ),
+        )
         .where(eq(experimentProtocols.experimentId, experimentId))
         .orderBy(experimentProtocols.order);
     });
@@ -36,7 +42,7 @@ export class ExperimentProtocolRepository {
 
   async addProtocols(
     experimentId: string,
-    protocolsToAdd: { protocolId: string; order?: number }[],
+    protocolsToAdd: { protocolId: string; protocolVersion?: number; order?: number }[],
   ): Promise<Result<ExperimentProtocolDto[]>> {
     return tryCatch(async () => {
       if (!protocolsToAdd.length) return [];
@@ -44,6 +50,7 @@ export class ExperimentProtocolRepository {
         protocolsToAdd.map((p, idx) => ({
           experimentId,
           protocolId: p.protocolId,
+          protocolVersion: p.protocolVersion ?? 1,
           order: p.order ?? idx,
         })),
       );
@@ -61,7 +68,13 @@ export class ExperimentProtocolRepository {
           },
         })
         .from(experimentProtocols)
-        .innerJoin(protocols, eq(experimentProtocols.protocolId, protocols.id))
+        .innerJoin(
+          protocols,
+          and(
+            eq(experimentProtocols.protocolId, protocols.id),
+            eq(experimentProtocols.protocolVersion, protocols.version),
+          ),
+        )
         .where(
           and(
             eq(experimentProtocols.experimentId, experimentId),

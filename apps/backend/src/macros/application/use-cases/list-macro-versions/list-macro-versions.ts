@@ -18,15 +18,14 @@ export class ListMacroVersionsUseCase {
       macroId: id,
     });
 
-    // First find the macro to get its name
+    // Check that at least one version exists
     const macroResult = await this.macroRepository.findById(id);
 
     if (macroResult.isFailure()) {
       return macroResult;
     }
 
-    const macro = macroResult.value;
-    if (!macro) {
+    if (!macroResult.value) {
       this.logger.warn({
         msg: "Macro not found",
         errorCode: ErrorCodes.MACRO_NOT_FOUND,
@@ -36,7 +35,7 @@ export class ListMacroVersionsUseCase {
       return failure(AppError.notFound(`Macro with ID ${id} not found`));
     }
 
-    // Return all versions with the same name
-    return this.macroRepository.findVersionsByName(macro.name);
+    // Return all versions by id
+    return this.macroRepository.findVersionsById(id);
   }
 }

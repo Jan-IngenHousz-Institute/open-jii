@@ -5,17 +5,16 @@ import { z } from "zod";
 import { macros } from "@repo/database";
 
 /**
- * Generate a hashed filename based on the macro ID
+ * Generate a hashed filename based on the macro ID and version.
+ * Each version gets a unique filename for Databricks isolation.
  */
-export function generateHashedFilename(macroId: string): string {
+export function generateHashedFilename(macroId: string, version: number = 1): string {
   const hash = createHash("sha256").update(macroId).digest("hex");
-  // Use first 12 characters for a reasonable length filename
-  return `macro_${hash.substring(0, 12)}`;
+  return `macro_${hash.substring(0, 12)}_v${version}`;
 }
 
 export const createMacroSchema = createInsertSchema(macros).omit({
-  id: true,
-  filename: true, // filename is derived from name
+  filename: true, // filename is derived from id + version
   createdAt: true,
   updatedAt: true,
   createdBy: true,

@@ -57,8 +57,8 @@ export class MacroController {
 
   @TsRestHandler(macroContract.getMacro)
   getMacro() {
-    return tsRestHandler(macroContract.getMacro, async ({ params }) => {
-      const result = await this.getMacroUseCase.execute(params.id);
+    return tsRestHandler(macroContract.getMacro, async ({ params, query }) => {
+      const result = await this.getMacroUseCase.execute(params.id, query?.version);
 
       if (isSuccess(result)) {
         return {

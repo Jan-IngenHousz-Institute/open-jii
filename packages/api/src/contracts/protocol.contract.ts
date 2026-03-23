@@ -1,4 +1,5 @@
 import { initContract } from "@ts-rest/core";
+import { z } from "zod";
 
 import {
   zProtocol,
@@ -32,12 +33,14 @@ export const protocolContract = c.router({
     method: "GET",
     path: "/api/v1/protocols/:id",
     pathParams: zProtocolIdPathParam,
+    query: z.object({ version: z.coerce.number().int().optional() }),
     responses: {
       200: zProtocol,
       404: zProtocolErrorResponse,
     },
     summary: "Get protocol by ID",
-    description: "Returns a protocol by its ID",
+    description:
+      "Returns a protocol by its ID. Without version param, returns the latest version.",
   },
 
   createProtocol: {

@@ -33,12 +33,14 @@ export const macroContract = c.router({
     method: "GET",
     path: "/api/v1/macros/:id",
     pathParams: zMacroIdPathParam,
+    query: z.object({ version: z.coerce.number().int().optional() }),
     responses: {
       200: zMacro,
       404: zMacroErrorResponse,
     },
     summary: "Get macro by ID",
-    description: "Returns a macro by its ID",
+    description:
+      "Returns a macro by its ID. Without version param, returns the latest version.",
   },
 
   createMacro: {

@@ -5,7 +5,7 @@ import { experimentProtocols } from "@repo/database";
 
 // Schema for returning experiment protocols
 export const experimentProtocolSchema = createSelectSchema(experimentProtocols)
-  .omit({ protocolId: true })
+  .omit({ protocolId: true, protocolVersion: true })
   .extend({
     protocol: z.object({
       id: z.string().uuid(),

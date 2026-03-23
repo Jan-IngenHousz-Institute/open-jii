@@ -170,8 +170,8 @@ export class ProtocolController {
 
   @TsRestHandler(contract.protocols.getProtocol)
   getProtocol() {
-    return tsRestHandler(contract.protocols.getProtocol, async ({ params }) => {
-      const result = await this.getProtocolUseCase.execute(params.id);
+    return tsRestHandler(contract.protocols.getProtocol, async ({ params, query }) => {
+      const result = await this.getProtocolUseCase.execute(params.id, query?.version);
 
       if (result.isSuccess()) {
         // Transform the code field to ensure it's a proper Record<string, unknown>

@@ -30,17 +30,23 @@ export class MacroRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
+  /**
+   * Create a new macro (v1) or a new version of an existing macro.
+   * For v1: pass data without id (will be auto-generated).
+   * For new version: pass data with the same id and incremented version.
+   */
   async create(data: CreateMacroDto, userId: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      // Generate UUID for the macro to create a consistent hashed filename
-      const macroId = crypto.randomUUID();
+      const macroId = data.id ?? crypto.randomUUID();
+      const version = data.version ?? 1;
 
       const results = await this.database
         .insert(macros)
         .values({
           ...data,
           id: macroId,
-          filename: generateHashedFilename(macroId),
+          version,
+          filename: generateHashedFilename(macroId, version),
           createdBy: userId,
         })
         .returning();
@@ -48,6 +54,9 @@ export class MacroRepository {
     });
   }
 
+  /**
+   * List macros, returning only the latest version of each.
+   */
   async findAll(filter?: MacroFilter): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       let query = this.database
@@ -60,10 +69,8 @@ export class MacroRepository {
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
         .orderBy(asc(macros.sortOrder), asc(macros.name));
 
-      // Build array of conditions for filters
       const conditions: (SQL | undefined)[] = [];
 
-      // Apply filters if provided
       if (filter?.search) {
         conditions.push(ilike(macros.name, `%${filter.search}%`));
       }
@@ -76,13 +83,11 @@ export class MacroRepository {
         conditions.push(eq(macros.createdBy, filter.userId));
       }
 
-      // Only return the latest version of each macro
+      // Only return the latest version of each macro (by id)
       conditions.push(
-        sql`${macros.version} = (SELECT MAX(m2.version) FROM macros m2 WHERE m2.name = ${macros.name})`,
+        sql`${macros.version} = (SELECT MAX(m2.version) FROM macros m2 WHERE m2.id = ${macros.id})`,
       );
 
-      // Apply all conditions with AND logic
-      // Type assertion is needed for query builder compatibility
       query = query.where(and(...conditions)) as typeof query;
 
       const results = await query;
@@ -97,8 +102,22 @@ export class MacroRepository {
     });
   }
 
-  async findById(id: string): Promise<Result<MacroDto | null>> {
+  /**
+   * Find a macro by id. If version is provided, returns that exact version.
+   * Otherwise returns the latest version.
+   */
+  async findById(id: string, version?: number): Promise<Result<MacroDto | null>> {
     return tryCatch(async () => {
+      const conditions = [eq(macros.id, id)];
+      if (version !== undefined) {
+        conditions.push(eq(macros.version, version));
+      } else {
+        // Latest version
+        conditions.push(
+          sql`${macros.version} = (SELECT MAX(m2.version) FROM macros m2 WHERE m2.id = ${id})`,
+        );
+      }
+
       const result = await this.database
         .select({
           macros,
@@ -107,7 +126,7 @@ export class MacroRepository {
         })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
-        .where(eq(macros.id, id))
+        .where(and(...conditions))
         .limit(1);
 
       if (result.length === 0) {
@@ -134,6 +153,7 @@ export class MacroRepository {
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
         .where(eq(macros.name, name))
+        .orderBy(desc(macros.version))
         .limit(1);
 
       if (result.length === 0) {
@@ -149,34 +169,10 @@ export class MacroRepository {
     });
   }
 
-  async update(id: string, data: UpdateMacroDto): Promise<Result<MacroDto[]>> {
-    return tryCatch(async () => {
-      // The filename is based on the macro ID hash and should not change during updates
-      const results = await this.database
-        .update(macros)
-        .set({
-          ...data,
-          updatedAt: new Date(),
-        })
-        .where(eq(macros.id, id))
-        .returning();
-
-      return results as unknown as MacroDto[];
-    });
-  }
-
-  async delete(id: string): Promise<Result<MacroDto[]>> {
-    return tryCatch(async () => {
-      const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
-
-      return results as unknown as MacroDto[];
-    });
-  }
-
   /**
-   * Find all versions of a macro by name, ordered by version descending.
+   * Find all versions of a macro by id, ordered by version descending.
    */
-  async findVersionsByName(name: string): Promise<Result<MacroDto[]>> {
+  async findVersionsById(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       const results = await this.database
         .select({
@@ -186,7 +182,7 @@ export class MacroRepository {
         })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
-        .where(eq(macros.name, name))
+        .where(eq(macros.id, id))
         .orderBy(desc(macros.version));
 
       return results.map((result) => {
@@ -201,24 +197,37 @@ export class MacroRepository {
   }
 
   /**
-   * Get the highest version number for a given macro name.
-   * Returns 0 if no macro with that name exists.
+   * Get the highest version number for a given macro id.
+   * Returns 0 if no macro with that id exists.
    */
-  async findMaxVersionByName(name: string): Promise<Result<number>> {
+  async findMaxVersion(id: string): Promise<Result<number>> {
     return tryCatch(async () => {
       const result = await this.database
         .select({ maxVersion: max(macros.version) })
         .from(macros)
-        .where(eq(macros.name, name));
+        .where(eq(macros.id, id));
 
       return result[0]?.maxVersion ?? 0;
     });
   }
 
+  async delete(id: string, version?: number): Promise<Result<MacroDto[]>> {
+    return tryCatch(async () => {
+      const conditions = [eq(macros.id, id)];
+      if (version !== undefined) {
+        conditions.push(eq(macros.version, version));
+      }
+      const results = await this.database
+        .delete(macros)
+        .where(and(...conditions))
+        .returning();
+
+      return results as unknown as MacroDto[];
+    });
+  }
+
   /**
-   * Find multiple macros by their IDs.
-   * Non-UUID identifiers are silently excluded to avoid PostgreSQL cast errors.
-   * Returns a map keyed by macro UUID -> { name, filename }.
+   * Find multiple macros by their IDs (latest version of each).
    */
   async findNamesByIds(
     ids: string[],
@@ -237,7 +246,12 @@ export class MacroRepository {
           filename: macros.filename,
         })
         .from(macros)
-        .where(inArray(macros.id, uuids));
+        .where(
+          and(
+            inArray(macros.id, uuids),
+            sql`${macros.version} = (SELECT MAX(m2.version) FROM macros m2 WHERE m2.id = ${macros.id})`,
+          ),
+        );
 
       const map = new Map<string, { name: string; filename: string }>();
       for (const row of results) {

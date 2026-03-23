@@ -11,14 +11,14 @@ export class GetProtocolUseCase {
 
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
-  async execute(id: string): Promise<Result<ProtocolDto>> {
+  async execute(id: string, version?: number): Promise<Result<ProtocolDto>> {
     this.logger.log({
       msg: "Getting protocol",
       operation: "getProtocol",
       protocolId: id,
     });
 
-    const result = await this.protocolRepository.findOne(id);
+    const result = await this.protocolRepository.findOne(id, version);
 
     if (result.isFailure()) {
       return result;

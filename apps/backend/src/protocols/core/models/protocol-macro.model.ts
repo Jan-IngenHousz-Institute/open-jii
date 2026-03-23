@@ -5,7 +5,7 @@ import { protocolMacros } from "@repo/database";
 
 // Schema for returning protocol-compatible macros
 export const protocolMacroSchema = createSelectSchema(protocolMacros)
-  .omit({ macroId: true })
+  .omit({ macroId: true, macroVersion: true })
   .extend({
     macro: z.object({
       id: z.string().uuid(),

@@ -18,15 +18,14 @@ export class ListProtocolVersionsUseCase {
       protocolId: id,
     });
 
-    // First find the protocol to get its name
+    // Check that at least one version exists
     const protocolResult = await this.protocolRepository.findOne(id);
 
     if (protocolResult.isFailure()) {
       return protocolResult;
     }
 
-    const protocol = protocolResult.value;
-    if (!protocol) {
+    if (!protocolResult.value) {
       this.logger.warn({
         msg: "Protocol not found",
         errorCode: ErrorCodes.PROTOCOL_NOT_FOUND,
@@ -36,7 +35,7 @@ export class ListProtocolVersionsUseCase {
       return failure(AppError.notFound(`Protocol with ID ${id} not found`));
     }
 
-    // Return all versions with the same name
-    return this.protocolRepository.findVersionsByName(protocol.name);
+    // Return all versions by id
+    return this.protocolRepository.findVersionsById(id);
   }
 }

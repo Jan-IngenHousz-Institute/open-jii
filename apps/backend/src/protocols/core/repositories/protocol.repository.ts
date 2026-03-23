@@ -30,6 +30,11 @@ export class ProtocolRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
+  /**
+   * Create a new protocol (v1) or a new version of an existing protocol.
+   * For v1: pass data without id (will be auto-generated).
+   * For new version: pass data with the same id and incremented version.
+   */
   async create(
     createProtocolDto: CreateProtocolDto,
     userId: string,
@@ -39,6 +44,8 @@ export class ProtocolRepository {
         .insert(protocols)
         .values({
           ...createProtocolDto,
+          id: createProtocolDto.id ?? crypto.randomUUID(),
+          version: createProtocolDto.version ?? 1,
           createdBy: userId,
         })
         .returning();
@@ -46,6 +53,9 @@ export class ProtocolRepository {
     });
   }
 
+  /**
+   * List protocols, returning only the latest version of each.
+   */
   async findAll(
     search?: ProtocolFilter,
     filter?: "my",
@@ -72,12 +82,11 @@ export class ProtocolRepository {
         conditions.push(eq(protocols.createdBy, userId));
       }
 
-      // Only return the latest version of each protocol
+      // Only return the latest version of each protocol (by id)
       conditions.push(
-        sql`${protocols.version} = (SELECT MAX(p2.version) FROM protocols p2 WHERE p2.name = ${protocols.name})`,
+        sql`${protocols.version} = (SELECT MAX(p2.version) FROM protocols p2 WHERE p2.id = ${protocols.id})`,
       );
 
-      // Apply all conditions with AND logic
       query = query.where(and(...conditions)) as typeof query;
 
       const results = await query;
@@ -92,8 +101,21 @@ export class ProtocolRepository {
     });
   }
 
-  async findOne(id: string): Promise<Result<ProtocolDto | null>> {
+  /**
+   * Find a protocol by id. If version is provided, returns that exact version.
+   * Otherwise returns the latest version.
+   */
+  async findOne(id: string, version?: number): Promise<Result<ProtocolDto | null>> {
     return tryCatch(async () => {
+      const conditions = [eq(protocols.id, id)];
+      if (version !== undefined) {
+        conditions.push(eq(protocols.version, version));
+      } else {
+        conditions.push(
+          sql`${protocols.version} = (SELECT MAX(p2.version) FROM protocols p2 WHERE p2.id = ${id})`,
+        );
+      }
+
       const result = await this.database
         .select({
           protocols,
@@ -102,7 +124,7 @@ export class ProtocolRepository {
         })
         .from(protocols)
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
-        .where(eq(protocols.id, id))
+        .where(and(...conditions))
         .limit(1);
 
       if (result.length === 0) {
@@ -125,6 +147,7 @@ export class ProtocolRepository {
         .from(protocols)
         .innerJoin(users, eq(protocols.createdBy, users.id))
         .where(eq(protocols.name, name))
+        .orderBy(desc(protocols.version))
         .limit(1);
 
       if (result.length === 0) {
@@ -137,25 +160,10 @@ export class ProtocolRepository {
     });
   }
 
-  async update(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto[]>> {
-    return tryCatch(async () => {
-      const results = await this.database
-        .update(protocols)
-        .set({
-          ...updateProtocolDto,
-          updatedAt: new Date(),
-        })
-        .where(eq(protocols.id, id))
-        .returning();
-
-      return results as unknown as ProtocolDto[];
-    });
-  }
-
   /**
-   * Find all versions of a protocol by name, ordered by version descending.
+   * Find all versions of a protocol by id, ordered by version descending.
    */
-  async findVersionsByName(name: string): Promise<Result<ProtocolDto[]>> {
+  async findVersionsById(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
       const results = await this.database
         .select({
@@ -165,7 +173,7 @@ export class ProtocolRepository {
         })
         .from(protocols)
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
-        .where(eq(protocols.name, name))
+        .where(eq(protocols.id, id))
         .orderBy(desc(protocols.version));
 
       return results.map((result) => {
@@ -180,23 +188,30 @@ export class ProtocolRepository {
   }
 
   /**
-   * Get the highest version number for a given protocol name.
-   * Returns 0 if no protocol with that name exists.
+   * Get the highest version number for a given protocol id.
+   * Returns 0 if no protocol with that id exists.
    */
-  async findMaxVersionByName(name: string): Promise<Result<number>> {
+  async findMaxVersion(id: string): Promise<Result<number>> {
     return tryCatch(async () => {
       const result = await this.database
         .select({ maxVersion: max(protocols.version) })
         .from(protocols)
-        .where(eq(protocols.name, name));
+        .where(eq(protocols.id, id));
 
       return result[0]?.maxVersion ?? 0;
     });
   }
 
-  async delete(id: string): Promise<Result<ProtocolDto[]>> {
+  async delete(id: string, version?: number): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database.delete(protocols).where(eq(protocols.id, id)).returning();
+      const conditions = [eq(protocols.id, id)];
+      if (version !== undefined) {
+        conditions.push(eq(protocols.version, version));
+      }
+      const results = await this.database
+        .delete(protocols)
+        .where(and(...conditions))
+        .returning();
 
       return results as unknown as ProtocolDto[];
     });

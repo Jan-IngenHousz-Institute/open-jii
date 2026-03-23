@@ -63,7 +63,9 @@ export class AddCompatibleMacrosUseCase {
     }
 
     // Add the compatibility links
-    const addResult = await this.protocolMacroRepository.addMacros(protocolId, macroIds);
+    const protocolVersion = protocolResult.value.version;
+    const macroRefs = macroIds.map((id) => ({ id, version: 1 }));
+    const addResult = await this.protocolMacroRepository.addMacros(protocolId, protocolVersion, macroRefs);
     if (addResult.isFailure()) {
       this.logger.error({
         msg: "Failed to add compatible macros",

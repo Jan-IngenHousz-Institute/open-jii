@@ -4,7 +4,6 @@ import { z } from "zod";
 import { protocols } from "@repo/database";
 
 export const createProtocolSchema = createInsertSchema(protocols).omit({
-  id: true,
   createdAt: true,
   updatedAt: true,
   createdBy: true,

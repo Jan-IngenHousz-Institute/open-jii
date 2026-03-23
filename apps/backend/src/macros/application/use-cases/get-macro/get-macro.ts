@@ -11,14 +11,14 @@ export class GetMacroUseCase {
 
   constructor(private readonly macroRepository: MacroRepository) {}
 
-  async execute(id: string): Promise<Result<MacroDto>> {
+  async execute(id: string, version?: number): Promise<Result<MacroDto>> {
     this.logger.log({
       msg: "Getting macro",
       operation: "getMacro",
       macroId: id,
     });
 
-    const result = await this.macroRepository.findById(id);
+    const result = await this.macroRepository.findById(id, version);
 
     if (result.isFailure()) {
       return result;

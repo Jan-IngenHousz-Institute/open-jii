@@ -30,7 +30,8 @@ export class ListCompatibleProtocolsUseCase {
       return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
     }
 
-    const result = await this.macroProtocolRepository.listProtocols(macroId);
+    const macroVersion = macroResult.value.version;
+    const result = await this.macroProtocolRepository.listProtocols(macroId, macroVersion);
     if (result.isFailure()) {
       this.logger.error({
         msg: "Failed to list compatible protocols",

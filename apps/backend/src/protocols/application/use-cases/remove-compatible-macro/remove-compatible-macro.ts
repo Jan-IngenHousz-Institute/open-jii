@@ -44,7 +44,10 @@ export class RemoveCompatibleMacroUseCase {
       return failure(AppError.forbidden("Only the protocol creator can manage compatible macros"));
     }
 
-    const removeResult = await this.protocolMacroRepository.removeMacro(protocolId, macroId);
+    const protocolVersion = protocolResult.value.version;
+    // TODO: resolve actual macroVersion from API when schema is updated
+    const macroVersion = 1;
+    const removeResult = await this.protocolMacroRepository.removeMacro(protocolId, protocolVersion, macroId, macroVersion);
     if (removeResult.isFailure()) {
       this.logger.error({
         msg: "Failed to remove compatible macro",

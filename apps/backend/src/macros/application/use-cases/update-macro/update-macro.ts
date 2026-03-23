@@ -2,9 +2,8 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { UpdateMacroDto, MacroDto, generateHashedFilename } from "../../../core/models/macro.model";
+import { UpdateMacroDto, MacroDto } from "../../../core/models/macro.model";
 import { DATABRICKS_PORT, DatabricksPort } from "../../../core/ports/databricks.port";
-import { MacroProtocolRepository } from "../../../core/repositories/macro-protocol.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
 @Injectable()
@@ -13,7 +12,6 @@ export class UpdateMacroUseCase {
 
   constructor(
     private readonly macroRepository: MacroRepository,
-    private readonly macroProtocolRepository: MacroProtocolRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
@@ -25,7 +23,7 @@ export class UpdateMacroUseCase {
       userId,
     });
 
-    // Fetch the existing macro
+    // Fetch the existing macro (latest version)
     const macroResult = await this.macroRepository.findById(id);
 
     if (macroResult.isFailure()) {
@@ -44,7 +42,6 @@ export class UpdateMacroUseCase {
       return failure(AppError.notFound(`Macro with ID ${id} not found`));
     }
 
-    // Check if user is the creator
     if (existingMacro.createdBy !== userId) {
       this.logger.warn({
         msg: "Unauthorized macro update attempt",
@@ -56,23 +53,23 @@ export class UpdateMacroUseCase {
       return failure(AppError.forbidden("Only the macro creator can update this macro"));
     }
 
-    // Get the next version number
-    const maxVersionResult = await this.macroRepository.findMaxVersionByName(existingMacro.name);
+    // Get the next version number for this macro id
+    const maxVersionResult = await this.macroRepository.findMaxVersion(id);
     if (maxVersionResult.isFailure()) {
       return maxVersionResult;
     }
     const nextVersion = maxVersionResult.value + 1;
 
-    // Create a new version: merge existing data with provided updates
-    const newMacroId = crypto.randomUUID();
+    // Create a new version: same UUID, incremented version, merged data
     const createResult = await this.macroRepository.create(
       {
+        id: existingMacro.id, // Same UUID
+        version: nextVersion,
         name: data.name ?? existingMacro.name,
         description: data.description ?? existingMacro.description,
         language: data.language ?? existingMacro.language,
         code: data.code ?? existingMacro.code,
         sortOrder: existingMacro.sortOrder,
-        version: nextVersion,
       },
       userId,
     );
@@ -95,7 +92,7 @@ export class UpdateMacroUseCase {
 
     const newMacro = newMacros[0];
 
-    // Upload code to Databricks with the new filename
+    // Upload code to Databricks with the new version-specific filename
     const codeToUpload = data.code ?? existingMacro.code;
     const databricksResult = await this.databricksPort.uploadMacroCode({
       filename: newMacro.filename,
@@ -109,22 +106,19 @@ export class UpdateMacroUseCase {
         errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
         operation: "updateMacro",
         macroId: newMacro.id,
+        version: nextVersion,
         userId,
         error: databricksResult.error.message,
       });
-      // Clean up: delete the newly created version if Databricks upload fails
-      await this.macroRepository.delete(newMacro.id);
+      // Clean up: delete the failed new version
+      await this.macroRepository.delete(newMacro.id, nextVersion);
       return failure(AppError.internal(databricksResult.error.message));
     }
-
-    // Copy compatibility links from old version to new version
-    await this.macroProtocolRepository.copyLinksToNewMacro(id, newMacro.id);
 
     this.logger.log({
       msg: "New macro version created successfully",
       operation: "updateMacro",
-      previousMacroId: id,
-      newMacroId: newMacro.id,
+      macroId: id,
       version: nextVersion,
       userId,
       status: "success",
