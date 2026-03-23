@@ -28,12 +28,13 @@ interface AnalysisNodeProps {
   content: {
     params: Record<string, any>;
     macroId: string;
+    macroVersion?: number;
   };
 }
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes, colors } = useTheme();
-  const { macro, isLoading } = useMacro(content.macroId);
+  const { macro, isLoading } = useMacro(content.macroId, content.macroVersion);
   const {
     scanResult,
     previousStep,

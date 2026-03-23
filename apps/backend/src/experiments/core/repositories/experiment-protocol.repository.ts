@@ -22,6 +22,7 @@ export class ExperimentProtocolRepository {
           addedAt: experimentProtocols.addedAt,
           protocol: {
             id: protocols.id,
+            version: protocols.version,
             name: protocols.name,
             family: protocols.family,
             createdBy: protocols.createdBy,
@@ -62,6 +63,7 @@ export class ExperimentProtocolRepository {
           addedAt: experimentProtocols.addedAt,
           protocol: {
             id: protocols.id,
+            version: protocols.version,
             name: protocols.name,
             family: protocols.family,
             createdBy: protocols.createdBy,

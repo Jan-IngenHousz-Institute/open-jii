@@ -44,11 +44,13 @@ export interface QuestionContent {
 export interface MeasurementContent {
   params: Record<string, any>;
   protocolId: string;
+  protocolVersion?: number;
 }
 
 export interface AnalysisContent {
   params: Record<string, any>;
   macroId: string;
+  macroVersion?: number;
 }
 
 export interface FlowEdge {

@@ -9,6 +9,7 @@ export const experimentProtocolSchema = createSelectSchema(experimentProtocols)
   .extend({
     protocol: z.object({
       id: z.string().uuid(),
+      version: z.number().int(),
       name: z.string(),
       family: z.enum(["multispeq", "ambit", "generic"]),
       createdBy: z.string().uuid(),

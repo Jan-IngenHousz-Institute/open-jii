@@ -1,9 +1,9 @@
 import { tsr } from "~/api/tsr";
 
-export function useMacro(macroId: string | undefined) {
+export function useMacro(macroId: string | undefined, version?: number) {
   const { data, isLoading, error } = tsr.macros.getMacro.useQuery({
-    queryKey: ["macro", macroId],
-    queryData: { params: { id: macroId ?? "" } },
+    queryKey: ["macro", macroId, version],
+    queryData: { params: { id: macroId ?? "" }, query: { version } },
     enabled: !!macroId,
     networkMode: "offlineFirst",
   });
