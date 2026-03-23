@@ -4,13 +4,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { useRouter, usePathname } from "next/navigation";
 import React from "react";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components";
 
 interface VersionPickerProps {
   currentVersion: number;

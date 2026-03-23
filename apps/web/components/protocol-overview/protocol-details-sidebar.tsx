@@ -1,9 +1,9 @@
 "use client";
 
+import { VersionPicker } from "@/components/shared/version-picker";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useProtocolVersions } from "@/hooks/protocol/useProtocolVersions/useProtocolVersions";
 import { useLocale } from "@/hooks/useLocale";
-import { VersionPicker } from "@/components/shared/version-picker";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
@@ -150,7 +150,11 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       />
 
       {isCreator ? (
-        <ProtocolCompatibleMacrosCard protocolId={protocolId} protocolVersion={protocol.version} embedded />
+        <ProtocolCompatibleMacrosCard
+          protocolId={protocolId}
+          protocolVersion={protocol.version}
+          embedded
+        />
       ) : (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{t("protocolSettings.compatibleMacros")}</h4>

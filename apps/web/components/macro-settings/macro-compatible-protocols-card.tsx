@@ -140,9 +140,7 @@ export function MacroCompatibleProtocolsCard({
                     <Badge className={`${getFamilyColor(entry.protocol.family)} capitalize`}>
                       {entry.protocol.family}
                     </Badge>
-                    <Badge className="bg-slate-200 text-slate-700">
-                      v{entry.protocol.version}
-                    </Badge>
+                    <Badge className="bg-slate-200 text-slate-700">v{entry.protocol.version}</Badge>
                   </div>
                 </div>
                 <Button

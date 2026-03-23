@@ -1,10 +1,10 @@
 "use client";
 
+import { VersionPicker } from "@/components/shared/version-picker";
 import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useMacroVersions } from "@/hooks/macro/useMacroVersions/useMacroVersions";
 import { useLocale } from "@/hooks/useLocale";
-import { VersionPicker } from "@/components/shared/version-picker";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
