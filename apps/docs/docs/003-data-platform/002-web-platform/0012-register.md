@@ -6,7 +6,7 @@ If you don't yet have an openJII account, follow these steps to create one.
 
 1. Go to the openJII website and choose **Sign up / Log in**.
 2. Select one of the three registration methods:
-	- **Email** — we send a secure login link to your email (no password required).
+	- **Email** — we send a 6-digit verification code to your email (no password required).
 	- **GitHub** — sign in with your GitHub account.
 	- **ORCID** — sign in with your ORCID account.
 

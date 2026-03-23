@@ -17,10 +17,10 @@ An experiment member is appointed by an admin of an experiment. A member is some
 | Add measurements via app | - | ✓ | ✓ | 
 | Add/edit comments/flags (app&web) | - | ✓ | ✓ | 
 | Leave an experiment | - | ✓ | ✓ ** | 
-| Create/edit/delete visualisations | - | ✓ (soon: - )  | ✓ |
-| (Bulk) Upload data via web | - | ✓ (soon: - ) | ✓ | 
-| Edit experiment settings*** | - | ✓  (soon: - )  | ✓ |
-| Edit measurement flow | - | ✓  (soon: - )  | ✓ |
+| Create/edit/delete visualisations | - | -  | ✓ |
+| (Bulk) Upload data via web | - | - | ✓ |
+| Edit experiment settings*** | - | -  | ✓ |
+| Edit measurement flow | - | -  | ✓ |
 | Add/remove members/admins from experiment | - | - | ✓ |
 | Change role of members/admins | - | - | ✓ |
 | Archive experiment | - | - | ✓ |
@@ -28,6 +28,18 @@ An experiment member is appointed by an admin of an experiment. A member is some
 `*` unless experiment is private and embargo is active - those experiments are hidden  
 `**`  unless you are the last admin  
 `***` title, description, visibility, location  
+
+### Inviting users
+
+Experiment admins can invite new collaborators by email:
+
+1. Go to your experiment's member management.
+2. Search for an existing user or enter an email address.
+3. If the email matches a registered user, they are added immediately with the chosen role.
+4. If the email does not match a registered user, an **invitation** is sent. The invitee receives a notification email.
+5. When the invitee creates an openJII account, all pending invitations are **automatically accepted** — they are added to the experiment(s) with the role specified in the invitation.
+
+Admins can change the role of a pending invitation or revoke it before it is accepted.
 
 ### Protocols and macros
 Protocols and macros can be seen and used by everyone. Editing is restricted to the user who created the protocol/macro.
