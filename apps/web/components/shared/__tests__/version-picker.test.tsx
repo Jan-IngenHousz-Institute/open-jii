@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { VersionPicker } from "../version-picker";
 
@@ -25,7 +25,7 @@ describe("VersionPicker", () => {
     expect(screen.getByRole("combobox")).toBeDefined();
   });
 
-  it("should show all version options", async () => {
+  it("should show all version options", () => {
     const { container } = render(<VersionPicker currentVersion={2} versions={versions} />);
     // The select trigger should show the current version
     expect(container.textContent).toContain("v2");
