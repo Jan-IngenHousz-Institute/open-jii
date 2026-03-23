@@ -164,24 +164,6 @@ export function NewProtocolForm() {
     toast({ description: t("protocols.protocolCreated") });
   }
 
-  const selectedMacroIds = useMemo(
-    () => new Set(selectedMacros.map((m) => m.id)),
-    [selectedMacros],
-  );
-
-  const availableMacros: Macro[] = useMemo(
-    () => (macroList ?? []).filter((m) => !selectedMacroIds.has(m.id)),
-    [macroList, selectedMacroIds],
-  );
-
-  const handleAddMacro = (macroId: string) => {
-    const macro = macroList?.find((m) => m.id === macroId);
-    if (macro) {
-      setSelectedMacros((prev) => [...prev, macro].sort((a, b) => a.name.localeCompare(b.name)));
-      setMacroSearch("");
-    }
-  };
-
   const handleFormChange = () => {
     if (!hasFormData) {
       setHasFormData(true);
