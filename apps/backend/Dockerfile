@@ -40,7 +40,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
 
 RUN turbo build --filter=${PROJECT}
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
 
 # Dependencies stage - create a clean production dependencies directory
 FROM builder AS dependencies
