@@ -39,8 +39,7 @@ export const macroContract = c.router({
       404: zMacroErrorResponse,
     },
     summary: "Get macro by ID",
-    description:
-      "Returns a macro by its ID. Without version param, returns the latest version.",
+    description: "Returns a macro by its ID. Without version param, returns the latest version.",
   },
 
   createMacro: {

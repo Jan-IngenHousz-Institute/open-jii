@@ -39,8 +39,7 @@ export const protocolContract = c.router({
       404: zProtocolErrorResponse,
     },
     summary: "Get protocol by ID",
-    description:
-      "Returns a protocol by its ID. Without version param, returns the latest version.",
+    description: "Returns a protocol by its ID. Without version param, returns the latest version.",
   },
 
   createProtocol: {
