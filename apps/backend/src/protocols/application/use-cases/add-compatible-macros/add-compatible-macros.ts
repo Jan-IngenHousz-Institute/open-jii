@@ -51,7 +51,8 @@ export class AddCompatibleMacrosUseCase {
       return failure(AppError.forbidden("Only the protocol creator can manage compatible macros"));
     }
 
-    // Validate that all macros exist
+    // Validate that all macros exist and get their latest versions
+    const macroRefs: { id: string; version: number }[] = [];
     for (const macroId of macroIds) {
       const macroResult = await this.macroRepository.findById(macroId);
       if (macroResult.isFailure()) {
@@ -60,11 +61,11 @@ export class AddCompatibleMacrosUseCase {
       if (!macroResult.value) {
         return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
       }
+      macroRefs.push({ id: macroResult.value.id, version: macroResult.value.version });
     }
 
-    // Add the compatibility links
+    // Add the compatibility links using latest versions
     const protocolVersion = protocolResult.value.version;
-    const macroRefs = macroIds.map((id) => ({ id, version: 1 }));
     const addResult = await this.protocolMacroRepository.addMacros(protocolId, protocolVersion, macroRefs);
     if (addResult.isFailure()) {
       this.logger.error({

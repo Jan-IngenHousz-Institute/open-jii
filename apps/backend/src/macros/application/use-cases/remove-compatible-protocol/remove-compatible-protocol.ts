@@ -45,8 +45,9 @@ export class RemoveCompatibleProtocolUseCase {
     }
 
     const macroVersion = macroResult.value.version;
-    // TODO: resolve actual protocolVersion from API when schema is updated
-    const protocolVersion = 1;
+    // Look up the protocol's version from the existing link
+    const protocolLookup = await this.macroProtocolRepository.findProtocolById(protocolId);
+    const protocolVersion = protocolLookup.isSuccess() && protocolLookup.value ? protocolLookup.value.version : 1;
     const removeResult = await this.macroProtocolRepository.removeProtocol(macroId, macroVersion, protocolId, protocolVersion);
     if (removeResult.isFailure()) {
       this.logger.error({
