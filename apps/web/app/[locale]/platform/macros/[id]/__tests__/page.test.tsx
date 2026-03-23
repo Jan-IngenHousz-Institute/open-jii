@@ -18,6 +18,10 @@ vi.mock("react", async () => {
   };
 });
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 // --------------------
 // Hook mocks
 // --------------------

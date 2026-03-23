@@ -34,8 +34,8 @@ describe("useMacroCompatibleProtocols", () => {
     renderHook(() => useMacroCompatibleProtocols(mockMacroId));
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockMacroId } },
-      queryKey: ["macro-compatible-protocols", mockMacroId],
+      queryData: { params: { id: mockMacroId }, query: { version: undefined } },
+      queryKey: ["macro-compatible-protocols", mockMacroId, undefined],
       enabled: true,
     });
   });
@@ -50,8 +50,8 @@ describe("useMacroCompatibleProtocols", () => {
     renderHook(() => useMacroCompatibleProtocols(""));
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: "" } },
-      queryKey: ["macro-compatible-protocols", ""],
+      queryData: { params: { id: "" }, query: { version: undefined } },
+      queryKey: ["macro-compatible-protocols", "", undefined],
       enabled: false,
     });
   });
@@ -66,8 +66,8 @@ describe("useMacroCompatibleProtocols", () => {
     renderHook(() => useMacroCompatibleProtocols(mockMacroId, false));
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockMacroId } },
-      queryKey: ["macro-compatible-protocols", mockMacroId],
+      queryData: { params: { id: mockMacroId }, query: { version: undefined } },
+      queryKey: ["macro-compatible-protocols", mockMacroId, undefined],
       enabled: false,
     });
   });

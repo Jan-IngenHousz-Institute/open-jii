@@ -133,7 +133,7 @@ describe("<AnalysisPanel />", () => {
     // Select it - click the macro item itself
     const macroItem = screen.getByRole("option", { name: /Plot Humidity/i });
     await userEvent.click(macroItem);
-    expect(onChange).toHaveBeenCalledWith("macro-2");
+    expect(onChange).toHaveBeenCalledWith("macro-2", undefined);
 
     // Popover should be closed (search input disappears)
     expect(screen.queryByPlaceholderText("experiments.searchMacros")).not.toBeInTheDocument();

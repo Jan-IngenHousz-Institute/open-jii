@@ -34,8 +34,8 @@ describe("useProtocolCompatibleMacros", () => {
     renderHook(() => useProtocolCompatibleMacros(mockProtocolId));
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockProtocolId } },
-      queryKey: ["protocol-compatible-macros", mockProtocolId],
+      queryData: { params: { id: mockProtocolId }, query: { version: undefined } },
+      queryKey: ["protocol-compatible-macros", mockProtocolId, undefined],
       enabled: true,
     });
   });
@@ -50,8 +50,8 @@ describe("useProtocolCompatibleMacros", () => {
     renderHook(() => useProtocolCompatibleMacros(""));
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: "" } },
-      queryKey: ["protocol-compatible-macros", ""],
+      queryData: { params: { id: "" }, query: { version: undefined } },
+      queryKey: ["protocol-compatible-macros", "", undefined],
       enabled: false,
     });
   });
@@ -66,8 +66,8 @@ describe("useProtocolCompatibleMacros", () => {
     renderHook(() => useProtocolCompatibleMacros(mockProtocolId, false));
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockProtocolId } },
-      queryKey: ["protocol-compatible-macros", mockProtocolId],
+      queryData: { params: { id: mockProtocolId }, query: { version: undefined } },
+      queryKey: ["protocol-compatible-macros", mockProtocolId, undefined],
       enabled: false,
     });
   });
