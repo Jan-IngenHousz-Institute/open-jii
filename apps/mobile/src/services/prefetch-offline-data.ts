@@ -8,6 +8,17 @@ import type { FlowNode } from "~/screens/measurement-flow-screen/types";
  * Called after login to ensure measurements can run without network.
  */
 export async function prefetchOfflineData(queryClient: QueryClient): Promise<void> {
+  try {
+    await _prefetchOfflineData(queryClient);
+  } catch (err) {
+    console.error(
+      "[prefetch] Failed to prefetch offline data:",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+}
+
+async function _prefetchOfflineData(queryClient: QueryClient): Promise<void> {
   // 1. Fetch all user experiments
   const experimentsResponse = await queryClient.fetchQuery({
     queryKey: ["experiments"],
@@ -53,7 +64,9 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
         allProtocolIds.push(...protocolIds);
         allMacroIds.push(...macroIds);
       } catch (err) {
-        throw new Error(`Flow fetch failed for experiment ${experiment.id}: ${err}`);
+        throw new Error(
+          `Flow fetch failed for experiment ${experiment.id}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }),
   );
