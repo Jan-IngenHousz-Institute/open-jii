@@ -19,6 +19,7 @@ import Svg, { Path } from "react-native-svg";
 import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 import { OTPInput } from "~/components/OTPInput";
+import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useTheme } from "~/hooks/use-theme";
@@ -43,6 +44,8 @@ export default function LoginScreen() {
     emailLoading,
     verifyLoading,
   } = useLoginFlow();
+
+  const { data: online } = useIsOnline();
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
@@ -166,6 +169,15 @@ export default function LoginScreen() {
           <View style={styles.formContainer}>
             {showEnvSelector && <EnvironmentSelector />}
 
+            {online === false && (
+              <View style={styles.offlineBanner}>
+                <MaterialIcons name="wifi-off" size={18} color="#92400e" />
+                <Text style={styles.offlineBannerText}>
+                  You are offline. Please connect to the internet to log in.
+                </Text>
+              </View>
+            )}
+
             {!showOTPInput ? (
               <>
                 {/* Title */}
@@ -180,7 +192,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!emailLoading}
+                  editable={!emailLoading && online !== false}
                   error={error}
                   containerStyle={{ marginBottom: 12 }}
                 />
@@ -189,7 +201,7 @@ export default function LoginScreen() {
                   variant="primary"
                   onPress={handleEmailSubmit}
                   style={styles.authButton}
-                  isDisabled={emailLoading}
+                  isDisabled={emailLoading || online === false}
                   isLoading={emailLoading}
                 />
 
@@ -206,7 +218,7 @@ export default function LoginScreen() {
                     title="GitHub"
                     variant="surface"
                     onPress={handleGitHubLogin}
-                    isDisabled={githubLoading}
+                    isDisabled={githubLoading || online === false}
                     isLoading={githubLoading}
                     icon={
                       <Svg width="20" height="20" viewBox="0 0 24 24" fill="#000">
@@ -220,7 +232,7 @@ export default function LoginScreen() {
                     title="ORCID"
                     variant="surface"
                     onPress={handleOrcidLogin}
-                    isDisabled={orcidLoading}
+                    isDisabled={orcidLoading || online === false}
                     isLoading={orcidLoading}
                     icon={
                       <Svg width="20" height="20" viewBox="0 0 24 24">
@@ -425,5 +437,19 @@ const styles = StyleSheet.create({
   backButton: {
     marginBottom: 16,
     alignSelf: "flex-start",
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#92400e",
   },
 });
