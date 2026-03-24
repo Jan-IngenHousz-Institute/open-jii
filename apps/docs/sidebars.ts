@@ -136,6 +136,11 @@ const sidebars: SidebarsConfig = {
       id: "data-platform/report-issue",
       label: "Report issue / Request feature",
     },
+    {
+      type: "doc",
+      id: "data-platform/support",
+      label: "Support & Triage",
+    },
     /*{
       type: "category",
       label: "Usage",
