@@ -345,17 +345,6 @@ const styles = StyleSheet.create({
   formContainer: {
     width: "100%",
   },
-  betaBadge: {
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 24,
-  },
-  betaBadgeText: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
   loginTitle: {
     fontSize: 24,
     fontWeight: "bold",
