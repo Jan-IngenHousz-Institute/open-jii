@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { getAuthClient } from "~/services/auth";
@@ -28,7 +29,7 @@ export const customApiFetcher = async (args: ApiFetcherArgs) => {
     },
   });
 
-  if (result?.status === 401) {
+  if (result?.status === 401 && onlineManager.isOnline()) {
     await authClient.signOut();
   }
 

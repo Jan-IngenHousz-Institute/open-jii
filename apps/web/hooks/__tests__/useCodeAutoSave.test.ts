@@ -174,7 +174,6 @@ describe("useCodeAutoSave", () => {
 
       // Simulate onSuccess callback
       act(() => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const call = saveFn.mock.calls[0] as [{ code: string }, { onSuccess: () => void }];
         call[1].onSuccess();
       });

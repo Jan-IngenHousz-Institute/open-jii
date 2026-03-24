@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { onlineManager } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -48,6 +49,11 @@ export default function LoginScreen() {
     tapsRequired: 4,
     intervalMs: 600,
   });
+
+  const [isOnline, setIsOnline] = useState(onlineManager.isOnline());
+  useEffect(() => {
+    return onlineManager.subscribe((online) => setIsOnline(online));
+  }, []);
 
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [email, setEmail] = useState("");
@@ -165,6 +171,14 @@ export default function LoginScreen() {
 
           <View style={styles.formContainer}>
             {showEnvSelector && <EnvironmentSelector />}
+
+            {!isOnline && (
+              <View style={styles.offlineBanner}>
+                <Text style={styles.offlineBannerText}>
+                  You can only login when a device is online
+                </Text>
+              </View>
+            )}
 
             {!showOTPInput ? (
               <>
@@ -425,5 +439,17 @@ const styles = StyleSheet.create({
   backButton: {
     marginBottom: 16,
     alignSelf: "flex-start",
+  },
+  offlineBanner: {
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  offlineBannerText: {
+    color: "#92400e",
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "center",
   },
 });

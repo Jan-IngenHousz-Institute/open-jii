@@ -1,6 +1,7 @@
+import { onlineManager } from "@tanstack/react-query";
 import { Tabs, useRouter, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
@@ -16,15 +17,30 @@ export default function TabLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  const { session, isLoaded } = useSession();
+  const { session, isLoaded, error } = useSession();
+
+  // Network errors do not have a status code
+  const isNetworkError = useMemo(() => !!error && error.status === undefined, [error]);
 
   const inMeasureTab = segments.includes("measurement-flow");
 
   useEffect(() => {
-    if (isLoaded && !session) {
-      router.replace("/callback");
-    }
-  }, [isLoaded, session, router]);
+    // Prevent user from being kicked out when network drops
+    if (!onlineManager.isOnline()) return;
+
+    // Check if the session error is a network error
+    // Even though we are back online, the session fetch might not have been (re)fetched yet
+    if (isNetworkError) return;
+
+    // Give better auth time to load
+    if (!isLoaded) return;
+
+    // Hooray, we have a session
+    if (session) return;
+
+    // No session is present > kick out user
+    router.replace("/callback");
+  }, [isLoaded, session, router, isNetworkError]);
 
   return (
     <View style={{ flex: 1 }}>
