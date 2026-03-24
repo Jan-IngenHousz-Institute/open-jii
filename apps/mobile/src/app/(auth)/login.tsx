@@ -52,15 +52,17 @@ export default function LoginScreen() {
 
   const { data: online = false } = useIsOnline();
 
-  // On cold start, check if there's a cached session in SecureStore.
-  // useSession() won't return cached data when offline (it needs server validation),
-  // so we read the cache directly. Better Auth stores it at `{storagePrefix}_session_data`.
+  // On cold start while offline, check SecureStore for a cached session.
+  // useSession() won't return cached data offline (needs server validation),
+  // so we read the cache directly. Only do this when offline — when online,
+  // let the normal login flow handle it (the cache might be stale).
   useEffect(() => {
+    if (online) return;
     const cached = SecureStore.getItem("openjii_session_data");
     if (cached && cached !== "{}") {
       router.replace("(tabs)");
     }
-  }, [router]);
+  }, [online, router]);
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
