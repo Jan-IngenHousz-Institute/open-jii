@@ -32,13 +32,11 @@ export default function TabLayout() {
     if (!isLoaded || hadSession === null) return;
     if (session) return;
 
-    // If the session check errored (network failure, server error, etc.),
-    // don't redirect — we can't confirm the user is unauthenticated.
-    if (error) return;
-
     // If offline and user previously had a session, trust it —
     // don't kick them to login where they can't do anything.
+    // If they never had a session, redirect to login even if offline.
     if (!onlineManager.isOnline() && hadSession) return;
+    if (error && hadSession) return;
 
     router.replace("/callback");
   }, [isLoaded, session, error, hadSession, router]);
