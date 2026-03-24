@@ -27,6 +27,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
   const { classes, colors } = useTheme();
   const { flowNodes, iterationCount } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore();
+  const theme = useTheme();
 
   const questionEntries: { node: FlowNode; index: number }[] = flowNodes
     .map((node, index) => ({ node, index }))
@@ -76,7 +77,12 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               key={node.id}
               onPress={() => onCardPress(index)}
               activeOpacity={0.7}
-              className="mb-2 flex-row items-stretch gap-4 rounded-xl bg-[#F6F8FA] p-4"
+              className="mb-2 flex-row items-stretch gap-4 rounded-xl p-4"
+              style={{
+                backgroundColor: theme.isDark
+                  ? colors.dark.grayBackground
+                  : colors.light.grayBackground,
+              }}
             >
               <View className="items-center justify-center">
                 <LinearGradient

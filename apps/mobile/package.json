@@ -45,6 +45,7 @@
     "expo-application": "^7.0.8",
     "expo-asset": "~12.0.12",
     "expo-audio": "^1.1.1",
+    "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",
     "expo-file-system": "~19.0.21",
