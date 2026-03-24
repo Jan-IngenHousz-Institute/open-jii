@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useRouter } from "expo-router";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -31,7 +30,6 @@ export default function LoginScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const router = useRouter();
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
   const {
     startGitHubLogin,
@@ -69,10 +67,8 @@ export default function LoginScreen() {
       return;
     }
 
-    // Check if user is registered (similar to web app)
-    // For now, just navigate to tabs - registration flow can be added later
-    router.replace("(tabs)");
-  }, [otp, email, verifyEmailOTP, router]);
+    // Session is now set — Stack.Protected guard will redirect to (tabs) automatically.
+  }, [otp, email, verifyEmailOTP]);
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -89,13 +85,11 @@ export default function LoginScreen() {
   async function handleGitHubLogin() {
     setError("");
     await startGitHubLogin();
-    router.replace("(tabs)");
   }
 
   async function handleOrcidLogin() {
     setError("");
     await startOrcidLogin();
-    router.replace("(tabs)");
   }
 
   async function handleEmailSubmit() {

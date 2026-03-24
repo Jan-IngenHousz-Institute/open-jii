@@ -1,33 +1,66 @@
 /**
- * Hook to access the current user session using Better Auth
+ * Hook to access the current user session.
+ *
+ * Uses Better Auth's useSession() as the primary source. When offline,
+ * Better Auth can't validate the session and returns null — in that case
+ * we fall back to the SecureStore cache written by the expo client plugin.
  */
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useState } from "react";
 import { useAuthClient } from "~/services/auth";
+
+const SESSION_CACHE_KEY = "openjii_session_data";
+
+function getCachedSession() {
+  const raw = SecureStore.getItem(SESSION_CACHE_KEY);
+  if (!raw || raw === "{}") return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 export function useSession() {
   const authClient = useAuthClient();
-  const { data: session, isPending, error } = authClient.useSession();
-  // console.log("useSession:", { session, isPending, error });
+  const { data: betterAuthSession, isPending, error } = authClient.useSession();
+  const [cachedSession, setCachedSession] = useState(() => getCachedSession());
+
+  // Re-check cache when Better Auth finishes loading but has no session
+  useEffect(() => {
+    if (!isPending && !betterAuthSession) {
+      setCachedSession(getCachedSession());
+    }
+  }, [isPending, betterAuthSession]);
+
+  // Use Better Auth session when available, fall back to cache
+  const activeSession = betterAuthSession ?? cachedSession;
+
+  const session = activeSession
+    ? {
+        data: {
+          user: {
+            id: activeSession.user?.id,
+            name: activeSession.user?.name,
+            email: activeSession.user?.email,
+            image: activeSession.user?.image,
+          },
+          expires: activeSession.session?.expiresAt
+            ? new Date(activeSession.session.expiresAt).toISOString()
+            : undefined,
+        },
+      }
+    : undefined;
 
   return {
-    session: session
-      ? {
-          data: {
-            user: {
-              id: session.user.id,
-              name: session.user.name,
-              email: session.user.email,
-              image: session.user.image,
-            },
-            expires: new Date(session.session.expiresAt).toISOString(),
-          },
-        }
-      : undefined,
+    session,
     isLoaded: !isPending,
     isPending,
     error,
-    // For compatibility with Better Auth
-    user: session?.user,
-    // Actions
-    signOut: () => authClient.signOut(),
+    user: activeSession?.user,
+    signOut: async () => {
+      SecureStore.setItem(SESSION_CACHE_KEY, "{}");
+      await authClient.signOut();
+    },
   };
 }

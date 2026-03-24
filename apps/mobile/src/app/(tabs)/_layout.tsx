@@ -1,10 +1,8 @@
-import { Tabs, useRouter, useSegments } from "expo-router";
+import { Tabs, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
-import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
-import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
@@ -13,18 +11,9 @@ export default function TabLayout() {
   const theme = useTheme();
   const { colors } = theme;
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const segments = useSegments();
 
-  const { session, isLoaded } = useSession();
-
   const inMeasureTab = segments.includes("measurement-flow");
-
-  useEffect(() => {
-    if (isLoaded && !session) {
-      router.replace("/callback");
-    }
-  }, [isLoaded, session, router]);
 
   return (
     <View style={{ flex: 1 }}>

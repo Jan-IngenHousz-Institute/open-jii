@@ -14,52 +14,58 @@ import { ConfiguredQueryClientProvider } from "~/components/configured-query-cli
 import { PythonMacroProvider } from "~/components/python-macro-provider";
 import { TimeSyncProvider } from "~/components/time-sync-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
+import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 
 SplashScreen.preventAutoHideAsync();
 
+function SplashScreenController() {
+  const { isLoaded } = useSession();
+
+  useEffect(() => {
+    if (isLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoaded]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   const theme = useTheme();
   const { colors } = theme;
+  const { session } = useSession();
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        headerStyle: {
-          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
-        },
-        headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-        headerTitleStyle: {
-          fontWeight: "bold",
-          fontFamily: "Poppins-Bold",
-        },
-        headerShadowVisible: false,
-        contentStyle: {
-          backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
-        },
-      }}
-    >
-      <Stack.Screen
-        name="(auth)/login"
-        options={{
+    <>
+      <SplashScreenController />
+      <Stack
+        screenOptions={{
           headerShown: false,
+          headerStyle: {
+            backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
+          },
+          headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+          headerTitleStyle: {
+            fontWeight: "bold",
+            fontFamily: "Poppins-Bold",
+          },
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
+          },
         }}
-      />
-      <Stack.Screen
-        name="callback"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
-      />
-    </Stack>
+      >
+        <Stack.Protected guard={!!session}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack.Protected>
+
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+        </Stack.Protected>
+      </Stack>
+    </>
   );
 }
 

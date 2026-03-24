@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import "expo-application";
 import * as Application from "expo-application";
-import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, Linking, Image } from "react-native";
@@ -17,14 +16,13 @@ import { formatRelativeTime } from "~/utils/format-relative-time";
 export default function ProfileScreen() {
   const { session, signOut } = useSession();
   const queryClient = useQueryClient();
-  const router = useRouter();
   const theme = useTheme();
   const { colors } = theme;
 
   const handleLogout = async () => {
     queryClient.resetQueries();
     await signOut();
-    router.replace("/callback");
+    // Stack.Protected guard will redirect to login automatically.
   };
 
   const handleOpenWebProfile = async () => {
