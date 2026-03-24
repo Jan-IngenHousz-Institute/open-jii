@@ -50,14 +50,14 @@ export default function LoginScreen() {
     verifyLoading,
   } = useLoginFlow();
 
-  const { data: online = false } = useIsOnline();
+  const { data: online } = useIsOnline();
 
   // On cold start while offline, check SecureStore for a cached session.
   // useSession() won't return cached data offline (needs server validation),
-  // so we read the cache directly. Only do this when offline — when online,
-  // let the normal login flow handle it (the cache might be stale).
+  // so we read the cache directly. Only do this when confirmed offline —
+  // when online or still checking (undefined), let the normal flow handle it.
   useEffect(() => {
-    if (online) return;
+    if (online !== false) return;
     const cached = SecureStore.getItem("openjii_session_data");
     if (cached && cached !== "{}") {
       router.replace("(tabs)");
