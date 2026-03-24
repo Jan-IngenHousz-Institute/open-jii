@@ -24,9 +24,7 @@ import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
 
-export interface LoginFormValues {
-  email: string;
-}
+import type { LoginFormValues } from "~/components/auth/types";
 
 export default function LoginScreen() {
   const { classes } = useTheme();
