@@ -15,7 +15,7 @@ This page highlights the main capabilities of the openJII platform. For detailed
 
 - **Sensor support:** connect to supported sensors (MultispeQ) over Bluetooth and run measurements.
 - **Fast workflow:** guided measurement flows for rapid field data collection, including questions and instructions.
-- **Offline-first:** capture data offline and sync when network is available.
+- **Offline-first:** after login, all user experiments, measurement flows, protocols and macros are prefetched and cached indefinitely. Measurements can run completely offline without network connectivity. Cached data is served immediately when offline, with automatic background updates when online.
 - **Seamless sync:** measurements sync to the web platform for analysis and sharing. 
 
 See the Mobile App [overview](../003-data-platform/002-mobile-app.md) for device-specific details.
