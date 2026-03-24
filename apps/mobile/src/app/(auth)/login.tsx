@@ -2,6 +2,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import React, { useState } from "react";
+import { useForm } from "react-hook-form";
 import {
   View,
   Text,
@@ -25,6 +26,10 @@ import { EmailLoginStep } from "./components/email-login-step";
 import { OfflineBanner } from "./components/offline-banner";
 import { OTPVerifyStep } from "./components/otp-verify-step";
 
+export interface LoginFormValues {
+  email: string;
+}
+
 export default function LoginScreen() {
   const { classes } = useTheme();
   const queryClient = useQueryClient();
@@ -44,22 +49,23 @@ export default function LoginScreen() {
   const { data: online } = useIsOnline();
   const isOffline = online === false;
 
+  const form = useForm<LoginFormValues>({ defaultValues: { email: "" } });
+
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
     intervalMs: 600,
   });
 
   const [step, setStep] = useState<"email" | "otp">("email");
-  const [email, setEmail] = useState("");
 
-  async function handleEmailSubmit(submittedEmail: string) {
-    setEmail(submittedEmail);
-    const result = await sendEmailOTP(submittedEmail);
+  async function handleEmailSubmit(email: string) {
+    const result = await sendEmailOTP(email);
     if (result?.error) throw new Error(result.error.message ?? "Failed to send code");
     setStep("otp");
   }
 
   async function handleOTPVerify(otp: string): Promise<string | undefined> {
+    const email = form.getValues("email");
     const result = await verifyEmailOTP(email, otp);
     if (result?.error) {
       return "The code you entered is invalid or has expired. Please try again or request a new one.";
@@ -69,6 +75,7 @@ export default function LoginScreen() {
   }
 
   async function handleResend() {
+    const email = form.getValues("email");
     const result = await sendEmailOTP(email);
     if (result?.error) throw new Error(result.error.message ?? "Failed to resend code");
   }
@@ -114,6 +121,7 @@ export default function LoginScreen() {
 
             {step === "email" ? (
               <EmailLoginStep
+                form={form}
                 isOffline={isOffline}
                 emailLoading={emailLoading}
                 githubLoading={githubLoading}
@@ -125,7 +133,7 @@ export default function LoginScreen() {
               />
             ) : (
               <OTPVerifyStep
-                email={email}
+                email={form.getValues("email")}
                 isOffline={isOffline}
                 verifyLoading={verifyLoading}
                 emailLoading={emailLoading}

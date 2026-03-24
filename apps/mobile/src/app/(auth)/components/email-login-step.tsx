@@ -1,18 +1,17 @@
 import { clsx } from "clsx";
 import React from "react";
-import { useForm, Controller } from "react-hook-form";
+import { Controller } from "react-hook-form";
+import type { UseFormReturn } from "react-hook-form";
 import { View, Text, Linking } from "react-native";
 import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 import { useTheme } from "~/hooks/use-theme";
 
+import type { LoginFormValues } from "../login";
 import { GitHubIcon, OrcidIcon } from "./oauth-icons";
 
-interface EmailForm {
-  email: string;
-}
-
 interface EmailLoginStepProps {
+  form: UseFormReturn<LoginFormValues>;
   isOffline: boolean;
   emailLoading: boolean;
   githubLoading: boolean;
@@ -24,6 +23,7 @@ interface EmailLoginStepProps {
 }
 
 export function EmailLoginStep({
+  form,
   isOffline,
   emailLoading,
   githubLoading,
@@ -34,14 +34,13 @@ export function EmailLoginStep({
   termsUrl,
 }: EmailLoginStepProps) {
   const { classes } = useTheme();
-
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<EmailForm>({ defaultValues: { email: "" } });
+  } = form;
 
-  const onSubmit = (data: EmailForm) => onEmailSubmit(data.email);
+  const onSubmit = (data: LoginFormValues) => onEmailSubmit(data.email);
 
   return (
     <>
