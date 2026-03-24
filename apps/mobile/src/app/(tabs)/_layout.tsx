@@ -25,9 +25,8 @@ export default function TabLayout() {
     // Don't kick the user out when the device is offline
     if (!onlineManager.isOnline()) return;
 
-    // A network error means the session fetch failed, not that there's no session
-    const isNetworkError = !!error && (error as any).status === undefined;
-    if (isNetworkError) return;
+    // A network error (status 0) means the session fetch failed, not that there's no session
+    if (error?.status === 0) return;
 
     if (!isLoaded) return;
     if (session) return;

@@ -45,7 +45,7 @@ export default function LoginScreen() {
     verifyLoading,
   } = useLoginFlow();
 
-  const { data: online } = useIsOnline();
+  const { data: online = false } = useIsOnline();
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
@@ -84,10 +84,10 @@ export default function LoginScreen() {
   }, [countdown]);
 
   useEffect(() => {
-    if (otp.length === 6 && !verifyLoading) {
+    if (otp.length === 6 && !verifyLoading && online) {
       void handleOTPVerify();
     }
-  }, [otp, verifyLoading, handleOTPVerify]);
+  }, [otp, verifyLoading, handleOTPVerify, online]);
 
   async function handleGitHubLogin() {
     setError("");
@@ -285,7 +285,7 @@ export default function LoginScreen() {
                   value={otp}
                   onChangeText={setOTP}
                   length={6}
-                  editable={!verifyLoading}
+                  editable={!verifyLoading && online}
                   autoFocus
                   error={!!error}
                 />
@@ -295,13 +295,13 @@ export default function LoginScreen() {
 
                 <Pressable
                   onPress={handleResendCode}
-                  disabled={countdown > 0 || emailLoading}
+                  disabled={countdown > 0 || emailLoading || !online}
                   style={styles.resendButton}
                 >
                   <Text
                     style={[
                       styles.resendText,
-                      { color: countdown > 0 || emailLoading ? mutedColor : "#005e5e" },
+                      { color: countdown > 0 || emailLoading || !online ? mutedColor : "#005e5e" },
                     ]}
                   >
                     {countdown > 0 ? `Re-send code (${countdown}s)` : "Re-send code"}
