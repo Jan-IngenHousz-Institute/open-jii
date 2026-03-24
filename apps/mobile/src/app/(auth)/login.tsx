@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -24,6 +25,7 @@ import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
+import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { markSessionActive } from "~/services/session-persistence";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
@@ -35,6 +37,7 @@ export default function LoginScreen() {
   const { colors } = theme;
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
   const {
     startGitHubLogin,
@@ -86,7 +89,8 @@ export default function LoginScreen() {
 
     void markSessionActive();
     router.replace("(tabs)");
-  }, [otp, email, verifyEmailOTP, router]);
+    void prefetchOfflineData(queryClient);
+  }, [otp, email, verifyEmailOTP, router, queryClient]);
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -105,6 +109,7 @@ export default function LoginScreen() {
     await startGitHubLogin();
     void markSessionActive();
     router.replace("(tabs)");
+    void prefetchOfflineData(queryClient);
   }
 
   async function handleOrcidLogin() {
@@ -112,6 +117,7 @@ export default function LoginScreen() {
     await startOrcidLogin();
     void markSessionActive();
     router.replace("(tabs)");
+    void prefetchOfflineData(queryClient);
   }
 
   async function handleEmailSubmit() {
