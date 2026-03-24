@@ -2,6 +2,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -23,7 +24,6 @@ import { OTPInput } from "~/components/OTPInput";
 import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
-import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { markSessionActive } from "~/services/session-persistence";
@@ -51,15 +51,16 @@ export default function LoginScreen() {
   } = useLoginFlow();
 
   const { data: online = false } = useIsOnline();
-  const { session, isLoaded } = useSession();
 
-  // If there's already a cached session (e.g. cold start with SecureStore cache),
-  // skip the login screen and go straight to the app.
+  // On cold start, check if there's a cached session in SecureStore.
+  // useSession() won't return cached data when offline (it needs server validation),
+  // so we read the cache directly. Better Auth stores it at `{storagePrefix}_session_data`.
   useEffect(() => {
-    if (isLoaded && session) {
+    const cached = SecureStore.getItem("openjii_session_data");
+    if (cached && cached !== "{}") {
       router.replace("(tabs)");
     }
-  }, [isLoaded, session, router]);
+  }, [router]);
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
