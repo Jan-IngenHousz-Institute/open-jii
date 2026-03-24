@@ -13,6 +13,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { EmailLoginStep } from "~/components/auth/email-login-step";
+import { OfflineBanner } from "~/components/auth/offline-banner";
+import { OTPVerifyStep } from "~/components/auth/otp-verify-step";
 import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
@@ -20,10 +23,6 @@ import { useTheme } from "~/hooks/use-theme";
 import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
-
-import { EmailLoginStep } from "~/components/auth/email-login-step";
-import { OfflineBanner } from "~/components/auth/offline-banner";
-import { OTPVerifyStep } from "~/components/auth/otp-verify-step";
 
 export interface LoginFormValues {
   email: string;
