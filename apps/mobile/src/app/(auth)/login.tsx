@@ -305,7 +305,7 @@ export default function LoginScreen() {
                   value={otp}
                   onChangeText={setOTP}
                   length={6}
-                  editable={!verifyLoading && online}
+                  editable={!verifyLoading && online !== false}
                   autoFocus
                   error={!!error}
                 />
@@ -315,13 +315,13 @@ export default function LoginScreen() {
 
                 <Pressable
                   onPress={handleResendCode}
-                  disabled={countdown > 0 || emailLoading || !online}
+                  disabled={countdown > 0 || emailLoading || online === false}
                   style={styles.resendButton}
                 >
                   <Text
                     style={[
                       styles.resendText,
-                      { color: countdown > 0 || emailLoading || !online ? mutedColor : "#005e5e" },
+                      { color: countdown > 0 || emailLoading || online === false ? mutedColor : "#005e5e" },
                     ]}
                   >
                     {countdown > 0 ? `Re-send code (${countdown}s)` : "Re-send code"}

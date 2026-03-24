@@ -1,10 +1,10 @@
-import { onlineManager } from "@tanstack/react-query";
 import { Tabs, useRouter, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
+import { useIsOnline } from "~/hooks/use-is-online";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { hadActiveSession } from "~/services/session-persistence";
@@ -19,6 +19,7 @@ export default function TabLayout() {
   const segments = useSegments();
 
   const { session, isLoaded, error } = useSession();
+  const { data: online } = useIsOnline();
   const [hadSession, setHadSession] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -35,11 +36,11 @@ export default function TabLayout() {
     // If offline and user previously had a session, trust it —
     // don't kick them to login where they can't do anything.
     // If they never had a session, redirect to login even if offline.
-    if (!onlineManager.isOnline() && hadSession) return;
+    if (online === false && hadSession) return;
     if (error && hadSession) return;
 
     router.replace("/callback");
-  }, [isLoaded, session, error, hadSession, router]);
+  }, [isLoaded, session, error, hadSession, online, router]);
 
   return (
     <View style={{ flex: 1 }}>
