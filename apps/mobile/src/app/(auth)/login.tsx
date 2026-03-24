@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { EmailLoginStep } from "~/components/auth/email-login-step";
 import { OfflineBanner } from "~/components/auth/offline-banner";
 import { OTPVerifyStep } from "~/components/auth/otp-verify-step";
+import type { LoginFormValues } from "~/components/auth/types";
 import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
@@ -23,8 +24,6 @@ import { useTheme } from "~/hooks/use-theme";
 import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
-
-import type { LoginFormValues } from "~/components/auth/types";
 
 export default function LoginScreen() {
   const { classes } = useTheme();

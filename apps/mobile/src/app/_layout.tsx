@@ -55,6 +55,8 @@ function RootLayoutNav() {
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)/login" />
         </Stack.Protected>
+
+        <Stack.Screen name="+not-found" />
       </Stack>
     </>
   );
