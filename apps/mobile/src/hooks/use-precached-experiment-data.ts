@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { uniq } from "lodash";
 import { tsr } from "~/api/tsr";
 import type { FlowNode } from "~/screens/measurement-flow-screen/types";
 
@@ -32,11 +31,12 @@ async function precacheExperimentMacrosFn(
       version: node.content.macroVersion as number | undefined,
     }));
 
-  // Deduplicate by id
+  // Deduplicate by (id, version) — treat undefined version as "latest"
   const seen = new Set<string>();
   const uniqueRefs = macroRefs.filter((ref) => {
-    if (seen.has(ref.id)) return false;
-    seen.add(ref.id);
+    const key = `${ref.id}:${ref.version ?? "latest"}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 
@@ -78,11 +78,12 @@ async function precacheExperimentProtocolsFn(
       version: node.content.protocolVersion as number | undefined,
     }));
 
-  // Deduplicate by id
+  // Deduplicate by (id, version) — treat undefined version as "latest"
   const seen = new Set<string>();
   const uniqueRefs = protocolRefs.filter((ref) => {
-    if (seen.has(ref.id)) return false;
-    seen.add(ref.id);
+    const key = `${ref.id}:${ref.version ?? "latest"}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 
