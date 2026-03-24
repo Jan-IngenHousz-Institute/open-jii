@@ -44,7 +44,43 @@ const baseArgs = {
 describe("customApiFetcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsOnline.mockReturnValue(true);
     mockGetCookie.mockReturnValue("session=abc");
+  });
+
+  describe("401 handling", () => {
+    it("calls signOut when online and API returns 401", async () => {
+      mockTsRestFetchApi.mockResolvedValueOnce({ status: 401, body: {} });
+
+      await customApiFetcher(baseArgs);
+
+      expect(mockSignOut).toHaveBeenCalledOnce();
+    });
+
+    it("does not call signOut when offline and API returns 401", async () => {
+      mockIsOnline.mockReturnValue(false);
+      mockTsRestFetchApi.mockResolvedValueOnce({ status: 401, body: {} });
+
+      await customApiFetcher(baseArgs);
+
+      expect(mockSignOut).not.toHaveBeenCalled();
+    });
+
+    it("does not call signOut for non-401 responses", async () => {
+      mockTsRestFetchApi.mockResolvedValueOnce({ status: 200, body: {} });
+
+      await customApiFetcher(baseArgs);
+
+      expect(mockSignOut).not.toHaveBeenCalled();
+    });
+
+    it("does not call signOut for 403 responses", async () => {
+      mockTsRestFetchApi.mockResolvedValueOnce({ status: 403, body: {} });
+
+      await customApiFetcher(baseArgs);
+
+      expect(mockSignOut).not.toHaveBeenCalled();
+    });
   });
 
   describe("request construction", () => {
