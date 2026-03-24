@@ -17,7 +17,7 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
       });
       return response;
     },
-    staleTime: Infinity,
+    staleTime: 0,
   });
 
   const experiments = (experimentsResponse?.body ?? []) as { id: string }[];
@@ -26,9 +26,8 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
   const allProtocolIds: string[] = [];
   const allMacroIds: string[] = [];
 
-  await Promise.all(
+  const flowResults = await Promise.allSettled(
     experiments.map(async (experiment: { id: string }) => {
-      // Fetch experiment flow
       const flowResponse: any = await queryClient.fetchQuery({
         queryKey: ["experiment-flow", experiment.id],
         queryFn: async () => {
@@ -37,17 +36,15 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
           });
           return response;
         },
-        staleTime: Infinity,
+        staleTime: 0,
       });
 
       const nodes = flowResponse?.body?.graph?.nodes ?? [];
 
-      // Collect protocol IDs from measurement nodes
       const protocolIds = nodes
         .filter((node: FlowNode) => node.type === "measurement" && node.content?.protocolId)
         .map((node: FlowNode) => node.content.protocolId as string);
 
-      // Collect macro IDs from analysis nodes
       const macroIds = nodes
         .filter((node: FlowNode) => node.type === "analysis" && node.content?.macroId)
         .map((node: FlowNode) => node.content.macroId as string);
@@ -57,11 +54,16 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
     }),
   );
 
+  const flowFailures = flowResults.filter((r) => r.status === "rejected");
+  if (flowFailures.length > 0) {
+    console.warn(`[prefetch] ${flowFailures.length} experiment flow(s) failed to prefetch`);
+  }
+
   // 3. Fetch all unique protocols and macros
   const uniqueProtocolIds = uniq(allProtocolIds);
   const uniqueMacroIds = uniq(allMacroIds);
 
-  await Promise.all([
+  const assetResults = await Promise.allSettled([
     ...uniqueProtocolIds.map((protocolId) =>
       queryClient.prefetchQuery({
         queryKey: ["protocol", protocolId],
@@ -71,7 +73,7 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
           });
           return { body: response.body };
         },
-        staleTime: Infinity,
+        staleTime: 0,
       }),
     ),
     ...uniqueMacroIds.map((macroId) =>
@@ -83,10 +85,15 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
           });
           return { body: response.body };
         },
-        staleTime: Infinity,
+        staleTime: 0,
       }),
     ),
   ]);
+
+  const assetFailures = assetResults.filter((r) => r.status === "rejected");
+  if (assetFailures.length > 0) {
+    console.warn(`[prefetch] ${assetFailures.length} protocol/macro(s) failed to prefetch`);
+  }
 
   console.log(
     `[prefetch] Cached ${experiments.length} experiments, ${uniqueProtocolIds.length} protocols, ${uniqueMacroIds.length} macros for offline use`,
