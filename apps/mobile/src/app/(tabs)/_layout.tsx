@@ -1,12 +1,13 @@
 import { onlineManager } from "@tanstack/react-query";
 import { Tabs, useRouter, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
+import { hadActiveSession } from "~/services/session-persistence";
 import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
@@ -18,23 +19,29 @@ export default function TabLayout() {
   const segments = useSegments();
 
   const { session, isLoaded, error } = useSession();
+  const [hadSession, setHadSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    void hadActiveSession().then(setHadSession);
+  }, []);
 
   const inMeasureTab = segments.includes("measurement-flow");
 
   useEffect(() => {
-    if (!isLoaded) return;
+    // Wait for session check and hadSession flag to load
+    if (!isLoaded || hadSession === null) return;
     if (session) return;
-
-    // Don't kick the user out when the device is offline
-    if (!onlineManager.isOnline()) return;
 
     // If the session check errored (network failure, server error, etc.),
     // don't redirect — we can't confirm the user is unauthenticated.
-    // Only redirect when the server explicitly confirmed no session.
     if (error) return;
 
+    // If offline and user previously had a session, trust it —
+    // don't kick them to login where they can't do anything.
+    if (!onlineManager.isOnline() && hadSession) return;
+
     router.replace("/callback");
-  }, [isLoaded, session, error, router]);
+  }, [isLoaded, session, error, hadSession, router]);
 
   return (
     <View style={{ flex: 1 }}>

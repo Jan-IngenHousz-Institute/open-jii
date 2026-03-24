@@ -8,11 +8,12 @@ import { isOnline } from "~/utils/is-online";
 
 const CHECK_INTERVAL = 10 * 1000;
 
+// Start as offline until the first connectivity check confirms otherwise.
+// Must run at module level (before any render) so the session guard in
+// the tabs layout doesn't assume online on cold start.
+onlineManager.setOnline(false);
+
 function startConnectivityWatcher() {
-  // Start as offline until the first check confirms connectivity.
-  // This prevents a race where the session guard assumes online
-  // before the first ping resolves (e.g. cold start without wifi).
-  onlineManager.setOnline(false);
   let lastOnline = false;
 
   async function checkOnline() {

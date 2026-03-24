@@ -25,6 +25,7 @@ import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useTheme } from "~/hooks/use-theme";
 import { prefetchOfflineData } from "~/services/prefetch-offline-data";
+import { markSessionActive } from "~/services/session-persistence";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
 
@@ -75,7 +76,8 @@ export default function LoginScreen() {
       return;
     }
 
-    // Prefetch all experiment data for offline use, then navigate
+    // Mark session for offline cold-start, prefetch data, then navigate
+    void markSessionActive();
     router.replace("(tabs)");
     void prefetchOfflineData(queryClient);
   }, [otp, email, verifyEmailOTP, router, queryClient]);
@@ -95,6 +97,7 @@ export default function LoginScreen() {
   async function handleGitHubLogin() {
     setError("");
     await startGitHubLogin();
+    void markSessionActive();
     router.replace("(tabs)");
     void prefetchOfflineData(queryClient);
   }
@@ -102,6 +105,7 @@ export default function LoginScreen() {
   async function handleOrcidLogin() {
     setError("");
     await startOrcidLogin();
+    void markSessionActive();
     router.replace("(tabs)");
     void prefetchOfflineData(queryClient);
   }
