@@ -368,7 +368,7 @@ export function validate<T>(schema: z.ZodType<T>, data: unknown): Result<T> {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return failure(
-        AppError.validationError("Validation failed", "VALIDATION_ERROR", error.format()),
+        AppError.validationError("Validation failed", "VALIDATION_ERROR", error.issues),
       );
     }
     return failure(AppError.badRequest("Invalid input"));

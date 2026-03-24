@@ -12,8 +12,8 @@ import {
 } from "./protocol.schema";
 
 // Reusable fixtures
-const uuidA = "11111111-1111-1111-1111-111111111111";
-const uuidB = "22222222-2222-2222-2222-222222222222";
+const uuidA = "11111111-1111-1111-8111-111111111111";
+const uuidB = "22222222-2222-2222-a222-222222222222";
 const iso = "2024-01-15T10:00:00Z";
 const iso2 = "2024-01-15T12:00:00Z";
 
@@ -122,7 +122,7 @@ describe("Protocol Schema", () => {
       };
       const p2 = {
         ...p1,
-        id: "33333333-3333-3333-3333-333333333333",
+        id: "33333333-3333-3333-b333-333333333333",
         name: "P2",
         sortOrder: 2,
         family: "multispeq" as const,

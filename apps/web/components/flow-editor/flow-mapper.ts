@@ -206,7 +206,7 @@ export class FlowMapper {
           // Throw only the first message if invalid
           const parsed = zQuestionContent.safeParse(candidate);
           if (!parsed.success) {
-            throw new Error(parsed.error.errors[0].message);
+            throw new Error(parsed.error.issues[0].message);
           }
           content = parsed.data;
         } else {
@@ -220,7 +220,7 @@ export class FlowMapper {
           // Throw only the first message if invalid
           const parsed = zQuestionContent.safeParse(candidate);
           if (!parsed.success) {
-            throw new Error(parsed.error.errors[0].message);
+            throw new Error(parsed.error.issues[0].message);
           }
           content = parsed.data;
         }
@@ -241,7 +241,7 @@ export class FlowMapper {
         // Let Zod handle all validation including missing protocol
         const parsed = zMeasurementContent.safeParse(candidate);
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       } else if (nodeType === "analysis") {
@@ -261,7 +261,7 @@ export class FlowMapper {
         // Let Zod handle all validation including missing macro
         const parsed = zAnalysisContent.safeParse(candidate);
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       } else {
@@ -270,7 +270,7 @@ export class FlowMapper {
 
         const parsed = zInstructionContent.safeParse(candidate);
         if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+          throw new Error(parsed.error.issues[0].message);
         }
         content = parsed.data;
       }
@@ -293,7 +293,7 @@ export class FlowMapper {
     const flowGraph = { nodes: apiNodes, edges: apiEdges };
     const result = zFlowGraph.safeParse(flowGraph);
     if (!result.success) {
-      throw new Error(result.error.errors[0].message);
+      throw new Error(result.error.issues[0].message);
     }
     return result.data;
   }

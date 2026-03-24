@@ -50,8 +50,8 @@ catalogs:
       specifier: ^5.8.3
       version: 5.9.3
     zod:
-      specifier: ^3.24.3
-      version: 3.25.76
+      specifier: ^4.0.0
+      version: 4.3.6
   react-query:
     '@tanstack/query-async-storage-persister':
       specifier: ^5.83.1
@@ -179,10 +179,10 @@ importers:
         version: 2.5.1(@nestjs/common@11.1.16(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(better-auth@1.5.5(drizzle-kit@0.31.9)(drizzle-orm@0.41.0(@opentelemetry/api@1.9.0)(kysely@0.28.12)(postgres@3.4.8))(mongodb@7.1.0(socks@2.8.7))(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(vitest@3.2.4))(express@5.2.1)(graphql@16.13.1)(qs@6.15.0)(typescript@5.9.3)
       '@ts-rest/core':
         specifier: ^3.52.1
-        version: 3.52.1(@types/node@22.19.15)(zod@3.25.76)
+        version: 3.52.1(@types/node@22.19.15)(zod@4.3.6)
       '@ts-rest/nest':
         specifier: ^3.52.1
-        version: 3.52.1(@nestjs/common@11.1.16(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(rxjs@7.8.2)(zod@3.25.76)
+        version: 3.52.1(@nestjs/common@11.1.16(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@4.3.6))(rxjs@7.8.2)(zod@4.3.6)
       '@types/busboy':
         specifier: ^1.5.4
         version: 1.5.4
@@ -196,8 +196,8 @@ importers:
         specifier: ^1.6.0
         version: 1.6.0
       drizzle-zod:
-        specifier: ^0.5.1
-        version: 0.5.1(drizzle-orm@0.41.0(@opentelemetry/api@1.9.0)(kysely@0.28.12)(postgres@3.4.8))(zod@3.25.76)
+        specifier: ^0.7.0
+        version: 0.7.1(drizzle-orm@0.41.0(@opentelemetry/api@1.9.0)(kysely@0.28.12)(postgres@3.4.8))(zod@4.3.6)
       expo-secure-store:
         specifier: ~15.0.8
         version: 15.0.8(expo@54.0.33)
@@ -227,7 +227,7 @@ importers:
         version: 7.8.2
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.3.6
     devDependencies:
       '@faker-js/faker':
         specifier: ^9.9.0
@@ -420,10 +420,10 @@ importers:
         version: 5.90.24(@tanstack/react-query@5.90.21(react@19.1.0))(react@19.1.0)
       '@ts-rest/core':
         specifier: ^3.52.1
-        version: 3.52.1(@types/node@25.5.0)(zod@3.25.76)
+        version: 3.52.1(@types/node@25.5.0)(zod@4.3.6)
       '@ts-rest/react-query':
         specifier: ^3.52.1
-        version: 3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@3.25.76))(react@19.1.0)(zod@3.25.76)
+        version: 3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@4.3.6))(react@19.1.0)(zod@4.3.6)
       axios:
         specifier: 'catalog:'
         version: 1.13.6
@@ -603,7 +603,7 @@ importers:
         version: 1.0.5
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.3.6
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))
@@ -708,10 +708,10 @@ importers:
         version: 8.21.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@ts-rest/core':
         specifier: ^3.52.1
-        version: 3.52.1(@types/node@22.19.15)(zod@3.25.76)
+        version: 3.52.1(@types/node@22.19.15)(zod@4.3.6)
       '@ts-rest/react-query':
         specifier: ^3.52.1
-        version: 3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(react@19.1.0)(zod@3.25.76)
+        version: 3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@4.3.6))(react@19.1.0)(zod@4.3.6)
       '@xyflow/react':
         specifier: ^12.10.1
         version: 12.10.1(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -750,7 +750,7 @@ importers:
         version: 11.1.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.3.6
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -817,7 +817,7 @@ importers:
         version: 10.3.1
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.3.6
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -851,13 +851,13 @@ importers:
     dependencies:
       '@ts-rest/core':
         specifier: ^3.52.1
-        version: 3.52.1(@types/node@22.19.15)(zod@3.25.76)
+        version: 3.52.1(@types/node@22.19.15)(zod@4.3.6)
       '@ts-rest/open-api':
         specifier: ^3.52.1
-        version: 3.52.1(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(zod@3.25.76)
+        version: 3.52.1(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@4.3.6))(zod@4.3.6)
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.3.6
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -1022,7 +1022,7 @@ importers:
         version: 3.4.8
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.3.6
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -1300,7 +1300,7 @@ importers:
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.5.0)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.3.6
 
   tooling/eslint:
     dependencies:
@@ -10388,11 +10388,11 @@ packages:
       sqlite3:
         optional: true
 
-  drizzle-zod@0.5.1:
-    resolution: {integrity: sha512-C/8bvzUH/zSnVfwdSibOgFjLhtDtbKYmkbPbUCq46QZyZCH6kODIMSOgZ8R7rVjoI+tCj3k06MRJMDqsIeoS4A==}
+  drizzle-zod@0.7.1:
+    resolution: {integrity: sha512-nZzALOdz44/AL2U005UlmMqaQ1qe5JfanvLujiTHiiT8+vZJTBFhj3pY4Vk+L6UWyKFfNmLhk602Hn4kCTynKQ==}
     peerDependencies:
-      drizzle-orm: '>=0.23.13'
-      zod: '*'
+      drizzle-orm: '>=0.36.0'
+      zod: '>=3.0.0'
 
   dset@3.1.4:
     resolution: {integrity: sha512-2QF/g9/zTaPDc3BjNcVTGoBbXBgYfMTTceLaYcFJ/W9kggFUkhxD/hMEeuLKbugyef9SqAx8cpgwlIP/jinUTA==}
@@ -18467,9 +18467,6 @@ packages:
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
@@ -18632,11 +18629,11 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@anatine/zod-openapi@1.14.2(openapi3-ts@2.0.2)(zod@3.25.76)':
+  '@anatine/zod-openapi@1.14.2(openapi3-ts@2.0.2)(zod@4.3.6)':
     dependencies:
       openapi3-ts: 2.0.2
       ts-deepmerge: 6.2.1
-      zod: 3.25.76
+      zod: 4.3.6
 
   '@angular-devkit/core@19.2.17(chokidar@4.0.3)':
     dependencies:
@@ -26509,47 +26506,47 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76)':
+  '@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@4.3.6)':
     optionalDependencies:
       '@types/node': 22.19.15
-      zod: 3.25.76
+      zod: 4.3.6
 
-  '@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@3.25.76)':
+  '@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@4.3.6)':
     optionalDependencies:
       '@types/node': 25.5.0
-      zod: 3.25.76
+      zod: 4.3.6
 
-  '@ts-rest/nest@3.52.1(@nestjs/common@11.1.16(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(rxjs@7.8.2)(zod@3.25.76)':
+  '@ts-rest/nest@3.52.1(@nestjs/common@11.1.16(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@4.3.6))(rxjs@7.8.2)(zod@4.3.6)':
     dependencies:
       '@nestjs/common': 11.1.16(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.1.16(@nestjs/common@11.1.16(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@3.25.76)
+      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@4.3.6)
       rxjs: 7.8.2
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.3.6
 
-  '@ts-rest/open-api@3.52.1(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(zod@3.25.76)':
+  '@ts-rest/open-api@3.52.1(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@4.3.6))(zod@4.3.6)':
     dependencies:
-      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@3.25.76)
-      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@3.25.76)
+      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@4.3.6)
+      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@4.3.6)
       openapi3-ts: 2.0.2
-      zod: 3.25.76
+      zod: 4.3.6
 
-  '@ts-rest/react-query@3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(react@19.1.0)(zod@3.25.76)':
+  '@ts-rest/react-query@3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@4.3.6))(react@19.1.0)(zod@4.3.6)':
     dependencies:
       '@tanstack/react-query': 5.90.21(react@19.1.0)
-      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@3.25.76)
+      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@4.3.6)
       react: 19.1.0
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.3.6
 
-  '@ts-rest/react-query@3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@3.25.76))(react@19.1.0)(zod@3.25.76)':
+  '@ts-rest/react-query@3.52.1(@tanstack/react-query@5.90.21(react@19.1.0))(@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@4.3.6))(react@19.1.0)(zod@4.3.6)':
     dependencies:
       '@tanstack/react-query': 5.90.21(react@19.1.0)
-      '@ts-rest/core': 3.52.1(@types/node@25.5.0)(zod@3.25.76)
+      '@ts-rest/core': 3.52.1(@types/node@25.5.0)(zod@4.3.6)
       react: 19.1.0
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.3.6
 
   '@tsconfig/node10@1.0.12': {}
 
@@ -27214,7 +27211,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@25.5.0)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -27279,7 +27276,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@25.5.0)(@vitest/ui@3.2.4)(jiti@1.21.7)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/utils@3.2.4':
     dependencies:
@@ -29857,10 +29854,10 @@ snapshots:
       kysely: 0.28.12
       postgres: 3.4.8
 
-  drizzle-zod@0.5.1(drizzle-orm@0.41.0(@opentelemetry/api@1.9.0)(kysely@0.28.12)(postgres@3.4.8))(zod@3.25.76):
+  drizzle-zod@0.7.1(drizzle-orm@0.41.0(@opentelemetry/api@1.9.0)(kysely@0.28.12)(postgres@3.4.8))(zod@4.3.6):
     dependencies:
       drizzle-orm: 0.41.0(@opentelemetry/api@1.9.0)(kysely@0.28.12)(postgres@3.4.8)
-      zod: 3.25.76
+      zod: 4.3.6
 
   dset@3.1.4: {}
 
@@ -39971,8 +39968,6 @@ snapshots:
   zod-validation-error@4.0.2(zod@4.3.6):
     dependencies:
       zod: 4.3.6
-
-  zod@3.25.76: {}
 
   zod@4.3.6: {}
 
