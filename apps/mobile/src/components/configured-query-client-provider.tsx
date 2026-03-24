@@ -9,7 +9,11 @@ import { isOnline } from "~/utils/is-online";
 const CHECK_INTERVAL = 10 * 1000;
 
 function startConnectivityWatcher() {
-  let lastOnline = true;
+  // Start as offline until the first check confirms connectivity.
+  // This prevents a race where the session guard assumes online
+  // before the first ping resolves (e.g. cold start without wifi).
+  onlineManager.setOnline(false);
+  let lastOnline = false;
 
   async function checkOnline() {
     const online = await isOnline();
@@ -31,6 +35,7 @@ const defaultOptions = {
   queries: {
     staleTime: 0,
     gcTime: Infinity,
+    networkMode: "offlineFirst" as const,
     refetchOnMount: false,
     refetchOnReconnect: true,
     refetchOnWindowFocus: false,
@@ -70,7 +75,7 @@ export function ConfiguredQueryClientProvider({ children }) {
       client={queryClientRef.current}
       persistOptions={{
         persister: asyncStoragePersister,
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        maxAge: Infinity,
       }}
     >
       {children}

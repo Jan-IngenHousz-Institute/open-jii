@@ -22,14 +22,16 @@ export default function TabLayout() {
   const inMeasureTab = segments.includes("measurement-flow");
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (session) return;
+
     // Don't kick the user out when the device is offline
     if (!onlineManager.isOnline()) return;
 
-    // A network error (status 0) means the session fetch failed, not that there's no session
-    if (error?.status === 0) return;
-
-    if (!isLoaded) return;
-    if (session) return;
+    // If the session check errored (network failure, server error, etc.),
+    // don't redirect — we can't confirm the user is unauthenticated.
+    // Only redirect when the server explicitly confirmed no session.
+    if (error) return;
 
     router.replace("/callback");
   }, [isLoaded, session, error, router]);
