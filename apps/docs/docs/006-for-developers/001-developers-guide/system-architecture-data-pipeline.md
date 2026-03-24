@@ -105,7 +105,7 @@ META --> API
 G --> EXP
 ```
 
-See [Data Ingestion Architecture](../../data-platform/ingestion-architecture) for detailed documentation on the medallion architecture, VARIANT columns, table identity model, and export system.
+See [Data Ingestion Architecture](/docs/data-platform/ingestion-architecture) for detailed documentation on the medallion architecture, VARIANT columns, table identity model, and export system.
 
 ## Authentication
 
