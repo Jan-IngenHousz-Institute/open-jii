@@ -922,6 +922,7 @@ def enriched_experiment_raw_data():
             raw_data.id,
             raw_data.device_id,
             raw_data.device_name,
+            raw_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
             raw_data.timestamp.alias("timestamp_utc"),
             raw_data.timezone,
             raw_data.date,
@@ -936,7 +937,7 @@ def enriched_experiment_raw_data():
             "timestamp_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
             )
         )
         .withColumn(
@@ -1018,6 +1019,7 @@ def enriched_experiment_macro_data():
             macro_data.raw_id,
             macro_data.device_id,
             macro_data.device_name,
+            macro_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
             macro_data.timestamp.alias("timestamp_utc"),
             macro_data.timezone,
             macro_data.date,
@@ -1035,7 +1037,7 @@ def enriched_experiment_macro_data():
             "timestamp_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ssXXX")
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
             )
         )
         .withColumn(
