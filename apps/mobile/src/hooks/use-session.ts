@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useAuthClient } from "~/services/auth";
 
 const SESSION_CACHE_KEY = "openjii_session_data";
+const COOKIE_KEY = "openjii_cookie";
 
 function getCachedSession() {
   const raw = SecureStore.getItem(SESSION_CACHE_KEY);
@@ -63,7 +64,10 @@ export function useSession() {
     error,
     user: activeSession?.user,
     signOut: async () => {
+      // Clear all local session state so sign-out works even offline.
       SecureStore.setItem(SESSION_CACHE_KEY, "{}");
+      SecureStore.setItem(COOKIE_KEY, "{}");
+      setCachedSession(null);
       try {
         await authClient.signOut();
       } catch {
