@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -22,6 +23,7 @@ import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useTheme } from "~/hooks/use-theme";
+import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
 
@@ -31,6 +33,7 @@ export default function LoginScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
+  const queryClient = useQueryClient();
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
   const {
     startGitHubLogin,
@@ -71,8 +74,9 @@ export default function LoginScreen() {
       return;
     }
 
-    // Session is now set — Stack.Protected guard will redirect to (tabs) automatically.
-  }, [otp, email, verifyEmailOTP]);
+    // Prefetch experiment data for offline use. Guard will redirect to (tabs).
+    void prefetchOfflineData(queryClient);
+  }, [otp, email, verifyEmailOTP, queryClient]);
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -89,11 +93,13 @@ export default function LoginScreen() {
   async function handleGitHubLogin() {
     setError("");
     await startGitHubLogin();
+    void prefetchOfflineData(queryClient);
   }
 
   async function handleOrcidLogin() {
     setError("");
     await startOrcidLogin();
+    void prefetchOfflineData(queryClient);
   }
 
   async function handleEmailSubmit() {
@@ -296,7 +302,9 @@ export default function LoginScreen() {
                   <Text
                     style={[
                       styles.resendText,
-                      { color: countdown > 0 || emailLoading || isOffline ? mutedColor : "#005e5e" },
+                      {
+                        color: countdown > 0 || emailLoading || isOffline ? mutedColor : "#005e5e",
+                      },
                     ]}
                   >
                     {countdown > 0 ? `Re-send code (${countdown}s)` : "Re-send code"}

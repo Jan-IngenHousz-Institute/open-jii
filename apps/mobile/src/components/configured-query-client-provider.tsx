@@ -31,6 +31,7 @@ const defaultOptions = {
   queries: {
     staleTime: 0,
     gcTime: Infinity,
+    networkMode: "offlineFirst" as const,
     refetchOnMount: false,
     refetchOnReconnect: true,
     refetchOnWindowFocus: false,
@@ -70,7 +71,7 @@ export function ConfiguredQueryClientProvider({ children }) {
       client={queryClientRef.current}
       persistOptions={{
         persister: asyncStoragePersister,
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        maxAge: Infinity,
       }}
     >
       {children}
