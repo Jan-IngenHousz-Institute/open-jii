@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -25,7 +24,6 @@ import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
-import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { markSessionActive } from "~/services/session-persistence";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
@@ -37,7 +35,6 @@ export default function LoginScreen() {
   const { colors } = theme;
 
   const router = useRouter();
-  const queryClient = useQueryClient();
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
   const {
     startGitHubLogin,
@@ -87,11 +84,9 @@ export default function LoginScreen() {
       return;
     }
 
-    // Mark session for offline cold-start, prefetch data, then navigate
     void markSessionActive();
     router.replace("(tabs)");
-    void prefetchOfflineData(queryClient);
-  }, [otp, email, verifyEmailOTP, router, queryClient]);
+  }, [otp, email, verifyEmailOTP, router]);
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -110,7 +105,6 @@ export default function LoginScreen() {
     await startGitHubLogin();
     void markSessionActive();
     router.replace("(tabs)");
-    void prefetchOfflineData(queryClient);
   }
 
   async function handleOrcidLogin() {
@@ -118,7 +112,6 @@ export default function LoginScreen() {
     await startOrcidLogin();
     void markSessionActive();
     router.replace("(tabs)");
-    void prefetchOfflineData(queryClient);
   }
 
   async function handleEmailSubmit() {
@@ -321,7 +314,12 @@ export default function LoginScreen() {
                   <Text
                     style={[
                       styles.resendText,
-                      { color: countdown > 0 || emailLoading || online === false ? mutedColor : "#005e5e" },
+                      {
+                        color:
+                          countdown > 0 || emailLoading || online === false
+                            ? mutedColor
+                            : "#005e5e",
+                      },
                     ]}
                   >
                     {countdown > 0 ? `Re-send code (${countdown}s)` : "Re-send code"}
