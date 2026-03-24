@@ -5,7 +5,7 @@ This page highlights the main capabilities of the openJII platform. For detailed
 ### Web platform
 
 - **Scalable data layer:** ingest, store and query large time-series and sensor datasets efficiently.
-- **Secure authentication & access:** sign in with magic-link email, ORCID or GitHub; control experiment visibility.
+- **Secure authentication & access:** sign in with magic-link email, ORCID or GitHub; control experiment visibility. On mobile, when offline, an offline banner with a wifi-off icon appears on the login screen and all authentication buttons are disabled until network connectivity is restored.
 - **Experiment management:** create, edit and version experiments; add members, locations, metadata and tags. See the Web Platform [overview](../003-data-platform/002-web-platform/001-overview.md) and [create/edit experiment guide](../003-data-platform/002-web-platform/0013-create-add-experiment.md).
 - **Measurement flow editor:** visual drag-and-drop editor (Instruction, Question, Measurement, Analysis) to define what field users should do.
 - **Data exploration & analysis:** interactive dashboards, filters and export options for downstream analysis.
@@ -15,7 +15,7 @@ This page highlights the main capabilities of the openJII platform. For detailed
 
 - **Sensor support:** connect to supported sensors (MultispeQ) over Bluetooth and run measurements.
 - **Fast workflow:** guided measurement flows for rapid field data collection, including questions and instructions.
-- **Offline-first:** capture data offline and sync when network is available.
+- **Offline-first:** capture data offline and sync when network is available. User sessions are maintained during temporary network drops. After login, all experiment data is prefetched and cached so measurements can run completely offline.
 - **Seamless sync:** measurements sync to the web platform for analysis and sharing. 
 
 See the Mobile App [overview](../003-data-platform/002-mobile-app.md) for device-specific details.
