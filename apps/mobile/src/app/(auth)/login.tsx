@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 import { useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import React, { useState } from "react";
