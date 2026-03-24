@@ -52,9 +52,13 @@ export function useSession() {
       }
     : undefined;
 
+  // If we have a cached session, consider loaded immediately so the
+  // splash screen hides without waiting for server validation.
+  const isLoaded = !isPending || !!cachedSession;
+
   return {
     session,
-    isLoaded: !isPending,
+    isLoaded,
     isPending,
     error,
     user: activeSession?.user,

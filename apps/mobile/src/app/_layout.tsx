@@ -43,26 +43,17 @@ function RootLayoutNav() {
       <Stack
         screenOptions={{
           headerShown: false,
-          headerStyle: {
-            backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
-          },
-          headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-          headerTitleStyle: {
-            fontWeight: "bold",
-            fontFamily: "Poppins-Bold",
-          },
-          headerShadowVisible: false,
           contentStyle: {
             backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
           },
         }}
       >
         <Stack.Protected guard={!!session}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" />
         </Stack.Protected>
 
         <Stack.Protected guard={!session}>
-          <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/login" />
         </Stack.Protected>
       </Stack>
     </>

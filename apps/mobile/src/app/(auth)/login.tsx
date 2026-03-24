@@ -18,6 +18,7 @@ import Svg, { Path } from "react-native-svg";
 import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 import { OTPInput } from "~/components/OTPInput";
+import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useTheme } from "~/hooks/use-theme";
@@ -41,6 +42,9 @@ export default function LoginScreen() {
     emailLoading,
     verifyLoading,
   } = useLoginFlow();
+
+  const { data: online } = useIsOnline();
+  const isOffline = online === false;
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
@@ -77,10 +81,10 @@ export default function LoginScreen() {
   }, [countdown]);
 
   useEffect(() => {
-    if (otp.length === 6 && !verifyLoading) {
+    if (otp.length === 6 && !verifyLoading && !isOffline) {
       void handleOTPVerify();
     }
-  }, [otp, verifyLoading, handleOTPVerify]);
+  }, [otp, verifyLoading, handleOTPVerify, isOffline]);
 
   async function handleGitHubLogin() {
     setError("");
@@ -160,6 +164,15 @@ export default function LoginScreen() {
           <View style={styles.formContainer}>
             {showEnvSelector && <EnvironmentSelector />}
 
+            {isOffline && (
+              <View style={styles.offlineBanner}>
+                <MaterialIcons name="wifi-off" size={18} color="#92400e" />
+                <Text style={styles.offlineBannerText}>
+                  You are offline. Please connect to the internet to log in.
+                </Text>
+              </View>
+            )}
+
             {!showOTPInput ? (
               <>
                 {/* Title */}
@@ -174,7 +187,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!emailLoading}
+                  editable={!emailLoading && !isOffline}
                   error={error}
                   containerStyle={{ marginBottom: 12 }}
                 />
@@ -183,7 +196,7 @@ export default function LoginScreen() {
                   variant="primary"
                   onPress={handleEmailSubmit}
                   style={styles.authButton}
-                  isDisabled={emailLoading}
+                  isDisabled={emailLoading || isOffline}
                   isLoading={emailLoading}
                 />
 
@@ -200,7 +213,7 @@ export default function LoginScreen() {
                     title="GitHub"
                     variant="surface"
                     onPress={handleGitHubLogin}
-                    isDisabled={githubLoading}
+                    isDisabled={githubLoading || isOffline}
                     isLoading={githubLoading}
                     icon={
                       <Svg width="20" height="20" viewBox="0 0 24 24" fill="#000">
@@ -214,7 +227,7 @@ export default function LoginScreen() {
                     title="ORCID"
                     variant="surface"
                     onPress={handleOrcidLogin}
-                    isDisabled={orcidLoading}
+                    isDisabled={orcidLoading || isOffline}
                     isLoading={orcidLoading}
                     icon={
                       <Svg width="20" height="20" viewBox="0 0 24 24">
@@ -267,7 +280,7 @@ export default function LoginScreen() {
                   value={otp}
                   onChangeText={setOTP}
                   length={6}
-                  editable={!verifyLoading}
+                  editable={!verifyLoading && !isOffline}
                   autoFocus
                   error={!!error}
                 />
@@ -277,13 +290,13 @@ export default function LoginScreen() {
 
                 <Pressable
                   onPress={handleResendCode}
-                  disabled={countdown > 0 || emailLoading}
+                  disabled={countdown > 0 || emailLoading || isOffline}
                   style={styles.resendButton}
                 >
                   <Text
                     style={[
                       styles.resendText,
-                      { color: countdown > 0 || emailLoading ? mutedColor : "#005e5e" },
+                      { color: countdown > 0 || emailLoading || isOffline ? mutedColor : "#005e5e" },
                     ]}
                   >
                     {countdown > 0 ? `Re-send code (${countdown}s)` : "Re-send code"}
@@ -419,5 +432,19 @@ const styles = StyleSheet.create({
   backButton: {
     marginBottom: 16,
     alignSelf: "flex-start",
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#92400e",
   },
 });
