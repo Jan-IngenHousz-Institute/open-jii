@@ -23,6 +23,7 @@ import { OTPInput } from "~/components/OTPInput";
 import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
+import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { markSessionActive } from "~/services/session-persistence";
@@ -50,6 +51,15 @@ export default function LoginScreen() {
   } = useLoginFlow();
 
   const { data: online = false } = useIsOnline();
+  const { session, isLoaded } = useSession();
+
+  // If there's already a cached session (e.g. cold start with SecureStore cache),
+  // skip the login screen and go straight to the app.
+  useEffect(() => {
+    if (isLoaded && session) {
+      router.replace("(tabs)");
+    }
+  }, [isLoaded, session, router]);
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
