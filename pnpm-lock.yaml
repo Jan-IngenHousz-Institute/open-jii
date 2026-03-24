@@ -535,6 +535,9 @@ importers:
       react-async-hook:
         specifier: ^4.0.0
         version: 4.0.0(react@19.1.0)
+      react-hook-form:
+        specifier: 'catalog:'
+        version: 7.71.2(react@19.1.0)
       react-native:
         specifier: 0.81.5
         version: 0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.1.0)
