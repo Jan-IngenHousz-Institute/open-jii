@@ -1,5 +1,6 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
+import * as SecureStore from "expo-secure-store";
 import { getAuthClient } from "~/services/auth";
 import { getEnvVar } from "~/stores/environment-store";
 
@@ -29,6 +30,7 @@ export const customApiFetcher = async (args: ApiFetcherArgs) => {
   });
 
   if (result?.status === 401) {
+    SecureStore.setItem("openjii_session_data", "{}");
     await authClient.signOut();
   }
 
