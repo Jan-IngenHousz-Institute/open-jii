@@ -7,7 +7,7 @@ import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 import { useTheme } from "~/hooks/use-theme";
 
-import type { LoginFormValues } from "../login";
+import type { LoginFormValues } from "~/app/(auth)/login";
 import { GitHubIcon, OrcidIcon } from "./oauth-icons";
 
 interface EmailLoginStepProps {

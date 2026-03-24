@@ -21,9 +21,9 @@ import { prefetchOfflineData } from "~/services/prefetch-offline-data";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
 
-import { EmailLoginStep } from "./components/email-login-step";
-import { OfflineBanner } from "./components/offline-banner";
-import { OTPVerifyStep } from "./components/otp-verify-step";
+import { EmailLoginStep } from "~/components/auth/email-login-step";
+import { OfflineBanner } from "~/components/auth/offline-banner";
+import { OTPVerifyStep } from "~/components/auth/otp-verify-step";
 
 export interface LoginFormValues {
   email: string;
