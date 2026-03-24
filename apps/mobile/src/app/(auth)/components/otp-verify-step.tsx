@@ -1,8 +1,9 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { clsx } from "clsx";
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable } from "react-native";
+import React, { useState, useEffect } from "react";
+import { Text, Pressable } from "react-native";
 import { OTPInput } from "~/components/OTPInput";
+import { useDebounce } from "~/hooks/use-debounce";
 import { useTheme } from "~/hooks/use-theme";
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -31,6 +32,9 @@ export function OTPVerifyStep({
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN_SECONDS);
 
+  // Debounce the OTP value so auto-submit doesn't fire on every keystroke
+  const [debouncedOtp, isDebounced] = useDebounce(otp, 200);
+
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -38,21 +42,16 @@ export function OTPVerifyStep({
     }
   }, [countdown]);
 
-  const handleVerify = useCallback(async () => {
-    setError("");
-    if (otp.length !== 6) {
-      setError("Please enter a valid 6-digit code");
-      return;
-    }
-    const errorMessage = await onVerify(otp);
-    if (errorMessage) setError(errorMessage);
-  }, [otp, onVerify]);
-
+  // Auto-submit when debounced OTP reaches 6 digits
   useEffect(() => {
-    if (otp.length === 6 && !verifyLoading && !isOffline) {
-      void handleVerify();
-    }
-  }, [otp, verifyLoading, handleVerify, isOffline]);
+    if (debouncedOtp.length !== 6 || !isDebounced) return;
+    if (verifyLoading || isOffline) return;
+
+    setError("");
+    void onVerify(debouncedOtp).then((errorMessage) => {
+      if (errorMessage) setError(errorMessage);
+    });
+  }, [debouncedOtp, isDebounced, verifyLoading, isOffline, onVerify]);
 
   async function handleResend() {
     if (emailLoading || countdown > 0) return;
