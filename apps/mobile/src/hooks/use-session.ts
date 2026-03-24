@@ -64,7 +64,12 @@ export function useSession() {
     user: activeSession?.user,
     signOut: async () => {
       SecureStore.setItem(SESSION_CACHE_KEY, "{}");
-      await authClient.signOut();
+      try {
+        await authClient.signOut();
+      } catch {
+        // Network call may fail offline — that's fine,
+        // the server session will expire on its own.
+      }
     },
   };
 }
