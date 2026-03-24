@@ -17,7 +17,7 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
       });
       return response;
     },
-    staleTime: Infinity,
+    staleTime: 0,
   });
 
   const experiments = (experimentsResponse?.body ?? []) as { id: string }[];
@@ -36,7 +36,7 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
           });
           return response;
         },
-        staleTime: Infinity,
+        staleTime: 0,
       });
 
       const nodes = flowResponse?.body?.graph?.nodes ?? [];
@@ -73,7 +73,7 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
           });
           return { body: response.body };
         },
-        staleTime: Infinity,
+        staleTime: 0,
       }),
     ),
     ...uniqueMacroIds.map((macroId) =>
@@ -85,7 +85,7 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
           });
           return { body: response.body };
         },
-        staleTime: Infinity,
+        staleTime: 0,
       }),
     ),
   ]);
