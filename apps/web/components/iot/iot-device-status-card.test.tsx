@@ -56,7 +56,9 @@ describe("DeviceStatusCard", () => {
 
     it("shows 'Connecting' status with animated text when connecting", () => {
       render(<DeviceStatusCard {...defaultProps} isConnecting={true} />);
-      expect(screen.getAllByText(/iot\.protocolRunner\.connecting/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/iot\.protocolRunner\.connecting/).length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     it("shows 'Connected' status when connected", () => {
