@@ -141,11 +141,29 @@ module "vpc_endpoints" {
 }
 
 # ─── Aurora DB — restored from AWS Backup cross-region snapshot ───────────────
-# Before running `terraform apply`, locate the shared snapshot in the DR vault:
-#   aws backup list-recovery-points-by-backup-vault \
-#     --backup-vault-name open-jii-prod-backup-vault \
-#     --region eu-west-1
-# Then pass the RecoveryPointArn as var.aurora_snapshot_identifier.
+# AWS Backup copies daily snapshots from eu-central-1 to the DR vault in
+# eu-west-1. Those copies surface as regular RDS manual snapshots, which the
+# data source below picks up automatically.
+#
+# By default (var.aurora_snapshot_identifier = null) the most recent snapshot
+# is used. To restore to a specific point in time, pass the exact RDS snapshot
+# ARN (arn:aws:rds:eu-west-1:...) as var.aurora_snapshot_identifier.
+#
+# NOTE: snapshot_identifier expects an RDS snapshot ARN, NOT an AWS Backup
+# recovery-point ARN (arn:aws:backup:...). The data source below resolves this
+# automatically; if you override manually, use:
+#   aws rds describe-db-cluster-snapshots \
+#     --region eu-west-1 \
+#     --snapshot-type manual \
+#     --query "DBClusterSnapshots[?contains(DBClusterSnapshotIdentifier,'awsbackup')].DBClusterSnapshotArn"
+data "aws_db_cluster_snapshot" "latest_backup" {
+  count                 = var.aurora_snapshot_identifier == null ? 1 : 0
+  db_cluster_identifier = "open-jii-prod-db-cluster"
+  snapshot_type         = "manual" # AWS Backup cross-region copies land as manual snapshots
+  most_recent           = true
+  include_shared        = true
+}
+
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
   cluster_identifier     = "open-jii-${var.environment}-db-cluster"
@@ -161,7 +179,10 @@ module "aurora_db" {
   backup_retention_period  = 1 # minimal retention in DR; prod vault holds the authoritative backups
   skip_final_snapshot      = true
 
-  snapshot_identifier = var.aurora_snapshot_identifier
+  snapshot_identifier = coalesce(
+    var.aurora_snapshot_identifier,
+    try(data.aws_db_cluster_snapshot.latest_backup[0].db_cluster_snapshot_arn, null)
+  )
 }
 
 module "secrets_rotation_trigger" {
@@ -259,12 +280,15 @@ module "contentful_secrets" {
   }
 }
 
-# NOTE: SES domain verification adds DKIM TXT records to the prod Route53 zone.
-# During an actual failover (prod is down) this is safe. During a DR drill while
-# prod is live, the DR DKIM records will overwrite prod DKIM records and may
-# temporarily break transactional email in prod for ~72 h (DNS TTL). Plan the
-# drill accordingly or comment this module out during drills.
+# NOTE: SES creates DKIM TXT records in the prod Route53 zone.
+# This is gated behind var.enable_ses_cutover to prevent drill runs from
+# overwriting prod DKIM records and disrupting live transactional email.
+# During drills (enable_ses_cutover=false) the backend reuses the prod SES
+# SMTP endpoint via var.prod_ses_smtp_server — no DNS records are touched.
+# During an actual failover set enable_ses_cutover=true (eu-central-1 SES is
+# also down, so DR needs its own SES identity in eu-west-1).
 module "ses" {
+  count  = var.enable_ses_cutover ? 1 : 0
   source = "../../modules/ses"
 
   region                 = var.aws_region
@@ -299,9 +323,9 @@ module "ses_secrets" {
   description = "SES SMTP credentials for transactional email sending"
 
   secret_string = jsonencode({
-    AUTH_EMAIL_SERVER    = module.ses.auth_email_server
+    AUTH_EMAIL_SERVER    = var.enable_ses_cutover ? module.ses[0].auth_email_server : var.prod_ses_smtp_server
     AUTH_EMAIL_FROM      = "auth@mail.${var.domain_name}"
-    BACKEND_EMAIL_SERVER = module.ses.auth_email_server
+    BACKEND_EMAIL_SERVER = var.enable_ses_cutover ? module.ses[0].auth_email_server : var.prod_ses_smtp_server
     BACKEND_EMAIL_FROM   = "notifications@mail.${var.domain_name}"
   })
 
@@ -706,7 +730,7 @@ module "route53" {
   environment            = "prod" # keep base_domain = openjii.org (no env prefix)
   use_environment_prefix = false
 
-  existing_zone_id   = var.prod_route53_zone_id
+  existing_zone_id   = var.existing_route53_zone_id
   create_dns_records = var.enable_dns_cutover
 
   # Reuse prod's already-validated us-east-1 CloudFront certs — no propagation wait

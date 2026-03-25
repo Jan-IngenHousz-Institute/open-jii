@@ -83,7 +83,11 @@ resource "aws_iam_role_policy_attachment" "restore_policy" {
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Backup plan — daily backups + automatic cross-region copy to DR vault
-# Schedule: 01:00 UTC daily (after Aurora's own backup window 00:00–02:00)
+# Schedule: 02:30 UTC daily
+#   - Aurora preferred_backup_window = "00:00-02:00" → AWS Backup runs after
+#     the Aurora snapshot is already complete, not during it.
+#   - Aurora preferred_maintenance_window = "sun:03:00-sun:07:00" → 02:30
+#     finishes before the Sunday maintenance window opens.
 # ──────────────────────────────────────────────────────────────────────────────
 resource "aws_backup_plan" "main" {
   name = "open-jii-${var.environment}-backup-plan"
@@ -91,7 +95,7 @@ resource "aws_backup_plan" "main" {
   rule {
     rule_name         = "daily-backup-with-dr-copy"
     target_vault_name = aws_backup_vault.primary.name
-    schedule          = "cron(0 1 * * ? *)"
+    schedule          = "cron(30 2 * * ? *)"
 
     lifecycle {
       delete_after = var.backup_retention_days

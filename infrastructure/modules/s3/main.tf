@@ -173,6 +173,10 @@ resource "aws_s3_bucket_replication_configuration" "crr" {
     id     = "replicate-all-to-dr"
     status = "Enabled"
 
+    delete_marker_replication {
+      status = "Enabled"
+    }
+
     destination {
       bucket        = aws_s3_bucket.dr_bucket[0].arn
       storage_class = "STANDARD_IA" # Cost-optimised storage class for rarely-accessed DR data
@@ -183,4 +187,19 @@ resource "aws_s3_bucket_replication_configuration" "crr" {
     aws_s3_bucket_versioning.versioning,
     aws_s3_bucket_versioning.dr_versioning,
   ]
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "dr_lifecycle" {
+  provider = aws.dr
+  count    = var.enable_crr ? 1 : 0
+  bucket   = aws_s3_bucket.dr_bucket[0].id
+
+  rule {
+    id     = "expire-old-versions"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90 # Adjust based on DR requirements
+    }
+  }
 }

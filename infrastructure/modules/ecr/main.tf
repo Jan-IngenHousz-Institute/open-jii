@@ -154,6 +154,15 @@ resource "aws_ecr_replication_configuration" "cross_region" {
         region      = var.dr_region
         registry_id = data.aws_caller_identity.current.account_id
       }
+
+      # Scope replication to this repository only.
+      # aws_ecr_replication_configuration is an account-level singleton: without
+      # a filter, a rule replicates every repository in the account. Pinning to
+      # the exact repository name avoids unintended replication of other repos.
+      repository_filter {
+        filter      = var.repository_name
+        filter_type = "PREFIX_MATCH"
+      }
     }
   }
 

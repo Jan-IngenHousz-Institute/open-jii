@@ -22,16 +22,8 @@ resource "aws_dynamodb_table" "revalidation" {
   global_secondary_index {
     name            = "revalidate"
     projection_type = "ALL"
-
-    key_schema {
-      attribute_name = "path"
-      key_type       = "HASH"
-    }
-
-    key_schema {
-      attribute_name = "revalidatedAt"
-      key_type       = "RANGE"
-    }
+    hash_key        = "path"
+    range_key       = "revalidatedAt"
   }
 
   point_in_time_recovery {

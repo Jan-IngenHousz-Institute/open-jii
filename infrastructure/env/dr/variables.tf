@@ -11,13 +11,26 @@ variable "environment" {
 }
 
 variable "aurora_snapshot_identifier" {
-  description = "ARN or ID of the Aurora snapshot to restore from. Retrieve from the DR AWS Backup vault in eu-west-1 after a real disaster or before a DR drill."
+  description = "RDS snapshot ARN (arn:aws:rds:eu-west-1:...) to restore Aurora from. When null (default), the DR env automatically discovers the most recent snapshot copied to the DR region by AWS Backup. Override only when you need to restore from a specific point in time."
+  type        = string
+  default     = null
+}
+
+variable "existing_route53_zone_id" {
+  description = "Route53 hosted zone ID that already owns var.domain_name. For a prod failover this is the prod zone (openjii.org). For a dev drill this is the dev zone (dev.openjii.org). DR reuses this zone instead of creating a new one — supply via tfvars, never hardcode."
   type        = string
 }
 
-variable "prod_route53_zone_id" {
-  description = "Route53 hosted zone ID from the prod environment (openjii.org). DR reuses this zone instead of creating a new one."
+variable "enable_ses_cutover" {
+  description = "Set to true only during an actual failover (not drills). When true, creates a new SES identity in eu-west-1 and writes DKIM TXT records to the prod Route53 zone. When false (default), the backend reuses the existing prod SES SMTP endpoint via var.prod_ses_smtp_server — no DNS changes are made and prod email is unaffected."
+  type        = bool
+  default     = false
+}
+
+variable "prod_ses_smtp_server" {
+  description = "Prod SES SMTP server endpoint (e.g. email-smtp.eu-central-1.amazonaws.com). Used when enable_ses_cutover=false to reuse prod SES without touching the Route53 zone. Retrieve from the openjii-ses-secrets-prod secret in eu-central-1."
   type        = string
+  default     = null
 }
 
 variable "enable_dns_cutover" {
@@ -88,9 +101,8 @@ variable "slack_channel" {
 }
 
 variable "domain_name" {
-  description = "Base domain name"
+  description = "Apex domain for this DR target (e.g. openjii.org for a prod failover, dev.openjii.org for a dev drill). Must match the Route53 zone supplied via existing_route53_zone_id and the ACM certs that already exist in us-east-1. No default — always supply explicitly via tfvars."
   type        = string
-  default     = "dev.openjii.org"
 }
 
 variable "backend_container_port" {
