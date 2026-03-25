@@ -65,3 +65,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "reserved_concurrent_executions" {
+  description = "Max concurrent executions per Lambda function. Set to -1 for unrestricted."
+  type        = number
+  default     = -1
+}
