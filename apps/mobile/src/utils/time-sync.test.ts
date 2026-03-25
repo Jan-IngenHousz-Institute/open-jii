@@ -437,6 +437,47 @@ describe("time-sync", () => {
     });
   });
 
+  describe("getSyncedUtcISO", () => {
+    it("returns a UTC ISO string (Z suffix) after sync", async () => {
+      const { startTimeSync, getSyncedUtcISO } = await import("./time-sync");
+
+      mockServerUtcMs = Date.now();
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(getSyncedUtcISO()).toMatch(/Z$/);
+    });
+
+    it("returns a time within tolerance of getSyncedUtcNow", async () => {
+      const { startTimeSync, getSyncedUtcISO, getSyncedUtcNow } = await import("./time-sync");
+
+      mockServerUtcMs = Date.now() + 5000;
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      const iso = getSyncedUtcISO();
+      const utcMs = getSyncedUtcNow();
+
+      expect(Math.abs(new Date(iso).getTime() - utcMs)).toBeLessThan(100);
+    });
+
+    it("differs from getSyncedLocalISO when timezone is not UTC", async () => {
+      const { startTimeSync, getSyncedUtcISO, getSyncedLocalISO } = await import("./time-sync");
+
+      // GPS mock resolves to "America/Chicago" — local ISO will carry a UTC offset suffix
+      mockServerUtcMs = Date.now();
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      const utcIso = getSyncedUtcISO();
+      const localIso = getSyncedLocalISO();
+
+      expect(utcIso).toMatch(/Z$/);
+      expect(localIso).not.toMatch(/Z$/); // local time ends with e.g. "-06:00"
+      expect(utcIso).not.toBe(localIso);
+    });
+  });
+
   describe("ensureSynced", () => {
     it("should resolve immediately if already synced", async () => {
       const { startTimeSync, ensureSynced } = await import("./time-sync");

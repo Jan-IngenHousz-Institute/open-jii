@@ -64,6 +64,7 @@ sensor_schema = StructType([
     StructField("output", StringType(), True),
     StructField("questions", ArrayType(question_schema), True),
     StructField("user_id", StringType(), True),
+    StructField("timezone", StringType(), True),
     StructField("macros", ArrayType(macro_schema), True),
     StructField("annotations", ArrayType(annotation_schema), True)
 ])
@@ -157,7 +158,7 @@ def raw_data():
             F.lit(None).cast(StringType())
         ))
         .select(
-            "experiment_id", 
+            "experiment_id",
             "parsed_data",
             "ingestion_timestamp",
             "ingest_date",
@@ -204,6 +205,9 @@ def clean_data():
         )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
+        # NOTE: timestamp === normalized UTC timestamp. timezone is the IANA name (e.g. "Europe/Amsterdam").
+        # Together they are the source of truth — all local-time representations are derived from these two.
+        .withColumn("timezone", F.col("parsed_data.timezone"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
@@ -319,6 +323,7 @@ def clean_data():
         "questions",
         "annotations",
         "user_id",
+        "timezone",
         "experiment_id",
         "timestamp",
         "date",
@@ -338,6 +343,7 @@ def clean_data():
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
         .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
+        .withColumn("timezone", F.lit(None).cast("string"))
         # Build macros array from macro columns (empty when no macro)
         # Apply legacy macro ID remapping inline
         .withColumn(
@@ -377,6 +383,7 @@ def clean_data():
             "questions",
             "annotations",
             "user_id",
+            "timezone",
             "experiment_id",
             "timestamp",
             "date",
@@ -547,6 +554,7 @@ def experiment_raw_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "macros",
             "questions_data",
             "annotations",
@@ -641,6 +649,7 @@ def experiment_macro_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "user_id",
             "data",
             "output_data",
@@ -657,6 +666,7 @@ def experiment_macro_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "user_id",
             "data",
             "output_data",
@@ -751,6 +761,7 @@ def experiment_macro_data():
             "device_id",
             "device_name",
             "timestamp",
+            "timezone",
             "user_id",
             "macro_id",
             "macro_name",
@@ -902,7 +913,7 @@ def enriched_experiment_raw_data():
         raw_data
         .join(
             contributors,
-            (raw_data.experiment_id == contributors.experiment_id) & 
+            (raw_data.experiment_id == contributors.experiment_id) &
             (raw_data.user_id == contributors.user_id),
             "left"
         )
@@ -911,7 +922,9 @@ def enriched_experiment_raw_data():
             raw_data.id,
             raw_data.device_id,
             raw_data.device_name,
-            raw_data.timestamp,
+            raw_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
+            raw_data.timestamp.alias("timestamp_utc"),
+            raw_data.timezone,
             raw_data.date,
             raw_data.macros,
             raw_data.questions_data,
@@ -920,8 +933,22 @@ def enriched_experiment_raw_data():
             raw_data.data,
             raw_data.processed_timestamp
         )
+        .withColumn(
+            "timestamp_local",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
+            )
+        )
+        .withColumn(
+            "time_local",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
+            )
+        )
     )
-    
+
     return add_annotation_column(
         enriched,
         table_name="experiment_raw_data",
@@ -982,7 +1009,7 @@ def enriched_experiment_macro_data():
         macro_data
         .join(
             contributors,
-            (macro_data.experiment_id == contributors.experiment_id) & 
+            (macro_data.experiment_id == contributors.experiment_id) &
             (macro_data.user_id == contributors.user_id),
             "left"
         )
@@ -992,7 +1019,9 @@ def enriched_experiment_macro_data():
             macro_data.raw_id,
             macro_data.device_id,
             macro_data.device_name,
-            macro_data.timestamp,
+            macro_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
+            macro_data.timestamp.alias("timestamp_utc"),
+            macro_data.timezone,
             macro_data.date,
             contributors.user.alias("contributor"),
             macro_data.macro_id,
@@ -1004,8 +1033,22 @@ def enriched_experiment_macro_data():
             macro_data.questions_data,
             macro_data.annotations
         )
+        .withColumn(
+            "timestamp_local",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
+            )
+        )
+        .withColumn(
+            "time_local",
+            F.when(
+                F.col("timezone").isNotNull(),
+                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
+            )
+        )
     )
-    
+
     return add_annotation_column(
         enriched,
         table_name="experiment_macro_data",  # Generic macro data table name
