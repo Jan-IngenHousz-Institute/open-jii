@@ -11,6 +11,7 @@ import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
+import { clearSessionFlag } from "~/services/session-persistence";
 import { getEnvVar } from "~/stores/environment-store";
 import { formatRelativeTime } from "~/utils/format-relative-time";
 
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     queryClient.resetQueries();
+    await clearSessionFlag();
     await signOut();
     router.replace("/callback");
   };

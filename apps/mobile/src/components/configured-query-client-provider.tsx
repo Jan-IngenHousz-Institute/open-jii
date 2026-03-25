@@ -8,8 +8,13 @@ import { isOnline } from "~/utils/is-online";
 
 const CHECK_INTERVAL = 10 * 1000;
 
+// Start as offline until the first connectivity check confirms otherwise.
+// Must run at module level (before any render) so the session guard in
+// the tabs layout doesn't assume online on cold start.
+onlineManager.setOnline(false);
+
 function startConnectivityWatcher() {
-  let lastOnline = true;
+  let lastOnline = false;
 
   async function checkOnline() {
     const online = await isOnline();
@@ -31,6 +36,7 @@ const defaultOptions = {
   queries: {
     staleTime: 0,
     gcTime: Infinity,
+    networkMode: "offlineFirst" as const,
     refetchOnMount: false,
     refetchOnReconnect: true,
     refetchOnWindowFocus: false,
@@ -70,7 +76,7 @@ export function ConfiguredQueryClientProvider({ children }) {
       client={queryClientRef.current}
       persistOptions={{
         persister: asyncStoragePersister,
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        maxAge: Infinity,
       }}
     >
       {children}
