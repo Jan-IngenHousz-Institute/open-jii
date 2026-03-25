@@ -67,25 +67,25 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           return;
         }
         handleAnswerChangeAndAdvance(match);
-        toast.success("Answer applied successfully");
+        toast.success(`"${match}" selected successfully!`);
         break;
       }
       case "open_ended":
         handleAnswerChange(data);
-        toast.success("Answer applied successfully!");
+        toast.success("QR applied successfully!");
         break;
       case "number": {
         if (data.trim() === "" || isNaN(Number(data))) {
-          toast.error("QR answer is not a valid number.");
+          toast.error("QR is not a valid number.");
           return;
         }
         handleAnswerChange(data);
-        toast.success("Answer applied successfully!");
+        toast.success("QR applied successfully!");
         break;
       }
       default:
         handleAnswerChange(data);
-        toast.success("Answer applied successfully!");
+        toast.success("QR applied successfully!");
     }
   };
 
@@ -154,6 +154,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         visible={qrScannerVisible}
         onClose={() => setQrScannerVisible(false)}
         onScanned={handleQRScanned}
+        showMatchNote={content.kind === "multi_choice"}
       />
 
       <View className="flex-row items-center gap-4">
