@@ -88,7 +88,7 @@ describe("UpdateExperimentMemberRoleUseCase", () => {
     expect(result.error.code).toBe("FORBIDDEN");
   });
 
-  it("should return FORBIDDEN when attempting to update member roles in an archived experiment", async () => {
+  it("should allow updating member roles in an archived experiment", async () => {
     // Create an experiment and archive it
     const { experiment } = await testApp.createExperiment({
       name: "Archived Update Role Test",
@@ -102,12 +102,12 @@ describe("UpdateExperimentMemberRoleUseCase", () => {
     });
     await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-    // Attempt to update role as the creator/admin
+    // Attempt to update role as the creator/admin — should succeed
     const result = await useCase.execute(experiment.id, memberId, "admin", testUserId);
 
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.role).toBe("admin");
   });
 
   it("should return BAD_REQUEST when attempting to demote the last admin", async () => {

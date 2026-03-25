@@ -13,6 +13,7 @@ import {
   sessions,
   // authenticators table removed - Better Auth uses accounts table
   experimentMembers,
+  experiments,
   sql,
   isNull,
 } from "@repo/database";
@@ -147,7 +148,9 @@ export class UserRepository {
     );
   }
 
-  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
+  async getExperimentsWhereOnlyAdmin(
+    userId: string,
+  ): Promise<Result<{ id: string; name: string; status: string }[]>> {
     return tryCatch(async () => {
       // Find all experiments where this user is an admin
       const adminRows = await this.database
@@ -156,10 +159,11 @@ export class UserRepository {
         .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
 
       if (adminRows.length === 0) {
-        return false;
+        return [];
       }
 
-      // For each experiment, check how many admins exist. If any has exactly 1 admin, return true.
+      const blocking: { id: string; name: string; status: string }[] = [];
+
       for (const row of adminRows) {
         const admins = await this.database
           .select()
@@ -172,11 +176,19 @@ export class UserRepository {
           );
 
         if (admins.length === 1) {
-          return true;
+          const exp = await this.database
+            .select({ id: experiments.id, name: experiments.name, status: experiments.status })
+            .from(experiments)
+            .where(eq(experiments.id, row.experimentId))
+            .limit(1);
+
+          if (exp.length > 0) {
+            blocking.push(exp[0]);
+          }
         }
       }
 
-      return false;
+      return blocking;
     });
   }
 
