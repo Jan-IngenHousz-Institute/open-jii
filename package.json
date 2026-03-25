@@ -51,7 +51,7 @@
     },
     "patchedDependencies": {
       "react-native-usb-serialport-for-android": "patches/react-native-usb-serialport-for-android.patch",
-      "@better-auth/expo": "patches/@better-auth__expo.patch"
+      "@better-auth/expo@1.5.6": "patches/@better-auth__expo@1.5.6.patch"
     }
   }
 }
