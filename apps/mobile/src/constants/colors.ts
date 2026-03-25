@@ -51,7 +51,7 @@ export const colors = {
     inactive: "#757575",
     divider: "#2C2C2C",
     statusBar: "#000000",
-    grayBackground: "##1C2128",
+    grayBackground: "#1C2128",
   },
 
   // Theme Colors (light theme)
