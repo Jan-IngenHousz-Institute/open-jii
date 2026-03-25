@@ -238,7 +238,6 @@ export function ProtocolDetailsCard({
                   <IotProtocolRunner
                     protocolCode={form.watch("code") ?? [{}]}
                     sensorFamily={form.watch("family")}
-                    protocolName={form.watch("name")}
                     layout="vertical"
                   />
                 ) : (

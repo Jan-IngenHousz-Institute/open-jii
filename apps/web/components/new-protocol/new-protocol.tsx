@@ -52,6 +52,7 @@ export function NewProtocolForm() {
       setIsSubmitting(false);
     },
     onSuccess: (id: string) => {
+      toast({ description: t("protocols.protocolCreated") });
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
@@ -164,7 +165,6 @@ export function NewProtocolForm() {
         family: data.family,
       },
     });
-    toast({ description: t("protocols.protocolCreated") });
   }
 
   const handleFormChange = () => {
@@ -204,7 +204,7 @@ export function NewProtocolForm() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("click", handleLinkClick, true);
     };
-  }, [hasFormData, isSubmitting, showDialog]);
+  }, [hasFormData, isSubmitting, showDialog, router]);
 
   const handleCancelNavigation = () => {
     setShowDialog(false);

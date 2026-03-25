@@ -61,10 +61,9 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
 
 /**
  * Get transport support info for a device type.
- * Falls back to the generic profile for unknown device types.
  */
 export function getDeviceTransportSupport(deviceType: DeviceType): DeviceTransportSupport {
-  return DEVICE_TRANSPORT_SUPPORT[deviceType] ?? DEVICE_TRANSPORT_SUPPORT.generic;
+  return DEVICE_TRANSPORT_SUPPORT[deviceType];
 }
 
 /**

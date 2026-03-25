@@ -98,7 +98,10 @@ export function DeviceStatusCard({
             className="shrink-0"
           >
             {isConnecting ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              <>
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                {t("iot.protocolRunner.connecting")}
+              </>
             ) : isConnected ? (
               t("iot.protocolRunner.disconnect")
             ) : (

@@ -4,6 +4,7 @@ import { tsr } from "../../../lib/tsr";
 
 interface ProtocolCreateProps {
   onSuccess?: (id: string) => void;
+  onError?: () => void;
 }
 
 /**
@@ -32,6 +33,7 @@ export const useProtocolCreate = (props: ProtocolCreateProps = {}) => {
       if (context?.previousProtocols) {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
+      props.onError?.();
     },
     onSettled: async () => {
       // Always refetch after error or success to make sure cache is in sync with server
