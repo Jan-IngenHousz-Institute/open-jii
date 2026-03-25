@@ -791,6 +791,7 @@ resource "grafana_rule_group" "macro_sandbox_health" {
           namespace  = "AWS/Lambda"
           metricName = "Errors"
           statistic  = "Sum"
+          period     = "300"
           dimensions = {
             FunctionName = rule.value
           }
@@ -810,7 +811,7 @@ resource "grafana_rule_group" "macro_sandbox_health" {
         datasource_uid = "__expr__"
 
         model = <<EOT
-{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
 EOT
 
         relative_time_range {
@@ -868,6 +869,7 @@ EOT
           namespace  = "AWS/Lambda"
           metricName = "Throttles"
           statistic  = "Sum"
+          period     = "300"
           dimensions = {
             FunctionName = rule.value
           }
@@ -887,7 +889,7 @@ EOT
         datasource_uid = "__expr__"
 
         model = <<EOT
-{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
 EOT
 
         relative_time_range {
@@ -941,8 +943,9 @@ EOT
         refId      = "A"
         region     = var.aws_region
         namespace  = "OpenJII/MacroSandbox"
-        metricName = "MacroSandboxRejectedTraffic"
+        metricName = "MacroSandboxRejectedTraffic-${var.environment}"
         statistic  = "Sum"
+        period     = "300"
         expression = "FILL(m1, 0)"
         id         = "m1"
       })
@@ -959,7 +962,7 @@ EOT
       datasource_uid = "__expr__"
 
       model = <<EOT
-{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
 EOT
 
       relative_time_range {

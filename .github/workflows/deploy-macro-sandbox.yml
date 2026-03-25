@@ -71,7 +71,7 @@ jobs:
           echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
           echo "Checked out SHA: $ACTUAL_SHA"
 
-    - name: Capture Deployment Start Time
+      - name: Capture Deployment Start Time
         uses: ./.github/actions/capture-dora-start
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -132,13 +132,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          CURRENT_IMAGE=$(aws lambda get-function-configuration \
+          CODE_SHA=$(aws lambda get-function-configuration \
             --function-name "${FUNCTION_NAME}" \
             --query "CodeSha256" \
             --output text)
 
           echo "🔍 Function: ${FUNCTION_NAME}"
-          echo "   Code SHA: ${CURRENT_IMAGE}"
+          echo "   Code SHA: ${CODE_SHA}"
           echo "   Image: ${{ steps.build-image.outputs.image }}"
 
       - name: Publish DORA Metrics

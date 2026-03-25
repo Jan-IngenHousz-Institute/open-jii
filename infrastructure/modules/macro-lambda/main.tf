@@ -48,6 +48,7 @@ resource "aws_iam_role_policy" "lambda_vpc" {
       Action = [
         "ec2:CreateNetworkInterface",
         "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeSubnets",
         "ec2:DeleteNetworkInterface",
         "ec2:AssignPrivateIpAddresses",
         "ec2:UnassignPrivateIpAddresses"
@@ -208,7 +209,7 @@ resource "aws_cloudwatch_log_metric_filter" "rejected_traffic" {
   pattern        = "REJECT"
 
   metric_transformation {
-    name      = "MacroSandboxRejectedTraffic"
+    name      = "MacroSandboxRejectedTraffic-${var.environment}"
     namespace = "OpenJII/MacroSandbox"
     value     = "1"
   }
