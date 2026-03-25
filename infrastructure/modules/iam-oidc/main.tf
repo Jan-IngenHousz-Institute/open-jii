@@ -111,6 +111,7 @@ locals {
         # Replication configuration (Terraform — account-level singleton)
         "ecr:PutReplicationConfiguration",
         "ecr:DescribeReplicationConfigurations",
+        "ecr:DescribeRegistry",
         # Image push/pull (deploy workflows)
         "ecr:GetAuthorizationToken",
         "ecr:BatchCheckLayerAvailability",
@@ -336,6 +337,10 @@ locals {
         "kms:EnableKeyRotation",
         "kms:DisableKeyRotation",
         "kms:GetKeyRotationStatus",
+        # Required when services (e.g. AWS Backup) use a KMS key to encrypt data
+        "kms:GenerateDataKey",
+        "kms:GenerateDataKeyWithoutPlaintext",
+        "kms:Decrypt",
       ]
       resource = "*"
     }
@@ -937,6 +942,16 @@ locals {
         "backup:PutBackupVaultAccessPolicy",
         "backup:DeleteBackupVaultAccessPolicy",
         "backup:GetBackupVaultNotifications",
+      ]
+      resource = "*"
+    }
+
+    # ── backup-storage: internal AWS Backup service permission ──
+    # Required by CreateBackupVault — AWS Backup uses this internally to
+    # provision the underlying storage capsule for the vault.
+    backup-storage = {
+      actions = [
+        "backup-storage:MountCapsule",
       ]
       resource = "*"
     }
