@@ -140,7 +140,7 @@ M[Data Exports]
 
 A -->|"gzip+base64 MQTT"| B
 B --> C
-D -->|"Project Transfers"| F
+D -->|"Project Transfers"| E
 C --> E
 E --> F
 F --> G

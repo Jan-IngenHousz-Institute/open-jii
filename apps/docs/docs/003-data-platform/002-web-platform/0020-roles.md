@@ -19,7 +19,7 @@ An experiment member is appointed by an admin of an experiment. A member is some
 | Add measurements via app | - | ✓ | ✓ | 
 | Add/edit comments/flags (app&web) | - | ✓ | ✓ | 
 | Leave an experiment | - | ✓ | ✓ ** | 
-| Create/edit/delete visualisations | - | -  | ✓ |
+| Create/edit/delete visualizations | - | -  | ✓ |
 | (Bulk) Upload data via web | - | - | ✓ |
 | Edit experiment settings*** | - | -  | ✓ |
 | Edit measurement flow | - | -  | ✓ |

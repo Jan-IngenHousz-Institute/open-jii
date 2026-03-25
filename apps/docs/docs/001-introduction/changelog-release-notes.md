@@ -11,6 +11,7 @@ If you have suggestions, feel free to do a [feature request](../data-platform/re
 The platform went live with updated mobile and web apps.
 
 ### New Features
+
 - **Protocol & Macro Page Redesign** — Protocol and macro pages now follow the same layout patterns as experiment pages, with inline-editable titles/descriptions and sidebar metadata (#1115)
 - **Protocol-Macro Many-to-Many** — Protocols and macros can now be linked freely in any combination (#1090)
 - **IoT Package** — Introduced a dedicated IoT package for platform-agnostic sensor communication with pluggable transport and driver layers (#1112)
@@ -24,6 +25,7 @@ The platform went live with updated mobile and web apps.
 - **Async Data Exports** — Export data in multiple formats (CSV, NDJSON, JSON, Parquet) via background jobs (#1047)
 
 ### Improvements
+
 - **Production Monitoring with Grafana** — Amazon Managed Grafana dashboards live in production for infrastructure monitoring (#1032, #1118, #1120, #1121)
 - **Better Auth Migration** — Migrated from NextAuth.js to Better Auth — unified authentication across web and mobile via backend API, email login now uses 6-digit OTP codes (#933)
 - **Updated Member Permissions** — Visualizations, data uploads, experiment settings, and flows restricted to admin role (#1020)
@@ -42,6 +44,7 @@ The platform went live with updated mobile and web apps.
 - **CI/CD: Tag-Based Mobile Versioning** — Mobile app version derived from release tags (#1089)
 
 ### Bug Fixes
+
 - Fixed mobile measurement flow UX issues and comment modal bottom sheet (#1144)
 - Fixed clickable area on web navigation tabs (#1140)
 - Fixed Databricks provider issue (#1138)
@@ -55,13 +58,15 @@ The platform went live with updated mobile and web apps.
 ## Public Beta — v0.2 (8 December 2025)
 
 ### Mobile app
+
 - Back button in measurement process
 - Offline measurements
 - Turn off MultispeQ
 
 ### Web platform
+
 - Notification when added to Experiment
-- Visualisations
+- Visualizations
 
 ---
 
