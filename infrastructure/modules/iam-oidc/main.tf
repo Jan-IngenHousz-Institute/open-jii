@@ -80,6 +80,7 @@ locals {
         "s3:GetBucketRequestPayment",
         "s3:GetBucketWebsite",
         "s3:GetReplicationConfiguration",
+        "s3:PutReplicationConfiguration",
         # Object operations (deploy workflows + Terraform state)
         "s3:GetObject",
         "s3:PutObject",
@@ -107,6 +108,9 @@ locals {
         "ecr:TagResource",
         "ecr:UntagResource",
         "ecr:ListTagsForResource",
+        # Replication configuration (Terraform — account-level singleton)
+        "ecr:PutReplicationConfiguration",
+        "ecr:DescribeReplicationConfigurations",
         # Image push/pull (deploy workflows)
         "ecr:GetAuthorizationToken",
         "ecr:BatchCheckLayerAvailability",
@@ -905,6 +909,34 @@ locals {
         "cloudtrail:AddTags",
         "cloudtrail:RemoveTags",
         "cloudtrail:ListTags",
+      ]
+      resource = "*"
+    }
+
+    # ── AWS Backup: vault + plan + selection management (Terraform) ──
+    backup = {
+      actions = [
+        "backup:CreateBackupVault",
+        "backup:DeleteBackupVault",
+        "backup:DescribeBackupVault",
+        "backup:ListBackupVaults",
+        "backup:TagResource",
+        "backup:UntagResource",
+        "backup:ListTags",
+        "backup:CreateBackupPlan",
+        "backup:DeleteBackupPlan",
+        "backup:DescribeBackupPlan",
+        "backup:GetBackupPlan",
+        "backup:UpdateBackupPlan",
+        "backup:CreateBackupSelection",
+        "backup:DeleteBackupSelection",
+        "backup:GetBackupSelection",
+        "backup:ListBackupSelections",
+        "backup:ListBackupPlans",
+        "backup:GetBackupVaultAccessPolicy",
+        "backup:PutBackupVaultAccessPolicy",
+        "backup:DeleteBackupVaultAccessPolicy",
+        "backup:GetBackupVaultNotifications",
       ]
       resource = "*"
     }
