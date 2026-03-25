@@ -93,7 +93,9 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       onShowOTPChange?.(true);
       setCountdown(RESEND_COOLDOWN_SECONDS);
     } catch {
-      emailForm.setError("email", { message: t("auth.emailSendError", "Something went wrong. Please try again.") });
+      emailForm.setError("email", {
+        message: t("auth.emailSendError", "Something went wrong. Please try again."),
+      });
     }
   }
 
@@ -132,7 +134,9 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       setCountdown(RESEND_COOLDOWN_SECONDS);
       otpForm.reset();
     } catch {
-      emailForm.setError("email", { message: t("auth.emailSendError", "Something went wrong. Please try again.") });
+      emailForm.setError("email", {
+        message: t("auth.emailSendError", "Something went wrong. Please try again."),
+      });
     }
   }
 
