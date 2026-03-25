@@ -1957,6 +1957,8 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
+  macro_sandbox_function_names = module.macro_sandbox.function_names
+
   providers = {
     grafana.amg = grafana.amg
   }

@@ -145,7 +145,7 @@ jobs:
         if: always()
         uses: ./.github/actions/publish-dora-metrics
         with:
-          deployment-outcome: ${{ steps.update-lambda.outcome || 'failure' }}
+          deployment-outcome: ${{ steps.update-lambda.outcome == 'success' && 'success' || 'failure' }}
           service: "macro-sandbox-${{ matrix.language }}"
           environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
