@@ -1224,6 +1224,16 @@ module "migration_runner_ecr" {
   }
 }
 
+module "ecr_replication" {
+  source = "../../modules/ecr-replication"
+
+  dr_region = var.dr_region
+  repository_names = [
+    module.backend_ecr.repository_name,
+    module.migration_runner_ecr.repository_name,
+  ]
+}
+
 module "migration_runner_ecs" {
   source = "../../modules/ecs"
 
@@ -1300,9 +1310,6 @@ module "backend_ecr" {
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
   image_tag_mutability          = "IMMUTABLE"
-
-  enable_cross_region_replication = true
-  dr_region                       = var.dr_region
 
   #ci_cd_role_arn = module.iam_oidc.role_arn
 

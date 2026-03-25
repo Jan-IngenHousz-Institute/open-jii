@@ -1264,6 +1264,16 @@ module "migration_runner_ecr" {
   }
 }
 
+module "ecr_replication" {
+  source = "../../modules/ecr-replication"
+
+  dr_region = "eu-west-1"
+  repository_names = [
+    module.backend_ecr.repository_name,
+    module.migration_runner_ecr.repository_name,
+  ]
+}
+
 module "migration_runner_ecs" {
   source = "../../modules/ecs"
 
@@ -1342,9 +1352,6 @@ module "backend_ecr" {
   image_tag_mutability          = "IMMUTABLE"
 
   ci_cd_role_arn = module.iam_oidc.role_arn
-
-  enable_cross_region_replication = true
-  dr_region                       = "eu-west-1"
 
   tags = {
     Environment = var.environment

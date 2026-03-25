@@ -76,15 +76,3 @@ variable "ci_cd_role_arn" {
   type        = string
   default     = null
 }
-
-variable "enable_cross_region_replication" {
-  description = "Enable ECR cross-region replication to a DR region. This is an account-level setting — only enable on ONE ECR module per account; it covers all repositories automatically."
-  type        = bool
-  default     = false
-}
-
-variable "dr_region" {
-  description = "Destination AWS region for ECR cross-region replication (required when enable_cross_region_replication = true)"
-  type        = string
-  default     = null
-}
