@@ -179,6 +179,7 @@ module "macro_sandbox" {
   tags = {
     Environment = var.environment
     Project     = "open-jii"
+    ManagedBy   = "terraform"
   }
 }
 
