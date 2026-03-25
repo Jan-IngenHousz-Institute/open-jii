@@ -617,7 +617,7 @@
     "noMacrosAdded": "Keine Makros hinzugefügt",
     "unsavedChangesTitle": "Ungespeicherte Änderungen",
     "unsavedChangesMessage": "Sie haben begonnen, ein neues Protokoll zu erstellen. Möchten Sie die Seite wirklich verlassen? Alle Fortschritte gehen verloren.",
-    "unsavedStay": "Auf Seite bleiben",
+    "unsavedStay": "Auf der Seite bleiben",
     "unsavedLeave": "Seite verlassen"
   },
   "protocolSettings": {

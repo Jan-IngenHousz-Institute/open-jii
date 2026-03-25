@@ -229,8 +229,8 @@ describe("NewProtocolForm", () => {
     const goToStep2 = async () => {
       render(<NewProtocolForm />);
 
-      // Fill in required name field — use first textbox (name input)
-      const nameInput = screen.getAllByRole("textbox")[0];
+      // Fill in required name field
+      const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
       fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
       // Click next to go to step 2
@@ -292,7 +292,7 @@ describe("NewProtocolForm", () => {
       render(<NewProtocolForm />);
 
       // Fill in required name field
-      const nameInput = screen.getAllByRole("textbox")[0];
+      const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
       fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
       // Step 1 → Step 2

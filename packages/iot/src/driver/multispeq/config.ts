@@ -44,8 +44,7 @@ export const MULTISPEQ_FRAMING = {
 export type MultispeqTransportType = "bluetooth-classic" | "usb";
 
 /**
- * MultispeQ supported transport categories.
- * MultispeQ only supports Bluetooth Classic + USB Serial.
- * Since Web Bluetooth is BLE-only, Bluetooth is NOT available on the web.
+ * Shared transport-support registry for all device types.
+ * Re-exported for convenience; see core/types.ts for per-device entries.
  */
 export { DEVICE_TRANSPORT_SUPPORT } from "../../core/types";

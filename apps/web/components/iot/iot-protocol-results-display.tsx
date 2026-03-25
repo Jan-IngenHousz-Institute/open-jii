@@ -27,7 +27,7 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!testResult?.data) return;
+    if (testResult?.data === undefined) return;
 
     try {
       await navigator.clipboard.writeText(JSON.stringify(testResult.data, null, 2));

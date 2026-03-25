@@ -58,8 +58,8 @@ export const GENERIC_FRAMING = {
 } as const;
 
 /**
- * Generic device supported transport categories.
- * Generic devices support both BLE and Serial.
+ * Shared transport-support registry for all device types.
+ * Re-exported for convenience; see core/types.ts for per-device entries.
  */
 export { DEVICE_TRANSPORT_SUPPORT } from "../../core/types";
 

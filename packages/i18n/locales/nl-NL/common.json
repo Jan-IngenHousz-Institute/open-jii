@@ -399,7 +399,7 @@
     "compatibleMacrosDescription": "Macro's waarvan bekend is dat ze werken met dit protocol. Deze worden aanbevolen in de flow builder.",
     "noCompatibleMacros": "Nog geen compatibele macro's gekoppeld.",
     "addCompatibleMacro": "Zoek en voeg een compatibele macro toe...",
-    "detailsTitle": "Protocol Details",
+    "detailsTitle": "Protocoldetails",
     "testerTitle": "Verbinden & Testen"
   },
   "experimentDataTable": {

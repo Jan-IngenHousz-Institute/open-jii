@@ -183,8 +183,9 @@ export function NewProtocolForm() {
       if (link?.href && !link.target && link.origin === window.location.origin) {
         e.preventDefault();
         e.stopPropagation();
+        const pathname = link.pathname + link.search + link.hash;
         setPendingNavigation(() => () => {
-          window.location.href = link.href;
+          router.push(pathname);
         });
         setShowDialog(true);
       }

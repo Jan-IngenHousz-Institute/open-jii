@@ -168,6 +168,7 @@ export function NewProtocolDetailsCard({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 shrink-0"
+                    aria-label={`${t("common.remove")} ${macro.name}`}
                     onClick={() => onRemoveMacro(macro.id)}
                   >
                     <X className="h-4 w-4" />
