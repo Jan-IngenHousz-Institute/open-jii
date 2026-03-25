@@ -71,7 +71,7 @@ The IAM role includes permissions for the following AWS services and operations:
 ### ECR (Elastic Container Registry)
 - Repository management (Create, Delete, Describe, List)
 - Image lifecycle and tagging
-- **Replication configuration** (account-level): `ecr:PutReplicationConfiguration`, `ecr:DescribeReplicationConfigurations`
+- **Replication configuration** (account-level): `ecr:PutReplicationConfiguration`, `ecr:DescribeReplicationConfigurations`, `ecr:DescribeRegistry`
 - Image push/pull operations
 
 ### AWS Backup
@@ -80,6 +80,12 @@ The IAM role includes permissions for the following AWS services and operations:
 - **Selection management**: `CreateBackupSelection`, `DeleteBackupSelection`, `GetBackupSelection`, `ListBackupSelections`
 - **Tagging**: `TagResource`, `UntagResource`, `ListTags`
 - **Policy and notification management**: `GetBackupVaultAccessPolicy`, `PutBackupVaultAccessPolicy`, `DeleteBackupVaultAccessPolicy`, `GetBackupVaultNotifications`
+- **Storage provisioning**: `backup-storage:MountCapsule` (required by CreateBackupVault to provision the underlying storage capsule for the vault)
+
+### KMS (Key Management Service)
+- Key management operations (Create, Delete, Describe, List, Update)
+- Key rotation management
+- **Data encryption operations**: `kms:GenerateDataKey`, `kms:GenerateDataKeyWithoutPlaintext`, `kms:Decrypt` (required when AWS services such as AWS Backup use a KMS key to encrypt data)
 
 ### Other Services
 - **VPC**: Network infrastructure management
