@@ -36,8 +36,10 @@ resource "aws_iam_role_policy" "this" {
     Statement = [{
       Effect = "Allow"
       Action = [
+        "logs:CreateLogGroup",
         "logs:CreateLogStream",
         "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
         "logs:DescribeLogStreams"
       ]
       Resource = "${aws_cloudwatch_log_group.this.arn}:*"
@@ -46,15 +48,15 @@ resource "aws_iam_role_policy" "this" {
 }
 
 resource "aws_flow_log" "this" {
-  count = length(var.subnet_ids)
+  for_each = toset(var.subnet_ids)
 
-  subnet_id                = var.subnet_ids[count.index]
+  subnet_id                = each.value
   traffic_type             = var.traffic_type
   iam_role_arn             = aws_iam_role.this.arn
   log_destination          = aws_cloudwatch_log_group.this.arn
   max_aggregation_interval = var.max_aggregation_interval
 
   tags = merge(local.default_tags, {
-    Name = "${var.name_prefix}-flow-log-${count.index}-${var.environment}"
+    Name = "${var.name_prefix}-flow-log-${each.value}-${var.environment}"
   })
 }
