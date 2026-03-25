@@ -45,7 +45,7 @@ export function CameraPermissionState({
     );
   }
 
-  const permanentlyDenied = !permission.canAskAgain;
+  const permanentlyDenied = !permission.canAskAgain || permission.status === "denied";
 
   return (
     <View className="flex-1 items-center justify-center gap-6 px-8">
