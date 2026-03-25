@@ -18,7 +18,6 @@ import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
 interface IotProtocolRunnerProps {
   protocolCode: Record<string, unknown>[];
   sensorFamily: SensorFamily;
-  protocolName?: string;
   layout?: "horizontal" | "vertical";
 }
 
@@ -33,7 +32,6 @@ interface TestResult {
 export function IotProtocolRunner({
   protocolCode,
   sensorFamily,
-  protocolName: _protocolName,
   layout = "horizontal",
 }: IotProtocolRunnerProps) {
   const { t } = useTranslation("iot");

@@ -48,8 +48,10 @@ export function NewProtocolForm() {
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
+    onError: () => {
+      setIsSubmitting(false);
+    },
     onSuccess: (id: string) => {
-      setIsSubmitting(true);
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
@@ -73,6 +75,7 @@ export function NewProtocolForm() {
 
   const handleRemoveMacro = (macroId: string) => {
     setSelectedMacros((prev) => prev.filter((m) => m.id !== macroId));
+    setHasFormData(true);
   };
 
   // Helper to create DetailsStep with the details card
@@ -89,6 +92,7 @@ export function NewProtocolForm() {
           onAddMacro={(macro: Macro) => {
             setSelectedMacros((prev) => {
               if (prev.some((m) => m.id === macro.id)) return prev;
+              setHasFormData(true);
               return [...prev, macro];
             });
           }}
@@ -107,7 +111,6 @@ export function NewProtocolForm() {
       <CodeTestStep
         {...props}
         browserSupport={browserSupport}
-        isCodeValid={isCodeValidRef.current}
         setIsCodeValid={(v: boolean) => {
           isCodeValidRef.current = v;
         }}
@@ -226,7 +229,7 @@ export function NewProtocolForm() {
             family: "generic",
           }}
           onSubmit={onSubmit}
-          isSubmitting={isPending}
+          isSubmitting={isSubmitting || isPending}
           showStepIndicator={true}
           showStepTitles={true}
         />

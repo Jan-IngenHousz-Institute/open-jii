@@ -78,10 +78,10 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const bluetoothButton = buttons.find((btn) => btn.textContent.includes("bluetooth"));
+      const bluetoothButton = buttons.find((btn) => btn.textContent?.includes("bluetooth"));
 
       expect(bluetoothButton).toBeDefined();
-      if (bluetoothButton) fireEvent.click(bluetoothButton);
+      fireEvent.click(bluetoothButton!);
       expect(mockOnConnectionTypeChange).toHaveBeenCalledWith("bluetooth");
     });
 
@@ -95,10 +95,10 @@ describe("ConnectionTypeSelector", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      const serialButton = buttons.find((btn) => btn.textContent.includes("serial"));
+      const serialButton = buttons.find((btn) => btn.textContent?.includes("serial"));
 
       expect(serialButton).toBeDefined();
-      if (serialButton) fireEvent.click(serialButton);
+      fireEvent.click(serialButton!);
       expect(mockOnConnectionTypeChange).toHaveBeenCalledWith("serial");
     });
   });

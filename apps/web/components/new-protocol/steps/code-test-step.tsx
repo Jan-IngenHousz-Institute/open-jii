@@ -17,7 +17,6 @@ export const codeSchema = zCreateProtocolRequestBody.pick({ code: true });
 
 interface CodeTestStepProps extends WizardStepProps<CreateProtocolRequestBody> {
   browserSupport: { bluetooth: boolean; serial: boolean; any: boolean };
-  isCodeValid: boolean;
   setIsCodeValid: (v: boolean) => void;
   ProtocolCodeEditor: ComponentType<{
     value: Record<string, unknown>[];
@@ -32,7 +31,6 @@ interface CodeTestStepProps extends WizardStepProps<CreateProtocolRequestBody> {
   IotProtocolRunner: ComponentType<{
     protocolCode: Record<string, unknown>[];
     sensorFamily: SensorFamily;
-    protocolName: string;
     layout: "horizontal" | "vertical";
   }>;
 }
@@ -45,7 +43,6 @@ export function CodeTestStep({
   totalSteps,
   isSubmitting = false,
   browserSupport,
-  isCodeValid: _isCodeValid,
   setIsCodeValid,
   ProtocolCodeEditor,
   IotProtocolRunner,
@@ -89,7 +86,6 @@ export function CodeTestStep({
     <IotProtocolRunner
       protocolCode={form.watch("code")}
       sensorFamily={form.watch("family")}
-      protocolName={form.watch("name") || "Untitled Protocol"}
       layout="vertical"
     />
   ) : (

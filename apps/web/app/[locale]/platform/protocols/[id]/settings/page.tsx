@@ -13,12 +13,12 @@ interface ProtocolSettingsPageProps {
 
 export default function ProtocolSettingsPage({ params }: ProtocolSettingsPageProps) {
   const { id } = use(params);
-  const { data: session } = useSession();
+  const { data: session, isPending: isSessionPending } = useSession();
   const { data: protocolData, isLoading } = useProtocol(id);
   const { t } = useTranslation();
 
   // Show loading state
-  if (isLoading) {
+  if (isLoading || isSessionPending) {
     return <div>{t("common.loading")}</div>;
   }
 

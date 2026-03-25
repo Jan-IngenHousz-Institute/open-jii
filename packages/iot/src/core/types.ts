@@ -45,6 +45,9 @@ export interface DeviceTransportSupport {
  */
 export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport> = {
   multispeq: {
+    // MultispeQ uses Bluetooth Classic, not BLE. Since Web Bluetooth is BLE-only,
+    // "bluetooth" is intentionally excluded from supportedTransports on the web.
+    // React Native layers should check supportsBluetoothClassic to offer BT Classic.
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: true,
@@ -61,7 +64,7 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
  * Falls back to the generic profile for unknown device types.
  */
 export function getDeviceTransportSupport(deviceType: DeviceType): DeviceTransportSupport {
-  return DEVICE_TRANSPORT_SUPPORT[deviceType];
+  return DEVICE_TRANSPORT_SUPPORT[deviceType] ?? DEVICE_TRANSPORT_SUPPORT.generic;
 }
 
 /**

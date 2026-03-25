@@ -63,7 +63,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 
   // Check feature flag for validation strategy — default to warning mode when flag hasn't resolved
   const validationAsWarning =
-    useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ?? true;
+    useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ?? false;
 
   // Convert array to JSON string for editor if needed
   const initialEditorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);

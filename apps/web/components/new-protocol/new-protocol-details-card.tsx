@@ -114,7 +114,7 @@ export function NewProtocolDetailsCard({
                     {SENSOR_FAMILY_OPTIONS.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
                         {opt.label}
-                        {opt.disabled ? " (Coming Soon)" : ""}
+                        {opt.disabled ? ` (${t("common.comingSoon")})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>

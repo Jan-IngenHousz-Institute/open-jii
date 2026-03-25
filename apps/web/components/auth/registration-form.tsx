@@ -174,7 +174,7 @@ export function RegistrationForm({
         },
       });
     } catch {
-      // Error handled by UI state
+      toast({ description: t("registration.errorMessage") || "Registration failed" });
     } finally {
       setIsPending(false);
     }

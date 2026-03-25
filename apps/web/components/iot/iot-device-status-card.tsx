@@ -72,7 +72,7 @@ export function DeviceStatusCard({
                     {t("iot.protocolRunner.version")} {deviceInfo.device_version}
                   </div>
                 )}
-                {deviceInfo.device_battery && (
+                {deviceInfo.device_battery != null && (
                   <div className="mt-1 flex items-center gap-1.5">
                     <Battery className="h-3 w-3" />
                     <span>{deviceInfo.device_battery}%</span>
